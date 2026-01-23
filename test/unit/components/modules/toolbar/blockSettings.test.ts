@@ -334,7 +334,7 @@ describe('BlockSettings', () => {
 
     (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
 
-    const addEventListenerSpy = vi.spyOn(block.pluginsContent as HTMLElement, 'addEventListener');
+    const addEventListenerSpy = vi.spyOn(block.pluginsContent, 'addEventListener');
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
       getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockResolvedValue([
@@ -468,7 +468,8 @@ describe('BlockSettings', () => {
 
     blockSettings.close();
 
-    expect(selectionStub.restore).not.toHaveBeenCalled();
+    expect(blockSettings.opened).toBe(false);
+    expect(eventsDispatcher.emit).toHaveBeenCalledWith(blockSettings.events.closed);
     expect(selectionStub.clearSaved).toHaveBeenCalledTimes(1);
 
     selectionAtBlokSpy.mockRestore();
@@ -559,17 +560,19 @@ describe('BlockSettings', () => {
   });
 
   it('forwards popover close event to block settings close', () => {
-    const closeSpy = vi.spyOn(blockSettings, 'close');
+    Object.assign(blockSettings as unknown as { opened: boolean }, {
+      opened: true,
+    });
 
     (blockSettings as unknown as { onPopoverClose: () => void }).onPopoverClose();
 
-    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(blockSettings.opened).toBe(false);
   });
 
   it('attaches and detaches flipper keydown listeners around block content', () => {
     const block = createBlock();
-    const addSpy = vi.spyOn(block.pluginsContent as HTMLElement, 'addEventListener');
-    const removeSpy = vi.spyOn(block.pluginsContent as HTMLElement, 'removeEventListener');
+    const addSpy = vi.spyOn(block.pluginsContent, 'addEventListener');
+    const removeSpy = vi.spyOn(block.pluginsContent, 'removeEventListener');
 
     (blockSettings as unknown as { attachFlipperKeydownListener: (b: Block) => void }).attachFlipperKeydownListener(block);
 
@@ -604,5 +607,63 @@ describe('BlockSettings', () => {
     expect(removeNodesSpy).toHaveBeenCalledTimes(1);
     expect(listenersDestroySpy).toHaveBeenCalledTimes(1);
     expect(eventsDispatcher.off).toHaveBeenCalledWith(expect.anything(), blockSettings.close);
+  });
+
+  it('sets isOpening flag to true during async open and clears it after', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+    blokMock.BlockManager.currentBlock = block;
+
+    const selectionStub = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      clearSaved: vi.fn(),
+    };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    // Create a promise that we can control - use an object wrapper to avoid definite assignment issues
+    type Resolver = (value: unknown) => void;
+    const resolverRef: { resolve: Resolver | null } = { resolve: null };
+    const getTunesItemsPromise = new Promise((resolve) => {
+      resolverRef.resolve = resolve;
+    });
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockReturnValueOnce(getTunesItemsPromise as Promise<PopoverItemParams[]>);
+
+    // Start opening block settings (async operation)
+    const openPromise = blockSettings.open(block);
+
+    // Check that isOpening is set to true during async operation
+    expect(blockSettings.isOpening).toBe(true);
+    expect(blockSettings.opened).toBe(false);
+
+    // Resolve the async operation
+    resolverRef.resolve?.([]);
+
+    // Wait for open to complete
+    await openPromise;
+
+    // Check that isOpening is cleared and opened is set to true
+    expect(blockSettings.isOpening).toBe(false);
+    expect(blockSettings.opened).toBe(true);
+
+    getTunesItemsSpy.mockRestore();
+  });
+
+  it('clears isOpening flag when close is called', () => {
+    Object.assign(blockSettings as unknown as { opened: boolean; isOpening: boolean; popover: null }, {
+      opened: true,
+      isOpening: true,
+      popover: null,
+    });
+
+    blockSettings.close();
+
+    expect(blockSettings.opened).toBe(false);
+    expect(blockSettings.isOpening).toBe(false);
   });
 });

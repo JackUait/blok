@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import type { OutputData } from '@/types';
+
+import { Paragraph,  type ParagraphConfig  } from '../tools/paragraph';
+
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import { Paragraph,  type ParagraphConfig  } from '../tools/paragraph';
+
+import type { OutputData } from '@/types';
+
 
 interface ParagraphArgs extends EditorFactoryOptions {
   minHeight: number;

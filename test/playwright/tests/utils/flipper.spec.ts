@@ -1,6 +1,8 @@
 /* global globalThis */
 import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used in global type declaration
+import type { Blok } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
@@ -30,6 +32,65 @@ type KeydownOptions = {
   code?: string;
   key?: string;
 };
+
+/**
+ * Represents the Flipper instance with its public API
+ */
+interface FlipperInstance {
+  isActivated: boolean;
+  activate(items?: HTMLElement[], cursorPosition?: number): void;
+  deactivate(): void;
+  hasFocus(): boolean;
+  focusFirst(): void;
+  onFlip(callback: () => void): void;
+  removeOnFlip(callback: () => void): void;
+  /**
+   * Internal iterator for accessing current focused item
+   * This is accessed in tests to verify flipper state
+   */
+  iterator?: {
+    currentItem?: HTMLElement | null;
+  };
+}
+
+/**
+ * Represents the BlockSettings module with its flipper
+ */
+interface BlockSettingsModule {
+  flipper: FlipperInstance;
+}
+
+/**
+ * Represents the Toolbar module with blockSettings
+ */
+interface ToolbarModule {
+  blockSettings: BlockSettingsModule;
+  inlineToolbar: unknown;
+}
+
+/**
+ * Internal modules accessible via Blok's module property
+ */
+interface BlokInternalModules {
+  toolbar: ToolbarModule;
+  [key: string]: unknown;
+}
+
+/**
+ * Blok instance with internal modules accessible for testing
+ */
+interface BlokInstanceWithModules {
+  module?: BlokInternalModules;
+  destroy?(): void;
+}
+
+/**
+ * Extended Window interface for test environment
+ */
+declare global {
+  var blokInstance: BlokInstanceWithModules | undefined;
+  var Blok: { prototype: Record<string, unknown>; new (config: unknown): { isReady: Promise<void> } };
+}
 
 /**
  *
@@ -128,9 +189,12 @@ const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<v
 
   await page.evaluate(
     async ({ holder, rawData, rawConfig, serializedTools }) => {
+      /* eslint-disable no-new-func -- Using Function constructor to revive class from string for test purposes */
       const reviveToolClass = (classSource: string): unknown => {
-        return new Function(`return (${classSource});`)();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Intentional use of Function constructor for test purposes
+        return new Function(`return (${classSource});`)() as unknown;
       };
+      /* eslint-enable no-new-func */
 
       const revivedTools = serializedTools.reduce<Record<string, unknown>>((accumulator, toolConfig) => {
         const revivedClass = reviveToolClass(toolConfig.classSource);
@@ -571,7 +635,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -592,7 +656,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -613,7 +677,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -647,7 +711,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -668,7 +732,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -703,7 +767,7 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -747,7 +811,7 @@ test.describe('flipper', () => {
         return null;
       }
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -837,7 +901,7 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -884,7 +948,7 @@ test.describe('flipper', () => {
         throw new Error('Blok not found');
       }
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -937,15 +1001,15 @@ test.describe('flipper', () => {
           throw new Error('Blok not found');
         }
 
-        const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+        const blockSettings = blok.module?.toolbar?.blockSettings;
 
         if (!blockSettings || !blockSettings.flipper) {
           throw new Error('Flipper not found');
         }
 
         const items = Array.from(
-          document.querySelectorAll(selector)
-        ) as HTMLElement[];
+          document.querySelectorAll<HTMLElement>(selector)
+        );
 
         blockSettings.flipper.deactivate();
         blockSettings.flipper.activate(items, activeIndex);
@@ -1002,15 +1066,15 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
       }
 
       const originalItems = Array.from(
-        document.querySelectorAll('[data-blok-testid="popover-item"]')
-      ) as HTMLElement[];
+        document.querySelectorAll<HTMLElement>('[data-blok-testid="popover-item"]')
+      );
 
       // Create new items
       const newItem1 = document.createElement('div');
@@ -1118,7 +1182,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return { error: 'Flipper not found' };
@@ -1169,7 +1233,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -1196,7 +1260,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -1217,7 +1281,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         return null;
@@ -1357,7 +1421,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');
@@ -1450,7 +1514,7 @@ test.describe('flipper', () => {
       }
 
 
-      const blockSettings = (blok as any).module?.toolbar?.blockSettings;
+      const blockSettings = blok.module?.toolbar?.blockSettings;
 
       if (!blockSettings || !blockSettings.flipper) {
         throw new Error('Flipper not found');

@@ -1,16 +1,18 @@
-import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
-import { Shortcuts } from '../utils/shortcuts';
+import { Dom } from '../dom';
+import { BlokMobileLayoutToggled } from '../events';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
-import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
+import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
 import { EventsDispatcher } from '../utils/events';
-import { translateToolTitle, type I18nInstance } from '../utils/tools';
-import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { Listeners } from '../utils/listeners';
-import { Dom } from '../dom';
 import type { Popover } from '../utils/popover';
 import { PopoverDesktop, PopoverMobile } from '../utils/popover';
-import { BlokMobileLayoutToggled } from '../events';
+import { Shortcuts } from '../utils/shortcuts';
+import { translateToolTitle, type I18nInstance } from '../utils/tools';
+
+import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
+
 
 /**
  * @todo the first Tab on the Block — focus Plus Button, the second — focus Block Tunes Toggler, the third — focus next Block
@@ -514,7 +516,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      */
     const index = shouldReplaceBlock ? currentBlockIndex : currentBlockIndex + 1;
 
-    const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides as Record<string, unknown>).length > 0;
+    const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides).length > 0;
 
     const blockData: BlockToolData | undefined = hasBlockDataOverrides
       ? Object.assign(await this.api.blocks.composeBlockData(toolName), blockDataOverrides)
@@ -537,8 +539,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     /**
      * close toolbar when node is changed
+     * Pass setExplicitlyClosed: false so the toolbar can show again on hover after toolbox insertion
      */
-    this.api.toolbar.close();
+    this.api.toolbar.close({ setExplicitlyClosed: false });
   }
 
   /**

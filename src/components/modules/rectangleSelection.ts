@@ -5,15 +5,14 @@
  * @version 1.0.0
  */
 import { Module } from '../__module';
-import { Dom as $ } from '../dom';
-
-import { SelectionUtils } from '../selection';
-import { throttle } from '../utils';
 import {
   INLINE_TOOLBAR_INTERFACE_SELECTOR,
   DATA_ATTR,
   createSelector,
 } from '../constants';
+import { Dom as $ } from '../dom';
+import { SelectionUtils } from '../selection/index';
+import { throttle } from '../utils';
 
 /**
  *

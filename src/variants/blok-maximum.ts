@@ -10,11 +10,11 @@
  */
 
 // Re-export everything from the main blok entry
-export * from '../blok';
-
 // Import all locales to force them into the bundle
 // The allLocales export ensures these aren't tree-shaken
 import { allLocales, localeCount } from './all-locales';
+
+export * from '../blok';
 
 // Export to prevent tree-shaking
 export { allLocales, localeCount };

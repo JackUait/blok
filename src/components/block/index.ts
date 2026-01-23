@@ -2,35 +2,32 @@ import type {
   BlockAPI as BlockAPIInterface,
   BlockTool as IBlockTool,
   BlockToolData,
-  BlockTune as IBlockTune,
   SanitizerConfig,
   ToolConfig,
   ToolboxConfigEntry,
   PopoverItemParams
 } from '../../../types';
-
-import type { SavedData } from '../../../types/data-formats';
-import { twMerge } from '../utils/tw';
-import { Dom as $, toggleEmptyMark } from '../dom';
-import { generateBlockId, isEmpty, isFunction, log } from '../utils';
-import type { API as ApiModules } from '../modules/api';
-import { BlockAPI } from './api';
-import { SelectionUtils } from '../selection';
-import type { BlockToolAdapter } from '../tools/block';
-
-import type { BlockTuneAdapter } from '../tools/tune';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
-import type { ToolsCollection } from '../tools/collection';
-import { EventsDispatcher } from '../utils/events';
-import type { MenuConfigItem } from '../../../types/tools';
-import { isMutationBelongsToElement } from '../utils/mutations';
+import type { SavedData } from '../../../types/data-formats';
+import { Dom as $, toggleEmptyMark } from '../dom';
 import type { BlokEventMap } from '../events';
-import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../events';
-import type { RedactorDomChangedPayload } from '../events/RedactorDomChanged';
-import { convertBlockDataToString, isSameBlockData } from '../utils/blocks';
-import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import { DATA_ATTR, createSelector } from '../constants';
-import type { DragManager } from '../modules/dragManager';
+import type { API as ApiModules } from '../modules/api';
+import type { DragController } from '../modules/drag/DragController';
+import type { BlockToolAdapter } from '../tools/block';
+import type { ToolsCollection } from '../tools/collection';
+import type { BlockTuneAdapter } from '../tools/tune';
+import { generateBlockId, isFunction, log } from '../utils';
+import { isSameBlockData } from '../utils/blocks';
+import { EventsDispatcher } from '../utils/events';
+
+import { BlockAPI } from './api';
+import { DataPersistenceManager } from './data-persistence-manager';
+import { InputManager } from './input-manager';
+import { MutationHandler } from './mutation-handler';
+import { SelectionManager } from './selection-manager';
+import { StyleManager } from './style-manager';
+import { ToolRenderer } from './tool-renderer';
+import { TunesManager } from './tunes-manager';
 
 /**
  * Interface describes Block class constructor argument
@@ -124,16 +121,6 @@ interface BlockEvents {
 export class Block extends EventsDispatcher<BlockEvents> {
 
   /**
-   * Tailwind styles for the Block elements
-   */
-  private static readonly styles = {
-    wrapper: 'relative opacity-100 my-[-0.5em] py-[0.5em] first:mt-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
-    content: 'relative mx-auto transition-colors duration-150 ease-out max-w-content',
-    contentSelected: 'bg-selection rounded-[4px] [&_[contenteditable]]:select-none [&_img]:opacity-55 [&_[data-blok-tool=stub]]:opacity-55',
-    contentStretched: 'max-w-none',
-  };
-
-  /**
    * Block unique identifier
    */
   public id: string;
@@ -181,44 +168,14 @@ export class Block extends EventsDispatcher<BlockEvents> {
   public readonly config: ToolConfig;
 
   /**
-   * Stores last successfully extracted block data
-   */
-  private lastSavedData: BlockToolData;
-
-  /**
-   * Cached inputs
-   */
-  private cachedInputs: HTMLElement[] = [];
-
-  /**
-   * Stores last successfully extracted tunes data
-   */
-  private lastSavedTunes: { [name: string]: BlockTuneData } = {};
-
-  /**
-   * We'll store a reference to the tool's rendered element to access it later
-   */
-  private toolRenderedElement: HTMLElement | null = null;
-
-  /**
-   * Reference to the content wrapper element for style toggling
-   */
-  private contentElement: HTMLElement | null = null;
-
-  /**
    * Tool class instance
    */
   private readonly toolInstance: IBlockTool;
 
   /**
-   * User provided Block Tunes instances
+   * Manages block tunes
    */
-  private readonly tunesInstances: Map<string, IBlockTune> = new Map();
-
-  /**
-   * Blok provided Block Tunes instances
-   */
-  private readonly defaultTunesInstances: Map<string, IBlockTune> = new Map();
+  private readonly tunesManager: TunesManager;
 
   /**
    * Promise that resolves when the block is ready (rendered)
@@ -226,26 +183,19 @@ export class Block extends EventsDispatcher<BlockEvents> {
   public ready: Promise<void>;
 
   /**
-   * Resolver for ready promise
-   */
-  private readyResolver: (() => void) | null = null;
-
-  /**
-   * If there is saved data for Tune which is not available at the moment,
-   * we will store it here and provide back on save so data is not lost
-   */
-  private unavailableTunesData: { [name: string]: BlockTuneData } = {};
-
-  /**
-   * Focused input index
-   * @type {number}
-   */
-  private inputIndex = 0;
-
-  /**
    * Common blok event bus
    */
   private readonly blokEventBus: EventsDispatcher<BlokEventMap> | null = null;
+
+  /**
+   * Manages input elements within the block
+   */
+  private readonly inputManager: InputManager;
+
+  /**
+   * Handles mutation observation and filtering
+   */
+  private readonly mutationHandler: MutationHandler;
 
   /**
    * Current block API interface
@@ -256,6 +206,26 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Cleanup function for draggable behavior
    */
   private draggableCleanup: (() => void) | null = null;
+
+  /**
+   * Manages tool element composition and rendering
+   */
+  private readonly toolRenderer: ToolRenderer;
+
+  /**
+   * Manages block visual state including stretched mode
+   */
+  private readonly styleManager: StyleManager;
+
+  /**
+   * Manages block selection logic including fake cursor
+   */
+  private readonly selectionManager: SelectionManager;
+
+  /**
+   * Manages data extraction, caching, and in-place updates
+   */
+  private readonly dataPersistenceManager: DataPersistenceManager;
 
 
   /**
@@ -280,9 +250,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
     bindMutationWatchersImmediately = false,
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
-    this.ready = new Promise((resolve) => {
-      this.readyResolver = resolve;
-    });
+
+    // Set basic properties
     this.name = tool.name;
     this.id = id;
     this.parentId = parentId ?? null;
@@ -291,49 +260,75 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.config = this.settings;
     this.blokEventBus = eventBus || null;
     this.blockAPI = new BlockAPI(this);
-    this.lastSavedData = data ?? {};
-    this.lastSavedTunes = tunesData ?? {};
-
 
     this.tool = tool;
     this.toolInstance = tool.create(data, this.blockAPI, readOnly);
-
-    /**
-     * @type {BlockTuneAdapter[]}
-     */
     this.tunes = tool.tunes;
 
-    this.composeTunes(tunesData);
+    // Initialize tunes manager (needed by ToolRenderer)
+    this.tunesManager = new TunesManager(this.tunes, tunesData, this.blockAPI);
 
-    const holderElement = this.compose();
+    // Initialize ToolRenderer to create the DOM structure
+    this.toolRenderer = new ToolRenderer(
+      this.toolInstance,
+      this.name,
+      this.id,
+      this.tunesManager,
+      this.config
+    );
 
-    if (holderElement == null) {
-      throw new Error(`Tool "${this.name}" did not return a block holder element during render()`);
-    }
+    // Compose the block and get the holder
+    this.holder = this.toolRenderer.compose();
+    this.ready = this.toolRenderer.ready;
 
-    this.holder = holderElement;
+    // Initialize StyleManager with holder and content element
+    this.styleManager = new StyleManager(
+      this.holder,
+      this.toolRenderer.contentElement
+    );
 
-    /**
-     * Bind block mutation watchers and input events
-     * - Immediately if bindMutationWatchersImmediately is true (for user-created blocks)
-     * - Deferred via requestIdleCallback otherwise (for initial load optimization)
-     */
+    // Initialize SelectionManager with dependencies
+    this.selectionManager = new SelectionManager(
+      this.holder,
+      () => this.toolRenderer.contentElement,
+      () => this.styleManager.stretched,
+      this.blokEventBus,
+      this.styleManager
+    );
+
+    // Initialize input manager (needed by DataPersistenceManager)
+    this.inputManager = new InputManager(
+      this.holder,
+      () => this.didMutated()
+    );
+
+    // Initialize mutation handler
+    this.mutationHandler = new MutationHandler(
+      () => this.toolRenderer.toolRenderedElement,
+      this.blokEventBus,
+      (mutations) => this.didMutated(mutations)
+    );
+
+    // Initialize DataPersistenceManager
+    this.dataPersistenceManager = new DataPersistenceManager(
+      this.toolInstance,
+      () => this.toolRenderer.toolRenderedElement,
+      this.tunesManager,
+      this.name,
+      () => this.isEmpty,
+      this.inputManager,
+      () => this.call(BlockToolAPI.UPDATED),
+      () => this.toggleInputsEmptyMark(),
+      data,
+      tunesData
+    );
+
+    // Bind block mutation watchers and input events
+    // - Immediately if bindMutationWatchersImmediately is true (for user-created blocks)
+    // - Deferred via requestIdleCallback otherwise (for initial load optimization)
     const bindEvents = (): void => {
-      /**
-       * Start watching block mutations
-       */
-      this.watchBlockMutations();
-
-      /**
-       * Mutation observer doesn't track changes in "<input>" and "<textarea>"
-       * so we need to track focus events to update current input and clear cache.
-       */
-      this.addInputEvents();
-
-      /**
-       * We mark inputs with [data-blok-empty] attribute
-       * It can be useful for developers, for example for correct placeholder behavior
-       */
+      this.mutationHandler.watch();
+      this.inputManager.addInputEvents();
       this.toggleInputsEmptyMark();
     };
 
@@ -350,7 +345,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param dragHandle - The element to use as the drag handle
    * @param dragManager - DragManager instance to handle drag operations
    */
-  public setupDraggable(dragHandle: HTMLElement, dragManager: DragManager): void {
+  public setupDraggable(dragHandle: HTMLElement, dragManager: DragController): void {
     /** Clean up any existing draggable */
     this.cleanupDraggable();
 
@@ -376,7 +371,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param {string} methodName - method to call
    * @param {object} params - method argument
    */
-  public call(methodName: string, params?: object): void {
+  public call(methodName: string, params?: Record<string, unknown>): void {
     /**
      * call Tool's method with the instance context
      */
@@ -429,90 +424,16 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {object}
    */
   public async save(): Promise<undefined | BlockSaveResult> {
-    const extractedBlock = await this.extractToolData();
+    const result = await this.dataPersistenceManager.save();
 
-    if (extractedBlock === undefined) {
+    if (result === undefined) {
       return undefined;
     }
 
-    const tunesData: { [name: string]: BlockTuneData } = { ...this.unavailableTunesData };
+    // Override id with the actual block id
+    result.id = this.id;
 
-    [
-      ...this.tunesInstances.entries(),
-      ...this.defaultTunesInstances.entries(),
-    ]
-      .forEach(([name, tune]) => {
-        if (isFunction(tune.save)) {
-          try {
-            tunesData[name] = tune.save();
-          } catch (e) {
-            log(`Tune ${tune.constructor.name} save method throws an Error %o`, 'warn', e);
-          }
-        }
-      });
-
-    /**
-     * Measuring execution time
-     */
-    const measuringStart = window.performance.now();
-
-    this.lastSavedData = extractedBlock;
-    this.lastSavedTunes = { ...tunesData };
-
-    const measuringEnd = window.performance.now();
-
-    return {
-      id: this.id,
-      tool: this.name,
-      data: extractedBlock,
-      tunes: tunesData,
-      time: measuringEnd - measuringStart,
-    };
-  }
-
-  /**
-   * Safely executes tool.save capturing possible errors without breaking the saver pipeline
-   */
-  private async extractToolData(): Promise<BlockToolData | undefined> {
-    try {
-      const extracted = await this.toolInstance.save(this.pluginsContent as HTMLElement);
-
-      if (!this.isEmpty || extracted === undefined || extracted === null || typeof extracted !== 'object') {
-        return extracted;
-      }
-
-      const normalized = { ...extracted } as Record<string, unknown>;
-      const sanitizeField = (field: string): void => {
-        const value = normalized[field];
-
-        if (typeof value !== 'string') {
-          return;
-        }
-
-        const container = document.createElement('div');
-
-        container.innerHTML = value;
-
-        if ($.isEmpty(container)) {
-          normalized[field] = '';
-        }
-      };
-
-      sanitizeField('text');
-      sanitizeField('html');
-
-      return normalized as BlockToolData;
-    } catch (error) {
-      const normalizedError = error instanceof Error ? error : new Error(String(error));
-
-      log(
-        `Saving process for ${this.name} tool failed due to the ${normalizedError}`,
-        'log',
-        normalizedError
-      );
-
-      return undefined;
-    }
+    return result;
   }
 
   /**
@@ -523,11 +444,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {Promise<boolean>} valid
    */
   public async validate(data: BlockToolData): Promise<boolean> {
-    if (this.toolInstance.validate instanceof Function) {
-      return await this.toolInstance.validate(data);
-    }
-
-    return true;
+    return this.dataPersistenceManager.validate(data);
   }
 
   /**
@@ -538,118 +455,17 @@ export class Block extends EventsDispatcher<BlockEvents> {
       toolTunes: PopoverItemParams[];
       commonTunes: PopoverItemParams[];
       } {
-    const toolTunesPopoverParams: PopoverItemParams[] = [];
-    const commonTunesPopoverParams: PopoverItemParams[] = [];
-    const pushTuneConfig = (
-      tuneConfig: MenuConfigItem | MenuConfigItem[] | HTMLElement | undefined,
-      target: PopoverItemParams[]
-    ): void => {
-      if (!tuneConfig) {
-        return;
-      }
-
-      if ($.isElement(tuneConfig)) {
-        target.push({
-          type: PopoverItemType.Html,
-          element: tuneConfig,
-        });
-
-        return;
-      }
-
-      if (Array.isArray(tuneConfig)) {
-        target.push(...tuneConfig);
-
-        return;
-      }
-
-      target.push(tuneConfig);
-    };
-
     /** Tool's tunes: may be defined as return value of optional renderSettings method */
     const tunesDefinedInTool = typeof this.toolInstance.renderSettings === 'function' ? this.toolInstance.renderSettings() : [];
 
-    pushTuneConfig(tunesDefinedInTool, toolTunesPopoverParams);
-
-    /** Common tunes: combination of default tunes (move up, move down, delete) and third-party tunes connected via tunes api */
-    const commonTunes = [
-      ...this.tunesInstances.values(),
-      ...this.defaultTunesInstances.values(),
-    ].map(tuneInstance => tuneInstance.render());
-
-    /** Separate custom html from Popover items params for common tunes */
-    commonTunes.forEach(tuneConfig => {
-      pushTuneConfig(tuneConfig, commonTunesPopoverParams);
-    });
-
-    return {
-      toolTunes: toolTunesPopoverParams,
-      commonTunes: commonTunesPopoverParams,
-    };
+    return this.tunesManager.getMenuConfig(tunesDefinedInTool);
   }
 
   /**
    * Update current input index with selection anchor node
    */
   public updateCurrentInput(): void {
-    /**
-     * If activeElement is native input, anchorNode points to its parent.
-     * So if it is native input use it instead of anchorNode
-     *
-     * If anchorNode is undefined, also use activeElement
-     */
-    const anchorNode = SelectionUtils.anchorNode;
-    const activeElement = document.activeElement;
-
-    const resolveInput = (node: Node | null): HTMLElement | undefined => {
-      if (!node) {
-        return undefined;
-      }
-
-      const element = node instanceof HTMLElement ? node : node.parentElement;
-
-      if (element === null) {
-        return undefined;
-      }
-
-      const directMatch = this.inputs.find((input) => input === element || input.contains(element));
-
-      if (directMatch !== undefined) {
-        return directMatch;
-      }
-
-      const closestEditable = element.closest($.allInputsSelector);
-
-      if (!(closestEditable instanceof HTMLElement)) {
-        return undefined;
-      }
-
-      const closestMatch = this.inputs.find((input) => input === closestEditable);
-
-      if (closestMatch !== undefined) {
-        return closestMatch;
-      }
-
-      return undefined;
-    };
-
-    if ($.isNativeInput(activeElement)) {
-      this.currentInput = activeElement;
-
-      return;
-    }
-
-    const candidateInput = resolveInput(anchorNode) ?? (activeElement instanceof HTMLElement ? resolveInput(activeElement) : undefined);
-
-    if (candidateInput !== undefined) {
-      this.currentInput = candidateInput;
-
-      return;
-    }
-
-    if (activeElement instanceof HTMLElement && this.inputs.includes(activeElement)) {
-      this.currentInput = activeElement;
-    }
+    this.inputManager.updateCurrentInput();
   }
 
   /**
@@ -668,58 +484,15 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns true if the update was performed in-place, false if a full re-render is needed
    */
   public async setData(newData: BlockToolData): Promise<boolean> {
-    // Check if tool supports setData method
-    const toolSetData = (this.toolInstance as { setData?: (data: BlockToolData) => void | Promise<void> }).setData;
-
-    if (typeof toolSetData === 'function') {
-      try {
-        await toolSetData.call(this.toolInstance, newData);
-        this.lastSavedData = newData;
-
-        return true;
-      } catch (e) {
-        log(`Tool ${this.name} setData failed: ${e instanceof Error ? e.message : String(e)}`, 'warn');
-
-        return false;
-      }
-    }
-
-    // For tools without setData, try to update innerHTML directly for simple text-based tools
-    const pluginsContent = this.toolRenderedElement;
-
-    if (!pluginsContent) {
-      return false;
-    }
-
-    // Handle simple text-based blocks (like paragraph) with a 'text' property
-    // If newData is empty ({}) and the element is contenteditable, treat it as an empty string
-    // Only apply empty-data-as-empty-text logic for the default paragraph tool
-    const isContentEditable = pluginsContent.getAttribute('contenteditable') === 'true';
-    const hasTextProperty = typeof newData.text === 'string';
-    const isEmptyParagraphData = Object.keys(newData).length === 0 && this.name === 'paragraph';
-
-    if (isContentEditable && (hasTextProperty || isEmptyParagraphData)) {
-      const newText = hasTextProperty ? newData.text : '';
-
-      pluginsContent.innerHTML = newText;
-      this.lastSavedData = newData;
-      this.dropInputsCache();
-      this.toggleInputsEmptyMark();
-      this.call(BlockToolAPI.UPDATED);
-
-      return true;
-    }
-
-    // For other tools, fall back to full re-render
-    return false;
+    return this.dataPersistenceManager.setData(newData);
   }
 
   /**
    * Call Tool instance destroy method
    */
   public destroy(): void {
-    this.unwatchBlockMutations();
-    this.removeInputEvents();
+    this.mutationHandler.destroy();
+    this.inputManager.destroy();
 
     /** Clean up drag and drop */
     if (this.draggableCleanup) {
@@ -772,7 +545,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     const blockData = await this.data;
 
     return toolboxSettings.find((item) => {
-      return isSameBlockData(item.data, blockData);
+      return item.data !== undefined && isSameBlockData(item.data, blockData);
     });
   }
 
@@ -780,57 +553,29 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Exports Block data as string using conversion config
    */
   public async exportDataAsString(): Promise<string> {
-    const blockData = await this.data;
-
-    return convertBlockDataToString(blockData, this.tool.conversionConfig);
+    return this.dataPersistenceManager.exportDataAsString(this.tool.conversionConfig ?? {});
   }
-
-  /**
-   * Link to blok dom change callback. Used to remove listener on remove
-   */
-  private redactorDomChangedCallback: (payload: RedactorDomChangedPayload) => void = () => {};
 
   /**
    * Find and return all editable elements (contenteditable and native inputs) in the Tool HTML
    */
   public get inputs(): HTMLElement[] {
-    /**
-     * Return from cache if existed
-     */
-    if (this.cachedInputs.length !== 0) {
-      return this.cachedInputs;
-    }
-
-    const inputs = $.findAllInputs(this.holder);
-
-    /**
-     * If inputs amount was changed we need to check if input index is bigger then inputs array length
-     */
-    if (this.inputIndex > inputs.length - 1) {
-      this.inputIndex = inputs.length - 1;
-    }
-
-    /**
-     * Cache inputs
-     */
-    this.cachedInputs = inputs;
-
-    return inputs;
+    return this.inputManager.inputs;
   }
 
   /**
-   * Return current Tool`s input
+   * Return current Tool's input
    * If Block doesn't contain inputs, return undefined
    */
   public get currentInput(): HTMLElement | undefined {
-    return this.inputs[this.inputIndex];
+    return this.inputManager.currentInput;
   }
 
   /**
    * Returns the current input index (for caret restoration)
    */
   public get currentInputIndex(): number {
-    return this.inputIndex;
+    return this.inputManager.currentInputIndex;
   }
 
   /**
@@ -838,49 +583,39 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param element - HTML Element to set as current input
    */
   public set currentInput(element: HTMLElement | undefined) {
-    if (element === undefined) {
-      return;
-    }
-
-    const index = this.inputs.findIndex((input) => input === element || input.contains(element));
-
-    if (index !== -1) {
-      this.inputIndex = index;
-    }
+    this.inputManager.currentInput = element;
   }
 
   /**
-   * Return first Tool`s input
+   * Return first Tool's input
    * If Block doesn't contain inputs, return undefined
    */
   public get firstInput(): HTMLElement | undefined {
-    return this.inputs[0];
+    return this.inputManager.firstInput;
   }
 
   /**
-   * Return first Tool`s input
+   * Return last Tool's input
    * If Block doesn't contain inputs, return undefined
    */
   public get lastInput(): HTMLElement | undefined {
-    const inputs = this.inputs;
-
-    return inputs[inputs.length - 1];
+    return this.inputManager.lastInput;
   }
 
   /**
-   * Return next Tool`s input or undefined if it doesn't exist
+   * Return next Tool's input or undefined if it doesn't exist
    * If Block doesn't contain inputs, return undefined
    */
   public get nextInput(): HTMLElement | undefined {
-    return this.inputs[this.inputIndex + 1];
+    return this.inputManager.nextInput;
   }
 
   /**
-   * Return previous Tool`s input or undefined if it doesn't exist
+   * Return previous Tool's input or undefined if it doesn't exist
    * If Block doesn't contain inputs, return undefined
    */
   public get previousInput(): HTMLElement | undefined {
-    return this.inputs[this.inputIndex - 1];
+    return this.inputManager.previousInput;
   }
 
   /**
@@ -888,27 +623,21 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {object}
    */
   public get data(): Promise<BlockToolData> {
-    return this.save().then((savedObject) => {
-      if (savedObject && !isEmpty(savedObject.data)) {
-        return savedObject.data;
-      } else {
-        return {};
-      }
-    });
+    return this.dataPersistenceManager.data;
   }
 
   /**
    * Returns last successfully extracted block data
    */
   public get preservedData(): BlockToolData {
-    return this.lastSavedData ?? {};
+    return this.dataPersistenceManager.preservedData;
   }
 
   /**
    * Returns last successfully extracted tune data
    */
   public get preservedTunes(): { [name: string]: BlockTuneData } {
-    return this.lastSavedTunes ?? {};
+    return this.dataPersistenceManager.preservedTunes;
   }
 
   /**
@@ -975,38 +704,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param {boolean} state - 'true' to select, 'false' to remove selection
    */
   public set selected(state: boolean) {
-    if (state) {
-      this.holder.setAttribute(DATA_ATTR.selected, 'true');
-    } else {
-      this.holder.removeAttribute(DATA_ATTR.selected);
-    }
-
-    if (this.contentElement) {
-      const stretchedClass = this.stretched ? Block.styles.contentStretched : '';
-
-      this.contentElement.className = state
-        ? twMerge(Block.styles.content, Block.styles.contentSelected)
-        : twMerge(Block.styles.content, stretchedClass);
-    }
-
-    const fakeCursorWillBeAdded = state === true && SelectionUtils.isRangeInsideContainer(this.holder);
-    const fakeCursorWillBeRemoved = state === false && SelectionUtils.isFakeCursorInsideContainer(this.holder);
-
-    if (!fakeCursorWillBeAdded && !fakeCursorWillBeRemoved) {
-      return;
-    }
-
-    this.blokEventBus?.emit(FakeCursorAboutToBeToggled, { state }); // mutex
-
-    if (fakeCursorWillBeAdded) {
-      SelectionUtils.addFakeCursor();
-    }
-
-    if (fakeCursorWillBeRemoved) {
-      SelectionUtils.removeFakeCursor(this.holder);
-    }
-
-    this.blokEventBus?.emit(FakeCursorHaveBeenSet, { state });
+    this.selectionManager.selected = state;
   }
 
   /**
@@ -1014,7 +712,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get selected(): boolean {
-    return this.holder.getAttribute(DATA_ATTR.selected) === 'true';
+    return this.selectionManager.selected;
   }
 
   /**
@@ -1022,17 +720,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param {boolean} state - 'true' to enable, 'false' to disable stretched state
    */
   public setStretchState(state: boolean): void {
-    if (state) {
-      this.holder.setAttribute(DATA_ATTR.stretched, 'true');
-    } else {
-      this.holder.removeAttribute(DATA_ATTR.stretched);
-    }
-
-    if (this.contentElement && !this.selected) {
-      this.contentElement.className = state
-        ? twMerge(Block.styles.content, Block.styles.contentStretched)
-        : Block.styles.content;
-    }
+    this.styleManager.setStretchState(state, this.selected);
   }
 
   /**
@@ -1048,7 +736,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get stretched(): boolean {
-    return this.holder.getAttribute(DATA_ATTR.stretched) === 'true';
+    return this.styleManager.stretched;
   }
 
 
@@ -1057,344 +745,41 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {HTMLElement}
    */
   public get pluginsContent(): HTMLElement {
-    if (this.toolRenderedElement === null) {
-      throw new Error('Block pluginsContent is not yet initialized');
-    }
-
-    return this.toolRenderedElement;
-  }
-
-  /**
-   * Make default Block wrappers and put Tool`s content there
-   * @returns {HTMLDivElement}
-   */
-  private compose(): HTMLDivElement {
-    const wrapper = $.make('div', Block.styles.wrapper) as HTMLDivElement;
-    const contentNode = $.make('div', Block.styles.content);
-
-    this.contentElement = contentNode;
-
-    // Set data attributes for block element and content
-    wrapper.setAttribute(DATA_ATTR.element, '');
-    contentNode.setAttribute(DATA_ATTR.elementContent, '');
-    contentNode.setAttribute('data-blok-testid', 'block-content');
-    const pluginsContent = this.toolInstance.render();
-
-    wrapper.setAttribute('data-blok-testid', 'block-wrapper');
-
-    if (this.name && !wrapper.hasAttribute('data-blok-component')) {
-      wrapper.setAttribute('data-blok-component', this.name);
-    }
-
-    /**
-     * Export id to the DOM three
-     * Useful for standalone modules development. For example, allows to identify Block by some child node. Or scroll to a particular Block by id.
-     */
-    wrapper.setAttribute('data-blok-id', this.id);
-
-    /**
-     * Saving a reference to plugin's content element for guaranteed accessing it later
-     * Handle both synchronous HTMLElement and Promise<HTMLElement> cases
-     */
-    if (pluginsContent instanceof Promise) {
-      // Handle async render: resolve the promise and update DOM when ready
-      pluginsContent.then((resolvedElement) => {
-        this.toolRenderedElement = resolvedElement;
-        this.addToolDataAttributes(resolvedElement, wrapper);
-        contentNode.appendChild(resolvedElement);
-        this.readyResolver?.();
-      }).catch((error) => {
-        log(`Tool render promise rejected: %o`, 'error', error);
-        this.readyResolver?.();
-      });
-    } else {
-      // Handle synchronous render
-      this.toolRenderedElement = pluginsContent;
-      this.addToolDataAttributes(pluginsContent, wrapper);
-      contentNode.appendChild(pluginsContent);
-      this.readyResolver?.();
-    }
-
-    /**
-     * Block Tunes might wrap Block's content node to provide any UI changes
-     *
-     * <tune2wrapper>
-     *   <tune1wrapper>
-     *     <blockContent />
-     *   </tune1wrapper>
-     * </tune2wrapper>
-     */
-    const wrappedContentNode: HTMLElement = [...this.tunesInstances.values(), ...this.defaultTunesInstances.values()]
-      .reduce((acc, tune) => {
-        if (isFunction(tune.wrap)) {
-          try {
-            return tune.wrap(acc);
-          } catch (e) {
-            log(`Tune ${tune.constructor.name} wrap method throws an Error %o`, 'warn', e);
-
-            return acc;
-          }
-        }
-
-        return acc;
-      }, contentNode);
-
-    wrapper.appendChild(wrappedContentNode);
-
-    return wrapper;
-  }
-
-  /**
-   * Add data attributes to tool-rendered element based on tool name
-   * @param element - The tool-rendered element
-   * @param blockWrapper - Block wrapper that hosts the tool render
-   * @private
-   */
-  private addToolDataAttributes(element: HTMLElement, blockWrapper: HTMLDivElement): void {
-    /**
-     * Add data-blok-component attribute to identify the tool type used for the block.
-     * Some tools (like Paragraph) add their own class names, but we can rely on the tool name for all cases.
-     */
-    if (this.name && !blockWrapper.hasAttribute('data-blok-component')) {
-      blockWrapper.setAttribute('data-blok-component', this.name);
-    }
-
-    const placeholderAttribute = 'data-blok-placeholder';
-    const placeholder = this.config?.placeholder;
-    const placeholderText = typeof placeholder === 'string' ? placeholder.trim() : '';
-
-    /**
-     * Paragraph tool handles its own placeholder via data-blok-placeholder-active attribute
-     * with focus-only classes, so we skip the block-level placeholder for it.
-     */
-    if (this.name === 'paragraph') {
-      return;
-    }
-
-    /**
-     * Placeholder styling classes using Tailwind arbitrary variants.
-     * Applied to ::before pseudo-element only when element is empty.
-     * Uses arbitrary properties for `content: attr(data-blok-placeholder)`.
-     */
-    const placeholderClasses = [
-      'empty:before:pointer-events-none',
-      'empty:before:text-gray-text',
-      'empty:before:cursor-text',
-      'empty:before:content-[attr(data-blok-placeholder)]',
-      '[&[data-blok-empty=true]]:before:pointer-events-none',
-      '[&[data-blok-empty=true]]:before:text-gray-text',
-      '[&[data-blok-empty=true]]:before:cursor-text',
-      '[&[data-blok-empty=true]]:before:content-[attr(data-blok-placeholder)]',
-    ];
-
-    if (placeholderText.length > 0) {
-      element.setAttribute(placeholderAttribute, placeholderText);
-      element.classList.add(...placeholderClasses);
-
-      return;
-    }
-
-    if (placeholder === false && element.hasAttribute(placeholderAttribute)) {
-      element.removeAttribute(placeholderAttribute);
-    }
-  }
-
-  /**
-   * Instantiate Block Tunes
-   * @param tunesData - current Block tunes data
-   * @private
-   */
-  private composeTunes(tunesData: { [name: string]: BlockTuneData }): void {
-    Array.from(this.tunes.values()).forEach((tune) => {
-      const collection = tune.isInternal ? this.defaultTunesInstances : this.tunesInstances;
-
-      collection.set(tune.name, tune.create(tunesData[tune.name], this.blockAPI));
-    });
-
-    /**
-     * Check if there is some data for not available tunes
-     */
-    Object.entries(tunesData).forEach(([name, data]) => {
-      if (!this.tunesInstances.has(name)) {
-        this.unavailableTunesData[name] = data;
-      }
-    });
-  }
-
-  /**
-   * Is fired when text input or contentEditable is focused
-   */
-  private handleFocus = (): void => {
-    /**
-     * Drop inputs cache to query the new ones
-     */
-    this.dropInputsCache();
-
-    /**
-     * Update current input
-     */
-    this.updateCurrentInput();
-  };
-
-  /**
-   * Adds focus event listeners to all inputs and contenteditable
-   */
-  private addInputEvents(): void {
-    this.inputs.forEach(input => {
-      input.addEventListener('focus', this.handleFocus);
-
-      /**
-       * If input is native input add oninput listener to observe changes
-       */
-      if ($.isNativeInput(input)) {
-        input.addEventListener('input', this.didMutated as EventListener);
-      }
-    });
-  }
-
-  /**
-   * removes focus event listeners from all inputs and contenteditable
-   */
-  private removeInputEvents(): void {
-    this.inputs.forEach(input => {
-      input.removeEventListener('focus', this.handleFocus);
-
-      if ($.isNativeInput(input)) {
-        input.removeEventListener('input', this.didMutated as EventListener);
-      }
-    });
+    return this.toolRenderer.pluginsContent;
   }
 
   /**
    * Is fired when DOM mutation has been happened
    * @param mutationsOrInputEvent - actual changes
    *   - MutationRecord[] - any DOM change
-   *   - InputEvent — <input> change
+   *   - InputEvent — <input> change (from InputManager callback)
    *   - undefined — manual triggering of block.dispatchChange()
    */
   private readonly didMutated = (mutationsOrInputEvent: MutationRecord[] | InputEvent | undefined = undefined): void => {
-    /**
-     * Block API have dispatchChange() method. In this case, mutations list will be undefined.
-     */
-    const isManuallyDispatched = mutationsOrInputEvent === undefined;
+    const result = this.mutationHandler.handleMutation(mutationsOrInputEvent);
 
-    /**
-     * True if didMutated has been called as "input" event handler
-     */
-    const isInputEventHandler = mutationsOrInputEvent instanceof InputEvent;
-
-    /**
-     * If tool updates its own root element, we need to renew it in our memory
-     */
-    if (!isManuallyDispatched && !isInputEventHandler) {
-      this.detectToolRootChange(mutationsOrInputEvent);
+    if (result.newToolRoot) {
+      // Update the tool renderer's reference to the new root element
+      this.toolRenderer.toolRenderedElement = result.newToolRoot;
     }
 
-    /**
-     * We won't fire a Block mutation event if mutation contain only nodes marked with 'data-blok-mutation-free' attributes
-     */
-    const shouldFireUpdate = (() => {
-      if (isManuallyDispatched || isInputEventHandler) {
-        return true;
-      }
-
-      /**
-       * Update from 2023, Feb 17:
-       *    Changed mutationsOrInputEvent.some() to mutationsOrInputEvent.every()
-       *    since there could be a real mutations same-time with mutation-free changes,
-       *    for example when Block Tune change: block is changing along with FakeCursor (mutation-free) removing
-       *    — we should fire 'didMutated' event in that case
-       */
-      const everyRecordIsMutationFree = mutationsOrInputEvent.length > 0 && mutationsOrInputEvent.every((record) => {
-        const { addedNodes, removedNodes, target } = record;
-        const changedNodes = [
-          ...Array.from(addedNodes),
-          ...Array.from(removedNodes),
-          target,
-        ];
-
-        return changedNodes.every((node) => {
-          const elementToCheck: Element | null = !$.isElement(node)
-            ? node.parentElement ?? null
-            : node;
-
-          if (elementToCheck === null) {
-            return false;
-          }
-
-          return elementToCheck.closest('[data-blok-mutation-free="true"]') !== null;
-        });
-      });
-
-      return !everyRecordIsMutationFree;
-    })();
-
-    /**
-     * In case some mutation free elements are added or removed, do not trigger didMutated event
-     */
-    if (!shouldFireUpdate) {
+    if (!result.shouldFireUpdate) {
       return;
     }
 
-    this.dropInputsCache();
-
-    /**
-     * Update current input
-     */
-    this.updateCurrentInput();
-
-    /**
-     * We mark inputs with 'data-blok-empty' attribute, so new inputs should be marked as well
-     */
+    this.inputManager.dropCache();
+    this.inputManager.updateCurrentInput();
     this.toggleInputsEmptyMark();
-
     this.call(BlockToolAPI.UPDATED);
-
-    /**
-     * Emit a Block Event with current Block instance.
-     * Block Manager subscribed to these events
-     */
     this.emit('didMutated', this);
   };
-
-  /**
-   * Listen common blok Dom Changed event and detect mutations related to the  Block
-   */
-  private watchBlockMutations(): void {
-    /**
-     * Save callback to a property to remove it on Block destroy
-     * @param payload - event payload
-     */
-    this.redactorDomChangedCallback = (payload) => {
-      const { mutations } = payload;
-
-      const toolElement = this.toolRenderedElement;
-
-      if (toolElement === null) {
-        return;
-      }
-
-      /**
-       * Filter mutations to only include those that belong to this block.
-       * Previously, all mutations were passed when any belonged to the block,
-       * which could include mutations from other parts of the blok.
-       */
-      const blockMutations = mutations.filter(record => isMutationBelongsToElement(record, toolElement));
-
-      if (blockMutations.length > 0) {
-        this.didMutated(blockMutations);
-      }
-    };
-
-    this.blokEventBus?.on(RedactorDomChanged, this.redactorDomChangedCallback);
-  }
 
   /**
    * Remove redactor dom change event listener.
    * Can be called to stop watching mutations before destroying the block.
    */
   public unwatchBlockMutations(): void {
-    this.blokEventBus?.off(RedactorDomChanged, this.redactorDomChangedCallback);
+    this.mutationHandler.unwatch();
   }
 
   /**
@@ -1403,48 +788,8 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * especially when mutation observers haven't been set up yet.
    */
   public refreshToolRootElement(): void {
-    const contentNode = this.holder.querySelector(createSelector(DATA_ATTR.elementContent));
-
-    if (!contentNode) {
-      return;
-    }
-
-    const firstChild = contentNode.firstElementChild as HTMLElement | null;
-
-    if (firstChild && firstChild !== this.toolRenderedElement) {
-      this.toolRenderedElement = firstChild;
-      this.dropInputsCache();
-    }
-  }
-
-  /**
-   * Sometimes Tool can replace own main element, for example H2 -> H4 or UL -> OL
-   * We need to detect such changes and update a link to tools main element with the new one
-   * @param mutations - records of block content mutations
-   */
-  private detectToolRootChange(mutations: MutationRecord[]): void {
-    const toolElement = this.toolRenderedElement;
-
-    if (toolElement === null) {
-      return;
-    }
-
-    mutations.forEach(record => {
-      const toolRootHasBeenUpdated = Array.from(record.removedNodes).includes(toolElement);
-
-      if (toolRootHasBeenUpdated) {
-        const newToolElement = record.addedNodes[record.addedNodes.length - 1];
-
-        this.toolRenderedElement = newToolElement as HTMLElement;
-      }
-    });
-  }
-
-  /**
-   * Clears inputs cached value
-   */
-  private dropInputsCache(): void {
-    this.cachedInputs = [];
+    this.toolRenderer.refreshToolRootElement(this.holder);
+    this.inputManager.dropCache();
   }
 
   /**

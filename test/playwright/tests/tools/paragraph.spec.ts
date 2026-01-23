@@ -434,12 +434,13 @@ test.describe('paragraph tool', () => {
         data: createParagraphData('Test paragraph content'),
       });
 
-      const savedData = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('paragraph');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
       expect(savedData?.blocks[0].data.text).toBe('Test paragraph content');
     });
 
@@ -455,10 +456,11 @@ test.describe('paragraph tool', () => {
       await page.keyboard.press('End');
       await page.keyboard.type(' Updated');
 
-      const savedData = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
       expect(savedData?.blocks[0].data.text).toBe('Original Updated');
     });
 
@@ -503,11 +505,12 @@ test.describe('paragraph tool', () => {
         { timeout: 5000 }
       );
 
-      const savedData = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
       // Bold formatting should be saved as <b> tag
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
       expect(savedData?.blocks[0].data.text).toMatch(/<b>|<strong>/);
     });
   });

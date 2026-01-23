@@ -8,6 +8,34 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { BlokMobileLayoutToggled } from '../../../src/components/events';
 import { Shortcuts } from '../../../src/components/utils/shortcuts';
 
+/**
+ * Creates a mock ToolsCollection with proper forEach implementation
+ * instead of binding Map.prototype.forEach
+ */
+const createToolsCollection = <T extends BlockToolAdapter>(entries: [string, T][]): ToolsCollection<T> => {
+  const map = new Map<string, T>(entries);
+
+  return {
+    get: (key: string) => map.get(key),
+    set: (key: string, value: T) => map.set(key, value),
+    has: (key: string) => map.has(key),
+    delete: (key: string) => map.delete(key),
+    clear: () => map.clear(),
+    get size(): number {
+      return map.size;
+    },
+    keys: () => map.keys(),
+    values: () => map.values(),
+    entries: () => map.entries(),
+    forEach: (callbackfn: (value: T, key: string, map: Map<string, T>) => void, thisArg?: unknown) => {
+      for (const [key, value] of map.entries()) {
+        callbackfn.call(thisArg, value, key, map);
+      }
+    },
+    [Symbol.iterator]: () => map[Symbol.iterator](),
+  } as unknown as ToolsCollection<T>;
+};
+
 // Use vi.hoisted to create mock instance that can be shared between factory and tests
 const mockPopoverInstance = vi.hoisted(() => ({
   show: vi.fn(),
@@ -127,11 +155,10 @@ describe('Toolbox', () => {
       shortcut: 'CMD+T',
     } as unknown as BlockToolAdapter;
 
-    // Mock ToolsCollection
-    const tools = new Map() as unknown as ToolsCollection<BlockToolAdapter>;
-
-    tools.set('testTool', blockToolAdapter);
-    tools.forEach = Map.prototype.forEach.bind(tools);
+    // Mock ToolsCollection using helper
+    const tools = createToolsCollection([
+      ['testTool', blockToolAdapter],
+    ]);
 
     // Mock API
     const api = {
@@ -223,9 +250,7 @@ describe('Toolbox', () => {
 
   describe('isEmpty', () => {
     it('should return true when no tools have toolbox configuration', () => {
-      const emptyTools = new Map() as unknown as ToolsCollection<BlockToolAdapter>;
-
-      emptyTools.forEach = Map.prototype.forEach.bind(emptyTools);
+      const emptyTools = createToolsCollection([]);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -254,10 +279,9 @@ describe('Toolbox', () => {
         toolbox: undefined,
       } as unknown as BlockToolAdapter;
 
-      const tools = new Map() as unknown as ToolsCollection<BlockToolAdapter>;
-
-      tools.set('noToolboxTool', toolWithoutToolbox);
-      tools.forEach = Map.prototype.forEach.bind(tools);
+      const tools = createToolsCollection([
+        ['noToolboxTool', toolWithoutToolbox],
+      ]);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -334,9 +358,7 @@ describe('Toolbox', () => {
     });
 
     it('should not open when toolbox is empty', () => {
-      const emptyTools = new Map() as unknown as ToolsCollection<BlockToolAdapter>;
-
-      emptyTools.forEach = Map.prototype.forEach.bind(emptyTools);
+      const emptyTools = createToolsCollection([]);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -385,11 +407,11 @@ describe('Toolbox', () => {
       });
 
       toolbox.opened = false;
-      const openSpy = vi.spyOn(toolbox, 'open');
-
       toolbox.toggle();
 
-      expect(openSpy).toHaveBeenCalled();
+      // Verify actual outcome - toolbox should be opened
+      expect(toolbox.opened).toBe(true);
+      expect(mockPopoverInstance.show).toHaveBeenCalled();
     });
 
     it('should close when opened', () => {
@@ -401,11 +423,11 @@ describe('Toolbox', () => {
       });
 
       toolbox.opened = true;
-      const closeSpy = vi.spyOn(toolbox, 'close');
-
       toolbox.toggle();
 
-      expect(closeSpy).toHaveBeenCalled();
+      // Verify actual outcome - toolbox should be closed
+      expect(toolbox.opened).toBe(false);
+      expect(mockPopoverInstance.hide).toHaveBeenCalled();
     });
   });
 
@@ -426,7 +448,17 @@ describe('Toolbox', () => {
 
       await toolbox.toolButtonActivated('testTool', blockDataOverrides);
 
-      expect(mocks.api.blocks.insert).toHaveBeenCalled();
+      // Verify actual outcome - block should be inserted with correct parameters
+      // Since blockAPI.isEmpty is true, it replaces at index 0
+      // blockDataOverrides is merged with composeBlockData result
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        { test: 'data' },
+        undefined,
+        0,
+        undefined,
+        true
+      );
     });
 
     it('should insert block with overridden data', async () => {
@@ -445,7 +477,9 @@ describe('Toolbox', () => {
 
       await toolbox.toolButtonActivated('testTool', blockDataOverrides);
 
+      // Verify actual outcome - composeBlockData should be called and insert should happen
       expect(mocks.api.blocks.composeBlockData).toHaveBeenCalledWith('testTool');
+      expect(mocks.api.blocks.insert).toHaveBeenCalled();
     });
   });
 
@@ -458,10 +492,21 @@ describe('Toolbox', () => {
         i18n: mockI18n,
       });
 
+      // First open the toolbox to establish initial state
+      toolbox.open();
+      expect(toolbox.opened).toBe(true);
+      expect(mockPopoverInstance.show).toHaveBeenCalled();
+
+      // Clear the mock to track fresh calls
+      vi.clearAllMocks();
+
       toolbox.handleMobileLayoutToggle();
 
+      // Verify actual outcome - popover should be destroyed and reinitialized
       expect(mockPopoverInstance.hide).toHaveBeenCalled();
       expect(mockPopoverInstance.destroy).toHaveBeenCalled();
+      // Note: opened state remains true since handleMobileLayoutToggle only reinitializes the popover
+      expect(toolbox.opened).toBe(true);
     });
   });
 
@@ -476,13 +521,15 @@ describe('Toolbox', () => {
 
       const element = toolbox.getElement();
 
-      document.body.appendChild(element!);
+      if (element) {
+        document.body.appendChild(element);
 
-      expect(document.body.contains(element!)).toBe(true);
+        expect(document.body.contains(element)).toBe(true);
 
-      toolbox.destroy();
+        toolbox.destroy();
 
-      expect(document.body.contains(element!)).toBe(false);
+        expect(document.body.contains(element)).toBe(false);
+      }
     });
 
     it('should remove popover event listener', () => {
@@ -525,11 +572,15 @@ describe('Toolbox', () => {
         i18n: mockI18n,
       });
 
-      const superDestroySpy = vi.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(toolbox)), 'destroy');
+      const element = toolbox.getElement();
+      if (element) {
+        document.body.appendChild(element);
 
-      toolbox.destroy();
+        toolbox.destroy();
 
-      expect(superDestroySpy).toHaveBeenCalled();
+        // Verify actual outcome - element should be removed from DOM (side effect of super.destroy())
+        expect(document.body.contains(element)).toBe(false);
+      }
     });
   });
 
@@ -547,7 +598,7 @@ describe('Toolbox', () => {
 
       // Simulate popover close event
       const closeHandler = (mockPopoverInstance.on as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call) => call[0] === PopoverEvent.Closed
+        (call): call is [string, () => void] => call[0] === PopoverEvent.Closed
       )?.[1];
 
       if (closeHandler) {
@@ -575,10 +626,9 @@ describe('Toolbox', () => {
         ] as ToolboxConfigEntry[],
       } as unknown as BlockToolAdapter;
 
-      const tools = new Map() as unknown as ToolsCollection<BlockToolAdapter>;
-
-      tools.set('multiTool', toolWithMultipleEntries);
-      tools.forEach = Map.prototype.forEach.bind(tools);
+      const tools = createToolsCollection([
+        ['multiTool', toolWithMultipleEntries],
+      ]);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -600,7 +650,15 @@ describe('Toolbox', () => {
         i18n: mockI18n,
       });
 
-      expect(Shortcuts.add).toHaveBeenCalled();
+      // Verify actual outcome - shortcut should be registered with correct name and handler
+      const addCalls = vi.mocked(Shortcuts.add).mock.calls;
+      expect(addCalls.length).toBeGreaterThan(0);
+      const shortcutConfig = addCalls[0]?.[0];
+      expect(shortcutConfig).toMatchObject({
+        name: 'CMD+T',
+        on: mocks.api.ui.nodes.redactor,
+      });
+      expect(shortcutConfig.handler).toBeInstanceOf(Function);
     });
 
     it('should not enable shortcuts for tools without shortcut', () => {
@@ -613,10 +671,9 @@ describe('Toolbox', () => {
         shortcut: undefined,
       } as unknown as BlockToolAdapter;
 
-      const tools = new Map() as unknown as ToolsCollection<BlockToolAdapter>;
-
-      tools.set('noShortcutTool', toolWithoutShortcut);
-      tools.forEach = Map.prototype.forEach.bind(tools);
+      const tools = createToolsCollection([
+        ['noShortcutTool', toolWithoutShortcut],
+      ]);
 
       vi.clearAllMocks();
 
@@ -704,9 +761,11 @@ describe('Toolbox', () => {
 
       await toolbox.toolButtonActivated('testTool', {});
 
+      // Verify actual outcome - event should be emitted AND block should be inserted
       expect(emitSpy).toHaveBeenCalledWith(ToolboxEvent.BlockAdded, {
         block: mocks.blockAPI,
       });
+      expect(mocks.api.blocks.insert).toHaveBeenCalled();
     });
 
     it('should close toolbar after inserting block', async () => {
@@ -720,9 +779,13 @@ describe('Toolbox', () => {
         i18n: mockI18n,
       });
 
+      const emitSpy = vi.spyOn(toolbox, 'emit');
       await toolbox.toolButtonActivated('testTool', {});
 
+      // Verify actual outcome - toolbar should be closed, block should be inserted, and event should be emitted
       expect(mocks.api.toolbar.close).toHaveBeenCalled();
+      expect(mocks.api.blocks.insert).toHaveBeenCalled();
+      expect(emitSpy).toHaveBeenCalledWith(ToolboxEvent.BlockAdded, expect.anything());
     });
 
     it('should not insert block when current block is null', async () => {
@@ -778,6 +841,8 @@ describe('Toolbox', () => {
       });
 
       vi.mocked(mocks.api.blocks.convert).mockRejectedValue(new Error('Conversion failed'));
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(mocks.blockAPI);
 
       const addCalls = vi.mocked(Shortcuts.add).mock.calls;
       const addCall = addCalls[0]?.[0];
@@ -787,7 +852,17 @@ describe('Toolbox', () => {
 
         await addCall.handler(event);
 
-        expect(mocks.api.blocks.insert).toHaveBeenCalled();
+        // Verify actual outcome - block should be inserted when conversion fails
+        // Since blockAPI.isEmpty is true, it replaces at index 0
+        expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+          'testTool',
+          undefined,
+          undefined,
+          0,
+          undefined,
+          true
+        );
+        expect(event.preventDefault).toHaveBeenCalled();
       }
     });
 

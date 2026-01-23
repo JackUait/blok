@@ -12,7 +12,7 @@ describe('PopoverItemSeparator', () => {
     const element = separator.getElement();
 
     expect(element).toBeInstanceOf(HTMLElement);
-    expect(element.getAttribute('data-blok-testid')).toBe('popover-item-separator');
+    expect(element).toHaveAttribute('data-blok-testid', 'popover-item-separator');
     expect(element.childElementCount).toBe(1);
 
     const line = element.firstElementChild as HTMLElement | null;
@@ -26,9 +26,9 @@ describe('PopoverItemSeparator', () => {
     const element = separator.getElement();
 
     separator.toggleHidden(true);
-    expect(element.getAttribute('data-blok-hidden')).toBe('true');
+    expect(element).toHaveAttribute('data-blok-hidden', 'true');
 
     separator.toggleHidden(false);
-    expect(element.hasAttribute('data-blok-hidden')).toBe(false);
+    expect(element).not.toHaveAttribute('data-blok-hidden');
   });
 });

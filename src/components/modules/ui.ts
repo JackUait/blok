@@ -3,41 +3,30 @@
  * Module UI
  * @type {UI}
  */
-import { Module } from '../__module';
-import { Dom as $, toggleEmptyMark } from '../dom';
-import { debounce, getValidUrl, isEmpty, openTab, throttle } from '../utils';
-
-import { SelectionUtils as Selection } from '../selection';
-import { Flipper } from '../flipper';
-import type { Block } from '../block';
-import { mobileScreenBreakpoint } from '../utils';
-
-/**
- * Horizontal distance from the content edge where block hover is still detected.
- * Extends to the left for LTR layouts, to the right for RTL.
- */
-const HOVER_ZONE_SIZE = 100;
-
-/**
- * Keys that require caret capture on keydown before tools can intercept them.
- * When tools call event.preventDefault() on keydown, beforeinput never fires,
- * so we capture caret position for these keys in the capture phase.
- */
-const KEYS_REQUIRING_CARET_CAPTURE = new Set(['Enter', 'Backspace', 'Delete', 'Tab']);
-
 import styles from '../../styles/main.css?inline';
-import { BlockHovered } from '../events/BlockHovered';
+import { Module } from '../__module';
 import {
   DATA_ATTR,
   BLOK_INTERFACE_VALUE,
-  selectionChangeDebounceTimeout,
 } from '../constants';
+import { Dom as $, toggleEmptyMark } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
+import { Flipper } from '../flipper';
+import { SelectionUtils as Selection } from '../selection/index';
+import { debounce, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
+
+// Controllers and handlers
+import { BlockHoverController } from './uiControllers/controllers/blockHover';
+import { KeyboardController } from './uiControllers/controllers/keyboard';
+import { SelectionController } from './uiControllers/controllers/selection';
+import { createDocumentClickedHandler } from './uiControllers/handlers/click';
+import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
+
 /**
  * HTML Elements used for UI
  */
-interface UINodes {
+interface UINodes extends Record<string, unknown> {
   holder: HTMLElement;
   wrapper: HTMLElement;
   redactor: HTMLElement;
@@ -60,6 +49,26 @@ interface UINodes {
  * @property {Element} nodes.redactor - <blok-redactor>
  */
 export class UI extends Module<UINodes> {
+  /**
+   * Controllers for UI state management
+   */
+  private keyboardController: KeyboardController | null = null;
+  private selectionController: SelectionController | null = null;
+  private blockHoverController: BlockHoverController | null = null;
+
+  /**
+   * Handlers for simple event behaviors
+   */
+  private documentClickedHandler: ((event: MouseEvent) => void) | null = null;
+  private redactorTouchHandler: ((event: Event) => void) | null = null;
+
+  /**
+   * Reset the block hover state (used after drag cancellation to allow toolbar to show again)
+   */
+  public resetBlockHoverState(): void {
+    this.blockHoverController?.resetHoverState();
+  }
+
   /**
    * Return Width of center column of Blok
    * @returns {DOMRect}
@@ -111,13 +120,6 @@ export class UI extends Module<UINodes> {
   }, 200);
 
   /**
-   * Handle selection change to manipulate Inline Toolbar appearance
-   */
-  private selectionChangeDebounced = debounce(() => {
-    this.selectionChanged();
-  }, selectionChangeDebounceTimeout);
-
-  /**
    * Making main interface
    */
   public async prepare(): Promise<void> {
@@ -141,6 +143,71 @@ export class UI extends Module<UINodes> {
      * for proper multi-instance cleanup
      */
     registerAnnouncer();
+
+    /**
+     * Initialize controllers after Blok modules are ready
+     */
+    this.initializeControllers();
+
+    /**
+     * Enable selection controller after initialization.
+     * This is needed because bindReadOnlyInsensitiveListeners() is called in make()
+     * before initializeControllers(), so the selectionController doesn't exist yet.
+     */
+    this.selectionController?.enable();
+  }
+
+  /**
+   * Initialize controllers with their dependencies
+   */
+  private initializeControllers(): void {
+    /**
+     * Keyboard controller needs someToolbarOpened callback to avoid circular dependencies
+     */
+    this.keyboardController = new KeyboardController({
+      config: this.config,
+      eventsDispatcher: this.eventsDispatcher,
+      someToolbarOpened: () => this.someToolbarOpened,
+    });
+    this.keyboardController.state = this.Blok;
+    this.keyboardController.setRedactorElement(this.nodes.redactor);
+
+    /**
+     * Selection controller needs wrapper element for click detection
+     */
+    this.selectionController = new SelectionController({
+      config: this.config,
+      eventsDispatcher: this.eventsDispatcher,
+    });
+    this.selectionController.state = this.Blok;
+    this.selectionController.setWrapperElement(this.nodes.wrapper);
+
+    /**
+     * Block hover controller needs content rect getter and RTL flag
+     */
+    this.blockHoverController = new BlockHoverController({
+      config: this.config,
+      eventsDispatcher: this.eventsDispatcher,
+      contentRectGetter: () => this.contentRect,
+      isRtl: this.isRtl,
+    });
+    this.blockHoverController.state = this.Blok;
+
+    /**
+     * Create handlers for click and touch events
+     */
+    this.documentClickedHandler = createDocumentClickedHandler({
+      Blok: this.Blok,
+      nodes: {
+        holder: this.nodes.holder,
+        redactor: this.nodes.redactor,
+      },
+    });
+
+    this.redactorTouchHandler = createRedactorTouchHandler({
+      Blok: this.Blok,
+      redactorElement: this.nodes.redactor,
+    });
   }
 
   /**
@@ -148,9 +215,11 @@ export class UI extends Module<UINodes> {
    *
    * If readOnly is true:
    * - removes all listeners from main UI module elements
+   * - sets contenteditable="false" on all block content elements
    *
    * if readOnly is false:
    * - enables all listeners to UI module elements
+   * - sets contenteditable="true" on all block content elements
    * @param {boolean} readOnlyEnabled - "read only" state
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
@@ -163,6 +232,11 @@ export class UI extends Module<UINodes> {
        *
        */
       this.unbindReadOnlySensitiveListeners();
+
+      /**
+       * Set contenteditable="false" on all block content elements
+       */
+      this.updateBlocksContentEditable(false);
 
       return;
     }
@@ -179,6 +253,11 @@ export class UI extends Module<UINodes> {
      */
     bindListeners();
 
+    /**
+     * Set contenteditable="true" on all block content elements
+     */
+    this.updateBlocksContentEditable(true);
+
     const idleCallback = window.requestIdleCallback;
 
     if (typeof idleCallback !== 'function') {
@@ -191,6 +270,22 @@ export class UI extends Module<UINodes> {
     idleCallback(bindListeners, {
       timeout: 2000,
     });
+  }
+
+  /**
+   * Update contenteditable attribute on all block content elements
+   * @param editable - whether blocks should be editable
+   */
+  private updateBlocksContentEditable(editable: boolean): void {
+    const { BlockManager } = this.Blok;
+
+    for (const block of BlockManager.blocks) {
+      const contentEditable = block.holder.querySelector<HTMLElement>('[contenteditable]');
+
+      if (contentEditable) {
+        contentEditable.contentEditable = editable ? 'true' : 'false';
+      }
+    }
   }
 
   /**
@@ -225,15 +320,16 @@ export class UI extends Module<UINodes> {
       return true;
     }
 
+    /**
+     * Type guard to check if a module has a flipper property
+     */
+    const hasFlipper = (module: unknown): module is { flipper: Flipper } => {
+      return typeof module === 'object' && module !== null && 'flipper' in module && module.flipper instanceof Flipper;
+    };
 
-    return Object.entries(this.Blok).filter(([_moduleName, moduleClass]) => {
-      return moduleClass.flipper instanceof Flipper;
-    })
-      .some(([_moduleName, moduleClass]) => {
-        return moduleClass.flipper.hasFocus();
-      });
-
-
+    return Object.values(this.Blok).some((moduleClass) => {
+      return hasFlipper(moduleClass) && moduleClass.flipper.hasFocus();
+    });
   }
 
   /**
@@ -265,7 +361,9 @@ export class UI extends Module<UINodes> {
    * @param event - TouchEvent or MouseEvent
    */
   private documentTouchedListener = (event: Event): void => {
-    this.documentTouched(event);
+    if (this.redactorTouchHandler) {
+      this.redactorTouchHandler(event);
+    }
   };
 
   /**
@@ -400,8 +498,6 @@ export class UI extends Module<UINodes> {
    * Adds listeners that should work both in read-only and read-write modes
    */
   private bindReadOnlyInsensitiveListeners(): void {
-    this.listeners.on(document, 'selectionchange', this.selectionChangeDebounced);
-
     this.listeners.on(window, 'resize', this.resizeDebouncer, {
       passive: true,
     });
@@ -415,16 +511,21 @@ export class UI extends Module<UINodes> {
       capture: true,
       passive: true,
     });
+
   }
 
   /**
    * Removes listeners that should work both in read-only and read-write modes
    */
   private unbindReadOnlyInsensitiveListeners(): void {
-    this.listeners.off(document, 'selectionchange', this.selectionChangeDebounced);
     this.listeners.off(window, 'resize', this.resizeDebouncer);
     this.listeners.off(this.nodes.redactor, 'mousedown', this.documentTouchedListener);
     this.listeners.off(this.nodes.redactor, 'touchstart', this.documentTouchedListener);
+
+    /**
+     * Disable selection controller
+     */
+    this.selectionController?.disable();
   }
 
 
@@ -432,51 +533,34 @@ export class UI extends Module<UINodes> {
    * Adds listeners that should work only in read-only mode
    */
   private bindReadOnlySensitiveListeners(): void {
+    /**
+     * Redactor click handler for bottom zone clicks
+     */
     this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: Event) => {
       if (event instanceof MouseEvent) {
         this.redactorClicked(event);
       }
     }, false);
 
-    this.readOnlyMutableListeners.on(document, 'keydown', (event: Event) => {
-      if (event instanceof KeyboardEvent) {
-        this.documentKeydown(event);
-      }
-    }, true);
-
+    /**
+     * Document click handler - uses the click handler from handlers/click.ts
+     */
     this.readOnlyMutableListeners.on(document, 'mousedown', (event: Event) => {
-      if (event instanceof MouseEvent) {
-        this.documentClicked(event);
+      if (event instanceof MouseEvent && this.documentClickedHandler) {
+        this.documentClickedHandler(event);
       }
     }, true);
 
     /**
-     * Capture caret position before any input changes the DOM.
-     * This ensures undo/redo restores the caret to the correct position.
+     * Enable keyboard controller for document keydown handling
+     * Keyboard controller also handles beforeinput and caret capture
      */
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'beforeinput', () => {
-      this.Blok.YjsManager.markCaretBeforeChange();
-    }, true);
+    this.keyboardController?.enable();
 
     /**
-     * Capture caret position on keydown for keys that tools commonly intercept.
-     * Uses capture phase to run before tool handlers.
-     * markCaretBeforeChange() is idempotent - if beforeinput also fires, the second call is ignored.
+     * Enable block hover controller for block hover detection
      */
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'keydown', (event: Event) => {
-      if (!(event instanceof KeyboardEvent)) {
-        return;
-      }
-
-      if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
-        this.Blok.YjsManager.markCaretBeforeChange();
-      }
-    }, true);
-
-    /**
-     * Start watching 'block-hovered' events that is used by Toolbar for moving
-     */
-    this.watchBlockHoveredEvents();
+    this.blockHoverController?.enable();
 
     /**
      * We have custom logic for providing placeholders for contenteditable elements.
@@ -487,129 +571,20 @@ export class UI extends Module<UINodes> {
 
 
   /**
-   * Listen redactor mousemove to emit 'block-hovered' event
-   */
-  private watchBlockHoveredEvents(): void {
-    /**
-     * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove.
-     * Stores block ID to ensure consistent comparison regardless of how the block was detected.
-     */
-    const blockHoveredState: { lastHoveredBlockId: string | null } = {
-      lastHoveredBlockId: null,
-    };
-
-    const handleBlockHovered = (event: Event): void => {
-      if (typeof MouseEvent === 'undefined' || !(event instanceof MouseEvent)) {
-        return;
-      }
-
-      const hoveredBlockElement = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
-
-      /**
-       * If no block element found directly, try the extended hover zone
-       */
-      const zoneBlock = !hoveredBlockElement
-        ? this.findBlockInHoverZone(event.clientX, event.clientY)
-        : null;
-
-      if (zoneBlock !== null && blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
-        blockHoveredState.lastHoveredBlockId = zoneBlock.id;
-
-        this.eventsDispatcher.emit(BlockHovered, {
-          block: zoneBlock,
-          target: zoneBlock.holder,
-        });
-      }
-
-      if (zoneBlock !== null) {
-        return;
-      }
-
-      if (!hoveredBlockElement) {
-        return;
-      }
-
-      const block = this.Blok.BlockManager.getBlockByChildNode(hoveredBlockElement);
-
-      if (!block) {
-        return;
-      }
-
-      /**
-       * For multi-block selection, still emit 'block-hovered' event so toolbar can follow the hovered block.
-       * The toolbar module will handle the logic of whether to move or not.
-       */
-      if (blockHoveredState.lastHoveredBlockId === block.id) {
-        return;
-      }
-
-      blockHoveredState.lastHoveredBlockId = block.id;
-
-      this.eventsDispatcher.emit(BlockHovered, {
-        block,
-        target: event.target as Element,
-      });
-    };
-
-    const throttledHandleBlockHovered = throttle(
-      handleBlockHovered as (...args: unknown[]) => unknown,
-
-      20
-    );
-
-    /**
-     * Listen on document to detect hover in the extended zone
-     * which is outside the wrapper's bounds.
-     * We filter events to only process those over the editor or in the hover zone.
-     */
-    this.readOnlyMutableListeners.on(document, 'mousemove', (event: Event) => {
-      throttledHandleBlockHovered(event);
-    }, {
-      passive: true,
-    });
-  }
-
-  /**
-   * Finds a block by vertical position when cursor is in the extended hover zone.
-   * The zone extends HOVER_ZONE_SIZE pixels from the content edge (left for LTR, right for RTL).
-   * @param clientX - Cursor X position
-   * @param clientY - Cursor Y position
-   * @returns Block at the vertical position, or null if not in hover zone or no block found
-   */
-  private findBlockInHoverZone(clientX: number, clientY: number): Block | null {
-    const contentRect = this.contentRect;
-
-    /**
-     * For LTR: check if cursor is within hover zone to the left of content
-     * For RTL: check if cursor is within hover zone to the right of content
-     */
-    const isInHoverZone = this.isRtl
-      ? clientX > contentRect.right && clientX <= contentRect.right + HOVER_ZONE_SIZE
-      : clientX < contentRect.left && clientX >= contentRect.left - HOVER_ZONE_SIZE;
-
-    if (!isInHoverZone) {
-      return null;
-    }
-
-    /**
-     * Find block by Y position
-     */
-    for (const block of this.Blok.BlockManager.blocks) {
-      const rect = block.holder.getBoundingClientRect();
-
-      if (clientY >= rect.top && clientY <= rect.bottom) {
-        return block;
-      }
-    }
-
-    return null;
-  }
-
-  /**
    * Unbind events that should work only in read-only mode
    */
   private unbindReadOnlySensitiveListeners(): void {
     this.readOnlyMutableListeners.clearAll();
+
+    /**
+     * Disable keyboard controller
+     */
+    this.keyboardController?.disable();
+
+    /**
+     * Disable block hover controller
+     */
+    this.blockHoverController?.disable();
   }
 
   /**
@@ -625,517 +600,6 @@ export class UI extends Module<UINodes> {
      * Detect mobile version
      */
     this.setIsMobile();
-  }
-
-  /**
-   * All keydowns on document
-   * @param {KeyboardEvent} event - keyboard event
-   */
-  private documentKeydown(event: KeyboardEvent): void {
-    const key = event.key ?? '';
-
-    switch (key) {
-      case 'Enter':
-        this.enterPressed(event);
-        break;
-
-      case 'Backspace':
-      case 'Delete':
-        this.backspacePressed(event);
-        break;
-
-      case 'Escape':
-        this.escapePressed(event);
-        break;
-
-      case 'Tab':
-        this.tabPressed(event);
-        break;
-
-      case 'z':
-      case 'Z':
-        this.undoRedoPressed(event);
-        break;
-
-      default:
-        this.defaultBehaviour(event);
-        break;
-    }
-  }
-
-  /**
-   * Handle Tab key press at document level for multi-select indent/outdent
-   * @param {KeyboardEvent} event - keyboard event
-   */
-  private tabPressed(event: KeyboardEvent): void {
-    const { BlockSelection } = this.Blok;
-
-    /**
-     * Only handle Tab when blocks are selected (for multi-select indent)
-     * Otherwise, let the default behavior handle it (e.g., toolbar navigation)
-     */
-    if (!BlockSelection.anyBlockSelected) {
-      this.defaultBehaviour(event);
-
-      return;
-    }
-
-    /**
-     * Forward to BlockEvents to handle the multi-select indent/outdent.
-     * BlockEvents.keydown will call preventDefault if needed.
-     */
-    this.Blok.BlockEvents.keydown(event);
-
-    /**
-     * When blocks are selected, always prevent default Tab behavior (focus navigation)
-     * even if the indent operation couldn't be performed (e.g., mixed block types).
-     * This ensures Tab doesn't unexpectedly move focus or trigger single-block indent.
-     * We call preventDefault AFTER BlockEvents.keydown so that check for defaultPrevented passes.
-     * We also stop propagation to prevent the event from reaching block-level handlers
-     * (like ListItem's handleKeyDown) which might try to handle the Tab independently.
-     */
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
-  /**
-   * Ignore all other document's keydown events
-   * @param {KeyboardEvent} event - keyboard event
-   */
-  private defaultBehaviour(event: KeyboardEvent): void {
-    const { currentBlock } = this.Blok.BlockManager;
-    const target = event.target;
-    const isTargetElement = target instanceof HTMLElement;
-    const keyDownOnBlok = isTargetElement ? target.closest('[data-blok-testid="blok-editor"]') : null;
-    const isMetaKey = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-
-    /**
-     * Ignore keydowns from inside the BlockSettings popover (e.g., search input)
-     * to prevent closing the popover when typing
-     */
-    if (isTargetElement && this.Blok.BlockSettings.contains(target)) {
-      return;
-    }
-
-    /**
-     * Handle navigation mode keys even when focus is outside the editor
-     * Skip if event was already handled (e.g., by block holder listener)
-     */
-    if (this.Blok.BlockSelection.navigationModeEnabled && !event.defaultPrevented) {
-      this.Blok.BlockEvents.keydown(event);
-    }
-
-    if (this.Blok.BlockSelection.navigationModeEnabled) {
-      return;
-    }
-
-    /**
-     * When some block is selected, but the caret is not set inside the blok, treat such keydowns as keydown on selected block.
-     */
-    if (currentBlock !== undefined && keyDownOnBlok === null) {
-      this.Blok.BlockEvents.keydown(event);
-
-      return;
-    }
-
-    /**
-     * Ignore keydowns on blok and meta keys
-     */
-    if (keyDownOnBlok || (currentBlock && isMetaKey)) {
-      return;
-    }
-
-    /**
-     * Remove all highlights and remove caret
-     */
-    this.Blok.BlockManager.unsetCurrentBlock();
-
-    /**
-     * Close Toolbar
-     */
-    this.Blok.Toolbar.close();
-  }
-
-  /**
-   * @param {KeyboardEvent} event - keyboard event
-   */
-  private backspacePressed(event: KeyboardEvent): void {
-    /**
-     * Ignore backspace/delete from inside the BlockSettings popover (e.g., search input)
-     */
-    if (this.Blok.BlockSettings.contains(event.target as HTMLElement)) {
-      return;
-    }
-
-    const { BlockManager, BlockSelection, Caret } = this.Blok;
-
-    const selectionExists = Selection.isSelectionExists;
-    const selectionCollapsed = Selection.isCollapsed;
-
-    /**
-     * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
-     * remove selected blocks
-     */
-    const shouldRemoveSelection = BlockSelection.anyBlockSelected && (
-      !selectionExists ||
-      selectionCollapsed === true ||
-      this.Blok.CrossBlockSelection.isCrossBlockSelectionStarted
-    );
-
-    if (!shouldRemoveSelection) {
-      return;
-    }
-
-    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
-
-    if (insertedBlock) {
-      Caret.setToBlock(insertedBlock, Caret.positions.START);
-    }
-
-    BlockSelection.clearSelection(event);
-
-    /**
-     * Stop propagations
-     * Manipulation with BlockSelections is handled in global backspacePress because they may occur
-     * with CMD+A or RectangleSelection and they can be handled on document event
-     */
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-  }
-
-  /**
-   * Escape pressed
-   * If some of Toolbar components are opened, then close it otherwise close Toolbar.
-   * If focus is in editor content and no toolbars are open, enable navigation mode.
-   * @param {Event} event - escape keydown event
-   */
-  private escapePressed(event: KeyboardEvent): void {
-    /**
-     * If navigation mode is already enabled, disable it and return
-     */
-    if (this.Blok.BlockSelection.navigationModeEnabled) {
-      this.Blok.BlockSelection.disableNavigationMode(false);
-
-      return;
-    }
-
-    /**
-     * Close BlockSettings first if it's open, regardless of selection state.
-     * This prevents navigation mode from being enabled when the user closes block tunes with Escape.
-     */
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
-
-      return;
-    }
-
-    /**
-     * Clear blocks selection by ESC (but not when entering navigation mode)
-     */
-    if (this.Blok.BlockSelection.anyBlockSelected) {
-      this.Blok.BlockSelection.clearSelection(event);
-
-      return;
-    }
-
-    if (this.Blok.Toolbar.toolbox.opened) {
-      this.Blok.Toolbar.toolbox.close();
-      this.Blok.BlockManager.currentBlock &&
-        this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
-
-      return;
-    }
-
-    /**
-     * If a nested popover is open (like convert-to dropdown),
-     * close only the nested popover, not the entire inline toolbar.
-     * We use stopImmediatePropagation to prevent other keydown listeners
-     * (like the one on block.holder) from also handling this event.
-     */
-    if (this.Blok.InlineToolbar.opened && this.Blok.InlineToolbar.hasNestedPopoverOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      this.Blok.InlineToolbar.closeNestedPopover();
-
-      return;
-    }
-
-    if (this.Blok.InlineToolbar.opened) {
-      this.Blok.InlineToolbar.close();
-
-      return;
-    }
-
-    /**
-     * If focus is inside editor content and no toolbars are open,
-     * enable navigation mode for keyboard-based block navigation
-     */
-    const target = event.target;
-    const isTargetElement = target instanceof HTMLElement;
-    const isInsideRedactor = isTargetElement && this.nodes.redactor.contains(target);
-    const hasCurrentBlock = this.Blok.BlockManager.currentBlock !== undefined;
-
-    if (isInsideRedactor && hasCurrentBlock) {
-      event.preventDefault();
-      this.Blok.Toolbar.close();
-      this.Blok.BlockSelection.enableNavigationMode();
-
-      return;
-    }
-
-    this.Blok.Toolbar.close();
-  }
-
-  /**
-   * Timestamp of last undo/redo call to prevent double-firing
-   */
-  private lastUndoRedoTime = 0;
-
-  /**
-   * Handle Cmd/Ctrl+Z (undo) and Cmd/Ctrl+Shift+Z (redo)
-   * @param {KeyboardEvent} event - keyboard event
-   */
-  private undoRedoPressed(event: KeyboardEvent): void {
-    const isMeta = event.metaKey || event.ctrlKey;
-
-    if (!isMeta) {
-      this.defaultBehaviour(event);
-
-      return;
-    }
-
-    // Prevent double-firing within 50ms
-    const now = Date.now();
-
-    if (now - this.lastUndoRedoTime < 50) {
-      event.preventDefault();
-
-      return;
-    }
-    this.lastUndoRedoTime = now;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (event.shiftKey) {
-      this.Blok.YjsManager.redo();
-    } else {
-      this.Blok.YjsManager.undo();
-    }
-  }
-
-  /**
-   * Enter pressed on document
-   * @param {KeyboardEvent} event - keyboard event
-   */
-  private enterPressed(event: KeyboardEvent): void {
-    const { BlockManager, BlockSelection, BlockEvents } = this.Blok;
-
-    if (this.someToolbarOpened) {
-      return;
-    }
-
-    /**
-     * If navigation mode is enabled, delegate to BlockEvents to handle Enter.
-     * This will set the caret at the end of the current block.
-     */
-    if (BlockSelection.navigationModeEnabled) {
-      BlockEvents.keydown(event);
-
-      return;
-    }
-
-    const hasPointerToBlock = BlockManager.currentBlockIndex >= 0;
-
-    const selectionExists = Selection.isSelectionExists;
-    const selectionCollapsed = Selection.isCollapsed;
-
-    /**
-     * If any block selected and selection doesn't exists on the page (that means no other editable element is focused),
-     * remove selected blocks
-     */
-    if (BlockSelection.anyBlockSelected && (!selectionExists || selectionCollapsed === true)) {
-      /** Clear selection */
-      BlockSelection.clearSelection(event);
-
-      /**
-       * Stop propagations
-       * Manipulation with BlockSelections is handled in global enterPress because they may occur
-       * with CMD+A or RectangleSelection
-       */
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      event.stopPropagation();
-
-      return;
-    }
-
-    /**
-     * If Caret is not set anywhere, event target on Enter is always Element that we handle
-     * In our case it is document.body
-     *
-     * So, BlockManager points some Block and Enter press is on Body
-     * We can create a new block
-     */
-    if (!this.someToolbarOpened && hasPointerToBlock && (event.target as HTMLElement).tagName === 'BODY') {
-      /**
-       * Insert the default typed Block
-       */
-      const newBlock = this.Blok.BlockManager.insert();
-
-      /**
-       * Prevent default enter behaviour to prevent adding a new line (<div><br></div>) to the inserted block
-       */
-      event.preventDefault();
-      this.Blok.Caret.setToBlock(newBlock);
-
-      /**
-       * Move toolbar and show plus button because new Block is empty
-       */
-      this.Blok.Toolbar.moveAndOpen(newBlock);
-    }
-
-    this.Blok.BlockSelection.clearSelection(event);
-  }
-
-  /**
-   * All clicks on document
-   * @param {MouseEvent} event - Click event
-   */
-  private documentClicked(event: MouseEvent): void {
-    /**
-     * Sometimes we emulate click on some UI elements, for example by Enter on Block Settings button
-     * We don't need to handle such events, because they handled in other place.
-     */
-    if (!event.isTrusted) {
-      return;
-    }
-    /**
-     * Close Inline Toolbar when nothing selected
-     * Do not fire check on clicks at the Inline Toolbar buttons
-     */
-    const target = event.target as HTMLElement;
-    const clickedInsideOfBlok = this.nodes.holder.contains(target) || Selection.isAtBlok;
-    const clickedInsideRedactor = this.nodes.redactor.contains(target);
-    const clickedInsideToolbar = this.Blok.Toolbar.contains(target);
-    const clickedInsideInlineToolbar = this.Blok.InlineToolbar.containsNode(target);
-    const clickedInsideBlokSurface = clickedInsideOfBlok || clickedInsideToolbar;
-
-    /**
-     * Check if click is on Block Settings, Settings Toggler, or Plus Button
-     * These elements have their own click handlers and should not trigger default behavior
-     */
-    const isClickedInsideBlockSettings = this.Blok.BlockSettings.contains(target);
-    const isClickedInsideBlockSettingsToggler = this.Blok.Toolbar.nodes.settingsToggler?.contains(target);
-    const isClickedInsidePlusButton = this.Blok.Toolbar.nodes.plusButton?.contains(target);
-    const doNotProcess = isClickedInsideBlockSettings || isClickedInsideBlockSettingsToggler || isClickedInsidePlusButton;
-
-    const shouldClearCurrentBlock = !clickedInsideBlokSurface || (!clickedInsideRedactor && !clickedInsideToolbar);
-
-    /**
-     * Don't clear current block when clicking on settings toggler, plus button, or inside block settings
-     * These elements need the current block to function properly
-     */
-    if (shouldClearCurrentBlock && !doNotProcess) {
-      /**
-       * Clear pointer on BlockManager
-       *
-       * Current page might contain several instances
-       * Click between instances MUST clear focus, pointers and close toolbars
-       */
-      this.Blok.BlockManager.unsetCurrentBlock();
-      this.Blok.Toolbar.close();
-    }
-
-    const shouldCloseBlockSettings = this.Blok.BlockSettings.opened && !doNotProcess;
-    if (shouldCloseBlockSettings) {
-      this.Blok.BlockSettings.close();
-    }
-
-    if (shouldCloseBlockSettings && clickedInsideRedactor) {
-      const clickedBlock = this.Blok.BlockManager.getBlockByChildNode(target);
-      this.Blok.Toolbar.moveAndOpen(clickedBlock);
-    }
-
-    /**
-     * Clear Selection if user clicked somewhere
-     * But preserve selection when clicking on block settings toggler or inside block settings
-     * to allow multi-block operations like conversion
-     */
-    if (!doNotProcess) {
-      this.Blok.BlockSelection.clearSelection(event);
-    }
-
-    /**
-     * Close Inline Toolbar when clicking outside of it
-     * This handles clicks anywhere outside the inline toolbar,
-     * including inside the editor content area or on page controls
-     */
-    if (this.Blok.InlineToolbar.opened && !clickedInsideInlineToolbar) {
-      this.Blok.InlineToolbar.close();
-    }
-  }
-
-  /**
-   * First touch on blok
-   * Fired before click
-   *
-   * Used to change current block — we need to do it before 'selectionChange' event.
-   * Also:
-   * - Move and show the Toolbar
-   * - Set a Caret
-   * @param event - touch or mouse event
-   */
-  private documentTouched(event: Event): void {
-    const initialTarget = event.target as HTMLElement;
-
-    /**
-     * If click was fired on Blok`s wrapper, try to get clicked node by elementFromPoint method
-     */
-    const clickedNode = (() => {
-      if (initialTarget !== this.nodes.redactor) {
-        return initialTarget;
-      }
-
-      if (event instanceof MouseEvent) {
-        const nodeFromPoint = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
-
-        return nodeFromPoint ?? initialTarget;
-      }
-
-      if (event instanceof TouchEvent && event.touches.length > 0) {
-        const { clientX, clientY } = event.touches[0];
-        const nodeFromPoint = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-
-        return nodeFromPoint ?? initialTarget;
-      }
-
-      return initialTarget;
-    })();
-
-    /**
-     * Select clicked Block as Current
-     */
-    try {
-      this.Blok.BlockManager.setCurrentBlockByChildNode(clickedNode);
-    } catch (_e) {
-      /**
-       * If clicked outside first-level Blocks and it is not RectSelection, set Caret to the last empty Block
-       */
-      if (!this.Blok.RectangleSelection.isRectActivated()) {
-        this.Blok.Caret.setToTheLastBlock();
-      }
-    }
-
-    /**
-     * Move and open toolbar
-     * (used for showing Block Settings toggler after opening and closing Inline Toolbar)
-     */
-    if (!this.Blok.ReadOnly.isEnabled && !this.Blok.Toolbar.contains(initialTarget)) {
-      this.Blok.Toolbar.moveAndOpen(undefined, clickedNode);
-    }
   }
 
   /**
@@ -1188,6 +652,10 @@ export class UI extends Module<UINodes> {
   private processBottomZoneClick(event: MouseEvent): void {
     const lastBlock = this.Blok.BlockManager.getBlockByIndex(-1);
 
+    if (lastBlock === undefined) {
+      return;
+    }
+
     const lastBlockBottomCoord = $.offset(lastBlock.holder).bottom;
     const clickedCoord = event.pageY;
     const { BlockSelection } = this.Blok;
@@ -1227,109 +695,6 @@ export class UI extends Module<UINodes> {
      */
     Caret.setToTheLastBlock();
     Toolbar.moveAndOpen(BlockManager.lastBlock);
-  }
-
-  /**
-   * Handle selection changes on mobile devices
-   * Uses for showing the Inline Toolbar
-   */
-  private selectionChanged(): void {
-    const { CrossBlockSelection, BlockSelection } = this.Blok;
-    const focusedElement = Selection.anchorElement;
-
-    if (CrossBlockSelection.isCrossBlockSelectionStarted && BlockSelection.anyBlockSelected) {
-      // Removes all ranges when any Block is selected
-      Selection.get()?.removeAllRanges();
-    }
-
-    /**
-     * Ignore transient selection changes triggered by fake background wrappers (used by inline tools
-     * like Convert) while the Inline Toolbar is already open. Otherwise, the toolbar gets torn down
-     * and re-rendered, which closes nested popovers before a user can click their items.
-     */
-    const hasFakeBackground = document.querySelector('[data-blok-fake-background="true"]') !== null;
-
-    if (hasFakeBackground && this.Blok?.InlineToolbar?.opened) {
-      return;
-    }
-
-    /**
-     * Usual clicks on some controls, for example, Block Tunes Toggler
-     */
-    if (!focusedElement && !Selection.range) {
-      /**
-       * If there is no selected range, close inline toolbar
-       * @todo Make this method more straightforward
-       */
-      this.Blok.InlineToolbar.close();
-    }
-
-    if (!focusedElement) {
-      return;
-    }
-
-    /**
-     * Event can be fired on clicks at non-block-content elements,
-     * for example, at the Inline Toolbar or some Block Tune element.
-     * We also make sure that the closest block belongs to the current blok and not a parent
-     */
-    const closestBlock = focusedElement.closest('[data-blok-testid="block-content"]');
-    const clickedOutsideBlockContent = closestBlock === null || (closestBlock.closest('[data-blok-testid="blok-editor"]') !== this.nodes.wrapper);
-
-    const inlineToolbarEnabledForExternalTool = (focusedElement as HTMLElement).getAttribute('data-blok-inline-toolbar') === 'true';
-    const shouldCloseInlineToolbar = clickedOutsideBlockContent && !this.Blok.InlineToolbar.containsNode(focusedElement);
-
-    /**
-     * If the inline toolbar is already open without a nested popover,
-     * don't close or re-render it. This prevents the toolbar from flickering
-     * when the user closes a nested popover (e.g., via Esc key).
-     *
-     * However, if the selection is now collapsed or empty (e.g., user deleted the selected text),
-     * we should close the inline toolbar since there's nothing to format.
-     *
-     * Important: Don't close the toolbar if a flipper item is focused (user is navigating
-     * with Tab/Arrow keys). In some browsers (webkit), keyboard navigation within the
-     * popover can trigger selectionchange events that make the selection appear empty.
-     */
-    const currentSelection = Selection.get();
-    const selectionIsEmpty = !currentSelection || currentSelection.isCollapsed || Selection.text.length === 0;
-    const hasFlipperFocus = this.Blok.InlineToolbar.hasFlipperFocus;
-
-    if (selectionIsEmpty && this.Blok.InlineToolbar.opened && !hasFlipperFocus) {
-      this.Blok.InlineToolbar.close();
-
-      return;
-    }
-
-    if (this.Blok.InlineToolbar.opened && !this.Blok.InlineToolbar.hasNestedPopoverOpen) {
-      return;
-    }
-
-    if (shouldCloseInlineToolbar) {
-      /**
-       * If new selection is not on Inline Toolbar, we need to close it
-       */
-      this.Blok.InlineToolbar.close();
-    }
-
-    if (clickedOutsideBlockContent && !inlineToolbarEnabledForExternalTool) {
-      /**
-       * Case when we click on external tool elements,
-       * for example some Block Tune element.
-       * If this external content editable element has data-inline-toolbar="true"
-       */
-      return;
-    }
-
-    /**
-     * Always update current block when focus moves to a different block.
-     * This handles Tab key navigation, programmatic focus, and accessibility tools.
-     * Without this, currentBlockIndex would remain stale and caret restoration
-     * during undo/redo would target the wrong block.
-     */
-    this.Blok.BlockManager.setCurrentBlockByChildNode(focusedElement);
-
-    void this.Blok.InlineToolbar.tryToShow(true);
   }
 
   /**

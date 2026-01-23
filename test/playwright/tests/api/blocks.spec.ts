@@ -61,6 +61,7 @@ const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<v
   await page.evaluate(
     async ({ holder, rawData, rawConfig, serializedTools, tunes: tunesArray, hasOnChange }) => {
       const reviveToolClass = (classSource: string): unknown => {
+        // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Required for dynamically creating tool classes in tests
         return new Function(`return (${classSource});`)();
       };
 
@@ -257,7 +258,7 @@ test.describe('api.blocks', () => {
 
       expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect(savedData.blocks[0].data.text).toBe('Rendered from HTML');
+      expect((savedData.blocks[0].data as { text: string }).text).toBe('Rendered from HTML');
     });
   });
 
@@ -305,7 +306,7 @@ test.describe('api.blocks', () => {
         }
 
         return await window.blokInstance.blocks.composeBlockData('prefilled');
-      });
+      }) as { text: string };
 
       expect(data).toStrictEqual({ text: 'Composed paragraph' });
     });
@@ -394,7 +395,7 @@ test.describe('api.blocks', () => {
         return await window.blokInstance.save();
       });
 
-      const text = output.blocks[0].data.text;
+      const text = (output.blocks[0].data as { text: string }).text;
 
       expect(text).toBe(newBlockData.text);
     });
@@ -691,7 +692,7 @@ test.describe('api.blocks', () => {
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('convertableTool');
-      expect(blocks[0].data.text).toBe(existingBlock.data.text);
+      expect((blocks[0].data as { text: string }).text).toBe(existingBlock.data.text);
 
       /**
        * Check that returned value is BlockAPI
@@ -947,7 +948,7 @@ test.describe('api.blocks', () => {
       /**
        * Check that tool converted returned config as a result of import
        */
-      expect(blocks[0].data.text).toBe(JSON.stringify(conversionTargetToolConfig));
+      expect((blocks[0].data as { text: string }).text).toBe(JSON.stringify(conversionTargetToolConfig));
     });
 
     test('should apply provided data overrides when converting a Block', async ({ page }) => {
@@ -1993,7 +1994,7 @@ test.describe('api.blocks', () => {
 
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('functionExport');
-      expect(blocks[0].data.text).toBe(existingBlock.data.text);
+      expect((blocks[0].data as { text: string }).text).toBe(existingBlock.data.text);
     });
 
     test('should handle function-based import conversion config', async ({ page }) => {
@@ -2088,7 +2089,7 @@ test.describe('api.blocks', () => {
       expect(blocks).toHaveLength(1);
       expect(blocks[0].type).toBe('functionImport');
       // Function import should transform the text
-      expect(blocks[0].data.text).toBe('SOME TEXT');
+      expect((blocks[0].data as { text: string }).text).toBe('SOME TEXT');
     });
   });
 

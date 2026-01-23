@@ -63,6 +63,7 @@ describe('DeleteTune', () => {
 
     tune.handleClick();
 
-    expect(blocks.delete).toHaveBeenCalledTimes(1);
+    // Verify the blocks.delete method was called with no arguments
+    expect(blocks.delete).toHaveBeenCalledWith();
   });
 });

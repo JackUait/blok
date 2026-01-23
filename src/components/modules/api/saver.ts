@@ -1,7 +1,7 @@
-import type { Saver } from '../../../../types/api';
 import type { OutputData } from '../../../../types';
-import { logLabeled } from '../../utils';
+import type { Saver } from '../../../../types/api';
 import { Module } from '../../__module';
+import { logLabeled } from '../../utils';
 
 /**
  * @class SaverAPI
@@ -44,6 +44,7 @@ export class SaverAPI extends Module {
     }
 
     const errorMessage = lastError !== undefined
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       ? String(lastError)
       : 'Blok\'s content can not be saved because collecting data failed';
 

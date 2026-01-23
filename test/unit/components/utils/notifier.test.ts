@@ -19,39 +19,32 @@ type NotifierInternals = {
 
 const hoisted = vi.hoisted(() => {
   const showSpy = vi.fn();
-  const moduleExports: Record<string, unknown> = {};
 
-  const overwriteModuleExports = (exports: unknown): void => {
+  const moduleExports: Record<string, unknown> = {
+    show: showSpy,
+  };
+
+  const resetModuleExports = (): void => {
     for (const key of Object.keys(moduleExports)) {
-      delete moduleExports[key];
+      moduleExports[key] = undefined;
     }
-
-    // Always set __esModule first
-    moduleExports.__esModule = true;
-
-    if (typeof exports === 'object' && exports !== null) {
-      Object.assign(moduleExports, exports as Record<string, unknown>);
-    }
+    moduleExports.show = showSpy;
   };
 
-  const setDefaultExports = (): void => {
-    overwriteModuleExports({
-      __esModule: true,
-      show: showSpy,
-    });
+  const setModuleExports = (exports: Record<string, unknown>): void => {
+    for (const key of Object.keys(moduleExports)) {
+      moduleExports[key] = undefined;
+    }
+    for (const [key, value] of Object.entries(exports)) {
+      moduleExports[key] = value;
+    }
   };
-
-  setDefaultExports();
 
   return {
     showSpy,
     getModuleExports: () => moduleExports,
-    setModuleExports: (exports: unknown) => {
-      overwriteModuleExports(exports);
-    },
-    resetModuleExports: () => {
-      setDefaultExports();
-    },
+    setModuleExports,
+    resetModuleExports,
   };
 });
 
@@ -59,18 +52,25 @@ const { showSpy, getModuleExports, setModuleExports, resetModuleExports } = hois
 
 vi.mock('../../../../src/components/utils/notifier/index', () => getModuleExports());
 
+type NotifierWithPrivateProps = {
+  loadNotifierModule: () => Promise<NotifierModule>;
+  notifierModule: NotifierModule | null;
+  loadingPromise: Promise<NotifierModule> | null;
+};
+
 const exposeInternals = (notifier: Notifier): NotifierInternals => {
-  const loadModule = (Reflect.get(notifier as object, 'loadNotifierModule') as () => Promise<NotifierModule>).bind(notifier);
+  const target = notifier as unknown as NotifierWithPrivateProps;
+  const loadModule = target.loadNotifierModule.bind(notifier);
 
   return {
     loadNotifierModule: loadModule,
-    getNotifierModule: () => Reflect.get(notifier as object, 'notifierModule') as NotifierModule | null,
+    getNotifierModule: () => target.notifierModule,
     setNotifierModule: (module) => {
-      Reflect.set(notifier as object, 'notifierModule', module);
+      target.notifierModule = module;
     },
-    getLoadingPromise: () => Reflect.get(notifier as object, 'loadingPromise') as Promise<NotifierModule> | null,
+    getLoadingPromise: () => target.loadingPromise,
     setLoadingPromise: (promise) => {
-      Reflect.set(notifier as object, 'loadingPromise', promise);
+      target.loadingPromise = promise;
     },
   };
 };
@@ -179,11 +179,11 @@ describe('Notifier utility', () => {
       await expect(loadingPromise).rejects.toThrow('notifier module does not expose a "show" method.');
 
       expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
-      const [message, errorInstance] = consoleErrorSpy.mock.calls[0];
+      const [message, errorInstance] = consoleErrorSpy.mock.calls[0] as [string, Error];
 
       expect(message).toBe('[Blok] Failed to display notification. Reason:');
       expect(errorInstance).toBeInstanceOf(Error);
-      expect((errorInstance as Error).message).toBe('notifier module does not expose a "show" method.');
+      expect(errorInstance.message).toBe('notifier module does not expose a "show" method.');
     });
   });
 });

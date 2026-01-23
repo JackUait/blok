@@ -1,8 +1,8 @@
-import { SelectionUtils as Selection } from '../selection';
 import { Module } from '../__module';
 import type { Block } from '../block';
-import { getCaretXPosition, isCaretAtEndOfInput, isCaretAtFirstLine, isCaretAtLastLine, isCaretAtStartOfInput, setCaretAtXPosition } from '../utils/caret';
 import { Dom as $ } from '../dom';
+import { SelectionUtils as Selection } from '../selection/index';
+import { getCaretXPosition, isCaretAtEndOfInput, isCaretAtFirstLine, isCaretAtLastLine, isCaretAtStartOfInput, setCaretAtXPosition } from '../utils/caret/index';
 
 const ASCII_MAX_CODE_POINT = 0x7f;
 
@@ -197,7 +197,10 @@ export class Caret extends Module {
 
     BlockManager.setCurrentBlockByChildNode(block.holder);
 
-    BlockManager.currentBlock!.currentInput = element;
+    const updatedBlock = BlockManager.currentBlock;
+    if (updatedBlock) {
+      updatedBlock.currentInput = element;
+    }
   }
 
   /**
@@ -288,7 +291,10 @@ export class Caret extends Module {
     }
 
     BlockManager.setCurrentBlockByChildNode(block.holder);
-    BlockManager.currentBlock!.currentInput = element;
+    const updatedBlock = BlockManager.currentBlock;
+    if (updatedBlock) {
+      updatedBlock.currentInput = element;
+    }
   }
 
   /**
@@ -464,7 +470,7 @@ export class Caret extends Module {
        * Text before the caret stays in the input,
        * while text after the caret is returned as a fragment to be inserted after the block.
        */
-      const input = currentBlockInput as HTMLInputElement | HTMLTextAreaElement;
+      const input = currentBlockInput;
       const newFragment = document.createDocumentFragment();
       const selectionStart = input.selectionStart ?? 0;
 
@@ -540,7 +546,7 @@ export class Caret extends Module {
        * If there is no nextBlock, but currentBlock is not default,
        * insert new default block at the end and navigate to it
        */
-      return BlockManager.insertAtEnd() as Block;
+      return BlockManager.insertAtEnd();
     };
 
     const blockToNavigate = getBlockToNavigate();
@@ -586,7 +592,7 @@ export class Caret extends Module {
     }
 
     if (previousBlock !== null && navigationAllowed) {
-      this.setToBlock(previousBlock as Block, this.positions.END);
+      this.setToBlock(previousBlock, this.positions.END);
 
       return true;
     }
@@ -690,7 +696,7 @@ export class Caret extends Module {
     const isAtEnd = currentInput !== undefined ? isCaretAtEndOfInput(currentInput) : true;
 
     if (!currentBlock.tool.isDefault && isAtEnd) {
-      const newBlock = BlockManager.insertAtEnd() as Block;
+      const newBlock = BlockManager.insertAtEnd();
 
       this.setToBlock(newBlock, this.positions.START);
 
@@ -759,7 +765,7 @@ export class Caret extends Module {
      * Navigate to previous block, preserving horizontal position
      */
     if (previousBlock !== null) {
-      this.setToBlockAtXPosition(previousBlock as Block, caretX, false);
+      this.setToBlockAtXPosition(previousBlock, caretX, false);
 
       return true;
     }

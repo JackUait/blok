@@ -72,5 +72,5 @@ export interface BaseToolAdapter<Type extends ToolType, ToolClass extends Tool> 
    *
    * @param args
    */
-  create(...args: any[]): ToolClass;
+  create(...args: unknown[]): ToolClass;
 }

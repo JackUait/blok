@@ -1,11 +1,12 @@
-import type { Tool, ToolConstructable, ToolSettings } from '@/types/tools';
-import type { SanitizerConfig, API as ApiMethods, ToolConfig } from '@/types';
 import { isFunction } from '../utils';
-import { ToolType } from '@/types/tools/adapters/tool-type';
+
+import type { SanitizerConfig, API as ApiMethods, ToolConfig } from '@/types';
+import type { Tool, ToolConstructable, ToolSettings } from '@/types/tools';
 import type { BaseToolAdapter as BaseToolAdapterInterface } from '@/types/tools/adapters/base-tool-adapter';
-import type { InlineToolAdapter as InlineToolAdapterInterface } from '@/types/tools/adapters/inline-tool-adapter';
 import type { BlockToolAdapter as BlockToolAdapterInterface } from '@/types/tools/adapters/block-tool-adapter';
 import type { BlockTuneAdapter as BlockTuneAdapterInterface } from '@/types/tools/adapters/block-tune-adapter';
+import type { InlineToolAdapter as InlineToolAdapterInterface } from '@/types/tools/adapters/inline-tool-adapter';
+import { ToolType } from '@/types/tools/adapters/tool-type';
 
 /**
  * Keys that are Blok-level settings (not passed to tool constructor)
@@ -206,7 +207,7 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
    */
   public get settings(): ToolConfig {
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: reading legacy config for backwards compatibility
-    const nestedConfig = (this.config[UserSettings.Config] ?? {}) as ToolConfig;
+    const nestedConfig = (this.config[UserSettings.Config] ?? {});
 
     // Extract non-Blok keys as tool-specific config
     const flatConfig: Record<string, unknown> = {};
@@ -218,7 +219,7 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
     }
 
     // Merge: nested config first, flat config overrides
-    const config = { ...nestedConfig, ...flatConfig } as ToolConfig;
+    const config = { ...nestedConfig, ...flatConfig };
 
     if (this.isDefault && !('placeholder' in config) && this.defaultPlaceholder) {
       config.placeholder = this.defaultPlaceholder;
@@ -297,5 +298,5 @@ export abstract class BaseToolAdapter<Type extends ToolType = ToolType, ToolClas
    * @param args
    */
 
-  public abstract create(...args: any[]): ToolClass;
+  public abstract create(...args: unknown[]): ToolClass;
 }

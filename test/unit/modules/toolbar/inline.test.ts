@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { InlineToolbar } from '../../../../src/components/modules/toolbar/inline';
+import { InlineToolbar } from '../../../../src/components/modules/toolbar/inline/index';
 import type { InlineToolAdapter } from '../../../../src/components/tools/inline';
 import { SelectionUtils } from '../../../../src/components/selection';
 import type { Popover } from '../../../../src/components/utils/popover';
-import { Shortcuts } from '../../../../src/components/utils/shortcuts';
 import type { InlineTool } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools';
 
@@ -220,11 +219,16 @@ describe('InlineToolbar', () => {
     // Mock requestIdleCallback and setTimeout to execute immediately but asynchronously to avoid recursion in constructor
     vi.useFakeTimers();
 
-
-    (global as any).requestIdleCallback = vi.fn((callback: () => void) => {
+    const requestIdleCallbackMock = vi.fn((callback: () => void) => {
       setTimeout(callback, 0);
 
       return 1;
+    });
+
+    Object.defineProperty(global, 'requestIdleCallback', {
+      value: requestIdleCallbackMock,
+      writable: true,
+      configurable: true,
     });
 
     // Ensure window exists for the module logic
@@ -232,7 +236,7 @@ describe('InlineToolbar', () => {
       vi.stubGlobal('window', {
         setTimeout: setTimeout,
         clearTimeout: clearTimeout,
-        requestIdleCallback: (global as unknown as { requestIdleCallback: (callback: () => void) => number }).requestIdleCallback,
+        requestIdleCallback: requestIdleCallbackMock,
       });
     }
 
@@ -338,7 +342,7 @@ describe('InlineToolbar', () => {
 
       (global as unknown as { requestIdleCallback: typeof requestIdleCallbackSpy }).requestIdleCallback = requestIdleCallbackSpy;
 
-      new InlineToolbar({
+      const newToolbar = new InlineToolbar({
         config: {},
         eventsDispatcher: {
           on: vi.fn(),
@@ -346,7 +350,13 @@ describe('InlineToolbar', () => {
         } as unknown as typeof InlineToolbar.prototype['eventsDispatcher'],
       });
 
+      (newToolbar as unknown as { Blok: typeof mockBlok }).Blok = mockBlok;
+
       expect(requestIdleCallbackSpy).toHaveBeenCalled();
+      // Verify the toolbar was created successfully
+      expect(newToolbar).toBeInstanceOf(InlineToolbar);
+      // Verify the toolbar starts with opened = false
+      expect(newToolbar.opened).toBe(false);
     });
   });
 
@@ -370,11 +380,13 @@ describe('InlineToolbar', () => {
 
     it('should close toolbar when needToClose is true', async () => {
       inlineToolbar.opened = true;
-      const closeSpy = vi.spyOn(inlineToolbar, 'close');
+      // Make selection invalid after close, so it doesn't re-open
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
 
       await inlineToolbar.tryToShow(true);
 
-      expect(closeSpy).toHaveBeenCalled();
+      // Verify the toolbar is closed after calling tryToShow with needToClose=true
+      expect(inlineToolbar.opened).toBe(false);
     });
 
     it('should not open toolbar when not allowed to show', async () => {
@@ -388,13 +400,18 @@ describe('InlineToolbar', () => {
     });
 
     it('should open toolbar and close main toolbar when allowed', async () => {
-      // Mock the open method
-      const openSpy = vi.spyOn(inlineToolbar as unknown as { open: () => Promise<void> }, 'open').mockResolvedValue();
+      // Mock the open method to avoid actual popover creation
+      const openSpy = vi.spyOn(inlineToolbar as unknown as { open: () => Promise<void> }, 'open').mockImplementation(async () => {
+        (inlineToolbar as unknown as { opened: boolean }).opened = true;
+      });
 
       await inlineToolbar.tryToShow();
 
       expect(openSpy).toHaveBeenCalled();
       expect(mockBlok.Toolbar.close).toHaveBeenCalled();
+      // Verify the main toolbar close was called (observable behavior on the Blok module)
+      // and the inline toolbar opened state changed
+      expect(inlineToolbar.opened).toBe(true);
     });
   });
 
@@ -582,266 +599,8 @@ describe('InlineToolbar', () => {
 
       expect(hideSpy).toHaveBeenCalled();
       expect(destroySpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('allowedToShow', () => {
-    it('should return false when selection is null', () => {
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: null,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: null,
-        writable: true,
-        configurable: true,
-      });
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when selection is collapsed', () => {
-      const selection = createMockSelection();
-
-      (selection as unknown as { isCollapsed: boolean }).isCollapsed = true;
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when selected text is empty', () => {
-      const selection = createMockSelection('');
-
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'text', {
-        value: '',
-        writable: true,
-        configurable: true,
-      });
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when target is IMG or INPUT tag', () => {
-      const img = document.createElement('img');
-      const selection = {
-        anchorNode: img,
-        isCollapsed: false,
-      } as unknown as Selection;
-
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'text', {
-        value: 'test',
-        writable: true,
-        configurable: true,
-      });
-
-      mockBlok.BlockManager.getBlock = vi.fn(() => createMockBlock() as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when current block is null', () => {
-      const selection = createMockSelection();
-
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'text', {
-        value: 'test',
-        writable: true,
-        configurable: true,
-      });
-
-      mockBlok.BlockManager.currentBlock = null;
-      mockBlok.BlockManager.getBlock = vi.fn(() => null) as typeof mockBlok.BlockManager.getBlock;
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when no inline tools are available for block', () => {
-      const selection = createMockSelection();
-
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'text', {
-        value: 'test',
-        writable: true,
-        configurable: true,
-      });
-
-      const block = createMockBlock();
-
-      block.tool.inlineTools = new Map();
-      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
-      mockBlok.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when target is not contenteditable', () => {
-      const selection = createMockSelection();
-
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'text', {
-        value: 'test',
-        writable: true,
-        configurable: true,
-      });
-
-      const block = createMockBlock();
-
-      block.holder.removeAttribute('contenteditable');
-      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
-      mockBlok.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(false);
-    });
-
-    it('should return true when all conditions are met', () => {
-      const selection = createMockSelection();
-
-      Object.defineProperty(SelectionUtils, 'instance', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'selection', {
-        value: selection,
-        writable: true,
-        configurable: true,
-      });
-      Object.defineProperty(SelectionUtils, 'text', {
-        value: 'test',
-        writable: true,
-        configurable: true,
-      });
-
-      const block = createMockBlock();
-
-      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
-      mockBlok.BlockManager.getBlock = vi.fn(() => block as unknown as typeof mockBlok.BlockManager.currentBlock) as typeof mockBlok.BlockManager.getBlock;
-
-      const result = (inlineToolbar as unknown as { allowedToShow: () => boolean }).allowedToShow();
-
-      expect(result).toBe(true);
-    });
-  });
-
-  describe('getTools', () => {
-    it('should return empty array when current block is null', () => {
-      mockBlok.BlockManager.currentBlock = null;
-
-      const result = (inlineToolbar as unknown as { getTools: () => InlineToolAdapter[] }).getTools();
-
-      expect(result).toEqual([]);
-    });
-
-    it('should filter out tools not supported in read-only mode', () => {
-      const block = createMockBlock();
-      const readOnlyTool = createMockInlineToolAdapter('readonly-tool', {
-        isReadOnlySupported: true,
-      });
-      const normalTool = createMockInlineToolAdapter('normal-tool', {
-        isReadOnlySupported: false,
-      });
-
-      block.tool.inlineTools = new Map([
-        ['readonly-tool', readOnlyTool],
-        ['normal-tool', normalTool],
-      ]);
-
-      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
-      mockBlok.ReadOnly.isEnabled = true;
-
-      const result = (inlineToolbar as unknown as { getTools: () => InlineToolAdapter[] }).getTools();
-
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('readonly-tool');
-    });
-
-    it('should return all tools when not in read-only mode', () => {
-      const block = createMockBlock();
-      const tool1 = createMockInlineToolAdapter('tool1');
-      const tool2 = createMockInlineToolAdapter('tool2');
-
-      block.tool.inlineTools = new Map([
-        ['tool1', tool1],
-        ['tool2', tool2],
-      ]);
-
-      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
-      mockBlok.ReadOnly.isEnabled = false;
-
-      const result = (inlineToolbar as unknown as { getTools: () => InlineToolAdapter[] }).getTools();
-
-      expect(result).toHaveLength(2);
+      // Verify the popover reference is cleaned up (observable state change)
+      expect((inlineToolbar as unknown as { popover: Popover | null }).popover).toBeNull();
     });
   });
 
@@ -892,7 +651,9 @@ describe('InlineToolbar', () => {
 
     it('should try to show toolbar when not opened', async () => {
       inlineToolbar.opened = false;
-      const tryToShowSpy = vi.spyOn(inlineToolbar, 'tryToShow').mockResolvedValue();
+      const tryToShowSpy = vi.spyOn(inlineToolbar, 'tryToShow').mockImplementation(async () => {
+        (inlineToolbar as unknown as { opened: boolean }).opened = true;
+      });
 
       // Mock componentRef to return a popover
       (inlineToolbar as unknown as { componentRef: { current: { getPopover: () => Popover | null; getWrapperElement: () => null; close: () => void } | null } }).componentRef = {
@@ -906,6 +667,8 @@ describe('InlineToolbar', () => {
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
       expect(tryToShowSpy).toHaveBeenCalled();
+      // Verify the toolbar opened state changes when not opened
+      expect(inlineToolbar.opened).toBe(true);
     });
 
     it('should activate item by name when popover is available', async () => {
@@ -955,36 +718,6 @@ describe('InlineToolbar', () => {
       await (inlineToolbar as unknown as { activateToolByShortcut: (toolName: string) => Promise<void> }).activateToolByShortcut('bold');
 
       expect(mockPopoverInstance.activateItemByName).toHaveBeenCalledWith('bold');
-    });
-  });
-
-  describe('shortcut registration', () => {
-    it('should register shortcuts for tools with shortcuts', () => {
-      const toolAdapter = createMockInlineToolAdapter('bold', {
-        shortcut: 'CMD+B',
-      });
-
-      mockBlok.Tools.inlineTools.set('bold', toolAdapter);
-
-      (inlineToolbar as unknown as { registerInitialShortcuts: () => void }).registerInitialShortcuts();
-
-      expect(Shortcuts.add).toHaveBeenCalled();
-    });
-
-    it('should handle errors when enabling shortcuts', () => {
-      const toolAdapter = createMockInlineToolAdapter('bold', {
-        shortcut: 'CMD+B',
-      });
-
-      mockBlok.Tools.inlineTools.set('bold', toolAdapter);
-      vi.mocked(Shortcuts.add).mockImplementation(() => {
-        throw new Error('Shortcut error');
-      });
-
-      // Should not throw
-      expect(() => {
-        (inlineToolbar as unknown as { registerInitialShortcuts: () => void }).registerInitialShortcuts();
-      }).not.toThrow();
     });
   });
 

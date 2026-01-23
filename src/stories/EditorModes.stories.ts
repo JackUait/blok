@@ -11,9 +11,11 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { waitFor, expect } from 'storybook/test';
-import type { OutputData, API } from '@/types';
+
 import { createEditorContainer, simulateClick, waitForToolbar, TOOLBAR_TESTID } from './helpers';
 import type { EditorFactoryOptions, EditorContainer } from './helpers';
+
+import type { OutputData, API } from '@/types';
 
 interface EditorModesArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -344,7 +346,7 @@ export const DraggingState: Story = {
     readOnly: false,
   },
   play: async ({ canvasElement, step }) => {
-    const container = canvasElement.querySelector('[data-story-container]') as EditorContainer | null;
+    const container = canvasElement.querySelector('[data-story-container]');
 
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -353,7 +355,8 @@ export const DraggingState: Story = {
 
           expect(blocks.length).toBeGreaterThanOrEqual(3);
           // Also wait for editor instance to be available
-          expect(container?.__blokEditor).toBeTruthy();
+          const editorContainer = container && '__blokEditor' in container ? (container as EditorContainer) : null;
+          expect(editorContainer?.__blokEditor).toBeTruthy();
         },
         TIMEOUT_INIT
       );
@@ -396,7 +399,8 @@ export const DraggingState: Story = {
     });
 
     await step('Move first block to third position using editor API', async () => {
-      const editor = container?.__blokEditor;
+      const editorContainer = container && '__blokEditor' in container ? (container as EditorContainer) : null;
+      const editor = editorContainer?.__blokEditor;
 
       if (editor) {
         // Move block from index 0 to index 2 (after the current third block)

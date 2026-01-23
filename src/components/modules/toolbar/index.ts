@@ -1,47 +1,28 @@
-import { Module } from '../../__module';
-import { Dom as $ } from '../../dom';
-import { getUserOS, isMobileScreen, log } from '../../utils';
-import { hide, onHover } from '../../utils/tooltip';
+import type { ToolbarCloseOptions } from '../../../../types/api/toolbar';
 import type { ModuleConfig } from '../../../types-internal/module-config';
+import { Module } from '../../__module';
 import { Block } from '../../block';
-import { Toolbox,  ToolboxEvent  } from '../../ui/toolbox';
-import { IconMenu, IconPlus } from '../../icons';
+import { DATA_ATTR } from '../../constants';
+import { Dom as $ } from '../../dom';
+import type { BlockChangedPayload } from '../../events/BlockChanged';
+import { BlockChanged } from '../../events/BlockChanged';
 import { BlockHovered } from '../../events/BlockHovered';
 import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
-import type { BlockChangedPayload } from '../../events/BlockChanged';
-import { BlockChanged } from '../../events/BlockChanged';
-import { twJoin } from '../../utils/tw';
-import { DATA_ATTR } from '../../constants';
-import { SelectionUtils } from '../../selection';
+import { Toolbox, ToolboxEvent } from '../../ui/toolbox';
+import { getUserOS, isMobileScreen, log } from '../../utils';
+import { hide } from '../../utils/tooltip';
 
 /**
- * @todo Tab on non-empty block should open Block Settings of the hoveredBlock (not where caret is set)
- *          - make Block Settings a standalone module
- * @todo - Keyboard-only mode bug:
- *         press Tab, flip to the Checkbox. press Enter (block will be added), Press Tab
- *         (Block Tunes will be opened with Move up focused), press Enter, press Tab ———— both Block Tunes and Toolbox will be opened
- * @todo TEST CASE - show toggler after opening and closing the Inline Toolbar
+ * Refactored Toolbar module components
  */
+import { ClickDragHandler } from './click-handler';
+import { PlusButtonHandler } from './plus-button';
+import { ToolbarPositioner } from './positioning';
+import { SettingsTogglerHandler } from './settings-toggler';
+import { getToolbarStyles } from './styles';
+import type { ToolbarNodes } from './types';
 
-/**
- * HTML Elements used for Toolbar UI
- */
-interface ToolbarNodes {
-  wrapper: HTMLElement | undefined;
-  content: HTMLElement | undefined;
-  actions: HTMLElement | undefined;
-
-  plusButton: HTMLElement | undefined;
-  settingsToggler: HTMLElement | undefined;
-}
-
-/**
- * Threshold in pixels to distinguish between a click and a drag.
- * Should be higher than DragManager's dragThreshold (5px) so that
- * clicks with slight mouse movement still open the menu.
- */
-const DRAG_THRESHOLD = 10;
 /**
  *
  *«Toolbar» is the node that moves up/down over current block
@@ -99,9 +80,10 @@ export class Toolbar extends Module<ToolbarNodes> {
   private hoveredBlock: Block | null = null;
 
   /**
-   * The actual element being hovered (could be a nested element like a list item)
+   * Flag to track if toolbar was explicitly closed (e.g., after block deletion).
+   * This prevents the toolbar from reopening on subsequent block-hovered events.
    */
-  private hoveredTarget: Element | null = null;
+  private explicitlyClosed: boolean = false;
 
   /**
    * Toolbox class instance
@@ -110,22 +92,24 @@ export class Toolbar extends Module<ToolbarNodes> {
   private toolboxInstance: Toolbox | null = null;
 
   /**
-   * Last calculated toolbar Y position
-   * Used to avoid unnecessary repositioning when the position hasn't changed
+   * Toolbar positioner instance
    */
-  private lastToolbarY: number | null = null;
+  private positioner: ToolbarPositioner;
 
   /**
-   * Flag to ignore the next mouseup on settings toggler after a block drop
-   * Prevents the settings menu from opening when the cursor is over the toggler after drop
+   * Click-vs-drag handler instance
    */
-  private ignoreNextSettingsMouseUp = false;
+  private clickDragHandler: ClickDragHandler;
 
   /**
-   * Set of pending document-level mouseup listeners that need cleanup on destroy.
-   * Each listener is added on mousedown and removed after mouseup fires.
+   * Plus button handler instance
    */
-  private pendingMouseUpListeners: Set<(e: MouseEvent) => void> = new Set();
+  private plusButtonHandler: PlusButtonHandler;
+
+  /**
+   * Settings toggler handler instance
+   */
+  private settingsTogglerHandler: SettingsTogglerHandler;
 
   /**
    * @class
@@ -138,6 +122,31 @@ export class Toolbar extends Module<ToolbarNodes> {
       config,
       eventsDispatcher,
     });
+    this.positioner = new ToolbarPositioner();
+    this.clickDragHandler = new ClickDragHandler();
+
+    /**
+     * Initialize handlers with callbacks to toolbar methods
+     */
+    this.plusButtonHandler = new PlusButtonHandler(
+      () => this.Blok,
+      {
+        getToolboxOpened: () => this.toolbox.opened ?? false,
+        openToolbox: () => this.toolbox.open(),
+        closeToolbox: () => this.toolbox.close(),
+        moveAndOpenToolbar: (block, target) => this.moveAndOpen(block, target),
+      }
+    );
+
+    this.settingsTogglerHandler = new SettingsTogglerHandler(
+      () => this.Blok,
+      this.clickDragHandler,
+      {
+        setHoveredBlock: (block) => { this.hoveredBlock = block; },
+        getToolboxOpened: () => this.toolbox.opened ?? false,
+        closeToolbox: () => this.toolbox.close(),
+      }
+    );
   }
 
   /**
@@ -146,73 +155,8 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @deprecated Use data attributes via constants instead
    */
   public get CSS(): { [name: string]: string } {
-    return {
-      toolbar: twJoin(
-        'absolute left-0 right-0 top-0 transition-opacity duration-100 ease-linear will-change-[opacity,top]'
-      ),
-      toolbarOpened: 'block',
-      toolbarClosed: 'hidden',
-      content: twJoin(
-        'relative mx-auto max-w-content'
-      ),
-      actions: twJoin(
-        'absolute flex opacity-0 pr-[5px]',
-        'right-full',
-        // Mobile styles
-        'mobile:right-auto',
-        // RTL styles
-        'group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*theme(width.toolbox-btn))]',
-        'mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]'
-      ),
-      actionsOpened: 'opacity-100',
-
-      plusButton: twJoin(
-        // Base toolbox-button styles
-        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
-        'shrink-0',
-        // SVG sizing
-        '[&_svg]:h-6 [&_svg]:w-6',
-        // Hover (can-hover)
-        'can-hover:hover:bg-bg-light',
-        // Keep hover background when toolbox is open
-        'group-data-[blok-toolbox-opened=true]:bg-bg-light',
-        // Mobile styles (static positioning with overlay-pane appearance)
-        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
-        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
-        // RTL styles
-        'group-data-[blok-rtl=true]:right-[calc(-1*theme(width.toolbox-btn))] group-data-[blok-rtl=true]:left-auto',
-        // Narrow mode (not-mobile)
-        'not-mobile:group-data-[blok-narrow=true]:left-[5px]',
-        // Narrow mode RTL (not-mobile)
-        'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-0 not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:right-[5px]'
-      ),
-      plusButtonShortcutKey: 'text-white',
-      /**
-       * Data attribute selector used by SortableJS for drag handle
-       */
-      settingsToggler: twJoin(
-        // Base toolbox-button styles
-        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
-        'cursor-pointer select-none',
-        // SVG sizing
-        '[&_svg]:h-6 [&_svg]:w-6',
-        // Active state
-        'active:cursor-grabbing',
-        // Hover (can-hover)
-        'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
-        // When toolbox is opened, use pointer cursor on hover
-        'group-data-[blok-toolbox-opened=true]:can-hover:hover:cursor-pointer',
-        // When block settings is opened, show hover background and pointer cursor
-        'group-data-[blok-block-settings-opened=true]:bg-bg-light',
-        'group-data-[blok-block-settings-opened=true]:can-hover:hover:cursor-pointer',
-        // Mobile styles (static positioning with overlay-pane appearance)
-        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
-        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
-        // Not-mobile styles
-        'not-mobile:w-6'
-      ),
-      settingsTogglerHidden: 'hidden',
-    };
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter is deprecated but still used internally
+    return getToolbarStyles();
   }
 
   /**
@@ -358,6 +302,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Reset explicitlyClosed flag when toolbar is opened
+     */
+    this.explicitlyClosed = false;
+
+    /**
      * Close Toolbox when we move toolbar
      */
     if (this.toolboxInstance.opened) {
@@ -383,8 +332,10 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.hoveredBlock = targetBlock;
-    this.hoveredTarget = target ?? null;
-    this.lastToolbarY = null; // Reset cached position when moving to a new block
+    this.plusButtonHandler.setHoveredBlock(targetBlock);
+    this.settingsTogglerHandler.setHoveredBlock(targetBlock);
+    this.positioner.setHoveredTarget(target ?? null);
+    this.positioner.resetCachedPosition(); // Reset cached position when moving to a new block
 
     const { wrapper, plusButton, settingsToggler } = this.nodes;
 
@@ -395,16 +346,19 @@ export class Toolbar extends Module<ToolbarNodes> {
     const targetBlockHolder = targetBlock.holder;
     const { isMobile } = this.Blok.UI;
 
+    const toolbarY = this.positioner.calculateToolbarY(
+      { targetBlock, hoveredTarget: target ?? null, isMobile },
+      plusButton
+    );
 
-    const toolbarY = this.calculateToolbarY(targetBlock, plusButton, isMobile);
+    if (toolbarY === null) {
+      return;
+    }
 
     /**
      * Move Toolbar to the Top coordinate of Block
      */
-    const newToolbarY = Math.floor(toolbarY);
-
-    this.lastToolbarY = newToolbarY;
-    wrapper.style.top = `${newToolbarY}px`;
+    this.positioner.moveToY(this.nodes, toolbarY);
     targetBlockHolder.appendChild(wrapper);
 
     /** Set up draggable on the target block using the settings toggler as drag handle */
@@ -415,7 +369,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Apply content offset for nested elements (e.g., nested list items)
      */
-    this.applyContentOffset(targetBlock);
+    this.positioner.applyContentOffset(this.nodes, targetBlock);
 
     /**
      * Do not show Block Tunes Toggler near single and empty block
@@ -438,6 +392,14 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param block - optional block to position the toolbar at (defaults to first selected block)
    */
   public moveAndOpenForMultipleBlocks(block?: Block): void {
+    /**
+     * Do not move toolbar if Block Settings is opened or opening.
+     * The settings menu should remain anchored to where the user opened it.
+     */
+    if (this.Blok.BlockSettings.opened || this.Blok.BlockSettings.isOpening) {
+      return;
+    }
+
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
 
     if (selectedBlocks.length < 2) {
@@ -460,9 +422,10 @@ export class Toolbar extends Module<ToolbarNodes> {
       this.toolboxInstance.close();
     }
 
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
-    }
+    /**
+     * Don't close BlockSettings here - it should remain open if the user explicitly opened it via the settings toggler.
+     * The hover behavior that calls this method shouldn't interfere with the user's intent to open the menu.
+     */
 
     /**
      * Use the provided block or fall back to the first selected block as the anchor for the toolbar
@@ -475,8 +438,10 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.hoveredBlock = targetBlock;
-    this.hoveredTarget = null; // No target for multi-block selection
-    this.lastToolbarY = null; // Reset cached position when moving to a new block
+    this.plusButtonHandler.setHoveredBlock(targetBlock);
+    this.settingsTogglerHandler.setHoveredBlock(targetBlock);
+    this.positioner.setHoveredTarget(null); // No target for multi-block selection
+    this.positioner.resetCachedPosition(); // Reset cached position when moving to a new block
 
     const { wrapper, plusButton } = this.nodes;
 
@@ -486,10 +451,16 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     const targetBlockHolder = targetBlock.holder;
 
-    const newToolbarY = Math.floor(this.calculateToolbarY(targetBlock, plusButton, false));
+    const toolbarY = this.positioner.calculateToolbarY(
+      { targetBlock, hoveredTarget: null, isMobile: false },
+      plusButton
+    );
 
-    this.lastToolbarY = newToolbarY;
-    wrapper.style.top = `${newToolbarY}px`;
+    if (toolbarY === null) {
+      return;
+    }
+
+    this.positioner.moveToY(this.nodes, toolbarY);
     targetBlockHolder.appendChild(wrapper);
 
     /** Set up draggable on the target block using the settings toggler as drag handle */
@@ -502,7 +473,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Reset content offset for multi-block selection
      */
-    this.applyContentOffset(targetBlock);
+    this.positioner.applyContentOffset(this.nodes, targetBlock);
 
     /**
      * Always show the settings toggler for multi-block selection
@@ -514,8 +485,9 @@ export class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Close the Toolbar
+   * @param options - Optional configuration
    */
-  public close(): void {
+  public close(options?: ToolbarCloseOptions): void {
     if (this.Blok.ReadOnly.isEnabled) {
       return;
     }
@@ -532,6 +504,16 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.Blok.BlockSettings.close();
 
     /**
+     * Clear hovered block state and optionally mark as explicitly closed
+     * to prevent toolbar from reopening on subsequent block-hovered events
+     */
+    this.hoveredBlock = null;
+    // Only set explicitlyClosed if not explicitly disabled (e.g., when called from toolbox after block insertion)
+    if (options?.setExplicitlyClosed !== false) {
+      this.explicitlyClosed = true;
+    }
+
+    /**
      * Restore plus button visibility in case it was hidden by other interactions
      */
     if (this.nodes.plusButton) {
@@ -544,7 +526,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (this.nodes.actions) {
       this.nodes.actions.style.transform = '';
     }
-    this.hoveredTarget = null;
+    this.positioner.setHoveredTarget(null);
 
     this.reset();
   }
@@ -554,14 +536,22 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Used after block drop to avoid accidental menu opening
    */
   public skipNextSettingsToggle(): void {
-    this.ignoreNextSettingsMouseUp = true;
+    this.settingsTogglerHandler.skipNextToggle();
+  }
+
+  /**
+   * Resets the explicitlyClosed flag to allow the toolbar to reopen on hover.
+   * Called when drag is cancelled to re-enable hover-based toolbar opening.
+   */
+  public resetExplicitlyClosed(): void {
+    this.explicitlyClosed = false;
   }
 
   /**
    * Reset the Toolbar position to prevent DOM height growth, for example after blocks deletion
    */
   private reset(): void {
-    this.lastToolbarY = null; // Reset cached position when toolbar is reset
+    this.positioner.resetCachedPosition(); // Reset cached position when toolbar is reset
 
     if (this.nodes.wrapper) {
       this.nodes.wrapper.style.top = 'unset';
@@ -638,103 +628,20 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Fill Content Zone:
-     *  - Plus Button
+     *  - Plus Button (created by handler)
      *  - Toolbox
      */
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const plusButton = $.make('div', this.CSS.plusButton, {
-      innerHTML: IconPlus,
-    });
-
-    plusButton.setAttribute('data-blok-testid', 'plus-button');
-
-    this.nodes.plusButton = plusButton;
+    const plusButton = this.plusButtonHandler.make(this.nodes);
     $.append(actions, plusButton);
 
     /**
-     * Plus button mousedown handler
-     * Uses click-vs-drag detection to distinguish clicks from drags.
-     */
-    this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
-      hide();
-
-      this.setupClickVsDrag(
-        e as MouseEvent,
-        (mouseUpEvent) => {
-          /**
-           * Check for modifier key to determine insert direction:
-           * - Option/Alt on Mac, Ctrl on Windows → insert above
-           * - No modifier → insert below (default)
-           */
-          const userOS = getUserOS();
-          const insertAbove = userOS.win ? mouseUpEvent.ctrlKey : mouseUpEvent.altKey;
-
-          this.plusButtonClicked(insertAbove);
-        }
-      );
-    }, true);
-
-    /**
-     * Add events to show/hide tooltip for plus button
-     */
-    const userOS = getUserOS();
-    const modifierClickText = userOS.win
-      ? this.Blok.I18n.t('toolbox.ctrlAddAbove')
-      : this.Blok.I18n.t('toolbox.optionAddAbove');
-
-    const tooltipContent = this.createTooltipContent([
-      this.Blok.I18n.t('toolbox.addBelow'),
-      modifierClickText,
-    ]);
-
-    onHover(plusButton, tooltipContent, {
-      delay: 500,
-    });
-
-    /**
      * Fill Actions Zone:
-     *  - Settings Toggler
+     *  - Settings Toggler (created by handler)
      *  - Remove Block Button
      *  - Settings Panel
      */
-    const settingsToggler = $.make('span', [
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
-      this.CSS.settingsToggler,
-      'group-data-[blok-dragging=true]:cursor-grabbing',
-    ], {
-      innerHTML: IconMenu,
-    });
-
-    settingsToggler.setAttribute(DATA_ATTR.settingsToggler, '');
-    settingsToggler.setAttribute(DATA_ATTR.dragHandle, '');
-    settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
-
-    // Accessibility: make the drag handle accessible to screen readers
-    // Using tabindex="-1" keeps it accessible but removes from tab order
-    // Users can move blocks with keyboard shortcuts (Cmd/Ctrl+Shift+Arrow)
-    settingsToggler.setAttribute('role', 'button');
-    settingsToggler.setAttribute('tabindex', '-1');
-    settingsToggler.setAttribute(
-      'aria-label',
-      this.Blok.I18n.t('a11y.dragHandle')
-    );
-    settingsToggler.setAttribute(
-      'aria-roledescription',
-      this.Blok.I18n.t('a11y.dragHandleRole')
-    );
-
-    this.nodes.settingsToggler = settingsToggler;
-
+    const settingsToggler = this.settingsTogglerHandler.make(this.nodes);
     $.append(actions, settingsToggler);
-
-    const blockTunesTooltip = this.createTooltipContent([
-      this.Blok.I18n.t('blockSettings.dragToMove'),
-      this.Blok.I18n.t('blockSettings.clickToOpenMenu'),
-    ]);
-
-    onHover(settingsToggler, blockTunesTooltip, {
-      delay: 500,
-    });
 
     /**
      * Appending Toolbar components to itself
@@ -825,100 +732,44 @@ export class Toolbar extends Module<ToolbarNodes> {
 
 
   /**
-   * Handler for Plus Button.
-   * Inserts "/" into target block and opens toolbox, or toggles toolbox closed if already open.
-   * @param insertAbove - if true, insert above the current block instead of below
-   */
-  private plusButtonClicked(insertAbove = false): void {
-    const { BlockManager, BlockSettings, BlockSelection, Caret } = this.Blok;
-
-    // Close other menus and clear selections
-    if (BlockSettings.opened) {
-      BlockSettings.close();
-    }
-    if (BlockSelection.anyBlockSelected) {
-      BlockSelection.clearSelection();
-    }
-    SelectionUtils.get()?.removeAllRanges();
-
-    // Toggle closed if already open
-    if (this.toolbox.opened) {
-      this.toolbox.close();
-
-      return;
-    }
-
-    // Determine target block: reuse empty/slash paragraph, or create new one
-    const hoveredBlock = this.hoveredBlock;
-    const isParagraph = hoveredBlock?.name === 'paragraph';
-    const startsWithSlash = isParagraph && hoveredBlock.pluginsContent.textContent?.startsWith('/');
-    const isEmptyParagraph = isParagraph && hoveredBlock.isEmpty;
-
-    // Calculate insert index based on direction
-    const hoveredBlockIndex = hoveredBlock !== null
-      ? BlockManager.getBlockIndex(hoveredBlock)
-      : BlockManager.currentBlockIndex;
-    const insertIndex = insertAbove ? hoveredBlockIndex : hoveredBlockIndex + 1;
-
-    const targetBlock = isEmptyParagraph || startsWithSlash
-      ? hoveredBlock
-      : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
-
-    // Insert "/" or position caret after existing one
-    if (startsWithSlash) {
-      Caret.setToBlock(targetBlock, Caret.positions.DEFAULT, 1);
-    } else {
-      Caret.setToBlock(targetBlock, Caret.positions.START);
-      Caret.insertContentAtCaretPosition('/');
-    }
-    this.moveAndOpen(targetBlock);
-    this.toolbox.open();
-  }
-
-  /**
    * Enable bindings
    */
   private enableModuleBindings(): void {
     /**
-     * Settings toggler
-     *
-     * mousedown is used because on click selection is lost in Safari and FF
+     * Plus button mousedown handler
+     * Uses click-vs-drag detection to distinguish clicks from drags.
+     */
+    const plusButton = this.nodes.plusButton;
+
+    if (plusButton) {
+      this.readOnlyMutableListeners.on(plusButton, 'mousedown', (e) => {
+        hide();
+
+        this.clickDragHandler.setup(
+          e as MouseEvent,
+          (mouseUpEvent) => {
+            /**
+             * Check for modifier key to determine insert direction:
+             * - Option/Alt on Mac, Ctrl on Windows → insert above
+             * - No modifier → insert below (default)
+             */
+            const userOS = getUserOS();
+            const insertAbove = userOS.win ? mouseUpEvent.ctrlKey : mouseUpEvent.altKey;
+
+            this.plusButtonHandler.handleClick(insertAbove);
+          }
+        );
+      }, true);
+    }
+
+    /**
+     * Settings toggler mousedown handler
+     * Uses click-vs-drag detection to distinguish clicks from drags.
      */
     const settingsToggler = this.nodes.settingsToggler;
 
     if (settingsToggler) {
-      /**
-       * Settings toggler mousedown handler
-       * Uses click-vs-drag detection to distinguish clicks from drags.
-       */
-      this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', (e) => {
-        hide();
-
-        this.setupClickVsDrag(
-          e as MouseEvent,
-          () => {
-            this.settingsTogglerClicked();
-
-            if (this.toolboxInstance?.opened) {
-              this.toolboxInstance.close();
-            }
-          },
-          {
-            /**
-             * Check if we should ignore this mouseup (e.g., after a block drop)
-             */
-            beforeCallback: () => {
-              if (this.ignoreNextSettingsMouseUp) {
-                this.ignoreNextSettingsMouseUp = false;
-
-                return false;
-              }
-
-              return true;
-            },
-          }
-        );
-      }, true);
+      this.readOnlyMutableListeners.on(settingsToggler, 'mousedown', this.settingsTogglerHandler.createMousedownHandler(), true);
     }
 
     /**
@@ -947,7 +798,15 @@ export class Toolbar extends Module<ToolbarNodes> {
         /**
          * Do not move toolbar if Block Settings or Toolbox opened
          */
-        if (this.Blok.BlockSettings.opened || this.toolboxInstance?.opened) {
+        if (this.Blok.BlockSettings.opened || this.Blok.BlockSettings.isOpening || this.toolboxInstance?.opened) {
+          return;
+        }
+
+        /**
+         * Do not move toolbar if it was explicitly closed (e.g., after block deletion).
+         * This prevents the toolbar from reopening on subsequent block-hovered events.
+         */
+        if (this.explicitlyClosed) {
           return;
         }
 
@@ -1026,9 +885,9 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Don't reposition if Block Settings or Toolbox is opened
+     * Don't reposition if Block Settings or Toolbox is opened or opening
      */
-    if (this.Blok.BlockSettings.opened || this.toolboxInstance?.opened) {
+    if (this.Blok.BlockSettings.opened || this.Blok.BlockSettings.isOpening || this.toolboxInstance?.opened) {
       return;
     }
 
@@ -1047,130 +906,25 @@ export class Toolbar extends Module<ToolbarNodes> {
   };
 
   /**
-   * Calculates the Y position for the toolbar, centered on the first line of the block
-   * @param targetBlock - the block to position the toolbar relative to
-   * @param plusButton - the plus button element (used to get toolbar height)
-   * @param isMobile - whether the current view is mobile
-   * @returns the Y position in pixels
-   */
-  private calculateToolbarY(targetBlock: Block, plusButton: HTMLElement, isMobile: boolean): number {
-    const targetBlockHolder = targetBlock.holder;
-    const holderRect = targetBlockHolder.getBoundingClientRect();
-
-    /**
-     * Use the hovered target element (e.g., a nested list item) if available,
-     * otherwise fall back to the block's pluginsContent
-     */
-    const listItemElement = this.hoveredTarget?.closest('[role="listitem"]');
-    /**
-     * For list items, find the actual text content element ([contenteditable]) and use its position
-     * to properly center the toolbar on the text, not on the marker which may have different font-size
-     */
-    const textElement = listItemElement?.querySelector('[contenteditable]');
-    const contentElement = textElement ?? listItemElement ?? targetBlock.pluginsContent;
-    const contentRect = contentElement.getBoundingClientRect();
-    const contentOffset = contentRect.top - holderRect.top;
-
-    const contentStyle = window.getComputedStyle(contentElement);
-    const contentPaddingTop = parseInt(contentStyle.paddingTop, 10) || 0;
-    const lineHeight = parseFloat(contentStyle.lineHeight) || 24;
-    const toolbarHeight = parseInt(window.getComputedStyle(plusButton).height, 10);
-
-    if (isMobile) {
-      return contentOffset - toolbarHeight;
-    }
-
-    const firstLineTop = contentOffset + contentPaddingTop;
-    const firstLineCenterY = firstLineTop + (lineHeight / 2);
-
-    return firstLineCenterY - (toolbarHeight / 2);
-  }
-
-  /**
    * Repositions the toolbar to stay centered on the first line of the current block
    * without closing/opening toolbox or block settings
    */
   private repositionToolbar(): void {
-    const { wrapper, plusButton } = this.nodes;
-
-    if (!wrapper || !plusButton || !this.hoveredBlock) {
+    if (!this.hoveredBlock || !this.nodes.plusButton) {
       return;
     }
 
-    const newToolbarY = Math.floor(this.calculateToolbarY(this.hoveredBlock, plusButton, this.Blok.UI.isMobile));
-
-    /**
-     * Only update the toolbar position if it has actually changed significantly.
-     * This prevents unnecessary repositioning when block changes don't affect
-     * the toolbar's position (e.g., toggling checkbox styles in a checklist).
-     *
-     * We use a tolerance of 2px to account for:
-     * - Floating-point precision issues in getBoundingClientRect()
-     * - Minor layout changes that don't warrant toolbar repositioning
-     * - Browser rendering differences during DOM mutations
-     */
-    const POSITION_TOLERANCE = 2;
-    const positionChanged = this.lastToolbarY === null ||
-      Math.abs(newToolbarY - this.lastToolbarY) > POSITION_TOLERANCE;
-
-    if (positionChanged) {
-      this.lastToolbarY = newToolbarY;
-      wrapper.style.top = `${newToolbarY}px`;
-    }
+    this.positioner.repositionToolbar(
+      this.nodes,
+      {
+        targetBlock: this.hoveredBlock,
+        hoveredTarget: this.positioner.target,
+        isMobile: this.Blok.UI.isMobile,
+      },
+      this.nodes.plusButton
+    );
   }
 
-  /**
-   * Applies the content offset transform to the actions element based on the hovered target.
-   * This positions the toolbar closer to nested content like list items.
-   * @param targetBlock - the block to get the content offset from
-   */
-  private applyContentOffset(targetBlock: Block): void {
-    const { actions } = this.nodes;
-
-    if (!actions) {
-      return;
-    }
-
-    if (!this.hoveredTarget) {
-      actions.style.transform = '';
-
-      return;
-    }
-
-    const contentOffset = targetBlock.getContentOffset(this.hoveredTarget);
-    const hasValidOffset = contentOffset && contentOffset.left > 0;
-
-    actions.style.transform = hasValidOffset ? `translateX(${contentOffset.left}px)` : '';
-  }
-
-  /**
-   * Clicks on the Block Settings toggler
-   */
-  private settingsTogglerClicked(): void {
-    /**
-     * Cancel any pending drag tracking since we're opening the settings menu
-     * This prevents the drag from starting when the user moves their mouse to the menu
-     */
-    this.Blok.DragManager.cancelTracking();
-
-    /**
-     * Prefer the hovered block (desktop), fall back to the current block (mobile) so tapping the toggler still works
-     */
-    const targetBlock = this.hoveredBlock ?? this.Blok.BlockManager.currentBlock;
-
-    if (!targetBlock) {
-      return;
-    }
-
-    this.hoveredBlock = targetBlock;
-    this.Blok.BlockManager.currentBlock = targetBlock;
-
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
-    } else {
-      void this.Blok.BlockSettings.open(targetBlock, this.nodes.settingsToggler);
-    }
-  }
 
   /**
    * Draws Toolbar UI
@@ -1196,84 +950,6 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
-   * Creates a tooltip content element with multiple lines and consistent styling
-   * @param lines - array of text strings, each will be displayed on its own line
-   * @returns the tooltip container element
-   */
-  private createTooltipContent(lines: string[]): HTMLElement {
-    const container = $.make('div');
-
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.gap = '4px';
-
-    lines.forEach((text) => {
-      const line = $.make('div');
-      const spaceIndex = text.indexOf(' ');
-
-      if (spaceIndex > 0) {
-        const firstWord = text.substring(0, spaceIndex);
-        const rest = text.substring(spaceIndex);
-        const styledWord = $.make('span', null, { textContent: firstWord });
-
-        styledWord.style.color = 'white';
-        line.appendChild(styledWord);
-        line.appendChild(document.createTextNode(rest));
-      } else {
-        line.appendChild(document.createTextNode(text));
-      }
-
-      container.appendChild(line);
-    });
-
-    return container;
-  }
-
-  /**
-   * Sets up a click-vs-drag detection pattern on an element.
-   * Tracks mousedown position and fires callback only if mouse didn't move beyond threshold.
-   * Uses document-level mouseup to catch events even if mouse moves off element.
-   * @param element - Element to attach mousedown listener to
-   * @param mouseEvent - The mousedown event
-   * @param onClickCallback - Callback to fire if it was a click (not a drag)
-   * @param options - Optional configuration
-   * @param options.beforeCallback - Function called before click callback, return false to abort
-   */
-  private setupClickVsDrag(
-    mouseEvent: MouseEvent,
-    onClickCallback: (mouseUpEvent: MouseEvent) => void,
-    options?: { beforeCallback?: () => boolean }
-  ): void {
-    const startPosition = {
-      x: mouseEvent.clientX,
-      y: mouseEvent.clientY,
-    };
-
-    const onMouseUp = (mouseUpEvent: MouseEvent): void => {
-      document.removeEventListener('mouseup', onMouseUp, true);
-      this.pendingMouseUpListeners.delete(onMouseUp);
-
-      if (options?.beforeCallback && !options.beforeCallback()) {
-        return;
-      }
-
-      const wasDragged = (
-        Math.abs(mouseUpEvent.clientX - startPosition.x) > DRAG_THRESHOLD ||
-        Math.abs(mouseUpEvent.clientY - startPosition.y) > DRAG_THRESHOLD
-      );
-
-      if (wasDragged) {
-        return;
-      }
-
-      onClickCallback(mouseUpEvent);
-    };
-
-    this.pendingMouseUpListeners.add(onMouseUp);
-    document.addEventListener('mouseup', onMouseUp, true);
-  }
-
-  /**
    * Removes all created and saved HTMLElements
    * It is used in Read-Only mode
    */
@@ -1284,13 +960,8 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Clean up any pending document-level mouseup listeners.
-     * These are added on mousedown and normally removed on mouseup,
-     * but if the component is destroyed mid-click, they need manual cleanup.
+     * Clean up any pending click-drag handlers
      */
-    for (const listener of this.pendingMouseUpListeners) {
-      document.removeEventListener('mouseup', listener, true);
-    }
-    this.pendingMouseUpListeners.clear();
+    this.clickDragHandler.destroy();
   }
 }

@@ -11,7 +11,6 @@
  * {@link SanitizerConfig}
  */
 
-import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 
 /**
  * @typedef {object} SanitizerConfig
@@ -29,11 +28,18 @@ import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '.
  */
 
 import HTMLJanitor from 'html-janitor';
+
 import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
 import type { TagConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
+import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule | boolean;
+
+/**
+ * Recursive type for data that can contain nested arrays
+ */
+type DeepData = string | Record<string, unknown> | Array<DeepData>;
 
 const UNSAFE_URL_PROTOCOL_PATTERN = /^\s*(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)/i;
 const UNSAFE_URL_ATTR_FALLBACK_PATTERN =
@@ -93,10 +99,10 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {} as
  * @param {SanitizerConfig} globalRules - global sanitizer config
  */
 const deepSanitize = (
-  dataToSanitize: object | string,
+  dataToSanitize: DeepData,
   rules: DeepSanitizerRule,
   globalRules: SanitizerConfig
-): object | string => {
+): DeepData => {
   /**
    * BlockData It may contain 3 types:
    *  - Array
@@ -136,10 +142,10 @@ const deepSanitize = (
  * @param {SanitizerConfig} globalRules - global sanitizer config
  */
 const cleanArray = (
-  array: Array<object | string>,
+  array: Array<DeepData>,
   ruleForItem: DeepSanitizerRule,
   globalRules: SanitizerConfig
-): Array<object | string> => {
+): Array<DeepData> => {
   return array.map((arrayItem) => deepSanitize(arrayItem, ruleForItem, globalRules));
 };
 
@@ -151,12 +157,12 @@ const cleanArray = (
  * @returns {object}
  */
 const cleanObject = (
-  object: object,
+  object: Record<string, unknown>,
   rules: DeepSanitizerRule | Record<string, DeepSanitizerRule>,
   globalRules: SanitizerConfig
-): object => {
-  const cleanData: Record<string, unknown> = {};
-  const objectRecord = object as Record<string, unknown>;
+): Record<string, unknown> => {
+  const cleanData: Record<string, DeepData> = {};
+  const objectRecord = object;
 
   for (const fieldName in object) {
     if (!Object.prototype.hasOwnProperty.call(object, fieldName)) {
@@ -176,10 +182,10 @@ const cleanObject = (
       ? ruleCandidate
       : rules;
 
-    cleanData[fieldName] = deepSanitize(currentIterationItem as object | string, ruleForItem as DeepSanitizerRule, globalRules);
+    cleanData[fieldName] = deepSanitize(currentIterationItem as DeepData, ruleForItem as DeepSanitizerRule, globalRules);
   }
 
-  return cleanData;
+  return cleanData as Record<string, unknown>;
 };
 
 /**
@@ -386,12 +392,12 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     }
 
     if (fieldValue !== undefined) {
-      merged[tag] = cloneTagConfig(fieldValue as SanitizerRule);
+      merged[tag] = cloneTagConfig(fieldValue);
 
       continue;
     }
 
-    merged[tag] = cloneTagConfig(globalValue as SanitizerRule);
+    merged[tag] = cloneTagConfig(globalValue);
   }
 
   return merged;

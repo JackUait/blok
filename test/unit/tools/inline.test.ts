@@ -6,7 +6,7 @@ import { InlineToolAdapter } from '../../../src/components/tools/inline';
 type InlineToolAdapterOptions = ConstructorParameters<typeof InlineToolAdapter>[0];
 
 type InlineToolInstance = {
-  api: object;
+  api: Record<string, unknown>;
   config: ToolSettings;
 };
 
@@ -25,7 +25,7 @@ const createInlineToolOptions = (): InlineToolAdapterOptions => {
 
     public static isReadOnlySupported = true;
 
-    public api: object;
+    public api: Record<string, unknown>;
 
     public config: ToolSettings;
 
@@ -33,7 +33,7 @@ const createInlineToolOptions = (): InlineToolAdapterOptions => {
      *
      * @param root0 - The constructor arguments object
      */
-    constructor({ api, config }: { api: object; config: ToolSettings }) {
+    constructor({ api, config }: { api: Record<string, unknown>; config: ToolSettings }) {
       this.api = api;
       this.config = config;
     }
@@ -163,14 +163,16 @@ describe('InlineToolAdapter', () => {
   describe('.reset', () => {
     it('invokes constructable reset', async () => {
       const options = createInlineToolOptions();
-      const reset = vi.fn();
+      const resetReturnValue = 'reset complete';
+      const reset = vi.fn().mockReturnValue(resetReturnValue);
 
       options.constructable.reset = reset;
       const tool = new InlineToolAdapter(options);
 
-      await tool.reset();
+      const result = await tool.reset();
 
       expect(reset).toHaveBeenCalledTimes(1);
+      expect(result).toBe(resetReturnValue);
     });
 
     it('does nothing when constructable reset is absent', async () => {
@@ -202,11 +204,11 @@ describe('InlineToolAdapter', () => {
       /**
        *
        */
-      class ConstructableWithRender extends (options.constructable as unknown as { new (args: { api: object; config: ToolSettings }): InlineToolInstance }) {
+      class ConstructableWithRender extends (options.constructable as unknown as { new (args: { api: Record<string, unknown>; config: ToolSettings }): InlineToolInstance }) {
         /**
          *
          */
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
       }
@@ -226,11 +228,11 @@ describe('InlineToolAdapter', () => {
       /**
        *
        */
-      class ConstructableWithAllMethods extends (options.constructable as unknown as { new (args: { api: object; config: ToolSettings }): InlineToolInstance }) {
+      class ConstructableWithAllMethods extends (options.constructable as unknown as { new (args: { api: Record<string, unknown>; config: ToolSettings }): InlineToolInstance }) {
         /**
          *
          */
-        public render(): object {
+        public render(): Record<string, unknown> {
           return {};
         }
 

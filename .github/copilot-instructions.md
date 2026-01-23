@@ -17,7 +17,10 @@ You have access to a skills library at `.github/skills/`. These skills encode pr
 - **test-driven-development** - Use when implementing any feature or bugfix
 - **systematic-debugging** - Use when encountering bugs, test failures, unexpected behavior
 - **writing-plans** - Use for multi-step tasks, multi-file changes, or work > 15 minutes
-- **executing-plans** - Use when executing a written plan
+- **executing-plans** - Use when executing a written plan in a separate session
+- **subagent-driven-development** - Use when executing a plan with subagents in the current session
+- **using-git-worktrees** - Use when setting up isolated workspaces for feature work
+- **finishing-a-development-branch** - Use when completing work and preparing for merge
 - **verification-before-completion** - Use BEFORE declaring any task complete
 - **code-review** - Use when preparing for review or responding to feedback
 

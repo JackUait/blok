@@ -1,15 +1,18 @@
-import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
-import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
-import type { SearchInput } from './components/search-input';
+import { DATA_ATTR } from '../../constants/data-attributes';
 import { EventsDispatcher } from '../events';
 import { Listeners } from '../listeners';
+import { twMerge } from '../tw';
+
+import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './components/popover-item';
+import type { PopoverItem, PopoverItemRenderParamsMap , PopoverItemParams } from './components/popover-item';
+import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
+import type { SearchInput } from './components/search-input';
+import { css } from './popover.const';
+
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import type { PopoverItemParams } from './components/popover-item';
-import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
-import { css } from './popover.const';
-import { DATA_ATTR } from '../../constants/data-attributes';
-import { twMerge } from '../tw';
+
+
 
 /**
  * Class responsible for rendering popover and handling its behaviour.
@@ -35,7 +38,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * List of default popover items that are searchable and may have confirmation state
    */
   protected get itemsDefault(): PopoverItemDefault[] {
-    return this.items.filter(item => item instanceof PopoverItemDefault) as PopoverItemDefault[];
+    return this.items.filter(item => item instanceof PopoverItemDefault);
   }
 
   /**
@@ -88,14 +91,14 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Returns HTML element corresponding to the popover
    */
   public getElement(): HTMLElement {
-    return this.nodes.popover as HTMLElement;
+    return this.nodes.popover;
   }
 
   /**
    * Returns DOM element that should be attached to the document.
    */
   public getMountElement(): HTMLElement {
-    return this.nodes.popover as HTMLElement;
+    return this.nodes.popover;
   }
 
   /**
@@ -186,7 +189,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
           return new PopoverItemSeparator(this.itemsRenderParams[PopoverItemType.Separator]);
         case PopoverItemType.Html:
           return new PopoverItemHtml(item, this.itemsRenderParams[PopoverItemType.Html]);
-        default:
+        case PopoverItemType.Default:
+        case undefined:
           return new PopoverItemDefault(item, this.itemsRenderParams[PopoverItemType.Default]);
       }
     });
@@ -207,7 +211,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
         }
 
         return event.composedPath().includes(itemEl);
-      }) as PopoverItemDefault | PopoverItemHtml | undefined;
+      });
   }
 
   /**

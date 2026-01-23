@@ -1,10 +1,12 @@
 import { Dom } from '../../../../dom';
-import { Listeners } from '../../../listeners';
 import { IconSearch } from '../../../../icons';
+import { EventsDispatcher } from '../../../events';
+import { Listeners } from '../../../listeners';
+
+import { css } from './search-input.const';
 import type { SearchInputEventMap, SearchableItem } from './search-input.types';
 import { SearchInputEvent, matchesSearchQuery } from './search-input.types';
-import { css } from './search-input.const';
-import { EventsDispatcher } from '../../../events';
+
 
 /**
  * Provides search input element and search logic
@@ -132,7 +134,7 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
    * Overrides value property setter to catch programmatic changes
    */
   private overrideValueProperty(): void {
-    const prototype = Object.getPrototypeOf(this.input);
+    const prototype = Object.getPrototypeOf(this.input) as PropertyDescriptorMap & { value?: PropertyDescriptor };
     const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
 
     if (descriptor?.set === undefined || descriptor.get === undefined) {
@@ -140,15 +142,18 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     }
 
     const applySearch = this.applySearch.bind(this);
+    const getter: (() => unknown) | undefined = descriptor.get;
+    const setter: ((value: string) => void) | undefined = descriptor.set;
 
     Object.defineProperty(this.input, 'value', {
       configurable: descriptor.configurable ?? true,
       enumerable: descriptor.enumerable ?? false,
       get(): string {
-        return descriptor.get?.call(this) ?? '';
+        const value = getter?.call(this);
+        return typeof value === 'string' ? value : '';
       },
       set(value: string): void {
-        descriptor.set?.call(this, value);
+        setter?.call(this, value);
         applySearch(value);
       },
     });

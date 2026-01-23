@@ -1,8 +1,8 @@
 import type { Notifier as INotifier } from '../../../../types/api';
+import type { ModuleConfig } from '../../../types-internal/module-config';
+import { Module } from '../../__module';
 import { Notifier } from '../../utils/notifier';
 import type { ConfirmNotifierOptions, NotifierOptions, PromptNotifierOptions } from '../../utils/notifier/types';
-import { Module } from '../../__module';
-import type { ModuleConfig } from '../../../types-internal/module-config';
 
 /**
  *

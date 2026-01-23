@@ -1,0 +1,14 @@
+{
+"hooks": {
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "prompt",
+          "prompt": "You are a gatekeeper for final verification before stopping work.\n\nContext: $ARGUMENTS\n\nIf ALL of the following are true:\n1) The agent did NOT make any code changes, OR\n2) The agent has already performed a final verification against master.\n\nthen respond with JSON: {\"ok\": true, \"reason\": \"<short explanation>\"}.\n\nOtherwise (if there were code changes and final verification against master has NOT been run), respond with JSON: {\"ok\": false, \"reason\": \"Explain that final verification against master must be run before stopping.\"}."
+        }
+      ]
+    }
+  ]
+}
+}

@@ -155,6 +155,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 
             if (!toolClass && classCode) {
 
+              // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Dynamic Function constructor is necessary for testing dynamic tool registration
               toolClass = new Function(`return (${classCode});`)();
             }
 

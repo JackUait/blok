@@ -472,6 +472,7 @@ test.describe('inline tool italic', () => {
 
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Paragraph data has text property
     expect(paragraphBlock?.data.text).toMatch(/<i>italic<\/i> text/);
   });
 

@@ -1,7 +1,8 @@
 /**
- * Event detail for block relocation
+ * Move event for block relocation
+ * Passed to the moved() lifecycle hook when a block is moved to a new position
  */
-export interface MoveEventDetail {
+export interface MoveEvent {
   /**
    * index the block was moved from
    */
@@ -10,14 +11,4 @@ export interface MoveEventDetail {
    * index the block was moved to
    */
   toIndex: number;
-}
-
-/**
- * Move event for block relocation
- */
-export interface MoveEvent extends CustomEvent {
-  /**
-   * Override detail property of CustomEvent by MoveEvent hook
-   */
-  readonly detail: MoveEventDetail;
 }

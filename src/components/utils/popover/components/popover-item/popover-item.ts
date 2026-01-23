@@ -1,5 +1,6 @@
 import { hide, onHover } from '../../../../utils/tooltip';
 import { type HintPosition, Hint } from '../hint';
+
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 
 /**

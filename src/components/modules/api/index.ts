@@ -5,8 +5,8 @@
  * Each block has a Blok API instance to use provided public methods
  * if you cant to read more about how API works, please see docs
  */
-import { Module } from '../../__module';
 import type { API as APIInterfaces } from '../../../../types';
+import { Module } from '../../__module';
 
 /**
  * @class API

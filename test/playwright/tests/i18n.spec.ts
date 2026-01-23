@@ -127,7 +127,7 @@ const createBlokWithI18n = async (
       };
 
       const { tools, ...restConfig } = blokConfig ?? {};
-      const normalizedTools = normalizeTools(tools as Record<string, unknown> | undefined);
+      const normalizedTools = normalizeTools(tools);
 
       const blok = new window.Blok({
         holder: holder,
@@ -748,8 +748,7 @@ test.describe('blok i18n', () => {
       await resetBlok(page);
       await page.evaluate(
         async ({ holder, convertTo }) => {
-          // @ts-expect-error - Get SimpleHeader from window
-          const SimpleHeader = window.SimpleHeader;
+          const SimpleHeader = (window as { SimpleHeader?: unknown }).SimpleHeader;
 
           const blok = new window.Blok({
             holder: holder,

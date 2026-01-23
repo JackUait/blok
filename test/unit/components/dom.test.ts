@@ -22,8 +22,8 @@ describe('Dom helper utilities', () => {
       });
 
       expect(button.tagName).toBe('BUTTON');
-      expect(button.getAttribute('data-blok-classes')).toBe('btn primary');
-      expect(button.getAttribute('data-blok-testid')).toBe('make-button');
+      expect(button).toHaveAttribute('data-blok-classes', 'btn primary');
+      expect(button).toHaveAttribute('data-blok-testid', 'make-button');
       expect((button as HTMLButtonElement).disabled).toBe(true);
 
       const input = Dom.make('input', 'field', {
@@ -101,7 +101,7 @@ describe('Dom helper utilities', () => {
       const node = Dom.text('Blok');
 
       expect(node.nodeType).toBe(Node.TEXT_NODE);
-      expect(node.textContent).toBe('Blok');
+      expect(node).toHaveTextContent('Blok');
     });
   });
 
@@ -435,11 +435,11 @@ describe('Dom helper utilities', () => {
 
       element.textContent = '';
       toggleEmptyMark(element);
-      expect(element.getAttribute('data-blok-empty')).toBe('true');
+      expect(element).toHaveAttribute('data-blok-empty', 'true');
 
       element.textContent = 'filled';
       toggleEmptyMark(element);
-      expect(element.getAttribute('data-blok-empty')).toBe('false');
+      expect(element).toHaveAttribute('data-blok-empty', 'false');
     });
   });
 });

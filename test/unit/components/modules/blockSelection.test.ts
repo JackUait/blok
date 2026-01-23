@@ -44,6 +44,8 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
   const blockStub = {
     holder,
     inputs,
+    id: 'test-id',
+    name: 'paragraph',
     save: vi.fn().mockResolvedValue({
       id: 'test',
       tool: 'paragraph',
@@ -51,6 +53,9 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
       tunes: {},
       time: 0,
     }),
+    // Mock preservedData and preservedTunes for clipboard operations
+    preservedData: { text: 'Sample text' },
+    preservedTunes: {},
   };
 
   Object.defineProperty(blockStub, 'selected', {
@@ -102,6 +107,10 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     InlineToolbar: {
       close: vi.fn(),
     } as unknown as BlokModules['InlineToolbar'],
+    Toolbar: {
+      close: vi.fn(),
+      moveAndOpenForMultipleBlocks: vi.fn(),
+    } as unknown as BlokModules['Toolbar'],
     ReadOnly: {
       isEnabled: false,
     } as unknown as BlokModules['ReadOnly'],
@@ -404,8 +413,10 @@ describe('BlockSelection', () => {
         (modules.Paste as unknown as { MIME_TYPE: string }).MIME_TYPE,
         expect.stringContaining('"tool":"paragraph"')
       );
-      expect(firstBlock.save).toHaveBeenCalledTimes(1);
-      expect(secondBlock.save).toHaveBeenCalledTimes(1);
+      // copySelectedBlocks now uses preservedData instead of calling async block.save()
+      // This ensures clipboard operations are synchronous for browser compatibility
+      expect(firstBlock.save).not.toHaveBeenCalled();
+      expect(secondBlock.save).not.toHaveBeenCalled();
     });
   });
 
@@ -462,7 +473,7 @@ describe('BlockSelection', () => {
       blockSelection.toggleReadOnly();
 
       expect(selectionMock.removeAllRanges).toHaveBeenCalledTimes(1);
-      expect(blocks.every((block) => block.selected === false)).toBe(true);
+      expect(blocks.every((block) => !block.selected)).toBe(true);
     });
   });
 
@@ -613,14 +624,13 @@ describe('BlockSelection', () => {
     });
 
     it('handles read-only mode by selecting all blocks via shortcut handler', () => {
-      const { blockSelection, modules } = createBlockSelection();
+      const { blockSelection, modules, blocks } = createBlockSelection();
 
       Object.defineProperty(modules.ReadOnly, 'isEnabled', {
         value: true,
         writable: true,
         configurable: true,
       });
-      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
       const shortcutsAdd = vi.spyOn(Shortcuts, 'add').mockImplementation(() => undefined);
 
       blockSelection.prepare();
@@ -634,8 +644,9 @@ describe('BlockSelection', () => {
 
       handler(event);
 
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
-      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+      // Verify the observable outcome: all blocks should be selected
+      expect(blocks.every((block) => block.selected)).toBe(true);
+      expect(blockSelection.allBlocksSelected).toBe(true);
     });
   });
 
@@ -697,7 +708,7 @@ describe('BlockSelection', () => {
 
         expect(blockSelection.navigationModeEnabled).toBe(true);
         expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
-        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBe('true');
+        expect(blocks[1].holder).toHaveAttribute('data-blok-navigation-focused', 'true');
       });
 
       it('starts from first block when no current block', () => {
@@ -736,7 +747,7 @@ describe('BlockSelection', () => {
         blockSelection.disableNavigationMode();
 
         expect(blockSelection.navigationModeEnabled).toBe(false);
-        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBeNull();
+        expect(blocks[1].holder).not.toHaveAttribute('data-blok-navigation-focused');
       });
 
       it('focuses block for editing when requested', () => {
@@ -780,8 +791,8 @@ describe('BlockSelection', () => {
 
         expect(result).toBe(true);
         expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
-        expect(blocks[0].holder.getAttribute('data-blok-navigation-focused')).toBeNull();
-        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBe('true');
+        expect(blocks[0].holder).not.toHaveAttribute('data-blok-navigation-focused');
+        expect(blocks[1].holder).toHaveAttribute('data-blok-navigation-focused', 'true');
       });
 
       it('returns false when at last block', () => {
@@ -820,8 +831,8 @@ describe('BlockSelection', () => {
 
         expect(result).toBe(true);
         expect(blockSelection.navigationFocusedBlock).toBe(blocks[1]);
-        expect(blocks[2].holder.getAttribute('data-blok-navigation-focused')).toBeNull();
-        expect(blocks[1].holder.getAttribute('data-blok-navigation-focused')).toBe('true');
+        expect(blocks[2].holder).not.toHaveAttribute('data-blok-navigation-focused');
+        expect(blocks[1].holder).toHaveAttribute('data-blok-navigation-focused', 'true');
       });
 
       it('returns false when at first block', () => {

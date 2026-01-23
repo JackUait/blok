@@ -1,12 +1,72 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
 
 import { Paste } from '../../../../src/components/modules/paste';
+import { ToolRegistry } from '../../../../src/components/modules/paste/tool-registry';
+import { SanitizerConfigBuilder } from '../../../../src/components/modules/paste/sanitizer-config';
+import type { TagSubstitute } from '../../../../src/components/modules/paste/types';
+import { collectTagNames, SAFE_STRUCTURAL_TAGS } from '../../../../src/components/modules/paste/constants';
+import { BlokDataHandler } from '../../../../src/components/modules/paste/handlers/blok-data-handler';
+import { FilesHandler } from '../../../../src/components/modules/paste/handlers/files-handler';
+import { HtmlHandler } from '../../../../src/components/modules/paste/handlers/html-handler';
+import { PatternHandler } from '../../../../src/components/modules/paste/handlers/pattern-handler';
+import { TextHandler } from '../../../../src/components/modules/paste/handlers/text-handler';
+import { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
-import type { SanitizerConfig } from '../../../../types';
+import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
+import type { BlokConfig } from '../../../../types/configs/blok-config';
 import * as sanitizer from '../../../../src/components/utils/sanitizer';
 import { Listeners } from '../../../../src/components/utils/listeners';
 import * as utils from '../../../../src/components/utils';
+
+/**
+ * Mock DataTransfer class for testing.
+ * In Node.js environment, DataTransfer is not available.
+ */
+class MockDataTransfer implements DataTransfer {
+  dropEffect: 'none' | 'copy' | 'link' | 'move' = 'none';
+  effectAllowed: 'none' | 'copy' | 'copyLink' | 'copyMove' | 'link' | 'linkMove' | 'all' | 'move' | 'uninitialized' = 'uninitialized';
+  files: FileList;
+  items: DataTransferItemList;
+  types: string[];
+
+  private data: Record<string, string> = {};
+
+  constructor(data: Record<string, string>, files: FileList = {} as FileList, types: string[] = []) {
+    this.data = data;
+    this.files = files;
+    this.types = types;
+    this.items = [] as unknown as DataTransferItemList;
+  }
+
+  getData(format: string): string {
+    return this.data[format] || '';
+  }
+
+  setData(format: string, data: string): void {
+    this.data[format] = data;
+  }
+
+  clearData(format?: string): void {
+    if (format) {
+      const newData: Record<string, string> = {};
+      Object.keys(this.data).forEach(key => {
+        if (key !== format) {
+          newData[key] = this.data[key];
+        }
+      });
+      this.data = newData;
+    } else {
+      this.data = {};
+    }
+  }
+
+  setDragImage(_image: Element, _x: number, _y: number): void {
+    // Mock implementation
+  }
+
+  readonly element: HTMLElement | null = null;
+}
 
 interface CreatePasteOptions {
   defaultBlock?: string;
@@ -146,643 +206,706 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
 };
 
 describe('Paste module', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('collects tool configurations during prepare', async () => {
-    const { paste } = createPaste();
-    const processToolsSpy = vi.spyOn(paste as unknown as { processTools(): void }, 'processTools');
+  describe('ToolRegistry', () => {
+    it('collects tool configurations during processTools', async () => {
+      const { paste, mocks } = createPaste();
 
-    await paste.prepare();
-
-    expect(processToolsSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('processes every tool registered in Tools collection', () => {
-    const { paste, mocks } = createPaste();
-    const firstTool = {
-      name: 'first',
-      create: vi.fn(() => ({ onPaste: vi.fn() })),
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-    const secondTool = {
-      name: 'second',
-      create: vi.fn(() => ({ onPaste: vi.fn() })),
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-
-    mocks.Tools.blockTools.set('first', firstTool);
-    mocks.Tools.blockTools.set('second', secondTool);
-
-    const processToolSpy = vi.spyOn(paste as unknown as { processTool(tool: BlockToolAdapter): void }, 'processTool');
-
-    (paste as unknown as { processTools(): void }).processTools();
-
-    expect(processToolSpy).toHaveBeenCalledTimes(2);
-    expect(processToolSpy.mock.calls.map((args) => args[0])).toEqual([firstTool, secondTool]);
-  });
-
-  it('adds tools with disabled paste config to exception list and skips config collection', () => {
-    const { paste } = createPaste();
-    const tool = {
-      name: 'skip-tool',
-      create: vi.fn(() => ({ onPaste: vi.fn() })),
-      pasteConfig: false,
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-
-    const getTagsSpy = vi.spyOn(paste as unknown as { getTagsConfig(tool: BlockToolAdapter): void }, 'getTagsConfig');
-    const getFilesSpy = vi.spyOn(paste as unknown as { getFilesConfig(tool: BlockToolAdapter): void }, 'getFilesConfig');
-    const getPatternsSpy = vi.spyOn(paste as unknown as { getPatternsConfig(tool: BlockToolAdapter): void }, 'getPatternsConfig');
-
-    (paste as unknown as { processTool(tool: BlockToolAdapter): void }).processTool(tool);
-
-    const exceptionList = (paste as unknown as { exceptionList: string[] }).exceptionList;
-
-    expect(exceptionList).toContain('skip-tool');
-    expect(getTagsSpy).not.toHaveBeenCalled();
-    expect(getFilesSpy).not.toHaveBeenCalled();
-    expect(getPatternsSpy).not.toHaveBeenCalled();
-  });
-
-  it('skips tools without onPaste handler when processing paste config', () => {
-    const { paste } = createPaste();
-    const tool = {
-      name: 'incompatible',
-      create: vi.fn(() => ({})),
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-
-    const getTagsSpy = vi.spyOn(paste as unknown as { getTagsConfig(tool: BlockToolAdapter): void }, 'getTagsConfig');
-
-    (paste as unknown as { processTool(tool: BlockToolAdapter): void }).processTool(tool);
-
-    expect(getTagsSpy).not.toHaveBeenCalled();
-  });
-
-  it('collects tag, file and pattern configs for eligible tools', () => {
-    const { paste } = createPaste();
-    const tool = {
-      name: 'handler',
-      create: vi.fn(() => ({ onPaste: vi.fn() })),
-      hasOnPasteHandler: true,
-      pasteConfig: {
-        tags: [ 'P' ],
-        files: {
-          extensions: [ 'jpg' ],
-          mimeTypes: [ 'image/png' ],
-        },
-        patterns: {
-          link: /example/,
-        },
-      },
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-
-    const getTagsSpy = vi.spyOn(paste as unknown as { getTagsConfig(tool: BlockToolAdapter): void }, 'getTagsConfig');
-    const getFilesSpy = vi.spyOn(paste as unknown as { getFilesConfig(tool: BlockToolAdapter): void }, 'getFilesConfig');
-    const getPatternsSpy = vi.spyOn(paste as unknown as { getPatternsConfig(tool: BlockToolAdapter): void }, 'getPatternsConfig');
-
-    (paste as unknown as { processTool(tool: BlockToolAdapter): void }).processTool(tool);
-
-    expect(getTagsSpy).toHaveBeenCalledWith(tool);
-    expect(getFilesSpy).toHaveBeenCalledWith(tool);
-    expect(getPatternsSpy).toHaveBeenCalledWith(tool);
-  });
-
-  it('registers and removes paste listener when toggling read-only state', () => {
-    const { paste, mocks } = createPaste();
-
-    paste.toggleReadOnly(false);
-
-    expect(mocks.listeners.on).toHaveBeenCalledTimes(1);
-    expect(mocks.listeners.on).toHaveBeenNthCalledWith(
-      1,
-      mocks.holder,
-      'paste',
-      expect.any(Function)
-    );
-
-    const [, , handler] = mocks.listeners.on.mock.calls[0];
-
-    mocks.listeners.on.mockClear();
-
-    paste.toggleReadOnly(true);
-
-    expect(mocks.listeners.off).toHaveBeenCalledTimes(1);
-    expect(mocks.listeners.off).toHaveBeenCalledWith(
-      mocks.holder,
-      'paste',
-      handler
-    );
-    expect(mocks.listeners.on).not.toHaveBeenCalled();
-  });
-
-  it('processes matched files via BlockManager and replaces current default block', async () => {
-    const { paste, mocks } = createPaste();
-
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: true,
-      },
-      isEmpty: true,
-    };
-
-    (paste as unknown as { toolsFiles: Record<string, { extensions: string[]; mimeTypes: string[] }> }).toolsFiles = {
-      imageTool: {
-        extensions: [ 'png' ],
-        mimeTypes: [ 'image/*' ],
-      },
-    };
-
-    const file = new File([ 'content' ], 'example.png', { type: 'image/png' });
-    const fileList = {
-      length: 1,
-      item(index: number): File | null {
-        return index === 0 ? file : null;
-      },
-      [0]: file,
-    } as unknown as FileList;
-
-    await (paste as unknown as { processFiles(items: FileList): Promise<void> }).processFiles(fileList);
-
-    expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
-
-    const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0];
-
-    expect(tool).toBe('imageTool');
-    expect(event).toBeInstanceOf(CustomEvent);
-    expect(event.type).toBe('file');
-    expect(event.detail.file).toBe(file);
-    expect(shouldReplace).toBe(true);
-  });
-
-  it('collects tags from paste config and prevents duplicates', () => {
-    const { paste } = createPaste();
-    const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
-
-    const firstTool = {
-      name: 'first',
-      pasteConfig: {
-        tags: ['DIV', { table: { tr: {} } } ],
-      },
-    } as unknown as BlockToolAdapter;
-
-    const secondTool = {
-      name: 'second',
-      pasteConfig: {
-        tags: [ 'DIV' ],
-      },
-    } as unknown as BlockToolAdapter;
-
-    (paste as unknown as { getTagsConfig(tool: BlockToolAdapter): void }).getTagsConfig(firstTool);
-    (paste as unknown as { getTagsConfig(tool: BlockToolAdapter): void }).getTagsConfig(secondTool);
-
-    const toolsTags = (paste as unknown as { toolsTags: Record<string, { tool: BlockToolAdapter }> }).toolsTags;
-    const tagsByTool = (paste as unknown as { tagsByTool: Record<string, string[]> }).tagsByTool;
-
-    expect(toolsTags.DIV.tool).toBe(firstTool);
-    expect(toolsTags.TABLE.tool).toBe(firstTool);
-    expect(tagsByTool[firstTool.name]).toEqual(['DIV', 'TABLE']);
-    expect(tagsByTool[secondTool.name]).toEqual([ 'DIV' ]);
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Paste handler for «second» Tool on «DIV» tag is skipped because it is already used by «first» Tool.'),
-      'warn'
-    );
-  });
-
-  it('normalizes file configurations and warns for invalid values', () => {
-    const { paste } = createPaste();
-    const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
-    const tool = {
-      name: 'files',
-      pasteConfig: {
-        files: {
-          extensions: 'jpg' as unknown as string[],
-          mimeTypes: ['image/png', 'invalid'],
-        },
-      },
-    } as unknown as BlockToolAdapter;
-
-    (paste as unknown as { getFilesConfig(tool: BlockToolAdapter): void }).getFilesConfig(tool);
-
-    const filesConfig = (paste as unknown as {
-      toolsFiles: Record<string, { extensions: string[]; mimeTypes: string[] }>;
-    }).toolsFiles;
-
-    expect(filesConfig[tool.name]).toEqual({
-      extensions: [],
-      mimeTypes: [ 'image/png' ],
-    });
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('«extensions» property of the paste config for «files» Tool should be an array')
-    );
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('MIME type value «invalid» for the «files» Tool is not a valid MIME type'),
-      'warn'
-    );
-  });
-
-  it('stores valid patterns and warns when non-RegExp values are provided', () => {
-    const { paste } = createPaste();
-    const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
-    const tool = {
-      name: 'patterns',
-      pasteConfig: {
-        patterns: {
-          link: /example/,
-          invalid: 'string' as unknown as RegExp,
-        },
-      },
-    } as unknown as BlockToolAdapter;
-
-    (paste as unknown as { getPatternsConfig(tool: BlockToolAdapter): void }).getPatternsConfig(tool);
-
-    const registeredPatterns = (paste as unknown as {
-      toolsPatterns: Array<{ key: string; pattern: RegExp; tool: BlockToolAdapter }>;
-    }).toolsPatterns;
-
-    expect(registeredPatterns).toHaveLength(2);
-    expect(registeredPatterns[0]).toMatchObject({ key: 'link',
-      tool });
-    expect(registeredPatterns[1]).toMatchObject({ key: 'invalid',
-      tool });
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Pattern string for «patterns» Tool is skipped because it should be a Regexp instance.'),
-      'warn'
-    );
-  });
-
-  it('substitutes pattern matches on inline paste and replaces current default block', async () => {
-    const { paste, mocks } = createPaste();
-
-    const patternTool = {
-      name: 'link',
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-
-    (paste as unknown as {
-      toolsPatterns: Array<{
-        key: string;
-        pattern: RegExp;
-        tool: BlockToolAdapter;
-      }>;
-    }).toolsPatterns = [
-      {
-        key: 'link',
-        pattern: /^https:\/\/example\.com$/,
-        tool: patternTool,
-      },
-    ];
-
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: true,
+      const firstTool = {
+        name: 'first',
+        create: vi.fn(() => ({ onPaste: vi.fn() })),
+        pasteConfig: {},
         baseSanitizeConfig: {},
-      },
-      isEmpty: true,
-      name: 'paragraph',
-      currentInput: document.createElement('div'),
-    };
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
 
-    const content = document.createElement('div');
-
-    content.textContent = 'https://example.com';
-
-    mocks.BlockManager.paste.mockImplementation((_tool, _event, replace) => {
-      expect(replace).toBe(true);
-
-      return { id: 'link-block' };
-    });
-
-    await (paste as unknown as {
-      processInlinePaste(data: {
-        content: HTMLElement;
-        tool: string;
-        isBlock: boolean;
-        event: CustomEvent;
-      }): Promise<void>;
-    }).processInlinePaste({
-      content,
-      tool: 'paragraph',
-      isBlock: false,
-      event: new CustomEvent('pattern'),
-    });
-
-    expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
-
-    const [tool, event] = mocks.BlockManager.paste.mock.calls[0];
-
-    expect(tool).toBe('link');
-    expect(event).toBeInstanceOf(CustomEvent);
-    expect(event.type).toBe('pattern');
-    expect(event.detail.data).toBe('https://example.com');
-    expect(event.detail.key).toBe('link');
-    expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'link-block' }, mocks.Caret.positions.END);
-    expect(mocks.Caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
-  });
-
-  it('inserts sanitized inline content when no pattern matches and current input exists', async () => {
-    const { paste, mocks } = createPaste();
-
-    const cleanSpy = vi.spyOn(sanitizer, 'clean').mockReturnValue('sanitized-content');
-
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: false,
-        baseSanitizeConfig: {
-          b: {},
-        },
-      },
-      isEmpty: false,
-      name: 'paragraph',
-      currentInput: document.createElement('div'),
-    };
-
-    const content = document.createElement('div');
-
-    content.innerHTML = '<b>Example</b>';
-
-    await (paste as unknown as {
-      processInlinePaste(data: {
-        content: HTMLElement;
-        tool: string;
-        isBlock: boolean;
-        event: CustomEvent;
-      }): Promise<void>;
-    }).processInlinePaste({
-      content,
-      tool: 'paragraph',
-      isBlock: false,
-      event: new CustomEvent('tag'),
-    });
-
-    expect(cleanSpy).toHaveBeenCalledWith(
-      '<b>Example</b>',
-      {
-        b: {},
-      }
-    );
-    expect(mocks.Caret.insertContentAtCaretPosition).toHaveBeenCalledWith('sanitized-content');
-    expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
-  });
-
-  it('inserts sanitized Blok data and updates caret position', () => {
-    const { paste, mocks } = createPaste();
-
-    const sanitizeBlocksSpy = vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
-      {
-        tool: 'image',
-        data: { src: 'image.png' },
-      },
-      {
-        tool: 'paragraph',
-        data: { text: 'Hello' },
-      },
-    ]);
-
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: true,
-      },
-      isEmpty: true,
-    };
-
-    const insertedBlocks: Array<{ tool: string; data: unknown; replace: boolean }> = [];
-
-    mocks.BlockManager.insert.mockImplementation((payload) => {
-      insertedBlocks.push(payload);
-
-      return { id: `${payload.tool}-id` };
-    });
-
-    (paste as unknown as {
-      insertBlokData(blocks: Array<{ id: string; tool: string; data: unknown }>): void;
-    }).insertBlokData([
-      {
-        id: '1',
-        tool: 'image',
-        data: { src: 'image.png' },
-      },
-      {
-        id: '2',
-        tool: 'paragraph',
-        data: { text: 'Hello' },
-      },
-    ]);
-
-    expect(sanitizeBlocksSpy).toHaveBeenCalledTimes(1);
-    expect(insertedBlocks).toEqual([
-      {
-        tool: 'image',
-        data: { src: 'image.png' },
-        replace: true,
-      },
-      {
-        tool: 'paragraph',
-        data: { text: 'Hello' },
-        replace: false,
-      },
-    ]);
-    expect(mocks.Caret.setToBlock).toHaveBeenNthCalledWith(1, { id: 'image-id' }, mocks.Caret.positions.END);
-    expect(mocks.Caret.setToBlock).toHaveBeenNthCalledWith(2, { id: 'paragraph-id' }, mocks.Caret.positions.END);
-  });
-
-  it('checks patterns when pasting Blok data containing pattern-matching text', async () => {
-    const { paste, mocks } = createPaste();
-
-    const patternTool = {
-      name: 'embed',
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-
-    // Register a URL pattern
-    (paste as unknown as {
-      toolsPatterns: Array<{
-        key: string;
-        pattern: RegExp;
-        tool: BlockToolAdapter;
-      }>;
-    }).toolsPatterns = [
-      {
-        key: 'url',
-        pattern: /^https:\/\/example\.com$/,
-        tool: patternTool,
-      },
-    ];
-
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: true,
+      const secondTool = {
+        name: 'second',
+        create: vi.fn(() => ({ onPaste: vi.fn() })),
+        pasteConfig: {},
         baseSanitizeConfig: {},
-      },
-      isEmpty: true,
-      name: 'paragraph',
-      currentInput: document.createElement('div'),
-    };
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
 
-    mocks.BlockManager.paste.mockReturnValue({ id: 'embed-block' });
+      mocks.Tools.blockTools.set('first', firstTool);
+      mocks.Tools.blockTools.set('second', secondTool);
 
-    // Simulate pasting Blok data that contains a URL (cut/paste scenario)
-    const dataTransfer = {
-      getData: (type: string): string => {
-        if (type === 'application/x-blok') {
-          return JSON.stringify([
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.toolsTags).toBeDefined();
+      expect(toolRegistry.tagsByTool).toBeDefined();
+      expect(toolRegistry.toolsFiles).toBeDefined();
+      expect(toolRegistry.toolsPatterns).toBeDefined();
+    });
+
+    it('adds tools with disabled paste config to exception list', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tool = {
+        name: 'skip-tool',
+        create: vi.fn(() => ({ onPaste: vi.fn() })),
+        pasteConfig: false,
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('skip-tool', tool);
+
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.exceptionList).toContain('skip-tool');
+    });
+
+    it('skips tools without onPaste handler when processing paste config', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tool = {
+        name: 'incompatible',
+        create: vi.fn(() => ({})),
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: false,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('incompatible', tool);
+
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.tagsByTool[tool.name]).toBeUndefined();
+    });
+
+    it('collects tag, file and pattern configs for eligible tools', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tool = {
+        name: 'handler',
+        create: vi.fn(() => ({ onPaste: vi.fn() })),
+        hasOnPasteHandler: true,
+        pasteConfig: {
+          tags: ['P'],
+          files: {
+            extensions: ['jpg'],
+            mimeTypes: ['image/png'],
+          },
+          patterns: {
+            link: /example/,
+          },
+        },
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('handler', tool);
+
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.toolsTags['P']).toBeDefined();
+      expect(toolRegistry.toolsFiles['handler']).toBeDefined();
+      expect(toolRegistry.toolsPatterns).toHaveLength(1);
+    });
+
+    it('collects tags from paste config and prevents duplicates', async () => {
+      const { paste, mocks } = createPaste();
+      const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+
+      const firstTool = {
+        name: 'first',
+        pasteConfig: {
+          tags: ['DIV', { table: { tr: {} } }],
+        },
+        hasOnPasteHandler: true,
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      const secondTool = {
+        name: 'second',
+        pasteConfig: {
+          tags: ['DIV'],
+        },
+        hasOnPasteHandler: true,
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('first', firstTool);
+      mocks.Tools.blockTools.set('second', secondTool);
+
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.toolsTags['DIV'].tool).toBe(firstTool);
+      expect(toolRegistry.toolsTags['TABLE'].tool).toBe(firstTool);
+      expect(toolRegistry.tagsByTool[firstTool.name]).toEqual(['DIV', 'TABLE']);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Paste handler for «second» Tool on «DIV» tag is skipped'),
+        'warn'
+      );
+
+      logSpy.mockRestore();
+    });
+
+    it('normalizes file configurations and warns for invalid values', async () => {
+      const { paste, mocks } = createPaste();
+      const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+
+      const tool = {
+        name: 'files',
+        pasteConfig: {
+          files: {
+            extensions: 'jpg' as unknown as string[],
+            mimeTypes: ['image/png', 'invalid'],
+          },
+        },
+        hasOnPasteHandler: true,
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('files', tool);
+
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.toolsFiles['files']).toEqual({
+        extensions: [],
+        mimeTypes: ['image/png'],
+      });
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('«extensions» property of the paste config')
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('MIME type value «invalid»'),
+        'warn'
+      );
+
+      logSpy.mockRestore();
+    });
+
+    it('stores valid patterns and warns when non-RegExp values are provided', async () => {
+      const { paste, mocks } = createPaste();
+      const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+
+      const tool = {
+        name: 'patterns',
+        pasteConfig: {
+          patterns: {
+            link: /example/,
+            invalid: 'string' as unknown as RegExp,
+          },
+        },
+        hasOnPasteHandler: true,
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('patterns', tool);
+
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.toolsPatterns).toHaveLength(2);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('should be a Regexp instance'),
+        'warn'
+      );
+
+      logSpy.mockRestore();
+    });
+  });
+
+  describe('Paste class public API', () => {
+    it('registers and removes paste listener when toggling read-only state', () => {
+      const { paste, mocks } = createPaste();
+
+      paste.toggleReadOnly(false);
+
+      expect(mocks.listeners.on).toHaveBeenCalledTimes(1);
+      expect(mocks.listeners.on).toHaveBeenCalledWith(
+        mocks.holder,
+        'paste',
+        expect.any(Function)
+      );
+
+      const [, , handler] = mocks.listeners.on.mock.calls[0];
+
+      mocks.listeners.on.mockClear();
+
+      paste.toggleReadOnly(true);
+
+      expect(mocks.listeners.off).toHaveBeenCalledTimes(1);
+      expect(mocks.listeners.off).toHaveBeenCalledWith(
+        mocks.holder,
+        'paste',
+        handler
+      );
+      expect(mocks.listeners.on).not.toHaveBeenCalled();
+    });
+
+    it('processes plain text via processText', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      await paste.processText('Hello world', false);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0];
+
+      expect(tool).toBe('paragraph');
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect(event.type).toBe('tag');
+      expect(shouldReplace).toBe(true);
+    });
+
+    it('processes HTML via processText with isHTML flag', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      await paste.processText('<p>Hello world</p>', true);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0];
+
+      expect(tool).toBe('paragraph');
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect(event.type).toBe('tag');
+      expect(shouldReplace).toBe(true);
+    });
+
+    it('detects native inputs when checking for native behaviour', () => {
+      const { paste } = createPaste();
+
+      const input = document.createElement('input');
+      const div = document.createElement('div');
+
+      expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(input)).toBe(true);
+      expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(div)).toBe(false);
+    });
+  });
+
+  describe('FilesHandler', () => {
+    it('processes matched files via BlockManager and replaces current default block', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+
+      // Register a file tool
+      const imageTool = {
+        name: 'imageTool',
+        pasteConfig: {
+          files: {
+            extensions: ['png'],
+            mimeTypes: ['image/*'],
+          },
+        },
+        hasOnPasteHandler: true,
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('imageTool', imageTool);
+
+      // Re-prepare to reprocess tools
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        isEmpty: true,
+      };
+
+      const file = new File(['content'], 'example.png', { type: 'image/png' });
+      const fileList = {
+        length: 1,
+        item(index: number): File | null {
+          return index === 0 ? file : null;
+        },
+        [0]: file,
+      } as unknown as FileList;
+
+      const dataTransfer = new MockDataTransfer({}, fileList, ['Files']);
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [tool, event, shouldReplace] = mocks.BlockManager.paste.mock.calls[0] as [string, CustomEvent, boolean];
+
+      expect(tool).toBe('imageTool');
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect(event.type).toBe('file');
+      expect((event.detail as { file: File }).file).toBe(file);
+      expect(shouldReplace).toBe(true);
+    });
+  });
+
+  describe('PatternHandler', () => {
+    it('substitutes pattern matches on inline paste and replaces current default block', async () => {
+      const { paste, mocks } = createPaste();
+
+      const patternTool = {
+        name: 'link',
+        pasteConfig: {
+          patterns: {
+            link: /^https:\/\/example\.com$/,
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('link', patternTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+          baseSanitizeConfig: {},
+        },
+        isEmpty: true,
+        name: 'paragraph',
+        currentInput: document.createElement('div'),
+      };
+
+      mocks.BlockManager.paste.mockImplementation((_tool, _event, replace) => {
+        expect(replace).toBe(true);
+
+        return { id: 'link-block' };
+      });
+
+      const dataTransfer = new MockDataTransfer(
+        { 'text/plain': 'https://example.com' },
+        { length: 0 } as FileList,
+        ['text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [tool, event] = mocks.BlockManager.paste.mock.calls[0] as [string, CustomEvent];
+
+      expect(tool).toBe('link');
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect(event.type).toBe('pattern');
+      expect((event.detail as { data: string; key: string }).data).toBe('https://example.com');
+      expect((event.detail as { data: string; key: string }).key).toBe('link');
+      expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'link-block' }, mocks.Caret.positions.END);
+    });
+
+    it('inserts sanitized inline content when no pattern matches and current input exists', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+
+      const cleanSpy = vi.spyOn(sanitizer, 'clean').mockReturnValue('sanitized-content');
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: false,
+          baseSanitizeConfig: {
+            b: {},
+          },
+        },
+        isEmpty: false,
+        name: 'paragraph',
+        currentInput: document.createElement('div'),
+      };
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/plain': '<b>Example</b>',
+          'text/html': '<b>Example</b>',
+        },
+        { length: 0 } as FileList,
+        ['text/plain', 'text/html']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(cleanSpy).toHaveBeenCalled();
+      expect(mocks.Caret.insertContentAtCaretPosition).toHaveBeenCalledWith('sanitized-content');
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('BlokDataHandler', () => {
+    it('inserts sanitized Blok data and updates caret position', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+
+      const sanitizeBlocksSpy = vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
+        {
+          tool: 'image',
+          data: { src: 'image.png' },
+        },
+        {
+          tool: 'paragraph',
+          data: { text: 'Hello' },
+        },
+      ]);
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        isEmpty: true,
+      };
+
+      const insertedBlocks: Array<{ tool: string; data: unknown; replace: boolean }> = [];
+
+      mocks.BlockManager.insert.mockImplementation((payload) => {
+        insertedBlocks.push(payload);
+
+        return { id: `${payload.tool}-id` };
+      });
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'application/x-blok': JSON.stringify([
+            {
+              id: '1',
+              tool: 'image',
+              data: { src: 'image.png' },
+            },
+            {
+              id: '2',
+              tool: 'paragraph',
+              data: { text: 'Hello' },
+            },
+          ]),
+          'text/plain': '',
+        },
+        { length: 0 } as FileList,
+        ['application/x-blok', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(sanitizeBlocksSpy).toHaveBeenCalledTimes(1);
+      expect(insertedBlocks).toEqual([
+        {
+          tool: 'image',
+          data: { src: 'image.png' },
+          replace: true,
+        },
+        {
+          tool: 'paragraph',
+          data: { text: 'Hello' },
+          replace: false,
+        },
+      ]);
+      expect(mocks.Caret.setToBlock).toHaveBeenNthCalledWith(1, { id: 'image-id' }, mocks.Caret.positions.END);
+      expect(mocks.Caret.setToBlock).toHaveBeenNthCalledWith(2, { id: 'paragraph-id' }, mocks.Caret.positions.END);
+    });
+
+    it('checks patterns when pasting Blok data containing pattern-matching text', async () => {
+      const { paste, mocks } = createPaste();
+
+      const patternTool = {
+        name: 'embed',
+        pasteConfig: {
+          patterns: {
+            url: /^https:\/\/example\.com$/,
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('embed', patternTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+          baseSanitizeConfig: {},
+        },
+        isEmpty: true,
+        name: 'paragraph',
+        currentInput: document.createElement('div'),
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'embed-block' });
+
+      // Simulate pasting Blok data that contains a URL
+      const dataTransfer = new MockDataTransfer(
+        {
+          'application/x-blok': JSON.stringify([
             {
               id: '1',
               tool: 'paragraph',
               data: { text: 'https://example.com' },
             },
-          ]);
-        }
-        if (type === 'text/plain') {
-          return 'https://example.com';
-        }
-        return '';
-      },
-      types: ['application/x-blok', 'text/plain', 'text/html'],
-      files: { length: 0 } as FileList,
-    } as unknown as DataTransfer;
+          ]),
+          'text/plain': 'https://example.com',
+          'text/html': '',
+        },
+        { length: 0 } as FileList,
+        ['application/x-blok', 'text/plain', 'text/html']
+      );
 
-    await paste.processDataTransfer(dataTransfer);
+      await paste.processDataTransfer(dataTransfer);
 
-    // Should trigger pattern paste, not direct Blok data insertion
-    expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
-    const [tool, event] = mocks.BlockManager.paste.mock.calls[0];
+      // Should trigger pattern paste
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
 
-    expect(tool).toBe('embed');
-    expect(event).toBeInstanceOf(CustomEvent);
-    expect(event.type).toBe('pattern');
-    expect(event.detail.data).toBe('https://example.com');
-  });
+      const [tool, event] = mocks.BlockManager.paste.mock.calls[0];
 
-  it('uses Blok data directly when no pattern matches', async () => {
-    const { paste, mocks } = createPaste();
+      expect(tool).toBe('embed');
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect(event.type).toBe('pattern');
+      if (event instanceof CustomEvent && event.detail) {
+        const detail = event.detail as { data: unknown };
+        expect(detail.data).toBe('https://example.com');
+      } else {
+        throw new Error('Event.detail is not accessible');
+      }
+    });
 
-    const patternTool = {
-      name: 'embed',
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
+    it('uses Blok data directly when no pattern matches', async () => {
+      const { paste, mocks } = createPaste();
 
-    // Register a URL pattern that won't match
-    (paste as unknown as {
-      toolsPatterns: Array<{
-        key: string;
-        pattern: RegExp;
-        tool: BlockToolAdapter;
-      }>;
-    }).toolsPatterns = [
-      {
-        key: 'youtube',
-        pattern: /^https:\/\/www\.youtube\.com\/watch/,
-        tool: patternTool,
-      },
-    ];
+      const patternTool = {
+        name: 'embed',
+        pasteConfig: {
+          patterns: {
+            youtube: /^https:\/\/www\.youtube\.com\/watch/,
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
 
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: true,
-      },
-      isEmpty: true,
-    };
+      mocks.Tools.blockTools.set('embed', patternTool);
 
-    vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
-      {
-        tool: 'paragraph',
-        data: { text: 'Hello world' },
-      },
-    ]);
+      await paste.prepare();
 
-    mocks.BlockManager.insert.mockReturnValue({ id: 'paragraph-id' });
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        isEmpty: true,
+      };
 
-    // Plain text doesn't match the youtube pattern
-    const dataTransfer = {
-      getData: (type: string): string => {
-        if (type === 'application/x-blok') {
-          return JSON.stringify([
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
+        {
+          tool: 'paragraph',
+          data: { text: 'Hello world' },
+        },
+      ]);
+
+      mocks.BlockManager.insert.mockReturnValue({ id: 'paragraph-id' });
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'application/x-blok': JSON.stringify([
             {
               id: '1',
               tool: 'paragraph',
               data: { text: 'Hello world' },
             },
-          ]);
-        }
-        if (type === 'text/plain') {
-          return 'Hello world';
-        }
-        return '';
-      },
-      types: ['application/x-blok', 'text/plain', 'text/html'],
-      files: { length: 0 } as FileList,
-    } as unknown as DataTransfer;
+          ]),
+          'text/plain': 'Hello world',
+          'text/html': '',
+        },
+        { length: 0 } as FileList,
+        ['application/x-blok', 'text/plain', 'text/html']
+      );
 
-    await paste.processDataTransfer(dataTransfer);
+      await paste.processDataTransfer(dataTransfer);
 
-    // Should use insertBlokData since pattern doesn't match
-    expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
-    expect(mocks.BlockManager.insert).toHaveBeenCalledWith({
-      tool: 'paragraph',
-      data: { text: 'Hello world' },
-      replace: true,
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      expect(mocks.BlockManager.insert).toHaveBeenCalledWith({
+        tool: 'paragraph',
+        data: { text: 'Hello world' },
+        replace: true,
+      });
     });
-  });
 
-  it('uses Blok data when plain text does not match any pattern', async () => {
-    const { paste, mocks } = createPaste();
+    it('uses Blok data when plain text does not match any pattern', async () => {
+      const { paste, mocks } = createPaste();
 
-    const patternTool = {
-      name: 'embed',
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
+      const patternTool = {
+        name: 'embed',
+        pasteConfig: {
+          patterns: {
+            url: /^https:\/\/example\.com$/,
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
 
-    // Register a URL pattern
-    (paste as unknown as {
-      toolsPatterns: Array<{
-        key: string;
-        pattern: RegExp;
-        tool: BlockToolAdapter;
-      }>;
-    }).toolsPatterns = [
-      {
-        key: 'url',
-        pattern: /^https:\/\/example\.com$/,
-        tool: patternTool,
-      },
-    ];
+      mocks.Tools.blockTools.set('embed', patternTool);
 
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: true,
-      },
-      isEmpty: true,
-    };
+      await paste.prepare();
 
-    vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
-      {
-        tool: 'paragraph',
-        data: { text: 'First block' },
-      },
-      {
-        tool: 'paragraph',
-        data: { text: 'Second block' },
-      },
-    ]);
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        isEmpty: true,
+      };
 
-    mocks.BlockManager.insert.mockReturnValue({ id: 'block-id' });
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([
+        {
+          tool: 'paragraph',
+          data: { text: 'First block' },
+        },
+        {
+          tool: 'paragraph',
+          data: { text: 'Second block' },
+        },
+      ]);
 
-    // Multi-block paste - plain text doesn't match the URL pattern, so Blok data is used
-    const dataTransfer = {
-      getData: (type: string): string => {
-        if (type === 'application/x-blok') {
-          return JSON.stringify([
+      mocks.BlockManager.insert.mockReturnValue({ id: 'block-id' });
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'application/x-blok': JSON.stringify([
             {
               id: '1',
               tool: 'paragraph',
@@ -793,188 +916,1207 @@ describe('Paste module', () => {
               tool: 'paragraph',
               data: { text: 'Second block' },
             },
-          ]);
-        }
-        if (type === 'text/plain') {
-          return 'First block\n\nSecond block';
-        }
-        return '';
-      },
-      types: ['application/x-blok', 'text/plain', 'text/html'],
-      files: { length: 0 } as FileList,
-    } as unknown as DataTransfer;
+          ]),
+          'text/plain': 'First block\n\nSecond block',
+          'text/html': '',
+        },
+        { length: 0 } as FileList,
+        ['application/x-blok', 'text/plain', 'text/html']
+      );
 
-    await paste.processDataTransfer(dataTransfer);
+      await paste.processDataTransfer(dataTransfer);
 
-    // Should use insertBlokData for multi-block paste
-    expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
-    expect(mocks.BlockManager.insert).toHaveBeenCalledTimes(2);
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      expect(mocks.BlockManager.insert).toHaveBeenCalledTimes(2);
+
+      const firstCall = mocks.BlockManager.insert.mock.calls[0][0];
+      const secondCall = mocks.BlockManager.insert.mock.calls[1][0];
+
+      expect(firstCall).toEqual({
+        tool: 'paragraph',
+        data: { text: 'First block' },
+        replace: true,
+      });
+      expect(secondCall).toEqual({
+        tool: 'paragraph',
+        data: { text: 'Second block' },
+        replace: false,
+      });
+
+      expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'block-id' }, mocks.Caret.positions.END);
+    });
   });
 
-  it('splits plain text by new lines and creates PasteData entries', () => {
-    const { paste } = createPaste({ defaultBlock: 'paragraph' });
+  describe('TextHandler', () => {
+    it('splits plain text by new lines and creates entries', async () => {
+      const { paste, mocks } = createPaste();
 
-    const result = (paste as unknown as {
-      processPlain(data: string): Array<{ tool: string; content: HTMLElement; event: CustomEvent; isBlock: boolean }>;
-    }).processPlain('First\n\nSecond');
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
 
-    expect(result).toHaveLength(2);
-    expect(result[0].tool).toBe('paragraph');
-    expect(result[0].content.textContent).toBe('First');
-    expect(result[0].event.type).toBe('tag');
-    expect(result[1].content.textContent).toBe('Second');
-  });
+      await paste.prepare();
 
-  it('inserts a new block when pasted tool differs from current block', async () => {
-    const { paste, mocks } = createPaste();
-    const insertBlockSpy = vi.spyOn(paste as unknown as { insertBlock(data: unknown, replace?: boolean): void }, 'insertBlock').mockImplementation(() => undefined);
+      const textHandler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
 
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: true,
-      },
-      isEmpty: true,
-      name: 'paragraph',
-    };
+      const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('First\n\nSecond');
 
-    const content = document.createElement('div');
-
-    await (paste as unknown as {
-      processSingleBlock(data: { content: HTMLElement; tool: string; isBlock: boolean; event: CustomEvent }): Promise<void>;
-    }).processSingleBlock({
-      content,
-      tool: 'quote',
-      isBlock: true,
-      event: new CustomEvent('tag'),
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        tool: 'paragraph',
+      });
+      expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('First');
+      expect((result[0] as { event: CustomEvent }).event.type).toBe('tag');
+      expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('Second');
     });
 
-    expect(insertBlockSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ tool: 'quote' }),
-      true
-    );
-    expect(mocks.Caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
-  });
+    it('filters out whitespace-only lines when processing plain text', async () => {
+      const { paste, mocks } = createPaste();
 
-  it('merges pasted single block content into the current block when possible', async () => {
-    const { paste, mocks } = createPaste();
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
 
-    mocks.BlockManager.currentBlock = {
-      tool: {
-        isDefault: false,
-      },
-      isEmpty: false,
-      name: 'paragraph',
-    };
+      await paste.prepare();
 
-    const content = document.createElement('div');
+      const textHandler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
 
-    content.innerHTML = '<span>Inline</span>';
+      const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\n   \nline2\n\nline3');
 
-    await (paste as unknown as {
-      processSingleBlock(data: { content: HTMLElement; tool: string; isBlock: boolean; event: CustomEvent }): Promise<void>;
-    }).processSingleBlock({
-      content,
-      tool: 'paragraph',
-      isBlock: true,
-      event: new CustomEvent('tag'),
+      // Whitespace-only lines should be filtered out
+      expect(result).toHaveLength(3);
+      expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+      expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
+      expect((result[2] as { content: HTMLElement }).content).toHaveTextContent('line3');
     });
 
-    expect(mocks.Caret.insertContentAtCaretPosition).toHaveBeenCalledWith('<span>Inline</span>');
-    expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
-  });
+    it('filters out tabs-only lines when processing plain text', async () => {
+      const { paste, mocks } = createPaste();
 
-  it('processes HTML fragments, default block content and substituted tags', () => {
-    const defaultTool = {
-      name: 'paragraph',
-      pasteConfig: {},
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
-    const { paste } = createPaste({ defaultBlock: 'paragraph',
-      defaultTool });
-    const headingTool = {
-      name: 'header',
-      pasteConfig: {
-        tags: [ 'h1' ],
-      },
-      baseSanitizeConfig: {},
-    } as unknown as BlockToolAdapter;
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
 
-    (paste as unknown as { getTagsConfig(tool: BlockToolAdapter): void }).getTagsConfig(headingTool);
+      await paste.prepare();
 
-    const cleanSpy = vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html.replace(/<script>.*?<\/script>/g, ''));
-    const html = '<span>Inline</span><div>Content</div><h1><script>bad()</script>Heading</h1>';
+      const textHandler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
 
-    const result = (paste as unknown as {
-      processHTML(innerHTML: string): Array<{ content: HTMLElement; isBlock: boolean; tool: string; event: CustomEvent }>;
-    }).processHTML(html);
+      const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\n\t\t\nline2');
 
-    expect(result).toHaveLength(3);
-
-    expect(result[0]).toMatchObject({
-      isBlock: false,
-      tool: 'paragraph',
+      expect(result).toHaveLength(2);
+      expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+      expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
     });
-    expect(result[1]).toMatchObject({
-      isBlock: true,
-      tool: 'paragraph',
+
+    it('filters out mixed whitespace-only lines when processing plain text', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      const textHandler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
+
+      const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\n \t \nline2');
+
+      expect(result).toHaveLength(2);
+      expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+      expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
     });
-    expect(result[2]).toMatchObject({
-      isBlock: true,
-      tool: 'header',
+  });
+
+  describe('HtmlHandler', () => {
+    it('processes HTML fragments, default block content and substituted tags', async () => {
+      const { paste, mocks } = createPaste();
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const headingTool = {
+        name: 'header',
+        pasteConfig: {
+          tags: ['h1'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.blockTools.set('header', headingTool);
+
+      await paste.prepare();
+
+      const cleanSpy = vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html.replace(/<script>.*?<\/script>/g, ''));
+
+      mocks.BlockManager.currentBlock = {
+        tool: {
+          isDefault: true,
+        },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const html = '<span>Inline</span><div>Content</div><h1><script>bad()</script>Heading</h1>';
+
+      await paste.processText(html, true);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(3);
+      expect(cleanSpy).toHaveBeenCalled();
+
+      // Verify first call: inline span fragment (replaces default block)
+      const [tool1, event1, shouldReplace1] = mocks.BlockManager.paste.mock.calls[0];
+      expect(tool1).toBe('paragraph');
+      expect(event1).toBeInstanceOf(CustomEvent);
+      expect(event1.type).toBe('tag');
+      expect(shouldReplace1).toBe(true);
+
+      // Verify second call: div (inserted without replacement)
+      const [tool2, event2] = mocks.BlockManager.paste.mock.calls[1];
+      expect(tool2).toBe('paragraph');
+      expect(event2).toBeInstanceOf(CustomEvent);
+      expect(event2.type).toBe('tag');
+      expect(mocks.BlockManager.paste.mock.calls[1].length).toBe(2);
+
+      // Verify third call: h1 (substituted with header tool, inserted without replacement)
+      const [tool3, event3] = mocks.BlockManager.paste.mock.calls[2];
+      expect(tool3).toBe('header');
+      expect(event3).toBeInstanceOf(CustomEvent);
+      expect(event3.type).toBe('tag');
+      expect(mocks.BlockManager.paste.mock.calls[2].length).toBe(2);
     });
-    expect(result[2].content.tagName).toBe('H1');
-    expect(result[2].event.type).toBe('tag');
-    expect(cleanSpy).toHaveBeenCalled();
   });
 
-  it('flattens nested block elements when fetching nodes', () => {
-    const { paste } = createPaste();
-    const wrapper = document.createElement('div');
+  describe('Handler priority system', () => {
+    it('uses correct handler priority for different data types', async () => {
+      const { paste, mocks } = createPaste();
 
-    wrapper.innerHTML = '<div><p>Paragraph</p></div>';
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
 
-    const nodes = (paste as unknown as { getNodes(wrapper: Node): Node[] }).getNodes(wrapper);
+      await paste.prepare();
 
-    expect(nodes).toHaveLength(2);
-    expect(nodes[0]).toBeInstanceOf(DocumentFragment);
-    expect(nodes[1]).toBeInstanceOf(HTMLElement);
-    expect((nodes[1] as HTMLElement).tagName).toBe('P');
+      const handlers = (paste as unknown as { handlers: unknown[] }).handlers;
+
+      expect(handlers).toBeDefined();
+      expect(handlers.length).toBeGreaterThan(0);
+
+      // BlokDataHandler should have highest priority (100)
+      const blokHandler = handlers.find((h): h is BlokDataHandler => h instanceof BlokDataHandler);
+      expect(blokHandler).toBeDefined();
+
+      // FilesHandler should have priority 80
+      const filesHandler = handlers.find((h): h is FilesHandler => h instanceof FilesHandler);
+      expect(filesHandler).toBeDefined();
+
+      // PatternHandler should have priority 60
+      const patternHandler = handlers.find((h): h is PatternHandler => h instanceof PatternHandler);
+      expect(patternHandler).toBeDefined();
+
+      // HtmlHandler should have priority 40
+      const htmlHandler = handlers.find((h): h is HtmlHandler => h instanceof HtmlHandler);
+      expect(htmlHandler).toBeDefined();
+
+      // TextHandler should have lowest priority (10)
+      const textHandler = handlers.find((h): h is TextHandler => h instanceof TextHandler);
+      expect(textHandler).toBeDefined();
+
+      // Verify order - highest priority first
+      expect(handlers[0]).toBe(blokHandler);
+      expect(handlers[1]).toBe(filesHandler);
+      expect(handlers[2]).toBe(patternHandler);
+      expect(handlers[3]).toBe(htmlHandler);
+      expect(handlers[4]).toBe(textHandler);
+    });
+
+    it('BlokDataHandler returns priority 100 for valid JSON', () => {
+      const { paste } = createPaste();
+
+      const handler = new BlokDataHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        {}
+      );
+
+      const validJson = JSON.stringify([{ tool: 'paragraph', data: { text: 'test' } }]);
+
+      expect(handler.canHandle(validJson)).toBe(100);
+      expect(handler.canHandle('not json')).toBe(0);
+      expect(handler.canHandle(123)).toBe(0);
+    });
+
+    it('FilesHandler returns priority 80 for DataTransfer with files', () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      const handler = new FilesHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+      );
+
+      const file = new File(['content'], 'test.png', { type: 'image/png' });
+      const dataTransferWithFiles = new MockDataTransfer({}, {
+        length: 1,
+        0: file,
+        item: (index: number) => index === 0 ? file : null,
+      } as unknown as FileList, ['Files']);
+
+      const dataTransferWithoutFiles = new MockDataTransfer({}, { length: 0 } as FileList, ['text/plain']);
+
+      expect(handler.canHandle(dataTransferWithFiles)).toBe(80);
+      expect(handler.canHandle(dataTransferWithoutFiles)).toBe(0);
+      expect(handler.canHandle('string')).toBe(0);
+    });
+
+    it('PatternHandler returns priority 60 for matching patterns', async () => {
+      const { paste, mocks } = createPaste();
+
+      const patternTool = {
+        name: 'link',
+        pasteConfig: {
+          patterns: {
+            url: /^https:\/\/example\.com$/,
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('link', patternTool);
+
+      await paste.prepare();
+
+      const handler = new PatternHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+      );
+
+      expect(handler.canHandle('https://example.com')).toBe(60);
+      expect(handler.canHandle('no match')).toBe(0);
+      expect(handler.canHandle(123)).toBe(0);
+    });
+
+    it('HtmlHandler returns priority 40 for HTML strings', () => {
+      const { paste } = createPaste();
+
+      const handler = new HtmlHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+      );
+
+      expect(handler.canHandle('<p>Hello</p>')).toBe(40);
+      expect(handler.canHandle('   <p>Hello</p>   ')).toBe(40);
+      expect(handler.canHandle('plain text')).toBe(0);
+      expect(handler.canHandle('')).toBe(0);
+      expect(handler.canHandle(123)).toBe(0);
+    });
+
+    it('TextHandler returns priority 10 for any string', () => {
+      const { paste } = createPaste();
+
+      const handler = new TextHandler(
+        paste as unknown as Paste['Blok'],
+        (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+        (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+        { defaultBlock: 'paragraph' }
+      );
+
+      expect(handler.canHandle('any string')).toBe(10);
+      expect(handler.canHandle('')).toBe(0);
+      expect(handler.canHandle(123)).toBe(0);
+    });
   });
 
-  it('appends inline elements to document fragments when processing element nodes', () => {
-    const { paste } = createPaste();
-    const fragment = document.createDocumentFragment();
-    const span = document.createElement('span');
-    const nodes: Node[] = [];
+  describe('ToolRegistry edge cases', () => {
+    it('returns undefined when finding tool for non-existent tag', async () => {
+      const { paste } = createPaste();
+      await paste.prepare();
 
-    span.textContent = 'inline';
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
 
-    const processed = (paste as unknown as {
-      processElementNode(node: Node, nodes: Node[], destNode: Node): Node[] | void;
-    }).processElementNode(span, nodes, fragment);
+      expect(toolRegistry.findToolForTag('NONEXISTENT')).toBeUndefined();
+      expect(toolRegistry.findToolForTag('')).toBeUndefined();
+    });
 
-    expect(processed).toEqual([ fragment ]);
-    expect(fragment.childNodes[0]).toBe(span);
+    it('returns undefined when finding tool for file with no matching tool', () => {
+      const toolsCollection = new ToolsCollection<BlockToolAdapter>();
+      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+
+      const unknownFile = new File(['content'], 'unknown.xyz', { type: 'application/unknown' });
+      expect(toolRegistry.findToolForFile(unknownFile)).toBeUndefined();
+    });
+
+    it('finds tool for file by extension only', async () => {
+      const fileTool = {
+        name: 'image',
+        pasteConfig: {
+          files: {
+            extensions: ['png', 'jpg'],
+            mimeTypes: [],
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const toolsCollection = new ToolsCollection<BlockToolAdapter>([['image', fileTool]]);
+      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+
+      await toolRegistry.processTools();
+
+      const pngFile = new File(['content'], 'test.png', { type: 'image/png' });
+      const jpgFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+      const txtFile = new File(['content'], 'test.txt', { type: 'text/plain' });
+
+      expect(toolRegistry.findToolForFile(pngFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(jpgFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(txtFile)).toBeUndefined();
+    });
+
+    it('finds tool for file by MIME type with wildcard', async () => {
+      const fileTool = {
+        name: 'image',
+        pasteConfig: {
+          files: {
+            extensions: [],
+            mimeTypes: ['image/*'],
+          },
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const toolsCollection = new ToolsCollection<BlockToolAdapter>([['image', fileTool]]);
+      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+
+      await toolRegistry.processTools();
+
+      const pngFile = new File(['content'], 'test.png', { type: 'image/png' });
+      const jpegFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+      const txtFile = new File(['content'], 'test.txt', { type: 'text/plain' });
+
+      expect(toolRegistry.findToolForFile(pngFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(jpegFile)).toBe('image');
+      expect(toolRegistry.findToolForFile(txtFile)).toBeUndefined();
+    });
+
+    it('returns undefined when finding tool for non-existent pattern', async () => {
+      const { paste } = createPaste();
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.findToolForPattern('no match here')).toBeUndefined();
+      expect(toolRegistry.findToolForPattern('')).toBeUndefined();
+    });
+
+    it('returns empty array for tool with no tags', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tool = {
+        name: 'no-tags',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('no-tags', tool);
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.getToolTags('no-tags')).toEqual([]);
+      expect(toolRegistry.getToolTags('nonexistent')).toEqual([]);
+    });
+
+    it('returns true for tool in exception list', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tool = {
+        name: 'exception-tool',
+        pasteConfig: false,
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('exception-tool', tool);
+      await paste.prepare();
+
+      const toolRegistry = (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry;
+
+      expect(toolRegistry.isException('exception-tool')).toBe(true);
+      expect(toolRegistry.isException('nonexistent')).toBe(false);
+    });
   });
 
-  it('returns block elements separately when processing element nodes', () => {
-    const { paste } = createPaste();
-    const fragment = document.createDocumentFragment();
-    const paragraph = document.createElement('p');
+  describe('Paste constants utilities', () => {
+    describe('collectTagNames', () => {
+      it('returns array with single tag name when input is string', () => {
+        expect(collectTagNames('DIV')).toEqual(['DIV']);
+        expect(collectTagNames('p')).toEqual(['p']);
+      });
 
-    const processed = (paste as unknown as {
-      processElementNode(node: Node, nodes: Node[], destNode: Node): Node[] | void;
-    }).processElementNode(paragraph, [], fragment);
+      it('returns array of keys when input is object', () => {
+        const config1: SanitizerConfig = { 'p': {}, 'div': { class: 'test' } };
+        const config2: SanitizerConfig = { 'table': {} };
 
-    expect(processed).toEqual([fragment, paragraph]);
+        expect(collectTagNames(config1)).toEqual(['p', 'div']);
+        expect(collectTagNames(config2)).toEqual(['table']);
+      });
+
+      it('returns empty array for null input at runtime', () => {
+        expect(collectTagNames(null as unknown as SanitizerConfig)).toEqual([]);
+      });
+
+      it('returns empty array for undefined input at runtime', () => {
+        expect(collectTagNames(undefined as unknown as SanitizerConfig)).toEqual([]);
+      });
+
+      it('returns empty array for non-object non-string input at runtime', () => {
+        expect(collectTagNames(123 as unknown as SanitizerConfig)).toEqual([]);
+        expect(collectTagNames(true as unknown as SanitizerConfig)).toEqual([]);
+        expect(collectTagNames([] as unknown as SanitizerConfig)).toEqual([]);
+      });
+    });
+
+    describe('SAFE_STRUCTURAL_TAGS', () => {
+      it('contains all expected table tags', () => {
+        expect(SAFE_STRUCTURAL_TAGS.has('table')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('thead')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('tbody')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('tfoot')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('tr')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('th')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('td')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('caption')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('colgroup')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('col')).toBe(true);
+      });
+
+      it('contains all expected list tags', () => {
+        expect(SAFE_STRUCTURAL_TAGS.has('ul')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('ol')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('li')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('dl')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('dt')).toBe(true);
+        expect(SAFE_STRUCTURAL_TAGS.has('dd')).toBe(true);
+      });
+
+      it('does not contain non-structural tags', () => {
+        expect(SAFE_STRUCTURAL_TAGS.has('div')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('span')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('p')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('h1')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('b')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('i')).toBe(false);
+        expect(SAFE_STRUCTURAL_TAGS.has('a')).toBe(false);
+      });
+    });
   });
 
-  it('detects native inputs when checking for native behaviour', () => {
-    const { paste } = createPaste();
-    const input = document.createElement('input');
-    const div = document.createElement('div');
+  describe('SanitizerConfigBuilder', () => {
+    let builder: SanitizerConfigBuilder;
 
-    expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(input)).toBe(true);
-    expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(div)).toBe(false);
+    beforeEach(() => {
+      builder = new SanitizerConfigBuilder(
+        new Map() as unknown as SanitizerConfigBuilder['tools'],
+        {} as SanitizerConfigBuilder['config']
+      );
+    });
+
+    it('buildToolsTagsConfig creates config with lowercase tag names', () => {
+      const toolsTags: { [tag: string]: TagSubstitute } = {
+        'P': { tool: {} as BlockToolAdapter, sanitizationConfig: {} },
+        'DIV': { tool: {} as BlockToolAdapter, sanitizationConfig: { class: 'test' } },
+        'H1': { tool: {} as BlockToolAdapter },
+      };
+
+      const result = builder.buildToolsTagsConfig(toolsTags);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': { class: 'test' },
+        'h1': {},
+      });
+    });
+
+    it('buildToolsTagsConfig uses empty config when sanitizationConfig is undefined', () => {
+      const toolsTags = {
+        'SPAN': { tool: {} as BlockToolAdapter },
+      };
+
+      const result = builder.buildToolsTagsConfig(toolsTags);
+
+      expect(result).toEqual({
+        'span': {},
+      });
+    });
+
+    it('getStructuralTagsConfig detects table tags in HTML', () => {
+      const html = '<table><thead><tr><th>Header</th></tr></thead><tbody><tr><td>Data</td></tr></tbody></table>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({
+        'table': {},
+        'thead': {},
+        'tbody': {},
+        'tr': {},
+        'th': {},
+        'td': {},
+      });
+    });
+
+    it('getStructuralTagsConfig detects list tags in HTML', () => {
+      const html = '<ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Ordered</li></ol>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({
+        'ul': {},
+        'li': {},
+        'ol': {},
+      });
+    });
+
+    it('getStructuralTagsConfig detects definition list tags', () => {
+      const html = '<dl><dt>Term</dt><dd>Definition</dd></dl>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({
+        'dl': {},
+        'dt': {},
+        'dd': {},
+      });
+    });
+
+    it('getStructuralTagsConfig handles nested structural tags', () => {
+      const html = '<table><tr><td><ul><li>Nested</li></ul></td></tr></table>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      // Note: browser automatically adds tbody to tables
+      expect(result).toEqual({
+        'table': {},
+        'tbody': {},
+        'tr': {},
+        'td': {},
+        'ul': {},
+        'li': {},
+      });
+    });
+
+    it('getStructuralTagsConfig ignores non-structural tags', () => {
+      const html = '<div><span>Text</span><p>Paragraph</p><b>Bold</b></div>';
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+
+      const result = builder.getStructuralTagsConfig(wrapper);
+
+      expect(result).toEqual({});
+    });
+
+    it('getStructuralTagsConfig handles empty element', () => {
+      const emptyElement = document.createElement('div');
+
+      const result = builder.getStructuralTagsConfig(emptyElement);
+
+      expect(result).toEqual({});
+    });
+
+    it('buildToolConfig returns empty config when pasteConfig is false', () => {
+      const tool = {
+        pasteConfig: false,
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({});
+    });
+
+    it('buildToolConfig extracts tags from string array', () => {
+      const tool = {
+        pasteConfig: {
+          tags: ['P', 'DIV', 'H1'],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': {},
+        'h1': {},
+      });
+    });
+
+    it('buildToolConfig extracts tags and sanitization configs from object', () => {
+      const tool = {
+        pasteConfig: {
+          tags: [
+            { 'p': { class: 'paragraph' } },
+            { 'div': { id: true } },
+          ],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({
+        'p': { class: 'paragraph' },
+        'div': { id: true },
+      });
+    });
+
+    it('buildToolConfig handles mixed string and config array', () => {
+      const tool = {
+        pasteConfig: {
+          tags: [
+            'P',
+            { 'div': { class: 'wrapper' } },
+            'SPAN',
+          ],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': { class: 'wrapper' },
+        'span': {},
+      });
+    });
+
+    it('buildToolConfig handles nested tag object with multiple tags', () => {
+      const tool = {
+        pasteConfig: {
+          tags: [
+            {
+              'table': {
+                'tr': {
+                  'td': {},
+                },
+              },
+            },
+          ],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      // The function preserves nested structure: tag -> its sanitization config
+      expect(result).toEqual({
+        'table': {
+          'tr': {
+            'td': {},
+          },
+        },
+      });
+    });
+
+    it('buildToolConfig returns empty object when pasteConfig has no tags', () => {
+      const tool = {
+        pasteConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(result).toEqual({});
+    });
+
+    it('buildToolConfig converts tag names to lowercase', () => {
+      const tool = {
+        pasteConfig: {
+          tags: ['P', 'DIV', 'CUSTOM-TAG'],
+        },
+      } as unknown as BlockToolAdapter;
+
+      const result = builder.buildToolConfig(tool);
+
+      expect(Object.keys(result)).toEqual(['p', 'div', 'custom-tag']);
+    });
+
+    it('composeConfigs merges multiple configs', () => {
+      const config1 = { 'p': {} };
+      const config2 = { 'div': { class: 'test' } };
+      const config3 = { 'span': { id: true } };
+
+      const result = builder.composeConfigs(config1, config2, config3);
+
+      expect(result).toEqual({
+        'p': {},
+        'div': { class: 'test' },
+        'span': { id: true },
+      });
+    });
+
+    it('composeConfigs handles empty configs', () => {
+      const result = builder.composeConfigs({}, {}, {});
+
+      expect(result).toEqual({});
+    });
+
+    it('sanitizeTable cleans table HTML and returns sanitized element', () => {
+      const table = document.createElement('table');
+      table.innerHTML = '<tr><td><script>bad()</script>Data</td></tr>';
+
+      const result = builder.sanitizeTable(table, { 'table': {}, 'tr': {}, 'td': {} });
+
+      expect(result).toBeInstanceOf(HTMLElement);
+      expect(result?.tagName.toLowerCase()).toBe('table');
+      expect(result?.outerHTML).not.toContain('<script>');
+    });
+
+    it('sanitizeTable returns null when sanitization removes table', () => {
+      const table = document.createElement('table');
+      table.innerHTML = '<tr><td>Data</td></tr>';
+
+      const result = builder.sanitizeTable(table, {}); // Empty config removes everything
+
+      expect(result).toBeNull();
+    });
+
+    it('sanitizeTable returns null when result is not an element', () => {
+      const table = document.createElement('table');
+      table.innerHTML = '<tr><td>Data</td></tr>';
+
+      // Empty config will remove the table element
+      const result = builder.sanitizeTable(table, {});
+
+      expect(result).toBeNull();
+    });
+
+    it('isStructuralTag returns true for table tags', () => {
+      expect(builder.isStructuralTag('table')).toBe(true);
+      expect(builder.isStructuralTag('thead')).toBe(true);
+      expect(builder.isStructuralTag('tbody')).toBe(true);
+      expect(builder.isStructuralTag('tfoot')).toBe(true);
+      expect(builder.isStructuralTag('tr')).toBe(true);
+      expect(builder.isStructuralTag('th')).toBe(true);
+      expect(builder.isStructuralTag('td')).toBe(true);
+      expect(builder.isStructuralTag('caption')).toBe(true);
+      expect(builder.isStructuralTag('colgroup')).toBe(true);
+      expect(builder.isStructuralTag('col')).toBe(true);
+    });
+
+    it('isStructuralTag returns true for list tags', () => {
+      expect(builder.isStructuralTag('ul')).toBe(true);
+      expect(builder.isStructuralTag('ol')).toBe(true);
+      expect(builder.isStructuralTag('li')).toBe(true);
+      expect(builder.isStructuralTag('dl')).toBe(true);
+      expect(builder.isStructuralTag('dt')).toBe(true);
+      expect(builder.isStructuralTag('dd')).toBe(true);
+    });
+
+    it('isStructuralTag returns false for non-structural tags', () => {
+      expect(builder.isStructuralTag('div')).toBe(false);
+      expect(builder.isStructuralTag('span')).toBe(false);
+      expect(builder.isStructuralTag('p')).toBe(false);
+      expect(builder.isStructuralTag('h1')).toBe(false);
+      expect(builder.isStructuralTag('b')).toBe(false);
+      expect(builder.isStructuralTag('i')).toBe(false);
+    });
+
+    it('isStructuralTag handles case insensitive input', () => {
+      expect(builder.isStructuralTag('TABLE')).toBe(true);
+      expect(builder.isStructuralTag('Table')).toBe(true);
+      expect(builder.isStructuralTag('UL')).toBe(true);
+      expect(builder.isStructuralTag('DIV')).toBe(false);
+    });
+  });
+
+  describe('Handler edge cases', () => {
+    describe('BlokDataHandler edge cases', () => {
+      it('returns priority 0 for non-string data', () => {
+        const { paste } = createPaste();
+
+        const handler = new BlokDataHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          {}
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+        expect(handler.canHandle([])).toBe(0);
+      });
+
+      it('returns priority 0 for invalid JSON strings', () => {
+        const { paste } = createPaste();
+
+        const handler = new BlokDataHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          {}
+        );
+
+        expect(handler.canHandle('not json')).toBe(0);
+        expect(handler.canHandle('{invalid}')).toBe(0);
+        expect(handler.canHandle('')).toBe(0);
+      });
+
+      it('handles empty Blok JSON array', async () => {
+        const { paste, mocks } = createPaste();
+        await paste.prepare();
+
+        const sanitizeBlocksSpy = vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue([]);
+
+        mocks.BlockManager.currentBlock = {
+          tool: { isDefault: true },
+          isEmpty: true,
+        };
+
+        const dataTransfer = new MockDataTransfer(
+          {
+            'application/x-blok': JSON.stringify([]),
+            'text/plain': '',
+          },
+          { length: 0 } as FileList,
+          ['application/x-blok', 'text/plain']
+        );
+
+        await paste.processDataTransfer(dataTransfer);
+
+        // Verify sanitizer was called with the empty Blok blocks array
+        expect(sanitizeBlocksSpy).toHaveBeenCalledWith(
+          [],  // Empty Blok data array
+          expect.any(Function),
+          {}
+        );
+        // Verify no blocks were inserted since array was empty
+        expect(mocks.BlockManager.insert).not.toHaveBeenCalled();
+      });
+
+      it('handles Blok data with missing required fields gracefully', async () => {
+        const { paste, mocks } = createPaste();
+        await paste.prepare();
+
+        const malformedBlocks = [
+          { id: '1', tool: 'paragraph', data: {} },
+          { tool: 'paragraph', data: { text: 'hello' } },
+          { tool: 'paragraph', data: { text: 'world' } },
+        ] as Array<{ tool: string; data: Record<string, unknown>; id?: string }>;
+
+        vi.spyOn(sanitizer, 'sanitizeBlocks').mockReturnValue(malformedBlocks);
+
+        mocks.BlockManager.currentBlock = {
+          tool: { isDefault: true },
+          isEmpty: true,
+        };
+
+        const insertedBlocks: Array<{ tool: string; data: Record<string, unknown> }> = [];
+        mocks.BlockManager.insert.mockImplementation((block) => {
+          insertedBlocks.push({
+            tool: (block as { tool: string }).tool,
+            data: (block as { data: Record<string, unknown> }).data,
+          });
+          return { id: 'block-id' };
+        });
+
+        const dataTransfer = new MockDataTransfer(
+          {
+            'application/x-blok': JSON.stringify(malformedBlocks),
+            'text/plain': '',
+          },
+          { length: 0 } as FileList,
+          ['application/x-blok', 'text/plain']
+        );
+
+        await paste.processDataTransfer(dataTransfer);
+
+        // Verify all 3 blocks were inserted despite missing id field
+        expect(insertedBlocks).toHaveLength(3);
+        expect(insertedBlocks[0]).toEqual({ tool: 'paragraph', data: {} });
+        expect(insertedBlocks[1]).toEqual({ tool: 'paragraph', data: { text: 'hello' } });
+        expect(insertedBlocks[2]).toEqual({ tool: 'paragraph', data: { text: 'world' } });
+      });
+    });
+
+    describe('FilesHandler edge cases', () => {
+      it('returns priority 0 for non-DataTransfer data', () => {
+        const { paste } = createPaste();
+
+        const handler = new FilesHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('string')).toBe(0);
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+
+      it('returns priority 0 for DataTransfer without files', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const handler = new FilesHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        const dataTransferWithoutFiles = new MockDataTransfer({}, { length: 0 } as FileList, ['text/plain']);
+
+        expect(handler.canHandle(dataTransferWithoutFiles)).toBe(0);
+      });
+
+      it('handles empty FileList', async () => {
+        const { paste, mocks } = createPaste();
+        await paste.prepare();
+
+        const emptyFileList = {
+          length: 0,
+          item: () => null,
+        } as unknown as FileList;
+
+        const dataTransfer = new MockDataTransfer({}, emptyFileList, []);
+
+        await paste.processDataTransfer(dataTransfer);
+
+        expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('PatternHandler edge cases', () => {
+      it('returns priority 0 for text exceeding max length', async () => {
+        const { paste, mocks } = createPaste();
+
+        const patternTool = {
+          name: 'link',
+          pasteConfig: {
+            patterns: {
+              link: /https:\/\/example\.com/,
+            },
+          },
+          baseSanitizeConfig: {},
+          hasOnPasteHandler: true,
+        } as unknown as BlockToolAdapter;
+
+        mocks.Tools.blockTools.set('link', patternTool);
+        await paste.prepare();
+
+        const handler = new PatternHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        const longText = 'a'.repeat(PatternHandler.PATTERN_PROCESSING_MAX_LENGTH + 1);
+
+        expect(handler.canHandle(longText)).toBe(0);
+      });
+
+      it('returns priority 0 for empty string', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const handler = new PatternHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('')).toBe(0);
+      });
+
+      it('returns priority 0 for non-string data', async () => {
+        const { paste } = createPaste();
+
+        const handler = new PatternHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+    });
+
+    describe('HtmlHandler edge cases', () => {
+      it('returns priority 0 for empty string', () => {
+        const { paste } = createPaste();
+
+        const handler = new HtmlHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('')).toBe(0);
+        expect(handler.canHandle('   ')).toBe(0);
+      });
+
+      it('returns priority 0 for non-HTML string', () => {
+        const { paste } = createPaste();
+
+        const handler = new HtmlHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle('plain text')).toBe(0);
+        expect(handler.canHandle('just words')).toBe(0);
+      });
+
+      it('returns priority 0 for non-string data', () => {
+        const { paste } = createPaste();
+
+        const handler = new HtmlHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+    });
+
+    describe('TextHandler edge cases', () => {
+      it('returns priority 0 for empty string', () => {
+        const { paste } = createPaste();
+
+        const handler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        expect(handler.canHandle('')).toBe(0);
+        // Note: TextHandler returns 10 for non-empty strings (including spaces)
+        // The whitespace filtering happens in processPlain()
+        expect(handler.canHandle('   ')).toBe(10);
+      });
+
+      it('returns priority 0 for non-string data', () => {
+        const { paste } = createPaste();
+
+        const handler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        expect(handler.canHandle(null)).toBe(0);
+        expect(handler.canHandle(undefined)).toBe(0);
+        expect(handler.canHandle(123)).toBe(0);
+        expect(handler.canHandle({})).toBe(0);
+      });
+
+      it('handles mixed line endings (\\r\\n and \\n)', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const textHandler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('line1\r\nline2\nline3');
+
+        expect(result).toHaveLength(3);
+        expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('line1');
+        expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('line2');
+        expect((result[2] as { content: HTMLElement }).content).toHaveTextContent('line3');
+      });
+
+      it('handles string with only newlines', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const textHandler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain('\n\n\n');
+
+        expect(result).toHaveLength(0);
+      });
+
+      it('handles Unicode and emoji characters', async () => {
+        const { paste, mocks } = createPaste();
+
+        mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+        await paste.prepare();
+
+        const textHandler = new TextHandler(
+          paste as unknown as Paste['Blok'],
+          (paste as unknown as { toolRegistry: ToolRegistry }).toolRegistry,
+          (paste as unknown as { sanitizerBuilder: SanitizerConfigBuilder }).sanitizerBuilder,
+          { defaultBlock: 'paragraph' }
+        );
+
+        const text = 'Hello 🚀 World\n你好\nمرحبا';
+
+        const result = (textHandler as unknown as { processPlain(plain: string): unknown[] }).processPlain(text);
+
+        expect(result).toHaveLength(3);
+        expect((result[0] as { content: HTMLElement }).content).toHaveTextContent('Hello 🚀 World');
+        expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('你好');
+        expect((result[2] as { content: HTMLElement }).content).toHaveTextContent('مرحبا');
+      });
+    });
   });
 });

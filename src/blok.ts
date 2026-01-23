@@ -1,18 +1,18 @@
 'use strict';
 
-import type { BlokConfig, API } from '../types';
-import type { BlokModules } from './types-internal/blok-modules';
-
 /**
  * Apply polyfills
  */
 import '@babel/register';
 
-import './components/polyfills';
+import type { BlokConfig, API } from '../types';
+
+import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
-import { DATA_ATTR } from './components/constants/data-attributes';
+import './components/polyfills';
+import type { BlokModules } from './types-internal/blok-modules';
 
 /**
  * Export version as a named export
@@ -130,10 +130,10 @@ class Blok {
 
       destroyTooltip();
 
-      for (const field in this) {
-        if (Object.prototype.hasOwnProperty.call(this, field)) {
-          delete (this as Record<string, unknown>)[field];
-        }
+      const thisKeys = Object.keys(this) as Array<keyof Blok>;
+      for (const field of thisKeys) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- needed to clear instance properties
+        delete this[field];
       }
 
       Object.setPrototypeOf(this, null);
@@ -155,29 +155,27 @@ class Blok {
         return;
       }
 
-      (this as Record<string, unknown>)[field] = configurationToExport as BlokConfig|string;
+      (this as Record<string, unknown>)[field] = configurationToExport;
     });
 
     this.destroy = destroy;
 
     const apiMethods = blok.moduleInstances.API.methods;
-    const eventsDispatcherApi = blok.moduleInstances.EventsAPI?.methods ?? apiMethods.events;
+    const eventsDispatcherApi = blok.moduleInstances.EventsAPI.methods;
 
-    if (eventsDispatcherApi !== undefined) {
-      const defineDispatcher = (target: object): void => {
-        if (!Object.prototype.hasOwnProperty.call(target, 'eventsDispatcher')) {
-          Object.defineProperty(target, 'eventsDispatcher', {
-            value: eventsDispatcherApi,
-            configurable: true,
-            enumerable: true,
-            writable: false,
-          });
-        }
-      };
+    const defineDispatcher = (target: Record<string, unknown>): void => {
+      if (!Object.prototype.hasOwnProperty.call(target, 'eventsDispatcher')) {
+        Object.defineProperty(target, 'eventsDispatcher', {
+          value: eventsDispatcherApi,
+          configurable: true,
+          enumerable: true,
+          writable: false,
+        });
+      }
+    };
 
-      defineDispatcher(apiMethods);
-      defineDispatcher(this as Record<string, unknown>);
-    }
+    defineDispatcher(apiMethods as unknown as Record<string, unknown>);
+    defineDispatcher(this as Record<string, unknown>);
 
     if (Object.getPrototypeOf(apiMethods) !== Blok.prototype) {
       Object.setPrototypeOf(apiMethods, Blok.prototype);
@@ -261,6 +259,16 @@ class Blok {
             (this as Record<string, unknown>)[alias] = apiMethodGroup[name];
           });
       });
+
+    // Expose isMobile property directly on the Blok instance
+    const uiMethods = blok.moduleInstances.API.methods.ui as unknown as Record<string, unknown>;
+    Object.defineProperty(this, 'isMobile', {
+      configurable: true,
+      enumerable: true,
+      get(): boolean {
+        return uiMethods.isMobile as boolean;
+      },
+    });
   }
 }
 

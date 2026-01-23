@@ -89,6 +89,7 @@ const createBlokWithBlocks = async (
     serializedTools: ToolDefinition[];
   }) => {
     const reviveToolClass = (classSource: string): unknown => {
+      // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Dynamic class evaluation is intentional for test code
       return new Function(`return (${classSource});`)();
     };
 
@@ -913,6 +914,10 @@ test.describe('modules/selection', () => {
 
     await page.mouse.move(reachBlockX, endY, { steps: 10 });
 
+    // The RectangleSelection module uses a 10ms throttled mousemove handler.
+    // Trigger one more single-pixel move to ensure the final position is fully processed.
+    await page.mouse.move(reachBlockX + 1, endY);
+
     // Now both blocks should be selected because rectangle intersects them
     await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
     await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
@@ -1144,5 +1149,230 @@ test.describe('modules/selection', () => {
     // Second and third blocks should NOT be selected from hovering
     await expect(getBlockByIndex(page, 1)).not.toHaveAttribute('data-blok-selected', 'true');
     await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
+  });
+
+  test.describe('edge cases', () => {
+    test('cross-block selection with mixed formatting tags', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'First block with <strong>bold</strong> text',
+          },
+        },
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Second block with <em>italic</em> text',
+          },
+        },
+      ]);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+
+      // Select text across both blocks using shift+arrow
+      await firstParagraph.click();
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.up('Shift');
+
+      // Both blocks should be selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+
+      // Deleting should remove both blocks and create replacement
+      await page.keyboard.press('Backspace');
+
+      const blocks = page.locator(BLOCK_WRAPPER_SELECTOR);
+      await expect(blocks).toHaveCount(1);
+    });
+
+    test('handles selection at document boundaries', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'First',
+          },
+        },
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Last',
+          },
+        },
+      ]);
+
+      // Click first to focus the editor
+      await getParagraphByIndex(page, 0).click();
+
+      // Select all blocks (needs double press for block selection)
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    });
+
+    test('handles rapid selection changes', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Block one',
+          },
+        },
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Block two',
+          },
+        },
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Block three',
+          },
+        },
+      ]);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const secondParagraph = getParagraphByIndex(page, 1);
+      const thirdParagraph = getParagraphByIndex(page, 2);
+
+      // Click different blocks rapidly
+      await firstParagraph.click();
+      await secondParagraph.click();
+      await thirdParagraph.click();
+      await firstParagraph.click();
+
+      // The last clicked block should have toolbar
+      const toolbar = page.locator('[data-blok-toolbar]');
+
+      await expect(toolbar).toHaveAttribute('data-blok-opened', 'true');
+
+      // Verify we can still interact with the editor
+      await page.keyboard.type(' more text');
+
+      const firstParagraphText = await firstParagraph.innerText();
+      expect(firstParagraphText).toContain('more text');
+    });
+
+    test('fake background with multi-line selection', async ({ page }) => {
+      const longText = 'This is a very long line of text that should wrap to multiple lines when displayed in the editor.';
+
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: longText,
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      // Select a portion of the text
+      await selectText(paragraph, 'very long line');
+
+      // Set fake background
+      await page.evaluate(() => {
+        window.blokInstance?.selection.setFakeBackground();
+      });
+
+      // Verify fake background is present
+      await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).not.toHaveCount(0);
+
+      // Remove fake background
+      await page.evaluate(() => {
+        window.blokInstance?.selection.removeFakeBackground();
+      });
+
+      await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).toHaveCount(0);
+    });
+
+    test('fake background preserves selection after focus loss', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Select this text',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await selectText(paragraph, 'this text');
+
+      const selectedTextBefore = await page.evaluate(() => {
+        return window.getSelection()?.toString() ?? '';
+      });
+
+      expect(selectedTextBefore).toBe('this text');
+
+      // Set fake background
+      await page.evaluate(() => {
+        window.blokInstance?.selection.setFakeBackground();
+      });
+
+      // Clear selection to simulate focus loss
+      await page.evaluate(() => {
+        window.getSelection()?.removeAllRanges();
+      });
+
+      // Restore selection
+      await page.evaluate(() => {
+        window.blokInstance?.selection.restore();
+      });
+
+      const selectedTextAfter = await page.evaluate(() => {
+        return window.getSelection()?.toString() ?? '';
+      });
+
+      expect(selectedTextAfter).toBe('this text');
+    });
+
+    test('fake background with nested formatting elements', async ({ page }) => {
+      const complexText = 'Text with <strong>bold</strong> and <em>italic</em> formatting';
+
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: complexText,
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      // Click to focus
+      await paragraph.click();
+
+      // Select text using API
+      await selectText(paragraph, 'bold');
+
+      // Set fake background
+      await page.evaluate(() => {
+        window.blokInstance?.selection.setFakeBackground();
+      });
+
+      // Verify fake background is created
+      const fakeBackgrounds = page.locator(FAKE_BACKGROUND_SELECTOR);
+      await expect(fakeBackgrounds).not.toHaveCount(0);
+
+      // Verify the content is preserved
+      const paragraphText = await paragraph.innerText();
+      expect(paragraphText).toContain('bold');
+      expect(paragraphText).toContain('italic');
+
+      // Clean up fake background
+      await page.evaluate(() => {
+        window.blokInstance?.selection.removeFakeBackground();
+      });
+
+      await expect(page.locator(FAKE_BACKGROUND_SELECTOR)).toHaveCount(0);
+    });
   });
 });

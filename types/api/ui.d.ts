@@ -6,6 +6,10 @@ export interface Ui {
    * Allows accessing some Blok UI elements
    */
   nodes: UiNodes,
+  /**
+   * Flag that indicates whether Blok is in mobile mode
+   */
+  isMobile: boolean,
 }
 
 /**

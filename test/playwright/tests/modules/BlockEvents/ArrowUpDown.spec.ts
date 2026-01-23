@@ -245,11 +245,20 @@ const setCaretAtOffset = async (locator: Locator, offset: number): Promise<void>
 const createBlokWithListTool = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
   await resetBlok(page);
   await page.evaluate(async ({ holder, blocks: blokBlocks }) => {
+    // Resolve List tool dynamically from window.Blok
+    const ListTool = 'Blok.List'.split('.').reduce<unknown>(
+      (obj: unknown, key: string) => (obj as Record<string, unknown>)?.[key],
+      window
+    );
+
+    if (!ListTool) {
+      throw new Error('List tool is not available globally');
+    }
+
     const blok = new window.Blok({
       holder: holder,
       tools: {
-         
-        list: (window as any).Blok.List,
+        list: ListTool,
       },
       data: { blocks: blokBlocks },
     });
@@ -416,7 +425,10 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       // This accounts for different character widths
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
-      expect(Math.abs(xAfter! - xBefore!)).toBeLessThan(50);
+
+      // Coerce to numbers (null becomes 0, but assertions above ensure we have valid values)
+      // The difference should be within 50px
+      expect(Math.abs((xAfter ?? 0) - (xBefore ?? 0))).toBeLessThan(50);
     });
 
     test('should preserve horizontal position when moving up between blocks', async ({ page }) => {
@@ -447,7 +459,9 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       // The X positions should be approximately the same
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
-      expect(Math.abs(xAfter! - xBefore!)).toBeLessThan(50);
+
+      // Coerce to numbers (null becomes 0, but assertions above ensure we have valid values)
+      expect(Math.abs((xAfter ?? 0) - (xBefore ?? 0))).toBeLessThan(50);
     });
 
     test('should clamp to end of shorter block when target X exceeds block length', async ({ page }) => {
@@ -799,7 +813,9 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       // Positions should be approximately the same (within 50px tolerance)
       expect(xBefore).not.toBeNull();
       expect(xAfter).not.toBeNull();
-      expect(Math.abs(xAfter! - xBefore!)).toBeLessThan(50);
+
+      // Coerce to numbers (null becomes 0, but assertions above ensure we have valid values)
+      expect(Math.abs((xAfter ?? 0) - (xBefore ?? 0))).toBeLessThan(50);
     });
   });
 });

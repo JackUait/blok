@@ -93,8 +93,10 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
           }
 
           if (!toolClass && classCode) {
-
-            toolClass = new Function(`return (${classCode});`)();
+            // eslint-disable-next-line no-new-func -- Required for dynamic tool instantiation in tests
+            const createToolClass = new Function('code', `return (${classCode});`);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Function constructor returns `Function`, unsafe call is necessary for dynamic instantiation
+            toolClass = createToolClass(classCode) as unknown;
           }
 
           if (!toolClass) {
@@ -706,8 +708,7 @@ test.describe('ui.block-tunes', () => {
       await expect(page.locator(NESTED_POPOVER_SELECTOR)).toBeVisible();
     });
 
-    // eslint-disable-next-line playwright/no-skipped-test -- TODO: Fix nested popover keyboard navigation - pre-existing bug
-    test.skip('closes nested popover with ArrowLeft and returns focus to parent', async ({ page }) => {
+    test('closes nested popover with ArrowLeft and returns focus to parent', async ({ page }) => {
       await createBlok(page, {
         tools: {
           header: {
@@ -748,8 +749,7 @@ test.describe('ui.block-tunes', () => {
       await expect(convertToOption).toHaveAttribute('data-blok-focused', 'true');
     });
 
-    // eslint-disable-next-line playwright/no-skipped-test -- TODO: Fix nested popover keyboard navigation - pre-existing bug
-    test.skip('navigates within nested popover using arrow keys', async ({ page }) => {
+    test('navigates within nested popover using arrow keys', async ({ page }) => {
       await createBlok(page, {
         tools: {
           header: {
@@ -827,8 +827,7 @@ test.describe('ui.block-tunes', () => {
       await expect(popoverContainer).toHaveCount(0);
     });
 
-    // eslint-disable-next-line playwright/no-skipped-test -- TODO: Fix nested popover keyboard navigation - pre-existing bug
-    test.skip('selects tool in nested popover with Enter and converts block', async ({ page }) => {
+    test('selects tool in nested popover with Enter and converts block', async ({ page }) => {
       await createBlok(page, {
         tools: {
           header: {

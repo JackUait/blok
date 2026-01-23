@@ -1,4 +1,5 @@
 import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
+
 import enMessages from './locales/en/messages.json';
 
 /**
@@ -35,7 +36,7 @@ export class LightweightI18n {
     // Check overrides first, then fall back to base dictionary
     const value = this.overrides?.[key] ?? this.dictionary[key];
 
-    if (value === undefined) {
+    if (!(key in this.dictionary) && (!this.overrides || !(key in this.overrides))) {
       return key;
     }
 
@@ -55,7 +56,7 @@ export class LightweightI18n {
    * Check if a translation exists
    */
   public has(key: string): boolean {
-    return (this.overrides?.[key] ?? this.dictionary[key]) !== undefined;
+    return key in this.dictionary || (this.overrides !== null && key in this.overrides);
   }
 
   /**

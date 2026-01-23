@@ -1,7 +1,6 @@
-import { array } from './utils';
 import type { Block } from './block';
 import { BlockToolAPI } from './block';
-import type { MoveEvent } from '../../types/tools';
+
 
 /**
  * @class Blocks
@@ -50,7 +49,7 @@ export class Blocks {
    * @returns {HTMLElement[]}
    */
   public get nodes(): HTMLElement[] {
-    return array(this.workingArea.children);
+    return Array.from(this.workingArea.children) as HTMLElement[];
   }
 
   /**
@@ -62,7 +61,7 @@ export class Blocks {
    * @param {Block} value — value to set
    * @returns {boolean}
    */
-  public static set(instance: Blocks, property: PropertyKey, value: Block | unknown): boolean {
+  public static set(instance: Blocks, property: PropertyKey, value: unknown): boolean {
     /**
      * If property name is not a number (method or other property, access it via reflect
      */
@@ -88,7 +87,7 @@ export class Blocks {
    * @param {PropertyKey} property — Blocks class property key
    * @returns {Block|*}
    */
-  public static get(instance: Blocks, property: PropertyKey): Block | unknown {
+  public static get(instance: Blocks, property: PropertyKey): unknown {
     /**
      * If property is not a number, get it via Reflect object
      */
@@ -140,12 +139,10 @@ export class Blocks {
     this.blocks.splice(toIndex, 0, block);
 
     // invoke hook
-    const event: MoveEvent = this.composeBlockEvent('move', {
+    block.call(BlockToolAPI.MOVED, {
       fromIndex,
       toIndex,
     });
-
-    block.call(BlockToolAPI.MOVED, event);
   }
 
   /**
@@ -188,9 +185,9 @@ export class Blocks {
       return;
     }
 
-    const nextBlock = this.blocks[insertIndex + 1];
+    const nextBlock = this.blocks[insertIndex + 1] as Block | undefined;
 
-    if (nextBlock !== undefined) {
+    if (nextBlock) {
       this.insertToDOM(block, 'beforebegin', nextBlock);
 
       return;
@@ -205,7 +202,7 @@ export class Blocks {
    * @param block - new block
    */
   public replace(index: number, block: Block): void {
-    if (this.blocks[index] === undefined) {
+    if (!(index in this.blocks)) {
       throw Error('Incorrect index');
     }
 
@@ -337,16 +334,5 @@ export class Blocks {
     }
 
     block.call(BlockToolAPI.RENDERED);
-  }
-
-  /**
-   * Composes Block event with passed type and details
-   * @param {string} type - event type
-   * @param {object} detail - event detail
-   */
-  private composeBlockEvent(type: string, detail: object): MoveEvent {
-    return new CustomEvent(type, {
-      detail,
-    }) as MoveEvent;
   }
 }

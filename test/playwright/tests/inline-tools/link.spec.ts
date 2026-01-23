@@ -358,6 +358,7 @@ test.describe('inline tool link', () => {
 
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Paragraph data has text property
     expect(paragraphBlock?.data.text).toContain('<a href="https://google.com" target="_blank" rel="nofollow">Persist me</a>');
   });
 
@@ -687,13 +688,8 @@ test.describe('inline tool link', () => {
     await selectText(paragraph, 'Paste Link');
     const linkInput = await ensureLinkInputOpen(page);
 
-    // Simulate paste
-    await linkInput.evaluate((el, text) => {
-      const input = el as HTMLInputElement;
-
-      input.value = text;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }, url);
+    // Fill the input using Playwright's fill method
+    await linkInput.fill(url);
 
     await linkInput.press('Enter');
 

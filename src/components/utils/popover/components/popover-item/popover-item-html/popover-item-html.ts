@@ -1,9 +1,12 @@
-import { PopoverItem } from '../popover-item';
-import type { PopoverItemHtmlParams, PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
-import { Dom } from '../../../../../dom';
-import { css, cssInline } from './popover-item-html.const';
 import { DATA_ATTR } from '../../../../../constants/data-attributes';
+import { Dom } from '../../../../../dom';
 import { twMerge } from '../../../../tw';
+import { PopoverItem } from '../popover-item';
+
+import { css, cssInline } from './popover-item-html.const';
+
+import type { PopoverItemHtmlParams, PopoverItemRenderParamsMap, PopoverItemType } from '@/types/utils/popover/popover-item';
+
 
 /**
  * Represents popover item with custom html content

@@ -61,11 +61,7 @@ describe('utils', () => {
     const initialVersion = versionHolder.VERSION;
 
     afterEach(() => {
-      if (initialVersion === undefined) {
-        delete versionHolder.VERSION;
-      } else {
-        versionHolder.VERSION = initialVersion;
-      }
+      versionHolder.VERSION = initialVersion;
     });
 
     it('should return injected VERSION when defined', () => {
@@ -75,7 +71,7 @@ describe('utils', () => {
     });
 
     it('should fallback to default version when VERSION is not set', () => {
-      delete versionHolder.VERSION;
+      versionHolder.VERSION = undefined;
 
       expect(getBlokVersion()).toBe('dev');
     });
@@ -253,7 +249,7 @@ describe('utils', () => {
     });
 
     it('should return true for object created with Object.create (no constructor)', () => {
-      const obj = Object.create(null);
+      const obj = Object.create(null) as Record<string, unknown>;
 
       // lodash isEmpty returns true for objects with no enumerable properties
       expect(isEmpty(obj)).toBe(true);
@@ -347,31 +343,35 @@ describe('utils', () => {
     it('should log at VERBOSE level', () => {
       setLogLevel(LogLevels.VERBOSE);
       log('test message');
-      expect(consoleSpy.log).toHaveBeenCalled();
+      expect(consoleSpy.log).toHaveBeenCalledWith('test message');
     });
 
     it('should not log info at INFO level when labeled', () => {
       setLogLevel(LogLevels.INFO);
       logLabeled('test message');
       expect(consoleSpy.log).not.toHaveBeenCalled();
+      // Verify behavior: labeled messages don't log at INFO level
+      expect(consoleSpy.log.mock.calls.length).toBe(0);
     });
 
     it('should log errors at ERROR level', () => {
       setLogLevel(LogLevels.ERROR);
       log('test message', 'error');
-      expect(consoleSpy.error).toHaveBeenCalled();
+      expect(consoleSpy.error).toHaveBeenCalledWith('test message');
     });
 
     it('should not log info at ERROR level', () => {
       setLogLevel(LogLevels.ERROR);
       log('test message', 'log');
       expect(consoleSpy.log).not.toHaveBeenCalled();
+      // Verify behavior: info messages are filtered at ERROR level
+      expect(consoleSpy.log.mock.calls.length).toBe(0);
     });
 
     it('should log warnings at WARN level', () => {
       setLogLevel(LogLevels.WARN);
       log('test message', 'warn');
-      expect(console.warn).toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith('test message');
     });
 
     it('should not log info at WARN level', () => {
@@ -408,14 +408,19 @@ describe('utils', () => {
   describe('delay', () => {
     it('should delay function execution', async () => {
       vi.useFakeTimers();
-      const fn = vi.fn();
+      let executed = false;
+      const fn = vi.fn(() => {
+        executed = true;
+      });
       const delayedFn = delay(fn, 100);
 
       delayedFn();
-      expect(fn).not.toHaveBeenCalled();
+      expect(executed).toBe(false);
 
       vi.advanceTimersByTime(100);
       expect(fn).toHaveBeenCalledTimes(1);
+      // Behavior verification: function was actually executed after delay
+      expect(executed).toBe(true);
 
       vi.useRealTimers();
     });
@@ -429,6 +434,8 @@ describe('utils', () => {
       vi.advanceTimersByTime(100);
 
       expect(fn).toHaveBeenCalledWith('arg1', 'arg2');
+      // Behavior verification: function received exactly the expected arguments
+      expect(fn.mock.calls[0]).toEqual(['arg1', 'arg2']);
       vi.useRealTimers();
     });
   });
@@ -454,6 +461,8 @@ describe('utils', () => {
 
       vi.advanceTimersByTime(100);
       expect(fn).toHaveBeenCalledTimes(1);
+      // Behavior verification: multiple rapid calls result in single execution
+      expect(fn.mock.calls.length).toBe(1);
     });
 
     it('should call function immediately when immediate is true', () => {
@@ -466,6 +475,8 @@ describe('utils', () => {
       debouncedFn();
       vi.advanceTimersByTime(100);
       expect(fn).toHaveBeenCalledTimes(1);
+      // Behavior verification: immediate mode calls function only once
+      expect(fn.mock.calls.length).toBe(1);
     });
 
     it('should pass arguments to debounced function', () => {
@@ -476,6 +487,8 @@ describe('utils', () => {
       vi.advanceTimersByTime(100);
 
       expect(fn).toHaveBeenCalledWith('arg1', 'arg2');
+      // Behavior verification: arguments were passed correctly
+      expect(fn.mock.calls[0]).toEqual(['arg1', 'arg2']);
     });
   });
 
@@ -500,6 +513,8 @@ describe('utils', () => {
 
       vi.advanceTimersByTime(100);
       expect(fn).toHaveBeenCalledTimes(2);
+      // Behavior verification: throttling limits execution rate
+      expect(fn.mock.calls.length).toBe(2);
     });
 
     it('should not call function on leading edge when leading is false', () => {
@@ -511,6 +526,8 @@ describe('utils', () => {
 
       vi.advanceTimersByTime(100);
       expect(fn).toHaveBeenCalledTimes(1);
+      // Behavior verification: no leading edge call means delayed execution
+      expect(fn.mock.calls.length).toBe(1);
     });
 
     it('should not call function on trailing edge when trailing is false', () => {
@@ -523,6 +540,8 @@ describe('utils', () => {
       throttledFn();
       vi.advanceTimersByTime(100);
       expect(fn).toHaveBeenCalledTimes(1);
+      // Behavior verification: no trailing edge means only initial call executes
+      expect(fn.mock.calls.length).toBe(1);
     });
 
     it('should return result from throttled function', () => {
@@ -777,12 +796,15 @@ describe('utils', () => {
 
   describe('getValidUrl', () => {
     beforeEach(() => {
-      // Mock window.location
-      delete (window as { location?: Location }).location;
-      (window as { location: Location }).location = {
-        protocol: 'https:',
-        origin: 'https://example.com',
-      } as Location;
+      // Mock window.location using defineProperty to avoid delete
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        configurable: true,
+        value: {
+          protocol: 'https:',
+          origin: 'https://example.com',
+        },
+      });
     });
 
     it('should return valid URL as-is', () => {
@@ -872,7 +894,7 @@ describe('utils', () => {
       const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, 'getValue');
 
       if (descriptor) {
-        cacheable(TestClass.prototype, 'getValue', descriptor);
+        cacheable(TestClass.prototype as unknown as Record<string, unknown>, 'getValue', descriptor);
         Object.defineProperty(TestClass.prototype, 'getValue', descriptor);
       }
 
@@ -906,7 +928,7 @@ describe('utils', () => {
       const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, 'value');
 
       if (descriptor) {
-        cacheable(TestClass.prototype, 'value', descriptor);
+        cacheable(TestClass.prototype as unknown as Record<string, unknown>, 'value', descriptor);
         Object.defineProperty(TestClass.prototype, 'value', descriptor);
       }
 
@@ -925,7 +947,7 @@ describe('utils', () => {
        */
       class TestClass {
         public callCount = 0;
-        private _value = 0;
+        private storedValue = 0;
 
         /**
          *
@@ -933,14 +955,14 @@ describe('utils', () => {
         public get value(): number {
           this.callCount++;
 
-          return this._value;
+          return this.storedValue;
         }
 
         /**
          *
          */
         public set value(val: number) {
-          this._value = val;
+          this.storedValue = val;
         }
       }
 
@@ -948,7 +970,7 @@ describe('utils', () => {
       const descriptor = Object.getOwnPropertyDescriptor(TestClass.prototype, 'value');
 
       if (descriptor) {
-        cacheable(TestClass.prototype, 'value', descriptor);
+        cacheable(TestClass.prototype as unknown as Record<string, unknown>, 'value', descriptor);
         Object.defineProperty(TestClass.prototype, 'value', descriptor);
       }
 

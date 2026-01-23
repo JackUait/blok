@@ -31,6 +31,23 @@ export interface ShortcutData {
 }
 
 /**
+ * Get a human-readable description of an element for error messages
+ * @param element - The element to describe
+ * @returns A string description of the element
+ */
+const getElementDescription = (element: HTMLElement | Document): string => {
+  if (element instanceof HTMLElement) {
+    return element.tagName.toLowerCase() + (element.className ? `.${element.className}` : '');
+  }
+
+  if (element instanceof Document) {
+    return 'document';
+  }
+
+  return String(element);
+};
+
+/**
  * @class Shortcut
  * @classdesc Allows to register new shortcut
  *
@@ -51,8 +68,10 @@ class ShortcutsClass {
     const foundShortcut = this.findShortcut(shortcut.on, shortcut.name);
 
     if (foundShortcut) {
+      const elementDescription = getElementDescription(shortcut.on);
+
       throw Error(
-        `Shortcut ${shortcut.name} is already registered for ${shortcut.on}. Please remove it before add a new handler.`
+        `Shortcut ${shortcut.name} is already registered for ${elementDescription}. Please remove it before add a new handler.`
       );
     }
 

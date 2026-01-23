@@ -1189,6 +1189,7 @@ test.describe('yjs undo/redo', () => {
       await page.evaluate(
         async ({ holder, blocks: blokBlocks, tuneSource }) => {
           // Use Function constructor instead of eval for slightly better security
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
           const TuneClass = new Function(`return ${tuneSource}`)();
 
           const blok = new window.Blok({
@@ -1196,6 +1197,7 @@ test.describe('yjs undo/redo', () => {
             data: { blocks: blokBlocks },
             tools: {
               exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
                 class: TuneClass,
               },
             },
@@ -1785,9 +1787,9 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(3);
-      expect(savedData.blocks[0].data.text).toBe('Block 1');
-      expect(savedData.blocks[1].data.text).toBe('Block 2');
-      expect(savedData.blocks[2].data.text).toBe('Block 3');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block 1');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Block 2');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Block 3');
     });
 
     test('handles many rapid redos without data corruption', async ({ page }) => {
@@ -1830,7 +1832,7 @@ test.describe('yjs undo/redo', () => {
       // Verify data integrity
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Version 5');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Version 5');
     });
 
     test('handles rapid interleaved undo/redo without corruption', async ({ page }) => {
@@ -1877,7 +1879,7 @@ test.describe('yjs undo/redo', () => {
       // Verify data integrity
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Step 3');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Step 3');
     });
 
     test('handles rapid block deletions and undos', async ({ page }) => {
@@ -1975,7 +1977,7 @@ test.describe('yjs undo/redo', () => {
       // Verify data integrity
       const savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Entry 2');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Entry 2');
     });
   });
 
@@ -2127,8 +2129,8 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
       const headerBlock = savedData.blocks.find(b => b.type === 'header');
       expect(headerBlock).toBeDefined();
-      expect(headerBlock?.data.level).toBe(3);
-      expect(headerBlock?.data.text).toBe('My Heading');
+      expect((headerBlock?.data as { level: number }).level).toBe(3);
+      expect((headerBlock?.data as { text: string }).text).toBe('My Heading');
 
       // Undo the typing
       await page.keyboard.press(UNDO_SHORTCUT);
@@ -2372,9 +2374,9 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(3);
-      expect(savedData.blocks[0].data.text).toBe('First content');
-      expect(savedData.blocks[1].data.text).toBe('Second content');
-      expect(savedData.blocks[2].data.text).toBe('Third content');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First content');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second content');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third content');
     });
 
     test('multi-block delete requires single undo (atomic operation)', async ({ page }) => {
@@ -2456,10 +2458,10 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(4);
-      expect(savedData.blocks[0].data.text).toBe('Alpha');
-      expect(savedData.blocks[1].data.text).toBe('Beta');
-      expect(savedData.blocks[2].data.text).toBe('Gamma');
-      expect(savedData.blocks[3].data.text).toBe('Delta');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Alpha');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Beta');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Gamma');
+      expect((savedData.blocks[3]?.data as { text: string }).text).toBe('Delta');
     });
   });
 
@@ -2682,9 +2684,9 @@ test.describe('yjs undo/redo', () => {
       const savedData = await saveBlok(page);
 
       expect(savedData.blocks).toHaveLength(3);
-      expect(savedData.blocks[0].data.text).toBe('First');
-      expect(savedData.blocks[1].data.text).toBe('Second');
-      expect(savedData.blocks[2].data.text).toBe('Third');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third');
     });
 
     test('undo after multi-block drag-drop restores all blocks to original positions', async ({ page }) => {
@@ -3295,7 +3297,7 @@ test.describe('yjs undo/redo', () => {
       // Verify starting state
       let savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Block A!');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block A!');
 
       // Use API to move block - move(toIndex, fromIndex)
       // Keep focus on the input during API call
@@ -3311,9 +3313,9 @@ test.describe('yjs undo/redo', () => {
       // Verify block order changed (Block A! is now at index 2)
       savedData = await saveBlok(page);
 
-      expect(savedData.blocks[0].data.text).toBe('Block B');
-      expect(savedData.blocks[1].data.text).toBe('Block C');
-      expect(savedData.blocks[2].data.text).toBe('Block A!');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block B');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Block C');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Block A!');
 
       // Focus the editor area before undo to ensure keyboard events work
       const blockAtIndex2 = getParagraphByIndex(page, 2);
@@ -3327,9 +3329,9 @@ test.describe('yjs undo/redo', () => {
 
       // Verify block order is restored - this is the main undo behavior
       savedData = await saveBlok(page);
-      expect(savedData.blocks[0].data.text).toBe('Block A!');
-      expect(savedData.blocks[1].data.text).toBe('Block B');
-      expect(savedData.blocks[2].data.text).toBe('Block C');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Block A!');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Block B');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Block C');
 
       // For API-based moves, caret restoration depends on whether currentBlock
       // was set when the move was triggered. We verify the move was undone correctly
@@ -4411,6 +4413,7 @@ test.describe('yjs undo/redo', () => {
   test.describe('smart grouping', () => {
     // Boundary timeout: 100ms in implementation + buffer for test reliability
     const BOUNDARY_TIMEOUT = 150;
+    const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+a' : 'Control+a';
 
     test('word boundary + pause creates checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
@@ -4589,6 +4592,432 @@ test.describe('yjs undo/redo', () => {
       await waitForDelay(page, 100);
 
       await expect(paragraphInput).toHaveText('');
+    });
+
+    test('boundary character with no timeout does not create checkpoint', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type "Hello " (with space - boundary character)
+      await page.keyboard.type('Hello ');
+      // Immediately continue typing before timeout (less than 100ms)
+      await waitForDelay(page, 50);
+      await page.keyboard.type('world');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Both words should be in same undo group
+      await expect(paragraphInput).toHaveText('Hello world');
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      // Both should undo together
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('multiple rapid boundaries without typing between them', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: '' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+
+      // Type boundary characters rapidly without actual text
+      await page.keyboard.type(' ');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.type(' ');
+      await page.keyboard.press('Backspace');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Should handle gracefully without errors
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('undo after deleting all content in block restores content', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Content to delete' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+      await page.keyboard.press('Backspace');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await expect(paragraphInput).toHaveText('');
+
+      // Undo should restore content
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('Content to delete');
+    });
+
+    test('redo after undoing select all and delete restores empty state', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'Content' },
+        },
+      ]);
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      await paragraphInput.click();
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
+      await page.keyboard.press('Backspace');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('Content');
+
+      // Redo should restore empty state
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      await expect(paragraphInput).toHaveText('');
+    });
+
+    test('undo/redo with tune change works correctly', async ({ page }) => {
+      // Create a custom tune for testing
+      const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get isTune() {
+          return true;
+        }
+
+        static get CSS() {
+          return {};
+        }
+
+        render() {
+          return document.createElement('div');
+        }
+
+        save() {
+          return this.data ?? '';
+        }
+      }`;
+
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, tuneSource }) => {
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+          const TuneClass = new Function(`return ${tuneSource}`)();
+
+          const blok = new window.Blok({
+            holder: holder,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: { text: 'Text' },
+                  tunes: {
+                    exampleTune: 'left',
+                  },
+                },
+              ],
+            },
+            tools: {
+              exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                class: TuneClass,
+              },
+            },
+            tunes: ['exampleTune'],
+          });
+
+          window.blokInstance = blok;
+          await blok.isReady;
+        },
+        { holder: HOLDER_ID, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
+
+      // Verify initial state
+      const savedData = await saveBlok(page);
+      expect(savedData.blocks[0].tunes?.exampleTune).toBe('left');
+
+      // Change tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'center',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Get the saved data
+      const beforeUndo = await saveBlok(page);
+      expect(beforeUndo.blocks[0].tunes?.exampleTune).toBe('center');
+
+      // Undo the tune change
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      const afterUndo = await saveBlok(page);
+      expect(afterUndo.blocks[0].tunes?.exampleTune).toBe('left');
+
+      // Redo the tune change
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      const afterRedo = await saveBlok(page);
+      expect(afterRedo.blocks[0].tunes?.exampleTune).toBe('center');
+    });
+
+    test('undo/redo cycle with multiple tune changes', async ({ page }) => {
+      // Create a custom tune for testing
+      const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get isTune() {
+          return true;
+        }
+
+        static get CSS() {
+          return {};
+        }
+
+        render() {
+          return document.createElement('div');
+        }
+
+        save() {
+          return this.data ?? '';
+        }
+      }`;
+
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, tuneSource }) => {
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+          const TuneClass = new Function(`return ${tuneSource}`)();
+
+          const blok = new window.Blok({
+            holder: holder,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: { text: 'Text' },
+                  tunes: {
+                    exampleTune: 'left',
+                  },
+                },
+              ],
+            },
+            tools: {
+              exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                class: TuneClass,
+              },
+            },
+            tunes: ['exampleTune'],
+          });
+
+          window.blokInstance = blok;
+          await blok.isReady;
+        },
+        { holder: HOLDER_ID, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
+
+      // First tune change: center
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'center',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Second tune change: right
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'right',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should restore to center
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      let data = await saveBlok(page);
+      expect(data.blocks[0].tunes?.exampleTune).toBe('center');
+
+      // Undo again should restore to left
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      data = await saveBlok(page);
+      expect(data.blocks[0].tunes?.exampleTune).toBe('left');
+    });
+
+    test('undo after changing block text and then tunes restores both', async ({ page }) => {
+      // Create a custom tune for testing
+      const EXAMPLE_TUNE_SOURCE = `class ExampleTune {
+        constructor({ data }) {
+          this.data = data;
+        }
+
+        static get isTune() {
+          return true;
+        }
+
+        static get CSS() {
+          return {};
+        }
+
+        render() {
+          return document.createElement('div');
+        }
+
+        save() {
+          return this.data ?? '';
+        }
+      }`;
+
+      await resetBlok(page);
+      await page.evaluate(
+        async ({ holder, tuneSource }) => {
+          // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+          const TuneClass = new Function(`return ${tuneSource}`)();
+
+          const blok = new window.Blok({
+            holder: holder,
+            data: {
+              blocks: [
+                {
+                  type: 'paragraph',
+                  data: { text: 'Original' },
+                  tunes: {
+                    exampleTune: 'left',
+                  },
+                },
+              ],
+            },
+            tools: {
+              exampleTune: {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                class: TuneClass,
+              },
+            },
+            tunes: ['exampleTune'],
+          });
+
+          window.blokInstance = blok;
+          await blok.isReady;
+        },
+        { holder: HOLDER_ID, tuneSource: EXAMPLE_TUNE_SOURCE }
+      );
+
+      const paragraph = getParagraphByIndex(page, 0);
+      const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+      // Change text
+      await paragraphInput.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' Modified');
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Change tune via API
+      await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        const block = window.blokInstance.blocks.getBlockByIndex(0);
+
+        if (!block) {
+          throw new Error('Block not found');
+        }
+
+        await window.blokInstance.blocks.update(block.id, undefined, {
+          exampleTune: 'center',
+        });
+      });
+
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // Undo should remove tune
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      let data = await saveBlok(page);
+      expect((data.blocks[0]?.data as { text?: string }).text).toBe('Original Modified');
+      expect(data.blocks[0].tunes?.exampleTune).toBe('left');
+
+      // Undo again should restore original text
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 100);
+
+      data = await saveBlok(page);
+      expect((data.blocks[0]?.data as { text?: string }).text).toBe('Original');
     });
   });
 });

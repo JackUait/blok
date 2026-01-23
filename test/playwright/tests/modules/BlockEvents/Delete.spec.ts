@@ -45,13 +45,16 @@ const getLastQuoteToolInput = async (page: Page): Promise<Locator> => {
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
+    // Clear any pending timeouts or async operations from previous instances
     if (window.blokInstance) {
       await window.blokInstance.destroy?.();
       window.blokInstance = undefined;
     }
 
+    // Force garbage collection of any detached DOM nodes
     document.body.innerHTML = '';
 
+    // Create a fresh container
     const container = document.createElement('div');
 
     container.id = holder;
@@ -59,6 +62,10 @@ const resetBlok = async (page: Page): Promise<void> => {
     container.style.border = '1px dotted #388AE5';
 
     document.body.appendChild(container);
+
+    // Force a layout calculation to ensure the DOM is fully updated
+    // This helps WebKit and other browsers flush any pending updates
+    void container.offsetHeight;
   }, { holder: HOLDER_ID });
 };
 
@@ -89,13 +96,7 @@ const createParagraphBlok = async (page: Page, textBlocks: string[]): Promise<vo
 const createMultiInputToolBlok = async (page: Page): Promise<void> => {
   await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
-    /**
-     *
-     */
     class ExampleOfToolWithSeveralInputs {
-      /**
-       *
-       */
       public render(): HTMLElement {
         const container = document.createElement('div');
         const input = document.createElement('div');
@@ -111,9 +112,6 @@ const createMultiInputToolBlok = async (page: Page): Promise<void> => {
         return container;
       }
 
-      /**
-       *
-       */
       public save(): Record<string, never> {
         return {};
       }
@@ -142,13 +140,7 @@ const createMultiInputToolBlok = async (page: Page): Promise<void> => {
 const createBlokWithUnmergeableTool = async (page: Page): Promise<void> => {
   await resetBlok(page);
   await page.evaluate(async ({ holder }) => {
-    /**
-     *
-     */
     class ExampleOfUnmergeableTool {
-      /**
-       *
-       */
       public render(): HTMLElement {
         const container = document.createElement('div');
 
@@ -159,9 +151,6 @@ const createBlokWithUnmergeableTool = async (page: Page): Promise<void> => {
         return container;
       }
 
-      /**
-       *
-       */
       public save(): Record<string, never> {
         return {};
       }
@@ -318,14 +307,40 @@ const expectToolbarClosed = async (page: Page): Promise<void> => {
   await expect(toolbar).not.toHaveAttribute('data-blok-opened', 'true');
 };
 
+/**
+ * Retry page navigation and Blok loading to handle race conditions
+ * when multiple tests run in parallel and Vite's module resolution
+ * can fail under concurrent load
+ */
+const retryPageLoad = async (page: Page): Promise<void> => {
+  const loadPage = async (): Promise<void> => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function', { timeout: 10000 });
+  };
+
+  try {
+    await loadPage();
+  } catch (_error) {
+    // Retry on failure
+    // eslint-disable-next-line playwright/no-wait-for-timeout
+    await page.waitForTimeout(100);
+    try {
+      await loadPage();
+    } catch {
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      await page.waitForTimeout(100);
+      await loadPage(); // Final attempt
+    }
+  }
+};
+
 test.describe('delete keydown', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
-    await page.waitForFunction(() => typeof window.Blok === 'function');
+    await retryPageLoad(page);
   });
 
   test.describe('ending whitespaces handling', () => {
@@ -383,11 +398,7 @@ test.describe('delete keydown', () => {
 
       await firstParagraph.click();
       await firstParagraph.press('End');
-      // Move left to skip empty tag if treated as char, or just stay at end if ignored?
-      // 1<b></b>|. If we delete, we merge.
-      // But if we want to be sure we are at end.
-      // The test expects '12'.
-      // If we are at end: 'Delete' -> merge.
+      // At end with empty <b></b> tag, Delete should merge blocks
       await firstParagraph.press('Delete');
 
       const lastBlock = await getLastBlock(page);
@@ -477,9 +488,7 @@ test.describe('delete keydown', () => {
       // Delete Space
       await page.keyboard.press('Delete');
 
-      // Now "1". Caret at end.
-      // Delete (merge)
-      // Delete (Merge)
+      // Now "1". Caret at end. Delete to merge.
       await page.keyboard.press('Delete');
 
       const lastBlock = await getLastBlock(page);

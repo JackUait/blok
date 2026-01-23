@@ -142,8 +142,10 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         }
 
         if (!toolClass && tool.classCode) {
-
-          toolClass = new Function(`return (${tool.classCode});`)();
+          // eslint-disable-next-line no-new-func -- Required for dynamic tool instantiation in tests
+          const createToolClass = new Function('code', `return (${tool.classCode});`);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Function constructor returns `Function`, unsafe call is necessary for dynamic instantiation
+          toolClass = createToolClass(tool.classCode) as unknown;
         }
 
         if (!toolClass) {
@@ -188,7 +190,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         }
 
         try {
-          return JSON.parse(JSON.stringify(value));
+          return JSON.parse(JSON.stringify(value)) as T;
         } catch (_error) {
           return value;
         }
@@ -196,10 +198,12 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 
       const serializeEvent = (event: CustomEvent | CustomEvent[]): SerializedOnChangeCall => {
         const serializeSingle = (singleEvent: CustomEvent): SerializedBlockMutationEvent => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- CustomEvent.detail is `any` in DOM types
           const { type, detail } = singleEvent;
 
           return {
             type,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- CustomEvent.detail is `any` in DOM types
             detail: detail ? cloneDetail(detail) : undefined,
           };
         };
@@ -217,8 +221,8 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         if (shouldCallSave && typeof (api as { saver?: { save: () => Promise<unknown> } }).saver?.save === 'function') {
           const saveResult = (api as { saver?: { save: () => Promise<unknown> } }).saver?.save();
 
-          if (saveResult && typeof (saveResult as Promise<unknown>).catch === 'function') {
-            void (saveResult as Promise<unknown>).catch(() => {
+          if (saveResult && typeof (saveResult).catch === 'function') {
+            void (saveResult).catch(() => {
               // Swallow errors to match the previous e2e behaviour where Promise rejections were ignored.
             });
           }

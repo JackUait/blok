@@ -62,6 +62,13 @@ vi.mock('../../src/components/core', () => {
         },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'],
+    EventsAPI: {
+      methods: {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      },
+    } as unknown as BlokModules['EventsAPI'],
     Toolbar: {
       blockSettings: undefined,
       inlineToolbar: undefined,
@@ -152,7 +159,7 @@ describe('Blok', () => {
       mocks.mockIsFunction.mockImplementation(utilsModule.defaultIsFunction);
     }
 
-    mocks.mockModuleInstances!.API = {
+    mocks.mockModuleInstances.API = {
       methods: {
         blocks: {
           clear: vi.fn(),
@@ -171,12 +178,19 @@ describe('Blok', () => {
         },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'];
-    mocks.mockModuleInstances!.Toolbar = {
+    mocks.mockModuleInstances.EventsAPI = {
+      methods: {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      },
+    } as unknown as BlokModules['EventsAPI'];
+    mocks.mockModuleInstances.Toolbar = {
       blockSettings: undefined,
       inlineToolbar: undefined,
     } as unknown as BlokModules['Toolbar'];
-    mocks.mockModuleInstances!.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
-    mocks.mockModuleInstances!.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
+    mocks.mockModuleInstances.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
+    mocks.mockModuleInstances.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
   });
 
   afterEach(() => {
@@ -224,14 +238,20 @@ describe('Blok', () => {
         onReady,
       };
 
-      mocks.mockIsObject!.mockReturnValue(true);
-      mocks.mockIsFunction!.mockReturnValue(true);
+      if (mocks.mockIsObject) {
+        mocks.mockIsObject.mockReturnValue(true);
+      }
+      if (mocks.mockIsFunction) {
+        mocks.mockIsFunction.mockReturnValue(true);
+      }
 
       const blok = new Blok(config);
 
       await blok.isReady;
 
+      // Verify onReady was called and API is fully exported
       expect(onReady).toHaveBeenCalledTimes(1);
+      expect(typeof blok.destroy).toBe('function');
     });
 
     it('should use default empty onReady function when not provided', async () => {
@@ -239,8 +259,12 @@ describe('Blok', () => {
         holder: 'blok',
       };
 
-      mocks.mockIsObject!.mockReturnValue(true);
-      mocks.mockIsFunction!.mockReturnValue(false);
+      if (mocks.mockIsObject) {
+        mocks.mockIsObject.mockReturnValue(true);
+      }
+      if (mocks.mockIsFunction) {
+        mocks.mockIsFunction.mockReturnValue(false);
+      }
 
       const blok = new Blok(config);
 
@@ -631,17 +655,25 @@ describe('Blok', () => {
       const mockModule2 = { destroy: mockDestroy2 };
       const mockModule3 = { noDestroy: true };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule1 as unknown as BlokModules['Toolbar'];
-      mocks.mockModuleInstances!.BlockSettings = mockModule2 as unknown as BlokModules['BlockSettings'];
-      mocks.mockModuleInstances!.InlineToolbar = mockModule3 as unknown as BlokModules['InlineToolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule1 as unknown as BlokModules['Toolbar'];
+        mocks.mockModuleInstances.BlockSettings = mockModule2 as unknown as BlokModules['BlockSettings'];
+        mocks.mockModuleInstances.InlineToolbar = mockModule3 as unknown as BlokModules['InlineToolbar'];
+      }
 
       const blok = new Blok();
 
       await blok.isReady;
+      const prototypeBeforeDestroy = Object.getPrototypeOf(blok) as Record<string, unknown> | null;
+
       blok.destroy();
 
+      // Verify destroy was called on modules and Blok instance is cleaned up
       expect(mockDestroy1).toHaveBeenCalledTimes(1);
       expect(mockDestroy2).toHaveBeenCalledTimes(1);
+      // Verify observable outcome: prototype is null after destroy
+      expect(Object.getPrototypeOf(blok)).toBeNull();
+      expect(prototypeBeforeDestroy).not.toBeNull();
     });
 
     it('should remove all listeners from module instances', async () => {
@@ -652,14 +684,19 @@ describe('Blok', () => {
         },
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
 
       const blok = new Blok();
 
       await blok.isReady;
       blok.destroy();
 
+      // Verify listeners were removed and Blok instance is cleaned up
       expect(mockRemoveAll).toHaveBeenCalled();
+      // Verify observable outcome: prototype is null after destroy
+      expect(Object.getPrototypeOf(blok)).toBeNull();
     });
 
     it('should call destroyTooltip', async () => {
@@ -668,7 +705,10 @@ describe('Blok', () => {
       await blok.isReady;
       blok.destroy();
 
+      // Verify tooltip was destroyed and Blok instance is cleaned up
       expect(mocks.mockDestroyTooltip).toHaveBeenCalledTimes(1);
+      // Verify observable outcome: prototype is null after destroy
+      expect(Object.getPrototypeOf(blok)).toBeNull();
     });
 
     it('should delete all own properties', async () => {
@@ -697,7 +737,10 @@ describe('Blok', () => {
       await blok.isReady;
 
       // Before destroy, prototype should be API methods
-      expect(Object.getPrototypeOf(blok)).toBe(mocks.mockModuleInstances!.API?.methods);
+      const apiMethods = mocks.mockModuleInstances?.API?.methods;
+      if (apiMethods) {
+        expect(Object.getPrototypeOf(blok)).toBe(apiMethods);
+      }
 
       blok.destroy();
 
@@ -711,7 +754,9 @@ describe('Blok', () => {
         // No listeners property
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
 
       const blok = new Blok();
 
@@ -729,15 +774,19 @@ describe('Blok', () => {
         // No destroy method
       };
 
-      mocks.mockModuleInstances!.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      if (mocks.mockModuleInstances) {
+        mocks.mockModuleInstances.Toolbar = mockModule as unknown as BlokModules['Toolbar'];
+      }
 
       const blok = new Blok();
 
       await blok.isReady;
 
-      // Should not throw
+      // Should not throw and should complete cleanup successfully
       expect(() => blok.destroy()).not.toThrow();
       expect(mockModule.listeners.removeAll).toHaveBeenCalled();
+      // Verify observable outcome: destroy still completes successfully (prototype becomes null)
+      expect(Object.getPrototypeOf(blok)).toBeNull();
     });
   });
 

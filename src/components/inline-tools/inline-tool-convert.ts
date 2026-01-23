@@ -1,11 +1,11 @@
 import type { InlineTool, API } from '../../../types';
-import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
-import { capitalize, isMobileScreen } from '../utils';
 import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
-import { SelectionUtils } from '../selection';
+import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
+import { SelectionUtils } from '../selection/index';
+import type { BlockToolAdapter } from '../tools/block';
+import { capitalize, isMobileScreen } from '../utils';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
 import { translateToolTitle, translateToolName, type I18nInstance } from '../utils/tools';
-import type { BlockToolAdapter } from '../tools/block';
 
 /**
  * Inline tools for converting blocks

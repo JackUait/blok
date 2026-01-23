@@ -66,6 +66,7 @@ const createBlok = async (page: Page, options: BlokSetupOptions = {}): Promise<v
     async ({ holder, rawData, serializedTools, rawConfig }) => {
       const reviveToolClass = (classSource: string): unknown => {
 
+        // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call -- Required for dynamically creating tool classes in tests
         return new Function(`return (${classSource});`)();
       };
 

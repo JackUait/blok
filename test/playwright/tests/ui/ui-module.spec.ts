@@ -106,6 +106,37 @@ const clickBottomZone = async (page: Page): Promise<void> => {
   await page.mouse.click(clickPoint.x, clickPoint.y);
 };
 
+/**
+ * Gets which block the toolbar is currently positioned on
+ */
+const getToolbarBlockId = async (page: Page): Promise<string | null> => {
+  return await page.evaluate(() => {
+    const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+
+    if (!toolbar) {
+      return null;
+    }
+
+    // The toolbar is positioned next to its target block
+    // We can find it by checking which block-wrapper contains/is near the toolbar
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const blocks = Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'));
+
+    for (const block of blocks) {
+      const blockRect = block.getBoundingClientRect();
+
+      // Check if toolbar's vertical center is within block bounds
+      const toolbarCenterY = toolbarRect.top + toolbarRect.height / 2;
+
+      if (toolbarCenterY >= blockRect.top && toolbarCenterY <= blockRect.bottom) {
+        return block.getAttribute('data-blok-id');
+      }
+    }
+
+    return null;
+  });
+};
+
 test.describe('ui module', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -423,37 +454,6 @@ test.describe('ui module', () => {
       });
     };
 
-    /**
-     * Gets which block the toolbar is currently positioned on
-     */
-    const getToolbarBlockId = async (page: Page): Promise<string | null> => {
-      return await page.evaluate(() => {
-        const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
-
-        if (!toolbar) {
-          return null;
-        }
-
-        // The toolbar is positioned next to its target block
-        // We can find it by checking which block-wrapper contains/is near the toolbar
-        const toolbarRect = toolbar.getBoundingClientRect();
-        const blocks = Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'));
-
-        for (const block of blocks) {
-          const blockRect = block.getBoundingClientRect();
-
-          // Check if toolbar's vertical center is within block bounds
-          const toolbarCenterY = toolbarRect.top + toolbarRect.height / 2;
-
-          if (toolbarCenterY >= blockRect.top && toolbarCenterY <= blockRect.bottom) {
-            return block.getAttribute('data-blok-id');
-          }
-        }
-
-        return null;
-      });
-    };
-
     test('shows toolbar when hovering in extended zone to the left of content (LTR)', async ({ page }) => {
       await createBlok(page, { data: threeBlocksData });
 
@@ -558,5 +558,207 @@ test.describe('ui module', () => {
       expect(currentBlockId).toBe('block-2');
     });
   });
-});
 
+  test.describe('extended hover zone (RTL)', () => {
+    const threeBlocksDataRTL: OutputData = {
+      blocks: [
+        {
+          id: 'block-rtl-1',
+          type: 'paragraph',
+          data: {
+            text: 'أول كتلة', // "First block" in Arabic
+          },
+        },
+        {
+          id: 'block-rtl-2',
+          type: 'paragraph',
+          data: {
+            text: 'ثاني كتلة', // "Second block" in Arabic
+          },
+        },
+        {
+          id: 'block-rtl-3',
+          type: 'paragraph',
+          data: {
+            text: 'ثالث كتلة', // "Third block" in Arabic
+          },
+        },
+      ],
+    };
+
+    /**
+     * Creates a Blok instance configured for RTL layout
+     */
+    const createBlokRTL = async (page: Page, data?: OutputData): Promise<void> => {
+      await resetBlok(page);
+      await page.waitForFunction(() => typeof window.Blok === 'function');
+
+      await page.evaluate(
+        async ({ holder, blokData }) => {
+          const blokConfig: Record<string, unknown> = {
+            holder: holder,
+            // Enable RTL mode
+            rtl: true,
+          };
+
+          if (blokData) {
+            blokConfig.data = blokData;
+          }
+
+          const blok = new window.Blok(blokConfig);
+
+          window.blokInstance = blok;
+          await blok.isReady;
+        },
+        {
+          holder: HOLDER_ID,
+          blokData: data,
+        }
+      );
+    };
+
+    /**
+     * Gets the position data for RTL hover zone testing
+     */
+    const getHoverZonePositionsRTL = async (page: Page): Promise<{
+      contentLeft: number;
+      contentRight: number;
+      firstBlockTop: number;
+      firstBlockBottom: number;
+      secondBlockTop: number;
+      secondBlockBottom: number;
+    }> => {
+      return await page.evaluate(() => {
+        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
+        const firstBlock = blocks[0];
+        const secondBlock = blocks[1];
+
+        if (!firstBlock || !secondBlock) {
+          throw new Error('Blocks not found');
+        }
+
+        const contentElement = firstBlock.querySelector('[data-blok-testid="block-content"]');
+
+        if (!contentElement) {
+          throw new Error('Content element not found');
+        }
+
+        const contentRect = contentElement.getBoundingClientRect();
+        const firstBlockRect = firstBlock.getBoundingClientRect();
+        const secondBlockRect = secondBlock.getBoundingClientRect();
+
+        return {
+          contentLeft: contentRect.left,
+          contentRight: contentRect.right,
+          firstBlockTop: firstBlockRect.top,
+          firstBlockBottom: firstBlockRect.bottom,
+          secondBlockTop: secondBlockRect.top,
+          secondBlockBottom: secondBlockRect.bottom,
+        };
+      });
+    };
+
+    test('shows toolbar when hovering in extended zone to the right of content (RTL)', async ({ page }) => {
+      await createBlokRTL(page, threeBlocksDataRTL);
+
+      // First hover directly on the second block to establish toolbar there
+      const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({
+        hasText: 'ثاني كتلة',
+      });
+
+      await secondParagraph.hover();
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is positioned at the second block
+      const initialBlockId = await getToolbarBlockId(page);
+
+      expect(initialBlockId).toBe('block-rtl-2');
+
+      // Get positions for hover zone calculation
+      const positions = await getHoverZonePositionsRTL(page);
+
+      // Now hover in the extended zone (50px RIGHT of content for RTL) at the first block's Y position
+      const hoverX = positions.contentRight + 50; // 50px right (inside 100px zone)
+      const hoverY = (positions.firstBlockTop + positions.firstBlockBottom) / 2; // Middle of first block
+
+      await page.mouse.move(hoverX, hoverY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar moved to the first block
+      const newBlockId = await getToolbarBlockId(page);
+
+      expect(newBlockId).toBe('block-rtl-1');
+    });
+
+    test('does not trigger hover when cursor is beyond the RTL extended zone boundary', async ({ page }) => {
+      await createBlokRTL(page, threeBlocksDataRTL);
+
+      // Get positions first
+      const positions = await getHoverZonePositionsRTL(page);
+
+      // Hover in the extended zone to verify it works
+      const inZoneX = positions.contentRight + 50; // 50px right (inside 100px zone)
+      const blockY = (positions.firstBlockTop + positions.firstBlockBottom) / 2;
+
+      await page.mouse.move(inZoneX, blockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is on first block (zone hover worked)
+      const zoneBlockId = await getToolbarBlockId(page);
+
+      expect(zoneBlockId).toBe('block-rtl-1');
+
+      // Now move far outside the zone (200px right of content, beyond the 100px limit)
+      const outsideZoneX = positions.contentRight + 200;
+
+      await page.mouse.move(outsideZoneX, blockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for potential hover event
+      await page.waitForTimeout(100);
+
+      // Toolbar should still be on first block (no new block detected outside zone)
+      const afterOutsideBlockId = await getToolbarBlockId(page);
+
+      expect(afterOutsideBlockId).toBe('block-rtl-1');
+    });
+
+    test('switches between blocks when moving vertically in the RTL extended zone', async ({ page }) => {
+      await createBlokRTL(page, threeBlocksDataRTL);
+
+      // Get positions
+      const positions = await getHoverZonePositionsRTL(page);
+
+      // Hover in the extended zone at the first block's Y position
+      const hoverX = positions.contentRight + 50; // Right side for RTL
+      const firstBlockY = (positions.firstBlockTop + positions.firstBlockBottom) / 2;
+
+      await page.mouse.move(hoverX, firstBlockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar is on first block
+      let currentBlockId = await getToolbarBlockId(page);
+
+      expect(currentBlockId).toBe('block-rtl-1');
+
+      // Move to the second block's Y position (staying in the extended zone)
+      const secondBlockY = (positions.secondBlockTop + positions.secondBlockBottom) / 2;
+
+      await page.mouse.move(hoverX, secondBlockY);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for hover event to process
+      await page.waitForTimeout(100);
+
+      // Verify toolbar moved to second block
+      currentBlockId = await getToolbarBlockId(page);
+      expect(currentBlockId).toBe('block-rtl-2');
+    });
+  });
+});

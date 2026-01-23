@@ -157,6 +157,12 @@ describe('Renderer module', () => {
 
     expect(blockManager.insert).toHaveBeenCalledTimes(1);
     expect(blockManager.insertMany).not.toHaveBeenCalled();
+
+    // Verify the return value - observable behavior: a block with default tool is created
+    const result = blockManager.insert.mock.results[0]?.value as ComposeBlockReturn | undefined;
+
+    expect(result).toBeDefined();
+    expect(result?.tool).toBe('default');
   });
 
   it('composes and inserts blocks when tools are available', async () => {
@@ -176,7 +182,7 @@ describe('Renderer module', () => {
 
     blockManager.composeBlock = composeBlock;
 
-    const blockData: OutputBlockData = {
+    const blockData: OutputBlockData<'paragraph', { text: string }> = {
       id: 'block-1',
       type: 'paragraph',
       data: { text: 'Hello' },
@@ -211,7 +217,7 @@ describe('Renderer module', () => {
 
     const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
 
-    const blockData: OutputBlockData = {
+    const blockData: OutputBlockData<'unsupported', { payload: boolean }> = {
       id: 'missing-tool-block',
       type: 'unsupported',
       data: { payload: true },
@@ -269,7 +275,7 @@ describe('Renderer module', () => {
 
     const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => {});
 
-    const blockData: OutputBlockData = {
+    const blockData: OutputBlockData<string, { payload: boolean }> = {
       id: 'failing-tool-block',
       type: failingTool,
       data: { payload: true },
@@ -282,9 +288,9 @@ describe('Renderer module', () => {
 
     expect(level).toBe('error');
     expect(message).toContain(`Block «${failingTool}» skipped because of plugins error`);
-    expect(details).toEqual({
+    expect(details as { data: { payload: boolean }; error: unknown }).toEqual({
       data: blockData.data,
-      error: expect.any(Error),
+      error: expect.any(Error) as unknown,
     });
 
     expect(composeBlock).toHaveBeenCalledTimes(2);

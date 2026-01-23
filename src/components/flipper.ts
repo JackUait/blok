@@ -368,6 +368,9 @@ export class Flipper {
       case keyCodes.ENTER:
         this.handleEnterPress(event);
         break;
+      case null:
+        // keyCode is null - unrecognized key, nothing to do
+        break;
     }
   };
 
@@ -389,6 +392,13 @@ export class Flipper {
    */
   public setHandleContentEditableTargets(value: boolean): void {
     this.handleContentEditableTargets = value;
+  }
+
+  /**
+   * Returns true if flipper handles events from contenteditable elements
+   */
+  public getHandleContentEditableTargets(): boolean {
+    return this.handleContentEditableTargets;
   }
 
   /**

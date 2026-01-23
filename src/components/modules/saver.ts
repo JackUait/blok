@@ -4,14 +4,14 @@
  * @author Blok Team
  * @version 2.0.0
  */
-import { Module } from '../__module';
-import type { BlockToolData, OutputData, SanitizerConfig } from '../../../types';
-import type { SavedData, ValidatedData } from '../../../types/data-formats';
+import type { OutputData, SanitizerConfig } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
+import type { SavedData, ValidatedData } from '../../../types/data-formats';
+import { Module } from '../__module';
 import type { Block } from '../block';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
-import { sanitizeBlocks } from '../utils/sanitizer';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
+import { sanitizeBlocks } from '../utils/sanitizer';
 
 type SaverValidatedData = ValidatedData & {
   tunes?: Record<string, BlockTuneData>;
@@ -48,9 +48,12 @@ export class Saver extends Module {
     const blocks = BlockManager.blocks;
 
     /**
-     * If there is only one block and it is empty, we should return empty blocks array
+     * If there is only one block and it is empty and it's the default tool, return empty blocks array.
+     * Non-default blocks (like headers or lists created via shortcuts) should be preserved even when empty.
      */
-    if (blocks.length === 1 && blocks[0].isEmpty) {
+    const shouldFilterSingleBlock = blocks.length === 1 && blocks[0].isEmpty && blocks[0].tool.isDefault;
+
+    if (shouldFilterSingleBlock) {
       return {
         time: +new Date(),
         blocks: [],
@@ -242,12 +245,12 @@ export class Saver extends Module {
    * Check that stub data matches OutputBlockData format
    * @param data - saved stub data that should represent original block payload
    */
-  private isStubSavedData(data: BlockToolData): data is OutputData['blocks'][number] {
+  private isStubSavedData(data: unknown): data is OutputData['blocks'][number] {
     if (!isObject(data)) {
       return false;
     }
 
-    const candidate = data as Record<string, unknown>;
+    const candidate = data;
 
     return typeof candidate.type === 'string' && candidate.data !== undefined;
   }

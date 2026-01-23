@@ -1,9 +1,10 @@
-import type { PopoverHeaderParams } from './popover-header.types';
-import { Dom } from '../../../../dom';
-import { css } from './popover-header.const';
 import { DATA_ATTR } from '../../../../constants/data-attributes';
+import { Dom } from '../../../../dom';
 import { IconChevronLeft } from '../../../../icons';
 import { Listeners } from '../../../listeners';
+
+import { css } from './popover-header.const';
+import type { PopoverHeaderParams } from './popover-header.types';
 
 /**
  * Represents popover header ui element

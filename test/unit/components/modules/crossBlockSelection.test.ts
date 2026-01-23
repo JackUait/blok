@@ -111,6 +111,9 @@ describe('CrossBlockSelection', () => {
       Toolbar: {
         close: toolbarClose,
         moveAndOpenForMultipleBlocks: vi.fn(),
+        nodes: {
+          wrapper: document.createElement('div'),
+        },
       },
       Caret: {
         positions: {

@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
-import type { OutputData } from '@/types';
+
+import { Header,  type HeaderConfig  } from '../tools/header';
+
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
-import { Header,  type HeaderConfig  } from '../tools/header';
+
+import type { OutputData } from '@/types';
+
 
 interface HeaderArgs extends EditorFactoryOptions {
   minHeight: number;
@@ -120,7 +124,7 @@ const createCustomHeaderEditor = (args: HeaderArgs): HTMLElement => createEditor
   tools: {
     header: {
       class: Header,
-      config: customHeaderConfig,
+      config: customHeaderConfig as Record<string, unknown>,
     },
   },
 });

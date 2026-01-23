@@ -466,13 +466,15 @@ test.describe('header Tool', () => {
         data: createHeaderData('Test Header', 3),
       });
 
-      const savedData = await page.evaluate(async () => {
+      const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('header');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
       expect(savedData?.blocks[0].data.text).toBe('Test Header');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
       expect(savedData?.blocks[0].data.level).toBe(3);
     });
 
@@ -487,10 +489,12 @@ test.describe('header Tool', () => {
 
       await h4Option.click();
 
-      const savedData = await page.evaluate(async () => {
+       
+      const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
       expect(savedData?.blocks[0].data.level).toBe(4);
     });
   });

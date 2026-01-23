@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconItalic } from '../../../../src/components/icons';
 
 import { ItalicInlineTool } from '../../../../src/components/inline-tools/inline-tool-italic';
+import type { PopoverItemDefaultBaseParams } from '../../../../types/utils/popover';
 
 describe('ItalicInlineTool', () => {
   let tool: ItalicInlineTool;
@@ -23,7 +24,7 @@ describe('ItalicInlineTool', () => {
   });
 
   it('renders menu config with italic icon and callbacks', () => {
-    const config = tool.render() as any;
+    const config = tool.render() as PopoverItemDefaultBaseParams;
 
     expect(config).toHaveProperty('icon');
     expect(config.icon).toBe(IconItalic);
@@ -40,9 +41,9 @@ describe('ItalicInlineTool', () => {
     it('should return false if no selection', () => {
       vi.spyOn(window, 'getSelection').mockReturnValue(null);
 
-      const config = tool.render() as any;
+      const config = tool.render() as PopoverItemDefaultBaseParams;
 
-      expect(config.isActive && config.isActive()).toBe(false);
+      expect(typeof config.isActive === 'function' && config.isActive()).toBe(false);
     });
 
     it('should return false if range count is 0', () => {
@@ -53,9 +54,9 @@ describe('ItalicInlineTool', () => {
 
       vi.spyOn(window, 'getSelection').mockReturnValue(mockSelection);
 
-      const config = tool.render() as any;
+      const config = tool.render() as PopoverItemDefaultBaseParams;
 
-      expect(config.isActive && config.isActive()).toBe(false);
+      expect(typeof config.isActive === 'function' && config.isActive()).toBe(false);
     });
   });
 });

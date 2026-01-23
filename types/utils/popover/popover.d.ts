@@ -1,5 +1,5 @@
 import { PopoverItemParams } from './popover-item';
-import type Flipper from '../../../src/components/flipper';
+import type { Flipper } from '../../../src/components/flipper';
 import { PopoverEvent } from './popover-event';
 
 /**

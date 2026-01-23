@@ -49,6 +49,8 @@ export interface ListConfig {
    * Accepts any valid CSS font-size value (px, rem, em, etc.)
    */
   itemSize?: string;
+  /** Index signature for additional tool options */
+  [key: string]: unknown;
 }
 
 /**

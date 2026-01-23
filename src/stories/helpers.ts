@@ -4,14 +4,15 @@
  */
 
 import { Blok } from '../blok';
-import type { OutputData, BlokConfig, ToolConstructable, ToolSettings, I18nConfig } from '@/types';
-import { Paragraph } from '../tools/paragraph';
-import { Header } from '../tools/header';
-import { ListItem } from '../tools/list';
 import { BoldInlineTool } from '../components/inline-tools/inline-tool-bold';
+import { ConvertInlineTool } from '../components/inline-tools/inline-tool-convert';
 import { ItalicInlineTool } from '../components/inline-tools/inline-tool-italic';
 import { LinkInlineTool } from '../components/inline-tools/inline-tool-link';
-import { ConvertInlineTool } from '../components/inline-tools/inline-tool-convert';
+import { Header } from '../tools/header';
+import { ListItem } from '../tools/list';
+import { Paragraph } from '../tools/paragraph';
+
+import type { OutputData, BlokConfig, ToolConstructable, ToolSettings, I18nConfig } from '@/types';
 
 /**
  * Default tools configuration for Storybook stories.
@@ -401,9 +402,9 @@ export const focusSearchInput = (
   text: string,
   searchInputSelector = '[data-blok-testid="popover-search-input"]'
 ): boolean => {
-  const searchInput = document.querySelector(searchInputSelector) as HTMLInputElement | null;
+  const searchInput = document.querySelector(searchInputSelector);
 
-  if (!searchInput) {
+  if (!(searchInput instanceof HTMLInputElement)) {
     return false;
   }
 

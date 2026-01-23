@@ -1,15 +1,18 @@
+import { DATA_ATTR } from '../../constants/data-attributes';
+import { Flipper } from '../../flipper';
 import { isMobileScreen, keyCodes } from '../../utils';
+import { twMerge } from '../tw';
+
 import type { PopoverItem } from './components/popover-item';
-import { PopoverItemDefault, PopoverItemType } from './components/popover-item';
+import { PopoverItemDefault, PopoverItemType , css as popoverItemCls } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import { PopoverDesktop } from './popover-desktop';
 import { css, cssInline, CSSVariables, getNestedLevelAttrValue } from './popover.const';
-import { DATA_ATTR } from '../../constants/data-attributes';
+
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { twMerge } from '../tw';
-import { Flipper } from '../../flipper';
-import { css as popoverItemCls } from './components/popover-item';
+
+
 
 /**
  * Inline popover height CSS variables
@@ -282,7 +285,7 @@ export class PopoverInline extends PopoverDesktop {
     nestedPopover.flipper?.setHandleContentEditableTargets(true);
 
     // Apply nested inline styles to the nested popover container
-    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement | null;
+    const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
     if (nestedContainer) {
       nestedContainer.className = twMerge(
         nestedContainer.className,
@@ -291,7 +294,7 @@ export class PopoverInline extends PopoverDesktop {
     }
 
     // Apply nested inline styles to the items container
-    const nestedItems = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverItems}]`) as HTMLElement | null;
+    const nestedItems = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverItems}]`);
     if (nestedItems) {
       nestedItems.className = twMerge(nestedItems.className, 'block w-full');
     }
@@ -303,7 +306,7 @@ export class PopoverInline extends PopoverDesktop {
     nestedPopoverEl.setAttribute(DATA_ATTR.nestedLevel, getNestedLevelAttrValue(nestedPopover.nestingLevel));
 
     // Apply level-1 specific positioning styles
-    if (nestedPopover.nestingLevel === 1 && nestedContainer) {
+    if (nestedPopover.nestingLevel === 1 && nestedContainer instanceof HTMLElement) {
       nestedContainer.className = twMerge(nestedContainer.className, 'left-0');
       // Set top position based on height
       const topOffset = isMobileScreen() ? 'calc(var(--height-mobile) + 3px)' : 'calc(var(--height) + 3px)';

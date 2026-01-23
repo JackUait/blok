@@ -16,7 +16,7 @@ type MockBlockShape = {
   stretched: boolean;
   focusable: boolean;
   setStretchState: (state: boolean) => void;
-  call: (methodName: string, param?: object) => unknown;
+  call: (methodName: string, param?: Record<string, unknown>) => unknown;
   save: () => Promise<void | SavedData>;
   validate: (data: BlockToolData) => Promise<boolean>;
   dispatchChange: () => void;

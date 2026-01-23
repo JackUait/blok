@@ -4,8 +4,8 @@
  * @copyright <CodeX Team> 2018
  */
 import type { API, BlockTune } from '../../../types';
-import { IconCross } from '../icons';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+import { IconCross } from '../icons';
 
 /**
  *

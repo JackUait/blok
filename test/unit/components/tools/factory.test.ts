@@ -139,7 +139,7 @@ type ToolConfigEntry = ToolSettings & { isInternal?: boolean };
 
 type ApiStub = {
   api: ApiModule;
-  methods: object;
+  methods: Record<string, unknown>;
 };
 
 const baseBlokConfig: BlokConfig = {

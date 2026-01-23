@@ -86,6 +86,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
     async ({ holder, blokData, blokConfig, toolDefinitions }) => {
       const reviveToolClass = (source: string): unknown => {
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, no-new-func
         return new Function(`return (${source});`)();
       };
 
@@ -169,6 +170,33 @@ const getSelectionState = async (page: Page): Promise<{ isInsideParagraph: boole
       offset: selection.anchorOffset ?? -1,
     };
   }, { paragraphSelector: PARAGRAPH_SELECTOR });
+};
+
+/**
+ * Extracts the 'text' property from the first block's data in the saved Blok output
+ * Using Object.entries to avoid unsafe property access on unknown types
+ */
+const extractFirstBlockText = (data: { blocks?: unknown[] }): string => {
+  if (!data.blocks || !Array.isArray(data.blocks) || data.blocks.length === 0) {
+    return '';
+  }
+
+  const firstBlock = data.blocks[0];
+  if (!firstBlock || typeof firstBlock !== 'object') {
+    return '';
+  }
+
+  const blockEntries = Object.entries(firstBlock as Record<string, unknown>);
+  const dataEntry = blockEntries.find(([key]) => key === 'data');
+
+  if (!dataEntry || !dataEntry[1] || typeof dataEntry[1] !== 'object' || dataEntry[1] === null || Array.isArray(dataEntry[1])) {
+    return '';
+  }
+
+  const dataEntries = Object.entries(dataEntry[1] as Record<string, unknown>);
+  const textEntry = dataEntries.find(([key]) => key === 'text');
+
+  return typeof textEntry?.[1] === 'string' ? textEntry[1] : '';
 };
 
 const openToolbox = async (page: Page): Promise<void> => {
@@ -365,9 +393,13 @@ test.describe('blok configuration options', () => {
     });
 
     const paddingBottom = await page.evaluate(({ selector }) => {
-      const redactor = document.querySelector(selector) as HTMLElement | null;
+      const redactor = document.querySelector(selector);
 
-      return redactor?.style.paddingBottom ?? null;
+      if (!(redactor instanceof HTMLElement)) {
+        return null;
+      }
+
+      return redactor.style.paddingBottom ?? null;
     }, { selector: REDACTOR_SELECTOR });
 
     expect(paddingBottom).toBe('180px');
@@ -377,9 +409,13 @@ test.describe('blok configuration options', () => {
     await createBlok(page);
 
     const paddingBottom = await page.evaluate(({ selector }) => {
-      const redactor = document.querySelector(selector) as HTMLElement | null;
+      const redactor = document.querySelector(selector);
 
-      return redactor?.style.paddingBottom ?? null;
+      if (!(redactor instanceof HTMLElement)) {
+        return null;
+      }
+
+      return redactor.style.paddingBottom ?? null;
     }, { selector: REDACTOR_SELECTOR });
 
     expect(paddingBottom).toBe('300px');
@@ -678,7 +714,7 @@ test.describe('blok configuration options', () => {
       },
     });
 
-    const savedHtml = await page.evaluate(async () => {
+    const savedDataJson = await page.evaluate(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -687,8 +723,11 @@ test.describe('blok configuration options', () => {
 
       const data = await blok.save();
 
-      return data.blocks[0]?.data?.text ?? '';
+      return JSON.stringify(data);
     });
+
+    const savedData = JSON.parse(savedDataJson) as { blocks?: unknown[] };
+    const savedHtml = extractFirstBlockText(savedData);
 
     expect(savedHtml).toContain('<span');
     expect(savedHtml).toContain('data-blok-test="allowed"');
@@ -708,7 +747,7 @@ test.describe('blok configuration options', () => {
       },
     });
 
-    const savedHtml = await page.evaluate(async () => {
+    const savedDataJson = await page.evaluate(async () => {
       const blok = window.blokInstance;
 
       if (!blok) {
@@ -717,8 +756,11 @@ test.describe('blok configuration options', () => {
 
       const data = await blok.save();
 
-      return data.blocks[0]?.data?.text ?? '';
+      return JSON.stringify(data);
     });
+
+    const savedData = JSON.parse(savedDataJson) as { blocks?: unknown[] };
+    const savedHtml = extractFirstBlockText(savedData);
 
     expect(savedHtml).not.toContain('<script');
     expect(savedHtml).toContain('Safe text');

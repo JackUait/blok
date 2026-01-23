@@ -92,11 +92,14 @@ const createBlokWithBlocks = async (
       }
 
       if (toolConfig.classSource) {
+        // eslint-disable-next-line no-new-func, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
         const revivedClass = new Function(`return (${toolConfig.classSource});`)();
 
         return {
           ...accumulator,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
           [toolConfig.name]: toolConfig.config
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Dynamic class evaluation is intentional for test code
             ? { ...toolConfig.config, class: revivedClass }
             : revivedClass,
         };
@@ -190,11 +193,7 @@ const openBlockTunesForSelectedBlocks = async (page: Page): Promise<void> => {
   const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
   await expect(settingsButton).toBeVisible();
-
-  // Use dispatchEvent for mousedown/mouseup to ensure proper event handling
-  // The toolbar listens on mousedown and sets up a document-level mouseup listener
-  await settingsButton.dispatchEvent('mousedown', { button: 0 });
-  await settingsButton.dispatchEvent('mouseup', { button: 0 });
+  await settingsButton.click();
 
   const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
 
@@ -263,9 +262,63 @@ test.describe('multi-block conversion', () => {
 
       await expect(settingsButton).toBeVisible();
     });
+
+    test('preserves multi-block selection when clicking settings toggler', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+        { type: 'paragraph', data: { text: 'Third block' } },
+      ]);
+
+      // Select all blocks via Shift+ArrowDown (this method shows the toolbar)
+      await selectBlocksWithShift(page, 0, 3);
+
+      // Verify blocks are selected before clicking
+      for (const index of [0, 1, 2]) {
+        await expect(getBlockByIndex(page, index)).toHaveAttribute('data-blok-selected', 'true');
+      }
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await settingsButton.click();
+
+      // After clicking settings toggler, BlockSettings should open and selection should be preserved
+      // Only the first block should be set as current, but all blocks should remain selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 2)).toHaveAttribute('data-blok-selected', 'true');
+    });
   });
 
   test.describe('block tunes for multiple blocks', () => {
+    test('opens block settings popover with real click (not just dispatchEvent)', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'First block' } },
+        { type: 'paragraph', data: { text: 'Second block' } },
+      ]);
+
+      // Select blocks via Shift+ArrowDown
+      await selectBlocksWithShift(page, 0, 2);
+
+      // Verify blocks are selected
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await settingsButton.click();
+
+      // The block settings popover should be visible
+      const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
+
+      await expect(popover).toHaveCount(1);
+      await popover.waitFor({ state: 'visible' });
+
+      // Blocks should still be selected after clicking
+      await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
+      await expect(getBlockByIndex(page, 1)).toHaveAttribute('data-blok-selected', 'true');
+    });
+
     test('shows convert-to option for multiple convertible blocks', async ({ page }) => {
       await createBlokWithBlocks(page, [
         { type: 'paragraph', data: { text: 'First block' } },
@@ -744,12 +797,12 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('list');
-      expect(savedData.blocks[0].data.text).toBe('First item');
-      expect(savedData.blocks[0].data.style).toBe('unordered');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First item');
+      expect((savedData.blocks[0]?.data as { style: string }).style).toBe('unordered');
       expect(savedData.blocks[1].type).toBe('list');
-      expect(savedData.blocks[1].data.text).toBe('Second item');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second item');
       expect(savedData.blocks[2].type).toBe('list');
-      expect(savedData.blocks[2].data.text).toBe('Third item');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third item');
     });
 
     test('converts mixed block types to list items', async ({ page, browserName }) => {
@@ -788,10 +841,10 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('list');
-      expect(savedData.blocks[0].data.style).toBe('ordered');
-      expect(savedData.blocks[0].data.text).toBe('Paragraph text');
-      expect(savedData.blocks[1].data.text).toBe('Header text');
-      expect(savedData.blocks[2].data.text).toBe('Another paragraph');
+      expect((savedData.blocks[0]?.data as { style: string }).style).toBe('ordered');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('Paragraph text');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Header text');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Another paragraph');
     });
 
     test('converts subset of blocks to list items', async ({ page }) => {
@@ -867,7 +920,7 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect(savedData.blocks[0].data.text).toBe('List item text');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('List item text');
     });
 
     test('converts list item to header', async ({ page }) => {
@@ -904,7 +957,7 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(1);
       expect(savedData.blocks[0].type).toBe('header');
-      expect(savedData.blocks[0].data.text).toBe('List item heading');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('List item heading');
     });
 
     test('converts multiple list items to paragraphs', async ({ page, browserName }) => {
@@ -942,11 +995,11 @@ test.describe('multi-block conversion', () => {
 
       expect(savedData.blocks).toHaveLength(3);
       expect(savedData.blocks[0].type).toBe('paragraph');
-      expect(savedData.blocks[0].data.text).toBe('First item');
+      expect((savedData.blocks[0]?.data as { text: string }).text).toBe('First item');
       expect(savedData.blocks[1].type).toBe('paragraph');
-      expect(savedData.blocks[1].data.text).toBe('Second item');
+      expect((savedData.blocks[1]?.data as { text: string }).text).toBe('Second item');
       expect(savedData.blocks[2].type).toBe('paragraph');
-      expect(savedData.blocks[2].data.text).toBe('Third item');
+      expect((savedData.blocks[2]?.data as { text: string }).text).toBe('Third item');
     });
   });
 });

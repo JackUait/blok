@@ -66,7 +66,7 @@ export interface ToolboxConfigEntry {
  *
  * @template Config - the structure describing a config object supported by the tool
  */
-export interface ExternalToolSettings<Config extends object = any> {
+export interface ExternalToolSettings<Config extends object = Record<string, unknown>> {
 
   /**
    * Tool's class - accepts any constructor, validated at runtime
@@ -112,7 +112,7 @@ export interface ExternalToolSettings<Config extends object = any> {
 /**
  * For internal Tools 'class' property is optional
  */
-export type InternalToolSettings<Config extends object = any> = Omit<ExternalToolSettings<Config>, 'class'> & Partial<Pick<ExternalToolSettings<Config>, 'class'>>;
+export type InternalToolSettings<Config extends object = Record<string, unknown>> = Omit<ExternalToolSettings<Config>, 'class'> & Partial<Pick<ExternalToolSettings<Config>, 'class'>>;
 
 /**
  * Keys that Blok extracts from tool settings (not passed to tool constructor)
@@ -123,7 +123,7 @@ export type BlokToolSettingsKeys = 'class' | 'inlineToolbar' | 'tunes' | 'shortc
  * Flat tool settings - tool-specific options at top level.
  * Blok extracts known keys and passes the rest as `config` to the tool.
  */
-export interface FlatToolSettings<Config extends object = any> {
+export interface FlatToolSettings<Config extends object = Record<string, unknown>> {
   /**
    * Tool's class
    */
@@ -166,7 +166,7 @@ export interface FlatToolSettings<Config extends object = any> {
 /**
  * Union of all tool settings formats
  */
-export type ToolSettings<Config extends object = any> =
+export type ToolSettings<Config extends object = Record<string, unknown>> =
   | InternalToolSettings<Config>
   | ExternalToolSettings<Config>
   | FlatToolSettings<Config>;

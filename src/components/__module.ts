@@ -1,15 +1,16 @@
-import type { BlokModules } from '../types-internal/blok-modules';
 import type { BlokConfig } from '../../types';
+import type { BlokModules } from '../types-internal/blok-modules';
 import type { ModuleConfig } from '../types-internal/module-config';
-import { Listeners } from './utils/listeners';
-import type { EventsDispatcher } from './utils/events';
+
 import type { BlokEventMap } from './events';
+import type { EventsDispatcher } from './utils/events';
+import { Listeners } from './utils/listeners';
 
 /**
  * The type <T> of the Module generic.
  * It describes the structure of nodes used in modules.
  */
-export type ModuleNodes = object;
+export type ModuleNodes = Record<string, unknown>;
 
 /**
  * @abstract
@@ -23,8 +24,8 @@ export class Module<T extends ModuleNodes = Record<string, HTMLElement>> {
   /**
    * Each module can provide some UI elements that will be stored in this property
    */
-   
-  public nodes: T = {} as any;
+
+  public nodes: T = {} as T;
 
   /**
    * Blok modules list

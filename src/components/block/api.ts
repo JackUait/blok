@@ -1,7 +1,8 @@
-import type { Block } from './index';
-import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../types/tools';
-import type { SavedData } from '../../../types/data-formats';
 import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
+import type { SavedData } from '../../../types/data-formats';
+import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../types/tools';
+
+import type { Block } from './index';
 
 /**
  * Constructs new BlockAPI object
@@ -89,7 +90,7 @@ const BlockAPIConstructor = function BlockAPI(
      * @param {object} param - object with parameters
      * @returns {unknown}
      */
-    call(methodName: string, param?: object): unknown {
+    call(methodName: string, param?: Record<string, unknown>): unknown {
       return block.call(methodName, param);
     },
 

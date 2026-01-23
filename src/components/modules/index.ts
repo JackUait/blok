@@ -1,4 +1,3 @@
-/** ./api */
 import { BlocksAPI } from './api/blocks';
 import { CaretAPI } from './api/caret';
 import { EventsAPI } from './api/events';
@@ -11,33 +10,30 @@ import { ReadOnlyAPI } from './api/readonly';
 import { SanitizerAPI } from './api/sanitizer';
 import { SaverAPI } from './api/saver';
 import { SelectionAPI } from './api/selection';
-import { ToolsAPI } from './api/tools';
 import { StylesAPI } from './api/styles';
 import { ToolbarAPI } from './api/toolbar';
+import { ToolsAPI } from './api/tools';
 import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
-/** ./toolbar */
-import { BlockSettings } from './toolbar/blockSettings';
-import { Toolbar } from './toolbar/index';
-import { InlineToolbar } from './toolbar/inline';
-
-/** . */
-import { I18n } from './i18n';
-import { YjsManager } from './yjsManager';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
 import { Caret } from './caret';
 import { CrossBlockSelection } from './crossBlockSelection';
-import { DragManager } from './dragManager';
+import { DragController as DragManager } from './drag/DragController';
+import { I18n } from './i18n';
 import { ModificationsObserver } from './modificationsObserver';
 import { Paste } from './paste';
 import { ReadOnly } from './readonly';
 import { RectangleSelection } from './rectangleSelection';
 import { Renderer } from './renderer';
 import { Saver } from './saver';
+import { BlockSettings } from './toolbar/blockSettings';
+import { Toolbar } from './toolbar/index';
+import { InlineToolbar } from './toolbar/inline';
 import { Tools } from './tools';
 import { UI } from './ui';
+import { YjsManager } from './yjs';
 
 /**
  * Named exports for better tree-shaking.

@@ -1,21 +1,23 @@
-import { Module } from '../../__module';
-import { Dom as $ } from '../../dom';
-import { SelectionUtils } from '../../selection';
-import type { Block } from '../../block';
-import { Flipper } from '../../flipper';
 import type { MenuConfigItem } from '../../../../types/tools';
-import type { PopoverItemParams } from '../../utils/popover';
-import { type Popover, PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
+import { Module } from '../../__module';
+import type { Block } from '../../block';
+import { BlockAPI } from '../../block/api';
+import { Dom as $ } from '../../dom';
+import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
+import { Flipper } from '../../flipper';
+import { IconReplace, IconCross } from '../../icons';
+import { SelectionUtils } from '../../selection/index';
+import type { BlockToolAdapter } from '../../tools/block';
+import { isMobileScreen, keyCodes } from '../../utils';
+import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
+import type { PopoverItemParams, Popover } from '../../utils/popover';
+import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
+import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
+import { translateToolTitle } from '../../utils/tools';
+
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { isMobileScreen, keyCodes } from '../../utils';
-import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
-import { IconReplace, IconCross } from '../../icons';
-import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
-import { translateToolTitle } from '../../utils/tools';
-import { BlockAPI } from '../../block/api';
-import type { BlockToolAdapter } from '../../tools/block';
+
 
 /**
  * HTML Elements that used for BlockSettings
@@ -25,6 +27,10 @@ interface BlockSettingsNodes {
    * Block Settings wrapper. Undefined when before "make" method called
    */
   wrapper: HTMLElement | undefined;
+  /**
+   * Index signature to satisfy ModuleNodes constraint
+   */
+  [key: string]: unknown;
 }
 
 /**
@@ -56,6 +62,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Opened state
    */
   public opened = false;
+
+  /**
+   * Flag to track if settings menu is in the process of opening
+   * Used to prevent toolbar movement during async menu item creation
+   */
+  public isOpening = false;
 
   /**
    * Getter for inner popover's flipper instance
@@ -145,6 +157,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     /**
+     * Set isOpening flag BEFORE async operations to prevent toolbar from moving
+     * while menu items are being created. This fixes a bug where hovering over a different
+     * block during async getTunesItems() causes the toolbar to reposition incorrectly.
+     */
+    this.isOpening = true;
+
+    /**
      * If block settings contains any inputs, focus will be set there,
      * so we need to save current selection to restore it after block settings is closed
      */
@@ -190,6 +209,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * when opened=true but popover is still null
      */
     this.opened = true;
+    this.isOpening = false; // Clear isOpening flag after popover is created
 
     /** Tell to subscribers that block settings is opened */
     this.eventsDispatcher.emit(this.events.opened);
@@ -230,6 +250,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.opened = false;
+    this.isOpening = false; // Clear isOpening flag when closing
 
     /**
      * If selection is at blok on Block Settings closing,
@@ -655,17 +676,27 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       /**
+       * Type guard to check if an item is a valid list item with content and nested items
+       */
+      const isValidListItem = (item: unknown): item is { content?: string; items?: unknown[] } => {
+        return typeof item === 'object' && item !== null;
+      };
+
+      /**
        * Extract content from each item, handling nested items recursively
        */
-      const extractContent = (items: Array<{ content?: string; items?: unknown[] }>): string[] => {
+      const extractContent = (items: unknown[]): string[] => {
         const contents: string[] = [];
 
         for (const item of items) {
+          if (!isValidListItem(item)) {
+            continue;
+          }
           if (item.content !== undefined && item.content !== '') {
             contents.push(item.content);
           }
           if (Array.isArray(item.items) && item.items.length > 0) {
-            contents.push(...extractContent(item.items as Array<{ content?: string; items?: unknown[] }>));
+            contents.push(...extractContent(item.items));
           }
         }
 
@@ -721,7 +752,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        */
       const importedData = typeof conversionImport === 'function'
         ? conversionImport(content, targetTool?.settings)
-        : { [conversionImport as string]: content };
+        : { [conversionImport]: content };
 
       const newBlockData = toolboxData
         ? Object.assign(importedData, toolboxData)

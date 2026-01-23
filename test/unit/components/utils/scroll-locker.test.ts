@@ -24,6 +24,7 @@ vi.mock('../../../../src/components/utils', async () => {
 });
 
 const originalScrollTo = window.scrollTo;
+const originalPageYOffsetDescriptor = Object.getOwnPropertyDescriptor(window, 'pageYOffset');
 
 describe('ScrollLocker', () => {
   beforeEach(() => {
@@ -32,20 +33,31 @@ describe('ScrollLocker', () => {
     document.body.innerHTML = '';
     document.documentElement?.style.removeProperty('--window-scroll-offset');
     setIsIosDeviceValue(false);
-    delete (window as { pageYOffset?: number }).pageYOffset;
+    if (originalPageYOffsetDescriptor) {
+      Object.defineProperty(window, 'pageYOffset', originalPageYOffsetDescriptor);
+    }
   });
 
   afterEach(() => {
     if (originalScrollTo) {
-      window.scrollTo = originalScrollTo;
+      Object.defineProperty(window, 'scrollTo', {
+        configurable: true,
+        writable: true,
+        value: originalScrollTo,
+      });
     } else {
-      delete (window as { scrollTo?: typeof window.scrollTo }).scrollTo;
+      Object.defineProperty(window, 'scrollTo', {
+        configurable: true,
+        value: window.scrollTo,
+      });
     }
     document.body.removeAttribute('data-blok-scroll-locked');
     document.body.removeAttribute('data-blok-scroll-locked-hard');
     document.documentElement?.style.removeProperty('--window-scroll-offset');
     setIsIosDeviceValue(false);
-    delete (window as { pageYOffset?: number }).pageYOffset;
+    if (originalPageYOffsetDescriptor) {
+      Object.defineProperty(window, 'pageYOffset', originalPageYOffsetDescriptor);
+    }
   });
 
   it('adds and removes body class on non-iOS devices', () => {
@@ -54,11 +66,11 @@ describe('ScrollLocker', () => {
 
     locker.lock();
 
-    expect(document.body.getAttribute('data-blok-scroll-locked')).toBe('true');
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked', 'true');
 
     locker.unlock();
 
-    expect(document.body.hasAttribute('data-blok-scroll-locked')).toBe(false);
+    expect(document.body).not.toHaveAttribute('data-blok-scroll-locked');
   });
 
   it('performs hard lock on iOS devices and restores scroll position', () => {
@@ -78,12 +90,12 @@ describe('ScrollLocker', () => {
 
     locker.lock();
 
-    expect(document.body.getAttribute('data-blok-scroll-locked-hard')).toBe('true');
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked-hard', 'true');
     expect(document.documentElement?.style.getPropertyValue('--window-scroll-offset')).toBe(`${storedScroll}px`);
 
     locker.unlock();
 
-    expect(document.body.hasAttribute('data-blok-scroll-locked-hard')).toBe(false);
+    expect(document.body).not.toHaveAttribute('data-blok-scroll-locked-hard');
     expect(scrollTo).toHaveBeenCalledWith(0, storedScroll);
   });
 

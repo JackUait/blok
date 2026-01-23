@@ -87,12 +87,60 @@ const hasNestedListItems = (items: LegacyListItem[]): boolean => {
 };
 
 /**
+ * Type guard for object with text property
+ */
+const isObjectWithText = (data: unknown): data is { text: string } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'text' in data && typeof (data as { text: unknown }).text === 'string';
+};
+
+/**
+ * Type guard for object with checked property
+ */
+const isObjectWithChecked = (data: unknown): data is { checked: boolean } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'checked' in data && typeof (data as { checked: unknown }).checked === 'boolean';
+};
+
+/**
+ * Type guard for object with style property
+ */
+const isObjectWithStyle = (data: unknown): data is { style: string } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'style' in data && typeof (data as { style: unknown }).style === 'string';
+};
+
+/**
+ * Type guard for object with start property
+ */
+const isObjectWithStart = (data: unknown): data is { start: number } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'start' in data && typeof (data as { start: unknown }).start === 'number';
+};
+
+/**
+ * Type guard for object with items property
+ */
+const isObjectWithItems = (data: unknown): data is { items: unknown } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'items' in data;
+};
+
+/**
+ * Type guard for legacy list data structure
+ */
+const isLegacyListData = (data: unknown): data is LegacyListData => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'style' in data &&
+    'items' in data &&
+    Array.isArray((data as LegacyListData).items)
+  );
+};
+
+/**
  * Check if a block is in legacy list format (has items[] array with content field)
  * Legacy format: { items: [{ content: "text" }], style: "unordered" }
  * Flat format: { text: "text", style: "unordered" }
  */
-const isLegacyListBlock = (block: OutputBlockData): boolean => {
-  return block.type === 'list' && Array.isArray(block.data?.items);
+const isLegacyListBlock = (block: OutputBlockData): block is OutputBlockData<string, LegacyListData> => {
+  return block.type === 'list' && isLegacyListData(block.data);
 };
 
 /**
@@ -103,7 +151,10 @@ const hasNestedItems = (block: OutputBlockData): boolean => {
     return false;
   }
 
-  return hasNestedListItems(block.data.items as LegacyListItem[]);
+  // Type guard narrows block.data to LegacyListData
+  // Extract items explicitly to avoid type widening
+  const items: LegacyListItem[] = block.data.items;
+  return hasNestedListItems(items);
 };
 
 /**
@@ -185,11 +236,11 @@ const expandListItems = (
     blocks.push(itemBlock);
 
     // Now recursively expand nested items (they will be added after the parent)
-    if (!hasChildren) {
+    if (!hasChildren || !item.items) {
       return;
     }
 
-    const nestedChildIds = expandListItems(item.items!, itemId, depth + 1, style, undefined, tunes, blocks);
+    const nestedChildIds = expandListItems(item.items, itemId, depth + 1, style, undefined, tunes, blocks);
 
     // Update the parent block with content IDs (only if children exist)
     if (nestedChildIds.length > 0) {
@@ -228,8 +279,8 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
   for (const block of blocks) {
     if (isLegacyListBlock(block)) {
       // Expand List tool nested items to flat blocks
-      const listData = block.data as LegacyListData;
-      const expanded = expandListToHierarchical(listData, block.tunes);
+      // Type guard narrows block.data to LegacyListData
+      const expanded = expandListToHierarchical(block.data, block.tunes);
 
       expandedBlocks.push(...expanded);
     } else {
@@ -301,16 +352,22 @@ const collectListItems = (
     processedIds.add(block.id);
   }
 
+  // Extract text and checked properties with proper type narrowing
+  const data: unknown = block.data;
+  const text = isObjectWithText(data) ? data.text : '';
+  const checked = isObjectWithChecked(data) ? data.checked : undefined;
+
   const item: LegacyListItem = {
-    content: block.data?.text || '',
-    checked: block.data?.checked,
+    content: text,
+    checked,
   };
 
   // Recursively process children
-  const hasChildren = block.content && block.content.length > 0;
+  const content = block.content;
+  const hasChildren = content !== undefined && content.length > 0;
 
   if (hasChildren) {
-    item.items = collectChildItems(block.content!, blockMap, processedIds);
+    item.items = collectChildItems(content, blockMap, processedIds);
   }
 
   // Clean up empty items array
@@ -334,8 +391,11 @@ const processRootListItem = (
   processedIds: Set<BlockId>
 ): OutputBlockData => {
   const listItems = collectListItems(block, blockMap, processedIds);
-  const style = block.data?.style || 'unordered';
-  const start = block.data?.start;
+
+  // Extract style and start properties with proper type narrowing
+  const data: unknown = block.data;
+  const style = isObjectWithStyle(data) ? data.style : 'unordered';
+  const start = isObjectWithStart(data) ? data.start : undefined;
 
   const listBlock: OutputBlockData = {
     id: block.id,
@@ -355,7 +415,15 @@ const processRootListItem = (
  * Check if a block is a flat-model list block (has 'text' field instead of 'items')
  */
 const isFlatModelListBlock = (block: OutputBlockData): boolean => {
-  return block.type === 'list' && block.data?.text !== undefined && block.data?.items === undefined;
+  if (block.type !== 'list') {
+    return false;
+  }
+
+  const data: unknown = block.data;
+  const hasText = isObjectWithText(data);
+  const hasItems = isObjectWithItems(data);
+
+  return hasText && !hasItems;
 };
 
 /**

@@ -160,7 +160,7 @@ describe('sanitizer', () => {
 
         const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-        const data = result[0].data as Record<string, unknown>;
+        const data = result[0].data;
 
         expect(data.title).toContain('<strong>');
         expect(data.title).not.toContain('<span>');
@@ -198,7 +198,7 @@ describe('sanitizer', () => {
 
         const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-        const data = result[0].data as Record<string, unknown>;
+        const data = result[0].data;
         const items = data.items as string[];
 
         expect(items[0]).toContain('<strong>');
@@ -227,7 +227,7 @@ describe('sanitizer', () => {
 
         const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-        const data = result[0].data as Record<string, unknown>;
+        const data = result[0].data;
 
         expect(data.count).toBe(expectedCount);
         expect(data.active).toBe(true);
@@ -860,9 +860,11 @@ describe('sanitizer', () => {
 
       const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-      expect(result[0].data.text).toContain('target="_blank"');
+      const text = result[0].data.text as string;
+
+      expect(text).toContain('target="_blank"');
       // Both links should have target="_blank"
-      const matches = result[0].data.text.match(/target="_blank"/g);
+      const matches = text.match(/target="_blank"/g);
 
       expect(matches).toHaveLength(2);
     });
@@ -934,7 +936,7 @@ describe('sanitizer', () => {
 
       const result = sanitizeBlocks(blocksData, sanitizeConfig, {});
 
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect(data.title).toContain('<strong>');
       expect(data.title).not.toContain('<span>');

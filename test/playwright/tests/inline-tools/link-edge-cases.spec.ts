@@ -265,11 +265,17 @@ test.describe('inline tool link - edge cases', () => {
 
     await expect(anchor).toHaveAttribute('href', 'javascript:alert(1)');
 
+     
     const savedData = await page.evaluate(async () => {
-      return window.blokInstance?.save();
+      const data = await window.blokInstance?.save();
+      if (!data || !data.blocks[0]) {
+        throw new Error('Expected save data to exist with at least one block');
+      }
+      return data;
     });
 
-    const blockData = savedData?.blocks[0].data.text;
+    const firstBlock = savedData.blocks[0];
+    const blockData = (firstBlock.data as { text: string }).text;
 
     // Blok sanitizer should strip javascript: hrefs
     expect(blockData).not.toContain('href="javascript:alert(1)"');

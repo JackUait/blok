@@ -8,6 +8,9 @@ import eslintPluginImport from 'eslint-plugin-import';
 import playwright from 'eslint-plugin-playwright';
 import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
+import vitest from 'eslint-plugin-vitest';
+import jestDom from 'eslint-plugin-jest-dom';
+import testingLibrary from 'eslint-plugin-testing-library';
 import tseslint from 'typescript-eslint';
 import jsdoc from 'eslint-plugin-jsdoc';
 import tailwindcss from 'eslint-plugin-tailwindcss';
@@ -60,6 +63,339 @@ const NON_CSS_PREFIXES = [
 
 const internalUnitTestPlugin = {
   rules: {
+    'no-direct-event-dispatch': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow direct event dispatching for user interaction events. Use user-event or proper user interaction simulation.',
+        },
+        schema: [],
+        messages: {
+          noDirectEventDispatch:
+            'Avoid using dispatchEvent() with {{eventType}} events. Use @testing-library/user-event or simulate user interaction through the DOM.',
+        },
+      },
+      create(context) {
+        // User interaction event types that should not be dispatched directly
+        const PROBLEMATIC_EVENTS = new Set([
+          // Mouse events
+          'click',
+          'dblclick',
+          'mousedown',
+          'mouseup',
+          'mouseover',
+          'mouseout',
+          'mousemove',
+          'mouseenter',
+          'mouseleave',
+          // Keyboard events
+          'keydown',
+          'keyup',
+          'keypress',
+          // Form events
+          'input',
+          'change',
+          'submit',
+          'focus',
+          'blur',
+        ]);
+
+        const getEventNameFromNewExpression = (node) => {
+          // For new MouseEvent('click', {...}), KeyboardEvent('keydown', {...}), etc.
+          // the first argument is the event type
+          if (node.arguments.length > 0) {
+            const firstArg = node.arguments[0];
+            if (firstArg.type === 'Literal' && typeof firstArg.value === 'string') {
+              return firstArg.value;
+            }
+          }
+
+          // For new Event() without type name suffix
+          if (node.callee.type === 'Identifier') {
+            const eventName = node.callee.name.replace('Event', '');
+            return eventName.toLowerCase();
+          }
+
+          return null;
+        };
+
+        return {
+          CallExpression(node) {
+            // Check for dispatchEvent calls
+            if (node.callee.type !== 'MemberExpression') {
+              return;
+            }
+
+            const { property } = node.callee;
+
+            if (property.type !== 'Identifier' || property.name !== 'dispatchEvent') {
+              return;
+            }
+
+            if (node.arguments.length === 0) {
+              return;
+            }
+
+            const eventArg = node.arguments[0];
+
+            // Check for new Event('click') or new MouseEvent('click')
+            if (eventArg.type === 'NewExpression') {
+              const eventName = getEventNameFromNewExpression(eventArg);
+
+              if (eventName && PROBLEMATIC_EVENTS.has(eventName.toLowerCase())) {
+                context.report({
+                  node: eventArg,
+                  messageId: 'noDirectEventDispatch',
+                  data: { eventType: eventName },
+                });
+              }
+            }
+
+            // Check for pre-created event variables (harder to detect, but we can flag dispatchEvent in general)
+            if (eventArg.type === 'Identifier') {
+              const variableName = eventArg.name.toLowerCase();
+
+              // If variable name suggests a problematic event type
+              for (const problematicEvent of PROBLEMATIC_EVENTS) {
+                if (variableName.includes(problematicEvent) || variableName.includes(`${problematicEvent}event`)) {
+                  context.report({
+                    node: eventArg,
+                    messageId: 'noDirectEventDispatch',
+                    data: { eventType: problematicEvent },
+                  });
+                  break;
+                }
+              }
+            }
+          },
+        };
+      },
+    },
+    'no-implementation-detail-spying': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow spying on prototype methods. Test behavior through public APIs instead.',
+        },
+        schema: [],
+        messages: {
+          noPrototypeSpying:
+            'Avoid spying on prototype methods ({{className}}.prototype.{{methodName}}). Test behavior through public APIs instead.',
+        },
+      },
+      create(context) {
+        return {
+          CallExpression(node) {
+            // Check for vi.spyOn(SomeClass.prototype, 'method') or jest.spyOn(SomeClass.prototype, 'method')
+            if (node.callee.type !== 'MemberExpression') {
+              return;
+            }
+
+            const { object, property } = node.callee;
+
+            // Check if it's vi.spyOn or jest.spyOn
+            if (object.type !== 'Identifier' || !['vi', 'jest'].includes(object.name)) {
+              return;
+            }
+
+            if (property.type !== 'Identifier' || property.name !== 'spyOn') {
+              return;
+            }
+
+            if (node.arguments.length < 2) {
+              return;
+            }
+
+            const firstArg = node.arguments[0];
+
+            // Check if first argument accesses .prototype
+            if (firstArg.type === 'MemberExpression') {
+              if (firstArg.property.type === 'Identifier' && firstArg.property.name === 'prototype') {
+                const className = firstArg.object.type === 'Identifier'
+                  ? firstArg.object.name
+                  : '<unknown>';
+
+                const secondArg = node.arguments[1];
+                const methodName = secondArg.type === 'Literal' && typeof secondArg.value === 'string'
+                  ? secondArg.value
+                  : '<unknown>';
+
+                context.report({
+                  node: firstArg,
+                  messageId: 'noPrototypeSpying',
+                  data: { className, methodName },
+                });
+              }
+            }
+          },
+        };
+      },
+    },
+    'no-prototype-property-binding': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow binding built-in prototype methods. Tests should not need to manipulate prototype methods of built-ins.',
+        },
+        schema: [],
+        messages: {
+          noPrototypeBinding:
+            'Avoid binding {{constructor}}.prototype.{{method}}. Test behavior differently.',
+        },
+      },
+      create(context) {
+        const BUILTIN_PROTOTYPES = new Set([
+          'Map',
+          'Set',
+          'Array',
+          'Object',
+          'String',
+          'Number',
+          'Date',
+          'RegExp',
+        ]);
+
+        return {
+          CallExpression(node) {
+            // Check for Constructor.prototype.method.bind(instance) pattern
+            if (node.callee.type !== 'MemberExpression') {
+              return;
+            }
+
+            const calleeObject = node.callee.object;
+
+            // Check if it's a .bind() call
+            if (node.callee.property.type !== 'Identifier' || node.callee.property.name !== 'bind') {
+              return;
+            }
+
+            // Check if the object being bound is a prototype property access
+            if (calleeObject.type !== 'MemberExpression') {
+              return;
+            }
+
+            const prototypeObject = calleeObject.object;
+
+            // Check if prototypeObject.prototype is being accessed
+            if (prototypeObject.type !== 'MemberExpression') {
+              return;
+            }
+
+            if (prototypeObject.property.type !== 'Identifier' || prototypeObject.property.name !== 'prototype') {
+              return;
+            }
+
+            const constructorName = prototypeObject.object.type === 'Identifier'
+              ? prototypeObject.object.name
+              : null;
+
+            if (constructorName && BUILTIN_PROTOTYPES.has(constructorName)) {
+              const methodName = calleeObject.property.type === 'Identifier'
+                ? calleeObject.property.name
+                : '<unknown>';
+
+              context.report({
+                node: calleeObject,
+                messageId: 'noPrototypeBinding',
+                data: { constructor: constructorName, method: methodName },
+              });
+            }
+          },
+        };
+      },
+    },
+    'no-instance-property-deletion': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow deleting instance properties in tests. If you need to delete mock methods, you are testing implementation details.',
+        },
+        schema: [],
+        messages: {
+          noInstanceDeletion:
+            'Avoid deleting instance properties. If you need to delete mock methods to test the prototype, you are testing implementation details.',
+        },
+      },
+      create(context) {
+        return {
+          UnaryExpression(node) {
+            // Check for delete expressions
+            if (node.operator !== 'delete') {
+              return;
+            }
+
+            const argument = node.argument;
+
+            // Allow deleting properties on test objects/mocks (objects created in test)
+            // Flag deleting properties on instances or cast expressions
+            if (argument.type === 'MemberExpression') {
+              const { object, property } = argument;
+
+              // Check for delete (instance as any).property pattern
+              if (argument.type === 'TSAsExpression' || object.type === 'TSAsExpression') {
+                context.report({
+                  node,
+                  messageId: 'noInstanceDeletion',
+                });
+                return;
+              }
+
+              // Flag delete instance.method where instance looks like a class instance
+              if (property.type === 'Identifier') {
+                context.report({
+                  node,
+                  messageId: 'noInstanceDeletion',
+                });
+              }
+            }
+          },
+        };
+      },
+    },
+    'prefer-public-api': {
+      meta: {
+        type: 'suggestion',
+        docs: {
+          description: 'Discourage direct access to module internal properties starting with underscore.',
+        },
+        schema: [],
+        messages: {
+          noPrivateProperty:
+            'Avoid accessing private property "{{propertyName}}". Use public APIs instead.',
+        },
+      },
+      create(context) {
+        return {
+          MemberExpression(node) {
+            const { property } = node;
+
+            // Check for underscore-prefixed properties
+            if (property.type === 'Identifier' && property.name.startsWith('_')) {
+              // Allow some common non-private patterns
+              const ALLOWED = new Set([
+                '_id',
+                '_v',
+                '__filename',
+                '__dirname',
+                '_cache',
+                '_mockData',
+                '_test',
+              ]);
+
+              if (ALLOWED.has(property.name)) {
+                return;
+              }
+
+              context.report({
+                node: property,
+                messageId: 'noPrivateProperty',
+                data: { propertyName: property.name },
+              });
+            }
+          },
+        };
+      },
+    },
     'no-class-selectors': {
       meta: {
         type: 'problem',
@@ -364,6 +700,262 @@ const internalUnitTestPlugin = {
         };
       },
     },
+    'require-behavior-verification': {
+      meta: {
+        type: 'suggestion',
+        docs: {
+          description: 'Require tests to verify observable behavior, not just mock calls.',
+        },
+        schema: [],
+        messages: {
+          onlyMockAssertions:
+            'Test only verifies mock calls without checking observable behavior (DOM state, return values, emitted events, or state changes). Add assertions that verify the actual outcome.',
+        },
+      },
+      create(context) {
+        // Matchers that indicate behavior verification (good)
+        const BEHAVIOR_MATCHERS = new Set([
+          // State/value matchers
+          'toBe',
+          'toEqual',
+          'toStrictEqual',
+          'toMatch',
+          'toMatchObject',
+          'toContain',
+          'toContainEqual',
+          'toHaveLength',
+          'toHaveProperty',
+          'toBeDefined',
+          'toBeUndefined',
+          'toBeNull',
+          'toBeTruthy',
+          'toBeFalsy',
+          'toBeGreaterThan',
+          'toBeGreaterThanOrEqual',
+          'toBeLessThan',
+          'toBeLessThanOrEqual',
+          'toBeCloseTo',
+          'toThrow',
+          // DOM-related matchers (jsdom)
+          'toHaveTextContent',
+          'toHaveAttribute',
+          'toHaveValue',
+          'toBeChecked',
+          'toBeDisabled',
+          'toBeEnabled',
+          'toBeVisible',
+          'toBeInTheDocument',
+          'toHaveFocus',
+          'toHaveStyle',
+          // Async matchers
+          'resolves',
+          'rejects',
+        ]);
+
+        // Matchers that only check implementation (bad)
+        const MOCK_ONLY_MATCHERS = new Set([
+          'toHaveBeenCalled',
+          'toHaveBeenCalledTimes',
+        ]);
+
+        const tests = [];
+
+        const enterTest = (node) => {
+          tests.push({
+            node,
+            hasBehaviorAssertion: false,
+            hasMockOnlyAssertion: false,
+            assertionCount: 0,
+          });
+        };
+
+        const exitTest = () => {
+          const test = tests.at(-1);
+          if (!test) {
+            return;
+          }
+
+          tests.pop();
+
+          // Only report if there are assertions but they're all mock-only
+          if (test.assertionCount > 0 && test.hasMockOnlyAssertion && !test.hasBehaviorAssertion) {
+            context.report({
+              node: test.node,
+              messageId: 'onlyMockAssertions',
+            });
+          }
+        };
+
+        const isExpectCall = (node) => {
+          if (node.type !== 'CallExpression') {
+            return false;
+          }
+
+          const { callee } = node;
+
+          // Handle await expect(...)
+          if (callee.type === 'AwaitExpression') {
+            return false; // await expect(...) - the actual expect is inside
+          }
+
+          // Check for expect() as direct callee
+          if (callee.type === 'Identifier' && callee.name === 'expect') {
+            return true;
+          }
+
+          // Check for expect().matcher() pattern
+          if (callee.type === 'MemberExpression') {
+            const { object } = callee;
+
+            // Check if object is expect() call
+            if (object.type === 'CallExpression' && object.callee.type === 'Identifier' && object.callee.name === 'expect') {
+              return true;
+            }
+
+            // Check for expect.identifier (e.g., expect.resolves, expect.rejects)
+            if (object.type === 'Identifier' && object.name === 'expect') {
+              return true;
+            }
+          }
+
+          return false;
+        };
+
+        const getAssertionMatcher = (node) => {
+          // For expect(x).matcher(...) or expect(x).not.matcher(...)
+          // node.callee is the MemberExpression like .matcher or .not.matcher
+          const callee = node.callee;
+
+          if (callee.type !== 'MemberExpression') {
+            return null;
+          }
+
+          // Walk up the chain to find the actual matcher (not, resolves, rejects are modifiers)
+          let current = callee;
+
+          while (current && current.type === 'MemberExpression') {
+            if (current.property.type === 'Identifier') {
+              const name = current.property.name;
+
+              // Check if this is a modifier
+              if (name === 'not' || name === 'resolves' || name === 'rejects') {
+                current = current.object;
+                continue;
+              }
+
+              // This is the actual matcher
+              return name;
+            }
+
+            break;
+          }
+
+          return null;
+        };
+
+        const checkAssertion = (node) => {
+          const test = tests.at(-1);
+          if (!test) {
+            return;
+          }
+
+          test.assertionCount++;
+
+          // Check if the call chain starts with expect()
+          if (!isExpectCall(node)) {
+            return;
+          }
+
+          const matcher = getAssertionMatcher(node);
+
+          if (!matcher) {
+            return;
+          }
+
+          if (BEHAVIOR_MATCHERS.has(matcher)) {
+            test.hasBehaviorAssertion = true;
+          }
+
+          if (MOCK_ONLY_MATCHERS.has(matcher)) {
+            test.hasMockOnlyAssertion = true;
+          }
+
+          // Special case: toHaveBeenCalledWith/LastCalledWith/NthCalledWith verify behavior (arguments)
+          if (matcher === 'toHaveBeenCalledWith' || matcher === 'toHaveBeenLastCalledWith' || matcher === 'toHaveBeenNthCalledWith') {
+            test.hasBehaviorAssertion = true;
+            test.hasMockOnlyAssertion = false;
+          }
+        };
+
+        return {
+          // Enter test functions - use FunctionExpression and ArrowFunctionExpression as selectors
+          FunctionExpression(node) {
+            // Check if this function is passed to it() or test()
+            const parent = node.parent;
+
+            if (parent && parent.type === 'CallExpression') {
+              const { callee } = parent;
+
+              // Check if the callee is it() or test()
+              if (callee.type === 'Identifier' && (callee.name === 'it' || callee.name === 'test')) {
+                enterTest(node);
+              }
+
+              // Also check for test.it(), describe.it() patterns
+              if (callee.type === 'MemberExpression' && callee.property.type === 'Identifier') {
+                if (callee.property.name === 'it' || callee.property.name === 'test') {
+                  enterTest(node);
+                }
+              }
+            }
+          },
+          ArrowFunctionExpression(node) {
+            // Check if this arrow function is passed to it() or test()
+            const parent = node.parent;
+
+            if (parent && parent.type === 'CallExpression') {
+              const { callee } = parent;
+
+              // Check if the callee is it() or test()
+              if (callee.type === 'Identifier' && (callee.name === 'it' || callee.name === 'test')) {
+                enterTest(node);
+              }
+
+              // Also check for test.it(), describe.it() patterns
+              if (callee.type === 'MemberExpression' && callee.property.type === 'Identifier') {
+                if (callee.property.name === 'it' || callee.property.name === 'test') {
+                  enterTest(node);
+                }
+              }
+            }
+          },
+
+          // Exit test functions
+          'FunctionExpression:exit': (node) => {
+            // Check if this is a test we're tracking
+            if (tests.length > 0 && tests.at(-1)?.node === node) {
+              exitTest();
+            }
+          },
+          'ArrowFunctionExpression:exit': (node) => {
+            // Check if this is a test we're tracking
+            if (tests.length > 0 && tests.at(-1)?.node === node) {
+              exitTest();
+            }
+          },
+
+          // Check all CallExpressions for expect() calls
+          CallExpression(node) {
+            // Skip if we're not in a test
+            if (tests.length === 0) {
+              return;
+            }
+
+            checkAssertion(node);
+          },
+        };
+      },
+    },
   },
 };
 
@@ -561,6 +1153,97 @@ const internalStorybookPlugin = {
 
 const internalPlaywrightPlugin = {
   rules: {
+    'no-direct-event-dispatch': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow direct event dispatching for user interaction events in Playwright tests. Use Playwright\'s user interaction methods instead.',
+        },
+        schema: [],
+        messages: {
+          noDirectEventDispatch:
+            'Avoid using dispatchEvent() with {{eventType}} events in Playwright tests. Use click(), press(), type(), or other user interaction methods instead.',
+        },
+      },
+      create(context) {
+        // User interaction event types that should not be dispatched directly
+        const PROBLEMATIC_EVENTS = new Set([
+          // Mouse events
+          'click',
+          'dblclick',
+          'mousedown',
+          'mouseup',
+          'mouseover',
+          'mouseout',
+          'mousemove',
+          'mouseenter',
+          'mouseleave',
+          // Keyboard events
+          'keydown',
+          'keyup',
+          'keypress',
+          // Form events
+          'input',
+          'change',
+          'submit',
+          'focus',
+          'blur',
+        ]);
+
+        const getEventNameFromNewExpression = (node) => {
+          // For new MouseEvent('click', {...}), KeyboardEvent('keydown', {...}), etc.
+          // the first argument is the event type
+          if (node.arguments.length > 0) {
+            const firstArg = node.arguments[0];
+            if (firstArg.type === 'Literal' && typeof firstArg.value === 'string') {
+              return firstArg.value;
+            }
+          }
+
+          // For new Event() without type name suffix
+          if (node.callee.type === 'Identifier') {
+            const eventName = node.callee.name.replace('Event', '');
+            return eventName.toLowerCase();
+          }
+
+          return null;
+        };
+
+        return {
+          CallExpression(node) {
+            // Check for dispatchEvent calls
+            if (node.callee.type !== 'MemberExpression') {
+              return;
+            }
+
+            const { property } = node.callee;
+
+            if (property.type !== 'Identifier' || property.name !== 'dispatchEvent') {
+              return;
+            }
+
+            if (node.arguments.length === 0) {
+              return;
+            }
+
+            const eventArg = node.arguments[0];
+
+            // Check for new Event('click') or new MouseEvent('click')
+            if (eventArg.type === 'NewExpression') {
+              const eventName = getEventNameFromNewExpression(eventArg);
+
+              if (eventName && PROBLEMATIC_EVENTS.has(eventName.toLowerCase())) {
+                context.report({
+                  node: eventArg,
+                  messageId: 'noDirectEventDispatch',
+                  data: { eventType: eventName },
+                });
+              }
+            }
+          },
+        };
+      },
+    },
     'no-css-selectors': {
       meta: {
         type: 'problem',
@@ -891,7 +1574,6 @@ export default defineConfig(
       'eslint.config.mjs',
       '**/*.d.ts',
       'src/components/tools/paragraph/**',
-      'src/polyfills.ts',
       'dist',
       'public/assets/**',
       '**/public/assets/**',
@@ -994,6 +1676,60 @@ export default defineConfig(
         },
       ],
       '@typescript-eslint/no-floating-promises': 'error',
+      // Security rules
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
+      'no-debugger': 'error',
+      'no-alert': 'error',
+      // Strict type safety rules
+      '@typescript-eslint/no-unsafe-argument': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+      '@typescript-eslint/no-unsafe-return': 'error',
+      '@typescript-eslint/no-unsafe-unary-minus': 'error',
+      '@typescript-eslint/no-unsafe-enum-comparison': 'error',
+      '@typescript-eslint/no-unsafe-declaration-merging': 'error',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+      // Additional type safety rules
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/no-meaningless-void-operator': 'error',
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/no-duplicate-type-constituents': 'error',
+      '@typescript-eslint/no-dynamic-delete': 'error',
+      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
+      '@typescript-eslint/no-base-to-string': 'error',
+      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
+      '@typescript-eslint/no-confusing-non-null-assertion': 'error',
+      '@typescript-eslint/no-non-null-asserted-nullish-coalescing': 'error',
+      '@typescript-eslint/no-non-null-asserted-optional-chain': 'error',
+      '@typescript-eslint/no-misused-new': 'error',
+      '@typescript-eslint/no-mixed-enums': 'error',
+      '@typescript-eslint/no-redundant-type-constituents': 'error',
+      // Disallow non-null assertions (!) - use proper type guards or nullish coalescing instead
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      // Prohibit weak types
+      '@typescript-eslint/no-explicit-any': 'error',
+      // Ban the `object` type and similar weak types
+      '@typescript-eslint/no-restricted-types': [
+        'error',
+        {
+          types: {
+            object: {
+              message: 'Avoid using the `object` type. Use a more specific type or Record<string, unknown> instead.',
+              fixWith: 'Record<string, unknown>',
+            },
+            Function: {
+              message: 'Avoid using the `Function` type. Use a specific function signature instead.',
+            },
+            '{}': {
+              message: 'Avoid using the `{}` type. Use `Record<string, unknown>` or a specific interface instead.',
+              fixWith: 'Record<string, unknown>',
+            },
+          },
+        },
+      ],
       'no-unused-vars': 'off',
     },
   },
@@ -1006,15 +1742,36 @@ export default defineConfig(
       'internal-dom': internalDomPlugin,
     },
     rules: {
-      // Limit file length to 600 lines
-      'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }],
+      // Limit file length to 500 lines
+      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-identical-expressions': 'error',
+      'sonarjs/no-extra-arguments': 'error',
+      'sonarjs/no-empty-collection': 'error',
       // Prevent UMD module patterns
       'import/no-amd': 'error',
       'import/no-commonjs': 'error',
+      // Import organization and quality
+      'import/no-duplicates': 'error',
+      'import/no-cycle': 'warn',
+      'import/no-extraneous-dependencies': 'error',
+      'import/no-self-import': 'error',
+      'import/order': ['error', {
+        groups: [
+          'builtin',
+          'external',
+          'internal',
+          'parent',
+          'sibling',
+          'index',
+        ],
+        'newlines-between': 'always',
+        alphabetize: { order: 'asc', caseInsensitive: true },
+      }],
+      'import/first': 'error',
+      'import/newline-after-import': 'error',
       // Tailwind CSS rules - best practices
       'tailwindcss/classnames-order': 'error', // Enforce consistent class ordering for readability
       'tailwindcss/enforces-negative-arbitrary-values': 'error', // Use -mt-[5px] instead of mt-[-5px]
@@ -1033,8 +1790,17 @@ export default defineConfig(
     files: ['test/unit/**/*.ts'],
     plugins: {
       jest,
+      vitest,
+      'jest-dom': jestDom,
+      'testing-library': testingLibrary,
       'internal-unit-test': internalUnitTestPlugin,
       'internal-dom': internalDomPlugin,
+    },
+    settings: {
+      // Disable aggressive reporting for testing-library
+      'testing-library/utils-module': 'off',
+      'testing-library/custom-renders': 'off',
+      'testing-library/custom-queries': 'off',
     },
     languageOptions: {
       globals: {
@@ -1053,10 +1819,18 @@ export default defineConfig(
     },
     rules: {
       ...jest.configs.recommended.rules,
+      ...vitest.configs.recommended.rules,
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       // Prevent class selectors in unit tests
       'internal-unit-test/no-class-selectors': 'error',
+      // Encourage behavior-driven testing
+      'internal-unit-test/no-direct-event-dispatch': 'warn',
+      'internal-unit-test/no-implementation-detail-spying': 'warn',
+      'internal-unit-test/no-prototype-property-binding': 'warn',
+      'internal-unit-test/no-instance-property-deletion': 'warn',
+      'internal-unit-test/prefer-public-api': 'warn',
+      'internal-unit-test/require-behavior-verification': 'warn',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-deprecated': 'off',
@@ -1064,6 +1838,23 @@ export default defineConfig(
       'jest/no-deprecated-functions': 'off',
       // Disable require-hook: vi.mock() MUST be top-level in Vitest (hoisting requirement)
       'jest/require-hook': 'off',
+      // Vitest-specific rules
+      'vitest/expect-expect': 'off', // Already handled by jest/expect-expect
+      'vitest/no-alias-methods': 'off', // Already handled by jest/no-alias-methods
+      'vitest/no-conditional-tests': 'warn',
+      'vitest/no-disabled-tests': 'warn',
+      'vitest/no-focused-tests': 'error',
+      'vitest/no-identical-title': 'error',
+      'vitest/no-interpolation-in-snapshots': 'error',
+      'vitest/no-mocks-import': 'error',
+      'vitest/no-standalone-expect': 'off', // Already handled by jest/no-standalone-expect
+      'vitest/prefer-to-be': 'off', // Already handled by jest/prefer-to-be
+      'vitest/prefer-to-contain': 'off', // Already handled by jest/prefer-to-contain
+      'vitest/prefer-to-have-length': 'off', // Already handled by jest/prefer-to-have-length
+      'vitest/require-top-level-describe': 'off', // Already handled by jest/require-top-level-describe
+      'vitest/valid-describe-callback': 'off', // Already handled by jest/valid-describe-callback
+      'vitest/valid-expect': 'off', // Already handled by jest/valid-expect
+      'vitest/valid-title': 'off', // Already handled by jest/valid-title
       // Enforce test structure best practices
       'jest/consistent-test-it': ['error', { fn: 'it' }],
       'jest/valid-describe-callback': 'error',
@@ -1109,6 +1900,31 @@ export default defineConfig(
       'jest/no-untyped-mock-factory': 'warn',
       'jest/prefer-mock-promise-shorthand': 'warn',
       // require-hook is disabled above (vi.mock() must be top-level in Vitest)
+      // jest-dom rules for DOM testing best practices
+      'jest-dom/prefer-checked': 'error',
+      'jest-dom/prefer-enabled-disabled': 'error',
+      'jest-dom/prefer-focus': 'error',
+      'jest-dom/prefer-required': 'error',
+      'jest-dom/prefer-to-have-attribute': 'warn',
+      'jest-dom/prefer-to-have-text-content': 'warn',
+      'jest-dom/prefer-to-have-value': 'error',
+      // testing-library rules for behavior-driven testing
+      // Note: These rules apply when using DOM Testing Library utilities
+      'testing-library/no-await-sync-events': 'warn',
+      'testing-library/no-await-sync-queries': 'warn',
+      'testing-library/no-container': 'warn',
+      'testing-library/no-debugging-utils': 'warn',
+      'testing-library/no-global-regexp-flag-in-query': 'warn',
+      'testing-library/no-manual-cleanup': 'warn',
+      'testing-library/no-node-access': 'warn',
+      'testing-library/no-promise-in-fire-event': 'warn',
+      'testing-library/no-wait-for-multiple-assertions': 'warn',
+      'testing-library/no-wait-for-side-effects': 'warn',
+      'testing-library/no-wait-for-snapshot': 'warn',
+      'testing-library/prefer-find-by': 'warn',
+      'testing-library/prefer-presence-queries': 'warn',
+      'testing-library/prefer-query-by-disappearance': 'warn',
+      'testing-library/prefer-user-event': 'off', // Disabled - project uses fireEvent pattern
     },
   },
   {
@@ -1129,6 +1945,8 @@ export default defineConfig(
     rules: {
       ...playwright.configs.recommended.rules,
       'internal-playwright/no-css-selectors': 'error',
+      // Encourage behavior-driven testing
+      'internal-playwright/no-direct-event-dispatch': 'warn',
       '@typescript-eslint/no-magic-numbers': 'off',
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-deprecated': 'off',
@@ -1227,6 +2045,8 @@ export default defineConfig(
       '@typescript-eslint/no-floating-promises': 'off',
       // Stories may have repeated selectors and test data
       'sonarjs/no-duplicate-string': 'off',
+      // Disable max-lines for stories (they can be longer due to multiple variations)
+      'max-lines': 'off',
     },
   },
 );

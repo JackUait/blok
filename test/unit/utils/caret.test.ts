@@ -7,7 +7,7 @@ import {
   isCaretAtEndOfInput,
   isCaretAtFirstLine,
   isCaretAtLastLine
-} from '../../../src/components/utils/caret';
+} from '../../../src/components/utils/caret/index';
 
 /**
  * Unit tests for caret.ts utility functions

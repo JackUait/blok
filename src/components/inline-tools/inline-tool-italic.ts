@@ -1,6 +1,23 @@
 import type { InlineTool, SanitizerConfig } from '../../../types';
-import { IconItalic } from '../icons';
 import type { MenuConfig } from '../../../types/tools';
+import { IconItalic } from '../icons';
+
+import {
+  isRangeFormatted,
+  findFormattingAncestor,
+  hasFormattingAncestor,
+  collectFormattingAncestors,
+} from './utils/formatting-range-utils';
+
+/**
+ * Check if an element is an italic tag (<i> or <em>)
+ * @param element - The element to check
+ */
+const isItalicTag = (element: Element): boolean => {
+  const tag = element.tagName;
+
+  return tag === 'I' || tag === 'EM';
+};
 
 /**
  * Italic Tool
@@ -132,7 +149,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param selection - The Selection object to check
    */
   private isSelectionVisuallyItalic(selection: Selection): boolean {
-    if (!selection || selection.rangeCount === 0) {
+    if (selection.rangeCount === 0) {
       return false;
     }
 
@@ -147,53 +164,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param options - Options for checking italic status
    */
   private isRangeItalic(range: Range, options: { ignoreWhitespace: boolean }): boolean {
-    if (range.collapsed) {
-      return Boolean(this.findItalicElement(range.startContainer));
-    }
-
-    const walker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          try {
-            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (_error) {
-            const nodeRange = document.createRange();
-
-            nodeRange.selectNodeContents(node);
-
-            const startsBeforeEnd = range.compareBoundaryPoints(Range.END_TO_START, nodeRange) > 0;
-            const endsAfterStart = range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0;
-
-            return (startsBeforeEnd && endsAfterStart) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          }
-        },
-      }
-    );
-
-    const textNodes: Text[] = [];
-
-    while (walker.nextNode()) {
-      const textNode = walker.currentNode as Text;
-      const value = textNode.textContent ?? '';
-
-      if (options.ignoreWhitespace && value.trim().length === 0) {
-        continue;
-      }
-
-      if (value.length === 0) {
-        continue;
-      }
-
-      textNodes.push(textNode);
-    }
-
-    if (textNodes.length === 0) {
-      return Boolean(this.findItalicElement(range.startContainer));
-    }
-
-    return textNodes.every((textNode) => this.hasItalicParent(textNode));
+    return isRangeFormatted(range, isItalicTag, options);
   }
 
   /**
@@ -269,7 +240,7 @@ export class ItalicInlineTool implements InlineTool {
     }
 
     italicAncestors.forEach((element) => {
-      if ((element.textContent ?? '').length === 0) {
+      if (element.textContent.length === 0) {
         element.remove();
       }
     });
@@ -280,15 +251,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param node - The node to check
    */
   private hasItalicParent(node: Node | null): boolean {
-    if (!node) {
-      return false;
-    }
-
-    if (node.nodeType === Node.ELEMENT_NODE && this.isItalicTag(node as Element)) {
-      return true;
-    }
-
-    return this.hasItalicParent(node.parentNode);
+    return hasFormattingAncestor(node, isItalicTag);
   }
 
   /**
@@ -296,25 +259,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param node - The node to start searching from
    */
   private findItalicElement(node: Node | null): HTMLElement | null {
-    if (!node) {
-      return null;
-    }
-
-    if (node.nodeType === Node.ELEMENT_NODE && this.isItalicTag(node as Element)) {
-      return node as HTMLElement;
-    }
-
-    return this.findItalicElement(node.parentNode);
-  }
-
-  /**
-   * Check if an element is an italic tag (<i> or <em>)
-   * @param node - The element to check
-   */
-  private isItalicTag(node: Element): boolean {
-    const tag = node.tagName;
-
-    return tag === 'I' || tag === 'EM';
+    return findFormattingAncestor(node, isItalicTag);
   }
 
   /**
@@ -322,37 +267,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param range - The range to search for italic ancestors
    */
   private collectItalicAncestors(range: Range): HTMLElement[] {
-    const ancestors = new Set<HTMLElement>();
-    const walker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: (node) => {
-          try {
-            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          } catch (_error) {
-            const nodeRange = document.createRange();
-
-            nodeRange.selectNodeContents(node);
-
-            const startsBeforeEnd = range.compareBoundaryPoints(Range.END_TO_START, nodeRange) > 0;
-            const endsAfterStart = range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0;
-
-            return (startsBeforeEnd && endsAfterStart) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-          }
-        },
-      }
-    );
-
-    while (walker.nextNode()) {
-      const italicElement = this.findItalicElement(walker.currentNode);
-
-      if (italicElement) {
-        ancestors.add(italicElement);
-      }
-    }
-
-    return Array.from(ancestors);
+    return collectFormattingAncestors(range, isItalicTag);
   }
 
   /**
@@ -376,11 +291,7 @@ export class ItalicInlineTool implements InlineTool {
    * @param root - The root node to process
    */
   private removeNestedItalic(root: ParentNode): void {
-    const italicNodes = root.querySelectorAll?.('i,em');
-
-    if (!italicNodes) {
-      return;
-    }
+    const italicNodes = root.querySelectorAll('i,em');
 
     italicNodes.forEach((node) => {
       this.unwrapElement(node);

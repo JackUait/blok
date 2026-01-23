@@ -4,15 +4,14 @@
  * @module BlockSelection
  * @version 1.0.0
  */
+import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
-import { delay } from '../utils';
 import { Dom as $ } from '../dom';
-import { Shortcuts } from '../utils/shortcuts';
-
-import { SelectionUtils } from '../selection';
-import type { SanitizerConfig } from '../../../types/configs';
+import { SelectionUtils } from '../selection/index';
+import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
+import { Shortcuts } from '../utils/shortcuts';
 
 /**
  *
@@ -78,7 +77,7 @@ export class BlockSelection extends Module {
   public get allBlocksSelected(): boolean {
     const { BlockManager } = this.Blok;
 
-    return BlockManager.blocks.every((block) => block.selected === true);
+    return BlockManager.blocks.every((block) => block.selected);
   }
 
   /**
@@ -103,7 +102,7 @@ export class BlockSelection extends Module {
     const { BlockManager } = this.Blok;
 
     if (this.anyBlockSelectedCache === null) {
-      this.anyBlockSelectedCache = BlockManager.blocks.some((block) => block.selected === true);
+      this.anyBlockSelectedCache = BlockManager.blocks.some((block) => block.selected);
     }
 
     return this.anyBlockSelectedCache;
@@ -273,7 +272,7 @@ export class BlockSelection extends Module {
      * remove selected blocks and insert pressed key
      */
     if (this.anyBlockSelected && isKeyboard && isPrintableKey && !SelectionUtils.isSelectionExists) {
-      this.replaceSelectedBlocksWithPrintableKey(reason as KeyboardEvent);
+      this.replaceSelectedBlocksWithPrintableKey(reason);
     }
 
     this.Blok.CrossBlockSelection.clear(reason);
@@ -321,6 +320,21 @@ export class BlockSelection extends Module {
     const fakeClipboard = $.make('div');
     const textPlainChunks: string[] = [];
 
+    /**
+     * Build custom Blok MIME_TYPE data synchronously using preserved data.
+     * This ensures clipboardData.setData() is called synchronously during the event handler,
+     * which is required for clipboard operations to work reliably across all browsers.
+     *
+     * Using preservedData (cached from last save) instead of calling async block.save()
+     * because setData() must be called synchronously in the clipboard event handler.
+     */
+    const savedData = this.selectedBlocks.map((block) => ({
+      id: block.id,
+      tool: block.name,
+      data: block.preservedData,
+      tunes: block.preservedTunes,
+    }));
+
     this.selectedBlocks.forEach((block) => {
       const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
       const wrapper = $.make('div');
@@ -349,15 +363,25 @@ export class BlockSelection extends Module {
     const textPlain = textPlainChunks.join('\n\n');
     const textHTML = fakeClipboard.innerHTML;
 
+    /**
+     * Set all clipboard data types synchronously.
+     * This MUST happen synchronously within the event handler for clipboard operations
+     * to work reliably across all browsers (especially Firefox).
+     */
     clipboardData.setData('text/plain', textPlain);
     clipboardData.setData('text/html', textHTML);
 
     try {
-      const savedData = await Promise.all(this.selectedBlocks.map((block) => block.save()));
-
       clipboardData.setData(this.Blok.Paste.MIME_TYPE, JSON.stringify(savedData));
-    } catch {
-      // In Firefox we can't set data in async function
+    } catch (error) {
+      /**
+       * Some browsers may throw when setting custom MIME types.
+       * The text/plain and text/html fallback should still work.
+       */
+      if (error instanceof Error) {
+        // Log the error but don't fail the entire copy operation
+        console.warn('Failed to set custom clipboard data:', error.message);
+      }
     }
   }
 
@@ -671,6 +695,11 @@ export class BlockSelection extends Module {
 
     /** close InlineToolbar if we selected all Blocks */
     this.Blok.InlineToolbar.close();
+
+    /**
+     * Show toolbar for multi-block selection
+     */
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
   }
 
   /**

@@ -1,6 +1,8 @@
-import { Module } from '../__module';
 import type { I18nDictionary } from '../../../types/configs';
 import type { SupportedLocale } from '../../../types/configs/i18n-config';
+import { Module } from '../__module';
+import type { I18nextInitResult } from '../i18n/i18next-loader';
+import { LightweightI18n } from '../i18n/lightweight-i18n';
 import {
   DEFAULT_LOCALE,
   loadLocale,
@@ -8,8 +10,6 @@ import {
   ALL_LOCALE_CODES,
   enMessages,
 } from '../i18n/locales';
-import { LightweightI18n } from '../i18n/lightweight-i18n';
-import type { I18nextInitResult } from '../i18n/i18next-loader';
 
 /**
  * I18n module - handles translations and locale management.
@@ -317,14 +317,14 @@ export class I18n extends Module {
 
     // Try exact match (e.g., 'ru')
     if (this.isLocaleSupported(normalized)) {
-      return normalized as SupportedLocale;
+      return normalized;
     }
 
     // Try base language (e.g., 'en-US' -> 'en')
     const baseLang = normalized.split('-')[0];
 
     if (baseLang !== undefined && this.isLocaleSupported(baseLang)) {
-      return baseLang as SupportedLocale;
+      return baseLang;
     }
 
     return null;

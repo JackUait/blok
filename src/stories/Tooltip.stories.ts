@@ -7,6 +7,7 @@
  */
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { waitFor, expect } from 'storybook/test';
+
 import { hide, show } from '../components/utils/tooltip';
 
 interface TooltipArgs {

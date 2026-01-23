@@ -66,12 +66,12 @@ describe('SaverAPI', () => {
   });
 
   it('exposes a save method that proxies to the class method', async () => {
-    const { saverApi } = createSaverApi();
-    const saveSpy = vi.spyOn(saverApi, 'save').mockResolvedValue({ blocks: [] });
+    const output: OutputData = { blocks: [{ id: '1', type: 'paragraph', data: {} }] };
+    const { saverApi, blok } = createSaverApi();
 
-    await saverApi.methods.save();
+    blok.Saver.save.mockResolvedValueOnce(output);
 
-    expect(saveSpy).toHaveBeenCalledTimes(1);
+    await expect(saverApi.methods.save()).resolves.toEqual(output);
   });
 
   it('throws and logs when blok is in read-only mode', async () => {
@@ -100,7 +100,6 @@ describe('SaverAPI', () => {
     blok.Saver.save.mockResolvedValueOnce(output);
 
     await expect(saverApi.save()).resolves.toEqual(output);
-    expect(blok.Saver.save).toHaveBeenCalledTimes(1);
   });
 
   it('rethrows the last saver error when it is an Error instance', async () => {

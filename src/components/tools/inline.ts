@@ -1,4 +1,5 @@
 import { BaseToolAdapter } from './base';
+
 import type { InlineTool as IInlineTool, InlineToolConstructable } from '@/types';
 import type { InlineToolAdapter as InlineToolAdapterInterface } from '@/types/tools/adapters/inline-tool-adapter';
 import { ToolType } from '@/types/tools/adapters/tool-type';
@@ -37,7 +38,7 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
     return new InlineToolClass({
       api: this.api,
       config: this.settings,
-    }) as IInlineTool;
+    });
   }
 
   /**

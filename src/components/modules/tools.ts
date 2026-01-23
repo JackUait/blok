@@ -1,16 +1,16 @@
-import { Module } from '../__module';
-import { deepMerge, isFunction, isObject, isUndefined, log } from '../utils';
-import { PromiseQueue } from '../utils/promise-queue';
 import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
 import { Stub } from '../../tools/stub';
+import { Module } from '../__module';
+import { DeleteTune } from '../block-tunes/block-tune-delete';
+import { CriticalError } from '../errors/critical';
+import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
+import type { BlockToolAdapter } from '../tools/block';
+import { ToolsCollection } from '../tools/collection';
 import { ToolsFactory } from '../tools/factory';
 import type { InlineToolAdapter } from '../tools/inline';
-import type { BlockToolAdapter } from '../tools/block';
 import type { BlockTuneAdapter } from '../tools/tune';
-import { DeleteTune } from '../block-tunes/block-tune-delete';
-import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
-import { ToolsCollection } from '../tools/collection';
-import { CriticalError } from '../errors/critical';
+import { deepMerge, isFunction, isObject, isUndefined, log } from '../utils';
+import { PromiseQueue } from '../utils/promise-queue';
 
 /**
  * @typedef {object} ChainData
@@ -19,8 +19,8 @@ import { CriticalError } from '../errors/critical';
  * @interface ChainData
  */
 export interface ChainData {
-  data?: object;
-  function: (data?: object) => unknown;
+  data?: Record<string, unknown>;
+  function: (data?: Record<string, unknown>) => unknown;
 }
 
 type ToolPrepareData = {
@@ -173,7 +173,7 @@ export class Tools extends Module {
       return Promise.resolve();
     }
 
-    const handlePrepareSuccess = (data: object): void => {
+    const handlePrepareSuccess = (data: Record<string, unknown>): void => {
       if (!this.isToolPrepareData(data)) {
         return;
       }
@@ -181,7 +181,7 @@ export class Tools extends Module {
       this.toolPrepareMethodSuccess({ toolName: data.toolName });
     };
 
-    const handlePrepareFallback = (data: object): void => {
+    const handlePrepareFallback = (data: Record<string, unknown>): void => {
       if (!this.isToolPrepareData(data)) {
         return;
       }
@@ -378,7 +378,7 @@ export class Tools extends Module {
    */
   private extractToolConfig(settings: ToolSettings): ToolConfig {
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: reading legacy config for backwards compatibility
-    const nestedConfig = (settings.config ?? {}) as ToolConfig;
+    const nestedConfig = (settings.config ?? {});
 
     // Extract non-Blok keys as tool-specific config
     const flatConfig: Record<string, unknown> = {};
@@ -390,7 +390,7 @@ export class Tools extends Module {
     }
 
     // Merge: nested config first, flat config overrides
-    return { ...nestedConfig, ...flatConfig } as ToolConfig;
+    return { ...nestedConfig, ...flatConfig };
   }
 
   /**
@@ -561,7 +561,7 @@ export class Tools extends Module {
    * Type guard that ensures provided data contains tool preparation metadata.
    * @param data - data passed to prepare sequence callbacks
    */
-  private isToolPrepareData(data: object): data is ToolPrepareData {
+  private isToolPrepareData(data: Record<string, unknown>): data is ToolPrepareData {
     const candidate = data as Partial<ToolPrepareData>;
 
     return typeof candidate?.toolName === 'string';

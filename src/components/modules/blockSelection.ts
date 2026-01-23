@@ -380,7 +380,6 @@ export class BlockSelection extends Module {
        */
       if (error instanceof Error) {
         // Log the error but don't fail the entire copy operation
-        // eslint-disable-next-line no-console
         console.warn('Failed to set custom clipboard data:', error.message);
       }
     }

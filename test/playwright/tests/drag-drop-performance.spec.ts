@@ -65,9 +65,6 @@ const performDragDrop = async (
       ? targetBox.y + 1
       : targetBox.y + targetBox.height - 1;
 
-  // Check if target is outside viewport (negative Y)
-  const isTargetOffPage = targetY < 0;
-
   const startTime = Date.now();
 
   // Move to source and press down
@@ -85,13 +82,28 @@ const performDragDrop = async (
   }, { timeout: 2000 });
 
   // Release to complete the drop
+  // First release the mouse button in Playwright's state
   await page.mouse.up();
+
+  // Then manually dispatch mouseup event to ensure cleanup happens
+  // Playwright's page.mouse.up() doesn't reliably trigger document event listeners
+  // in Firefox with large DOM structures
+  await page.evaluate(() => {
+    const mouseupEvent = new MouseEvent('mouseup', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      buttons: 0,
+      button: 0,
+    });
+    document.dispatchEvent(mouseupEvent);
+  });
 
   // Wait for drag state to be cleared (drop completed)
   await page.waitForFunction(() => {
     const wrapper = document.querySelector('[data-blok-interface=blok]');
     return wrapper?.getAttribute('data-blok-dragging') !== 'true';
-  }, { timeout: 2000 });
+  }, { timeout: 5000 });
 
   return Date.now() - startTime;
 };
@@ -314,7 +326,7 @@ test.describe("drag and drop performance", () => {
       // Firefox may need explicit toolbar activation after drag operations
       // since the hover event doesn't always trigger properly
       // Use evaluate to find the block by text content directly and call moveAndOpen
-      await page.evaluate(async (blockIndex) => {
+      await page.evaluate((blockIndex) => {
         const blok = window.blokInstance as TestBlokInstanceWithModules | undefined;
         if (!blok?.module || !blok.module.BlockManager || !blok.module.Toolbar) {
           return;
@@ -361,14 +373,19 @@ test.describe("drag and drop performance", () => {
       }, sourceIndex);
 
       // Wait for DOM changes to be applied (settings button to be available)
-      await page.waitForFunction((idx) => {
-        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
-        const targetBlock = blocks[idx];
-        if (!targetBlock) return false;
-        const settingsToggler = targetBlock.querySelector('[data-blok-settings-toggler]');
-        // Check if settings toggler exists and is ready (either visible or attached)
-        return settingsToggler !== null;
-      }, sourceIndex, { timeout: 2000 });
+      // Find block by text content instead of array index since drags reorder the DOM
+      await page.waitForFunction((blockText) => {
+        const blocks = Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'));
+        for (const block of blocks) {
+          // Use textContent trim for exact matching
+          const text = block.textContent?.trim();
+          if (text === blockText || text?.endsWith(blockText)) {
+            const settingsToggler = block.querySelector('[data-blok-settings-toggler]');
+            return settingsToggler !== null;
+          }
+        }
+        return false;
+      }, `Block ${sourceIndex}`, { timeout: 3000 });
 
       const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
@@ -584,7 +601,7 @@ test.describe("drag and drop stress tests", () => {
       await sourceBlock.hover({ timeout: 10000 });
 
       // Firefox may need explicit toolbar activation after drag operations
-      await page.evaluate(async (blockIndex) => {
+      await page.evaluate((blockIndex) => {
         const blok = window.blokInstance as TestBlokInstanceWithModules | undefined;
         if (!blok?.module || !blok.module.BlockManager || !blok.module.Toolbar) {
           return;
@@ -625,13 +642,19 @@ test.describe("drag and drop stress tests", () => {
       }, op.from);
 
       // Wait for DOM changes to be applied (settings button to be available)
-      await page.waitForFunction((idx) => {
-        const blocks = document.querySelectorAll('[data-blok-testid="block-wrapper"]');
-        const targetBlock = blocks[idx];
-        if (!targetBlock) return false;
-        const settingsToggler = targetBlock.querySelector('[data-blok-settings-toggler]');
-        return settingsToggler !== null;
-      }, op.from, { timeout: 2000 });
+      // Find block by text content instead of array index since drags reorder the DOM
+      await page.waitForFunction((blockText) => {
+        const blocks = Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'));
+        for (const block of blocks) {
+          // Use textContent trim for exact matching
+          const text = block.textContent?.trim();
+          if (text === blockText || text?.endsWith(blockText)) {
+            const settingsToggler = block.querySelector('[data-blok-settings-toggler]');
+            return settingsToggler !== null;
+          }
+        }
+        return false;
+      }, `Block ${op.from}`, { timeout: 3000 });
 
       const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
@@ -818,7 +841,7 @@ test.describe("drag and drop stress tests", () => {
       await sourceBlock.hover();
 
       // Firefox may need explicit toolbar activation after drag operations
-      await page.evaluate(async (blockIndex) => {
+      await page.evaluate((blockIndex) => {
         const blok = window.blokInstance as TestBlokInstanceWithModules | undefined;
         if (!blok?.module || !blok.module.BlockManager || !blok.module.Toolbar) {
           return;

@@ -137,6 +137,15 @@ export class RectangleSelection extends Module {
     }
 
     const scrollLeft = this.getScrollLeft();
+    const pointerX = pageX - scrollLeft;
+
+    /**
+     * Check if pointer is within editor's horizontal bounds.
+     * This determines whether we should close the toolbar when starting selection.
+     * Clicks outside the horizontal bounds (to the left or right) should NOT close the toolbar.
+     */
+    const withinEditorHorizontally = pointerX >= editorRect.left && pointerX <= editorRect.right;
+
     const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pointerY);
 
     if (!elemWhereSelectionStart) {
@@ -177,8 +186,12 @@ export class RectangleSelection extends Module {
 
     /**
      * Hide the toolbar immediately so it does not obstruct drag selection.
+     * Only close the toolbar if the selection starts within the horizontal bounds of the editor.
+     * This allows rectangle selection to start from outside (e.g., left margin) without closing the toolbar.
      */
-    this.Blok.Toolbar.close();
+    if (withinEditorHorizontally) {
+      this.Blok.Toolbar.close();
+    }
 
     this.mousedown = true;
     this.startX = pageX;

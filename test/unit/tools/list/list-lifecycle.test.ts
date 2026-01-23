@@ -316,16 +316,19 @@ describe('list-lifecycle', () => {
     const context = createMockContext({ style: 'unordered' });
     const result = renderListItem(context);
 
-    // Check wrapper (outermost element) has same classes as paragraph
-    expect(result.classList.contains('py-[3px]')).toBe(true);
-    expect(result.classList.contains('mt-[2px]')).toBe(true);
-    expect(result.classList.contains('mb-px')).toBe(true);
+    // Check wrapper has correct vertical spacing via computed styles
+    // py-[3px] = 3px padding top and bottom
+    const wrapperStyles = window.getComputedStyle(result);
+    expect(wrapperStyles.paddingTop).toBe('3px');
+    expect(wrapperStyles.paddingBottom).toBe('3px');
+    expect(wrapperStyles.marginTop).toBe('2px');
+    expect(wrapperStyles.marginBottom).toBe('1px');
 
     // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
     const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
-    expect(listItem?.classList.contains('pt-[2px]')).toBe(false);
-    expect(listItem?.classList.contains('pb-[1px]')).toBe(false);
-    expect(listItem?.classList.contains('py-0.5')).toBe(false);
+    const listItemStyles = window.getComputedStyle(listItem);
+    expect(listItemStyles.paddingTop).toBe('0px');
+    expect(listItemStyles.paddingBottom).toBe('0px');
   });
 
   /**
@@ -335,15 +338,18 @@ describe('list-lifecycle', () => {
     const context = createMockContext({ style: 'checklist' });
     const result = renderListItem(context);
 
-    // Check wrapper (outermost element) has same classes as paragraph
-    expect(result.classList.contains('py-[3px]')).toBe(true);
-    expect(result.classList.contains('mt-[2px]')).toBe(true);
-    expect(result.classList.contains('mb-px')).toBe(true);
+    // Check wrapper has correct vertical spacing via computed styles
+    // py-[3px] = 3px padding top and bottom
+    const wrapperStyles = window.getComputedStyle(result);
+    expect(wrapperStyles.paddingTop).toBe('3px');
+    expect(wrapperStyles.paddingBottom).toBe('3px');
+    expect(wrapperStyles.marginTop).toBe('2px');
+    expect(wrapperStyles.marginBottom).toBe('1px');
 
     // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
     const checklistItem = result.querySelector('[role="listitem"]') as HTMLElement;
-    expect(checklistItem?.classList.contains('pt-[2px]')).toBe(false);
-    expect(checklistItem?.classList.contains('pb-[1px]')).toBe(false);
-    expect(checklistItem?.classList.contains('py-0.5')).toBe(false);
+    const checklistItemStyles = window.getComputedStyle(checklistItem);
+    expect(checklistItemStyles.paddingTop).toBe('0px');
+    expect(checklistItemStyles.paddingBottom).toBe('0px');
   });
 });

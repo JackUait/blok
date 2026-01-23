@@ -1110,14 +1110,12 @@ test.describe('ui module', () => {
       const toolbarLocator = page.locator('[data-blok-testid="toolbar"]');
       const redactorLocator = page.locator('[data-blok-testid="redactor"]');
 
-      const [toolbarBox, redactorBox] = await Promise.all([
-        toolbarLocator.boundingBox(),
-        redactorLocator.boundingBox(),
-      ]);
+      const toolbarBox = await getRequiredBoundingBox(toolbarLocator);
+      const redactorBox = await getRequiredBoundingBox(redactorLocator);
 
       const startPos = {
-        x: toolbarBox!.x + toolbarBox!.width / 2, // Center of toolbar (inside redactor)
-        y: redactorBox!.y + 50, // Near top of redactor
+        x: toolbarBox.x + toolbarBox.width / 2, // Center of toolbar (inside redactor)
+        y: redactorBox.y + 50, // Near top of redactor
       };
 
       // Start selection from inside the redactor (toolbar position)

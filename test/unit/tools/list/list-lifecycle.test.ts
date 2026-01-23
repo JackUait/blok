@@ -305,4 +305,45 @@ describe('list-lifecycle', () => {
     const contentEl = result.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement;
     expect(contentEl?.contentEditable).toBe('false');
   });
+
+  /**
+   * Regression test for: list items and paragraphs must have same total height
+   *
+   * Paragraph wrapper uses blok-block (py-[3px]) + mt-[2px] mb-px
+   * List wrapper should match this exactly
+   */
+  it('has same vertical spacing as paragraph', () => {
+    const context = createMockContext({ style: 'unordered' });
+    const result = renderListItem(context);
+
+    // Check wrapper (outermost element) has same classes as paragraph
+    expect(result.classList.contains('py-[3px]')).toBe(true);
+    expect(result.classList.contains('mt-[2px]')).toBe(true);
+    expect(result.classList.contains('mb-px')).toBe(true);
+
+    // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
+    const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
+    expect(listItem?.classList.contains('pt-[2px]')).toBe(false);
+    expect(listItem?.classList.contains('pb-[1px]')).toBe(false);
+    expect(listItem?.classList.contains('py-0.5')).toBe(false);
+  });
+
+  /**
+   * Checklist items should also have same vertical spacing on wrapper
+   */
+  it('checklist has same vertical spacing as paragraph', () => {
+    const context = createMockContext({ style: 'checklist' });
+    const result = renderListItem(context);
+
+    // Check wrapper (outermost element) has same classes as paragraph
+    expect(result.classList.contains('py-[3px]')).toBe(true);
+    expect(result.classList.contains('mt-[2px]')).toBe(true);
+    expect(result.classList.contains('mb-px')).toBe(true);
+
+    // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
+    const checklistItem = result.querySelector('[role="listitem"]') as HTMLElement;
+    expect(checklistItem?.classList.contains('pt-[2px]')).toBe(false);
+    expect(checklistItem?.classList.contains('pb-[1px]')).toBe(false);
+    expect(checklistItem?.classList.contains('py-0.5')).toBe(false);
+  });
 });

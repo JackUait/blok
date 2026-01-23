@@ -7,7 +7,6 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
-const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
 const TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="toolbar"]`;
 
 declare global {
@@ -20,9 +19,6 @@ const getBlockByIndex = (page: Page, index: number): Locator => {
   return page.locator(`:nth-match(${BLOCK_WRAPPER_SELECTOR}, ${index + 1})`);
 };
 
-const getParagraphByIndex = (page: Page, index: number): Locator => {
-  return page.locator(`:nth-match(${PARAGRAPH_SELECTOR}, ${index + 1})`);
-};
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
@@ -140,21 +136,20 @@ test.describe('ui.toolbar-rubber-band-hover', () => {
     const toolbar = page.locator(TOOLBAR_SELECTOR);
     await expect(toolbar).toBeVisible();
 
-    // Get the initial toolbar position
-    const initialToolbarBox = await getRequiredBoundingBox(toolbar);
-
     // Move mouse below all blocks (outside editor) to clear any hover state
     // Using a position well below the fourth block to ensure hover zone doesn't find any block
     await page.mouse.move(fourthBox.x + fourthBox.width / 2, fourthBox.y + fourthBox.height + 100);
 
-    // Small wait to ensure events are processed
-    await page.waitForTimeout(50);
-
     // Now hover over the fourth (last) block
     await fourthBlock.hover();
 
-    // Wait a bit for any toolbar movement
-    await page.waitForTimeout(100);
+    // Wait for toolbar to settle after hover
+    await page.waitForFunction(() => {
+      const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+      if (!toolbar) return false;
+      const rect = toolbar.getBoundingClientRect();
+      return rect.top > 0 && rect.top < 1000; // Toolbar has a valid position
+    }, { timeout: 2000 });
 
     // Get the toolbar position after hovering fourth block
     const toolbarAfterFourthHover = await getRequiredBoundingBox(toolbar);
@@ -177,8 +172,13 @@ test.describe('ui.toolbar-rubber-band-hover', () => {
     const secondBlock = getBlockByIndex(page, 1);
     await secondBlock.hover();
 
-    // Wait for toolbar to move
-    await page.waitForTimeout(100);
+    // Wait for toolbar to settle after hover
+    await page.waitForFunction(() => {
+      const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
+      if (!toolbar) return false;
+      const rect = toolbar.getBoundingClientRect();
+      return rect.top > 0 && rect.top < 1000; // Toolbar has a valid position
+    }, { timeout: 2000 });
 
     // Get the toolbar position after hovering second block
     const toolbarAfterSecondHover = await getRequiredBoundingBox(toolbar);

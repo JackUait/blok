@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Try Blok — Live Demo</title>
+  <link rel="stylesheet" href="assets/demo.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <svg width="28" height="28" viewBox="0 0 128 128" fill="none">
+          <rect width="128" height="128" rx="28" fill="url(#logo-gradient-nav)"/>
+          <path d="M36 40h56c2.2 0 4 1.8 4 4v40c0 2.2-1.8 4-4 4H36c-2.2 0-4-1.8-4-4V44c0-2.2 1.8-4 4-4z" fill="white" opacity="0.9"/>
+          <rect x="42" y="52" width="44" height="4" rx="2" fill="#007AFF"/>
+          <rect x="42" y="62" width="32" height="4" rx="2" fill="#5856D6"/>
+          <rect x="42" y="72" width="38" height="4" rx="2" fill="#007AFF"/>
+          <circle cx="98" cy="84" r="14" fill="white"/>
+          <path d="M94 84l3 3 6-6" stroke="#007AFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <defs>
+            <linearGradient id="logo-gradient-nav" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#007AFF"/>
+              <stop offset="100%" style="stop-color:#5856D6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>Blok</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Docs</a>
+        <a href="api.html" class="nav-link">API</a>
+        <a href="migration.html" class="nav-link">Migration</a>
+        <a href="demo.html" class="nav-link nav-link-active">Demo</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Demo Page -->
+  <main class="demo-page">
+    <!-- Header -->
+    <header class="demo-header">
+      <div class="demo-header-content">
+        <div class="demo-badge">
+          <span class="demo-badge-dot"></span>
+          <span class="demo-badge-text">Live Demo</span>
+        </div>
+        <h1 class="demo-title">Try Blok</h1>
+        <p class="demo-subtitle">
+          Experience the block-based editor. Type <code class="inline-code">/</code> for commands or use the toolbar.
+        </p>
+      </div>
+    </header>
+
+    <!-- Editor Container -->
+    <div class="editor-container">
+      <!-- Toolbar -->
+      <div class="demo-toolbar">
+        <div class="toolbar-group">
+          <button class="toolbar-btn" data-action="undo" title="Undo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 14L4 9l5-5"/>
+              <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>
+            </svg>
+          </button>
+          <button class="toolbar-btn" data-action="redo" title="Redo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 14l5-5-5-5"/>
+              <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/>
+            </svg>
+          </button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+          <button class="toolbar-btn" data-action="save" title="Save JSON">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            <span>Save</span>
+          </button>
+          <button class="toolbar-btn" data-action="clear" title="Clear Editor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Blok Editor Holder -->
+      <div id="blok-editor" class="blok-editor">
+        <div class="editor-placeholder">
+          <div class="placeholder-content">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <rect width="64" height="64" rx="16" fill="url(#placeholder-gradient)" opacity="0.1"/>
+              <rect x="14" y="18" width="36" height="28" rx="6" stroke="url(#placeholder-gradient)" stroke-width="2"/>
+              <rect x="18" y="24" width="16" height="2" rx="1" fill="#007AFF"/>
+              <rect x="18" y="30" width="12" height="2" rx="1" fill="#5856D6"/>
+              <defs>
+                <linearGradient id="placeholder-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#007AFF"/>
+                  <stop offset="100%" style="stop-color:#5856D6"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <p>Loading editor...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JSON Output Panel -->
+    <div class="output-panel" id="output-panel">
+      <div class="output-header">
+        <div class="output-title">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 3v10a2 2 0 002 2h8a2 2 0 002-2V5l-2-2H4a2 2 0 00-2 2z" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6 9l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>JSON Output</span>
+        </div>
+        <button class="output-copy" data-copy-output>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M5 3v8a2 2 0 002 2h6V11H7a1 1 0 01-1-1V3H5zm2-1h6a2 2 0 012 2v9a2 2 0 01-2 2H7a2 2 0 01-2-2V2z"/>
+          </svg>
+          <span class="copy-text">Copy</span>
+        </button>
+      </div>
+      <pre class="output-content" id="output-content">Click "Save" to see the JSON output</pre>
+    </div>
+
+    <!-- Features Hint -->
+    <div class="features-hint">
+      <div class="hint-card">
+        <div class="hint-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4M12 8h.01"/>
+          </svg>
+        </div>
+        <div class="hint-content">
+          <strong>Pro tip:</strong> Type <code>/</code> in an empty block to see available block types.
+        </div>
+      </div>
+      <div class="hint-card">
+        <div class="hint-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h6v6M10 14L21 3M15 21h6v-6M10 10l11 11"/>
+          </svg>
+        </div>
+        <div class="hint-content">
+          Drag blocks using the <strong>⋮⋮</strong> handle to reorder.
+        </div>
+      </div>
+      <div class="hint-card">
+        <div class="hint-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+        </div>
+        <div class="hint-content">
+          Select text to format using the inline toolbar.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+    <span id="toast-message">Copied to clipboard!</span>
+  </div>
+
+  <script type="module" src="assets/demo.js"></script>
+</body>
+</html>

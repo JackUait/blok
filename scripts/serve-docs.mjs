@@ -12,12 +12,14 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DOCS_DIR = path.resolve(__dirname, '../docs');
+const DIST_DIR = path.resolve(__dirname, '../dist');
 const DEFAULT_PORT = 8080;
 
 const MIME_TYPES = {
   '.html': 'text/html',
   '.css': 'text/css',
   '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
   '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -34,7 +36,15 @@ const MIME_TYPES = {
 const PORT = process.env.PORT || parseInt(process.argv[2]) || DEFAULT_PORT;
 
 const server = http.createServer((req, res) => {
-  let filePath = path.join(DOCS_DIR, req.url === '/' ? 'index.html' : req.url);
+  let filePath;
+
+  // Serve dist files from /dist/* route
+  if (req.url.startsWith('/dist/')) {
+    filePath = path.join(DIST_DIR, req.url.replace('/dist/', ''));
+  } else {
+    // Serve docs files
+    filePath = path.join(DOCS_DIR, req.url === '/' ? 'index.html' : req.url);
+  }
 
   const extname = path.extname(filePath);
   const contentType = MIME_TYPES[extname] || 'application/octet-stream';
@@ -49,6 +59,12 @@ const server = http.createServer((req, res) => {
         res.end(`Server Error: ${err.code}`, 'utf-8');
       }
       return;
+    }
+
+    // Set CORS headers for ES modules
+    if (extname === '.mjs' || extname === '.js') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     }
 
     res.writeHead(200, { 'Content-Type': contentType });

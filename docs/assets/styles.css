@@ -402,18 +402,64 @@ body {
   animation: fadeInUp 0.8s var(--transition-slow) 0.1s backwards;
 }
 
+.editor-mockup-link {
+  display: block;
+  text-decoration: none;
+}
+
 .editor-mockup {
+  position: relative;
   background: var(--color-surface);
   border-radius: var(--radius-2xl);
   overflow: hidden;
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--color-border);
   transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
-  transition: transform var(--transition-slow);
+  transition: transform var(--transition-slow), box-shadow var(--transition-base);
 }
 
 .editor-mockup:hover {
-  transform: perspective(1000px) rotateY(-2deg) rotateX(1deg);
+  transform: perspective(1000px) rotateY(-2deg) rotateX(1deg) scale(1.02);
+  box-shadow: var(--shadow-xl), 0 0 0 4px rgba(0, 122, 255, 0.1);
+}
+
+.editor-mockup-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.editor-mockup:hover .editor-mockup-overlay {
+  opacity: 1;
+}
+
+.try-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--color-blue);
+  color: white;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  transform: translateY(10px);
+  transition: transform var(--transition-base);
+}
+
+.editor-mockup:hover .try-button {
+  transform: translateY(0);
+}
+
+.try-button svg {
+  width: 20px;
+  height: 20px;
 }
 
 .editor-header {

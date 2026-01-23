@@ -226,16 +226,16 @@ export class CrossBlockSelection extends Module {
      * Show toolbar for multi-block selection after mouse up
      */
     if (this.isCrossBlockSelectionStarted) {
-      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
-
       /**
-       * Reset the block hover state after cross-block selection completes.
-       * Use requestAnimationFrame to ensure this happens after all pending
-       * mouse events have been processed.
+       * Disable hover detection for a cooldown period and reset the hover state.
+       * This prevents any pending throttled mousemove events from emitting
+       * BlockHovered events that could move the toolbar before the user
+       * intentionally hovers over a block.
        */
-      requestAnimationFrame(() => {
-        this.Blok.UI.resetBlockHoverState();
-      });
+      this.Blok.UI.disableHoverForCooldown();
+      this.Blok.UI.resetBlockHoverState();
+
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
     }
   };
 

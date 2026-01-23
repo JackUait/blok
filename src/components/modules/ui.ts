@@ -70,6 +70,14 @@ export class UI extends Module<UINodes> {
   }
 
   /**
+   * Temporarily disable hover detection for a cooldown period.
+   * Used after cross-block selection to prevent spurious hover events.
+   */
+  public disableHoverForCooldown(): void {
+    this.blockHoverController?.disableHoverForCooldown();
+  }
+
+  /**
    * Return Width of center column of Blok
    * @returns {DOMRect}
    */

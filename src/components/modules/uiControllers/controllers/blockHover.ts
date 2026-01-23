@@ -27,6 +27,18 @@ export class BlockHoverController extends Controller {
     lastHoveredBlockId: null,
   };
 
+  /**
+   * Timestamp when hover detection was temporarily disabled.
+   * Used to prevent spurious hover events after operations like cross-block selection.
+   */
+  private hoverDisabledUntil: number = 0;
+
+  /**
+   * Duration in milliseconds to suppress hover events after being disabled.
+   * This accounts for throttled mousemove events that may still be in the queue.
+   */
+  private static readonly HOVER_COOLDOWN_MS = 50;
+
   constructor(options: {
     config: Controller['config'];
     eventsDispatcher: Controller['eventsDispatcher'];
@@ -46,6 +58,16 @@ export class BlockHoverController extends Controller {
      */
     const handleBlockHovered = (event: Event): void => {
       if (typeof MouseEvent === 'undefined' || !(event instanceof MouseEvent)) {
+        return;
+      }
+
+      /**
+       * Skip hover detection during cooldown period.
+       * This prevents spurious hover events from being emitted after operations
+       * like cross-block selection, where throttled mousemove events may still
+       * be in the event queue.
+       */
+      if (Date.now() < this.hoverDisabledUntil) {
         return;
       }
 
@@ -163,5 +185,14 @@ export class BlockHoverController extends Controller {
    */
   public resetHoverState(): void {
     this.blockHoveredState.lastHoveredBlockId = null;
+  }
+
+  /**
+   * Temporarily disable hover detection for a short cooldown period.
+   * This should be called after operations like cross-block selection to prevent
+   * spurious hover events from throttled mousemove events that may still be in the queue.
+   */
+  public disableHoverForCooldown(): void {
+    this.hoverDisabledUntil = Date.now() + BlockHoverController.HOVER_COOLDOWN_MS;
   }
 }

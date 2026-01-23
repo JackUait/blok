@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blok — Block-Based Rich Text Editor</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav" data-nav>
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <svg width="32" height="32" viewBox="0 0 128 128" fill="none">
+          <rect width="128" height="128" rx="28" fill="url(#logo-gradient)"/>
+          <path d="M36 40h56c2.2 0 4 1.8 4 4v40c0 2.2-1.8 4-4 4H36c-2.2 0-4-1.8-4-4V44c0-2.2 1.8-4 4-4z" fill="white" opacity="0.9"/>
+          <rect x="42" y="52" width="44" height="4" rx="2" fill="#007AFF"/>
+          <rect x="42" y="62" width="32" height="4" rx="2" fill="#5856D6"/>
+          <rect x="42" y="72" width="38" height="4" rx="2" fill="#007AFF"/>
+          <circle cx="98" cy="84" r="14" fill="white"/>
+          <path d="M94 84l3 3 6-6" stroke="#007AFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <defs>
+            <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#007AFF"/>
+              <stop offset="100%" style="stop-color:#5856D6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>Blok</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#quick-start" class="nav-link">Quick Start</a>
+        <a href="#api" class="nav-link">API</a>
+        <a href="https://github.com/JackUait/blok" class="nav-link nav-link-github">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu" data-nav-toggle>
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-blur hero-blur-1"></div>
+      <div class="hero-blur hero-blur-2"></div>
+      <div class="hero-blur hero-blur-3"></div>
+    </div>
+    <div class="hero-container">
+      <div class="hero-content" data-hero-content>
+        <p class="hero-eyebrow">Documentation</p>
+        <h1 class="hero-title">
+          Beautiful block-based<br>
+          <span class="hero-title-gradient">rich text editing</span>
+        </h1>
+        <p class="hero-description">
+          Blok is a headless, highly extensible rich text editor built for developers who need to implement a Notion-like editing experience without building it from scratch.
+        </p>
+        <div class="hero-actions">
+          <a href="#quick-start" class="btn btn-primary">Get Started</a>
+          <a href="https://github.com/JackUait/blok" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+            View on GitHub
+          </a>
+        </div>
+      </div>
+      <div class="hero-demo" data-hero-demo>
+        <div class="editor-mockup">
+          <div class="editor-header">
+            <div class="editor-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span class="editor-title">Untitled</span>
+          </div>
+          <div class="editor-content">
+            <div class="editor-block editor-block-heading">
+              <h2>Welcome to Blok</h2>
+            </div>
+            <div class="editor-block">
+              <p>A powerful block-based editor that treats every piece of content as an individual unit.</p>
+            </div>
+            <div class="editor-block">
+              <ul class="editor-list">
+                <li>Headless architecture</li>
+                <li>Slash commands</li>
+                <li>Drag & drop</li>
+              </ul>
+            </div>
+            <div class="editor-block">
+              <p>Start typing to see the magic happen...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-eyebrow">Why Blok</p>
+        <h2 class="section-title">Built for developers,<br>designed for users</h2>
+        <p class="section-description">
+          Everything you need to create powerful editing experiences in your applications.
+        </p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card" data-feature-card>
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#007AFF" fill-opacity="0.1"/>
+              <path d="M10 8h12c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H10c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2z" stroke="#007AFF" stroke-width="2"/>
+              <rect x="12" y="12" width="8" height="2" rx="1" fill="#007AFF"/>
+              <rect x="12" y="16" width="6" height="2" rx="1" fill="#007AFF" opacity="0.6"/>
+              <rect x="12" y="20" width="7" height="2" rx="1" fill="#007AFF" opacity="0.6"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Block Architecture</h3>
+          <p class="feature-description">
+            Content is structured as JSON data, not raw HTML. Parse, store, and render anywhere with ease.
+          </p>
+        </div>
+        <div class="feature-card" data-feature-card>
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#5856D6" fill-opacity="0.1"/>
+              <path d="M16 6l-8 4.67v9.66L16 25l8-4.67V10.67L16 6z" stroke="#5856D6" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M12 14l4 2 4-2M16 16v5M16 16l-4-2M16 16l4-2" stroke="#5856D6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Slash Commands</h3>
+          <p class="feature-description">
+            Built-in, customizable slash menu for quick formatting and inserting media.
+          </p>
+        </div>
+        <div class="feature-card" data-feature-card>
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#AF52DE" fill-opacity="0.1"/>
+              <circle cx="16" cy="16" r="6" stroke="#AF52DE" stroke-width="2"/>
+              <path d="M16 10V6M16 26v-4M10 16H6m20 0h-4" stroke="#AF52DE" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Headless & Stylable</h3>
+          <p class="feature-description">
+            Blok gives you the logic; you bring the UI. Compatible with Tailwind, Styled Components, or raw CSS.
+          </p>
+        </div>
+        <div class="feature-card" data-feature-card>
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#FF9500" fill-opacity="0.1"/>
+              <path d="M8 12h16M8 16h12M8 20h16" stroke="#FF9500" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="26" cy="22" r="3" stroke="#FF9500" stroke-width="2"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Drag & Drop</h3>
+          <p class="feature-description">
+            Native support for rearranging blocks with intuitive drag handles.
+          </p>
+        </div>
+        <div class="feature-card" data-feature-card>
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#34C759" fill-opacity="0.1"/>
+              <path d="M16 8v16M8 16h16" stroke="#34C759" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="16" cy="8" r="2" fill="#34C759"/>
+              <circle cx="8" cy="16" r="2" fill="#34C759"/>
+              <circle cx="24" cy="16" r="2" fill="#34C759"/>
+              <circle cx="16" cy="24" r="2" fill="#34C759"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">Extensible Plugin System</h3>
+          <p class="feature-description">
+            Create custom blocks for Kanbans, Embeds, Code Blocks, and more.
+          </p>
+        </div>
+        <div class="feature-card" data-feature-card>
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#FF3B30" fill-opacity="0.1"/>
+              <circle cx="16" cy="16" r="8" stroke="#FF3B30" stroke-width="2"/>
+              <path d="M16 12v4M16 20h.01" stroke="#FF3B30" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">68 Languages</h3>
+          <p class="feature-description">
+            Lazy-loaded locale support with only English bundled by default (~3KB).
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start Section -->
+  <section class="quick-start" id="quick-start">
+    <div class="quick-start-bg">
+      <div class="quick-start-blur"></div>
+    </div>
+    <div class="container">
+      <div class="section-header">
+        <p class="section-eyebrow">Quick Start</p>
+        <h2 class="section-title">Up and running<br>in minutes</h2>
+      </div>
+      <div class="install-steps">
+        <div class="install-step" data-install-step>
+          <div class="step-number">
+            <span>1</span>
+          </div>
+          <div class="step-content">
+            <h3 class="step-title">Install Blok</h3>
+            <p class="step-description">Add Blok to your project using your favorite package manager.</p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="npm install @jackuait/blok">
+                <span class="code-copy-text">Copy</span>
+                <svg class="code-copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M5 3v8a2 2 0 002 2h6V11H7a1 1 0 01-1-1V3H5zm2-1h6a2 2 0 012 2v9a2 2 0 01-2 2H7a2 2 0 01-2-2V2z"/>
+                </svg>
+              </button>
+              <pre><code class="language-bash">npm install @jackuait/blok</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="install-step" data-install-step>
+          <div class="step-number">
+            <span>2</span>
+          </div>
+          <div class="step-content">
+            <h3 class="step-title">Import and configure</h3>
+            <p class="step-description">Import the editor and tools, then configure your block types.</p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="import { Blok } from '@jackuait/blok';
+import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    paragraph: Paragraph,
+    header: { class: Header, placeholder: 'Enter a heading' },
+    list: List,
+    bold: Bold,
+    italic: Italic,
+    link: Link,
+  },
+});">
+                <span class="code-copy-text">Copy</span>
+                <svg class="code-copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M5 3v8a2 2 0 002 2h6V11H7a1 1 0 01-1-1V3H5zm2-1h6a2 2 0 012 2v9a2 2 0 01-2 2H7a2 2 0 01-2-2V2z"/>
+                </svg>
+              </button>
+              <pre><code class="language-typescript">import { Blok } from '@jackuait/blok';
+import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    paragraph: Paragraph,
+    header: { class: Header, placeholder: 'Enter a heading' },
+    list: List,
+    bold: Bold,
+    italic: Italic,
+    link: Link,
+  },
+});</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="install-step" data-install-step>
+          <div class="step-number">
+            <span>3</span>
+          </div>
+          <div class="step-content">
+            <h3 class="step-title">Save content</h3>
+            <p class="step-description">Extract clean JSON data ready to save anywhere.</p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="const data = await editor.save();
+// {
+//   &quot;version&quot;: &quot;0.5.0&quot;,
+//   &quot;time&quot;: 1642697600000,
+//   &quot;blocks&quot;: [
+//     {
+//       &quot;id&quot;: &quot;abc123&quot;,
+//       &quot;type&quot;: &quot;paragraph&quot;,
+//       &quot;data&quot;: { &quot;text&quot;: &quot;Hello World&quot; }
+//     }
+//   ]
+// }">
+                <span class="code-copy-text">Copy</span>
+                <svg class="code-copy-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M5 3v8a2 2 0 002 2h6V11H7a1 1 0 01-1-1V3H5zm2-1h6a2 2 0 012 2v9a2 2 0 01-2 2H7a2 2 0 01-2-2V2z"/>
+                </svg>
+              </button>
+              <pre><code class="language-javascript">const data = await editor.save();
+// {
+//   "version": "0.5.0",
+//   "time": 1642697600000,
+//   "blocks": [
+//     {
+//       "id": "abc123",
+//       "type": "paragraph",
+//       "data": { "text": "Hello World" }
+//     }
+//   ]
+// }</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API Section -->
+  <section class="api" id="api">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-eyebrow">API Reference</p>
+        <h2 class="section-title">Powerful APIs<br>for every use case</h2>
+        <p class="section-description">
+          Access every aspect of the editor through our comprehensive API surface.
+        </p>
+      </div>
+      <div class="api-grid">
+        <div class="api-card">
+          <div class="api-card-header">
+            <h3 class="api-card-title">Core Methods</h3>
+          </div>
+          <div class="api-card-content">
+            <div class="api-method">
+              <span class="api-method-name">save()</span>
+              <span class="api-method-return">Promise&lt;OutputData&gt;</span>
+              <p class="api-method-description">Extract content as JSON</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">render(data)</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+              <p class="api-method-description">Render from JSON data</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">focus()</span>
+              <span class="api-method-return">boolean</span>
+              <p class="api-method-description">Set cursor focus</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">clear()</span>
+              <span class="api-method-return">void</span>
+              <p class="api-method-description">Clear all blocks</p>
+            </div>
+          </div>
+        </div>
+        <div class="api-card">
+          <div class="api-card-header">
+            <h3 class="api-card-title">Blocks API</h3>
+          </div>
+          <div class="api-card-content">
+            <div class="api-method">
+              <span class="api-method-name">blocks.delete()</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+              <p class="api-method-description">Remove specified block</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">blocks.insert()</span>
+              <span class="api-method-return">Promise&lt;BlockAPI&gt;</span>
+              <p class="api-method-description">Insert new block</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">blocks.move()</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+              <p class="api-method-description">Move block to new index</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">blocks.update()</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+              <p class="api-method-description">Update block data</p>
+            </div>
+          </div>
+        </div>
+        <div class="api-card">
+          <div class="api-card-header">
+            <h3 class="api-card-title">Events</h3>
+          </div>
+          <div class="api-card-content">
+            <div class="api-method">
+              <span class="api-method-name">on(event, fn)</span>
+              <span class="api-method-return">void</span>
+              <p class="api-method-description">Subscribe to events</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">off(event, fn)</span>
+              <span class="api-method-return">void</span>
+              <p class="api-method-description">Unsubscribe from events</p>
+            </div>
+            <div class="api-method">
+              <span class="api-method-name">emit(event, data)</span>
+              <span class="api-method-return">void</span>
+              <p class="api-method-description">Emit custom events</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="api-cta">
+        <a href="api.html" class="btn btn-secondary">View Full API Reference</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Migration Section -->
+  <section class="migration">
+    <div class="container">
+      <div class="migration-card">
+        <div class="migration-content">
+          <div class="migration-icon">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <path d="M24 4L6 12v14c0 9.5 7.7 18.4 18 20.5 10.3-2.1 18-11 18-20.5V12L24 4z" stroke="url(#migration-gradient)" stroke-width="2" fill="none"/>
+              <path d="M18 24l6 6 10-10" stroke="url(#migration-gradient)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <defs>
+                <linearGradient id="migration-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#34C759"/>
+                  <stop offset="100%" style="stop-color:#30D158"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h2 class="migration-title">Migrating from EditorJS?</h2>
+          <p class="migration-description">
+            Blok is designed as a drop-in replacement. Use our automated codemod to switch in minutes, not hours.
+          </p>
+          <div class="migration-code">
+            <pre><code>npx -p @jackuait/blok migrate-from-editorjs ./src</code></pre>
+          </div>
+          <a href="migration.html" class="btn btn-primary">View Migration Guide</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <svg width="24" height="24" viewBox="0 0 128 128" fill="none">
+              <rect width="128" height="128" rx="28" fill="url(#logo-gradient)"/>
+              <path d="M36 40h56c2.2 0 4 1.8 4 4v40c0 2.2-1.8 4-4 4H36c-2.2 0-4-1.8-4-4V44c0-2.2 1.8-4 4-4z" fill="white" opacity="0.9"/>
+              <rect x="42" y="52" width="44" height="4" rx="2" fill="#007AFF"/>
+              <rect x="42" y="62" width="32" height="4" rx="2" fill="#5856D6"/>
+              <circle cx="98" cy="84" r="14" fill="white"/>
+              <path d="M94 84l3 3 6-6" stroke="#007AFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <defs>
+                <linearGradient id="logo-gradient-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#007AFF"/>
+                  <stop offset="100%" style="stop-color:#5856D6"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <span>Blok</span>
+          </div>
+          <p class="footer-tagline">Block-based rich text editor for modern applications.</p>
+        </div>
+        <div class="footer-links">
+          <div class="footer-column">
+            <h4 class="footer-column-title">Documentation</h4>
+            <a href="#quick-start" class="footer-link">Quick Start</a>
+            <a href="#api" class="footer-link">API Reference</a>
+            <a href="migration.html" class="footer-link">Migration Guide</a>
+          </div>
+          <div class="footer-column">
+            <h4 class="footer-column-title">Resources</h4>
+            <a href="https://github.com/JackUait/blok" class="footer-link">GitHub</a>
+            <a href="https://www.npmjs.com/package/@jackuait/blok" class="footer-link">npm</a>
+            <a href="#" class="footer-link">Examples</a>
+          </div>
+          <div class="footer-column">
+            <h4 class="footer-column-title">Community</h4>
+            <a href="https://github.com/JackUait/blok/issues" class="footer-link">Issues</a>
+            <a href="https://github.com/JackUait/blok/discussions" class="footer-link">Discussions</a>
+            <a href="#" class="footer-link">Contributing</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 JackUait. Licensed under <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache 2.0</a>.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/main.js"></script>
+</body>
+</html>

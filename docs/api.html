@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Reference — Blok Documentation</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/api.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=SF+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav" data-nav>
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <svg width="32" height="32" viewBox="0 0 128 128" fill="none">
+          <defs>
+            <linearGradient id="logo-gradient-nav" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#007AFF"/>
+              <stop offset="100%" style="stop-color:#5856D6"/>
+            </linearGradient>
+          </defs>
+          <rect width="128" height="128" rx="28" fill="url(#logo-gradient-nav)"/>
+          <path d="M36 40h56c2.2 0 4 1.8 4 4v40c0 2.2-1.8 4-4 4H36c-2.2 0-4-1.8-4-4V44c0-2.2 1.8-4 4-4z" fill="white" opacity="0.9"/>
+          <rect x="42" y="52" width="44" height="4" rx="2" fill="#007AFF"/>
+          <rect x="42" y="62" width="32" height="4" rx="2" fill="#5856D6"/>
+          <circle cx="98" cy="84" r="14" fill="white"/>
+          <path d="M94 84l3 3 6-6" stroke="#007AFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span>Blok</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html#features" class="nav-link">Features</a>
+        <a href="index.html#quick-start" class="nav-link">Quick Start</a>
+        <a href="api.html" class="nav-link nav-link-active">API</a>
+        <a href="https://github.com/JackUait/blok" class="nav-link nav-link-github">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu" data-nav-toggle>
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- API Documentation -->
+  <div class="api-docs">
+    <!-- Sidebar -->
+    <aside class="api-sidebar" data-api-sidebar>
+      <div class="api-sidebar-header">
+        <button class="api-sidebar-back" href="index.html">Back to Docs</button>
+      </div>
+      <nav class="api-sidebar-nav">
+        <div class="api-sidebar-section">
+          <h4 class="api-sidebar-title">Core</h4>
+          <a href="#core" class="api-sidebar-link active">Blok Class</a>
+          <a href="#config" class="api-sidebar-link">Configuration</a>
+        </div>
+        <div class="api-sidebar-section">
+          <h4 class="api-sidebar-title">API Modules</h4>
+          <a href="#blocks-api" class="api-sidebar-link">Blocks</a>
+          <a href="#caret-api" class="api-sidebar-link">Caret</a>
+          <a href="#events-api" class="api-sidebar-link">Events</a>
+          <a href="#saver-api" class="api-sidebar-link">Saver</a>
+          <a href="#selection-api" class="api-sidebar-link">Selection</a>
+          <a href="#styles-api" class="api-sidebar-link">Styles</a>
+          <a href="#toolbar-api" class="api-sidebar-link">Toolbar</a>
+          <a href="#tools-api" class="api-sidebar-link">Tools</a>
+        </div>
+        <div class="api-sidebar-section">
+          <h4 class="api-sidebar-title">Data</h4>
+          <a href="#output-data" class="api-sidebar-link">OutputData</a>
+          <a href="#block-data" class="api-sidebar-link">BlockData</a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="api-main">
+      <!-- Breadcrumb -->
+      <div class="api-breadcrumb">
+        <a href="index.html">Documentation</a>
+        <span class="api-breadcrumb-separator">/</span>
+        <span>API Reference</span>
+      </div>
+
+      <!-- Core Section -->
+      <section id="core" class="api-section">
+        <div class="api-section-header">
+          <div class="api-section-badge">Core</div>
+          <h1 class="api-section-title">Blok Class</h1>
+          <p class="api-section-description">
+            The main editor class that initializes and manages the Blok editor instance.
+          </p>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Constructor</h3>
+          <div class="code-block" data-code-block>
+            <button class="code-copy" data-copy data-code="new Blok(configuration?: BlokConfig | string)">
+              <span class="code-copy-text">Copy</span>
+            </button>
+            <pre><code class="language-typescript">new Blok(configuration?: BlokConfig | string)</code></pre>
+          </div>
+
+          <h4 class="api-block-subtitle">Parameters</h4>
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>configuration</code></td>
+                <td><code>BlokConfig | string</code></td>
+                <td>Configuration object or holder element ID/selector</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4 class="api-block-subtitle">Example</h4>
+          <div class="code-block" data-code-block>
+            <button class="code-copy" data-copy data-code="import { Blok } from '@jackuait/blok';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    paragraph: Paragraph,
+  },
+});">
+              <span class="code-copy-text">Copy</span>
+            </button>
+            <pre><code class="language-typescript">import { Blok } from '@jackuait/blok';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    paragraph: Paragraph,
+  },
+});</code></pre>
+          </div>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Properties</h3>
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>isReady</code></td>
+                <td><code>Promise&lt;void&gt;</code></td>
+                <td>Promise that resolves when editor is ready</td>
+              </tr>
+              <tr>
+                <td><code>blocks</code></td>
+                <td><code>Blocks</code></td>
+                <td>Blocks API module</td>
+              </tr>
+              <tr>
+                <td><code>caret</code></td>
+                <td><code>Caret</code></td>
+                <td>Caret API module</td>
+              </tr>
+              <tr>
+                <td><code>saver</code></td>
+                <td><code>Saver</code></td>
+                <td>Saver API module</td>
+              </tr>
+              <tr>
+                <td><code>toolbar</code></td>
+                <td><code>Toolbar</code></td>
+                <td>Toolbar API module</td>
+              </tr>
+              <tr>
+                <td><code>inlineToolbar</code></td>
+                <td><code>InlineToolbar</code></td>
+                <td>Inline toolbar API module</td>
+              </tr>
+              <tr>
+                <td><code>events</code></td>
+                <td><code>Events</code></td>
+                <td>Events API module</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Methods</h3>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">save()</span>
+              <span class="api-method-return">Promise&lt;OutputData&gt;</span>
+            </div>
+            <p class="api-method-description">
+              Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content.
+            </p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="const data = await editor.save();">
+                <span class="code-copy-text">Copy</span>
+              </button>
+              <pre><code class="language-typescript">const data = await editor.save();</code></pre>
+            </div>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">render(data)</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+            </div>
+            <p class="api-method-description">
+              Renders editor content from previously saved JSON data.
+            </p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="await editor.render(data);">
+                <span class="code-copy-text">Copy</span>
+              </button>
+              <pre><code class="language-typescript">await editor.render(data);</code></pre>
+            </div>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">focus(atEnd?)</span>
+              <span class="api-method-return">boolean</span>
+            </div>
+            <p class="api-method-description">
+              Sets focus to the editor. Optionally positions cursor at the end of content.
+            </p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="editor.focus();
+editor.focus(true); // Focus at end">
+                <span class="code-copy-text">Copy</span>
+              </button>
+              <pre><code class="language-typescript">editor.focus();
+editor.focus(true); // Focus at end</code></pre>
+            </div>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">clear()</span>
+              <span class="api-method-return">void</span>
+            </div>
+            <p class="api-method-description">
+              Removes all blocks from the editor.
+            </p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="editor.clear();">
+                <span class="code-copy-text">Copy</span>
+              </button>
+              <pre><code class="language-typescript">editor.clear();</code></pre>
+            </div>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">destroy()</span>
+              <span class="api-method-return">void</span>
+            </div>
+            <p class="api-method-description">
+              Destroys the editor instance and removes all DOM elements and event listeners.
+            </p>
+            <div class="code-block" data-code-block>
+              <button class="code-copy" data-copy data-code="editor.destroy();">
+                <span class="code-copy-text">Copy</span>
+              </button>
+              <pre><code class="language-typescript">editor.destroy();</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Configuration Section -->
+      <section id="config" class="api-section">
+        <div class="api-section-header">
+          <h2 class="api-section-title">Configuration</h2>
+          <p class="api-section-description">
+            The configuration object passed to the Blok constructor.
+          </p>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">BlokConfig</h3>
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Type</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>holder</code></td>
+                <td><code>string | HTMLElement</code></td>
+                <td><code>'blok'</code></td>
+                <td>Container element ID or reference</td>
+              </tr>
+              <tr>
+                <td><code>tools</code></td>
+                <td><code>Record&lt;string, ToolConfig&gt;</code></td>
+                <td><code>{}</code></td>
+                <td>Available block and inline tools</td>
+              </tr>
+              <tr>
+                <td><code>placeholder</code></td>
+                <td><code>string</code></td>
+                <td><code>''</code></td>
+                <td>Placeholder text for empty blocks</td>
+              </tr>
+              <tr>
+                <td><code>minHeight</code></td>
+                <td><code>string | number</code></td>
+                <td><code>300px</code></td>
+                <td>Minimum height of the editor</td>
+              </tr>
+              <tr>
+                <td><code>defaultBlock</code></td>
+                <td><code>string</code></td>
+                <td><code>'paragraph'</code></td>
+                <td>Default block type</td>
+              </tr>
+              <tr>
+                <td><code>sanitizer</code></td>
+                <td><code>SanitizerConfig</code></td>
+                <td><code>{}</code></td>
+                <td>HTML sanitization rules</td>
+              </tr>
+              <tr>
+                <td><code>i18n</code></td>
+                <td><code>I18nConfig</code></td>
+                <td><code>{ locale: 'auto' }</code></td>
+                <td>Internationalization settings</td>
+              </tr>
+              <tr>
+                <td><code>data</code></td>
+                <td><code>OutputData</code></td>
+                <td><code>undefined</code></td>
+                <td>Initial data to render</td>
+              </tr>
+              <tr>
+                <td><code>readOnly</code></td>
+                <td><code>boolean</code></td>
+                <td><code>false</code></td>
+                <td>Enable read-only mode</td>
+              </tr>
+              <tr>
+                <td><code>onChange</code></td>
+                <td><code>(api: API) => void</code></td>
+                <td><code>undefined</code></td>
+                <td>Change callback function</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Blocks API Section -->
+      <section id="blocks-api" class="api-section">
+        <div class="api-section-header">
+          <div class="api-section-badge">Blocks</div>
+          <h2 class="api-section-title">Blocks API</h2>
+          <p class="api-section-description">
+            Manage blocks in the editor—create, delete, update, and reorder content.
+          </p>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Methods</h3>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">blocks.delete(blockId)</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+            </div>
+            <p class="api-method-description">
+              Removes the specified block from the editor.
+            </p>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">blocks.insert(type, data?)</span>
+              <span class="api-method-return">Promise&lt;BlockAPI&gt;</span>
+            </div>
+            <p class="api-method-description">
+              Inserts a new block with the specified type and optional data.
+            </p>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">blocks.move(fromIndex, toIndex)</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+            </div>
+            <p class="api-method-description">
+              Moves a block from one position to another.
+            </p>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">blocks.update(blockId, data)</span>
+              <span class="api-method-return">Promise&lt;void&gt;</span>
+            </div>
+            <p class="api-method-description">
+              Updates the data of an existing block.
+            </p>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">blocks.getById(blockId)</span>
+              <span class="api-method-return">BlockAPI | undefined</span>
+            </div>
+            <p class="api-method-description">
+              Retrieves a block by its ID.
+            </p>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">blocks.getCurrentBlockIndex()</span>
+              <span class="api-method-return">number</span>
+            </div>
+            <p class="api-method-description">
+              Returns the index of the block containing the caret.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Events API Section -->
+      <section id="events-api" class="api-section">
+        <div class="api-section-header">
+          <div class="api-section-badge">Events</div>
+          <h2 class="api-section-title">Events API</h2>
+          <p class="api-section-description">
+            Subscribe to and emit custom events throughout the editor lifecycle.
+          </p>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Methods</h3>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">on(eventName, callback)</span>
+              <span class="api-method-return">void</span>
+            </div>
+            <p class="api-method-description">
+              Subscribe to an event. The callback will be invoked when the event is triggered.
+            </p>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">off(eventName, callback)</span>
+              <span class="api-method-return">void</span>
+            </div>
+            <p class="api-method-description">
+              Unsubscribe from an event by removing a specific callback.
+            </p>
+          </div>
+
+          <div class="api-method-large">
+            <div class="api-method-header">
+              <span class="api-method-name">emit(eventName, data)</span>
+              <span class="api-method-return">void</span>
+            </div>
+            <p class="api-method-description">
+              Emit a custom event with optional data payload.
+            </p>
+          </div>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Built-in Events</h3>
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>change</code></td>
+                <td>Editor content changed</td>
+              </tr>
+              <tr>
+                <td><code>block-added</code></td>
+                <td>A new block was added</td>
+              </tr>
+              <tr>
+                <td><code>block-removed</code></td>
+                <td>A block was removed</td>
+              </tr>
+              <tr>
+                <td><code>block-changed</code></td>
+                <td>A block's content changed</td>
+              </tr>
+              <tr>
+                <td><code>block-moved</code></td>
+                <td>A block was moved to a new position</td>
+              </tr>
+              <tr>
+                <td><code>focus</code></td>
+                <td>Editor received focus</td>
+              </tr>
+              <tr>
+                <td><code>blur</code></td>
+                <td>Editor lost focus</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Output Data Section -->
+      <section id="output-data" class="api-section">
+        <div class="api-section-header">
+          <div class="api-section-badge">Data</div>
+          <h2 class="api-section-title">OutputData Format</h2>
+          <p class="api-section-description">
+            The JSON structure returned by <code>save()</code> and accepted by <code>render()</code>.
+          </p>
+        </div>
+
+        <div class="code-block" data-code-block>
+          <button class="code-copy" data-copy data-code='{
+  "version": "0.5.0",
+  "time": 1642697600000,
+  "blocks": [
+    {
+      "id": "abc123",
+      "type": "paragraph",
+      "data": { "text": "Hello World" },
+      "tunes": {},
+      "parent": "parent-id",
+      "content": ["child-id-1", "child-id-2"]
+    }
+  ]
+}'>
+            <span class="code-copy-text">Copy</span>
+          </button>
+          <pre><code class="language-json">{
+  "version": "0.5.0",
+  "time": 1642697600000,
+  "blocks": [
+    {
+      "id": "abc123",
+      "type": "paragraph",
+      "data": { "text": "Hello World" },
+      "tunes": {},
+      "parent": "parent-id",
+      "content": ["child-id-1", "child-id-2"]
+    }
+  ]
+}</code></pre>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Properties</h3>
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>version</code></td>
+                <td><code>string</code></td>
+                <td>Blok version that created the data</td>
+              </tr>
+              <tr>
+                <td><code>time</code></td>
+                <td><code>number</code></td>
+                <td>Timestamp of when the data was saved</td>
+              </tr>
+              <tr>
+                <td><code>blocks</code></td>
+                <td><code>OutputBlockData[]</code></td>
+                <td>Array of block data objects</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="api-block">
+          <h3 class="api-block-title">Block Properties</h3>
+          <table class="api-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>id</code></td>
+                <td><code>string</code></td>
+                <td>Unique block identifier</td>
+              </tr>
+              <tr>
+                <td><code>type</code></td>
+                <td><code>string</code></td>
+                <td>Block type (e.g., "paragraph", "header")</td>
+              </tr>
+              <tr>
+                <td><code>data</code></td>
+                <td><code>BlockData</code></td>
+                <td>Block-specific data</td>
+              </tr>
+              <tr>
+                <td><code>tunes</code></td>
+                <td><code>Record&lt;string, unknown&gt;</code></td>
+                <td>Block tune settings</td>
+              </tr>
+              <tr>
+                <td><code>parent</code></td>
+                <td><code>string | null</code></td>
+                <td>Parent block ID (hierarchical mode)</td>
+              </tr>
+              <tr>
+                <td><code>content</code></td>
+                <td><code>string[]</code></td>
+                <td>Child block IDs (hierarchical mode)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer api-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2025 JackUait. Licensed under <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache 2.0</a>.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/main.js"></script>
+  <script src="assets/api.js"></script>
+</body>
+</html>

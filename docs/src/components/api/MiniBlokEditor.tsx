@@ -1,35 +1,29 @@
-import { FC, useRef, useEffect, useState, useCallback } from 'react';
+import type { FC } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import type { DemoConfig, BlockData } from './api-data';
+import type { BlokEditorInstance, BlokModule } from '@/types/blok';
+
+// Extend Window interface globally for tool class assignments
+declare global {
+  interface Window {
+    BlokHeader: unknown;
+    BlokParagraph: unknown;
+    BlokList: unknown;
+    BlokBold: unknown;
+    BlokItalic: unknown;
+    BlokLink: unknown;
+  }
+}
 
 export interface MiniBlokEditorProps {
   initialState?: DemoConfig['initialState'];
-  onEditorReady?: (editor: unknown) => void;
+  onEditorReady?: (editor: BlokEditorInstance) => void;
 }
 
 // Extension interface for the container ref to expose methods
 export interface MiniBlokEditorContainer extends HTMLDivElement {
   reset?: () => void;
   getEditor?: () => BlokEditorInstance | null;
-}
-
-interface BlokModule {
-  Blok: new (config: unknown) => BlokEditorInstance;
-  Header: unknown;
-  Paragraph: unknown;
-  List: unknown;
-  Bold: unknown;
-  Italic: unknown;
-  Link: unknown;
-}
-
-interface BlokEditorInstance {
-  destroy?: () => void;
-  clear: () => Promise<void>;
-  render: (data: { blocks: BlockData[] }) => Promise<void>;
-  blocks: {
-    getBlocksCount(): number;
-  };
-  [key: string]: unknown;
 }
 
 const DEFAULT_INITIAL_STATE = {
@@ -67,25 +61,20 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
 
       // Import the full bundle which includes all tools.
       // The Vite externalDistPlugin resolves /dist/ paths at runtime to the parent dist directory.
-      // @ts-ignore - Module is resolved at runtime by Vite's externalDistPlugin
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      // @ts-expect-error - Module path is resolved at runtime by Vite's externalDistPlugin, not TypeScript.
+      // Type safety is ensured by the BlokModule cast which matches the runtime module structure.
       const module = (await import('/dist/full.mjs')) as BlokModule;
 
       if (!containerRef.current) return;
 
       // Make tools available globally for the editor config
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).BlokHeader = module.Header;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).BlokParagraph = module.Paragraph;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).BlokList = module.List;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).BlokBold = module.Bold;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).BlokItalic = module.Italic;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).BlokLink = module.Link;
+      // This is required for the editor to find the tool classes
+      window.BlokHeader = module.Header;
+      window.BlokParagraph = module.Paragraph;
+      window.BlokList = module.List;
+      window.BlokBold = module.Bold;
+      window.BlokItalic = module.Italic;
+      window.BlokLink = module.Link;
 
       // Create the editor
       const BlokClass = module.Blok;
@@ -138,7 +127,7 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
   const reset = useCallback(() => {
     const editor = editorRef.current;
     if (editor) {
-      editor.render({ blocks: initialStateRef.current.blocks });
+      void editor.render({ blocks: initialStateRef.current.blocks });
     }
   }, []);
 
@@ -168,8 +157,7 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
         editorRef.current = null;
       }
     };
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only run on mount - intentionally omit initEditor from deps to prevent re-initialization
   }, []);
 
   if (error) {

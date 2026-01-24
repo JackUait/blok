@@ -45,7 +45,6 @@ export const ApiPreview: React.FC = () => {
     <section className="api" id="api">
       <div className="container">
         <div className="section-header">
-          <p className="section-eyebrow">API Reference</p>
           <h2 className="section-title">
             Powerful APIs
             <br />

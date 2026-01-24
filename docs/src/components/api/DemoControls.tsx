@@ -1,4 +1,5 @@
-import { FC, useState, useCallback } from 'react';
+import type { FC } from 'react';
+import { useState, useCallback } from 'react';
 import type { DemoAction } from './api-data';
 
 export interface DemoControlsProps {

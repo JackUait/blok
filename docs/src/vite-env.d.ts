@@ -18,7 +18,7 @@ import type { SearchIndexItem } from '@/types/search';
 
 // Declare the /dist/ module that is resolved by Vite's externalDistPlugin
 declare module '/dist/full.mjs' {
-  export const Blok: new (config: unknown) => {
+  export interface BlokEditorInstance {
     destroy?(): void;
     clear(): Promise<void>;
     render(data: { blocks: unknown[] }): Promise<void>;
@@ -30,8 +30,12 @@ declare module '/dist/full.mjs' {
       insert(type: string, data: unknown, config: unknown, index: number): unknown;
       render(data: { blocks: unknown[] }): Promise<void>;
     };
+    insert(toIndex?: number): unknown;
+    insert(type?: string, data?: unknown, config?: unknown, index?: number, needToFocus?: boolean, replace?: boolean, id?: string): unknown;
     [key: string]: unknown;
-  };
+  }
+
+  export const Blok: new (config: unknown) => BlokEditorInstance;
   export const Header: unknown;
   export const Paragraph: unknown;
   export const List: unknown;

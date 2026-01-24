@@ -11,8 +11,6 @@ interface NavProps {
 
 export const Nav: React.FC<NavProps> = ({ links }) => {
   const location = useLocation();
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [navHidden, setNavHidden] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -36,27 +34,8 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      const shouldHide = scrollY > 100;
-
       // Track scrolled state for visual enhancement
       setNavScrolled(scrollY > 20);
-
-      if (!shouldHide) {
-        setNavHidden(false);
-        setLastScrollY(scrollY);
-        return;
-      }
-
-      const isScrollingDown = scrollY > lastScrollY;
-      const shouldHideNav = isScrollingDown && !navHidden;
-      const shouldShowNav = !isScrollingDown && navHidden;
-      const shouldUpdateNav = shouldHideNav || shouldShowNav;
-
-      if (shouldUpdateNav) {
-        setNavHidden(shouldHideNav);
-      }
-
-      setLastScrollY(scrollY);
     };
 
     const tickingState = { value: false };
@@ -72,7 +51,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
 
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, [lastScrollY, navHidden]);
+  }, []);
 
   // Handle Cmd/Ctrl + K to open search
   useEffect(() => {
@@ -96,7 +75,6 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
 
   const navClasses = [
     'nav',
-    navHidden ? 'hidden' : '',
     navScrolled ? 'scrolled' : ''
   ].filter(Boolean).join(' ');
 

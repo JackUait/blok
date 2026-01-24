@@ -15,34 +15,10 @@
   }
 }
 
-/* Breadcrumb */
-.migration-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xl);
-}
-
-.migration-breadcrumb a {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-.migration-breadcrumb a:hover {
-  color: var(--color-blue);
-}
-
-.breadcrumb-separator {
-  color: var(--color-text-tertiary);
-}
-
 /* Migration Hero */
 .migration-hero {
   text-align: center;
-  padding: var(--spacing-4xl) 0;
+  padding-bottom: var(--spacing-4xl);
 }
 
 .migration-hero-badge {

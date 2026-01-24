@@ -25,18 +25,7 @@ const editor = new Blok({
   },
 });`;
 
-const SAVE_CODE = `const data = await editor.save();
-// {
-//   "version": "0.5.0",
-//   "time": 1642697600000,
-//   "blocks": [
-//     {
-//       "id": "abc123",
-//       "type": "paragraph",
-//       "data": { "text": "Hello World" }
-//     }
-//   ]
-// }`;
+const SAVE_CODE = `const data = await editor.save();`;
 
 const QuickStartContent: React.FC = () => {
   const [packageManager, setPackageManager] = useState<PackageManager>('yarn');

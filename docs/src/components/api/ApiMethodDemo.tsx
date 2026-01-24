@@ -1,5 +1,7 @@
-import { FC, useRef, useState, useCallback } from 'react';
+import type { FC } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import type { DemoConfig } from './api-data';
+import type { BlokEditorInstance } from '@/types/blok';
 import { MiniBlokEditor } from './MiniBlokEditor';
 import type { MiniBlokEditorContainer } from './MiniBlokEditor';
 import { DemoControls } from './DemoControls';
@@ -14,12 +16,12 @@ export interface ApiMethodDemoProps {
  * Combines the mini editor with action buttons and output display
  */
 export const ApiMethodDemo: FC<ApiMethodDemoProps> = ({ demo }) => {
-  const editorInstanceRef = useRef<unknown | null>(null);
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
+  const [editor, setEditor] = useState<BlokEditorInstance | null>(null);
   const [output, setOutput] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const handleEditorReady = useCallback((editor: unknown) => {
-    editorInstanceRef.current = editor;
+  const handleEditorReady = useCallback((editorInstance: BlokEditorInstance) => {
+    setEditor(editorInstance);
   }, []);
 
   const handleOutputChange = useCallback(
@@ -52,7 +54,7 @@ export const ApiMethodDemo: FC<ApiMethodDemoProps> = ({ demo }) => {
       </div>
       <DemoControls
         actions={demo.actions}
-        editor={editorInstanceRef.current}
+        editor={editor}
         onOutputChange={handleOutputChange}
         onReset={handleReset}
       />

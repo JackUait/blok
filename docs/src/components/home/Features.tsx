@@ -100,7 +100,6 @@ export const Features: React.FC = () => {
     <section className="features" id="features">
       <div className="container">
         <div className="section-header">
-          <p className="section-eyebrow">Why Blok</p>
           <h2 className="section-title">
             Built for developers,
             <br />

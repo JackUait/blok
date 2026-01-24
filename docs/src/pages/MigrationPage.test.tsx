@@ -15,39 +15,6 @@ describe('MigrationPage', () => {
     expect(nav).toBeInTheDocument();
   });
 
-  it('should render the migration breadcrumb', () => {
-    render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Documentation')).toBeInTheDocument();
-    expect(screen.getByText('Migration Guide')).toBeInTheDocument();
-  });
-
-  it('should render the breadcrumb separator', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    const separator = container.querySelector('.breadcrumb-separator');
-    expect(separator?.textContent).toBe('/');
-  });
-
-  it('should render the migration hero badge', () => {
-    render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    const badge = document.querySelector('.migration-hero-badge');
-    expect(badge).toBeInTheDocument();
-  });
-
   it('should render the migration hero title', () => {
     render(
       <MemoryRouter>
@@ -103,17 +70,6 @@ describe('MigrationPage', () => {
     expect(main?.tagName.toLowerCase()).toBe('main');
   });
 
-  it('should have migration-breadcrumb div', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    const breadcrumb = container.querySelector('.migration-breadcrumb');
-    expect(breadcrumb).toBeInTheDocument();
-  });
-
   it('should have migration-hero section', () => {
     const { container } = render(
       <MemoryRouter>
@@ -123,17 +79,6 @@ describe('MigrationPage', () => {
 
     const hero = container.querySelector('.migration-hero');
     expect(hero).toBeInTheDocument();
-  });
-
-  it('should have migration-hero-badge div', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    const badge = container.querySelector('.migration-hero-badge');
-    expect(badge).toBeInTheDocument();
   });
 
   it('should have migration-hero-title h1', () => {

@@ -19,7 +19,7 @@ interface BlokModule {
 }
 
 export const EditorWrapper: React.FC<{
-  onEditorReady: (editor: BlokEditor) => void;
+  onEditorReady?: (editor: BlokEditor) => void;
 }> = ({ onEditorReady }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlokEditor | null>(null);
@@ -136,7 +136,7 @@ export const EditorWrapper: React.FC<{
 
         editorRef.current = editor;
         setLoading(false);
-        onEditorReadyRef.current(editor);
+        onEditorReadyRef.current?.(editor);
       } catch (err) {
         if (editorState.isMounted) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown error';

@@ -17,8 +17,8 @@ describe('constants', () => {
       expect(docsLink?.href).toBe('/docs');
     });
 
-    it('should have a Demo link', () => {
-      const demoLink = NAV_LINKS.find((link) => link.label === 'Demo');
+    it('should have a Try it out link', () => {
+      const demoLink = NAV_LINKS.find((link) => link.label === 'Try it out');
       expect(demoLink).toBeDefined();
       expect(demoLink?.href).toBe('/demo');
     });

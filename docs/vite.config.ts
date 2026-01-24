@@ -27,37 +27,49 @@ const externalDistPlugin = (): Plugin => {
       return null;
     },
     configureServer(server) {
-      // Serve the parent dist directory at /dist
+      // Serve the parent directory files (CHANGELOG.md, etc.)
       server.middlewares.use((req, res, next) => {
-        if (!req.url?.startsWith('/dist/')) {
-          next();
+        // Handle CHANGELOG.md from parent directory
+        if (req.url?.startsWith('/CHANGELOG.md')) {
+          const filePath = resolve(__dirname, '..', 'CHANGELOG.md');
+          if (fs.existsSync(filePath)) {
+            res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            fs.createReadStream(filePath).pipe(res);
+            return;
+          }
+        }
+
+        // Handle /dist/ directory
+        if (req.url?.startsWith('/dist/')) {
+          const filePath = resolve(parentDistDir, req.url.slice('/dist/'.length));
+          if (!fs.existsSync(filePath)) {
+            const notFoundRes = res as typeof res & { statusCode: number; end: (data: string) => void };
+            notFoundRes.statusCode = 404;
+            notFoundRes.end(`Not found: ${req.url}`);
+            return;
+          }
+
+          const ext = filePath.slice(filePath.lastIndexOf('.'));
+          const getContentType = (extension: string): string => {
+            if (extension === '.mjs' || extension === '.js') {
+              return 'application/javascript; charset=utf-8';
+            }
+            if (extension === '.css') {
+              return 'text/css; charset=utf-8';
+            }
+            return 'text/plain; charset=utf-8';
+          };
+
+          const contentType = getContentType(ext);
+
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          fs.createReadStream(filePath).pipe(res);
           return;
         }
 
-        const filePath = resolve(parentDistDir, req.url.slice('/dist/'.length));
-        if (!fs.existsSync(filePath)) {
-          const notFoundRes = res as typeof res & { statusCode: number; end: (data: string) => void };
-          notFoundRes.statusCode = 404;
-          notFoundRes.end(`Not found: ${req.url}`);
-          return;
-        }
-
-        const ext = filePath.slice(filePath.lastIndexOf('.'));
-        const getContentType = (extension: string): string => {
-          if (extension === '.mjs' || extension === '.js') {
-            return 'application/javascript; charset=utf-8';
-          }
-          if (extension === '.css') {
-            return 'text/css; charset=utf-8';
-          }
-          return 'text/plain; charset=utf-8';
-        };
-
-        const contentType = getContentType(ext);
-
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        fs.createReadStream(filePath).pipe(res);
+        next();
       });
     },
   };

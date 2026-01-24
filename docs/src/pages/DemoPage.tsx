@@ -1,164 +1,113 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { Nav } from '../components/layout/Nav';
-import { Toolbar } from '../components/demo/Toolbar';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
-import { OutputPanel } from '../components/demo/OutputPanel';
-import { Toast } from '../components/common/Toast';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/demo.css';
 
-interface BlokEditor {
-  save: () => Promise<unknown>;
-  clear: () => Promise<void>;
-  undo: () => Promise<void>;
-  redo: () => Promise<void>;
-}
-
 export const DemoPage: React.FC = () => {
-  const [editor, setEditor] = useState<BlokEditor | null>(null);
-  const [output, setOutput] = useState('Click "Save" to see the JSON output');
-  const [toast, setToast] = useState({ visible: false, message: '' });
+  useEffect(() => {
+    // Initialize scroll animations for hint cards
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px 0px -50px 0px',
+      threshold: 0.1,
+    };
 
-  const showToast = (message: string) => {
-    setToast({ visible: true, message });
-  };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-in');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
 
-  const handleSave = async () => {
-    if (editor) {
-      try {
-        const data = await editor.save();
-        setOutput(JSON.stringify(data, null, 2));
-        showToast('Content saved!');
-      } catch (err) {
-        console.error('Save failed:', err);
-        showToast('Failed to save');
-      }
-    }
-  };
+    // Observe hint cards
+    document.querySelectorAll('[data-hint-card]').forEach((el) => {
+      observer.observe(el);
+    });
 
-  const handleClear = async () => {
-    if (editor) {
-      try {
-        await editor.clear();
-        showToast('Editor cleared');
-      } catch (err) {
-        console.error('Clear failed:', err);
-      }
-    }
-  };
-
-  const handleUndo = async () => {
-    if (editor) {
-      try {
-        await editor.undo();
-      } catch (err) {
-        console.error('Undo failed:', err);
-      }
-    }
-  };
-
-  const handleRedo = async () => {
-    if (editor) {
-      try {
-        await editor.redo();
-      } catch (err) {
-        console.error('Redo failed:', err);
-      }
-    }
-  };
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <>
       <Nav links={NAV_LINKS} />
       <main className="demo-page">
-        <header className="demo-header">
-          <div className="demo-header-content">
-            <div className="demo-badge">
-              <span className="demo-badge-dot"></span>
-              <span className="demo-badge-text">Live Demo</span>
-            </div>
-            <h1 className="demo-title">Try Blok</h1>
-            <p className="demo-subtitle">
-              Experience the block-based editor. Type{' '}
-              <code className="inline-code">/</code> for commands or use the toolbar.
-            </p>
-          </div>
-        </header>
-
-        <div className="editor-container">
-          <Toolbar
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onSave={handleSave}
-            onClear={handleClear}
-          />
-          <EditorWrapper onEditorReady={setEditor} />
+        <div className="demo-bg">
+          <div className="demo-blur demo-blur-1" />
+          <div className="demo-blur demo-blur-2" />
         </div>
 
-        <OutputPanel output={output} />
+        <div className="demo-container">
+          <div className="demo-header">
+            <div className="demo-badge">
+              <span className="demo-badge-dot" />
+              <span className="demo-badge-text">Live Demo</span>
+            </div>
+            <h1 className="demo-title">
+              Experience Blok
+            </h1>
+            <p className="demo-subtitle">
+              A fully functional editor running in your browser.
+              <br />
+              Type <code className="inline-code">/</code> for commands, drag blocks to reorder, or select text to format.
+            </p>
+          </div>
 
-        <div className="features-hint">
-          <div className="hint-card">
-            <div className="hint-icon">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4M12 8h.01" />
-              </svg>
-            </div>
-            <div className="hint-content">
-              <strong>Pro tip:</strong> Type <code>/</code> in an empty block to see available block
-              types.
-            </div>
+          <div className="editor-container">
+            <EditorWrapper />
           </div>
-          <div className="hint-card">
-            <div className="hint-icon">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M15 3h6v6M10 14L21 3M15 21h6v-6M10 10l11 11" />
-              </svg>
+
+          <div className="features-hint">
+            <div className="hint-card" data-hint-card style={{ animationDelay: '0.1s' }}>
+              <div className="hint-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </div>
+              <div className="hint-content">
+                <strong>Real-time Editing</strong>
+                <p>Everything happens instantly in your browser. No server roundtrips, just pure performance.</p>
+              </div>
             </div>
-            <div className="hint-content">
-              Drag blocks using the <strong>⋮⋮</strong> handle to reorder.
+
+            <div className="hint-card" data-hint-card style={{ animationDelay: '0.2s' }}>
+              <div className="hint-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <path d="M12 18v-6" />
+                  <path d="M9 15l3 3 3-3" />
+                </svg>
+              </div>
+              <div className="hint-content">
+                <strong>Clean JSON Output</strong>
+                <p>Content is stored as structured JSON blocks, not messy HTML. Parse, validate, and store anywhere.</p>
+              </div>
             </div>
-          </div>
-          <div className="hint-card">
-            <div className="hint-icon">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-            </div>
-            <div className="hint-content">
-              Select text to format using the inline toolbar.
+
+            <div className="hint-card" data-hint-card style={{ animationDelay: '0.3s' }}>
+              <div className="hint-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 1v6m0 6v6" />
+                  <path d="M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24" />
+                  <path d="M1 12h6m6 0h6" />
+                  <path d="M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24" />
+                </svg>
+              </div>
+              <div className="hint-content">
+                <strong>Extensible Architecture</strong>
+                <p>Create custom block types with simple JavaScript classes. Bring your own UI or use the defaults.</p>
+              </div>
             </div>
           </div>
         </div>
       </main>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        onVisibleChange={(visible) => setToast((prev) => ({ ...prev, visible }))}
-      />
     </>
   );
 };

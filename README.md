@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="40%" alt="Blok logotype" src="./static/blok.webp">
+  <img width="40%" alt="Blok logotype" src="./static/blok.png">
 </p>
 
 ## Introducing Blok

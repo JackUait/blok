@@ -7,30 +7,11 @@ All notable changes to this project will be documented in this file.
 ### ✨ Features
 
 - implement Conflict-Free Replicated Data Type (CRDT) undo/redo ([#33](https://github.com/JackUait/blok/pull/33)) ([98477264](https://github.com/JackUait/blok/commit/984772642af711dcbe23d06f14ed77c003012ecc))
-- handle edge cases when converting lists in old format to lists in new format ([594f3ba7](https://github.com/JackUait/blok/commit/594f3ba77cee0a08bcf5f46bb8251e41d857ea8e))
-- add convertion from the old data model to the new data model for lists ([a87c21b7](https://github.com/JackUait/blok/commit/a87c21b71344e3620bb7fcd6e621730de8442363))
 
 ### 🐛 Bug Fixes
 
 - toolbar hover behavior after cross-block selection ([#35](https://github.com/JackUait/blok/pull/35)) ([122a50fc](https://github.com/JackUait/blok/commit/122a50fcdabee2e7003c8f464701ecc35e4fc9af))
 - trigger PatternPasteEvent for internal cut/paste operations ([d98fd369](https://github.com/JackUait/blok/commit/d98fd36951cd5824d728ddb006572d071f6e8650))
-- bundle size bugs ([6a0f760b](https://github.com/JackUait/blok/commit/6a0f760bba5b490c2a2785c853154620b7b32e7b))
-
-### 🔧 CI/CD
-
-- fix bundle size tracking ([#32](https://github.com/JackUait/blok/pull/32)) ([655691fd](https://github.com/JackUait/blok/commit/655691fde852d28cc9ec0c4e9e539ffd25f3ff4c))
-- improve E2E runtime with parallel sharding and PR reporting ([#29](https://github.com/JackUait/blok/pull/29)) ([c4a29f1b](https://github.com/JackUait/blok/commit/c4a29f1bb4b7106ad9475ab5074b57ae10c14356))
-
-### ♻️ Refactoring
-
-- decouple files to reduce their complexity ([#34](https://github.com/JackUait/blok/pull/34)) ([55b77ce7](https://github.com/JackUait/blok/commit/55b77ce7140ec4cc08bec83861ac36bce244086c))
-- reduce bundle size ([#30](https://github.com/JackUait/blok/pull/30)) ([c437a8be](https://github.com/JackUait/blok/commit/c437a8be38290ca1d0a5ac0d1f7978a414df2540))
-- improve publishing ([#28](https://github.com/JackUait/blok/pull/28)) ([9b32f5ba](https://github.com/JackUait/blok/commit/9b32f5ba4274af4d9b51287fff8e6bcb27ca75f5))
-
-### 🧹 Chores
-
-- update storybook-related dependencies ([b5fb5313](https://github.com/JackUait/blok/commit/b5fb531379b5c4df597643e8133275207e919a8f))
-- Pre-v1 Polish: UX Improvements & Bug Fixes ([#31](https://github.com/JackUait/blok/pull/31)) ([1917a221](https://github.com/JackUait/blok/commit/1917a2214f6f3c08923a3df6cf963949ae2125de))
 
 ## [0.4.1-beta.5](https://github.com/JackUait/blok/compare/v0.4.1-beta.4...v0.4.1-beta.5) (2025-12-07)
 
@@ -60,12 +41,6 @@ All notable changes to this project will be documented in this file.
 
 - migrate internals to React ([#14](https://github.com/JackUait/blok/pull/14)) ([ea36157](https://github.com/JackUait/blok/commit/ea3615702597d971171e377e938ee549185b220c))
 
-## [0.4.1-beta.1](https://github.com/JackUait/blok/compare/v0.4.1-beta.0...v0.4.1-beta.1) (2025-12-03)
-
-### 🧹 Chores
-
-- **codemod** improve migration ([#13](https://github.com/JackUait/blok/pull/13)) ([3514c5b](https://github.com/JackUait/blok/commit/3514c5b34072bdc2788bd934822e1ba9de85f7d4))
-
 ## [0.4.1-beta.0](https://github.com/JackUait/blok/compare/v0.3.1-beta.0...v0.4.1-beta.0) (2025-12-16)
 
 ### ✨ Features
@@ -88,8 +63,6 @@ All notable changes to this project will be documented in this file.
 - **i18n** add support for Chinese (Mandarin) ([173f44b](https://github.com/JackUait/blok/commit/173f44bb06feba5db15f139a0b8e3600ecff481a))
 - **i18n** add translation to Russian ([fc19d28](https://github.com/JackUait/blok/commit/fc19d288fc4f70b90319f809700eca3a27c21bfc))
 - rename checklist into to-do list ([931e53c](https://github.com/JackUait/blok/commit/931e53c0f7273f397a22c03ef2f4da4b83bf80c1))
-- update codemod to account for flat translations config and updated keys ([d1e4404](https://github.com/JackUait/blok/commit/d1e4404fc7012a089ef563aa50d13e1f589da364))
-- make the translations object flat ([ffe4667](https://github.com/JackUait/blok/commit/ffe466783e9f4d540fb2a62b44c61567f1bce7b7))
 - improve drag&drop ([#26](https://github.com/JackUait/blok/pull/26)) ([b5e48e1](https://github.com/JackUait/blok/commit/b5e48e199cb848df040b8f27f62091b3fe9edea6))
 - **lists** move lists to the flat data model ([#25](https://github.com/JackUait/blok/pull/25)) ([4a259b4](https://github.com/JackUait/blok/commit/4a259b46e0f958a7975b5e2b43a97b5f752660e2))
 - move to the flat data model ([#24](https://github.com/JackUait/blok/pull/24)) ([931e678](https://github.com/JackUait/blok/commit/931e678bde948b453a784e788641d80298633826))
@@ -110,21 +83,6 @@ All notable changes to this project will be documented in this file.
 - close the inline toolbar on a click outside when the convert to menu is open ([0117d14](https://github.com/JackUait/blok/commit/0117d1455652a67594f9acaf91ff94223a69d265))
 - keep the toolbar always centered ([888bb1f](https://github.com/JackUait/blok/commit/888bb1f378dc90e5aecb817439dc82120d029f77))
 
-### 🧪 Tests
-
-- fix failing E2E tests ([4c885e9](https://github.com/JackUait/blok/commit/4c885e94e1245442daf8a15ad13227616a467875))
-- fix failing tests ([935c2d7](https://github.com/JackUait/blok/commit/935c2d7cbb75e6f8596176600773fd0ac8d8b5c9))
-- fix failing tests ([a684403](https://github.com/JackUait/blok/commit/a684403f31c4b845c3a56b49c0aae19479a7f333))
-
-### 🔧 CI/CD
-
-- add validation for missing translations ([ee19ab3](https://github.com/JackUait/blok/commit/ee19ab3f699848f15e22c7c9e135dc47979236fe))
-- update storybook:build script ([813b5ef](https://github.com/JackUait/blok/commit/813b5ef392510619ccbcd2cf3dab7dd73c4d9e7a))
-
-### ♻️ Refactoring
-
-- improve implementation ([0b615e9](https://github.com/JackUait/blok/commit/0b615e97d8c33ec879b8ce34cb21fa2a728e2fb8))
-
 ## [0.4.1](https://github.com/JackUait/blok/compare/v0.3.1-beta.0...v0.4.1) (2025-12-16)
 
 > This is the same as 0.4.1-beta.0 but tagged as a stable release.
@@ -140,3 +98,30 @@ All notable changes to this project will be documented in this file.
 ### ✨ Features
 
 - bundle tools paragraph and header ([fbf30d5](https://github.com/JackUait/blok/commit/fbf30d57403d3a3c8c0fea7f8d808327d0fcec91))
+
+## [0.2.0](https://github.com/JackUait/blok/compare/v0.1.5...v0.2.0) (2025-12-02)
+
+### ✨ Features
+
+- add drag & drop functionality ([e37fe12](https://github.com/JackUait/blok/commit/e37fe12fbd45ec41cd7b5023cc00f05d84b52c35))
+
+### 🐛 Bug Fixes
+
+- remove console.log statements and performance issue ([e1bd5a17](https://github.com/JackUait/blok/commit/e1bd5a17e13a95ed880ca8f51d581e0b0cfe5d70))
+
+### 🎨 Styling
+
+- rebrand from Editor.js to Blok ([#6](https://github.com/JackUait/blok/pull/6)) ([28a253dc](https://github.com/JackUait/blok/commit/28a253dc6524f74e8855688efcf3c93d9d3d0587))
+
+## [0.1.5](https://github.com/JackUait/blok/compare/v0.1.4...v0.1.5) (2025-11-24)
+
+### 🐛 Bug Fixes
+
+- eslint config ([9f3accba](https://github.com/JackUait/blok/commit/9f3accba9b18a4ff1983a75a423e632b33b8d4ec))
+
+## [0.1.0](https://github.com/JackUait/blok/releases/tag/v0.1.0) (2025-11-24)
+
+### 🎉 Initial Release
+
+- Fork of Editor.js, renamed to Blok
+- Initial feature set from Editor.js codebase

@@ -19,18 +19,7 @@ const editor = new Blok({
   },
 });`;
 
-const SAVE_CODE = `const data = await editor.save();
-// {
-//   "version": "0.5.0",
-//   "time": 1642697600000,
-//   "blocks": [
-//     {
-//       "id": "abc123",
-//       "type": "paragraph",
-//       "data": { "text": "Hello World" }
-//     }
-//   ]
-// }`;
+const SAVE_CODE = `const data = await editor.save();`;
 
 export const QuickStart: React.FC = () => {
   const [packageManager, setPackageManager] = useState<PackageManager>('yarn');
@@ -56,7 +45,6 @@ export const QuickStart: React.FC = () => {
       </div>
       <div className="container">
         <div className="section-header">
-          <p className="section-eyebrow">Quick Start</p>
           <h2 className="section-title">
             Up and running in minutes
           </h2>

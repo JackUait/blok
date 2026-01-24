@@ -6,7 +6,7 @@ import type { NavLink } from '@/types/navigation';
 
 const mockLinks: NavLink[] = [
   { href: '/docs', label: 'Docs' },
-  { href: '/demo', label: 'Demo' },
+  { href: '/demo', label: 'Try it out' },
   { href: '/migration', label: 'Migration' },
   { href: 'https://github.com/JackUait/blok', label: 'GitHub', external: true },
 ];
@@ -34,7 +34,7 @@ describe('Nav', () => {
     );
 
     expect(screen.getByText('Docs')).toBeInTheDocument();
-    expect(screen.getByText('Demo')).toBeInTheDocument();
+    expect(screen.getByText('Try it out')).toBeInTheDocument();
     expect(screen.getByText('Migration')).toBeInTheDocument();
     expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
@@ -57,7 +57,7 @@ describe('Nav', () => {
       </MemoryRouter>
     );
 
-    const demoLink = screen.getByText('Demo');
+    const demoLink = screen.getByText('Try it out');
     expect(demoLink).toBeInTheDocument();
   });
 

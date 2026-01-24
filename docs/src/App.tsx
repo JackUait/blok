@@ -4,6 +4,7 @@ import { HomePage } from './pages/HomePage';
 import { DemoPage } from './pages/DemoPage';
 import { ApiPage } from './pages/ApiPage';
 import { MigrationPage } from './pages/MigrationPage';
+import ChangelogPage from './pages/ChangelogPage';
 
 const ScrollHandler = () => {
   const { pathname, hash } = useLocation();
@@ -45,6 +46,7 @@ const App = () => {
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/docs" element={<ApiPage />} />
         <Route path="/migration" element={<MigrationPage />} />
+        <Route path="/changelog" element={<ChangelogPage />} />
       </Routes>
     </>
   );

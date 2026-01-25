@@ -87,9 +87,10 @@
 }
 
 .api-sidebar-link.active {
-  color: var(--color-blue);
-  border-left-color: var(--color-blue);
-  font-weight: 500;
+  color: var(--color-coral);
+  border-left-color: var(--color-coral);
+  font-weight: 600;
+  background: rgba(240, 123, 75, 0.06);
 }
 
 /* API Main Content */
@@ -141,11 +142,11 @@
   display: inline-flex;
   align-items: center;
   padding: var(--spacing-xs) var(--spacing-md);
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(88, 86, 214, 0.1) 100%);
-  color: var(--color-blue);
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.12) 100%);
+  color: var(--color-coral);
   font-size: var(--font-size-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border-radius: var(--radius-full);
   margin-bottom: var(--spacing-md);
@@ -249,8 +250,8 @@
 .api-method-large .api-method-name {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   font-size: var(--font-size-base);
-  font-weight: 500;
-  color: var(--color-blue);
+  font-weight: 600;
+  color: var(--color-coral);
 }
 
 .api-method-large .api-method-return {
@@ -319,17 +320,18 @@
 }
 
 .api-quickstart-number {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gradient-primary);
+  background: var(--gradient-coral-pink);
   color: white;
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 700;
   border-radius: var(--radius-full);
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(240, 123, 75, 0.25);
 }
 
 .api-quickstart-content h3 {
@@ -383,8 +385,8 @@
 .api-method-card .api-method-name {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   font-size: var(--font-size-base);
-  font-weight: 500;
-  color: var(--color-blue);
+  font-weight: 600;
+  color: var(--color-coral);
 }
 
 .api-method-card .api-method-return {
@@ -475,17 +477,18 @@
   padding: var(--spacing-xs) var(--spacing-md);
   font-size: var(--font-size-sm);
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  color: var(--color-blue);
+  color: var(--color-coral);
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
+  font-weight: 500;
 }
 
 .api-demo-action-btn:hover:not(:disabled) {
-  background: rgba(0, 122, 255, 0.1);
-  border-color: var(--color-blue);
+  background: rgba(240, 123, 75, 0.12);
+  border-color: var(--color-coral);
 }
 
 .api-demo-action-btn:disabled {

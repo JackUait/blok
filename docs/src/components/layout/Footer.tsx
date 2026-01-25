@@ -8,10 +8,24 @@ export const Footer: React.FC = () => {
         <div className="footer-content">
           <div className="footer-brand">
             <div className="footer-logo">
-              <Logo size={24} />
+              <Logo size={28} />
               <span>Blok</span>
             </div>
-            <p className="footer-tagline">Block-based rich text editor for modern applications.</p>
+            <p className="footer-tagline">
+              A friendly block-based rich text editor for modern applications. Built with love 🧡
+            </p>
+            <img
+              src="/mascot.png"
+              alt="Blok mascot"
+              className="footer-mascot"
+              style={{
+                width: '80px',
+                height: 'auto',
+                marginTop: '16px',
+                opacity: 0.9,
+                filter: 'drop-shadow(0 4px 12px rgba(240, 123, 75, 0.2))',
+              }}
+            />
           </div>
           <div className="footer-links">
             <div className="footer-column">
@@ -19,7 +33,7 @@ export const Footer: React.FC = () => {
               <Link to="/#quick-start" className="footer-link">
                 Quick Start
               </Link>
-              <Link to="/#api" className="footer-link">
+              <Link to="/docs" className="footer-link">
                 API Reference
               </Link>
               <Link to="/migration" className="footer-link">
@@ -45,7 +59,7 @@ export const Footer: React.FC = () => {
                 npm
               </a>
               <Link to="/demo" className="footer-link">
-                Examples
+                Live Demo
               </Link>
             </div>
             <div className="footer-column">
@@ -79,7 +93,7 @@ export const Footer: React.FC = () => {
         </div>
         <div className="footer-bottom">
           <p>
-            &copy; 2025 JackUait. Licensed under{' '}
+            &copy; 2026 JackUait. Licensed under{' '}
             <a
               href="https://www.apache.org/licenses/LICENSE-2.0"
               target="_blank"

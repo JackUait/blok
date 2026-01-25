@@ -30,7 +30,8 @@
   height: 500px;
   top: 10%;
   right: -150px;
-  background: var(--color-blue);
+  background: var(--color-coral);
+  animation: blobFloat 8s ease-in-out infinite;
 }
 
 .demo-blur-2 {
@@ -38,7 +39,9 @@
   height: 400px;
   bottom: 20%;
   left: -100px;
-  background: var(--color-purple);
+  background: var(--color-pink);
+  animation: blobFloat 8s ease-in-out infinite;
+  animation-delay: -3s;
 }
 
 /* Demo Container */
@@ -115,12 +118,12 @@
 .inline-code {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   font-size: 0.9em;
-  padding: 3px 8px;
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(88, 86, 214, 0.1) 100%);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-blue);
-  font-weight: 500;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.12) 100%);
+  border: 1px solid rgba(240, 123, 75, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-coral);
+  font-weight: 600;
 }
 
 /* Editor Container */
@@ -220,21 +223,22 @@
 }
 
 .hint-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px);
   box-shadow: var(--shadow-lg);
-  border-color: var(--color-blue);
+  border-color: var(--color-coral);
 }
 
 .hint-icon {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(88, 86, 214, 0.1) 100%);
+  background: var(--gradient-coral-pink);
   border-radius: var(--radius-lg);
-  color: var(--color-blue);
+  color: white;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(240, 123, 75, 0.25);
 }
 
 .hint-content {

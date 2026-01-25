@@ -25,7 +25,7 @@ export const Hero: React.FC = () => {
             <span className="hero-title-gradient">block-based editors</span>
           </h1>
           <p className="hero-description">
-            Blok is a headless, highly extensible rich text editor built for developers who need to
+            Blok is a highly extensible rich text editor built for developers who need to
             implement a Notion-like editing experience without building it from scratch.
           </p>
           <div className="hero-actions">
@@ -43,7 +43,7 @@ export const Hero: React.FC = () => {
               >
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
-              Try Demo
+              Try it out
             </Link>
           </div>
         </div>

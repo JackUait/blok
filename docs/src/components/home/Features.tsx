@@ -1,13 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { FeatureModal, type FeatureDetail } from './FeatureModal';
 
-interface Feature {
-  icon: React.ReactNode;
-  title: string;
-  description: React.ReactNode;
-  accent: 'coral' | 'orange' | 'pink' | 'mauve' | 'green' | 'cyan' | 'yellow' | 'red' | 'purple';
-}
-
-const FEATURES: Feature[] = [
+const FEATURES: FeatureDetail[] = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
@@ -23,6 +17,18 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'coral',
+    details: {
+      summary: 'Blok outputs clean, typed JSON data that\'s easy to store, transform, and render in any environment.',
+      benefits: [
+        'Store content in any database without HTML parsing',
+        'Render on server, client, or native apps',
+        'Full TypeScript types for all block data',
+        'Easy content migration and transformation',
+      ],
+      codeExample: `const data = await editor.save();
+// { blocks: [{ type: "paragraph", data: { text: "Hello" } }] }`,
+      apiLink: '/docs#save',
+    },
   },
   {
     icon: (
@@ -39,6 +45,24 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'orange',
+    details: {
+      summary: 'A powerful command palette for quick block insertion. Users can type "/" to search and insert any block type.',
+      benefits: [
+        'Keyboard-first workflow with "/" commands',
+        'Searchable block menu with fuzzy matching',
+        'Custom shortcuts for frequently used blocks',
+        'Accessible with full keyboard navigation',
+      ],
+      codeExample: `// Configure custom toolbox items
+new Blok({
+  tools: {
+    myBlock: {
+      class: MyBlockTool,
+      toolbox: { title: 'My Block', icon: '<svg>...</svg>' }
+    }
+  }
+});`,
+    },
   },
   {
     icon: (
@@ -55,6 +79,24 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'pink',
+    details: {
+      summary: 'A floating toolbar appears when text is selected, providing quick access to inline formatting options.',
+      benefits: [
+        'Context-aware formatting options',
+        'Built-in bold, italic, and link tools',
+        'Extensible with custom inline tools',
+        'Smart positioning that stays in viewport',
+      ],
+      codeExample: `// Add custom inline tool
+new Blok({
+  tools: {
+    highlight: {
+      class: HighlightTool,
+      inlineToolbar: true
+    }
+  }
+});`,
+    },
   },
   {
     icon: (
@@ -75,6 +117,15 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'mauve',
+    details: {
+      summary: 'Intuitive drag and drop reordering using a pointer-based system that works seamlessly on both touch and desktop devices.',
+      benefits: [
+        'Works on touch and desktop devices',
+        'Visual drop indicators',
+        'Smooth animations during drag',
+        'Accessible keyboard alternatives',
+      ],
+    },
   },
   {
     icon: (
@@ -92,6 +143,23 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'green',
+    details: {
+      summary: 'Create any block type you need. From simple text blocks to complex interactive components.',
+      benefits: [
+        'Simple API for creating custom blocks',
+        'Built-in paragraph, header, and list tools',
+        'Full lifecycle hooks (render, save, validate)',
+        'Block tunes for additional settings',
+      ],
+      codeExample: `class MyTool {
+  static get toolbox() {
+    return { title: 'My Tool', icon: '<svg>...</svg>' };
+  }
+  render() { return document.createElement('div'); }
+  save(element) { return { text: element.innerHTML }; }
+}`,
+      apiLink: '/docs#tools',
+    },
   },
   {
     icon: (
@@ -108,6 +176,21 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'cyan',
+    details: {
+      summary: 'Switch between edit and read-only modes at runtime without reinitializing the editor.',
+      benefits: [
+        'Toggle at runtime via API',
+        'Perfect for permission-based editing',
+        'Preserves content and scroll position',
+        'Disables all editing interactions',
+      ],
+      codeExample: `// Toggle read-only mode
+editor.readOnly.toggle();
+
+// Or set explicitly
+editor.readOnly.toggle(true);`,
+      apiLink: '/docs#readonly',
+    },
   },
   {
     icon: (
@@ -126,6 +209,15 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'yellow',
+    details: {
+      summary: 'Comprehensive undo/redo with keyboard shortcuts and API access. All changes are tracked automatically.',
+      benefits: [
+        'Automatic change tracking',
+        'Keyboard shortcuts (⌘Z / ⌘⇧Z)',
+        'Programmatic undo/redo via API',
+        'Configurable history depth',
+      ],
+    },
   },
   {
     icon: (
@@ -143,6 +235,20 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'red',
+    details: {
+      summary: 'Full internationalization with 68 languages, RTL support, and lazy loading for optimal bundle size.',
+      benefits: [
+        '68 supported languages',
+        'Full RTL layout support',
+        'Lazy-loaded translations (~3KB base)',
+        'Custom translation overrides',
+      ],
+      codeExample: `import { ar } from '@aspect/blok/locales';
+
+new Blok({
+  i18n: ar // Arabic with RTL
+});`,
+    },
   },
   {
     icon: (
@@ -160,11 +266,21 @@ const FEATURES: Feature[] = [
       </>
     ),
     accent: 'purple',
+    details: {
+      summary: 'Intelligent paste handling that converts content from various sources into clean blocks.',
+      benefits: [
+        'Paste from Google Docs, Word, and more',
+        'Automatic HTML sanitization',
+        'Preserves formatting as blocks',
+        'Custom paste handlers per tool',
+      ],
+    },
   },
 ];
 
 export const Features: React.FC = () => {
   const sectionRef = useRef<HTMLElement>(null);
+  const [selectedFeature, setSelectedFeature] = useState<FeatureDetail | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -184,6 +300,14 @@ export const Features: React.FC = () => {
 
     return () => observer.disconnect();
   }, []);
+
+  const handleFeatureClick = (feature: FeatureDetail) => {
+    setSelectedFeature(feature);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedFeature(null);
+  };
 
   return (
     <section className="features" id="features" ref={sectionRef}>
@@ -208,11 +332,14 @@ export const Features: React.FC = () => {
         </div>
         <div className="features-grid">
           {FEATURES.map((feature, index) => (
-            <div
+            <button
+              type="button"
               key={feature.title}
               className={`feature-card feature-card--${feature.accent}`}
               data-feature-card
               style={{ '--animation-order': index } as React.CSSProperties}
+              onClick={() => handleFeatureClick(feature)}
+              aria-label={`Learn more about ${feature.title}`}
             >
               <div className="feature-card-glow" />
               <div className="feature-card-content">
@@ -223,10 +350,12 @@ export const Features: React.FC = () => {
                 <p className="feature-description">{feature.description}</p>
               </div>
               <div className="feature-card-shine" />
-            </div>
+            </button>
           ))}
         </div>
       </div>
+
+      <FeatureModal feature={selectedFeature} onClose={handleCloseModal} />
     </section>
   );
 };

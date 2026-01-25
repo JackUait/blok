@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Logo } from '../common/Logo';
 import { Search } from '../common/Search';
+import { ThemeToggle } from '../common/ThemeToggle';
 import type { NavLink } from '@/types/navigation';
 import searchStyles from '../common/Search.module.css';
 
@@ -133,6 +134,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                 </Link>
               );
             })}
+            <ThemeToggle />
           </div>
           <button
             className={`nav-toggle ${menuOpen ? 'active' : ''}`}

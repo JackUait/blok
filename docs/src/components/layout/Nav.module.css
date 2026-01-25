@@ -26,12 +26,19 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :global(.nav.scrolled) {
+  :global(:root:not([data-theme="light"]) .nav.scrolled) {
     background: rgba(0, 0, 0, 0.85);
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.2),
       0 4px 12px rgba(0, 0, 0, 0.15);
   }
+}
+
+:global(:root[data-theme="dark"] .nav.scrolled) {
+  background: rgba(0, 0, 0, 0.85);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Subtle top highlight/glow on nav */
@@ -338,9 +345,13 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :global(.nav-links.open) {
+  :global(:root:not([data-theme="light"]) .nav-links.open) {
     background: rgba(0, 0, 0, 0.95);
   }
+}
+
+:global(:root[data-theme="dark"] .nav-links.open) {
+  background: rgba(0, 0, 0, 0.95);
 }
 
 @keyframes menuSlideIn {

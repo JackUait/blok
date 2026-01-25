@@ -7,6 +7,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=SF+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+      // Immediately apply theme before page renders to prevent flash
+      (function() {
+        const STORAGE_KEY = 'blok-docs-theme';
+        const VALID_THEMES = ['light', 'dark', 'system'];
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const theme = stored && VALID_THEMES.includes(stored) ? stored : 'system';
+
+        let resolvedTheme = theme;
+        if (theme === 'system') {
+          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          resolvedTheme = systemPrefersDark ? 'dark' : 'light';
+        }
+
+        document.documentElement.setAttribute('data-theme', resolvedTheme);
+        document.documentElement.classList.add(resolvedTheme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

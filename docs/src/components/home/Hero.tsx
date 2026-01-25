@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { use3DTilt } from '../../hooks/use3DTilt';
+import { WaveDivider } from '../common/WaveDivider';
 
 export const Hero: React.FC = () => {
   const mascotTilt = use3DTilt({
@@ -65,6 +66,12 @@ export const Hero: React.FC = () => {
           </div>
         </div>
       </div>
+      <WaveDivider
+        variant="soft"
+        fillColor="var(--color-surface)"
+        height={120}
+        position="bottom"
+      />
     </section>
   );
 };

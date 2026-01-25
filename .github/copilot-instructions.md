@@ -1,5 +1,9 @@
 # Blok - AI Coding Instructions
 
+Project guidance for GitHub Copilot and AI assistants working with this repository.
+
+---
+
 ## IMMEDIATE COMPLETION CHECKLIST
 
 **STOP! Before saying "done" or "complete", verify ALL of the following:**
@@ -370,14 +374,9 @@ The documentation is a React application in the `docs/` directory with its own `
 ```bash
 # From project root
 yarn serve:docs         # Dev server with proxy to blok demo
-yarn serve:docs:prod    # Serve production build locally
 
 # From docs/ directory
-npm run dev             # Vite dev server
-npm run build           # Production build
-npm run test            # Vitest unit tests
-npm run test:watch      # Watch mode
-npm run test:coverage   # Coverage report
+yarn test            # Vitest unit tests
 ```
 
 ### Docs Architecture
@@ -407,10 +406,7 @@ Uses Vitest with React Testing Library. Tests are co-located with components.
 
 ```bash
 # Run all docs tests
-cd docs && npm test
-
-# Watch mode
-cd docs && npm run test:watch
+cd docs && yarn test
 ```
 
 ### Plans Directory

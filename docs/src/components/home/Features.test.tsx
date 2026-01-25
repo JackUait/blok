@@ -27,37 +27,37 @@ describe('Features', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render all 6 feature cards', () => {
+  it('should render all 9 feature cards', () => {
     const { container } = render(<Features />);
 
     const featureCards = container.querySelectorAll('[data-feature-card]');
-    expect(featureCards.length).toBe(6);
+    expect(featureCards.length).toBe(9);
   });
 
-  it('should render Block Architecture feature', () => {
+  it('should render Clean JSON Output feature', () => {
     render(<Features />);
 
-    expect(screen.getByText('Block Architecture')).toBeInTheDocument();
+    expect(screen.getByText('Clean JSON Output')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('JSON data, not raw HTML'))
+      screen.getByText((content) => content.includes('typed JSON blocks'))
     ).toBeInTheDocument();
   });
 
-  it('should render Slash Commands feature', () => {
+  it('should render Toolbox & Slash Commands feature', () => {
     render(<Features />);
 
-    expect(screen.getByText('Slash Commands')).toBeInTheDocument();
+    expect(screen.getByText('Toolbox & Slash Commands')).toBeInTheDocument();
     expect(
-      screen.getByText('Built-in, customizable slash menu for quick formatting and inserting media.')
+      screen.getByText((content) => content.includes('Press "/" or click "+"'))
     ).toBeInTheDocument();
   });
 
-  it('should render Headless & Stylable feature', () => {
+  it('should render Inline Toolbar feature', () => {
     render(<Features />);
 
-    expect(screen.getByText('Headless & Stylable')).toBeInTheDocument();
+    expect(screen.getByText('Inline Toolbar')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Blok gives you the logic'))
+      screen.getByText((content) => content.includes('Select text to format'))
     ).toBeInTheDocument();
   });
 
@@ -65,15 +65,33 @@ describe('Features', () => {
     render(<Features />);
 
     expect(screen.getByText('Drag & Drop')).toBeInTheDocument();
-    expect(screen.getByText('Native support for rearranging blocks with intuitive drag handles.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Rearrange blocks with drag handles'))).toBeInTheDocument();
   });
 
-  it('should render Extensible Plugin System feature', () => {
+  it('should render Custom Block Tools feature', () => {
     render(<Features />);
 
-    expect(screen.getByText('Extensible Plugin System')).toBeInTheDocument();
+    expect(screen.getByText('Custom Block Tools')).toBeInTheDocument();
     expect(
-      screen.getByText('Create custom blocks for Kanbans, Embeds, Code Blocks, and more.')
+      screen.getByText((content) => content.includes('Extend the editor with custom blocks'))
+    ).toBeInTheDocument();
+  });
+
+  it('should render Read-Only Mode feature', () => {
+    render(<Features />);
+
+    expect(screen.getByText('Read-Only Mode')).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('Toggle read-only mode'))
+    ).toBeInTheDocument();
+  });
+
+  it('should render Undo & Redo feature', () => {
+    render(<Features />);
+
+    expect(screen.getByText('Undo & Redo')).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('Full history support'))
     ).toBeInTheDocument();
   });
 
@@ -82,7 +100,16 @@ describe('Features', () => {
 
     expect(screen.getByText('68 Languages')).toBeInTheDocument();
     expect(
-      screen.getByText('Lazy-loaded locale support with only English bundled by default (~3KB).')
+      screen.getByText((content) => content.includes('Lazy-loaded i18n'))
+    ).toBeInTheDocument();
+  });
+
+  it('should render Smart Paste feature', () => {
+    render(<Features />);
+
+    expect(screen.getByText('Smart Paste')).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('Paste from anywhere'))
     ).toBeInTheDocument();
   });
 
@@ -97,29 +124,64 @@ describe('Features', () => {
     const { container } = render(<Features />);
 
     const icons = container.querySelectorAll('.feature-icon');
-    expect(icons.length).toBe(6);
+    expect(icons.length).toBe(9);
   });
 
   it('should have feature-title elements', () => {
     const { container } = render(<Features />);
 
     const titles = container.querySelectorAll('.feature-title');
-    expect(titles.length).toBe(6);
+    expect(titles.length).toBe(9);
   });
 
   it('should have feature-description elements', () => {
     const { container } = render(<Features />);
 
     const descriptions = container.querySelectorAll('.feature-description');
-    expect(descriptions.length).toBe(6);
+    expect(descriptions.length).toBe(9);
   });
 
-  it('should apply animation-delay styles to cards', () => {
+  it('should apply animation-order CSS custom property to cards', () => {
     const { container } = render(<Features />);
 
     const cards = container.querySelectorAll('[data-feature-card]');
     cards.forEach((card, index) => {
-      expect(card).toHaveStyle({ animationDelay: `${index * 0.05}s` });
+      expect((card as HTMLElement).style.getPropertyValue('--animation-order')).toBe(String(index));
+    });
+  });
+
+  it('should render decorative background elements', () => {
+    const { container } = render(<Features />);
+
+    expect(container.querySelector('.features-bg')).toBeInTheDocument();
+    expect(container.querySelector('.features-blob-1')).toBeInTheDocument();
+    expect(container.querySelector('.features-blob-2')).toBeInTheDocument();
+    expect(container.querySelector('.features-grid-pattern')).toBeInTheDocument();
+  });
+
+  it('should render card glow and shine effects', () => {
+    const { container } = render(<Features />);
+
+    const glowEffects = container.querySelectorAll('.feature-card-glow');
+    const shineEffects = container.querySelectorAll('.feature-card-shine');
+
+    expect(glowEffects.length).toBe(9);
+    expect(shineEffects.length).toBe(9);
+  });
+
+  it('should render feature-icon-inner elements', () => {
+    const { container } = render(<Features />);
+
+    const iconInners = container.querySelectorAll('.feature-icon-inner');
+    expect(iconInners.length).toBe(9);
+  });
+
+  it('should apply accent color variant classes to cards', () => {
+    const { container } = render(<Features />);
+
+    const expectedAccents = ['coral', 'orange', 'pink', 'mauve', 'green', 'cyan', 'yellow', 'red', 'purple'];
+    expectedAccents.forEach((accent) => {
+      expect(container.querySelector(`.feature-card--${accent}`)).toBeInTheDocument();
     });
   });
 });

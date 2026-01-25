@@ -133,6 +133,49 @@ body {
   overflow-x: hidden;
 }
 
+/* Custom Scrollbar - Warm, playful style */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-coral) 0%, var(--color-pink) 100%);
+  border-radius: 10px;
+  border: 2px solid var(--color-cream);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--color-orange) 0%, var(--color-coral) 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-color: var(--color-surface);
+  }
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-coral) var(--color-cream);
+}
+
+@media (prefers-color-scheme: dark) {
+  * {
+    scrollbar-color: var(--color-coral) var(--color-surface);
+  }
+}
+
 /* Container */
 .container {
   max-width: 1200px;
@@ -278,6 +321,7 @@ body {
   display: flex;
   align-items: center;
   padding-top: 60px;
+  padding-bottom: 180px; /* 60px balance + 120px wave height */
   overflow: hidden;
   background: var(--gradient-hero);
 }
@@ -352,6 +396,13 @@ body {
   justify-content: center;
   align-items: center;
   position: relative;
+  cursor: pointer;
+}
+
+/* 3D Mascot container */
+.hero-mascot-3d {
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 
 .hero-mascot-image {
@@ -360,11 +411,33 @@ body {
   height: auto;
   filter: drop-shadow(0 20px 60px rgba(240, 123, 75, 0.3));
   animation: mascotFloat 4s ease-in-out infinite;
-  transition: transform var(--transition-slow);
+  transition: filter var(--transition-slow);
+  transform-style: preserve-3d;
 }
 
-.hero-mascot-image:hover {
-  transform: scale(1.05) rotate(-3deg);
+/* Pause float animation when hovering for clean 3D effect */
+.hero-mascot-hovered .hero-mascot-image {
+  animation-play-state: paused;
+  filter: drop-shadow(0 30px 80px rgba(240, 123, 75, 0.4));
+}
+
+/* Dynamic shadow that moves with 3D tilt */
+.hero-mascot-shadow {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(-50px);
+  width: 200px;
+  height: 40px;
+  background: radial-gradient(ellipse, rgba(240, 123, 75, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+  pointer-events: none;
+}
+
+.hero-mascot-hovered .hero-mascot-shadow {
+  opacity: 1;
 }
 
 @keyframes mascotFloat {
@@ -406,7 +479,7 @@ body {
   position: relative;
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--spacing-4xl) var(--spacing-lg);
+  padding: var(--spacing-lg) var(--spacing-lg);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-4xl);

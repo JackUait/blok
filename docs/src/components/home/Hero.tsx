@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom';
+import { use3DTilt } from '../../hooks/use3DTilt';
 
 export const Hero: React.FC = () => {
+  const mascotTilt = use3DTilt({
+    maxTilt: 20,
+    scale: 1.08,
+    transitionSpeed: 500,
+  });
+
   return (
     <section className="hero">
       <div className="hero-bg">
@@ -10,7 +17,7 @@ export const Hero: React.FC = () => {
       </div>
       <div className="hero-container">
         <div className="hero-content" data-hero-content>
-          <p className="hero-eyebrow">Open Source Editor</p>
+          <p className="hero-eyebrow">Open-Source Editor</p>
           <h1 className="hero-title">
             Build beautiful
             <br />
@@ -40,12 +47,21 @@ export const Hero: React.FC = () => {
           </div>
         </div>
         <div className="hero-demo" data-hero-demo>
-          <div className="hero-mascot">
+          <div
+            ref={mascotTilt.ref}
+            className={`hero-mascot hero-mascot-3d ${mascotTilt.isHovered ? 'hero-mascot-hovered' : ''}`}
+            onMouseMove={mascotTilt.onMouseMove}
+            onMouseEnter={mascotTilt.onMouseEnter}
+            onMouseLeave={mascotTilt.onMouseLeave}
+            style={mascotTilt.style}
+          >
             <img
               src="/mascot.png"
               alt="Blok mascot - a friendly orange character with pink yarn"
               className="hero-mascot-image"
             />
+            {/* Floating shadow that moves with tilt */}
+            <div className="hero-mascot-shadow" aria-hidden="true" />
           </div>
         </div>
       </div>

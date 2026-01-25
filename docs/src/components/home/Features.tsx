@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 interface Feature {
   icon: React.ReactNode;
   title: string;
-  description: string;
+  description: React.ReactNode;
   accent: 'coral' | 'orange' | 'pink' | 'mauve' | 'green' | 'cyan' | 'yellow' | 'red' | 'purple';
 }
 
@@ -17,8 +17,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Clean JSON Output',
-    description:
-      'Content is structured as typed JSON blocks, not raw HTML. Parse, store, and render anywhere.',
+    description: (
+      <>
+        Content is structured as <strong>typed JSON blocks</strong>, not raw HTML. Parse, store, and render anywhere.
+      </>
+    ),
     accent: 'coral',
   },
   {
@@ -30,7 +33,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Toolbox & Slash Commands',
-    description: 'Press "/" or click "+" to open the block menu. Insert paragraphs, headers, lists, and custom blocks.',
+    description: (
+      <>
+        Press <kbd>/</kbd> or click <kbd>+</kbd> to open the block menu. Insert paragraphs, headers, lists, and custom blocks.
+      </>
+    ),
     accent: 'orange',
   },
   {
@@ -42,8 +49,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Inline Toolbar',
-    description:
-      'Select text to format with bold, italic, and links. Extensible with custom inline tools.',
+    description: (
+      <>
+        Select text to format with <strong>bold</strong>, <em>italic</em>, and links. Extensible with custom inline tools.
+      </>
+    ),
     accent: 'pink',
   },
   {
@@ -59,7 +69,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Drag & Drop',
-    description: 'Rearrange blocks with drag handles. Pointer-based system works on touch and desktop.',
+    description: (
+      <>
+        Rearrange blocks with <strong>drag handles</strong>. Pointer-based system works on touch and desktop.
+      </>
+    ),
     accent: 'mauve',
   },
   {
@@ -72,7 +86,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Custom Block Tools',
-    description: 'Extend the editor with custom blocks. Built-in paragraph, header, list tools included.',
+    description: (
+      <>
+        Extend the editor with <strong>custom blocks</strong>. Built-in paragraph, header, list tools included.
+      </>
+    ),
     accent: 'green',
   },
   {
@@ -84,7 +102,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Read-Only Mode',
-    description: 'Toggle read-only mode at runtime. Perfect for view-only contexts or permission-based editing.',
+    description: (
+      <>
+        Toggle read-only mode <strong>at runtime</strong>. Perfect for view-only contexts or permission-based editing.
+      </>
+    ),
     accent: 'cyan',
   },
   {
@@ -98,7 +120,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Undo & Redo',
-    description: 'Full history support with keyboard shortcuts. Never lose your work with automatic state tracking.',
+    description: (
+      <>
+        Full history support with <kbd>⌘Z</kbd> / <kbd>⌘⇧Z</kbd>. Never lose your work with automatic state tracking.
+      </>
+    ),
     accent: 'yellow',
   },
   {
@@ -111,7 +137,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: '68 Languages',
-    description: 'Lazy-loaded i18n with RTL support. Only English bundled by default (~3KB overhead).',
+    description: (
+      <>
+        Lazy-loaded i18n with <strong>RTL support</strong>. Only English bundled by default <span className="feature-badge">~3KB</span>.
+      </>
+    ),
     accent: 'red',
   },
   {
@@ -124,7 +154,11 @@ const FEATURES: Feature[] = [
       </svg>
     ),
     title: 'Smart Paste',
-    description: 'Paste from anywhere — Word, Google Docs, or plain text. Content is sanitized and converted to blocks.',
+    description: (
+      <>
+        Paste from <strong>Google Docs</strong>, or plain text. Content is sanitized and converted to blocks.
+      </>
+    ),
     accent: 'purple',
   },
 ];

@@ -38,9 +38,7 @@ describe('Features', () => {
     render(<Features />);
 
     expect(screen.getByText('Clean JSON Output')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('typed JSON blocks'))
-    ).toBeInTheDocument();
+    expect(screen.getByText('typed JSON blocks')).toBeInTheDocument();
   });
 
   it('should render Toolbox & Slash Commands feature', () => {
@@ -48,7 +46,7 @@ describe('Features', () => {
 
     expect(screen.getByText('Toolbox & Slash Commands')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Press "/" or click "+"'))
+      screen.getByText((content) => content.includes('to open the block menu'))
     ).toBeInTheDocument();
   });
 
@@ -65,16 +63,14 @@ describe('Features', () => {
     render(<Features />);
 
     expect(screen.getByText('Drag & Drop')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('Rearrange blocks with drag handles'))).toBeInTheDocument();
+    expect(screen.getByText('drag handles')).toBeInTheDocument();
   });
 
   it('should render Custom Block Tools feature', () => {
     render(<Features />);
 
     expect(screen.getByText('Custom Block Tools')).toBeInTheDocument();
-    expect(
-      screen.getByText((content) => content.includes('Extend the editor with custom blocks'))
-    ).toBeInTheDocument();
+    expect(screen.getByText('custom blocks')).toBeInTheDocument();
   });
 
   it('should render Read-Only Mode feature', () => {
@@ -100,7 +96,7 @@ describe('Features', () => {
 
     expect(screen.getByText('68 Languages')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Lazy-loaded i18n'))
+      screen.getByText((content) => content.includes('RTL support'))
     ).toBeInTheDocument();
   });
 
@@ -109,7 +105,7 @@ describe('Features', () => {
 
     expect(screen.getByText('Smart Paste')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Paste from anywhere'))
+      screen.getByText((content) => content.includes('sanitized and converted'))
     ).toBeInTheDocument();
   });
 

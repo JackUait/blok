@@ -1,37 +1,9 @@
-import { useEffect } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/demo.css';
 
 export const DemoPage: React.FC = () => {
-  useEffect(() => {
-    // Initialize scroll animations for hint cards
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px 0px -50px 0px',
-      threshold: 0.1,
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-in');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, observerOptions);
-
-    // Observe hint cards
-    document.querySelectorAll('[data-hint-card]').forEach((el) => {
-      observer.observe(el);
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
   return (
     <>
       <Nav links={NAV_LINKS} />

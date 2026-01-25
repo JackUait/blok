@@ -10,32 +10,6 @@ import { NAV_LINKS } from '../utils/constants';
 
 export const HomePage: React.FC = () => {
   useEffect(() => {
-    // Initialize scroll animations
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px 0px -100px 0px',
-      threshold: 0.1,
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-in');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, observerOptions);
-
-    // Feature cards
-    document.querySelectorAll('[data-feature-card]').forEach((el) => {
-      observer.observe(el);
-    });
-
-    // Install steps
-    document.querySelectorAll('[data-install-step]').forEach((el) => {
-      observer.observe(el);
-    });
-
     // Syntax highlighting
     const codeBlocks = document.querySelectorAll('code');
     codeBlocks.forEach((block) => {
@@ -91,31 +65,10 @@ export const HomePage: React.FC = () => {
 
     detectTheme();
 
-    // Add animate-in styles dynamically
-    const style = document.createElement('style');
-    style.textContent = `
-      [data-feature-card],
-      [data-install-step] {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-                    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      [data-feature-card].animate-in,
-      [data-install-step].animate-in {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    `;
-    document.head.appendChild(style);
-
     return () => {
-      observer.disconnect();
       document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
         anchor.removeEventListener('click', handleAnchorClick);
       });
-      document.head.removeChild(style);
     };
   }, []);
 

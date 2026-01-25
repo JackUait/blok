@@ -213,13 +213,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   transition: all var(--transition-base);
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.hint-card.animate-in {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .hint-card:hover {

@@ -113,8 +113,9 @@ const getHighlighter = async (lang: string): Promise<Highlighter> => {
   const initPromise = getInitPromise();
   if (!initPromise) {
     // Initialize with only the languages we need
+    // Using vitesse-dark for dark mode (excellent property highlighting) and one-light for light mode
     const newInitPromise = createHighlighter({
-      themes: ["github-light", "github-dark"],
+      themes: ["vitesse-dark", "one-light"],
       langs: supportedLangs,
     }).then((highlighter) => {
       setHighlighterInstance(highlighter);
@@ -153,18 +154,26 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     onPackageManagerChange?.(manager);
   };
 
-  // Detect system dark mode preference for matching code content theme
+  // Detect dark mode from the document theme class (set by the site's theme toggle)
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const updateTheme = (e: MediaQueryListEvent | MediaQueryList) => {
-      setIsDark(e.matches);
+    const checkDarkMode = () => {
+      // Check for dark class on html element (common pattern for theme toggles)
+      const isDarkMode = document.documentElement.classList.contains("dark");
+      setIsDark(isDarkMode);
     };
 
-    updateTheme(mediaQuery);
-    mediaQuery.addEventListener("change", updateTheme);
+    // Initial check
+    checkDarkMode();
+
+    // Watch for class changes on the html element
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
 
     return () => {
-      mediaQuery.removeEventListener("change", updateTheme);
+      observer.disconnect();
     };
   }, []);
 
@@ -182,7 +191,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
         const html = highlighter.codeToHtml(displayCode, {
           lang,
-          theme: isDark ? "github-dark" : "github-light",
+          theme: isDark ? "vitesse-dark" : "one-light",
         });
 
         setHighlightedCode(html);

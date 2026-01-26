@@ -1,4 +1,7 @@
 import { Link } from "react-router-dom";
+import { CodeBlock } from "../common/CodeBlock";
+
+const MIGRATION_COMMAND = "npx -p @jackuait/blok migrate-from-editorjs ./src";
 
 export const MigrationCard: React.FC = () => {
   return (
@@ -50,9 +53,7 @@ export const MigrationCard: React.FC = () => {
               codemod to switch in minutes, not hours.
             </p>
             <div className="migration-code" data-blok-testid="migration-code">
-              <pre>
-                <code>npx -p @jackuait/blok migrate-from-editorjs ./src</code>
-              </pre>
+              <CodeBlock code={MIGRATION_COMMAND} language="bash" />
             </div>
             <Link to="/migration" className="btn btn-primary">
               View Migration Guide

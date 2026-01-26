@@ -110,13 +110,13 @@ export const use3DTilt = (options: Use3DTiltOptions = {}): Use3DTiltReturn => {
   const onMouseEnter = useCallback(() => {
     setIsHovered(true);
     setIsSettled(false);
-    // Allow a longer transition period for smooth entry before switching to instant tracking
+    // Brief transition period for smooth entry before switching to instant tracking
     if (settleTimeoutId.current !== null) {
       clearTimeout(settleTimeoutId.current);
     }
     settleTimeoutId.current = setTimeout(() => {
       setIsSettled(true);
-    }, 350);
+    }, 120);
   }, []);
 
   const onMouseLeave = useCallback(() => {
@@ -143,9 +143,9 @@ export const use3DTilt = (options: Use3DTiltOptions = {}): Use3DTiltReturn => {
     if (!isHovered) {
       return `transform ${transitionSpeed}ms cubic-bezier(0.33, 1, 0.68, 1)`;
     }
-    // Gentle entry with longer duration
+    // Quick entry transition before instant tracking kicks in
     if (isHovered && !isSettled) {
-      return 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)';
+      return 'transform 100ms cubic-bezier(0.22, 1, 0.36, 1)';
     }
     return 'none';
   };

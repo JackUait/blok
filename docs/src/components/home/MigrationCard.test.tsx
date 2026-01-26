@@ -1,7 +1,19 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MigrationCard } from './MigrationCard';
+
+// Mock Shiki to avoid async highlighting issues in tests
+vi.mock('shiki', () => ({
+  createHighlighter: vi.fn(() =>
+    Promise.resolve({
+      getLoadedLanguages: () => ['bash'],
+      codeToHtml: (code: string) =>
+        `<pre class="shiki"><code>${code}</code></pre>`,
+      loadLanguage: vi.fn(),
+    })
+  ),
+}));
 
 describe('MigrationCard', () => {
   it('should render a section element', () => {
@@ -56,14 +68,16 @@ describe('MigrationCard', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render the migration code', () => {
+  it('should render the migration code', async () => {
     render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText('npx -p @jackuait/blok migrate-from-editorjs ./src')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('npx -p @jackuait/blok migrate-from-editorjs ./src')).toBeInTheDocument();
+    });
   });
 
   it('should render the View Migration Guide button', () => {
@@ -98,7 +112,7 @@ describe('MigrationCard', () => {
     expect(screen.getByTestId('migration-code')).toBeInTheDocument();
   });
 
-  it('should have code element inside migration-code', () => {
+  it('should have code element inside migration-code', async () => {
     render(
       <MemoryRouter>
         <MigrationCard />
@@ -108,8 +122,10 @@ describe('MigrationCard', () => {
     // The code is rendered within a pre/code element inside migration-code
     const codeElement = screen.getByTestId('migration-code');
     expect(codeElement).toBeInTheDocument();
-    // Verify the code text content is present
-    expect(codeElement.textContent).toContain('npx -p @jackuait/blok migrate-from-editorjs ./src');
+    // Verify the code text content is present (wait for async Shiki highlighting)
+    await waitFor(() => {
+      expect(codeElement.textContent).toContain('npx -p @jackuait/blok migrate-from-editorjs ./src');
+    });
   });
 
   it('should have migration-title', () => {

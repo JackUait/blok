@@ -11,29 +11,6 @@ import { NAV_LINKS } from '../utils/constants';
 
 export const HomePage: React.FC = () => {
   useEffect(() => {
-    // Syntax highlighting
-    const codeBlocks = document.querySelectorAll('code');
-    codeBlocks.forEach((block) => {
-      const blockElement = block;
-      const originalHtml = blockElement.innerHTML;
-
-      // Keywords
-      const html = originalHtml.replace(
-        /\b(import|from|const|let|var|function|class|new|return|if|else|async|await|export|default)\b/g,
-        '<span class="token-keyword">$1</span>'
-      )
-        // Strings
-        .replace(/(['"`])(.*?)\1/g, '<span class="token-string">$1$2$1</span>')
-        // Comments
-        .replace(/(\/\/.*)/g, '<span class="token-comment">$1</span>')
-        // Numbers
-        .replace(/\b(\d+)\b/g, '<span class="token-number">$1</span>')
-        // Functions
-        .replace(/\b([a-zA-Z_]\w*)\s*\(/g, '<span class="token-function">$1</span>(');
-
-      blockElement.innerHTML = html;
-    });
-
     // Smooth scroll for anchor links
     const handleAnchorClick = (e: Event) => {
       const target = e.target as HTMLAnchorElement;

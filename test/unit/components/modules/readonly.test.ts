@@ -212,6 +212,80 @@ describe('ReadOnly module', () => {
     expect(mocks.toolbar.toggleReadOnly).toHaveBeenCalledWith(true);
     expect(mocks.inlineToolbar.toggleReadOnly).toHaveBeenCalledWith(true);
   });
+
+  describe('set method', () => {
+    it('sets read-only mode to true', async () => {
+      const { readOnly, mocks } = createReadOnly();
+
+      const result = await readOnly.set(true);
+
+      expect(result).toBe(true);
+      expect(readOnly.isEnabled).toBe(true);
+      expect(mocks.blockManager.toggleReadOnly).toHaveBeenCalledWith(true);
+      expect(mocks.toolbar.toggleReadOnly).toHaveBeenCalledWith(true);
+      expect(mocks.inlineToolbar.toggleReadOnly).toHaveBeenCalledWith(true);
+    });
+
+    it('sets read-only mode to false', async () => {
+      const { readOnly, mocks } = createReadOnly();
+
+      await readOnly.set(true);
+      mocks.modificationsObserver.disable.mockClear();
+      mocks.saver.save.mockClear();
+      mocks.blockManager.clear.mockClear();
+      mocks.renderer.render.mockClear();
+      mocks.modificationsObserver.enable.mockClear();
+
+      const result = await readOnly.set(false);
+
+      expect(result).toBe(false);
+      expect(readOnly.isEnabled).toBe(false);
+      expect(mocks.blockManager.toggleReadOnly).toHaveBeenCalledWith(false);
+    });
+
+    it('requires a boolean parameter (no default toggle behavior)', async () => {
+      const { readOnly } = createReadOnly();
+
+      // set() without a parameter should not toggle - it should require a value
+      // This is the key difference from toggle()
+      await readOnly.set(true);
+      expect(readOnly.isEnabled).toBe(true);
+
+      await readOnly.set(false);
+      expect(readOnly.isEnabled).toBe(false);
+    });
+
+    it('prevents enabling read-only mode when unsupported tools are registered', async () => {
+      const { readOnly } = createReadOnly();
+
+      (readOnly as unknown as { toolsDontSupportReadOnly: string[] }).toolsDontSupportReadOnly = [
+        'legacy',
+      ];
+
+      await expect(readOnly.set(true)).rejects.toThrow(CriticalError);
+    });
+
+    it('skips re-render when the requested state matches the current state', async () => {
+      const { readOnly, mocks } = createReadOnly();
+
+      await readOnly.set(true);
+
+      mocks.modificationsObserver.disable.mockClear();
+      mocks.saver.save.mockClear();
+      mocks.blockManager.clear.mockClear();
+      mocks.renderer.render.mockClear();
+      mocks.modificationsObserver.enable.mockClear();
+
+      const result = await readOnly.set(true);
+
+      expect(result).toBe(true);
+      expect(mocks.saver.save).not.toHaveBeenCalled();
+      expect(mocks.blockManager.clear).not.toHaveBeenCalled();
+      expect(mocks.renderer.render).not.toHaveBeenCalled();
+      expect(mocks.modificationsObserver.disable).not.toHaveBeenCalled();
+      expect(mocks.modificationsObserver.enable).not.toHaveBeenCalled();
+    });
+  });
 });
 
 

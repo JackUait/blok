@@ -46,6 +46,9 @@ const PORT = process.env.PORT || parseInt(process.argv[2]) || DEFAULT_PORT;
 
 // Function to proxy request to Vite dev server
 function proxyToVite(req, res) {
+  // Check if this is a WebSocket upgrade request (for Vite HMR)
+  const isWebSocket = req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket';
+
   const options = {
     hostname: 'localhost',
     port: VITE_PORT,
@@ -55,21 +58,35 @@ function proxyToVite(req, res) {
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
+    // For WebSocket upgrades, we need to forward the 101 response
+    if (isWebSocket || proxyRes.statusCode === 101) {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      // Bidirectional pipe for WebSocket
+      proxyRes.pipe(res);
+      req.pipe(proxyReq);
+      return;
+    }
+
     res.writeHead(proxyRes.statusCode, proxyRes.headers);
     proxyRes.pipe(res);
   });
 
   proxyReq.on('error', (err) => {
     console.error('Proxy error:', err.message);
-    res.writeHead(502, { 'Content-Type': 'text/html' });
-    res.end(
-      '<h1>502 - Vite Dev Server Not Running</h1>' +
-        '<p>Run: cd docs && npm run dev</p>',
-      'utf-8'
-    );
+    if (!res.headersSent) {
+      res.writeHead(502, { 'Content-Type': 'text/html' });
+      res.end(
+        '<h1>502 - Vite Dev Server Not Running</h1>' +
+          '<p>Run: cd docs && npm run dev</p>',
+        'utf-8'
+      );
+    }
   });
 
-  req.pipe(proxyReq);
+  // For non-WebSocket requests, pipe immediately
+  if (!isWebSocket) {
+    req.pipe(proxyReq);
+  }
 }
 
 const server = http.createServer((req, res) => {

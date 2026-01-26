@@ -32,8 +32,8 @@ describe('Hero', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Blok is a highly extensible/)).toBeInTheDocument();
-    expect(screen.getByText(/Notion-like editing experience/)).toBeInTheDocument();
+    expect(screen.getByText(/A production-ready, extensible rich text editor/)).toBeInTheDocument();
+    expect(screen.getByText(/Notion-like block-based editing/)).toBeInTheDocument();
   });
 
   it('should render the Get Started button with correct link', () => {
@@ -45,7 +45,7 @@ describe('Hero', () => {
 
     const getStartedLink = screen.getByRole('link', { name: 'Get Started' });
     expect(getStartedLink).toBeInTheDocument();
-    expect(getStartedLink).toHaveAttribute('href', '/#quick-start');
+    expect(getStartedLink).toHaveAttribute('href', '#quick-start');
   });
 
   it('should render the Try it out button with correct link', () => {

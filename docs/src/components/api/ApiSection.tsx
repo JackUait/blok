@@ -8,6 +8,27 @@ interface ApiSectionProps {
   section: ApiSectionType;
 }
 
+/**
+ * Generate a URL-safe anchor ID from a property or option name
+ * e.g., "isReady" -> "core-prop-isready"
+ */
+const generatePropertyId = (sectionId: string, propName: string): string => {
+  const cleanName = propName
+    .replace(/[.]+/g, "-")
+    .replace(/-+/g, "-")
+    .toLowerCase();
+  return `${sectionId}-prop-${cleanName}`;
+};
+
+/**
+ * Generate a URL-safe anchor ID from a config option name
+ * e.g., "holder" -> "config-holder"
+ */
+const generateOptionId = (sectionId: string, optionName: string): string => {
+  const cleanName = optionName.toLowerCase();
+  return `${sectionId}-${cleanName}`;
+};
+
 const PACKAGE_NAME = "@jackuait/blok";
 
 const CONFIG_CODE = `import { Blok } from '@jackuait/blok';
@@ -85,7 +106,10 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           {section.badge && (
             <div className="api-section-badge" data-blok-testid="api-section-badge">{section.badge}</div>
           )}
-          <h1 className="api-section-title">{section.title}</h1>
+          <h1 className="api-section-title">
+            <a href={`#${section.id}`} className="api-anchor-link" aria-label={`Link to ${section.title}`}>#</a>
+            {section.title}
+          </h1>
           {section.description && (
             <p className="api-section-description">{section.description}</p>
           )}
@@ -101,7 +125,10 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
         {section.badge && (
           <div className="api-section-badge" data-blok-testid="api-section-badge">{section.badge}</div>
         )}
-        <h1 className="api-section-title">{section.title}</h1>
+        <h1 className="api-section-title">
+          <a href={`#${section.id}`} className="api-anchor-link" aria-label={`Link to ${section.title}`}>#</a>
+          {section.title}
+        </h1>
         {section.description && (
           <p className="api-section-description">{section.description}</p>
         )}
@@ -111,7 +138,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
         <div className="api-block">
           <h3 className="api-block-title">Methods</h3>
           {section.methods.map((method, index) => (
-            <ApiMethodCard key={index} method={method} />
+            <ApiMethodCard key={index} method={method} sectionId={section.id} />
           ))}
         </div>
       )}
@@ -119,7 +146,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
       {section.properties && section.properties.length > 0 && (
         <div className="api-block">
           <h3 className="api-block-title">Properties</h3>
-          <table className="api-table">
+          <table className="api-table api-table--with-anchors">
             <thead>
               <tr>
                 <th>Property</th>
@@ -128,17 +155,21 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
               </tr>
             </thead>
             <tbody>
-              {section.properties.map((prop) => (
-                <tr key={prop.name}>
-                  <td>
-                    <code>{prop.name}</code>
-                  </td>
-                  <td>
-                    <code>{prop.type}</code>
-                  </td>
-                  <td>{prop.description}</td>
-                </tr>
-              ))}
+              {section.properties.map((prop) => {
+                const propId = generatePropertyId(section.id, prop.name);
+                return (
+                  <tr key={prop.name} id={propId} className="api-table-row">
+                    <td>
+                      <a href={`#${propId}`} className="api-anchor-link api-anchor-link--table" aria-label={`Link to ${prop.name}`}>#</a>
+                      <code>{prop.name}</code>
+                    </td>
+                    <td>
+                      <code>{prop.type}</code>
+                    </td>
+                    <td>{prop.description}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -147,7 +178,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
       {section.table && section.table.length > 0 && (
         <div className="api-block">
           <h3 className="api-block-title">{section.title}</h3>
-          <table className="api-table">
+          <table className="api-table api-table--with-anchors">
             <thead>
               <tr>
                 {section.id === "config" && <th>Option</th>}
@@ -157,22 +188,26 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
               </tr>
             </thead>
             <tbody>
-              {section.table.map((row) => (
-                <tr key={row.option}>
-                  <td>
-                    <code>{row.option}</code>
-                  </td>
-                  <td>
-                    <code>{row.type}</code>
-                  </td>
-                  {section.id === "config" && (
+              {section.table.map((row) => {
+                const optionId = generateOptionId(section.id, row.option);
+                return (
+                  <tr key={row.option} id={optionId} className="api-table-row">
                     <td>
-                      <code>{row.default}</code>
+                      <a href={`#${optionId}`} className="api-anchor-link api-anchor-link--table" aria-label={`Link to ${row.option}`}>#</a>
+                      <code>{row.option}</code>
                     </td>
-                  )}
-                  <td>{row.description}</td>
-                </tr>
-              ))}
+                    <td>
+                      <code>{row.type}</code>
+                    </td>
+                    {section.id === "config" && (
+                      <td>
+                        <code>{row.default}</code>
+                      </td>
+                    )}
+                    <td>{row.description}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

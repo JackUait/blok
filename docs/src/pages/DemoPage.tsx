@@ -1,4 +1,5 @@
 import { Nav } from '../components/layout/Nav';
+import { Footer } from '../components/layout/Footer';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/demo.css';
@@ -80,6 +81,7 @@ export const DemoPage: React.FC = () => {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 };

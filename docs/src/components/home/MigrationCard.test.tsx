@@ -36,16 +36,6 @@ describe('MigrationCard', () => {
     expect(screen.getByTestId('migration-card')).toBeInTheDocument();
   });
 
-  it('should render the migration icon', () => {
-    render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByTestId('migration-icon')).toBeInTheDocument();
-  });
-
   it('should render the title', () => {
     render(
       <MemoryRouter>
@@ -56,16 +46,25 @@ describe('MigrationCard', () => {
     expect(screen.getByText('Migrating from EditorJS?')).toBeInTheDocument();
   });
 
-  it('should render the description', () => {
+  it('should render the description with drop-in replacement highlight', () => {
     render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    expect(
-      screen.getByText('Blok is designed as a drop-in replacement. Use our automated codemod to switch in minutes, not hours.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('drop-in replacement')).toBeInTheDocument();
+  });
+
+  it('should render the migration badge', () => {
+    render(
+      <MemoryRouter>
+        <MigrationCard />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId('migration-badge')).toBeInTheDocument();
+    expect(screen.getByText('Zero downtime migration')).toBeInTheDocument();
   });
 
   it('should render the migration code', async () => {
@@ -87,9 +86,21 @@ describe('MigrationCard', () => {
       </MemoryRouter>
     );
 
-    const link = screen.getByRole('link', { name: 'View Migration Guide' });
+    const link = screen.getByRole('link', { name: /View Migration Guide/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/migration');
+  });
+
+  it('should render the View Codemod button', () => {
+    render(
+      <MemoryRouter>
+        <MigrationCard />
+      </MemoryRouter>
+    );
+
+    const link = screen.getByRole('link', { name: /View Codemod/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', 'https://github.com/jackuait/blok/tree/master/codemod');
   });
 
   it('should have migration-content div', () => {

@@ -41,7 +41,7 @@ const FEATURES: FeatureDetail[] = [
       ],
       codeExample: `const data = await editor.save();
 // { blocks: [{ type: "paragraph", data: { text: "Hello" } }] }`,
-      apiLink: "/docs#save",
+      apiLink: "/docs#core",
     },
   },
   {
@@ -91,6 +91,7 @@ new Blok({
     }
   }
 });`,
+      apiLink: "/docs#toolbar-api",
     },
   },
   {
@@ -141,6 +142,7 @@ new Blok({
     }
   }
 });`,
+      apiLink: "/docs#inline-toolbar-api",
     },
   },
   {
@@ -159,15 +161,15 @@ new Blok({
     description: (
       <>
         Rearrange blocks with <strong>drag handles</strong>. Pointer-based
-        system works on touch and desktop.
+        system for desktop devices.
       </>
     ),
     accent: "mauve",
     details: {
       summary:
-        "Intuitive drag and drop reordering using a pointer-based system that works seamlessly on both touch and desktop devices.",
+        "Intuitive drag and drop reordering using a pointer-based system. Currently available on desktop devices.",
       benefits: [
-        "Works on touch and desktop devices",
+        "Works on desktop devices",
         "Visual drop indicators",
         "Smooth animations during drag",
         "Accessible keyboard alternatives",
@@ -231,7 +233,7 @@ new Blok({
   render() { return document.createElement('div'); }
   save(element) { return { text: element.innerHTML }; }
 }`,
-      apiLink: "/docs#tools",
+      apiLink: "/docs#tools-api",
     },
   },
   {
@@ -254,7 +256,7 @@ new Blok({
         contexts or permission-based editing.
       </>
     ),
-    accent: "cyan",
+    accent: "purple",
     details: {
       summary:
         "Switch between edit and read-only modes at runtime without reinitializing the editor.",
@@ -264,12 +266,15 @@ new Blok({
         "Preserves content and scroll position",
         "Disables all editing interactions",
       ],
-      codeExample: `// Toggle read-only mode
-editor.readOnly.toggle();
+      codeExample: `// Set read-only mode
+await editor.readOnly.set(true);
 
-// Or set explicitly
-editor.readOnly.toggle(true);`,
-      apiLink: "/docs#readonly",
+// Disable read-only
+await editor.readOnly.set(false);
+
+// Check current state
+console.log(editor.readOnly.isEnabled);`,
+      apiLink: "/docs#readonly-api",
     },
   },
   {
@@ -309,20 +314,21 @@ editor.readOnly.toggle(true);`,
     title: "Undo & Redo",
     description: (
       <>
-        Full history support with <kbd>⌘Z</kbd> / <kbd>⌘⇧Z</kbd>. Never lose
-        your work with automatic state tracking.
+        <strong>CRDT-based</strong> history with <kbd>⌘Z</kbd> / <kbd>⌘⇧Z</kbd>.
+        Conflict-free state tracking for reliable undo/redo.
       </>
     ),
     accent: "yellow",
     details: {
       summary:
-        "Comprehensive undo/redo with keyboard shortcuts and API access. All changes are tracked automatically.",
+        "CRDT-powered undo/redo ensures conflict-free history tracking. Keyboard shortcuts and API access included.",
       benefits: [
-        "Automatic change tracking",
+        "CRDT-based change tracking",
+        "Conflict-free state management",
         "Keyboard shortcuts (⌘Z / ⌘⇧Z)",
         "Programmatic undo/redo via API",
-        "Configurable history depth",
       ],
+      apiLink: "/docs#blocks-api",
     },
   },
   {
@@ -339,7 +345,7 @@ editor.readOnly.toggle(true);`,
           strokeWidth="1.5"
         />
         <path
-          d="M7 12h18M7 20h18"
+          d="M8 12h16M8 20h16"
           stroke="currentColor"
           strokeWidth="1.5"
           strokeLinecap="round"
@@ -353,7 +359,7 @@ editor.readOnly.toggle(true);`,
         by default <span className="feature-badge">~3KB</span>.
       </>
     ),
-    accent: "red",
+    accent: "cyan",
     details: {
       summary:
         "Full internationalization with 68 languages, RTL support, and lazy loading for optimal bundle size.",
@@ -363,11 +369,10 @@ editor.readOnly.toggle(true);`,
         "Lazy-loaded translations (~3KB base)",
         "Custom translation overrides",
       ],
-      codeExample: `import { ar } from '@aspect/blok/locales';
-
-new Blok({
-  i18n: ar // Arabic with RTL
+      codeExample: `new Blok({
+  i18n: { locale: 'ar' } // Arabic with RTL
 });`,
+      apiLink: "/docs#i18n-api",
     },
   },
   {
@@ -400,19 +405,19 @@ new Blok({
     title: "Smart Paste",
     description: (
       <>
-        Paste from <strong>Google Docs</strong>, or plain text. Content is
+        Paste from <strong>Google Docs</strong> or plain text. HTML is
         sanitized and converted to blocks.
       </>
     ),
-    accent: "purple",
+    accent: "blue",
     details: {
       summary:
-        "Intelligent paste handling that converts content from various sources into clean blocks.",
+        "Paste content from Google Docs and watch it transform into clean, structured blocks automatically.",
       benefits: [
-        "Paste from Google Docs, Word, and more",
-        "Automatic HTML sanitization",
-        "Preserves formatting as blocks",
-        "Custom paste handlers per tool",
+        "Works with Google Docs and plain text",
+        "Automatic XSS-safe HTML sanitization",
+        "Preserves headings, lists, and formatting",
+        "Extensible paste handlers for custom tools",
       ],
     },
   },

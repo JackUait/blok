@@ -57,8 +57,9 @@ describe('ApiSection', () => {
   it('should render the title', () => {
     render(<ApiSection section={mockSection} />);
 
-    const title = screen.getByRole('heading', { level: 1, name: 'Test Section' });
-    expect(title).toBeInTheDocument();
+    // Title includes anchor link, check the heading contains the section title text
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(title).toHaveTextContent('Test Section');
   });
 
   it('should render the badge when provided', () => {
@@ -235,5 +236,62 @@ describe('ApiSection', () => {
     // Check for the CodeBlock wrapper using testid
     const codeBlock = screen.getByTestId('code-block');
     expect(codeBlock).toBeInTheDocument();
+  });
+
+  it('should render anchor link for the section title', () => {
+    render(<ApiSection section={mockSection} />);
+
+    const anchorLink = screen.getByRole('link', { name: /Link to Test Section/ });
+    expect(anchorLink).toBeInTheDocument();
+    expect(anchorLink).toHaveAttribute('href', '#test-section');
+    expect(anchorLink).toHaveClass('api-anchor-link');
+  });
+
+  it('should render anchor link for methods', () => {
+    render(<ApiSection section={mockSection} />);
+
+    const methodAnchor = screen.getByRole('link', { name: /Link to testMethod/ });
+    expect(methodAnchor).toBeInTheDocument();
+    expect(methodAnchor).toHaveAttribute('href', '#test-section-testmethod');
+  });
+
+  it('should render anchor links for properties', () => {
+    render(<ApiSection section={mockSection} />);
+
+    const propAnchor = screen.getByRole('link', { name: /Link to testProperty/ });
+    expect(propAnchor).toBeInTheDocument();
+    expect(propAnchor).toHaveAttribute('href', '#test-section-prop-testproperty');
+    expect(propAnchor).toHaveClass('api-anchor-link--table');
+  });
+
+  it('should render property rows with id for anchor navigation', () => {
+    render(<ApiSection section={mockSection} />);
+
+    const propRow = document.getElementById('test-section-prop-testproperty');
+    expect(propRow).toBeInTheDocument();
+    expect(propRow?.tagName.toLowerCase()).toBe('tr');
+  });
+
+  it('should render anchor links for config options', () => {
+    render(<ApiSection section={mockConfigSection} />);
+
+    const holderAnchor = screen.getByRole('link', { name: /Link to holder/ });
+    expect(holderAnchor).toBeInTheDocument();
+    expect(holderAnchor).toHaveAttribute('href', '#config-holder');
+
+    const toolsAnchor = screen.getByRole('link', { name: /Link to tools/ });
+    expect(toolsAnchor).toBeInTheDocument();
+    expect(toolsAnchor).toHaveAttribute('href', '#config-tools');
+  });
+
+  it('should render config option rows with id for anchor navigation', () => {
+    render(<ApiSection section={mockConfigSection} />);
+
+    const holderRow = document.getElementById('config-holder');
+    expect(holderRow).toBeInTheDocument();
+    expect(holderRow?.tagName.toLowerCase()).toBe('tr');
+
+    const toolsRow = document.getElementById('config-tools');
+    expect(toolsRow).toBeInTheDocument();
   });
 });

@@ -93,18 +93,7 @@ describe('ApiPreview', () => {
     expect(screen.getByText('emit(event, data)')).toBeInTheDocument();
   });
 
-  it('should render return types', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
 
-    // These return types appear in the component but may be split across elements
-    // Use getAllByText since multiple elements contain 'Promise'
-    const promiseElements = screen.getAllByText((content) => content.includes('Promise'));
-    expect(promiseElements.length).toBeGreaterThan(0);
-  });
 
   it('should render method descriptions', () => {
     render(

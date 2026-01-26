@@ -1017,9 +1017,44 @@ editor.tooltip.onHover(button, 'Click me', {
     description: "Control the read-only state of the editor.",
     methods: [
       {
+        name: "readOnly.set(state)",
+        returnType: "Promise<boolean>",
+        description: "Set read-only mode to the specified boolean state. Returns the new state.",
+        example: `// Enable read-only
+await editor.readOnly.set(true);
+
+// Disable read-only
+await editor.readOnly.set(false);
+
+// Check state
+console.log(editor.readOnly.isEnabled); // true or false`,
+        demo: {
+          actions: [
+            {
+              label: "Enable read-only",
+              execute: async (editor) => {
+                await (
+                  editor as { readOnly: { set(state: boolean): Promise<boolean> } }
+                ).readOnly.set(true);
+              },
+              expectedOutput: "Read-only mode enabled",
+            },
+            {
+              label: "Disable read-only",
+              execute: async (editor) => {
+                await (
+                  editor as { readOnly: { set(state: boolean): Promise<boolean> } }
+                ).readOnly.set(false);
+              },
+              expectedOutput: "Read-only mode disabled",
+            },
+          ],
+        },
+      },
+      {
         name: "readOnly.toggle(state?)",
         returnType: "Promise<boolean>",
-        description: "Set or toggle read-only mode. Returns the current state.",
+        description: "Toggle read-only state. Without parameter, toggles current state. With parameter, sets to specified state. (Deprecated - use set() instead)",
         example: `// Toggle current state
 const isReadOnly = await editor.readOnly.toggle();
 

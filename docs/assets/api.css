@@ -157,12 +157,65 @@
   font-weight: 700;
   letter-spacing: var(--letter-spacing-tight);
   margin-bottom: var(--spacing-sm);
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
 }
 
 .api-section-description {
   font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
   line-height: 1.6;
+}
+
+/* Anchor Links */
+.api-anchor-link {
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+  scroll-margin-top: 80px;
+}
+
+.api-anchor-link:hover {
+  color: var(--color-coral);
+  opacity: 1;
+}
+
+.api-section-title:hover .api-anchor-link,
+.api-method-header:hover .api-anchor-link {
+  opacity: 1;
+}
+
+.api-anchor-link--method {
+  font-size: var(--font-size-sm);
+  margin-right: var(--spacing-xs);
+}
+
+/* Table anchor links */
+.api-anchor-link--table {
+  font-size: var(--font-size-xs);
+  margin-right: var(--spacing-xs);
+  vertical-align: middle;
+}
+
+.api-table-row:hover .api-anchor-link--table {
+  opacity: 1;
+}
+
+.api-table--with-anchors td:first-child {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* Scroll margin for anchor targets */
+.api-section,
+.api-method-card,
+.api-table-row {
+  scroll-margin-top: 80px;
 }
 
 /* API Block */
@@ -242,9 +295,13 @@
 .api-method-header {
   display: flex;
   align-items: baseline;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-sm);
   flex-wrap: wrap;
+}
+
+.api-method-header .api-anchor-link {
+  flex-shrink: 0;
 }
 
 .api-method-large .api-method-name {

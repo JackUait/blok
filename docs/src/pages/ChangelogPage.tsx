@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Nav } from "../components/layout/Nav";
+import { Footer } from "../components/layout/Footer";
 import { parseChangelog } from "../utils/changelog-parser";
 import type { Release } from "@/types/changelog";
 import "../../assets/changelog.css";
@@ -175,6 +176,7 @@ const ChangelogPage: React.FC = () => {
             <p className="changelog-hero-description">Loading...</p>
           </div>
         </main>
+        <Footer />
       </>
     );
   }
@@ -195,6 +197,7 @@ const ChangelogPage: React.FC = () => {
             </p>
           </div>
         </main>
+        <Footer />
       </>
     );
   }
@@ -283,6 +286,7 @@ const ChangelogPage: React.FC = () => {
           ))}
         </div>
       </main>
+      <Footer />
     </>
   );
 };

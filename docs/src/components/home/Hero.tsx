@@ -9,6 +9,12 @@ export const Hero: React.FC = () => {
     transitionSpeed: 500,
   });
 
+  const handleScrollToQuickStart = (e: React.MouseEvent<HTMLAnchorElement>): void => {
+    e.preventDefault();
+    const target = document.getElementById('quick-start');
+    target?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <section className="hero">
       <div className="hero-bg">
@@ -25,13 +31,17 @@ export const Hero: React.FC = () => {
             <span className="hero-title-gradient">block-based editors</span>
           </h1>
           <p className="hero-description">
-            Blok is a highly extensible rich text editor built for developers who need to
-            implement a Notion-like editing experience without building it from scratch.
+            A production-ready, extensible rich text editor that brings Notion-like
+            block-based editing to your app — customizable, themeable, and battle-tested.
           </p>
           <div className="hero-actions">
-            <Link to="/#quick-start" className="btn btn-primary">
+            <a
+              href="#quick-start"
+              className="btn btn-primary"
+              onClick={handleScrollToQuickStart}
+            >
               Get Started
-            </Link>
+            </a>
             <Link to="/demo" className="btn btn-secondary">
               <svg
                 width="16"

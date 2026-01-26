@@ -1,4 +1,5 @@
 import { Nav } from '../components/layout/Nav';
+import { Footer } from '../components/layout/Footer';
 import { CodemodCard } from '../components/migration/CodemodCard';
 import { MigrationSteps } from '../components/migration/MigrationSteps';
 import { NAV_LINKS } from '../utils/constants';
@@ -23,6 +24,7 @@ export const MigrationPage: React.FC = () => {
 
         <MigrationSteps />
       </main>
+      <Footer />
     </>
   );
 };

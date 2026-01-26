@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Nav } from '../components/layout/Nav';
+import { Footer } from '../components/layout/Footer';
 import { ApiSidebar } from '../components/api/ApiSidebar';
 import { ApiSection } from '../components/api/ApiSection';
 import { API_SECTIONS } from '../components/api/api-data';
@@ -8,6 +9,40 @@ import '../../assets/api.css';
 
 export const ApiPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState('core');
+  const isScrollingToHashRef = useRef(false);
+
+  // Handle initial URL hash on page load and hash changes
+  const scrollToHash = useCallback(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+
+    // Small delay to ensure DOM is fully rendered
+    requestAnimationFrame(() => {
+      const targetElement = document.getElementById(hash);
+      if (targetElement) {
+        isScrollingToHashRef.current = true;
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Reset flag after scroll completes
+        setTimeout(() => {
+          isScrollingToHashRef.current = false;
+        }, 500);
+      }
+    });
+  }, []);
+
+  // Handle initial hash on mount
+  useEffect(() => {
+    scrollToHash();
+
+    // Listen for hash changes (back/forward navigation)
+    const handleHashChange = (): void => {
+      scrollToHash();
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [scrollToHash]);
 
   useEffect(() => {
     // Intersection Observer for active section tracking
@@ -18,6 +53,9 @@ export const ApiPage: React.FC = () => {
     };
 
     const observer = new IntersectionObserver((entries) => {
+      // Don't update active section while programmatically scrolling to hash
+      if (isScrollingToHashRef.current) return;
+      
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           setActiveSection(entry.target.id);
@@ -33,7 +71,7 @@ export const ApiPage: React.FC = () => {
       }
     });
 
-    // Smooth scroll for anchor links
+    // Handle anchor link clicks - update URL hash and scroll
     const handleAnchorClick = (e: Event) => {
       const target = e.target as HTMLAnchorElement;
       const href = target.getAttribute('href');
@@ -42,10 +80,20 @@ export const ApiPage: React.FC = () => {
       const targetElement = document.querySelector(href);
       if (targetElement) {
         e.preventDefault();
+        
+        // Update URL hash (enables sharing/bookmarking)
+        window.history.pushState(null, '', href);
+        
+        isScrollingToHashRef.current = true;
         targetElement.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
+        
+        // Reset flag after scroll completes
+        setTimeout(() => {
+          isScrollingToHashRef.current = false;
+        }, 500);
       }
     };
 
@@ -72,6 +120,7 @@ export const ApiPage: React.FC = () => {
           ))}
         </main>
       </div>
+      <Footer />
     </>
   );
 };

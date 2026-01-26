@@ -129,6 +129,18 @@ const getHighlighter = async (lang: string): Promise<Highlighter> => {
   return initPromise;
 };
 
+// Helper to create plain text HTML fallback (matches Shiki structure)
+const createPlainTextHtml = (text: string): string => {
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+  // Use same structure as Shiki output - pre.shiki > code
+  return `<pre class="shiki"><code>${escaped}</code></pre>`;
+};
+
 export const CodeBlock: React.FC<CodeBlockProps> = ({
   code,
   language = "bash",
@@ -139,7 +151,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 }) => {
   const { copyToClipboard } = useCopyToClipboard();
   const [copied, setCopied] = useState(false);
-  const [highlightedCode, setHighlightedCode] = useState<string>("");
   const [isDark, setIsDark] = useState(false);
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
 
@@ -148,6 +159,9 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     showPackageManagerToggle && packageName
       ? getInstallCommand(packageName, packageManager)
       : code;
+
+  // Initialize with plain text fallback immediately to prevent flash of empty content
+  const [highlightedCode, setHighlightedCode] = useState<string>(() => createPlainTextHtml(displayCode));
 
   const handlePackageManagerChange = (manager: PackageManager) => {
     setPackageManager(manager);
@@ -197,9 +211,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         setHighlightedCode(html);
       } catch {
         // Fallback to plain text if highlighting fails
-        setHighlightedCode(
-          `<pre class="shiki"><code>${escapeHtml(displayCode)}</code></pre>`,
-        );
+        setHighlightedCode(createPlainTextHtml(displayCode));
       }
     };
 
@@ -289,13 +301,4 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       </div>
     </div>
   );
-};
-
-const escapeHtml = (text: string): string => {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 };

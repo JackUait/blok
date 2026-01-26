@@ -10,6 +10,7 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
 
 type ReadOnlyModuleStub = {
   toggle: ReturnType<typeof vi.fn<(state?: boolean) => Promise<boolean>>>;
+  set: ReturnType<typeof vi.fn<(state: boolean) => Promise<boolean>>>;
   isEnabled: boolean;
 };
 
@@ -30,6 +31,7 @@ const createReadOnlyApi = (overrides: Partial<ReadOnlyModuleStub> = {}): {
 
   const defaultReadOnlyModule: ReadOnlyModuleStub = {
     toggle: vi.fn((_state?: boolean): Promise<boolean> => Promise.resolve(false)),
+    set: vi.fn((_state: boolean): Promise<boolean> => Promise.resolve(false)),
     isEnabled: false,
   };
 
@@ -88,5 +90,33 @@ describe('ReadOnlyAPI', () => {
 
     blok.ReadOnly.isEnabled = false;
     expect(readOnlyApi.isEnabled).toBe(false);
+  });
+
+  describe('set method', () => {
+    it('exposes set via the methods getter', async () => {
+      const { readOnlyApi } = createReadOnlyApi();
+      const setSpy = vi.spyOn(readOnlyApi, 'set').mockResolvedValue(true);
+
+      await expect(readOnlyApi.methods.set(true)).resolves.toBe(true);
+      expect(setSpy).toHaveBeenCalledWith(true);
+    });
+
+    it('delegates set calls to the Blok module', async () => {
+      const { readOnlyApi, blok } = createReadOnlyApi();
+
+      blok.ReadOnly.set.mockResolvedValueOnce(true);
+
+      await expect(readOnlyApi.set(true)).resolves.toBe(true);
+      expect(blok.ReadOnly.set).toHaveBeenCalledWith(true);
+    });
+
+    it('delegates set calls to the Blok module for false', async () => {
+      const { readOnlyApi, blok } = createReadOnlyApi();
+
+      blok.ReadOnly.set.mockResolvedValueOnce(false);
+
+      await expect(readOnlyApi.set(false)).resolves.toBe(false);
+      expect(blok.ReadOnly.set).toHaveBeenCalledWith(false);
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { CodeBlock } from "../common/CodeBlock";
 
 export interface FeatureDetail {
   icon: React.ReactNode;
@@ -13,7 +14,8 @@ export interface FeatureDetail {
     | "cyan"
     | "yellow"
     | "red"
-    | "purple";
+    | "purple"
+    | "blue";
   details: {
     summary: string;
     benefits: string[];
@@ -118,9 +120,10 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
           {feature.details.codeExample && (
             <div className="feature-modal-code">
               <h3>Example</h3>
-              <pre>
-                <code>{feature.details.codeExample}</code>
-              </pre>
+              <CodeBlock
+                code={feature.details.codeExample}
+                language="typescript"
+              />
             </div>
           )}
 

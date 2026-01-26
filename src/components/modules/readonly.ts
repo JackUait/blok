@@ -126,6 +126,17 @@ export class ReadOnly extends Module {
   }
 
   /**
+   * Set read-only mode to the specified boolean state
+   * Unlike toggle(), this method requires a parameter and does not have default toggle behavior
+   * Call all Modules `toggleReadOnly` method and re-render Blok
+   * @param state - read-only state to set (required)
+   * @returns the new read-only state
+   */
+  public async set(state: boolean): Promise<boolean> {
+    return this.toggle(state);
+  }
+
+  /**
    * Throws an error about tools which don't support read-only mode
    */
   private throwCriticalError(): never {

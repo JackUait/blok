@@ -209,7 +209,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     languageDisplayNames[language.toLowerCase()] || language;
 
   return (
-    <div className="code-block" data-code-block data-testid="code-block">
+    <div className="code-block" data-code-block data-blok-testid="code-block">
       <div className="code-block-header">
         <div className="code-block-controls">
           <span className="code-block-control code-block-control--red" />
@@ -226,7 +226,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           className={`code-copy ${copied ? "copied" : ""}`}
           data-copy
           data-code={displayCode}
-          data-testid="code-copy-button"
+          data-blok-testid="code-copy-button"
           onClick={handleCopy}
           type="button"
           aria-label={copied ? "Copied!" : copyLabel}

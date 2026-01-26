@@ -18,7 +18,7 @@ export const DemoOutput: FC<DemoOutputProps> = ({ output }) => {
   return (
     <div
       className={`api-demo-output api-demo-output-${output.type}`}
-      data-testid="api-demo-output"
+      data-blok-testid="api-demo-output"
       data-output-type={output.type}
     >
       {isSuccess ? (
@@ -29,7 +29,7 @@ export const DemoOutput: FC<DemoOutputProps> = ({ output }) => {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
-          data-testid="success-icon"
+          data-blok-testid="success-icon"
         >
           <path
             d="M11.6666 3.5L5.24992 9.91667L2.33325 7"
@@ -47,7 +47,7 @@ export const DemoOutput: FC<DemoOutputProps> = ({ output }) => {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
-          data-testid="error-icon"
+          data-blok-testid="error-icon"
         >
           <path
             d="M7 8.16667V7M7 5.83333V5.83333M11.6667 7C11.6667 9.57733 9.57733 11.6667 7 11.6667C4.42267 11.6667 2.33333 9.57733 2.33333 7C2.33333 4.42267 4.42267 2.33333 7 2.33333C9.57733 2.33333 11.6667 4.42267 11.6667 7Z"

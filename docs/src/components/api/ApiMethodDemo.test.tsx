@@ -16,7 +16,7 @@ vi.mock('./MiniBlokEditor', () => ({
         });
       }
     }, 0);
-    return <div data-testid="mini-blok-editor">Mock Editor</div>;
+    return <div data-blok-testid="mini-blok-editor">Mock Editor</div>;
   },
 }));
 

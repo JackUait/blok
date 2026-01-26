@@ -90,19 +90,23 @@ describe('MigrationSteps', () => {
   it('should render .codex-editor mapping in table', () => {
     render(<MigrationSteps />);
 
-    expect(screen.getByText('codex-editor')).toBeInTheDocument();
+    expect(screen.getByText('.codex-editor')).toBeInTheDocument();
   });
 
   it('should render .ce-block mapping in table', () => {
     render(<MigrationSteps />);
 
-    expect(screen.getByText('ce-block')).toBeInTheDocument();
+    const table = screen.getByTestId('migration-table');
+    const withinTable = within(table);
+    expect(withinTable.getByText('.ce-block')).toBeInTheDocument();
   });
 
   it('should render [data-blok-element] mapping in table', () => {
     render(<MigrationSteps />);
 
-    expect(screen.getByText('data-blok-element')).toBeInTheDocument();
+    const table = screen.getByTestId('migration-table');
+    const withinTable = within(table);
+    expect(withinTable.getByText('[data-blok-element]')).toBeInTheDocument();
   });
 
   it('should render both migration sections', () => {

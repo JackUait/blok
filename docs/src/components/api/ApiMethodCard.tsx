@@ -17,7 +17,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method }) => {
   return (
     <div
       className={`api-method-card${hasDemo ? " api-method-card--with-demo" : ""}`}
-      data-testid="api-method-card"
+      data-blok-testid="api-method-card"
       data-has-demo={hasDemo}
     >
       <div className="api-method-header">

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { CodemodCard } from './CodemodCard';
 
 describe('CodemodCard', () => {
@@ -62,7 +62,9 @@ describe('CodemodCard', () => {
     render(<CodemodCard />);
 
     // CodeBlock stores code in data-code attribute for copy functionality
-    const copyButton = screen.getByLabelText('Copy');
+    // Query within the dry-run panel to get the correct copy button
+    const dryRunPanel = screen.getByTestId('codemod-panel-dry-run');
+    const copyButton = within(dryRunPanel).getByLabelText('Copy');
     expect(copyButton).toHaveAttribute('data-code', 'npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run');
   });
 
@@ -72,7 +74,9 @@ describe('CodemodCard', () => {
     const applyTab = screen.getByTestId('codemod-tab-apply');
     fireEvent.click(applyTab);
 
-    const copyButton = screen.getByLabelText('Copy');
+    // Query within the apply panel to get the correct copy button
+    const applyPanel = screen.getByTestId('codemod-panel-apply');
+    const copyButton = within(applyPanel).getByLabelText('Copy');
     expect(copyButton).toHaveAttribute('data-code', 'npx -p @jackuait/blok migrate-from-editorjs ./src');
   });
 

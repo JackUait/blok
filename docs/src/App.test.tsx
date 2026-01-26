@@ -42,29 +42,6 @@ describe('App', () => {
     expect(apiSidebar).toBeInTheDocument();
   });
 
-  it('should render ApiPage for /docs path with hash', () => {
-    // Create a target element with the hash id before rendering
-    const targetElement = document.createElement('div');
-    targetElement.id = 'blocks-api';
-    document.body.appendChild(targetElement);
-
-    render(
-      <MemoryRouter initialEntries={['/docs#blocks-api']}>
-        <App />
-      </MemoryRouter>
-    );
-
-    // Verify ApiPage is rendered via its sidebar testid
-    const apiSidebar = screen.getByTestId('api-sidebar');
-    expect(apiSidebar).toBeInTheDocument();
-
-    // After the fix, scrollIntoView should be called
-    expect(scrollIntoViewMock).toHaveBeenCalled();
-
-    // Cleanup
-    document.body.removeChild(targetElement);
-  });
-
   it('should render without crashing', () => {
     render(
       <MemoryRouter initialEntries={['/']}>

@@ -13,7 +13,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, className = "" }) => {
       height={size}
       className={className}
       style={{ objectFit: "contain" }}
-      data-testid="logo"
+      data-blok-testid="logo"
     />
   );
 };

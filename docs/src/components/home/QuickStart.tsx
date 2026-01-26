@@ -39,26 +39,26 @@ export const QuickStart: React.FC = () => {
   };
 
   return (
-    <section className="quick-start" id="quick-start">
-      <div className="quick-start-bg">
-        <div className="quick-start-blur"></div>
+    <section className="quick-start" id="quick-start" data-blok-testid="quick-start-section">
+      <div className="quick-start-bg" data-blok-testid="quick-start-bg">
+        <div className="quick-start-blur" data-blok-testid="quick-start-blur"></div>
       </div>
       <div className="container">
         <div className="section-header">
           <h2 className="section-title">Up and running in minutes</h2>
         </div>
-        <div className="install-steps">
+        <div className="install-steps" data-blok-testid="install-steps">
           <div
             className="install-step"
-            data-install-step
+            data-blok-testid="install-step-1"
             style={{ animationDelay: "0s" }}
           >
-            <div className="step-number">
+            <div className="step-number" data-blok-testid="step-number-1">
               <span>1</span>
             </div>
-            <div className="step-content">
+            <div className="step-content" data-blok-testid="step-content-1">
               <h3 className="step-title">Install Blok</h3>
-              <p className="step-description">
+              <p className="step-description" data-blok-testid="step-description-1">
                 Add Blok to your project using your favorite package manager.
               </p>
               <CodeBlock
@@ -72,15 +72,15 @@ export const QuickStart: React.FC = () => {
           </div>
           <div
             className="install-step"
-            data-install-step
+            data-blok-testid="install-step-2"
             style={{ animationDelay: "0.1s" }}
           >
-            <div className="step-number">
+            <div className="step-number" data-blok-testid="step-number-2">
               <span>2</span>
             </div>
-            <div className="step-content">
+            <div className="step-content" data-blok-testid="step-content-2">
               <h3 className="step-title">Import and configure</h3>
-              <p className="step-description">
+              <p className="step-description" data-blok-testid="step-description-2">
                 Import the editor and tools, then configure your block types.
               </p>
               <CodeBlock code={CONFIG_CODE} language="typescript" />
@@ -88,15 +88,15 @@ export const QuickStart: React.FC = () => {
           </div>
           <div
             className="install-step"
-            data-install-step
+            data-blok-testid="install-step-3"
             style={{ animationDelay: "0.2s" }}
           >
-            <div className="step-number">
+            <div className="step-number" data-blok-testid="step-number-3">
               <span>3</span>
             </div>
-            <div className="step-content">
+            <div className="step-content" data-blok-testid="step-content-3">
               <h3 className="step-title">Save content</h3>
-              <p className="step-description">
+              <p className="step-description" data-blok-testid="step-description-3">
                 Extract clean JSON data ready to save anywhere.
               </p>
               <CodeBlock code={SAVE_CODE} language="javascript" />

@@ -6,12 +6,12 @@ import type { ApiMethod } from './api-data';
 // Mock the sub-components
 vi.mock('./ApiMethodDemo', () => ({
   ApiMethodDemo: ({ demo }: { demo?: unknown }) => (
-    <div data-testid="api-method-demo">{demo ? 'Demo Section' : 'No Demo'}</div>
+    <div data-blok-testid="api-method-demo">{demo ? 'Demo Section' : 'No Demo'}</div>
   ),
 }));
 
 vi.mock('../common/CodeBlock', () => ({
-  CodeBlock: ({ code }: { code: string }) => <div data-testid="code-block">{code}</div>,
+  CodeBlock: ({ code }: { code: string }) => <div data-blok-testid="code-block">{code}</div>,
 }));
 
 describe('ApiMethodCard', () => {

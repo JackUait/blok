@@ -452,7 +452,7 @@ export const Features: React.FC = () => {
   };
 
   return (
-    <section className="features" id="features" ref={sectionRef}>
+    <section className="features" id="features" ref={sectionRef} aria-label="Features">
       {/* Decorative background elements */}
       <div className="features-bg">
         <div className="features-blob features-blob-1" />

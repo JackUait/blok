@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { Features } from './Features';
 
 describe('Features', () => {
@@ -69,8 +69,10 @@ describe('Features', () => {
   it('should render Custom Block Tools feature', () => {
     render(<Features />);
 
-    expect(screen.getByText('Custom Block Tools')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('custom blocks'))).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Learn more about Custom Block Tools' });
+    const withinButton = within(button);
+    expect(withinButton.getByText('Custom Block Tools')).toBeInTheDocument();
+    expect(withinButton.getByText((content) => content.includes('custom blocks'))).toBeInTheDocument();
   });
 
   it('should render Read-Only Mode feature', () => {

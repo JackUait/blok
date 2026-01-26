@@ -120,7 +120,7 @@ export const QuickStart: React.FC = () => {
                     <CodeBlock code={CONFIG_CODE} language="typescript" />
                   )}
                   {step.number === 3 && (
-                    <CodeBlock code={SAVE_CODE} language="javascript" />
+                    <CodeBlock code={SAVE_CODE} language="typescript" />
                   )}
                 </div>
               </div>

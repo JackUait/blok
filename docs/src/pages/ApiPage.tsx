@@ -9,7 +9,7 @@ import '../../assets/api.css';
 
 export const ApiPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState('core');
-  const isScrollingToHashRef = useRef(false);
+  const scrollTargetRef = useRef<string | null>(null);
 
   // Handle initial URL hash on page load and hash changes
   const scrollToHash = useCallback(() => {
@@ -20,13 +20,9 @@ export const ApiPage: React.FC = () => {
     requestAnimationFrame(() => {
       const targetElement = document.getElementById(hash);
       if (targetElement) {
-        isScrollingToHashRef.current = true;
+        scrollTargetRef.current = hash;
+        setActiveSection(hash);
         targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        
-        // Reset flag after scroll completes
-        setTimeout(() => {
-          isScrollingToHashRef.current = false;
-        }, 500);
       }
     });
   }, []);
@@ -53,11 +49,15 @@ export const ApiPage: React.FC = () => {
     };
 
     const observer = new IntersectionObserver((entries) => {
-      // Don't update active section while programmatically scrolling to hash
-      if (isScrollingToHashRef.current) return;
-      
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
+          // If we're scrolling to a target, only update when we reach it
+          if (scrollTargetRef.current) {
+            if (entry.target.id === scrollTargetRef.current) {
+              scrollTargetRef.current = null;
+            }
+            return;
+          }
           setActiveSection(entry.target.id);
         }
       });
@@ -77,6 +77,7 @@ export const ApiPage: React.FC = () => {
       const href = target.getAttribute('href');
       if (!href || !href.startsWith('#')) return;
 
+      const sectionId = href.slice(1);
       const targetElement = document.querySelector(href);
       if (targetElement) {
         e.preventDefault();
@@ -84,16 +85,14 @@ export const ApiPage: React.FC = () => {
         // Update URL hash (enables sharing/bookmarking)
         window.history.pushState(null, '', href);
         
-        isScrollingToHashRef.current = true;
+        // Track target and update active section immediately
+        scrollTargetRef.current = sectionId;
+        setActiveSection(sectionId);
+        
         targetElement.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         });
-        
-        // Reset flag after scroll completes
-        setTimeout(() => {
-          isScrollingToHashRef.current = false;
-        }, 500);
       }
     };
 

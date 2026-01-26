@@ -90,7 +90,7 @@ const QuickStartContent: React.FC = () => {
         <div className="api-quickstart-content">
           <h3>Save content</h3>
           <p>Extract clean JSON data ready to save anywhere.</p>
-          <CodeBlock code={SAVE_CODE} language="javascript" />
+          <CodeBlock code={SAVE_CODE} language="typescript" />
         </div>
       </div>
     </div>

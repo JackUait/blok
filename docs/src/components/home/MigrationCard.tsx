@@ -26,37 +26,16 @@ export const MigrationCard: React.FC = () => {
               </div>
               
               <h2 className="migration-title" data-blok-testid="migration-title">
-                Migrating from EditorJS?
+                Migrate from EditorJS
               </h2>
               
               <p className="migration-description" data-blok-testid="migration-description">
-                Blok is a <strong>drop-in replacement</strong> with full API compatibility. 
-                Our automated codemod handles the transition—you just review and ship.
+                Already using EditorJS? Our automated codemod handles most of the 
+                transition — just run it, review the changes, and ship.
               </p>
               
-              <div className="migration-terminal" data-blok-testid="migration-code">
-                <div className="migration-terminal-shimmer" aria-hidden="true" />
-                <div className="migration-terminal-header">
-                  <div className="migration-terminal-dots">
-                    <span className="migration-terminal-dot migration-terminal-dot--red" />
-                    <span className="migration-terminal-dot migration-terminal-dot--yellow" />
-                    <span className="migration-terminal-dot migration-terminal-dot--green" />
-                  </div>
-                  <span className="migration-terminal-title">Terminal</span>
-                  <button 
-                    className="migration-terminal-copy" 
-                    onClick={() => navigator.clipboard.writeText(MIGRATION_COMMAND)}
-                    aria-label="Copy command"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2"/>
-                    </svg>
-                  </button>
-                </div>
-                <div className="migration-terminal-body">
-                  <CodeBlock code={MIGRATION_COMMAND} language="bash" />
-                </div>
+              <div className="migration-code-wrapper" data-blok-testid="migration-code">
+                <CodeBlock code={MIGRATION_COMMAND} language="bash" />
               </div>
               
               <div className="migration-actions">

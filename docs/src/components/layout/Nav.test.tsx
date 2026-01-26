@@ -46,8 +46,9 @@ describe('Nav', () => {
       </MemoryRouter>
     );
 
-    // Check for the logo text "Blok"
-    expect(screen.getByText('Blok')).toBeInTheDocument();
+    // Logo renders as an img element with alt="Blok"
+    const logo = screen.getByRole('img', { name: 'Blok' });
+    expect(logo).toBeInTheDocument();
   });
 
   it('should mark the active link based on current path', () => {
@@ -68,7 +69,7 @@ describe('Nav', () => {
       </MemoryRouter>
     );
 
-    const githubLink = screen.getByText('GitHub').closest('a');
+    const githubLink = screen.getByRole('link', { name: 'GitHub' });
     expect(githubLink).toHaveAttribute('href', 'https://github.com/JackUait/blok');
     expect(githubLink).toHaveAttribute('target', '_blank');
     expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
@@ -108,28 +109,6 @@ describe('Nav', () => {
     expect(toggleButton).toHaveAttribute('data-nav-toggle');
   });
 
-  it('should have a nav-container div', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <Nav links={mockLinks} />
-      </MemoryRouter>
-    );
-
-    const containerDiv = container.querySelector('.nav-container');
-    expect(containerDiv).toBeInTheDocument();
-  });
-
-  it('should have a nav-links div', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <Nav links={mockLinks} />
-      </MemoryRouter>
-    );
-
-    const linksDiv = container.querySelector('.nav-links');
-    expect(linksDiv).toBeInTheDocument();
-  });
-
   it('should render home link with Logo', () => {
     render(
       <MemoryRouter>
@@ -137,7 +116,8 @@ describe('Nav', () => {
       </MemoryRouter>
     );
 
-    const homeLink = screen.getByText('Blok').closest('a');
-    expect(homeLink).toHaveAttribute('class', expect.stringContaining('nav-logo'));
+    // The link's accessible name comes from the logo img's alt text
+    const homeLink = screen.getByRole('link', { name: 'Blok' });
+    expect(homeLink).toHaveAttribute('href', '/');
   });
 });

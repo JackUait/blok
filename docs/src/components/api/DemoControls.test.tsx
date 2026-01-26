@@ -156,21 +156,21 @@ describe('DemoControls', () => {
     expect(screen.getByText('Reset')).toBeInTheDocument();
   });
 
-  it('should call onReset when reset button is clicked', async () => {
-    const onReset = vi.fn();
+  it('should clear output when reset button is clicked', async () => {
+    const onOutputChange = vi.fn();
     render(
       <DemoControls
         actions={mockActions}
         editor={mockEditor}
-        onOutputChange={vi.fn()}
-        onReset={onReset}
+        onOutputChange={onOutputChange}
+        onReset={vi.fn()}
       />
     );
 
     const resetButton = screen.getByText('Reset');
     await userEvent.click(resetButton);
 
-    expect(onReset).toHaveBeenCalledTimes(1);
+    expect(onOutputChange).toHaveBeenCalledWith(null);
   });
 
   it('should not render reset button when onReset is not provided', () => {

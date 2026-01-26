@@ -4,7 +4,7 @@ interface LogoProps {
   className?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({ size = 32, className = '' }) => {
+export const Logo: React.FC<LogoProps> = ({ size = 32, className = "" }) => {
   return (
     <img
       src="/mascot.png"
@@ -12,7 +12,8 @@ export const Logo: React.FC<LogoProps> = ({ size = 32, className = '' }) => {
       width={size}
       height={size}
       className={className}
-      style={{ objectFit: 'contain' }}
+      style={{ objectFit: "contain" }}
+      data-testid="logo"
     />
   );
 };

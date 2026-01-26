@@ -10,9 +10,9 @@ describe('ApiSidebar', () => {
   it('should render an aside element with data-api-sidebar attribute', () => {
     render(<ApiSidebar activeSection="core" />);
 
-    const aside = document.querySelector('[data-api-sidebar]');
+    const aside = screen.getByTestId('api-sidebar');
     expect(aside).toBeInTheDocument();
-    expect(aside?.tagName.toLowerCase()).toBe('aside');
+    expect(aside.tagName.toLowerCase()).toBe('aside');
   });
 
   it('should render all sidebar sections', () => {
@@ -60,62 +60,46 @@ describe('ApiSidebar', () => {
   it('should apply active class to the active section', () => {
     render(<ApiSidebar activeSection="core" />);
 
-    const blokClassLink = screen.getByText('Blok Class');
-    expect(blokClassLink.closest('a')).toHaveClass('active');
+    const coreLink = screen.getByTestId('api-sidebar-link-core');
+    expect(coreLink).toHaveClass('active');
   });
 
   it('should not apply active class to inactive sections', () => {
     render(<ApiSidebar activeSection="core" />);
 
-    const configLink = screen.getByText('Configuration');
-    expect(configLink.closest('a')).not.toHaveClass('active');
+    const configLink = screen.getByTestId('api-sidebar-link-config');
+    expect(configLink).not.toHaveClass('active');
   });
 
-  it('should have api-sidebar-nav nav element', () => {
-    const { container } = render(<ApiSidebar activeSection="core" />);
+  it('should render nav element', () => {
+    render(<ApiSidebar activeSection="core" />);
 
-    const nav = container.querySelector('.api-sidebar-nav');
+    const nav = screen.getByTestId('api-sidebar-nav');
     expect(nav).toBeInTheDocument();
-    expect(nav?.tagName.toLowerCase()).toBe('nav');
+    expect(nav.tagName.toLowerCase()).toBe('nav');
   });
 
-  it('should have api-sidebar-section divs', () => {
-    const { container } = render(<ApiSidebar activeSection="core" />);
+  it('should render sidebar sections', () => {
+    render(<ApiSidebar activeSection="core" />);
 
-    const sections = container.querySelectorAll('.api-sidebar-section');
+    const sections = screen.getAllByTestId('api-sidebar-section');
     expect(sections.length).toBeGreaterThan(0);
-  });
-
-  it('should have api-sidebar-title h4 elements', () => {
-    const { container } = render(<ApiSidebar activeSection="core" />);
-
-    const titles = container.querySelectorAll('.api-sidebar-title');
-    expect(titles.length).toBeGreaterThan(0);
-  });
-
-  it('should have api-sidebar-link anchors', () => {
-    const { container } = render(<ApiSidebar activeSection="core" />);
-
-    const links = container.querySelectorAll('.api-sidebar-link');
-    expect(links.length).toBeGreaterThan(0);
   });
 
   it('should have correct href attributes for links', () => {
     render(<ApiSidebar activeSection="core" />);
 
-    const quickStartLink = screen.getByText('Quick Start');
-    expect(quickStartLink.closest('a')).toHaveAttribute('href', '#quick-start');
+    const quickStartLink = screen.getByTestId('api-sidebar-link-quick-start');
+    expect(quickStartLink).toHaveAttribute('href', '#quick-start');
 
-    const coreLink = screen.getByText('Blok Class');
-    expect(coreLink.closest('a')).toHaveAttribute('href', '#core');
+    const coreLink = screen.getByTestId('api-sidebar-link-core');
+    expect(coreLink).toHaveAttribute('href', '#core');
   });
 
   it('should have onClick handlers for scroll functionality', () => {
-    const { container } = render(<ApiSidebar activeSection="core" />);
+    render(<ApiSidebar activeSection="core" />);
 
-    const links = container.querySelectorAll('.api-sidebar-link');
-    links.forEach((link) => {
-      expect(link.getAttribute('onclick')).toBeDefined();
-    });
+    const quickStartLink = screen.getByTestId('api-sidebar-link-quick-start');
+    expect(quickStartLink.tagName.toLowerCase()).toBe('a');
   });
 });

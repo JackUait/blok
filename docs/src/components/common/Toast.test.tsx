@@ -13,10 +13,11 @@ describe('Toast', () => {
   });
 
   it('should not render when visible is false', () => {
-    const { container } = render(
+    render(
       <Toast message="Test message" visible={false} onVisibleChange={vi.fn()} />
     );
-    expect(container.firstChild).toBe(null);
+    const toast = screen.queryByTestId('toast');
+    expect(toast).not.toBeInTheDocument();
   });
 
   it('should render when visible is true', () => {
@@ -75,20 +76,21 @@ describe('Toast', () => {
     expect(onVisibleChange).not.toHaveBeenCalled();
   });
 
-  it('should have the correct CSS class', () => {
-    const { container } = render(
+  it('should have the correct data attribute when visible', () => {
+    render(
       <Toast message="Test" visible={true} onVisibleChange={vi.fn()} />
     );
-    const toast = container.querySelector('.toast');
+    const toast = screen.getByTestId('toast');
     expect(toast).toBeInTheDocument();
-    expect(toast).toHaveClass('visible');
+    expect(toast).toHaveAttribute('data-blok-testid', 'toast');
   });
 
   it('should contain a checkmark icon', () => {
-    const { container } = render(
+    render(
       <Toast message="Test" visible={true} onVisibleChange={vi.fn()} />
     );
-    const svg = container.querySelector('svg');
-    expect(svg).toBeInTheDocument();
+    const icon = screen.getByTestId('toast-icon');
+    expect(icon).toBeInTheDocument();
+    expect(icon.tagName.toLowerCase()).toBe('svg');
   });
 });

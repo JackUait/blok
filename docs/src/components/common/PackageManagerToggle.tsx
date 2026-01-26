@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-export type PackageManager = 'yarn' | 'npm' | 'bun';
+export type PackageManager = "yarn" | "npm" | "bun";
 
 interface PackageManagerToggleProps {
   onChange?: (manager: PackageManager) => void;
 }
 
-const PACKAGE_MANAGERS: PackageManager[] = ['yarn', 'npm', 'bun'];
+const PACKAGE_MANAGERS: PackageManager[] = ["yarn", "npm", "bun"];
 
 export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
   onChange,
 }) => {
-  const [selected, setSelected] = useState<PackageManager>('yarn');
+  const [selected, setSelected] = useState<PackageManager>("yarn");
 
   const handleClick = (manager: PackageManager) => {
     setSelected(manager);
@@ -24,7 +24,7 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
         <button
           key={manager}
           type="button"
-          className={`package-manager-option ${selected === manager ? 'active' : ''}`}
+          className={`package-manager-option ${selected === manager ? "active" : ""}`}
           onClick={() => handleClick(manager)}
           aria-pressed={selected === manager}
           aria-label={`Switch to ${manager} command`}
@@ -41,14 +41,14 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
  */
 export const getInstallCommand = (
   packageName: string,
-  manager: PackageManager
+  manager: PackageManager,
 ): string => {
   switch (manager) {
-    case 'yarn':
+    case "yarn":
       return `yarn add ${packageName}`;
-    case 'npm':
+    case "npm":
       return `npm install ${packageName}`;
-    case 'bun':
+    case "bun":
       return `bun add ${packageName}`;
     default:
       return `npm install ${packageName}`;

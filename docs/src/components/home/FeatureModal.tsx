@@ -1,10 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 export interface FeatureDetail {
   icon: React.ReactNode;
   title: string;
   description: React.ReactNode;
-  accent: 'coral' | 'orange' | 'pink' | 'mauve' | 'green' | 'cyan' | 'yellow' | 'red' | 'purple';
+  accent:
+    | "coral"
+    | "orange"
+    | "pink"
+    | "mauve"
+    | "green"
+    | "cyan"
+    | "yellow"
+    | "red"
+    | "purple";
   details: {
     summary: string;
     benefits: string[];
@@ -18,7 +27,10 @@ interface FeatureModalProps {
   onClose: () => void;
 }
 
-export const FeatureModal: React.FC<FeatureModalProps> = ({ feature, onClose }) => {
+export const FeatureModal: React.FC<FeatureModalProps> = ({
+  feature,
+  onClose,
+}) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -30,18 +42,18 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ feature, onClose }) 
 
     // Handle escape key
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
     // Prevent body scroll
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = '';
-      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [feature, onClose]);
 
@@ -73,7 +85,12 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ feature, onClose }) 
           aria-label="Close modal"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path
+              d="M18 6L6 18M6 6l12 12"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 

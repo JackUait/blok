@@ -44,6 +44,10 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
   const layer2Path = WAVE_PATHS_LAYER2[variant];
   const hasSecondLayer = Boolean(layer2Path);
 
+  const mainTestId = `wave-divider-${variant}`;
+  const mainPathTestId = `wave-path-main-${variant}`;
+  const layer2PathTestId = `wave-path-layer2-${variant}`;
+
   const style: React.CSSProperties = {
     position: 'absolute',
     left: 0,
@@ -63,6 +67,7 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
       className={`wave-divider wave-divider--${variant} ${className}`}
       style={style}
       aria-hidden="true"
+      data-blok-testid={mainTestId}
     >
       <svg
         viewBox="0 0 1280 160"
@@ -72,6 +77,7 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
           width: '100%',
           height: '100%',
         }}
+        data-blok-testid="wave-divider-svg"
       >
         {/* Second layer (behind, more transparent) */}
         {hasSecondLayer && (
@@ -80,6 +86,7 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
             fill={fillColor}
             opacity="0.5"
             className="wave-path wave-path--layer2"
+            data-blok-testid={layer2PathTestId}
           />
         )}
         {/* Main wave layer */}
@@ -87,6 +94,7 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
           d={path}
           fill={fillColor}
           className="wave-path wave-path--main"
+          data-blok-testid={mainPathTestId}
         />
       </svg>
     </div>

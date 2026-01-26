@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 interface ToastProps {
   message: string;
@@ -25,7 +25,10 @@ export const Toast: React.FC<ToastProps> = ({
   if (!visible) return null;
 
   return (
-    <div className={`toast ${visible ? 'visible' : ''}`}>
+    <div
+      className={`toast ${visible ? "visible" : ""}`}
+      data-blok-testid="toast"
+    >
       <svg
         width="20"
         height="20"
@@ -33,6 +36,7 @@ export const Toast: React.FC<ToastProps> = ({
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
+        data-blok-testid="toast-icon"
       >
         <polyline points="20 6 9 17 4 12" />
       </svg>

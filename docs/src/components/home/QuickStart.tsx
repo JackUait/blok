@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { CodeBlock } from '../common/CodeBlock';
-import type { PackageManager } from '../common/PackageManagerToggle';
+import { useState } from "react";
+import { CodeBlock } from "../common/CodeBlock";
+import type { PackageManager } from "../common/PackageManagerToggle";
 
-const PACKAGE_NAME = '@jackuait/blok';
+const PACKAGE_NAME = "@jackuait/blok";
 
 const CONFIG_CODE = `import { Blok } from '@jackuait/blok';
 import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
@@ -22,16 +22,16 @@ const editor = new Blok({
 const SAVE_CODE = `const data = await editor.save();`;
 
 export const QuickStart: React.FC = () => {
-  const [packageManager, setPackageManager] = useState<PackageManager>('yarn');
+  const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
 
   // Default install command (fallback, will be overridden by CodeBlock)
   const getInstallCommand = (manager: PackageManager): string => {
     switch (manager) {
-      case 'yarn':
+      case "yarn":
         return `yarn add ${PACKAGE_NAME}`;
-      case 'npm':
+      case "npm":
         return `npm install ${PACKAGE_NAME}`;
-      case 'bun':
+      case "bun":
         return `bun add ${PACKAGE_NAME}`;
       default:
         return `npm install ${PACKAGE_NAME}`;
@@ -45,15 +45,13 @@ export const QuickStart: React.FC = () => {
       </div>
       <div className="container">
         <div className="section-header">
-          <h2 className="section-title">
-            Up and running in minutes
-          </h2>
+          <h2 className="section-title">Up and running in minutes</h2>
         </div>
         <div className="install-steps">
           <div
             className="install-step"
             data-install-step
-            style={{ animationDelay: '0s' }}
+            style={{ animationDelay: "0s" }}
           >
             <div className="step-number">
               <span>1</span>
@@ -75,7 +73,7 @@ export const QuickStart: React.FC = () => {
           <div
             className="install-step"
             data-install-step
-            style={{ animationDelay: '0.1s' }}
+            style={{ animationDelay: "0.1s" }}
           >
             <div className="step-number">
               <span>2</span>
@@ -91,14 +89,16 @@ export const QuickStart: React.FC = () => {
           <div
             className="install-step"
             data-install-step
-            style={{ animationDelay: '0.2s' }}
+            style={{ animationDelay: "0.2s" }}
           >
             <div className="step-number">
               <span>3</span>
             </div>
             <div className="step-content">
               <h3 className="step-title">Save content</h3>
-              <p className="step-description">Extract clean JSON data ready to save anywhere.</p>
+              <p className="step-description">
+                Extract clean JSON data ready to save anywhere.
+              </p>
               <CodeBlock code={SAVE_CODE} language="javascript" />
             </div>
           </div>

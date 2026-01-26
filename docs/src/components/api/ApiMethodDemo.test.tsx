@@ -60,7 +60,8 @@ describe('ApiMethodDemo', () => {
   });
 
   it('should not render when demo config is not provided', () => {
-    const { container } = render(<ApiMethodDemo />);
-    expect(container.firstChild).toBe(null);
+    render(<ApiMethodDemo />);
+
+    expect(screen.queryByTestId('mini-blok-editor')).not.toBeInTheDocument();
   });
 });

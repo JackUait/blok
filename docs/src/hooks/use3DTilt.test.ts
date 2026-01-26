@@ -5,8 +5,6 @@ import { use3DTilt } from './use3DTilt';
 describe('use3DTilt', () => {
   let mockElement: HTMLDivElement;
   let mockGetBoundingClientRect: ReturnType<typeof vi.fn>;
-  let mockRAF: ReturnType<typeof vi.fn>;
-  let mockCAF: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -22,15 +20,12 @@ describe('use3DTilt', () => {
       getBoundingClientRect: mockGetBoundingClientRect,
     } as unknown as HTMLDivElement;
 
-    mockRAF = vi.fn((cb: FrameRequestCallback) => {
+    // Stub rAF to execute callbacks synchronously for testing
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
       cb(0);
-
       return 1;
     });
-    mockCAF = vi.fn();
-
-    vi.stubGlobal('requestAnimationFrame', mockRAF);
-    vi.stubGlobal('cancelAnimationFrame', mockCAF);
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
 
   afterEach(() => {
@@ -187,27 +182,8 @@ describe('use3DTilt', () => {
     expect(result.current.glareStyle.opacity).toBe(0);
   });
 
-  it('should use requestAnimationFrame for mouse move updates', () => {
-    const { result } = renderHook(() => use3DTilt());
-
-    act(() => {
-      result.current.ref(mockElement);
-    });
-
-    const mockEvent = {
-      clientX: 200,
-      clientY: 150,
-    } as React.MouseEvent<HTMLDivElement>;
-
-    act(() => {
-      result.current.onMouseMove(mockEvent);
-    });
-
-    expect(mockRAF).toHaveBeenCalled();
-  });
-
-  it('should cancel pending animation frame on mouse leave', () => {
-    const { result } = renderHook(() => use3DTilt());
+  it('should update tilt values on mouse move', () => {
+    const { result } = renderHook(() => use3DTilt({ maxTilt: 20 }));
 
     act(() => {
       result.current.ref(mockElement);
@@ -223,10 +199,39 @@ describe('use3DTilt', () => {
       result.current.onMouseMove(mockEvent);
     });
 
+    // Verify the actual behavior: mouse at center of element should result in no tilt
+    expect(result.current.style.transform).toContain('rotateX(0deg)');
+    expect(result.current.style.transform).toContain('rotateY(0deg)');
+  });
+
+  it('should reset tilt values on mouse leave', () => {
+    const { result } = renderHook(() => use3DTilt({ maxTilt: 20 }));
+
+    act(() => {
+      result.current.ref(mockElement);
+      result.current.onMouseEnter();
+    });
+
+    // Move mouse to create tilt
+    const mockEvent = {
+      clientX: 300,
+      clientY: 75,
+    } as React.MouseEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.onMouseMove(mockEvent);
+    });
+
+    // Verify tilt was applied
+    expect(result.current.style.transform).not.toContain('rotateX(0deg)');
+
     act(() => {
       result.current.onMouseLeave();
     });
 
-    expect(mockCAF).toHaveBeenCalled();
+    // Verify the actual behavior: mouse leave resets tilt to zero
+    expect(result.current.isHovered).toBe(false);
+    expect(result.current.style.transform).toContain('rotateX(0deg)');
+    expect(result.current.style.transform).toContain('rotateY(0deg)');
   });
 });

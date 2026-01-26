@@ -11,7 +11,7 @@ describe('MigrationPage', () => {
       </MemoryRouter>
     );
 
-    const nav = document.querySelector('[data-nav]');
+    const nav = screen.getByTestId('nav');
     expect(nav).toBeInTheDocument();
   });
 
@@ -58,49 +58,26 @@ describe('MigrationPage', () => {
     expect(screen.getByText('CSS Selector Reference')).toBeInTheDocument();
   });
 
-  it('should render the main element with migration-main class', () => {
-    const { container } = render(
+  it('should render the main element', () => {
+    render(
       <MemoryRouter>
         <MigrationPage />
       </MemoryRouter>
     );
 
-    const main = container.querySelector('.migration-main');
+    const main = screen.getByRole('main');
     expect(main).toBeInTheDocument();
-    expect(main?.tagName.toLowerCase()).toBe('main');
   });
 
-  it('should have migration-hero section', () => {
-    const { container } = render(
+  it('should render the hero section with heading', () => {
+    render(
       <MemoryRouter>
         <MigrationPage />
       </MemoryRouter>
     );
 
-    const hero = container.querySelector('.migration-hero');
-    expect(hero).toBeInTheDocument();
-  });
-
-  it('should have migration-hero-title h1', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    const title = container.querySelector('.migration-hero-title');
-    expect(title?.tagName.toLowerCase()).toBe('h1');
-  });
-
-  it('should have migration-hero-description p', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    const description = container.querySelector('.migration-hero-description');
-    expect(description?.tagName.toLowerCase()).toBe('p');
+    const heading = screen.getByRole('heading', { level: 1, name: 'From EditorJS to Blok' });
+    expect(heading).toBeInTheDocument();
   });
 
   it('should render navigation links', () => {
@@ -110,7 +87,7 @@ describe('MigrationPage', () => {
       </MemoryRouter>
     );
 
-    const nav = document.querySelector('[data-nav]');
+    const nav = screen.getByTestId('nav');
     expect(nav).toBeInTheDocument();
   });
 });

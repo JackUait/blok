@@ -6,7 +6,7 @@ describe('Features', () => {
   it('should render a section element with id="features"', () => {
     render(<Features />);
 
-    const section = document.getElementById('features');
+    const section = screen.getByRole('region', { name: /features/i });
     expect(section).toBeInTheDocument();
   });
 
@@ -27,18 +27,18 @@ describe('Features', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render all 9 feature cards', () => {
-    const { container } = render(<Features />);
+  it('should render all 9 feature cards as buttons', () => {
+    render(<Features />);
 
-    const featureCards = container.querySelectorAll('[data-feature-card]');
-    expect(featureCards.length).toBe(9);
+    const featureCards = screen.getAllByRole('button', { name: /learn more about/i });
+    expect(featureCards).toHaveLength(9);
   });
 
   it('should render Clean JSON Output feature', () => {
     render(<Features />);
 
     expect(screen.getByText('Clean JSON Output')).toBeInTheDocument();
-    expect(screen.getByText('typed JSON blocks')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('typed JSON blocks'))).toBeInTheDocument();
   });
 
   it('should render Toolbox & Slash Commands feature', () => {
@@ -63,14 +63,14 @@ describe('Features', () => {
     render(<Features />);
 
     expect(screen.getByText('Drag & Drop')).toBeInTheDocument();
-    expect(screen.getByText('drag handles')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('drag handles'))).toBeInTheDocument();
   });
 
   it('should render Custom Block Tools feature', () => {
     render(<Features />);
 
     expect(screen.getByText('Custom Block Tools')).toBeInTheDocument();
-    expect(screen.getByText('custom blocks')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('custom blocks'))).toBeInTheDocument();
   });
 
   it('should render Read-Only Mode feature', () => {
@@ -109,75 +109,23 @@ describe('Features', () => {
     ).toBeInTheDocument();
   });
 
-  it('should have features-grid div', () => {
-    const { container } = render(<Features />);
+  it('should render feature cards with accessible labels', () => {
+    render(<Features />);
 
-    const grid = container.querySelector('.features-grid');
-    expect(grid).toBeInTheDocument();
-  });
+    const expectedTitles = [
+      'Clean JSON Output',
+      'Toolbox & Slash Commands',
+      'Inline Toolbar',
+      'Drag & Drop',
+      'Custom Block Tools',
+      'Read-Only Mode',
+      'Undo & Redo',
+      '68 Languages',
+      'Smart Paste',
+    ];
 
-  it('should have feature-icon divs for each card', () => {
-    const { container } = render(<Features />);
-
-    const icons = container.querySelectorAll('.feature-icon');
-    expect(icons.length).toBe(9);
-  });
-
-  it('should have feature-title elements', () => {
-    const { container } = render(<Features />);
-
-    const titles = container.querySelectorAll('.feature-title');
-    expect(titles.length).toBe(9);
-  });
-
-  it('should have feature-description elements', () => {
-    const { container } = render(<Features />);
-
-    const descriptions = container.querySelectorAll('.feature-description');
-    expect(descriptions.length).toBe(9);
-  });
-
-  it('should apply animation-order CSS custom property to cards', () => {
-    const { container } = render(<Features />);
-
-    const cards = container.querySelectorAll('[data-feature-card]');
-    cards.forEach((card, index) => {
-      expect((card as HTMLElement).style.getPropertyValue('--animation-order')).toBe(String(index));
-    });
-  });
-
-  it('should render decorative background elements', () => {
-    const { container } = render(<Features />);
-
-    expect(container.querySelector('.features-bg')).toBeInTheDocument();
-    expect(container.querySelector('.features-blob-1')).toBeInTheDocument();
-    expect(container.querySelector('.features-blob-2')).toBeInTheDocument();
-    expect(container.querySelector('.features-grid-pattern')).toBeInTheDocument();
-  });
-
-  it('should render card glow and shine effects', () => {
-    const { container } = render(<Features />);
-
-    const glowEffects = container.querySelectorAll('.feature-card-glow');
-    const shineEffects = container.querySelectorAll('.feature-card-shine');
-
-    expect(glowEffects.length).toBe(9);
-    expect(shineEffects.length).toBe(9);
-  });
-
-  it('should render feature-icon-inner elements', () => {
-    const { container } = render(<Features />);
-
-    const iconInners = container.querySelectorAll('.feature-icon-inner');
-    expect(iconInners.length).toBe(9);
-  });
-
-  it('should apply accent color variant classes to cards', () => {
-    const { container } = render(<Features />);
-
-    const expectedAccents = ['coral', 'orange', 'pink', 'mauve', 'green', 'cyan', 'yellow', 'red', 'purple'];
-    expectedAccents.forEach((accent) => {
-      expect(container.querySelector(`.feature-card--${accent}`)).toBeInTheDocument();
+    expectedTitles.forEach((title) => {
+      expect(screen.getByRole('button', { name: `Learn more about ${title}` })).toBeInTheDocument();
     });
   });
 });

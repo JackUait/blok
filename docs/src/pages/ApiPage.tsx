@@ -64,9 +64,9 @@ export const ApiPage: React.FC = () => {
   return (
     <>
       <Nav links={NAV_LINKS} />
-      <div className="api-docs">
+      <div className="api-docs" data-blok-testid="api-docs">
         <ApiSidebar activeSection={activeSection} />
-        <main className="api-main">
+        <main className="api-main" data-blok-testid="api-main">
           {API_SECTIONS.map((section) => (
             <ApiSection key={section.id} section={section} />
           ))}

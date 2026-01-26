@@ -1,6 +1,10 @@
 import { expect } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { vi } from 'vitest';
+import { configure } from '@testing-library/dom';
+
+// Configure Testing Library to recognize data-blok-testid as a test ID attribute
+configure({ testIdAttribute: 'data-blok-testid' });
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
@@ -21,11 +25,21 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-})) as unknown as typeof IntersectionObserver;
+class MockIntersectionObserver {
+  root: Element | null = null;
+  rootMargin: string = '';
+  thresholds: ReadonlyArray<number> = [];
+  callback: IntersectionObserverCallback;
+
+  constructor(callback: IntersectionObserverCallback) {
+    this.callback = callback;
+  }
+
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+global.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
 
 // Mock requestAnimationFrame
 global.requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {

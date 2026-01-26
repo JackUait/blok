@@ -54,23 +54,17 @@ const mockQuickStartSection: ApiSectionType = {
 };
 
 describe('ApiSection', () => {
-  it('should render a section element with correct id', () => {
+  it('should render the title', () => {
     render(<ApiSection section={mockSection} />);
 
-    const section = document.getElementById('test-section');
-    expect(section).toBeInTheDocument();
+    const title = screen.getByRole('heading', { level: 1, name: 'Test Section' });
+    expect(title).toBeInTheDocument();
   });
 
   it('should render the badge when provided', () => {
     render(<ApiSection section={mockSection} />);
 
     expect(screen.getByText('Test')).toBeInTheDocument();
-  });
-
-  it('should render the title', () => {
-    render(<ApiSection section={mockSection} />);
-
-    expect(screen.getByText('Test Section')).toBeInTheDocument();
   });
 
   it('should render the description', () => {
@@ -91,9 +85,10 @@ describe('ApiSection', () => {
   it('should render method example when provided', () => {
     render(<ApiSection section={mockSection} />);
 
-    // CodeBlock renders asynchronously, so check for the wrapper
-    const codeBlock = document.querySelector('.api-method-card .code-block');
-    expect(codeBlock).toBeInTheDocument();
+    // CodeBlock renders with a copy button that can be queried by testid
+    const copyButton = screen.getByTestId('code-copy-button');
+    expect(copyButton).toBeInTheDocument();
+    expect(copyButton).toHaveAttribute('data-code', 'const result = editor.testMethod();');
   });
 
   it('should render properties when provided', () => {
@@ -113,13 +108,14 @@ describe('ApiSection', () => {
   });
 
   it('should render table with Option column for config sections', () => {
-    const { container } = render(<ApiSection section={mockConfigSection} />);
+    render(<ApiSection section={mockConfigSection} />);
 
-    const table = container.querySelector('.api-table');
+    const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
 
-    const headers = container.querySelectorAll('th');
-    expect(Array.from(headers).some((h) => h.textContent === 'Option')).toBe(true);
+    // Check that table has an Option column header
+    const optionHeader = screen.getByRole('columnheader', { name: 'Option' });
+    expect(optionHeader).toBeInTheDocument();
   });
 
   it('should render table without Option column for non-config sections', () => {
@@ -136,11 +132,15 @@ describe('ApiSection', () => {
       ],
     };
 
-    const { container } = render(<ApiSection section={nonConfigSection} />);
+    render(<ApiSection section={nonConfigSection} />);
 
-    const headers = container.querySelectorAll('th');
-    expect(Array.from(headers).some((h) => h.textContent === 'Option')).toBe(false);
-    expect(Array.from(headers).some((h) => h.textContent === 'Property')).toBe(true);
+    // Check that Option header does not exist for non-config sections
+    const optionHeader = screen.queryByRole('columnheader', { name: 'Option' });
+    expect(optionHeader).not.toBeInTheDocument();
+
+    // Property header should exist instead
+    const propertyHeader = screen.getByRole('columnheader', { name: 'Property' });
+    expect(propertyHeader).toBeInTheDocument();
   });
 
   it('should render quick-start content for customType quick-start', () => {
@@ -152,93 +152,88 @@ describe('ApiSection', () => {
   });
 
   it('should render 3 steps for quick-start section', () => {
-    const { container } = render(<ApiSection section={mockQuickStartSection} />);
+    render(<ApiSection section={mockQuickStartSection} />);
 
-    const steps = container.querySelectorAll('.api-quickstart-step');
-    expect(steps.length).toBe(3);
+    // Quick start has 3 h3 headings for the steps
+    const headings = screen.getAllByRole('heading', { level: 3 });
+    expect(headings).toHaveLength(3);
+    expect(headings[0]).toHaveTextContent('Install Blok');
+    expect(headings[1]).toHaveTextContent('Import and configure');
+    expect(headings[2]).toHaveTextContent('Save content');
   });
 
-  it('should have api-section class', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render section with heading level 1 for title', () => {
+    render(<ApiSection section={mockSection} />);
 
-    const section = container.querySelector('.api-section');
-    expect(section).toBeInTheDocument();
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(title).toHaveTextContent('Test Section');
   });
 
-  it('should have api-section-header div', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render section heading with badge', () => {
+    render(<ApiSection section={mockSection} />);
 
-    const header = container.querySelector('.api-section-header');
-    expect(header).toBeInTheDocument();
-  });
-
-  it('should have api-section-badge div when badge is provided', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
-
-    const badge = container.querySelector('.api-section-badge');
+    const badge = screen.getByText('Test');
     expect(badge).toBeInTheDocument();
   });
 
-  it('should have api-section-title h1', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render methods block with heading level 3', () => {
+    render(<ApiSection section={mockSection} />);
 
-    const title = container.querySelector('.api-section-title');
-    expect(title?.tagName.toLowerCase()).toBe('h1');
+    const methodsHeading = screen.getByRole('heading', { level: 3, name: 'Methods' });
+    expect(methodsHeading).toBeInTheDocument();
   });
 
-  it('should have api-section-description p', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render properties block with heading level 3', () => {
+    const propsOnlySection: ApiSectionType = {
+      id: 'props-only',
+      title: 'Props Only',
+      properties: mockSection.properties,
+    };
 
-    const description = container.querySelector('.api-section-description');
-    expect(description?.tagName.toLowerCase()).toBe('p');
+    render(<ApiSection section={propsOnlySection} />);
+
+    const propertiesHeading = screen.getByRole('heading', { level: 3, name: 'Properties' });
+    expect(propertiesHeading).toBeInTheDocument();
   });
 
-  it('should have api-block div for methods', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render method name and return type together', () => {
+    render(<ApiSection section={mockSection} />);
 
-    const block = container.querySelector('.api-block');
-    expect(block).toBeInTheDocument();
+    expect(screen.getByText('testMethod()')).toBeInTheDocument();
+    expect(screen.getByText('string')).toBeInTheDocument();
   });
 
-  it('should have api-block-title h3', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render method description', () => {
+    render(<ApiSection section={mockSection} />);
 
-    const blockTitle = container.querySelector('.api-block-title');
-    expect(blockTitle?.tagName.toLowerCase()).toBe('h3');
+    expect(screen.getByText('A test method')).toBeInTheDocument();
   });
 
-  it('should have api-method-card div', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render property table with proper columns', () => {
+    render(<ApiSection section={mockSection} />);
 
-    const method = container.querySelector('.api-method-card');
-    expect(method).toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(table).toBeInTheDocument();
+
+    expect(screen.getByRole('columnheader', { name: 'Property' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Description' })).toBeInTheDocument();
   });
 
-  it('should have api-method-header div', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render config table with proper columns', () => {
+    render(<ApiSection section={mockConfigSection} />);
 
-    const header = container.querySelector('.api-method-header');
-    expect(header).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Option' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Default' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Description' })).toBeInTheDocument();
   });
 
-  it('should have api-method-name span', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
+  it('should render code block for method examples', () => {
+    render(<ApiSection section={mockSection} />);
 
-    const methodName = container.querySelector('.api-method-name');
-    expect(methodName).toBeInTheDocument();
-  });
-
-  it('should have api-method-return span', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
-
-    const methodReturn = container.querySelector('.api-method-return');
-    expect(methodReturn).toBeInTheDocument();
-  });
-
-  it('should have api-method-description p', () => {
-    const { container } = render(<ApiSection section={mockSection} />);
-
-    const description = container.querySelector('.api-method-description');
-    expect(description?.tagName.toLowerCase()).toBe('p');
+    // Check for the CodeBlock wrapper using testid
+    const codeBlock = screen.getByTestId('code-block');
+    expect(codeBlock).toBeInTheDocument();
   });
 });

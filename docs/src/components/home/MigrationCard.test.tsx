@@ -11,19 +11,17 @@ describe('MigrationCard', () => {
       </MemoryRouter>
     );
 
-    const section = document.querySelector('.migration');
-    expect(section).toBeInTheDocument();
+    expect(screen.getByTestId('migration-section')).toBeInTheDocument();
   });
 
   it('should render the migration card', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    const card = container.querySelector('.migration-card');
-    expect(card).toBeInTheDocument();
+    expect(screen.getByTestId('migration-card')).toBeInTheDocument();
   });
 
   it('should render the migration icon', () => {
@@ -33,8 +31,7 @@ describe('MigrationCard', () => {
       </MemoryRouter>
     );
 
-    const icon = document.querySelector('.migration-icon');
-    expect(icon).toBeInTheDocument();
+    expect(screen.getByTestId('migration-icon')).toBeInTheDocument();
   });
 
   it('should render the title', () => {
@@ -76,63 +73,62 @@ describe('MigrationCard', () => {
       </MemoryRouter>
     );
 
-    const button = screen.getByText('View Migration Guide');
-    expect(button).toBeInTheDocument();
-    expect(button.closest('a')).toHaveAttribute('href', '/migration');
+    const link = screen.getByRole('link', { name: 'View Migration Guide' });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/migration');
   });
 
   it('should have migration-content div', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    const content = container.querySelector('.migration-content');
-    expect(content).toBeInTheDocument();
+    expect(screen.getByTestId('migration-content')).toBeInTheDocument();
   });
 
   it('should have migration-code element', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    const codeElement = container.querySelector('.migration-code');
-    expect(codeElement).toBeInTheDocument();
+    expect(screen.getByTestId('migration-code')).toBeInTheDocument();
   });
 
   it('should have code element inside migration-code', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    const code = container.querySelector('.migration-code code');
-    expect(code).toBeInTheDocument();
+    // The code is rendered within a pre/code element inside migration-code
+    const codeElement = screen.getByTestId('migration-code');
+    expect(codeElement).toBeInTheDocument();
+    // Verify the code text content is present
+    expect(codeElement.textContent).toContain('npx -p @jackuait/blok migrate-from-editorjs ./src');
   });
 
   it('should have migration-title', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    const title = container.querySelector('.migration-title');
-    expect(title).toBeInTheDocument();
+    expect(screen.getByTestId('migration-title')).toBeInTheDocument();
   });
 
   it('should have migration-description', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    const description = container.querySelector('.migration-description');
-    expect(description).toBeInTheDocument();
+    expect(screen.getByTestId('migration-description')).toBeInTheDocument();
   });
 });

@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
-import { HomePage } from './pages/HomePage';
-import { DemoPage } from './pages/DemoPage';
-import { ApiPage } from './pages/ApiPage';
-import { MigrationPage } from './pages/MigrationPage';
-import ChangelogPage from './pages/ChangelogPage';
+import { useEffect, useRef } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { HomePage } from "./pages/HomePage";
+import { DemoPage } from "./pages/DemoPage";
+import { ApiPage } from "./pages/ApiPage";
+import { MigrationPage } from "./pages/MigrationPage";
+import ChangelogPage from "./pages/ChangelogPage";
 
 const ScrollHandler = () => {
   const { pathname, hash } = useLocation();
@@ -28,8 +28,8 @@ const ScrollHandler = () => {
 
     if (element) {
       element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+        behavior: "smooth",
+        block: "start",
       });
     }
   }, [pathname, hash]);
@@ -50,6 +50,6 @@ const App = () => {
       </Routes>
     </>
   );
-}
+};
 
 export default App;

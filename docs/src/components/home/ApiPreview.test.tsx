@@ -11,8 +11,9 @@ describe('ApiPreview', () => {
       </MemoryRouter>
     );
 
-    const section = document.getElementById('api');
+    const section = screen.getByTestId('api-preview-section');
     expect(section).toBeInTheDocument();
+    expect(section).toHaveAttribute('id', 'api');
   });
 
   it('should render the section header', () => {
@@ -22,10 +23,9 @@ describe('ApiPreview', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('API Reference')).toBeInTheDocument();
     // The title is split by <br /> tags, so we need to find it by partial text
     expect(screen.getByText((content) => content.includes('Powerful APIs'))).toBeInTheDocument();
-    expect(screen.getByText('for every use case')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('for every use case'))).toBeInTheDocument();
   });
 
   it('should render the section description', () => {
@@ -41,14 +41,15 @@ describe('ApiPreview', () => {
   });
 
   it('should render 3 API cards', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPreview />
       </MemoryRouter>
     );
 
-    const cards = container.querySelectorAll('.api-card');
-    expect(cards.length).toBe(3);
+    expect(screen.getByTestId('api-card-core-methods')).toBeInTheDocument();
+    expect(screen.getByTestId('api-card-blocks-api')).toBeInTheDocument();
+    expect(screen.getByTestId('api-card-events')).toBeInTheDocument();
   });
 
   it('should render Core Methods card', () => {
@@ -100,7 +101,9 @@ describe('ApiPreview', () => {
     );
 
     // These return types appear in the component but may be split across elements
-    expect(screen.getByText((content) => content.includes('Promise'))).toBeInTheDocument();
+    // Use getAllByText since multiple elements contain 'Promise'
+    const promiseElements = screen.getAllByText((content) => content.includes('Promise'));
+    expect(promiseElements.length).toBeGreaterThan(0);
   });
 
   it('should render method descriptions', () => {
@@ -123,63 +126,63 @@ describe('ApiPreview', () => {
       </MemoryRouter>
     );
 
-    const link = screen.getByText('View Full API Reference');
+    const link = screen.getByRole('link', { name: 'View Full API Reference' });
     expect(link).toBeInTheDocument();
-    expect(link.closest('a')).toHaveAttribute('href', '/docs');
+    expect(link).toHaveAttribute('href', '/docs');
   });
 
   it('should have api-grid div', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPreview />
       </MemoryRouter>
     );
 
-    const grid = container.querySelector('.api-grid');
+    const grid = screen.getByTestId('api-grid');
     expect(grid).toBeInTheDocument();
   });
 
   it('should have api-cta div', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPreview />
       </MemoryRouter>
     );
 
-    const cta = container.querySelector('.api-cta');
+    const cta = screen.getByTestId('api-cta');
     expect(cta).toBeInTheDocument();
   });
 
   it('should have api-card-header elements', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPreview />
       </MemoryRouter>
     );
 
-    const headers = container.querySelectorAll('.api-card-header');
-    expect(headers.length).toBe(3);
+    const headers = screen.getAllByTestId('api-card-header');
+    expect(headers).toHaveLength(3);
   });
 
   it('should have api-card-content elements', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPreview />
       </MemoryRouter>
     );
 
-    const contents = container.querySelectorAll('.api-card-content');
-    expect(contents.length).toBe(3);
+    const contents = screen.getAllByTestId('api-card-content');
+    expect(contents).toHaveLength(3);
   });
 
   it('should have api-method elements', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPreview />
       </MemoryRouter>
     );
 
-    const methods = container.querySelectorAll('.api-method');
+    const methods = screen.getAllByTestId('api-method');
     expect(methods.length).toBeGreaterThan(0);
   });
 });

@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { CodeBlock } from '../common/CodeBlock';
-import { ApiMethodCard } from './ApiMethodCard';
-import type { ApiSection as ApiSectionType } from './api-data';
-import type { PackageManager } from '../common/PackageManagerToggle';
+import { useState } from "react";
+import { CodeBlock } from "../common/CodeBlock";
+import { ApiMethodCard } from "./ApiMethodCard";
+import type { ApiSection as ApiSectionType } from "./api-data";
+import type { PackageManager } from "../common/PackageManagerToggle";
 
 interface ApiSectionProps {
   section: ApiSectionType;
 }
 
-const PACKAGE_NAME = '@jackuait/blok';
+const PACKAGE_NAME = "@jackuait/blok";
 
 const CONFIG_CODE = `import { Blok } from '@jackuait/blok';
 import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
@@ -28,15 +28,15 @@ const editor = new Blok({
 const SAVE_CODE = `const data = await editor.save();`;
 
 const QuickStartContent: React.FC = () => {
-  const [packageManager, setPackageManager] = useState<PackageManager>('yarn');
+  const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
 
   const getInstallCommand = (manager: PackageManager): string => {
     switch (manager) {
-      case 'yarn':
+      case "yarn":
         return `yarn add ${PACKAGE_NAME}`;
-      case 'npm':
+      case "npm":
         return `npm install ${PACKAGE_NAME}`;
-      case 'bun':
+      case "bun":
         return `bun add ${PACKAGE_NAME}`;
       default:
         return `npm install ${PACKAGE_NAME}`;
@@ -78,11 +78,13 @@ const QuickStartContent: React.FC = () => {
 
 export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   // Render quick-start content specially
-  if (section.customType === 'quick-start') {
+  if (section.customType === "quick-start") {
     return (
-      <section id={section.id} className="api-section">
+      <section id={section.id} className="api-section" data-blok-testid={section.id} aria-label={section.title}>
         <div className="api-section-header">
-          {section.badge && <div className="api-section-badge">{section.badge}</div>}
+          {section.badge && (
+            <div className="api-section-badge" data-blok-testid="api-section-badge">{section.badge}</div>
+          )}
           <h1 className="api-section-title">{section.title}</h1>
           {section.description && (
             <p className="api-section-description">{section.description}</p>
@@ -94,9 +96,11 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   }
 
   return (
-    <section id={section.id} className="api-section">
+    <section id={section.id} className="api-section" data-blok-testid={section.id} aria-label={section.title}>
       <div className="api-section-header">
-        {section.badge && <div className="api-section-badge">{section.badge}</div>}
+        {section.badge && (
+          <div className="api-section-badge" data-blok-testid="api-section-badge">{section.badge}</div>
+        )}
         <h1 className="api-section-title">{section.title}</h1>
         {section.description && (
           <p className="api-section-description">{section.description}</p>
@@ -146,9 +150,9 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <table className="api-table">
             <thead>
               <tr>
-                {section.id === 'config' && <th>Option</th>}
-                <th>{section.id === 'config' ? 'Type' : 'Property'}</th>
-                {section.id === 'config' && <th>Default</th>}
+                {section.id === "config" && <th>Option</th>}
+                <th>{section.id === "config" ? "Type" : "Property"}</th>
+                {section.id === "config" && <th>Default</th>}
                 <th>Description</th>
               </tr>
             </thead>
@@ -161,7 +165,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
                   <td>
                     <code>{row.type}</code>
                   </td>
-                  {section.id === 'config' && (
+                  {section.id === "config" && (
                     <td>
                       <code>{row.default}</code>
                     </td>

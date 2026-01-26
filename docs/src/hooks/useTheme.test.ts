@@ -35,14 +35,13 @@ describe('useTheme', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     });
-    // Remove any existing theme class from document
-    document.documentElement.classList.remove('light', 'dark');
+    // Clean up theme state from document
     document.documentElement.removeAttribute('data-theme');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    document.documentElement.classList.remove('light', 'dark');
+    // Clean up theme state from document
     document.documentElement.removeAttribute('data-theme');
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 
@@ -25,8 +25,9 @@ describe('App', () => {
       </MemoryRouter>
     );
 
-    const hero = document.querySelector('[data-hero-content]');
-    expect(hero).toBeInTheDocument();
+    // HomePage renders Hero component with specific text content
+    const heading = screen.getByRole('heading', { name: /block-based editors/i });
+    expect(heading).toBeInTheDocument();
   });
 
   it('should render ApiPage for /docs path', () => {
@@ -36,8 +37,9 @@ describe('App', () => {
       </MemoryRouter>
     );
 
-    const apiDocs = document.querySelector('.api-docs');
-    expect(apiDocs).toBeInTheDocument();
+    // ApiPage has a sidebar with data-blok-testid
+    const apiSidebar = screen.getByTestId('api-sidebar');
+    expect(apiSidebar).toBeInTheDocument();
   });
 
   it('should render ApiPage for /docs path with hash', () => {
@@ -52,12 +54,11 @@ describe('App', () => {
       </MemoryRouter>
     );
 
-    // Verify ApiPage is rendered
-    const apiDocs = document.querySelector('.api-docs');
-    expect(apiDocs).toBeInTheDocument();
+    // Verify ApiPage is rendered via its sidebar testid
+    const apiSidebar = screen.getByTestId('api-sidebar');
+    expect(apiSidebar).toBeInTheDocument();
 
     // After the fix, scrollIntoView should be called
-    // This will fail initially, then pass after we implement the fix
     expect(scrollIntoViewMock).toHaveBeenCalled();
 
     // Cleanup
@@ -65,13 +66,14 @@ describe('App', () => {
   });
 
   it('should render without crashing', () => {
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
 
-    // App should render children (HomePage, etc.)
-    expect(container.firstChild).toBeInTheDocument();
+    // App should render children - verify by checking HomePage content is present
+    const heading = screen.getByRole('heading', { name: /block-based editors/i });
+    expect(heading).toBeInTheDocument();
   });
 });

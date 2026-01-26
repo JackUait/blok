@@ -11,8 +11,7 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    const nav = document.querySelector('[data-nav]');
-    expect(nav).toBeInTheDocument();
+    expect(screen.getByTestId('nav')).toBeInTheDocument();
   });
 
   it('should render the ApiSidebar component', () => {
@@ -22,8 +21,7 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    const sidebar = document.querySelector('[data-api-sidebar]');
-    expect(sidebar).toBeInTheDocument();
+    expect(screen.getByTestId('api-sidebar')).toBeInTheDocument();
   });
 
   it('should render the main api content area', () => {
@@ -33,8 +31,7 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    const main = document.querySelector('.api-main');
-    expect(main).toBeInTheDocument();
+    expect(screen.getByTestId('api-main')).toBeInTheDocument();
   });
 
   it('should render all API sections', () => {
@@ -44,10 +41,10 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    // Check that sections are rendered by their IDs
-    expect(document.getElementById('quick-start')).toBeInTheDocument();
-    expect(document.getElementById('core')).toBeInTheDocument();
-    expect(document.getElementById('config')).toBeInTheDocument();
+    // Check that sections are rendered using getByTestId which queries by data-testid
+    expect(screen.getByTestId('quick-start')).toBeInTheDocument();
+    expect(screen.getByTestId('core')).toBeInTheDocument();
+    expect(screen.getByTestId('config')).toBeInTheDocument();
   });
 
   it('should render API section badges', () => {
@@ -57,9 +54,8 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    // Check for badges in the sidebar and main content
-    const badges = document.querySelectorAll('.api-section-badge');
-    expect(badges.length).toBeGreaterThan(0);
+    // Check for badges using data-testid
+    expect(screen.getAllByTestId('api-section-badge').length).toBeGreaterThan(0);
   });
 
   it('should render Blocks API section', () => {
@@ -69,7 +65,7 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    expect(document.getElementById('blocks-api')).toBeInTheDocument();
+    expect(screen.getByTestId('blocks-api')).toBeInTheDocument();
   });
 
   it('should render Caret API section', () => {
@@ -79,7 +75,7 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    expect(document.getElementById('caret-api')).toBeInTheDocument();
+    expect(screen.getByTestId('caret-api')).toBeInTheDocument();
   });
 
   it('should render Events API section', () => {
@@ -89,7 +85,7 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    expect(document.getElementById('events-api')).toBeInTheDocument();
+    expect(screen.getByTestId('events-api')).toBeInTheDocument();
   });
 
   it('should render Saver API section', () => {
@@ -167,14 +163,13 @@ describe('ApiPage', () => {
   });
 
   it('should have api-docs container', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPage />
       </MemoryRouter>
     );
 
-    const apiDocs = container.querySelector('.api-docs');
-    expect(apiDocs).toBeInTheDocument();
+    expect(screen.getByTestId('api-docs')).toBeInTheDocument();
   });
 
   it('should render navigation links', () => {
@@ -184,19 +179,19 @@ describe('ApiPage', () => {
       </MemoryRouter>
     );
 
-    // Check that nav has the data-nav attribute
-    const nav = document.querySelector('[data-nav]');
-    expect(nav).toBeInTheDocument();
+    // Check that nav is rendered using testid
+    expect(screen.getByTestId('nav')).toBeInTheDocument();
   });
 
   it('should have api-section elements', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <ApiPage />
       </MemoryRouter>
     );
 
-    const sections = container.querySelectorAll('.api-section');
+    // Check that sections are rendered using role
+    const sections = screen.getAllByRole('region');
     expect(sections.length).toBeGreaterThan(0);
   });
 });

@@ -130,9 +130,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
 
   return (
     <>
-      <div className={styles['search-backdrop']} onClick={onClose} data-search-backdrop />
-      <div className={styles['search-container']} onClick={onClose} data-search-container>
-        <div className={styles['search-dialog']} ref={dialogRef} onClick={handleDialogClick}>
+      <div className={styles['search-backdrop']} onClick={onClose} data-blok-testid="search-backdrop" />
+      <div className={styles['search-container']} onClick={onClose} data-blok-testid="search-container">
+        <div className={styles['search-dialog']} ref={dialogRef} onClick={handleDialogClick} data-blok-testid="search-dialog">
           <div className={styles['search-input-wrapper']}>
             <svg
               className={styles['search-icon']}

@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Logo } from '../common/Logo';
-import { Search } from '../common/Search';
-import { ThemeToggle } from '../common/ThemeToggle';
-import type { NavLink } from '@/types/navigation';
-import searchStyles from '../common/Search.module.css';
+import { useState, useEffect, useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Logo } from "../common/Logo";
+import { Search } from "../common/Search";
+import { ThemeToggle } from "../common/ThemeToggle";
+import type { NavLink } from "@/types/navigation";
+import searchStyles from "../common/Search.module.css";
 
 interface NavProps {
   links: NavLink[];
@@ -25,7 +25,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
       if (link.external) return link;
 
       // Check if this link matches the current path
-      const linkPath = link.href.replace(/\/#.*$/, ''); // Remove anchor for comparison
+      const linkPath = link.href.replace(/\/#.*$/, ""); // Remove anchor for comparison
       const isActive = path === linkPath;
 
       return { ...link, active: isActive };
@@ -50,54 +50,48 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
       }
     };
 
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // Handle Cmd/Ctrl + K to open search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setSearchOpen((prev) => !prev);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const getLinkClassName = (link: NavLink): string => {
-    const baseClass = 'nav-link';
+    const baseClass = "nav-link";
     if (link.active) return `${baseClass} nav-link-active`;
     if (link.external) return `${baseClass} nav-link-github`;
     return baseClass;
   };
 
-  const navClasses = [
-    'nav',
-    navScrolled ? 'scrolled' : ''
-  ].filter(Boolean).join(' ');
+  const navClasses = ["nav", navScrolled ? "scrolled" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <>
-      <nav className={navClasses} data-nav>
+      <nav className={navClasses} data-nav data-blok-testid="nav">
         <div className="nav-container">
           <Link to="/" className="nav-logo">
             <Logo size={48} />
           </Link>
-          <div className={`nav-links ${menuOpen ? 'open' : ''}`}>
+          <div className={`nav-links ${menuOpen ? "open" : ""}`}>
             <button
-              className={searchStyles['nav-search-button']}
+              className={searchStyles["nav-search-button"]}
               onClick={() => setSearchOpen(true)}
               type="button"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 20 20"
-                fill="none"
-              >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                 <path
                   d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
                   stroke="currentColor"
@@ -107,7 +101,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                 />
               </svg>
               <span>Search</span>
-              <kbd className={searchStyles['nav-search-shortcut']}>⌘K</kbd>
+              <kbd className={searchStyles["nav-search-shortcut"]}>⌘K</kbd>
             </button>
             {linksWithActive.map((link) => {
               if (link.external) {
@@ -137,7 +131,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
             <ThemeToggle />
           </div>
           <button
-            className={`nav-toggle ${menuOpen ? 'active' : ''}`}
+            className={`nav-toggle ${menuOpen ? "active" : ""}`}
             aria-label="Toggle menu"
             data-nav-toggle
             onClick={() => setMenuOpen(!menuOpen)}

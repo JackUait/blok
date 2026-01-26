@@ -30,7 +30,7 @@ describe('Footer', () => {
       </MemoryRouter>
     );
     expect(
-      screen.getByText('Block-based rich text editor for modern applications.')
+      screen.getByText(/friendly block-based rich text editor for modern applications/i)
     ).toBeInTheDocument();
   });
 
@@ -57,7 +57,7 @@ describe('Footer', () => {
     expect(screen.getByText('Resources')).toBeInTheDocument();
     expect(screen.getByText('GitHub')).toBeInTheDocument();
     expect(screen.getByText('npm')).toBeInTheDocument();
-    expect(screen.getByText('Examples')).toBeInTheDocument();
+    expect(screen.getByText('Live Demo')).toBeInTheDocument();
   });
 
   it('should render Community section', () => {
@@ -80,7 +80,7 @@ describe('Footer', () => {
       </MemoryRouter>
     );
 
-    const githubLink = screen.getByText('GitHub').closest('a');
+    const githubLink = screen.getByTestId('github-link');
     expect(githubLink).toHaveAttribute('target', '_blank');
     expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
@@ -92,7 +92,7 @@ describe('Footer', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/2025 JackUait/)).toBeInTheDocument();
+    expect(screen.getByText(/2026 JackUait/)).toBeInTheDocument();
   });
 
   it('should render the Apache 2.0 license link', () => {
@@ -102,41 +102,38 @@ describe('Footer', () => {
       </MemoryRouter>
     );
 
-    const licenseLink = screen.getByText('Apache 2.0');
+    const licenseLink = screen.getByTestId('license-link');
     expect(licenseLink).toBeInTheDocument();
-    expect(licenseLink.closest('a')).toHaveAttribute('href', 'https://www.apache.org/licenses/LICENSE-2.0');
+    expect(licenseLink).toHaveAttribute('href', 'https://www.apache.org/licenses/LICENSE-2.0');
   });
 
   it('should have a footer-brand div', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <Footer />
       </MemoryRouter>
     );
 
-    const brandDiv = container.querySelector('.footer-brand');
-    expect(brandDiv).toBeInTheDocument();
+    expect(screen.getByTestId('footer-brand')).toBeInTheDocument();
   });
 
   it('should have footer-links div', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <Footer />
       </MemoryRouter>
     );
 
-    const linksDiv = container.querySelector('.footer-links');
-    expect(linksDiv).toBeInTheDocument();
+    expect(screen.getByTestId('footer-links')).toBeInTheDocument();
   });
 
   it('should have footer-bottom div', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <Footer />
       </MemoryRouter>
     );
 
-    const bottomDiv = container.querySelector('.footer-bottom');
-    expect(bottomDiv).toBeInTheDocument();
+    expect(screen.getByTestId('footer-bottom')).toBeInTheDocument();
   });
 });

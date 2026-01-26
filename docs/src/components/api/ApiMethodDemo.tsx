@@ -1,11 +1,11 @@
-import type { FC } from 'react';
-import { useRef, useState, useCallback } from 'react';
-import type { DemoConfig } from './api-data';
-import type { BlokEditorInstance } from '@/types/blok';
-import { MiniBlokEditor } from './MiniBlokEditor';
-import type { MiniBlokEditorContainer } from './MiniBlokEditor';
-import { DemoControls } from './DemoControls';
-import { DemoOutput } from './DemoOutput';
+import type { FC } from "react";
+import { useRef, useState, useCallback } from "react";
+import type { DemoConfig } from "./api-data";
+import type { BlokEditorInstance } from "@/types/blok";
+import { MiniBlokEditor } from "./MiniBlokEditor";
+import type { MiniBlokEditorContainer } from "./MiniBlokEditor";
+import { DemoControls } from "./DemoControls";
+import { DemoOutput } from "./DemoOutput";
 
 export interface ApiMethodDemoProps {
   demo?: DemoConfig;
@@ -18,22 +18,29 @@ export interface ApiMethodDemoProps {
 export const ApiMethodDemo: FC<ApiMethodDemoProps> = ({ demo }) => {
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const [editor, setEditor] = useState<BlokEditorInstance | null>(null);
-  const [output, setOutput] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [output, setOutput] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
-  const handleEditorReady = useCallback((editorInstance: BlokEditorInstance) => {
-    setEditor(editorInstance);
-  }, []);
+  const handleEditorReady = useCallback(
+    (editorInstance: BlokEditorInstance) => {
+      setEditor(editorInstance);
+    },
+    [],
+  );
 
   const handleOutputChange = useCallback(
-    (newOutput: { message: string; type: 'success' | 'error' } | null) => {
+    (newOutput: { message: string; type: "success" | "error" } | null) => {
       setOutput(newOutput);
     },
-    []
+    [],
   );
 
   const handleReset = useCallback(() => {
     // Access the reset method from the DOM element
-    const container = editorContainerRef.current as MiniBlokEditorContainer | null;
+    const container =
+      editorContainerRef.current as MiniBlokEditorContainer | null;
     if (container?.reset) {
       container.reset();
     }

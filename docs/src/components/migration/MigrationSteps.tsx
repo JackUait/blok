@@ -1,17 +1,24 @@
-import { CHANGE_ITEMS, CSS_MAPPINGS } from './migration-data';
+import { CHANGE_ITEMS, CSS_MAPPINGS } from "./migration-data";
 
 export const MigrationSteps: React.FC = () => {
   return (
     <>
-      <section className="migration-section">
+      <section
+        className="migration-section"
+        data-blok-testid="migration-section"
+      >
         <h2 className="migration-section-title">What Gets Transformed</h2>
         <p className="migration-section-description">
           The codemod handles all the breaking changes automatically.
         </p>
 
-        <div className="changes-grid">
+        <div className="changes-grid" data-blok-testid="changes-grid">
           {CHANGE_ITEMS.map((item) => (
-            <div key={item.title} className="change-card">
+            <article
+              key={item.title}
+              className="change-card"
+              data-blok-testid="change-card"
+            >
               <div className="change-card-header">
                 <span className="change-card-icon">{item.icon}</span>
                 <h3 className="change-card-title">{item.title}</h3>
@@ -28,19 +35,25 @@ export const MigrationSteps: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="migration-section">
+      <section
+        className="migration-section"
+        data-blok-testid="css-reference-section"
+      >
         <h2 className="migration-section-title">CSS Selector Reference</h2>
         <p className="migration-section-description">
           Reference for manually updating your CSS selectors.
         </p>
 
         <div className="reference-table-wrapper">
-          <table className="migration-table reference-table">
+          <table
+            className="migration-table reference-table"
+            data-blok-testid="migration-table"
+          >
             <thead>
               <tr>
                 <th>EditorJS</th>

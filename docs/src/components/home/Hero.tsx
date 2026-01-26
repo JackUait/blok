@@ -17,7 +17,7 @@ export const Hero: React.FC = () => {
         <div className="hero-blur hero-blur-3"></div>
       </div>
       <div className="hero-container">
-        <div className="hero-content" data-hero-content>
+        <div className="hero-content" data-blok-testid="hero-content">
           <p className="hero-eyebrow">Open-Source Editor</p>
           <h1 className="hero-title">
             Build beautiful
@@ -47,7 +47,7 @@ export const Hero: React.FC = () => {
             </Link>
           </div>
         </div>
-        <div className="hero-demo" data-hero-demo>
+        <div className="hero-demo" data-blok-testid="hero-demo">
           <div
             ref={mascotTilt.ref}
             className={`hero-mascot hero-mascot-3d ${mascotTilt.isHovered ? 'hero-mascot-hovered' : ''}`}

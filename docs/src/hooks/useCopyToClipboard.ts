@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 interface UseCopyToClipboardReturn {
   copyToClipboard: (text: string) => Promise<boolean>;
@@ -6,16 +6,16 @@ interface UseCopyToClipboardReturn {
 }
 
 const fallbackCopyToClipboard = (text: string): boolean => {
-  const textarea = document.createElement('textarea');
+  const textarea = document.createElement("textarea");
   textarea.value = text;
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
   document.body.appendChild(textarea);
   textarea.select();
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-deprecated
-    const success = document.execCommand('copy');
+    const success = document.execCommand("copy");
     return success;
   } catch {
     return false;

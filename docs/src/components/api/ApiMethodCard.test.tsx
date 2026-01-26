@@ -81,11 +81,10 @@ describe('ApiMethodCard', () => {
     expect(screen.getByText('No Demo')).toBeInTheDocument();
   });
 
-  it('should have the correct CSS class', () => {
-    const { container } = render(<ApiMethodCard method={mockMethod} />);
+  it('should render the card element', () => {
+    render(<ApiMethodCard method={mockMethod} />);
 
-    const card = container.querySelector('.api-method-card');
-    expect(card).toBeInTheDocument();
+    expect(screen.getByTestId('api-method-card')).toBeInTheDocument();
   });
 
   it('should render side-by-side layout when demo is provided', () => {
@@ -101,9 +100,9 @@ describe('ApiMethodCard', () => {
       },
     };
 
-    const { container } = render(<ApiMethodCard method={methodWithDemo} />);
+    render(<ApiMethodCard method={methodWithDemo} />);
 
-    const card = container.querySelector('.api-method-card');
-    expect(card).toHaveClass('api-method-card--with-demo');
+    const card = screen.getByTestId('api-method-card');
+    expect(card).toHaveAttribute('data-has-demo', 'true');
   });
 });

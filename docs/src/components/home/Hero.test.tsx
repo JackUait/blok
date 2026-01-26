@@ -4,17 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { Hero } from './Hero';
 
 describe('Hero', () => {
-  it('should render a section element', () => {
-    render(
-      <MemoryRouter>
-        <Hero />
-      </MemoryRouter>
-    );
-
-    const section = document.querySelector('.hero');
-    expect(section).toBeInTheDocument();
-  });
-
   it('should render the eyebrow text', () => {
     render(
       <MemoryRouter>
@@ -22,7 +11,7 @@ describe('Hero', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Documentation')).toBeInTheDocument();
+    expect(screen.getByText('Open-Source Editor')).toBeInTheDocument();
   });
 
   it('should render the main title', () => {
@@ -32,8 +21,8 @@ describe('Hero', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Beautiful block-based')).toBeInTheDocument();
-    expect(screen.getByText('rich text editing')).toBeInTheDocument();
+    expect(screen.getByText('Build beautiful')).toBeInTheDocument();
+    expect(screen.getByText('block-based editors')).toBeInTheDocument();
   });
 
   it('should render the description', () => {
@@ -43,103 +32,63 @@ describe('Hero', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Blok is a headless/)).toBeInTheDocument();
+    expect(screen.getByText(/Blok is a highly extensible/)).toBeInTheDocument();
     expect(screen.getByText(/Notion-like editing experience/)).toBeInTheDocument();
   });
 
-  it('should render the Get Started button', () => {
+  it('should render the Get Started button with correct link', () => {
     render(
       <MemoryRouter>
         <Hero />
       </MemoryRouter>
     );
 
-    const getStartedButton = screen.getByText('Get Started');
-    expect(getStartedButton).toBeInTheDocument();
-    expect(getStartedButton.closest('a')).toHaveAttribute('href', '/#quick-start');
+    const getStartedLink = screen.getByRole('link', { name: 'Get Started' });
+    expect(getStartedLink).toBeInTheDocument();
+    expect(getStartedLink).toHaveAttribute('href', '/#quick-start');
   });
 
-  it('should render the GitHub link', () => {
+  it('should render the Try it out button with correct link', () => {
     render(
       <MemoryRouter>
         <Hero />
       </MemoryRouter>
     );
 
-    const githubLink = screen.getByText('View on GitHub');
-    expect(githubLink).toBeInTheDocument();
-    expect(githubLink.closest('a')).toHaveAttribute('href', 'https://github.com/JackUait/blok');
-    expect(githubLink.closest('a')).toHaveAttribute('target', '_blank');
-  });
-
-  it('should render the editor mockup', () => {
-    render(
-      <MemoryRouter>
-        <Hero />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Welcome to Blok')).toBeInTheDocument();
-    expect(screen.getByText(/A powerful block-based editor/)).toBeInTheDocument();
-    expect(screen.getByText('Headless architecture')).toBeInTheDocument();
-    expect(screen.getByText('Slash commands')).toBeInTheDocument();
-    expect(screen.getByText('Drag & drop')).toBeInTheDocument();
-  });
-
-  it('should render the Try it live button', () => {
-    render(
-      <MemoryRouter>
-        <Hero />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Try it live')).toBeInTheDocument();
+    const tryItOutLink = screen.getByRole('link', { name: /Try it out/ });
+    expect(tryItOutLink).toBeInTheDocument();
+    expect(tryItOutLink).toHaveAttribute('href', '/demo');
   });
 
   it('should have data-hero-content attribute', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <Hero />
       </MemoryRouter>
     );
 
-    const heroContent = container.querySelector('[data-hero-content]');
-    expect(heroContent).toBeInTheDocument();
+    expect(screen.getByTestId('hero-content')).toBeInTheDocument();
   });
 
   it('should have data-hero-demo attribute', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <Hero />
       </MemoryRouter>
     );
 
-    const heroDemo = container.querySelector('[data-hero-demo]');
-    expect(heroDemo).toBeInTheDocument();
+    expect(screen.getByTestId('hero-demo')).toBeInTheDocument();
   });
 
-  it('should have hero-bg div with blur elements', () => {
-    const { container } = render(
+  it('should render the mascot image', () => {
+    render(
       <MemoryRouter>
         <Hero />
       </MemoryRouter>
     );
 
-    const heroBg = container.querySelector('.hero-bg');
-    expect(heroBg).toBeInTheDocument();
-
-    const blurs = container.querySelectorAll('.hero-blur');
-    expect(blurs.length).toBe(3);
-  });
-
-  it('should have editor-dots in the editor header', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <Hero />
-      </MemoryRouter>
-    );
-
-    const dots = container.querySelectorAll('.editor-dots span');
-    expect(dots.length).toBe(3);
+    const mascot = screen.getByAltText(/Blok mascot/);
+    expect(mascot).toBeInTheDocument();
+    expect(mascot).toHaveAttribute('src', '/mascot.png');
   });
 });

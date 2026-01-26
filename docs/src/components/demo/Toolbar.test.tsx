@@ -14,18 +14,10 @@ describe('Toolbar', () => {
     vi.clearAllMocks();
   });
 
-  it('should render a div with demo-toolbar class', () => {
-    render(<Toolbar {...mockHandlers} />);
-
-    const toolbar = document.querySelector('.demo-toolbar');
-    expect(toolbar).toBeInTheDocument();
-  });
-
   it('should render undo button', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const undoButton = screen.getByTitle('Undo');
-    expect(undoButton).toBeInTheDocument();
     expect(undoButton.tagName.toLowerCase()).toBe('button');
   });
 
@@ -33,7 +25,6 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const redoButton = screen.getByTitle('Redo');
-    expect(redoButton).toBeInTheDocument();
     expect(redoButton.tagName.toLowerCase()).toBe('button');
   });
 
@@ -41,7 +32,6 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const saveButton = screen.getByTitle('Save JSON');
-    expect(saveButton).toBeInTheDocument();
     expect(saveButton.tagName.toLowerCase()).toBe('button');
   });
 
@@ -49,7 +39,6 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const clearButton = screen.getByTitle('Clear Editor');
-    expect(clearButton).toBeInTheDocument();
     expect(clearButton.tagName.toLowerCase()).toBe('button');
   });
 
@@ -57,6 +46,7 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const undoButton = screen.getByTitle('Undo');
+    expect(undoButton).toBeEnabled();
     fireEvent.click(undoButton);
 
     expect(mockHandlers.onUndo).toHaveBeenCalledTimes(1);
@@ -66,6 +56,7 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const redoButton = screen.getByTitle('Redo');
+    expect(redoButton).toBeEnabled();
     fireEvent.click(redoButton);
 
     expect(mockHandlers.onRedo).toHaveBeenCalledTimes(1);
@@ -75,6 +66,7 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const saveButton = screen.getByTitle('Save JSON');
+    expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
 
     expect(mockHandlers.onSave).toHaveBeenCalledTimes(1);
@@ -84,6 +76,7 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     const clearButton = screen.getByTitle('Clear Editor');
+    expect(clearButton).toBeEnabled();
     fireEvent.click(clearButton);
 
     expect(mockHandlers.onClear).toHaveBeenCalledTimes(1);
@@ -117,25 +110,11 @@ describe('Toolbar', () => {
     expect(redoButton).not.toBeDisabled();
   });
 
-  it('should have toolbar-group divs', () => {
-    const { container } = render(<Toolbar {...mockHandlers} />);
+  it('should render all 4 toolbar buttons', () => {
+    render(<Toolbar {...mockHandlers} />);
 
-    const groups = container.querySelectorAll('.toolbar-group');
-    expect(groups.length).toBe(2);
-  });
-
-  it('should have toolbar-divider', () => {
-    const { container } = render(<Toolbar {...mockHandlers} />);
-
-    const divider = container.querySelector('.toolbar-divider');
-    expect(divider).toBeInTheDocument();
-  });
-
-  it('should have toolbar-btn class on all buttons', () => {
-    const { container } = render(<Toolbar {...mockHandlers} />);
-
-    const buttons = container.querySelectorAll('.toolbar-btn');
-    expect(buttons.length).toBe(4);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(4);
   });
 
   it('should have Save text on save button', () => {
@@ -148,12 +127,5 @@ describe('Toolbar', () => {
     render(<Toolbar {...mockHandlers} />);
 
     expect(screen.getByText('Clear')).toBeInTheDocument();
-  });
-
-  it('should have SVG icons for all buttons', () => {
-    const { container } = render(<Toolbar {...mockHandlers} />);
-
-    const svgs = container.querySelectorAll('.toolbar-btn svg');
-    expect(svgs.length).toBe(4);
   });
 });

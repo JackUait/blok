@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { useEffect, useState } from "react";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import {
   createHighlighter,
   type Highlighter,
   type BundledLanguage,
   type SpecialLanguage,
-} from 'shiki';
-import { PackageManagerToggle, type PackageManager } from './PackageManagerToggle';
+} from "shiki";
+import {
+  PackageManagerToggle,
+  type PackageManager,
+} from "./PackageManagerToggle";
 
 interface CodeBlockProps {
   code: string;
@@ -17,13 +20,16 @@ interface CodeBlockProps {
   onPackageManagerChange?: (manager: PackageManager) => void;
 }
 
-const getInstallCommand = (packageName: string, manager: PackageManager): string => {
+const getInstallCommand = (
+  packageName: string,
+  manager: PackageManager,
+): string => {
   switch (manager) {
-    case 'yarn':
+    case "yarn":
       return `yarn add ${packageName}`;
-    case 'npm':
+    case "npm":
       return `npm install ${packageName}`;
-    case 'bun':
+    case "bun":
       return `bun add ${packageName}`;
     default:
       return `npm install ${packageName}`;
@@ -36,47 +42,52 @@ const highlighterState = {
   initPromise: null as Promise<Highlighter> | null,
 };
 
-const getHighlighterInstance = (): Highlighter | null => highlighterState.instance;
+const getHighlighterInstance = (): Highlighter | null =>
+  highlighterState.instance;
 const setHighlighterInstance = (instance: Highlighter | null): void => {
   highlighterState.instance = instance;
 };
-const getInitPromise = (): Promise<Highlighter> | null => highlighterState.initPromise;
+const getInitPromise = (): Promise<Highlighter> | null =>
+  highlighterState.initPromise;
 const setInitPromise = (promise: Promise<Highlighter> | null): void => {
   highlighterState.initPromise = promise;
 };
 
 const supportedLangs: (BundledLanguage | SpecialLanguage)[] = [
-  'javascript',
-  'typescript',
-  'tsx',
-  'jsx',
-  'bash',
-  'sh',
-  'json',
-  'css',
-  'html',
-  'markdown',
-  'md',
-  'python',
+  "javascript",
+  "typescript",
+  "tsx",
+  "jsx",
+  "bash",
+  "sh",
+  "json",
+  "css",
+  "html",
+  "markdown",
+  "md",
+  "python",
 ];
 
 // Display names for languages
 const languageDisplayNames: Record<string, string> = {
-  javascript: 'JavaScript',
-  typescript: 'TypeScript',
-  tsx: 'TSX',
-  jsx: 'JSX',
-  bash: 'Terminal',
-  sh: 'Shell',
-  json: 'JSON',
-  css: 'CSS',
-  html: 'HTML',
-  markdown: 'Markdown',
-  md: 'Markdown',
-  python: 'Python',
+  javascript: "JavaScript",
+  typescript: "TypeScript",
+  tsx: "TSX",
+  jsx: "JSX",
+  bash: "Terminal",
+  sh: "Shell",
+  json: "JSON",
+  css: "CSS",
+  html: "HTML",
+  markdown: "Markdown",
+  md: "Markdown",
+  python: "Python",
 };
 
-const loadLanguageIfNeeded = async (highlighter: Highlighter, lang: string): Promise<void> => {
+const loadLanguageIfNeeded = async (
+  highlighter: Highlighter,
+  lang: string,
+): Promise<void> => {
   const langKey = lang.toLowerCase() as BundledLanguage | SpecialLanguage;
   const isLangLoaded = highlighter.getLoadedLanguages().includes(langKey);
 
@@ -103,7 +114,7 @@ const getHighlighter = async (lang: string): Promise<Highlighter> => {
   if (!initPromise) {
     // Initialize with only the languages we need
     const newInitPromise = createHighlighter({
-      themes: ['github-light', 'github-dark'],
+      themes: ["github-light", "github-dark"],
       langs: supportedLangs,
     }).then((highlighter) => {
       setHighlighterInstance(highlighter);
@@ -119,22 +130,23 @@ const getHighlighter = async (lang: string): Promise<Highlighter> => {
 
 export const CodeBlock: React.FC<CodeBlockProps> = ({
   code,
-  language = 'bash',
-  copyLabel = 'Copy',
+  language = "bash",
+  copyLabel = "Copy",
   showPackageManagerToggle = false,
   packageName,
   onPackageManagerChange,
 }) => {
   const { copyToClipboard } = useCopyToClipboard();
   const [copied, setCopied] = useState(false);
-  const [highlightedCode, setHighlightedCode] = useState<string>('');
+  const [highlightedCode, setHighlightedCode] = useState<string>("");
   const [isDark, setIsDark] = useState(false);
-  const [packageManager, setPackageManager] = useState<PackageManager>('yarn');
+  const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
 
   // Compute the display code based on package manager selection
-  const displayCode = showPackageManagerToggle && packageName
-    ? getInstallCommand(packageName, packageManager)
-    : code;
+  const displayCode =
+    showPackageManagerToggle && packageName
+      ? getInstallCommand(packageName, packageManager)
+      : code;
 
   const handlePackageManagerChange = (manager: PackageManager) => {
     setPackageManager(manager);
@@ -143,16 +155,16 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
   // Detect system dark mode preference for matching code content theme
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const updateTheme = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsDark(e.matches);
     };
 
     updateTheme(mediaQuery);
-    mediaQuery.addEventListener('change', updateTheme);
+    mediaQuery.addEventListener("change", updateTheme);
 
     return () => {
-      mediaQuery.removeEventListener('change', updateTheme);
+      mediaQuery.removeEventListener("change", updateTheme);
     };
   }, []);
 
@@ -161,20 +173,24 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     const highlight = async () => {
       try {
         const highlighter = await getHighlighter(language);
-        const langKey = language.toLowerCase() as BundledLanguage | SpecialLanguage;
+        const langKey = language.toLowerCase() as
+          | BundledLanguage
+          | SpecialLanguage;
         const lang = highlighter.getLoadedLanguages().includes(langKey)
           ? langKey
-          : 'plaintext';
+          : "plaintext";
 
         const html = highlighter.codeToHtml(displayCode, {
           lang,
-          theme: isDark ? 'github-dark' : 'github-light',
+          theme: isDark ? "github-dark" : "github-light",
         });
 
         setHighlightedCode(html);
       } catch {
         // Fallback to plain text if highlighting fails
-        setHighlightedCode(`<pre class="shiki"><code>${escapeHtml(displayCode)}</code></pre>`);
+        setHighlightedCode(
+          `<pre class="shiki"><code>${escapeHtml(displayCode)}</code></pre>`,
+        );
       }
     };
 
@@ -189,10 +205,11 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     }
   };
 
-  const displayLanguage = languageDisplayNames[language.toLowerCase()] || language;
+  const displayLanguage =
+    languageDisplayNames[language.toLowerCase()] || language;
 
   return (
-    <div className="code-block" data-code-block>
+    <div className="code-block" data-code-block data-testid="code-block">
       <div className="code-block-header">
         <div className="code-block-controls">
           <span className="code-block-control code-block-control--red" />
@@ -206,12 +223,13 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           </div>
         )}
         <button
-          className={`code-copy ${copied ? 'copied' : ''}`}
+          className={`code-copy ${copied ? "copied" : ""}`}
           data-copy
           data-code={displayCode}
+          data-testid="code-copy-button"
           onClick={handleCopy}
           type="button"
-          aria-label={copied ? 'Copied!' : copyLabel}
+          aria-label={copied ? "Copied!" : copyLabel}
         >
           {copied ? (
             <svg
@@ -266,9 +284,9 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
 const escapeHtml = (text: string): string => {
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};

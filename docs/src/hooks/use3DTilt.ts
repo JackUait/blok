@@ -137,19 +137,20 @@ export const use3DTilt = (options: Use3DTiltOptions = {}): Use3DTiltReturn => {
     });
   }, []);
 
-  // Use smooth transition during entry/exit phase, then switch to instant tracking
-  const isEntering = isHovered && !isSettled;
-  const isExiting = !isHovered;
-
-  // Determine transition based on state
-  let transition = 'none';
-  if (isExiting) {
+  // Determine transition based on state - use early returns for clarity
+  const getTransition = (): string => {
     // Smooth exit back to center
-    transition = `transform ${transitionSpeed}ms cubic-bezier(0.33, 1, 0.68, 1)`;
-  } else if (isEntering) {
+    if (!isHovered) {
+      return `transform ${transitionSpeed}ms cubic-bezier(0.33, 1, 0.68, 1)`;
+    }
     // Gentle entry with longer duration
-    transition = 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)';
-  }
+    if (isHovered && !isSettled) {
+      return 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)';
+    }
+    return 'none';
+  };
+
+  const transition = getTransition();
 
   const style: React.CSSProperties = {
     transform: isHovered

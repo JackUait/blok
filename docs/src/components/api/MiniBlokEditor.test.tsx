@@ -29,12 +29,8 @@ describe('MiniBlokEditor', () => {
   });
 
   it('should render container element', () => {
-    const { container: renderContainer } = render(
-      <MiniBlokEditor initialState={defaultInitialState} />,
-      { container }
-    );
-    const editorContainer = renderContainer.querySelector('.mini-blok-editor');
-    expect(editorContainer).toBeInTheDocument();
+    render(<MiniBlokEditor initialState={defaultInitialState} />, { container });
+    expect(screen.getByTestId('mini-blok-editor')).toBeInTheDocument();
   });
 
   it('should render error state when editor fails to load', async () => {
@@ -43,24 +39,10 @@ describe('MiniBlokEditor', () => {
       throw new Error('Failed to load');
     });
 
-    const { container: renderContainer } = render(
-      <MiniBlokEditor initialState={defaultInitialState} />,
-      { container }
-    );
+    render(<MiniBlokEditor initialState={defaultInitialState} />, { container });
 
     // Eventually the error state should be shown
     // Note: This test may need adjustment based on actual error handling behavior
-    const editorContainer = renderContainer.querySelector('.mini-blok-editor');
-    expect(editorContainer).toBeInTheDocument();
-  });
-
-  it('should have correct CSS classes', () => {
-    const { container: renderContainer } = render(
-      <MiniBlokEditor initialState={defaultInitialState} />,
-      { container }
-    );
-
-    const editorContainer = renderContainer.querySelector('.mini-blok-editor');
-    expect(editorContainer).toHaveClass('mini-blok-editor');
+    expect(screen.getByTestId('mini-blok-editor')).toBeInTheDocument();
   });
 });

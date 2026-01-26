@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface BlokEditor {
   save: () => Promise<unknown>;
@@ -39,16 +39,20 @@ export const EditorWrapper: React.FC<{
       try {
         // Import the full bundle which includes all tools
         // @ts-ignore - Dynamic import of external Blok module
-        const module = (await import('/dist/full.mjs')) as unknown as BlokModule;
+        const module =
+          (await import("/dist/full.mjs")) as unknown as BlokModule;
 
         if (!editorState.isMounted || !containerRef.current) return;
 
         // Make tools available globally for the editor config
-        (window as unknown as Record<string, unknown>).BlokHeader = module.Header;
-        (window as unknown as Record<string, unknown>).BlokParagraph = module.Paragraph;
+        (window as unknown as Record<string, unknown>).BlokHeader =
+          module.Header;
+        (window as unknown as Record<string, unknown>).BlokParagraph =
+          module.Paragraph;
         (window as unknown as Record<string, unknown>).BlokList = module.List;
         (window as unknown as Record<string, unknown>).BlokBold = module.Bold;
-        (window as unknown as Record<string, unknown>).BlokItalic = module.Italic;
+        (window as unknown as Record<string, unknown>).BlokItalic =
+          module.Italic;
         (window as unknown as Record<string, unknown>).BlokLink = module.Link;
 
         // Create the editor
@@ -59,15 +63,15 @@ export const EditorWrapper: React.FC<{
             header: {
               class: module.Header,
               config: {
-                placeholder: 'Enter a header...',
+                placeholder: "Enter a header...",
                 levels: [1, 2, 3, 4],
                 defaultLevel: 2,
               },
-              inlineToolbar: ['bold', 'italic', 'link'],
+              inlineToolbar: ["bold", "italic", "link"],
             },
             paragraph: {
               class: module.Paragraph,
-              inlineToolbar: ['bold', 'italic', 'link'],
+              inlineToolbar: ["bold", "italic", "link"],
               config: {
                 preserveBlank: true,
                 placeholder: 'Type "/" for commands...',
@@ -77,37 +81,37 @@ export const EditorWrapper: React.FC<{
               class: module.List,
               inlineToolbar: true,
               config: {
-                defaultStyle: 'unordered',
+                defaultStyle: "unordered",
               },
             },
           },
           data: {
             blocks: [
               {
-                id: 'welcome-block',
-                type: 'header',
+                id: "welcome-block",
+                type: "header",
                 data: {
-                  text: 'Welcome to Blok',
+                  text: "Welcome to Blok",
                   level: 2,
                 },
               },
               {
-                id: 'intro-block',
-                type: 'paragraph',
+                id: "intro-block",
+                type: "paragraph",
                 data: {
-                  text: 'This is a live demo of the Blok editor. Try typing <code>/</code> to see available commands, or select text to format it.',
+                  text: "This is a live demo of the Blok editor. Try typing <code>/</code> to see available commands, or select text to format it.",
                 },
               },
               {
-                id: 'features-list',
-                type: 'list',
+                id: "features-list",
+                type: "list",
                 data: {
-                  style: 'unordered',
+                  style: "unordered",
                   items: [
-                    'Block-based architecture',
-                    'Slash commands for quick formatting',
-                    'Drag and drop to reorder blocks',
-                    'Clean JSON output',
+                    "Block-based architecture",
+                    "Slash commands for quick formatting",
+                    "Drag and drop to reorder blocks",
+                    "Clean JSON output",
                   ],
                 },
               },
@@ -115,10 +119,10 @@ export const EditorWrapper: React.FC<{
           },
           onChange: () => {
             // Optional: Auto-save indicator
-            console.log('Content changed');
+            console.log("Content changed");
           },
           onReady: () => {
-            console.log('Blok editor is ready!');
+            console.log("Blok editor is ready!");
           },
         });
 
@@ -139,7 +143,8 @@ export const EditorWrapper: React.FC<{
         onEditorReadyRef.current?.(editor);
       } catch (err) {
         if (editorState.isMounted) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          const errorMessage =
+            err instanceof Error ? err.message : "Unknown error";
           setError(errorMessage);
           setLoading(false);
         }
@@ -164,16 +169,18 @@ export const EditorWrapper: React.FC<{
       <div className="blok-editor">
         <div
           style={{
-            padding: '2rem',
-            textAlign: 'center',
-            color: 'var(--demo-text-muted, #666)',
+            padding: "2rem",
+            textAlign: "center",
+            color: "var(--demo-text-muted, #666)",
           }}
         >
-          <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Failed to load editor</p>
+          <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
+            Failed to load editor
+          </p>
           <p style={{ fontSize: 14 }}>
             Make sure the Blok editor is built with <code>npm run build</code>
           </p>
-          <p style={{ fontSize: 12, marginTop: '1rem' }}>Error: {error}</p>
+          <p style={{ fontSize: 12, marginTop: "1rem" }}>Error: {error}</p>
         </div>
       </div>
     );

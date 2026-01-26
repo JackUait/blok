@@ -6,15 +6,13 @@ describe('CodemodCard', () => {
   it('should render a div with codemod-card class', () => {
     render(<CodemodCard />);
 
-    const card = document.querySelector('.codemod-card');
-    expect(card).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-card')).toBeInTheDocument();
   });
 
   it('should render the codemod icon', () => {
     render(<CodemodCard />);
 
-    const icon = document.querySelector('.codemod-icon');
-    expect(icon).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-icon')).toBeInTheDocument();
   });
 
   it('should render the title', () => {
@@ -41,40 +39,41 @@ describe('CodemodCard', () => {
   it('should have dry-run tab active by default', () => {
     render(<CodemodCard />);
 
-    const dryRunTab = screen.getByText('Dry Run');
-    expect(dryRunTab.closest('button')).toHaveClass('active');
+    const dryRunTab = screen.getByTestId('codemod-tab-dry-run');
+    expect(dryRunTab).toHaveClass('active');
 
-    const applyTab = screen.getByText('Apply');
-    expect(applyTab.closest('button')).not.toHaveClass('active');
+    const applyTab = screen.getByTestId('codemod-tab-apply');
+    expect(applyTab).not.toHaveClass('active');
   });
 
   it('should switch to apply tab when clicked', () => {
     render(<CodemodCard />);
 
-    const applyTab = screen.getByText('Apply');
+    const applyTab = screen.getByTestId('codemod-tab-apply');
     fireEvent.click(applyTab);
 
-    expect(applyTab.closest('button')).toHaveClass('active');
+    expect(applyTab).toHaveClass('active');
 
-    const dryRunTab = screen.getByText('Dry Run');
-    expect(dryRunTab.closest('button')).not.toHaveClass('active');
+    const dryRunTab = screen.getByTestId('codemod-tab-dry-run');
+    expect(dryRunTab).not.toHaveClass('active');
   });
 
   it('should render dry-run code by default', () => {
     render(<CodemodCard />);
 
-    // CodeBlock content may be highlighted, so we check for partial text
-    expect(screen.getByText((content) => content.includes('npx'))).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('--dry-run'))).toBeInTheDocument();
+    // CodeBlock stores code in data-code attribute for copy functionality
+    const copyButton = screen.getByLabelText('Copy');
+    expect(copyButton).toHaveAttribute('data-code', 'npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run');
   });
 
   it('should render apply code when apply tab is active', () => {
     render(<CodemodCard />);
 
-    const applyTab = screen.getByText('Apply');
+    const applyTab = screen.getByTestId('codemod-tab-apply');
     fireEvent.click(applyTab);
 
-    expect(screen.getByText((content) => content.includes('npx'))).toBeInTheDocument();
+    const copyButton = screen.getByLabelText('Copy');
+    expect(copyButton).toHaveAttribute('data-code', 'npx -p @jackuait/blok migrate-from-editorjs ./src');
   });
 
   it('should render codemod-options section', () => {
@@ -100,51 +99,47 @@ describe('CodemodCard', () => {
   });
 
   it('should have codemod-tabs div', () => {
-    const { container } = render(<CodemodCard />);
+    render(<CodemodCard />);
 
-    const tabs = container.querySelector('.codemod-tabs');
-    expect(tabs).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-tabs')).toBeInTheDocument();
   });
 
   it('should have codemod-tab buttons', () => {
-    const { container } = render(<CodemodCard />);
+    render(<CodemodCard />);
 
-    const tabs = container.querySelectorAll('.codemod-tab');
-    expect(tabs.length).toBe(2);
+    expect(screen.getByTestId('codemod-tab-dry-run')).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-tab-apply')).toBeInTheDocument();
   });
 
   it('should have codemod-content div', () => {
-    const { container } = render(<CodemodCard />);
+    render(<CodemodCard />);
 
-    const content = container.querySelector('.codemod-content');
-    expect(content).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-content')).toBeInTheDocument();
   });
 
   it('should have codemod-panel divs', () => {
-    const { container } = render(<CodemodCard />);
+    render(<CodemodCard />);
 
-    const panels = container.querySelectorAll('.codemod-panel');
-    expect(panels.length).toBe(2);
+    expect(screen.getByTestId('codemod-panel-dry-run')).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-panel-apply')).toBeInTheDocument();
   });
 
   it('should have codemod-options div', () => {
-    const { container } = render(<CodemodCard />);
+    render(<CodemodCard />);
 
-    const options = container.querySelector('.codemod-options');
-    expect(options).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-options')).toBeInTheDocument();
   });
 
   it('should have codemod-options-title h4', () => {
-    const { container } = render(<CodemodCard />);
+    render(<CodemodCard />);
 
-    const title = container.querySelector('.codemod-options-title');
-    expect(title?.textContent).toBe('Options');
+    const title = screen.getByTestId('codemod-options-title');
+    expect(title).toHaveTextContent('Options');
   });
 
   it('should have migration-table class on table', () => {
-    const { container } = render(<CodemodCard />);
+    render(<CodemodCard />);
 
-    const table = container.querySelector('.migration-table');
-    expect(table).toBeInTheDocument();
+    expect(screen.getByTestId('migration-table')).toBeInTheDocument();
   });
 });

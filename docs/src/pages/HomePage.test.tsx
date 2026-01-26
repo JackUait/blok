@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
 
@@ -11,7 +11,7 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const nav = document.querySelector('[data-nav]');
+    const nav = screen.getByRole('navigation');
     expect(nav).toBeInTheDocument();
   });
 
@@ -22,7 +22,7 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const footer = document.querySelector('.footer');
+    const footer = screen.getByTestId('footer-brand');
     expect(footer).toBeInTheDocument();
   });
 
@@ -33,7 +33,7 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const heroContent = document.querySelector('[data-hero-content]');
+    const heroContent = screen.getByTestId('hero-content');
     expect(heroContent).toBeInTheDocument();
   });
 
@@ -44,7 +44,8 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const features = document.getElementById('features');
+    const main = screen.getByRole('main');
+    const features = within(main).getByText(/why blok/i);
     expect(features).toBeInTheDocument();
   });
 
@@ -55,7 +56,8 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const quickStart = document.getElementById('quick-start');
+    const main = screen.getByRole('main');
+    const quickStart = within(main).getByText(/up and running in minutes/i);
     expect(quickStart).toBeInTheDocument();
   });
 
@@ -66,7 +68,7 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const api = document.getElementById('api');
+    const api = screen.getByTestId('api-preview-section');
     expect(api).toBeInTheDocument();
   });
 
@@ -77,18 +79,18 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const migration = document.querySelector('.migration');
+    const migration = screen.getByTestId('migration-section');
     expect(migration).toBeInTheDocument();
   });
 
   it('should render a main element', () => {
-    const { container } = render(
+    render(
       <MemoryRouter>
         <HomePage />
       </MemoryRouter>
     );
 
-    const main = container.querySelector('main');
+    const main = screen.getByRole('main');
     expect(main).toBeInTheDocument();
   });
 
@@ -99,7 +101,7 @@ describe('HomePage', () => {
       </MemoryRouter>
     );
 
-    const nav = document.querySelector('[data-nav]');
+    const nav = screen.getByRole('navigation');
     expect(nav).toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
-import type { FC } from 'react';
-import { useRef, useEffect, useState, useCallback } from 'react';
-import type { DemoConfig, BlockData } from './api-data';
-import type { BlokEditorInstance, BlokModule } from '@/types/blok';
+import type { FC } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
+import type { DemoConfig, BlockData } from "./api-data";
+import type { BlokEditorInstance, BlokModule } from "@/types/blok";
 
 // Extend Window interface globally for tool class assignments
 declare global {
@@ -16,7 +16,7 @@ declare global {
 }
 
 export interface MiniBlokEditorProps {
-  initialState?: DemoConfig['initialState'];
+  initialState?: DemoConfig["initialState"];
   onEditorReady?: (editor: BlokEditorInstance) => void;
 }
 
@@ -28,9 +28,9 @@ export interface MiniBlokEditorContainer extends HTMLDivElement {
 
 const DEFAULT_INITIAL_STATE = {
   blocks: [
-    { id: '1', type: 'paragraph', data: { text: 'Hello World' } },
-    { id: '2', type: 'paragraph', data: { text: 'Try the actions below!' } },
-    { id: '3', type: 'header', data: { text: 'Getting Started', level: 2 } },
+    { id: "1", type: "paragraph", data: { text: "Hello World" } },
+    { id: "2", type: "paragraph", data: { text: "Try the actions below!" } },
+    { id: "3", type: "header", data: { text: "Getting Started", level: 2 } },
   ] as BlockData[],
 };
 
@@ -63,7 +63,7 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
       // The Vite externalDistPlugin resolves /dist/ paths at runtime to the parent dist directory.
       // @ts-expect-error - Module path is resolved at runtime by Vite's externalDistPlugin, not TypeScript.
       // Type safety is ensured by the BlokModule cast which matches the runtime module structure.
-      const module = (await import('/dist/full.mjs')) as BlokModule;
+      const module = (await import("/dist/full.mjs")) as BlokModule;
 
       if (!containerRef.current) return;
 
@@ -84,7 +84,7 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
           header: {
             class: module.Header,
             config: {
-              placeholder: 'Enter a header...',
+              placeholder: "Enter a header...",
               levels: [1, 2, 3, 4],
               defaultLevel: 2,
             },
@@ -95,14 +95,14 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
             inlineToolbar: [],
             config: {
               preserveBlank: true,
-              placeholder: 'Type something...',
+              placeholder: "Type something...",
             },
           },
           list: {
             class: module.List,
             inlineToolbar: false,
             config: {
-              defaultStyle: 'unordered',
+              defaultStyle: "unordered",
             },
           },
         },
@@ -117,7 +117,7 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
 
       editorRef.current = editor;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
       setLoading(false);
     }
@@ -162,7 +162,7 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
 
   if (error) {
     return (
-      <div className="mini-blok-editor">
+      <div className="mini-blok-editor" data-blok-testid="mini-blok-editor">
         <div className="mini-editor-error">
           <p>Failed to load editor</p>
           <p className="mini-editor-error-message">{error}</p>
@@ -172,7 +172,11 @@ export const MiniBlokEditor: FC<MiniBlokEditorProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="mini-blok-editor">
+    <div
+      ref={containerRef}
+      className="mini-blok-editor"
+      data-blok-testid="mini-blok-editor"
+    >
       {loading && (
         <div className="mini-editor-placeholder">
           <div className="mini-editor-placeholder-content">

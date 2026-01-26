@@ -1,5 +1,5 @@
-import { useTheme } from '@/hooks/useTheme';
-import styles from './ThemeToggle.module.css';
+import { useTheme } from "@/hooks/useTheme";
+import styles from "./ThemeToggle.module.css";
 
 /**
  * Theme toggle button that cycles through system -> light -> dark modes.
@@ -10,10 +10,10 @@ export const ThemeToggle: React.FC = () => {
 
   // Icon based on current theme setting, not resolved theme
   const getIcon = () => {
-    if (theme === 'system') {
+    if (theme === "system") {
       return <SystemIcon />;
     }
-    if (resolvedTheme === 'dark') {
+    if (resolvedTheme === "dark") {
       return <MoonIcon />;
     }
     return <SunIcon />;
@@ -21,12 +21,12 @@ export const ThemeToggle: React.FC = () => {
 
   const getLabel = () => {
     switch (theme) {
-      case 'system':
-        return 'System theme';
-      case 'light':
-        return 'Light theme';
-      case 'dark':
-        return 'Dark theme';
+      case "system":
+        return "System theme";
+      case "light":
+        return "Light theme";
+      case "dark":
+        return "Dark theme";
     }
   };
 
@@ -38,9 +38,7 @@ export const ThemeToggle: React.FC = () => {
       aria-label={`Toggle theme (current: ${getLabel()})`}
       title={getLabel()}
     >
-      <span className={styles.iconWrapper}>
-        {getIcon()}
-      </span>
+      <span className={styles.iconWrapper}>{getIcon()}</span>
     </button>
   );
 };

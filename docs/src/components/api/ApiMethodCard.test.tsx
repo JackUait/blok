@@ -77,33 +77,13 @@ describe('ApiMethodCard', () => {
   it('should not render demo section when demo config is not provided', () => {
     render(<ApiMethodCard method={mockMethod} sectionId="blocks-api" />);
 
-    expect(screen.getByTestId('api-method-demo')).toBeInTheDocument();
-    expect(screen.getByText('No Demo')).toBeInTheDocument();
+    expect(screen.queryByTestId('api-method-demo')).not.toBeInTheDocument();
   });
 
   it('should render the card element', () => {
     render(<ApiMethodCard method={mockMethod} sectionId="blocks-api" />);
 
     expect(screen.getByTestId('api-method-card')).toBeInTheDocument();
-  });
-
-  it('should render side-by-side layout when demo is provided', () => {
-    const methodWithDemo: ApiMethod = {
-      ...mockMethod,
-      demo: {
-        actions: [
-          {
-            label: 'Move first to last',
-            execute: vi.fn(),
-          },
-        ],
-      },
-    };
-
-    render(<ApiMethodCard method={methodWithDemo} sectionId="blocks-api" />);
-
-    const card = screen.getByTestId('api-method-card');
-    expect(card).toHaveAttribute('data-has-demo', 'true');
   });
 
   it('should render anchor link for the method', () => {

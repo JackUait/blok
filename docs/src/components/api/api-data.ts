@@ -100,6 +100,29 @@ editor.focus();
 
 // Focus at end
 editor.focus(true);`,
+        demo: {
+          initialState: {
+            blocks: [
+              { id: "1", type: "paragraph", data: { text: "Click a button to focus the editor." } },
+            ] as BlockData[],
+          },
+          actions: [
+            {
+              label: "Focus at start",
+              execute: (editor) => {
+                (editor as { focus(atEnd?: boolean): boolean }).focus();
+              },
+              expectedOutput: "Editor focused at start of content",
+            },
+            {
+              label: "Focus at end",
+              execute: (editor) => {
+                (editor as { focus(atEnd?: boolean): boolean }).focus(true);
+              },
+              expectedOutput: "Editor focused at end of content",
+            },
+          ],
+        },
       },
       {
         name: "clear()",

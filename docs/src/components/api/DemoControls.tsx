@@ -7,6 +7,7 @@ export interface DemoControlsProps {
   editor: unknown;
   onOutputChange: (output: { message: string; type: 'success' | 'error' } | null) => void;
   onReset?: () => void;
+  onExpand?: () => void;
 }
 
 /**
@@ -18,6 +19,7 @@ export const DemoControls: FC<DemoControlsProps> = ({
   editor,
   onOutputChange,
   onReset,
+  onExpand,
 }) => {
   const [executingIndex, setExecutingIndex] = useState<number | null>(null);
 
@@ -76,6 +78,23 @@ export const DemoControls: FC<DemoControlsProps> = ({
           disabled={executingIndex !== null}
         >
           Reset
+        </button>
+      )}
+      {onExpand && (
+        <button
+          type="button"
+          className="api-demo-expand-btn"
+          onClick={onExpand}
+          disabled={executingIndex !== null}
+          aria-label="Open in fullscreen"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 3 21 3 21 9" />
+            <polyline points="9 21 3 21 3 15" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+          </svg>
+          Expand
         </button>
       )}
     </div>

@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import type { ApiMethod } from "./api-data";
 import { CodeBlock } from "../common/CodeBlock";
+import { ApiMethodDemo } from "./ApiMethodDemo";
 
 export interface ApiMethodCardProps {
   method: ApiMethod;
@@ -45,6 +46,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       {method.example && (
         <CodeBlock code={method.example} language="typescript" />
       )}
+      {method.demo && <ApiMethodDemo demo={method.demo} methodName={method.name} />}
     </div>
   );
 };

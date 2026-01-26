@@ -856,30 +856,26 @@
 .api-method-demo {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-background);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
 }
 
-/* Mini Blok Editor - Premium styling */
+/* Mini Blok Editor - Compact styling */
 .mini-blok-editor {
-  height: 200px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 80%, var(--color-coral) 20%);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+  height: 120px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow-y: auto;
   background: var(--color-surface);
   position: relative;
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 0 0 1px rgba(0, 0, 0, 0.02);
-  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
 .mini-blok-editor:focus-within {
-  border-color: color-mix(in srgb, var(--color-coral) 60%, var(--color-border));
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 2px 8px rgba(240, 123, 75, 0.08),
-    0 0 0 3px rgba(240, 123, 75, 0.08);
+  border-color: var(--color-coral);
 }
 
 .mini-editor-placeholder {
@@ -888,11 +884,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    var(--color-background) 0%,
-    color-mix(in srgb, var(--color-background) 95%, var(--color-coral)) 100%
-  );
+  background: var(--color-background);
 }
 
 .mini-editor-placeholder-content {
@@ -983,12 +975,8 @@
 }
 
 .api-demo-reset-btn::before {
-  content: '';
-  width: 12px;
-  height: 12px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8a5 5 0 1 1 1.5 3.5M3 12V8h4'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
+  content: '↺';
+  font-size: 14px;
   opacity: 0.7;
   transition: opacity var(--transition-fast);
 }
@@ -1146,4 +1134,139 @@
   .api-demo-reset-btn {
     justify-content: center;
   }
+}
+
+/* Expand Button */
+.api-demo-expand-btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-left: auto;
+}
+
+.api-demo-expand-btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.api-demo-expand-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Demo Modal */
+.demo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-xl);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.demo-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.demo-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.demo-modal-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.demo-modal-title code {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  color: var(--color-coral);
+  background: rgba(240, 123, 75, 0.1);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+}
+
+.demo-modal-close {
+  padding: var(--spacing-sm);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.demo-modal-close:hover {
+  color: var(--color-text-primary);
+  background: var(--color-background);
+}
+
+.demo-modal-content {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.demo-modal-editor {
+  height: 300px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-y: auto;
+  background: var(--color-background);
+}
+
+.demo-modal-editor .mini-blok-editor {
+  height: 100%;
+  border: none;
+}
+
+.demo-modal-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }

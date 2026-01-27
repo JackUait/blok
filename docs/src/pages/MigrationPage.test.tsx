@@ -33,7 +33,7 @@ describe('MigrationPage', () => {
     );
 
     expect(
-      screen.getByText('Blok is designed as a drop-in replacement for EditorJS. Follow this guide to migrate your project in minutes, not hours.')
+      screen.getByText('Blok is designed as a replacement for EditorJS. Follow this guide to migrate your project in minutes, not hours.')
     ).toBeInTheDocument();
   });
 

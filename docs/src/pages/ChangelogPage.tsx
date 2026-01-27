@@ -134,6 +134,71 @@ const formatDate = (dateString: string): string => {
   });
 };
 
+/**
+ * Format a changelog description with proper styling for:
+ * - **bold** text (feature names)
+ * - `code` backticks
+ * - — em-dashes (visual separators)
+ */
+const formatDescription = (text: string): React.ReactNode => {
+  // Split by em-dash to separate title from description
+  const parts = text.split(/\s*—\s*/);
+  const hasEmDash = parts.length > 1;
+
+  const formatPart = (part: string, key: number): React.ReactNode => {
+    // Match **bold** and `code` patterns
+    const tokens: React.ReactNode[] = [];
+    let lastIndex = 0;
+    const regex = /(\*\*[^*]+\*\*)|(`[^`]+`)/g;
+    let match;
+
+    while ((match = regex.exec(part)) !== null) {
+      // Add text before match
+      if (match.index > lastIndex) {
+        tokens.push(part.slice(lastIndex, match.index));
+      }
+
+      const matched = match[0];
+      if (matched.startsWith("**") && matched.endsWith("**")) {
+        // Bold text
+        tokens.push(
+          <strong key={`${key}-${match.index}`} className="changelog-bold">
+            {matched.slice(2, -2)}
+          </strong>
+        );
+      } else if (matched.startsWith("`") && matched.endsWith("`")) {
+        // Code text
+        tokens.push(
+          <code key={`${key}-${match.index}`} className="changelog-code">
+            {matched.slice(1, -1)}
+          </code>
+        );
+      }
+
+      lastIndex = match.index + matched.length;
+    }
+
+    // Add remaining text
+    if (lastIndex < part.length) {
+      tokens.push(part.slice(lastIndex));
+    }
+
+    return tokens.length > 0 ? tokens : part;
+  };
+
+  if (hasEmDash) {
+    return (
+      <>
+        <span className="changelog-title">{formatPart(parts[0], 0)}</span>
+        <span className="changelog-separator"> — </span>
+        <span className="changelog-detail">{formatPart(parts.slice(1).join(" — "), 1)}</span>
+      </>
+    );
+  }
+
+  return formatPart(text, 0);
+};
+
 const ChangelogPage: React.FC = () => {
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,10 +252,6 @@ const ChangelogPage: React.FC = () => {
         <Nav links={NAV_LINKS} />
         <main className="changelog-main">
           <div className="changelog-hero">
-            <div className="changelog-hero-badge">
-              <Icons.clock />
-              Version History
-            </div>
             <h1 className="changelog-hero-title">Changelog</h1>
             <p className="changelog-hero-description">
               Error loading changelog: {error}
@@ -211,10 +272,6 @@ const ChangelogPage: React.FC = () => {
         <div className="changelog-gradient-2" aria-hidden="true" />
 
         <div className="changelog-hero">
-          <div className="changelog-hero-badge">
-            <Icons.clock />
-            Version History
-          </div>
           <h1 className="changelog-hero-title">Changelog</h1>
         </div>
 
@@ -267,7 +324,7 @@ const ChangelogPage: React.FC = () => {
                         {change.category}
                       </span>
                       <span className="changelog-change-description">
-                        {change.description}
+                        {formatDescription(change.description)}
                         {change.link && (
                           <Link
                             to={change.link}

@@ -1,11 +1,19 @@
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { CodeBlock } from '../components/common/CodeBlock';
+import { Sidebar } from '../components/common/Sidebar';
 import { RecipeCard } from '../components/recipes/RecipeCard';
 import { KeyboardShortcuts } from '../components/recipes/KeyboardShortcuts';
 import { QuickTips } from '../components/recipes/QuickTips';
+import { SIDEBAR_SECTIONS } from '../components/recipes/recipes-data';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/recipes.css';
+
+// Flatten sidebar sections to get all section IDs
+const ALL_SECTION_IDS = SIDEBAR_SECTIONS.flatMap((section) =>
+  section.links.map((link) => link.id)
+);
 
 const SaveIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -185,127 +193,231 @@ new Blok({
 });`;
 
 export const RecipesPage: React.FC = () => {
+  // Initialize active section from URL hash
+  const [activeSection, setActiveSection] = useState<string>(() => {
+    const hash = window.location.hash.slice(1);
+    return hash || 'quick-tips';
+  });
+  const scrollTargetRef = useRef<string | null>(null);
+
+  // Handle initial URL hash on page load and hash changes
+  const scrollToHash = useCallback(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+
+    requestAnimationFrame(() => {
+      const targetElement = document.getElementById(hash);
+      if (targetElement) {
+        scrollTargetRef.current = hash;
+        setActiveSection(hash);
+        targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }
+    });
+  }, []);
+
+  // Handle initial hash on mount
+  useEffect(() => {
+    scrollToHash();
+
+    const handleHashChange = (): void => {
+      scrollToHash();
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [scrollToHash]);
+
+  useEffect(() => {
+    // Intersection Observer for active section tracking
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -100px 0px',
+      threshold: 0.1,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          if (scrollTargetRef.current) {
+            if (entry.target.id === scrollTargetRef.current) {
+              scrollTargetRef.current = null;
+            }
+            return;
+          }
+          setActiveSection(entry.target.id);
+        }
+      });
+    }, observerOptions);
+
+    // Observe all sections
+    ALL_SECTION_IDS.forEach((sectionId) => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    // Handle anchor link clicks
+    const handleAnchorClick = (e: Event) => {
+      const target = e.target as HTMLAnchorElement;
+      const href = target.getAttribute('href');
+      if (!href || !href.startsWith('#')) return;
+
+      const sectionId = href.slice(1);
+      const targetElement = document.querySelector(href);
+      if (targetElement) {
+        e.preventDefault();
+        window.history.pushState(null, '', href);
+        scrollTargetRef.current = sectionId;
+        setActiveSection(sectionId);
+        targetElement.scrollIntoView({
+          behavior: 'auto',
+          block: 'start',
+        });
+      }
+    };
+
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener('click', handleAnchorClick);
+    });
+
+    return () => {
+      observer.disconnect();
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.removeEventListener('click', handleAnchorClick);
+      });
+    };
+  }, []);
+
   return (
     <>
       <Nav links={NAV_LINKS} />
-      <main className="recipes-main">
-        <section className="recipes-hero">
-          <span className="recipes-hero-badge">Cookbook</span>
-          <h1 className="recipes-hero-title">Recipes</h1>
-          <p className="recipes-hero-description">
-            Practical tips, patterns, and code snippets to help you get the most out of Blok.
-            From basic setup to advanced customization.
-          </p>
-        </section>
-
-        <section className="recipes-section">
-          <h2 className="recipes-section-title">
-            <span className="recipes-section-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-            </span>
-            Quick Tips
-          </h2>
-          <QuickTips />
-        </section>
-
-        <section className="recipes-section">
-          <h2 className="recipes-section-title">
-            <span className="recipes-section-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </span>
-            Keyboard Shortcuts
-          </h2>
-          <KeyboardShortcuts />
-        </section>
-
-        <section className="recipes-section">
-          <h2 className="recipes-section-title">
-            <span className="recipes-section-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-              </svg>
-            </span>
-            Code Recipes
-          </h2>
-
-          <RecipeCard
-            icon={<SaveIcon />}
-            title="Autosave with Debouncing"
-            description="Automatically save content as users type, with debouncing to prevent excessive server requests."
-            tip="A 1-second debounce is usually a good balance between responsiveness and server load."
-          >
-            <CodeBlock code={AUTOSAVE_CODE} language="typescript" />
-          </RecipeCard>
-
-          <RecipeCard
-            icon={<EventIcon />}
-            title="Working with Events"
-            description="Listen to editor events to integrate with your application's state management or analytics."
-          >
-            <CodeBlock code={EVENTS_CODE} language="typescript" />
-          </RecipeCard>
-
-          <RecipeCard
-            icon={<ToolIcon />}
-            title="Creating a Custom Tool"
-            description="Build your own block type to extend Blok's functionality. This example creates a simple alert/callout block."
-            tip="Keep tools focused on a single purpose. For complex needs, compose multiple simple tools."
-          >
-            <CodeBlock code={CUSTOM_TOOL_CODE} language="typescript" />
-          </RecipeCard>
-
-          <RecipeCard
-            icon={<StyleIcon />}
-            title="Styling with Data Attributes"
-            description="Customize Blok's appearance using CSS and data attributes. No need to fight with specificity."
-          >
-            <CodeBlock code={STYLING_CODE} language="css" />
-          </RecipeCard>
-
-          <RecipeCard
-            icon={<ReadOnlyIcon />}
-            title="Read-Only Mode"
-            description="Display saved content without editing capabilities, or toggle between edit and preview modes."
-            tip="Read-only mode is perfect for previewing content before publishing or displaying user-generated content."
-          >
-            <CodeBlock code={READONLY_CODE} language="typescript" />
-          </RecipeCard>
-
-          <RecipeCard
-            icon={<LocaleIcon />}
-            title="Localization with Preloading"
-            description="Configure Blok for multiple languages with optional preloading for offline support or instant initialization."
-            tip="Most apps can use on-demand loading with buildRegistry() directly—the ~50-100ms delay is usually imperceptible."
-          >
-            <CodeBlock code={LOCALE_CODE} language="typescript" />
-          </RecipeCard>
-        </section>
-
-        <section className="recipes-cta">
-          <div className="recipes-cta-card">
-            <h2>Have a recipe to share?</h2>
-            <p>
-              We're always looking for new patterns and best practices from the community.
+      <div className="recipes-docs" data-blok-testid="recipes-docs">
+        <Sidebar
+          sections={SIDEBAR_SECTIONS}
+          activeSection={activeSection}
+          variant="recipes"
+          filterLabel="Filter recipes"
+        />
+        <main className="recipes-main" data-blok-testid="recipes-main">
+          <section className="recipes-hero">
+            <h1 className="recipes-hero-title">Recipes</h1>
+            <p className="recipes-hero-description">
+              Practical tips, patterns, and code snippets to help you get the most out of Blok.
+              From basic setup to advanced customization.
             </p>
-            <div className="recipes-cta-actions">
-              <a
-                href="https://github.com/JackUait/blok/discussions"
-                className="btn btn--secondary"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Share on GitHub
-              </a>
+          </section>
+
+          <section id="quick-tips" className="recipes-section">
+            <h2 className="recipes-section-title">
+              <span className="recipes-section-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </span>
+              Quick Tips
+            </h2>
+            <QuickTips />
+          </section>
+
+          <section id="keyboard-shortcuts" className="recipes-section">
+            <h2 className="recipes-section-title">
+              <span className="recipes-section-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </span>
+              Keyboard Shortcuts
+            </h2>
+            <KeyboardShortcuts />
+          </section>
+
+          <section id="autosave" className="recipes-section">
+            <RecipeCard
+              icon={<SaveIcon />}
+              title="Autosave with Debouncing"
+              description="Automatically save content as users type, with debouncing to prevent excessive server requests."
+              tip="A 1-second debounce is usually a good balance between responsiveness and server load."
+            >
+              <CodeBlock code={AUTOSAVE_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="events" className="recipes-section">
+            <RecipeCard
+              icon={<EventIcon />}
+              title="Working with Events"
+              description="Listen to editor events to integrate with your application's state management or analytics."
+            >
+              <CodeBlock code={EVENTS_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="custom-tool" className="recipes-section">
+            <RecipeCard
+              icon={<ToolIcon />}
+              title="Creating a Custom Tool"
+              description="Build your own block type to extend Blok's functionality. This example creates a simple alert/callout block."
+              tip="Keep tools focused on a single purpose. For complex needs, compose multiple simple tools."
+            >
+              <CodeBlock code={CUSTOM_TOOL_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="styling" className="recipes-section">
+            <RecipeCard
+              icon={<StyleIcon />}
+              title="Styling with Data Attributes"
+              description="Customize Blok's appearance using CSS and data attributes. No need to fight with specificity."
+            >
+              <CodeBlock code={STYLING_CODE} language="css" />
+            </RecipeCard>
+          </section>
+
+          <section id="read-only" className="recipes-section">
+            <RecipeCard
+              icon={<ReadOnlyIcon />}
+              title="Read-Only Mode"
+              description="Display saved content without editing capabilities, or toggle between edit and preview modes."
+              tip="Read-only mode is perfect for previewing content before publishing or displaying user-generated content."
+            >
+              <CodeBlock code={READONLY_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="localization" className="recipes-section">
+            <RecipeCard
+              icon={<LocaleIcon />}
+              title="Localization with Preloading"
+              description="Configure Blok for multiple languages with optional preloading for offline support or instant initialization."
+              tip="Most apps can use on-demand loading with buildRegistry() directly—the ~50-100ms delay is usually imperceptible."
+            >
+              <CodeBlock code={LOCALE_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section className="recipes-cta">
+            <div className="recipes-cta-card">
+              <h2>Have a recipe to share?</h2>
+              <p>
+                We're always looking for new patterns and best practices from the community.
+              </p>
+              <div className="recipes-cta-actions">
+                <a
+                  href="https://github.com/JackUait/blok/discussions"
+                  className="btn btn--secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Share on GitHub
+                </a>
+              </div>
             </div>
-          </div>
-        </section>
-      </main>
+          </section>
+        </main>
+      </div>
       <Footer />
     </>
   );

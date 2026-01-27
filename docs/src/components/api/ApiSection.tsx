@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CodeBlock } from "../common/CodeBlock";
+import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
@@ -104,7 +105,10 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
       <section id={section.id} className="api-section" data-blok-testid={section.id} aria-label={section.title}>
         <div className="api-section-header">
           {section.badge && (
-            <div className="api-section-badge" data-blok-testid="api-section-badge">{section.badge}</div>
+            <div className="api-section-badge" data-blok-testid="api-section-badge">
+              <CategoryIcon category={section.badge} size={14} />
+              {section.badge}
+            </div>
           )}
           <h1 className="api-section-title">
             <a href={`#${section.id}`} className="api-anchor-link" aria-label={`Link to ${section.title}`}>#</a>
@@ -123,7 +127,10 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
     <section id={section.id} className="api-section" data-blok-testid={section.id} aria-label={section.title}>
       <div className="api-section-header">
         {section.badge && (
-          <div className="api-section-badge" data-blok-testid="api-section-badge">{section.badge}</div>
+          <div className="api-section-badge" data-blok-testid="api-section-badge">
+            <CategoryIcon category={section.badge} size={14} />
+            {section.badge}
+          </div>
         )}
         <h1 className="api-section-title">
           <a href={`#${section.id}`} className="api-anchor-link" aria-label={`Link to ${section.title}`}>#</a>
@@ -172,6 +179,12 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {section.example && (
+        <div className="api-block">
+          <CodeBlock code={section.example} language="typescript" />
         </div>
       )}
 

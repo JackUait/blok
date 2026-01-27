@@ -3,6 +3,7 @@ export interface SearchResult {
   title: string;
   description?: string;
   category: string;
+  module: string;
   path: string;
   hash?: string;
   rank: number;
@@ -13,12 +14,13 @@ export interface SearchIndexItem {
   title: string;
   description?: string;
   category: string;
+  module: string;
   path: string;
   hash?: string;
   keywords: string[];
 }
 
-export type SearchCategory = 'guide' | 'core' | 'api' | 'data' | 'page';
+export type SearchCategory = 'guide' | 'core' | 'api' | 'data' | 'page' | 'recipe';
 
 export const SEARCH_CATEGORIES: Record<SearchCategory, string> = {
   guide: 'Guide',
@@ -26,4 +28,5 @@ export const SEARCH_CATEGORIES: Record<SearchCategory, string> = {
   api: 'API',
   data: 'Data',
   page: 'Page',
+  recipe: 'Recipe',
 } as const;

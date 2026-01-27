@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
-import { ApiSidebar } from '../components/api/ApiSidebar';
+import { Sidebar } from '../components/common/Sidebar';
 import { ApiSection } from '../components/api/ApiSection';
-import { API_SECTIONS } from '../components/api/api-data';
+import { API_SECTIONS, SIDEBAR_SECTIONS } from '../components/api/api-data';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/api.css';
 
@@ -116,7 +116,12 @@ export const ApiPage: React.FC = () => {
     <>
       <Nav links={NAV_LINKS} />
       <div className="api-docs" data-blok-testid="api-docs">
-        <ApiSidebar activeSection={activeSection} />
+        <Sidebar
+          sections={SIDEBAR_SECTIONS}
+          activeSection={activeSection}
+          variant="api"
+          filterLabel="Filter API sections"
+        />
         <main className="api-main" data-blok-testid="api-main">
           {API_SECTIONS.map((section) => (
             <ApiSection key={section.id} section={section} />

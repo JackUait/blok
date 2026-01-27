@@ -29,6 +29,14 @@ const mockConfigSection: ApiSectionType = {
   id: 'config',
   title: 'Configuration',
   description: 'Configuration options',
+  example: `import { Blok, type BlokConfig } from '@jackuait/blok';
+
+const config: BlokConfig = {
+  holder: 'editor',
+  tools: { paragraph: Paragraph },
+};
+
+const editor = new Blok(config);`,
   table: [
     {
       option: 'holder',
@@ -293,5 +301,34 @@ describe('ApiSection', () => {
 
     const toolsRow = document.getElementById('config-tools');
     expect(toolsRow).toBeInTheDocument();
+  });
+
+  describe('Configuration section clarity', () => {
+    it('should display an example showing the BlokConfig interface', () => {
+      // Use mockConfigSection which now has an example
+      render(<ApiSection section={mockConfigSection} />);
+
+      // Should show a code example demonstrating that these properties
+      // are passed to the Blok constructor
+      const codeBlock = screen.getByTestId('code-block');
+      expect(codeBlock).toBeInTheDocument();
+
+      // The example should show "new Blok" to make it clear
+      // these are constructor options
+      const copyButton = screen.getByTestId('code-copy-button');
+      const code = copyButton.getAttribute('data-code');
+      expect(code).toBeDefined();
+      expect(code).toContain('new Blok');
+      expect(code).toContain('holder:');
+    });
+
+    it('should show the TypeScript interface for configuration', () => {
+      // Use mockConfigSection which has BlokConfig in the example
+      render(<ApiSection section={mockConfigSection} />);
+
+      // Should show BlokConfig interface to clarify what object
+      // these properties belong to
+      expect(screen.getByText(/BlokConfig/)).toBeInTheDocument();
+    });
   });
 });

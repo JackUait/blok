@@ -1,12 +1,31 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { SIDEBAR_SECTIONS } from "./api-data";
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 
-interface ApiSidebarProps {
-  activeSection: string;
+export interface SidebarLink {
+  id: string;
+  label: string;
 }
 
-export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+export interface SidebarSection {
+  title: string;
+  links: SidebarLink[];
+}
+
+export type SidebarVariant = 'api' | 'recipes';
+
+interface SidebarProps {
+  sections: SidebarSection[];
+  activeSection: string;
+  variant: SidebarVariant;
+  filterLabel?: string;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  sections,
+  activeSection,
+  variant,
+  filterLabel = 'Filter sections',
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -16,19 +35,21 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
   // Filter sections and links based on search query
   const filteredSections = useMemo(() => {
     if (!searchQuery.trim()) {
-      return SIDEBAR_SECTIONS;
+      return sections;
     }
 
     const query = searchQuery.toLowerCase();
-    return SIDEBAR_SECTIONS.map((section) => ({
-      ...section,
-      links: section.links.filter(
-        (link) =>
-          link.label.toLowerCase().includes(query) ||
-          link.id.toLowerCase().includes(query)
-      ),
-    })).filter((section) => section.links.length > 0);
-  }, [searchQuery]);
+    return sections
+      .map((section) => ({
+        ...section,
+        links: section.links.filter(
+          (link) =>
+            link.label.toLowerCase().includes(query) ||
+            link.id.toLowerCase().includes(query)
+        ),
+      }))
+      .filter((section) => section.links.length > 0);
+  }, [searchQuery, sections]);
 
   // Scroll active link into view when activeSection changes (with 2-item buffer)
   const scrollActiveIntoView = useCallback(() => {
@@ -48,9 +69,12 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
     previousActiveSectionRef.current = activeSection;
 
     const sidebar = sidebarRef.current;
-    const allLinks = Array.from(navRef.current.querySelectorAll('[data-blok-testid^="api-sidebar-link-"]'));
+    const allLinks = Array.from(
+      navRef.current.querySelectorAll(`[data-blok-testid^="${variant}-sidebar-link-"]`)
+    );
     const activeIndex = allLinks.findIndex(
-      (link) => link.getAttribute('data-blok-testid') === `api-sidebar-link-${activeSection}`
+      (link) =>
+        link.getAttribute('data-blok-testid') === `${variant}-sidebar-link-${activeSection}`
     );
 
     if (activeIndex === -1) return;
@@ -64,7 +88,7 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
     // Calculate positions relative to the sidebar's scroll container
     const sidebarRect = sidebar.getBoundingClientRect();
     const activeLinkRect = activeLink.getBoundingClientRect();
-    
+
     // Position of active link relative to the sidebar's visible area (below search)
     const linkTopInSidebar = activeLinkRect.top - sidebarRect.top - searchHeight;
     const linkBottomInSidebar = activeLinkRect.bottom - sidebarRect.top;
@@ -79,21 +103,23 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
       const bufferTopIndex = Math.max(0, activeIndex - bufferSize);
       const bufferLink = allLinks[bufferTopIndex] as HTMLElement;
       const bufferLinkRect = bufferLink.getBoundingClientRect();
-      const scrollOffset = bufferLinkRect.top - sidebarRect.top + sidebar.scrollTop - searchHeight - 20;
+      const scrollOffset =
+        bufferLinkRect.top - sidebarRect.top + sidebar.scrollTop - searchHeight - 20;
       sidebar.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'auto' });
       return;
     }
-    
+
     // Check if active link is near bottom edge
     if (linkBottomInSidebar > sidebarVisibleHeight - bufferPixels) {
       // Scroll down to show buffer items below
       const bufferBottomIndex = Math.min(allLinks.length - 1, activeIndex + bufferSize);
       const bufferLink = allLinks[bufferBottomIndex] as HTMLElement;
       const bufferLinkRect = bufferLink.getBoundingClientRect();
-      const scrollOffset = bufferLinkRect.bottom - sidebarRect.top + sidebar.scrollTop - sidebarVisibleHeight + 20;
+      const scrollOffset =
+        bufferLinkRect.bottom - sidebarRect.top + sidebar.scrollTop - sidebarVisibleHeight + 20;
       sidebar.scrollTo({ top: scrollOffset, behavior: 'auto' });
     }
-  }, [activeSection]);
+  }, [activeSection, variant]);
 
   useEffect(() => {
     scrollActiveIntoView();
@@ -103,27 +129,35 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // "/" to focus search when not in an input
-      if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
         e.preventDefault();
         inputRef.current?.focus();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleClear = () => {
-    setSearchQuery("");
+    setSearchQuery('');
     inputRef.current?.focus();
   };
 
   return (
-    <aside ref={sidebarRef} className="api-sidebar" data-api-sidebar data-blok-testid="api-sidebar">
-      <div ref={searchRef} className="api-sidebar-search" data-blok-testid="api-sidebar-search">
-        <div className="api-sidebar-search-field">
+    <aside
+      ref={sidebarRef}
+      className={`${variant}-sidebar`}
+      data-blok-testid={`${variant}-sidebar`}
+    >
+      <div
+        ref={searchRef}
+        className={`${variant}-sidebar-search`}
+        data-blok-testid={`${variant}-sidebar-search`}
+      >
+        <div className={`${variant}-sidebar-search-field`}>
           <svg
-            className="api-sidebar-search-icon"
+            className={`${variant}-sidebar-search-icon`}
             width="16"
             height="16"
             viewBox="0 0 20 20"
@@ -141,20 +175,20 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
           <input
             ref={inputRef}
             type="text"
-            className="api-sidebar-search-input"
+            className={`${variant}-sidebar-search-input`}
             placeholder="Filter..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Filter API sections"
-            data-blok-testid="api-sidebar-search-input"
+            aria-label={filterLabel}
+            data-blok-testid={`${variant}-sidebar-search-input`}
           />
           {searchQuery ? (
             <button
               type="button"
-              className="api-sidebar-search-clear"
+              className={`${variant}-sidebar-search-clear`}
               onClick={handleClear}
               aria-label="Clear search"
-              data-blok-testid="api-sidebar-search-clear"
+              data-blok-testid={`${variant}-sidebar-search-clear`}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path
@@ -167,34 +201,41 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
             </button>
           ) : (
             <kbd
-              className="api-sidebar-search-shortcut"
+              className={`${variant}-sidebar-search-shortcut`}
               title="Press / to focus search"
-              data-blok-testid="api-sidebar-search-shortcut"
+              data-blok-testid={`${variant}-sidebar-search-shortcut`}
             >
               /
             </kbd>
           )}
         </div>
       </div>
-      <nav ref={navRef} className="api-sidebar-nav" data-blok-testid="api-sidebar-nav">
+      <nav
+        ref={navRef}
+        className={`${variant}-sidebar-nav`}
+        data-blok-testid={`${variant}-sidebar-nav`}
+      >
         {filteredSections.length === 0 ? (
-          <div className="api-sidebar-empty" data-blok-testid="api-sidebar-empty">
+          <div
+            className={`${variant}-sidebar-empty`}
+            data-blok-testid={`${variant}-sidebar-empty`}
+          >
             <p>No results</p>
           </div>
         ) : (
           filteredSections.map((section) => (
             <div
               key={section.title}
-              className="api-sidebar-section"
-              data-blok-testid="api-sidebar-section"
+              className={`${variant}-sidebar-section`}
+              data-blok-testid={`${variant}-sidebar-section`}
             >
-              <h4 className="api-sidebar-title">{section.title}</h4>
+              <h4 className={`${variant}-sidebar-title`}>{section.title}</h4>
               {section.links.map((link) => (
                 <a
                   key={link.id}
                   href={`#${link.id}`}
-                  className={`api-sidebar-link ${activeSection === link.id ? "active" : ""}`}
-                  data-blok-testid={`api-sidebar-link-${link.id}`}
+                  className={`${variant}-sidebar-link ${activeSection === link.id ? 'active' : ''}`}
+                  data-blok-testid={`${variant}-sidebar-link-${link.id}`}
                 >
                   {link.label}
                 </a>

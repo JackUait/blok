@@ -1,5 +1,14 @@
 import type { SearchIndexItem, SearchResult } from '@/types/search';
-import { API_SECTIONS } from '@/components/api/api-data';
+import { API_SECTIONS, SIDEBAR_SECTIONS } from '@/components/api/api-data';
+
+// Map section IDs to their module (sidebar section) titles
+const SECTION_TO_MODULE: Record<string, string> = {};
+
+for (const section of SIDEBAR_SECTIONS) {
+  for (const link of section.links) {
+    SECTION_TO_MODULE[link.id] = section.title;
+  }
+}
 
 // Common aliases for better search matching
 const ALIASES: Record<string, string[]> = {
@@ -82,6 +91,8 @@ const indexMethods = (index: SearchIndexItem[], section: ApiSection): void => {
     return;
   }
 
+  const module = SECTION_TO_MODULE[section.id] ?? section.badge ?? 'API';
+
   for (const method of section.methods) {
     const methodName = method.name.replace('()', '');
     index.push({
@@ -89,6 +100,7 @@ const indexMethods = (index: SearchIndexItem[], section: ApiSection): void => {
       title: method.name,
       description: method.description,
       category: section.badge ?? 'api',
+      module,
       path: '/docs',
       hash: section.id,
       keywords: createKeywords(
@@ -106,12 +118,15 @@ const indexProperties = (index: SearchIndexItem[], section: ApiSection): void =>
     return;
   }
 
+  const module = SECTION_TO_MODULE[section.id] ?? section.badge ?? 'API';
+
   for (const prop of section.properties) {
     index.push({
       id: `${section.id}-${prop.name}`,
       title: prop.name,
       description: prop.description,
       category: section.badge ?? 'api',
+      module,
       path: '/docs',
       hash: section.id,
       keywords: createKeywords(
@@ -129,12 +144,15 @@ const indexTableOptions = (index: SearchIndexItem[], section: ApiSection): void 
     return;
   }
 
+  const module = SECTION_TO_MODULE[section.id] ?? section.badge ?? 'API';
+
   for (const row of section.table) {
     index.push({
       id: `${section.id}-${row.option}`,
       title: row.option,
       description: row.description,
       category: section.badge ?? 'api',
+      module,
       path: '/docs',
       hash: section.id,
       keywords: createKeywords(
@@ -147,18 +165,85 @@ const indexTableOptions = (index: SearchIndexItem[], section: ApiSection): void 
   }
 };
 
+// Recipe data extracted from RecipesPage.tsx and recipe components
+const RECIPES: Array<{
+  id: string;
+  title: string;
+  description: string;
+  keywords: string[];
+}> = [
+  {
+    id: 'recipe-quick-tips',
+    title: 'Quick Tips',
+    description: 'Quick tips for using Blok effectively',
+    keywords: [
+      'nest', 'nested', 'drag', 'drop', 'settings', 'menu',
+      'paste', 'rich', 'content', 'autosave', 'onchange',
+    ],
+  },
+  {
+    id: 'recipe-keyboard-shortcuts',
+    title: 'Keyboard Shortcuts',
+    description: 'All keyboard shortcuts for Blok editor',
+    keywords: [
+      'shortcut', 'keyboard', 'hotkey', 'slash', 'toolbox',
+      'bold', 'italic', 'underline', 'link', 'undo', 'redo',
+      'enter', 'backspace', 'tab', 'indent', 'outdent', 'list',
+    ],
+  },
+  {
+    id: 'recipe-autosave',
+    title: 'Autosave with Debouncing',
+    description: 'Automatically save content as users type, with debouncing to prevent excessive server requests.',
+    keywords: ['autosave', 'save', 'debounce', 'onchange', 'server', 'request'],
+  },
+  {
+    id: 'recipe-events',
+    title: 'Working with Events',
+    description: 'Listen to editor events to integrate with your application\'s state management or analytics.',
+    keywords: ['event', 'onready', 'onchange', 'listener', 'callback', 'analytics'],
+  },
+  {
+    id: 'recipe-custom-tool',
+    title: 'Creating a Custom Tool',
+    description: 'Build your own block type to extend Blok\'s functionality. This example creates a simple alert/callout block.',
+    keywords: ['custom', 'tool', 'plugin', 'extension', 'block', 'create', 'alert', 'callout'],
+  },
+  {
+    id: 'recipe-styling',
+    title: 'Styling with Data Attributes',
+    description: 'Customize Blok\'s appearance using CSS and data attributes. No need to fight with specificity.',
+    keywords: ['style', 'css', 'styling', 'theme', 'custom', 'appearance', 'data', 'attribute'],
+  },
+  {
+    id: 'recipe-readonly',
+    title: 'Read-Only Mode',
+    description: 'Display saved content without editing capabilities, or toggle between edit and preview modes.',
+    keywords: ['readonly', 'read-only', 'preview', 'toggle', 'edit', 'mode'],
+  },
+  {
+    id: 'recipe-locale',
+    title: 'Localization with Preloading',
+    description: 'Configure Blok for multiple languages with optional preloading for offline support or instant initialization.',
+    keywords: ['locale', 'i18n', 'localization', 'language', 'translation', 'preload', 'offline'],
+  },
+];
+
 // Build search index from API documentation
 export const buildSearchIndex = (): SearchIndexItem[] => {
   const index: SearchIndexItem[] = [];
 
   // Index API sections
   for (const section of API_SECTIONS) {
+    const module = SECTION_TO_MODULE[section.id] ?? section.badge ?? 'API';
+
     // Add the section itself
     index.push({
       id: section.id,
       title: section.title,
       description: section.description,
       category: section.badge ?? 'api',
+      module,
       path: '/docs',
       hash: section.id,
       keywords: createKeywords(
@@ -174,13 +259,14 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
     indexTableOptions(index, section);
   }
 
-  // Add page-level entries
+  // Add page-level entries (pages don't belong to a specific module)
   index.push(
     {
       id: 'home',
       title: 'Home',
       description: 'Welcome to Blok documentation',
       category: 'page',
+      module: 'Page',
       path: '/',
       keywords: ['home', 'welcome', 'blok', 'editor', 'start', 'getting started'],
     },
@@ -189,6 +275,7 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       title: 'Documentation',
       description: 'API documentation and guides',
       category: 'page',
+      module: 'Page',
       path: '/docs',
       keywords: ['docs', 'documentation', 'api', 'reference', 'guide', 'manual'],
     },
@@ -197,6 +284,7 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       title: 'Demo',
       description: 'Try the Blok editor',
       category: 'page',
+      module: 'Page',
       path: '/demo',
       keywords: ['demo', 'try', 'editor', 'example', 'playground', 'test', 'live'],
     },
@@ -205,10 +293,24 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       title: 'Migration Guide',
       description: 'Migrate from other editors',
       category: 'page',
+      module: 'Page',
       path: '/migration',
       keywords: ['migration', 'migrate', 'convert', 'upgrade', 'editorjs', 'switch', 'transition'],
     }
   );
+
+  // Index recipes
+  for (const recipe of RECIPES) {
+    index.push({
+      id: recipe.id,
+      title: recipe.title,
+      description: recipe.description,
+      category: 'recipe',
+      module: 'Recipes',
+      path: '/recipes',
+      keywords: createKeywords(recipe.title, recipe.description, ...recipe.keywords),
+    });
+  }
 
   return index;
 };
@@ -324,7 +426,7 @@ export const search = (query: string, index: SearchIndexItem[]): SearchResult[] 
     const descScore = item.description
       ? multiWordScore(trimmedQuery, item.description) * 0.8
       : 0;
-    
+
     // Check keywords with direct word matching
     let keywordScore = 0;
     const queryWords = trimmedQuery.toLowerCase().split(/\s+/);
@@ -348,6 +450,7 @@ export const search = (query: string, index: SearchIndexItem[]): SearchResult[] 
         title: item.title,
         description: item.description,
         category: item.category,
+        module: item.module,
         path: item.path,
         hash: item.hash,
         rank: totalScore,

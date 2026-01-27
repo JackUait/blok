@@ -19,6 +19,7 @@ export interface ApiSection {
     description: string;
   }[];
   customType?: "quick-start";
+  example?: string;
 }
 
 export const API_SECTIONS: ApiSection[] = [
@@ -111,6 +112,29 @@ editor.destroy();`,
     id: "config",
     title: "Configuration",
     description: "The configuration object passed to the Blok constructor.",
+    example: `import { Blok, type BlokConfig } from '@jackuait/blok';
+
+const config: BlokConfig = {
+  holder: 'editor',
+  tools: {
+    paragraph: Paragraph,
+    header: { class: Header, placeholder: 'Enter a heading' },
+  },
+  placeholder: 'Start writing...',
+  minHeight: '300px',
+  defaultBlock: 'paragraph',
+  data: {
+    blocks: [
+      { id: '1', type: 'paragraph', data: { text: 'Hello!' } }
+    ]
+  },
+  readOnly: false,
+  onChange: (api) => {
+    console.log('Content changed', api);
+  },
+};
+
+const editor = new Blok(config);`,
     table: [
       {
         option: "holder",
@@ -167,7 +191,7 @@ editor.destroy();`,
     badge: "Blocks",
     title: "Blocks API",
     description:
-      "Manage blocks in the editor—create, delete, update, and reorder content.",
+      "Manage blocks in the editor — create, delete, update, and reorder content.",
     methods: [
       {
         name: "blocks.clear()",
@@ -733,6 +757,43 @@ editor.selection.restore();`,
     title: "Styles API",
     description:
       "Access CSS class names for styling custom tools and UI elements.",
+    example: `// Access CSS class names for styling custom tools
+const styles = editor.styles;
+
+// Use class names in your custom tool
+class MyCustomTool {
+  constructor({ api }) {
+    this.api = api;
+  }
+
+  render() {
+    const wrapper = document.createElement('div');
+    wrapper.className = this.api.styles.block;
+
+    const input = document.createElement('input');
+    input.className = this.api.styles.input;
+
+    const button = document.createElement('button');
+    button.className = this.api.styles.button;
+    button.textContent = 'Click me';
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(button);
+
+    return wrapper;
+  }
+}
+
+// Available class names:
+// - api.styles.block              // Base block wrapper
+// - api.styles.inlineToolButton   // Inline toolbar button
+// - api.styles.inlineToolButtonActive  // Active inline tool
+// - api.styles.input              // Input elements
+// - api.styles.loader             // Loading spinner
+// - api.styles.settingsButton     // Settings button
+// - api.styles.settingsButtonActive   // Active settings
+// - api.styles.settingsButtonFocused  // Focused settings
+// - api.styles.button             // General button`,
     properties: [
       {
         name: "block",
@@ -1083,6 +1144,33 @@ blockTools.forEach(tool => {
     badge: "Data",
     title: "OutputData",
     description: "The data structure returned by the save() method.",
+    example: `// Save editor content
+const data = await editor.save();
+
+// Result structure:
+interface OutputData {
+  version: string;    // Editor version
+  time: number;       // Save timestamp
+  blocks: BlockData[]; // Array of block data
+}
+
+// Example output:
+{
+  "version": "2.0.0",
+  "time": 1704067200000,
+  "blocks": [
+    {
+      "id": "block-abc123",
+      "type": "paragraph",
+      "data": { "text": "Hello, world!" }
+    },
+    {
+      "id": "block-def456",
+      "type": "header",
+      "data": { "text": "Title", "level": 2 }
+    }
+  ]
+}`,
     table: [
       {
         option: "version",
@@ -1109,6 +1197,35 @@ blockTools.forEach(tool => {
     badge: "Data",
     title: "BlockData",
     description: "The structure of each block in the blocks array.",
+    example: `// Individual block structure
+interface BlockData {
+  id: string;        // Unique identifier (auto-generated)
+  type: string;      // Tool name (e.g., "paragraph", "header")
+  data: object;      // Tool-specific data
+  tunes?: TuneData[]; // Optional block tunes/metadata
+}
+
+// Example blocks:
+const paragraphBlock: BlockData = {
+  id: "block-abc123",
+  type: "paragraph",
+  data: { "text": "Hello, world!" }
+};
+
+const headerBlock: BlockData = {
+  id: "block-def456",
+  type: "header",
+  data: { "text": "Chapter 1", "level": 1 }
+};
+
+const listBlock: BlockData = {
+  id: "block-ghi789",
+  type: "list",
+  data: {
+    "style": "unordered",
+    "items": ["Item 1", "Item 2", "Item 3"]
+  }
+};`,
     table: [
       {
         option: "id",

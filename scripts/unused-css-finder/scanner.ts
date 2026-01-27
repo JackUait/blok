@@ -382,6 +382,32 @@ export function findCSSUsage(code: string): CSSUsage {
     classes.add(match[1]);
   }
 
+  // Match string literals in array literals: ["class1", "class2", condition && "class3"]
+  // This catches patterns like: const classes = ["nav", scrolled ? "scrolled" : ""]
+  const arrayStringRegex = /['"`]([a-zA-Z0-9_-]+)['"`]/g;
+  while ((match = arrayStringRegex.exec(strippedCode)) !== null) {
+    // Check if we're inside an array context by counting brackets
+    // Look back from the match position to find if there's an unclosed [
+    let bracketCount = 0;
+    let inArray = false;
+    for (let i = match.index - 1; i >= Math.max(0, match.index - 200); i--) {
+      const char = strippedCode[i];
+      if (char === ']') {
+        bracketCount++;
+      } else if (char === '[') {
+        bracketCount--;
+        if (bracketCount < 0) {
+          // Found an unclosed [ before this string
+          inArray = true;
+          break;
+        }
+      }
+    }
+    if (inArray) {
+      classes.add(match[1]);
+    }
+  }
+
   // Match dataset properties: element.dataset.blokSelected -> data-blok-selected
   const datasetRegex = /dataset\.([a-zA-Z0-9]+)/g;
   while ((match = datasetRegex.exec(strippedCode)) !== null) {

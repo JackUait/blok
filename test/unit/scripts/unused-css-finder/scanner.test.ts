@@ -218,6 +218,42 @@ describe('Source Scanner', () => {
       expect(result.classes).toContain('class2');
       expect(result.classes).toContain('class3');
     });
+
+    it('should find class names in array literals', () => {
+      const code = `
+        const navClasses = ["nav", navScrolled ? "scrolled" : ""]
+          .filter(Boolean)
+          .join(" ");
+        <nav className={navClasses}>Navigation</nav>
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('nav');
+      expect(result.classes).toContain('scrolled');
+    });
+
+    it('should find class names in array literals with spread', () => {
+      const code = `
+        const baseClasses = ["btn", "btn-primary"];
+        const extraClasses = condition && ["btn-large"];
+        const allClasses = [...baseClasses, ...extraClasses].filter(Boolean);
+        <button className={allClasses.join(" ")}>Click</button>
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('btn');
+      expect(result.classes).toContain('btn-primary');
+      expect(result.classes).toContain('btn-large');
+    });
+
+    it('should find class names in array literals used directly in className', () => {
+      const code = `
+        <div className={["container", isActive && "container--active"].filter(Boolean).join(" ")}>
+          Content
+        </div>
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('container');
+      expect(result.classes).toContain('container--active');
+    });
   });
 
   describe('scanFile', () => {

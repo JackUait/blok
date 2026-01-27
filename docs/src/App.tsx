@@ -28,7 +28,7 @@ const ScrollHandler = () => {
 
     if (element) {
       element.scrollIntoView({
-        behavior: "smooth",
+        behavior: "auto",
         block: "start",
       });
     }

@@ -92,6 +92,7 @@ editor.destroy();`,
       },
       { name: "blocks", type: "BlocksAPI", description: "Blocks API module" },
       { name: "caret", type: "CaretAPI", description: "Caret API module" },
+      { name: "history", type: "HistoryAPI", description: "History API module" },
       { name: "saver", type: "SaverAPI", description: "Saver API module" },
       {
         name: "toolbar",
@@ -349,6 +350,16 @@ const newBlock = editor.blocks.splitBlock(
   1
 );`,
       },
+      {
+        name: "blocks.stopBlockMutationWatching(index)",
+        returnType: "void",
+        description:
+          "Stop mutation watching on a block at the specified index. Use this to prevent spurious block-changed events during block replacement operations.",
+        example: `// Replace a block without triggering change events
+editor.blocks.stopBlockMutationWatching(0);
+// Perform block replacement...
+// Mutation observer will not fire for this block`,
+      },
     ],
   },
   {
@@ -568,6 +579,66 @@ editor.on('custom-event', (data) => {
     ],
   },
   {
+    id: "history-api",
+    badge: "History",
+    title: "History API",
+    description: "Control undo/redo functionality for editor operations.",
+    methods: [
+      {
+        name: "history.undo()",
+        returnType: "void",
+        description: "Undo the last operation.",
+        example: `// Undo last change
+editor.history.undo();
+
+// Undo multiple times
+for (let i = 0; i < 3; i++) {
+  editor.history.undo();
+}`,
+      },
+      {
+        name: "history.redo()",
+        returnType: "void",
+        description: "Redo the last undone operation.",
+        example: `// Redo last undone change
+editor.history.redo();
+
+// Redo multiple times
+for (let i = 0; i < 3; i++) {
+  editor.history.redo();
+}`,
+      },
+      {
+        name: "history.canUndo()",
+        returnType: "boolean",
+        description: "Check if undo is available (there are operations to undo).",
+        example: `if (editor.history.canUndo()) {
+  editor.history.undo();
+} else {
+  console.log('Nothing to undo');
+}`,
+      },
+      {
+        name: "history.canRedo()",
+        returnType: "boolean",
+        description: "Check if redo is available (there are undone operations to redo).",
+        example: `if (editor.history.canRedo()) {
+  editor.history.redo();
+} else {
+  console.log('Nothing to redo');
+}`,
+      },
+      {
+        name: "history.clear()",
+        returnType: "void",
+        description: "Clear all history. Removes all undo/redo entries.",
+        example: `// Clear history when loading new content
+editor.blocks.render(newData);
+editor.history.clear();`,
+      },
+    ],
+  },
+  {
     id: "saver-api",
     badge: "Saver",
     title: "Saver API",
@@ -689,6 +760,16 @@ editor.selection.restore();`,
         name: "settingsButtonActive",
         type: "string",
         description: "Active settings button styles",
+      },
+      {
+        name: "settingsButtonFocused",
+        type: "string",
+        description: "Focused settings button styles",
+      },
+      {
+        name: "settingsButtonFocusedAnimated",
+        type: "string",
+        description: "Focused settings button styles with click animation",
       },
       { name: "button", type: "string", description: "General button styles" },
     ],
@@ -1081,6 +1162,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { id: "block-api", label: "BlockAPI" },
       { id: "caret-api", label: "Caret" },
       { id: "events-api", label: "Events" },
+      { id: "history-api", label: "History" },
       { id: "saver-api", label: "Saver" },
       { id: "selection-api", label: "Selection" },
       { id: "styles-api", label: "Styles" },

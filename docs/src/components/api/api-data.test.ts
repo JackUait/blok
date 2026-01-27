@@ -11,6 +11,7 @@ describe("API_SECTIONS", () => {
       "block-api",
       "caret-api",
       "events-api",
+      "history-api",
       "saver-api",
       "selection-api",
       "styles-api",
@@ -306,6 +307,38 @@ describe("API_SECTIONS", () => {
       const section = API_SECTIONS.find((s) => s.id === "listeners-api");
       expect(section).toBeDefined();
       expect(section!.methods).toBeDefined();
+    });
+  });
+
+  describe("History API", () => {
+    it("should have all History API methods documented", () => {
+      const historySection = API_SECTIONS.find((s) => s.id === "history-api");
+      expect(historySection).toBeDefined();
+
+      const methodNames = historySection!.methods!.map((m) => m.name);
+
+      const expectedMethods = [
+        "history.undo()",
+        "history.redo()",
+        "history.canUndo()",
+        "history.canRedo()",
+        "history.clear()",
+      ];
+
+      expectedMethods.forEach((method) => {
+        expect(methodNames).toContain(method);
+      });
+    });
+
+    it("should have examples for all History API methods", () => {
+      const historySection = API_SECTIONS.find((s) => s.id === "history-api");
+      expect(historySection).toBeDefined();
+
+      historySection!.methods!.forEach((method) => {
+        expect(method.example).toBeDefined();
+        expect(method.example!.trim().length).toBeGreaterThan(0);
+        expect(method.example).toMatch(/editor\.history\./);
+      });
     });
   });
 

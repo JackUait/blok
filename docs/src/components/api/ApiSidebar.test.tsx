@@ -231,9 +231,9 @@ describe('ApiSidebar', () => {
       expect(scrollToSpy).toHaveBeenCalled();
     });
 
-    it('should use smooth scroll behavior', () => {
+    it('should use auto scroll behavior', () => {
       const { rerender } = render(<ApiSidebar activeSection="core" />);
-      
+
       const sidebar = screen.getByTestId('api-sidebar');
       const scrollToSpy = vi.spyOn(sidebar, 'scrollTo');
 
@@ -251,8 +251,8 @@ describe('ApiSidebar', () => {
 
       rerender(<ApiSidebar activeSection="blocks-api" />);
 
-      // Verify smooth scroll was used
-      expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+      // Verify auto scroll was used
+      expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
     });
   });
 });

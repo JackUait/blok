@@ -62,7 +62,7 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
       const bufferLink = allLinks[bufferTopIndex] as HTMLElement;
       const bufferLinkRect = bufferLink.getBoundingClientRect();
       const scrollOffset = bufferLinkRect.top - sidebarRect.top + sidebar.scrollTop - 20;
-      sidebar.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+      sidebar.scrollTo({ top: scrollOffset, behavior: 'auto' });
       return;
     }
     
@@ -73,7 +73,7 @@ export const ApiSidebar: React.FC<ApiSidebarProps> = ({ activeSection }) => {
       const bufferLink = allLinks[bufferBottomIndex] as HTMLElement;
       const bufferLinkRect = bufferLink.getBoundingClientRect();
       const scrollOffset = bufferLinkRect.bottom - sidebarRect.top + sidebar.scrollTop - sidebarVisibleHeight + 20;
-      sidebar.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+      sidebar.scrollTo({ top: scrollOffset, behavior: 'auto' });
     }
   }, [activeSection]);
 

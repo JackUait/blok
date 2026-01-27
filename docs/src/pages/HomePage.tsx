@@ -21,7 +21,7 @@ export const HomePage: React.FC = () => {
       if (targetElement) {
         e.preventDefault();
         targetElement.scrollIntoView({
-          behavior: 'smooth',
+          behavior: 'auto',
           block: 'start',
         });
       }

@@ -22,7 +22,7 @@ export const ApiPage: React.FC = () => {
       if (targetElement) {
         scrollTargetRef.current = hash;
         setActiveSection(hash);
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
       }
     });
   }, []);
@@ -90,7 +90,7 @@ export const ApiPage: React.FC = () => {
         setActiveSection(sectionId);
         
         targetElement.scrollIntoView({
-          behavior: 'smooth',
+          behavior: 'auto',
           block: 'start',
         });
       }

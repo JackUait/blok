@@ -12,7 +12,7 @@ export const Hero: React.FC = () => {
   const handleScrollToQuickStart = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     e.preventDefault();
     const target = document.getElementById('quick-start');
-    target?.scrollIntoView({ behavior: 'smooth' });
+    target?.scrollIntoView({ behavior: 'auto' });
   };
 
   return (

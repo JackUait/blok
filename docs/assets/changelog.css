@@ -66,26 +66,6 @@
   50% { transform: translate(-40px, -30px) scale(1.15); }
 }
 
-/* Third gradient for depth */
-.changelog-gradient-3 {
-  position: fixed;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--color-orange) 0%, transparent 60%);
-  filter: blur(100px);
-  opacity: 0.06;
-  top: 40%;
-  left: 30%;
-  pointer-events: none;
-  z-index: -1;
-  animation: floatGlow3 20s ease-in-out infinite;
-}
-
-@keyframes floatGlow3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(60px, -40px) scale(1.1); }
-}
 
 /* Changelog Hero */
 .changelog-hero {
@@ -571,18 +551,6 @@
   background: linear-gradient(180deg, rgba(245, 147, 103, 0.04) 0%, transparent 100%);
 }
 
-/* Empty release card */
-.changelog-release-card--empty {
-  padding: var(--spacing-lg) var(--spacing-xl);
-  text-align: center;
-}
-
-.changelog-release-card--empty p {
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-sm);
-  font-style: italic;
-  margin: 0;
-}
 
 /* Release Highlight - Warm gradient */
 .changelog-release-highlight {

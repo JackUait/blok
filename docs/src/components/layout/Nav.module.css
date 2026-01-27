@@ -12,10 +12,6 @@
     box-shadow 0.3s ease;
 }
 
-/* Header slides up when hiding */
-.hidden {
-  transform: translateY(-100%);
-}
 
 /* Scrolled state with enhanced depth */
 :global(.nav.scrolled) {
@@ -70,13 +66,6 @@
   transition: opacity 0.3s ease;
 }
 
-:global(.nav.hidden .nav-container) {
-  opacity: 0;
-}
-
-:global(.nav:not(.hidden) .nav-container) {
-  opacity: 1;
-}
 
 /* ============================================
    Logo Enhancements
@@ -105,15 +94,6 @@
   width: 100%;
 }
 
-:global(.nav.hidden .nav-logo) {
-  opacity: 0;
-  transform: scale(0.95) translateY(-8px);
-}
-
-:global(.nav:not(.hidden) .nav-logo) {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-}
 
 /* Subtle pulse on logo hover */
 @keyframes logoPulse {
@@ -168,23 +148,13 @@
   background: var(--color-blue);
 }
 
-:global(.nav.hidden .nav-link) {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
 /* Staggered delays for nav links */
-:global(.nav:not(.hidden) .nav-links > *:nth-child(1)) { transition-delay: 0.05s; }
-:global(.nav:not(.hidden) .nav-links > *:nth-child(2)) { transition-delay: 0.08s; }
-:global(.nav:not(.hidden) .nav-links > *:nth-child(3)) { transition-delay: 0.11s; }
-:global(.nav:not(.hidden) .nav-links > *:nth-child(4)) { transition-delay: 0.14s; }
-:global(.nav:not(.hidden) .nav-links > *:nth-child(5)) { transition-delay: 0.17s; }
-:global(.nav:not(.hidden) .nav-links > *:nth-child(6)) { transition-delay: 0.20s; }
-
-:global(.nav:not(.hidden) .nav-link) {
-  opacity: 1;
-  transform: translateY(0);
-}
+:global(.nav-links > *:nth-child(1)) { transition-delay: 0.05s; }
+:global(.nav-links > *:nth-child(2)) { transition-delay: 0.08s; }
+:global(.nav-links > *:nth-child(3)) { transition-delay: 0.11s; }
+:global(.nav-links > *:nth-child(4)) { transition-delay: 0.14s; }
+:global(.nav-links > *:nth-child(5)) { transition-delay: 0.17s; }
+:global(.nav-links > *:nth-child(6)) { transition-delay: 0.20s; }
 
 /* ============================================
    GitHub Link Button Enhancement
@@ -296,15 +266,6 @@
   background: rgba(0, 122, 255, 0.08);
 }
 
-:global(.nav.hidden .nav-toggle) {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-:global(.nav:not(.hidden) .nav-toggle) {
-  opacity: 1;
-  transform: translateY(0);
-}
 
 /* Hamburger animation */
 :global(.nav-toggle span) {
@@ -395,29 +356,3 @@
   background: var(--color-background);
 }
 
-/* ============================================
-   Ambient Glow Effect
-   ============================================ */
-
-:global(.nav-glow) {
-  position: absolute;
-  top: -50%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 200px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(0, 122, 255, 0.08) 0%,
-    rgba(88, 86, 214, 0.04) 30%,
-    transparent 70%
-  );
-  filter: blur(40px);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-:global(.nav-glow.visible) {
-  opacity: 1;
-}

@@ -3,13 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { ApiMethodCard } from './ApiMethodCard';
 import type { ApiMethod } from './api-data';
 
-// Mock the sub-components
-vi.mock('./ApiMethodDemo', () => ({
-  ApiMethodDemo: ({ demo }: { demo?: unknown }) => (
-    <div data-blok-testid="api-method-demo">{demo ? 'Demo Section' : 'No Demo'}</div>
-  ),
-}));
-
 vi.mock('../common/CodeBlock', () => ({
   CodeBlock: ({ code }: { code: string }) => <div data-blok-testid="code-block">{code}</div>,
 }));
@@ -53,31 +46,6 @@ describe('ApiMethodCard', () => {
     render(<ApiMethodCard method={methodWithoutExample} sectionId="blocks-api" />);
 
     expect(screen.queryByTestId('code-block')).not.toBeInTheDocument();
-  });
-
-  it('should render demo section when demo config is provided', () => {
-    const methodWithDemo: ApiMethod = {
-      ...mockMethod,
-      demo: {
-        actions: [
-          {
-            label: 'Move first to last',
-            execute: vi.fn(),
-          },
-        ],
-      },
-    };
-
-    render(<ApiMethodCard method={methodWithDemo} sectionId="blocks-api" />);
-
-    expect(screen.getByTestId('api-method-demo')).toBeInTheDocument();
-    expect(screen.getByText('Demo Section')).toBeInTheDocument();
-  });
-
-  it('should not render demo section when demo config is not provided', () => {
-    render(<ApiMethodCard method={mockMethod} sectionId="blocks-api" />);
-
-    expect(screen.queryByTestId('api-method-demo')).not.toBeInTheDocument();
   });
 
   it('should render the card element', () => {

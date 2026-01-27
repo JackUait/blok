@@ -1,41 +1,8 @@
-/**
- * Demo action configuration for interactive API method demonstrations
- */
-export interface DemoAction {
-  /** Button text displayed to users */
-  label: string;
-  /** Function that executes the API method on the mini editor */
-  execute: (editor: unknown) => Promise<void> | void;
-  /** Optional expected output message to display on success */
-  expectedOutput?: string;
-}
-
-/**
- * Demo configuration for an API method
- */
-export interface DemoConfig {
-  /** Optional custom initial state for the demo editor */
-  initialState?: {
-    blocks: BlockData[];
-  };
-  /** Array of actions to expose as demo buttons */
-  actions: DemoAction[];
-}
-
-/** Block data structure for demo initial state */
-export interface BlockData {
-  id?: string;
-  type: string;
-  data: unknown;
-}
-
 export interface ApiMethod {
   name: string;
   returnType: string;
   description: string;
   example?: string;
-  /** Optional demo configuration for interactive demonstrations */
-  demo?: DemoConfig;
 }
 
 export interface ApiSection {
@@ -100,29 +67,6 @@ editor.focus();
 
 // Focus at end
 editor.focus(true);`,
-        demo: {
-          initialState: {
-            blocks: [
-              { id: "1", type: "paragraph", data: { text: "Click a button to focus the editor." } },
-            ] as BlockData[],
-          },
-          actions: [
-            {
-              label: "Focus at start",
-              execute: (editor) => {
-                (editor as { focus(atEnd?: boolean): boolean }).focus();
-              },
-              expectedOutput: "Editor focused at start of content",
-            },
-            {
-              label: "Focus at end",
-              execute: (editor) => {
-                (editor as { focus(atEnd?: boolean): boolean }).focus(true);
-              },
-              expectedOutput: "Editor focused at end of content",
-            },
-          ],
-        },
       },
       {
         name: "clear()",
@@ -230,19 +174,6 @@ editor.destroy();`,
         description: "Remove all blocks from the editor.",
         example: `await editor.blocks.clear();
 // Editor is now empty`,
-        demo: {
-          actions: [
-            {
-              label: "Clear all blocks",
-              execute: async (editor) => {
-                await (
-                  editor as { blocks: { clear(): Promise<void> } }
-                ).blocks.clear();
-              },
-              expectedOutput: "All blocks removed",
-            },
-          ],
-        },
       },
       {
         name: "blocks.render(data)",
@@ -255,44 +186,6 @@ editor.destroy();`,
   ]
 };
 await editor.blocks.render(data);`,
-        demo: {
-          initialState: {
-            blocks: [] as BlockData[],
-          },
-          actions: [
-            {
-              label: "Load sample content",
-              execute: async (editor) => {
-                await (
-                  editor as {
-                    blocks: {
-                      render(data: { blocks: BlockData[] }): Promise<void>;
-                    };
-                  }
-                ).blocks.render({
-                  blocks: [
-                    {
-                      id: "1",
-                      type: "paragraph",
-                      data: { text: "Hello World!" },
-                    },
-                    {
-                      id: "2",
-                      type: "paragraph",
-                      data: { text: "This is dynamically rendered content." },
-                    },
-                    {
-                      id: "3",
-                      type: "header",
-                      data: { text: "New Section", level: 2 },
-                    },
-                  ] as BlockData[],
-                });
-              },
-              expectedOutput: "Loaded 3 blocks from JSON data",
-            },
-          ],
-        },
       },
       {
         name: "blocks.renderFromHTML(data)",
@@ -324,36 +217,6 @@ editor.blocks.move(0);
 
 // Move block from index 2 to index 0
 editor.blocks.move(0, 2);`,
-        demo: {
-          actions: [
-            {
-              label: "Move first to last",
-              execute: async (editor) => {
-                const e = editor as {
-                  blocks: {
-                    move(toIndex: number, fromIndex?: number): void;
-                    getBlocksCount(): number;
-                  };
-                };
-                e.blocks.move(e.blocks.getBlocksCount() - 1, 0);
-              },
-              expectedOutput: "Moved first block to last position",
-            },
-            {
-              label: "Move last to top",
-              execute: async (editor) => {
-                const e = editor as {
-                  blocks: {
-                    move(toIndex: number, fromIndex?: number): void;
-                    getBlocksCount(): number;
-                  };
-                };
-                e.blocks.move(0, e.blocks.getBlocksCount() - 1);
-              },
-              expectedOutput: "Moved last block to first position",
-            },
-          ],
-        },
       },
       {
         name: "blocks.getBlockByIndex(index)",
@@ -418,21 +281,6 @@ children.forEach(child => {
         description: "Get the total number of blocks in the editor.",
         example: `const count = editor.blocks.getBlocksCount();
 console.log('Total blocks:', count);`,
-        demo: {
-          actions: [
-            {
-              label: "Count blocks",
-              execute: (editor) => {
-                // This is a read-only action - returns count but doesn't modify
-                const count = (
-                  editor as { blocks: { getBlocksCount(): number } }
-                ).blocks.getBlocksCount();
-                console.log("Block count:", count);
-              },
-              expectedOutput: "Editor has 3 blocks",
-            },
-          ],
-        },
       },
       {
         name: "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?)",
@@ -447,40 +295,6 @@ const block = editor.blocks.insert('paragraph', { text: 'Hello' }, undefined, 0)
 
 // Insert with custom ID
 const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undefined, undefined, undefined, 'custom-id');`,
-        demo: {
-          actions: [
-            {
-              label: "Add paragraph",
-              execute: (editor) => {
-                (editor as { blocks: { insert(): unknown } }).blocks.insert();
-              },
-              expectedOutput: "Added new paragraph block",
-            },
-            {
-              label: "Add header at top",
-              execute: (editor) => {
-                (
-                  editor as {
-                    blocks: {
-                      insert(
-                        type: string,
-                        data: unknown,
-                        config: unknown,
-                        index: number,
-                      ): unknown;
-                    };
-                  }
-                ).blocks.insert(
-                  "header",
-                  { text: "New Header", level: 2 },
-                  undefined,
-                  0,
-                );
-              },
-              expectedOutput: "Added header at position 0",
-            },
-          ],
-        },
       },
       {
         name: "blocks.insertMany(blocks, index?)",
@@ -1051,28 +865,6 @@ await editor.readOnly.set(false);
 
 // Check state
 console.log(editor.readOnly.isEnabled); // true or false`,
-        demo: {
-          actions: [
-            {
-              label: "Enable read-only",
-              execute: async (editor) => {
-                await (
-                  editor as { readOnly: { set(state: boolean): Promise<boolean> } }
-                ).readOnly.set(true);
-              },
-              expectedOutput: "Read-only mode enabled",
-            },
-            {
-              label: "Disable read-only",
-              execute: async (editor) => {
-                await (
-                  editor as { readOnly: { set(state: boolean): Promise<boolean> } }
-                ).readOnly.set(false);
-              },
-              expectedOutput: "Read-only mode disabled",
-            },
-          ],
-        },
       },
       {
         name: "readOnly.toggle(state?)",

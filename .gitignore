@@ -7,6 +7,7 @@ Thumbs.db
 
 node_modules/*
 docs/node_modules/*
+docs/.yarn/cache
 
 npm-debug.log
 yarn-error.log

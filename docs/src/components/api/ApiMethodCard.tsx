@@ -1,7 +1,6 @@
 import type { FC } from "react";
 import type { ApiMethod } from "./api-data";
 import { CodeBlock } from "../common/CodeBlock";
-import { ApiMethodDemo } from "./ApiMethodDemo";
 
 export interface ApiMethodCardProps {
   method: ApiMethod;
@@ -25,8 +24,8 @@ const generateMethodId = (sectionId: string, methodName: string): string => {
 };
 
 /**
- * Card component for displaying an API method with optional demo
- * Renders method signature, description, code example, and interactive demo
+ * Card component for displaying an API method
+ * Renders method signature, description, and code example
  */
 export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => {
   const methodId = generateMethodId(sectionId, method.name);
@@ -46,7 +45,6 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       {method.example && (
         <CodeBlock code={method.example} language="typescript" />
       )}
-      {method.demo && <ApiMethodDemo demo={method.demo} methodName={method.name} />}
     </div>
   );
 };

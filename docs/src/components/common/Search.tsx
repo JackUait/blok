@@ -57,14 +57,44 @@ const getCategoryIcon = (category: string) => {
 };
 
 // Highlight matching text in search results
+// Matches the query term OR words that share a common prefix with it
 const highlightMatch = (text: string, query: string): React.ReactNode => {
-  if (!query.trim()) return text;
+  const trimmedQuery = query.trim().toLowerCase();
+  if (!trimmedQuery) return text;
   
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
+  // Split query into words for multi-word matching
+  const queryWords = trimmedQuery.split(/\s+/).filter(w => w.length >= 2);
+  if (queryWords.length === 0) return text;
+  
+  // Build a regex that matches:
+  // 1. The exact query words
+  // 2. Words that start with query words (prefix match)
+  // 3. Words that the query words start with (reverse prefix - query "blocks" highlights "block")
+  const patterns: string[] = [];
+  for (const qw of queryWords) {
+    // Escape special regex characters
+    const escaped = qw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Match word boundaries: query word followed by optional word chars (prefix match)
+    patterns.push(`\\b${escaped}\\w*`);
+    // Also match if query is longer: e.g., query "blocks" should highlight "block"
+    if (qw.length >= 4) {
+      // Try progressively shorter prefixes (minimum 3 chars)
+      for (let len = qw.length - 1; len >= 3; len--) {
+        const prefix = qw.slice(0, len).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        patterns.push(`\\b${prefix}\\b`);
+      }
+    }
+  }
+  
+  const pattern = `(${patterns.join('|')})`;
+  const splitRegex = new RegExp(pattern, 'gi');
+  const parts = text.split(splitRegex);
+  
+  // Use a fresh regex for testing each part (avoid global state issues)
+  const testRegex = new RegExp(pattern, 'i');
   
   return parts.map((part, index) => 
-    regex.test(part) ? (
+    testRegex.test(part) ? (
       <mark key={index} className={styles['search-highlight']}>{part}</mark>
     ) : (
       part
@@ -80,11 +110,11 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const isKeyboardNavRef = useRef(false);
 
   // Focus input when opened
   useEffect(() => {
@@ -100,7 +130,6 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
       setDebouncedQuery('');
       setResults([]);
       setSelectedIndex(0);
-      setIsSearching(false);
       setIsClosing(false);
     }
   }, [open]);
@@ -159,14 +188,11 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   useEffect(() => {
     if (!query.trim()) {
       setDebouncedQuery('');
-      setIsSearching(false);
       return;
     }
 
-    setIsSearching(true);
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
-      setIsSearching(false);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
@@ -176,7 +202,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   useEffect(() => {
     if (debouncedQuery.trim()) {
       const searchResults = search(debouncedQuery, getSearchIndex());
-      setResults(searchResults.slice(0, 10)); // Increased to 10 results
+      const slicedResults = searchResults.slice(0, 10);
+      
+      setResults(slicedResults);
       setSelectedIndex(0);
     } else {
       setResults([]);
@@ -191,13 +219,13 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex((i) => (i + 1) % results.length);
+          isKeyboardNavRef.current = true;
+          setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setSelectedIndex(
-            (i) => (i - 1 + results.length) % results.length
-          );
+          isKeyboardNavRef.current = true;
+          setSelectedIndex((i) => Math.max(i - 1, 0));
           break;
         case 'Enter':
           e.preventDefault();
@@ -210,15 +238,57 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
     [results, selectedIndex]
   );
 
-  // Scroll selected result into view
+  // Scroll selected result into view with buffer (only for keyboard navigation)
   useEffect(() => {
-    if (resultsRef.current) {
-      const selectedElement = resultsRef.current.children[
-        selectedIndex
-      ] as HTMLElement;
-      selectedElement?.scrollIntoView({ block: 'nearest' });
+    if (!resultsRef.current || results.length === 0) return;
+    
+    // Only scroll for keyboard navigation, not mouse hover
+    if (!isKeyboardNavRef.current) return;
+    isKeyboardNavRef.current = false;
+
+    const container = resultsRef.current;
+    const allResults = Array.from(
+      container.querySelectorAll('[data-search-result-index]')
+    );
+    const selectedElement = allResults[selectedIndex] as HTMLElement | undefined;
+    
+    if (!selectedElement) return;
+
+    const bufferSize = 1; // Show 1 item above/below when possible
+    const containerRect = container.getBoundingClientRect();
+    const selectedRect = selectedElement.getBoundingClientRect();
+    
+    // Position relative to container's visible area
+    const elementTop = selectedRect.top - containerRect.top;
+    const elementBottom = selectedRect.bottom - containerRect.top;
+    const containerHeight = container.clientHeight;
+    
+    // Buffer zone: roughly 1 item worth of space (~60px for search results)
+    const bufferPixels = 70;
+
+    // Check if selected element is near top edge
+    if (elementTop < bufferPixels) {
+      const bufferTopIndex = Math.max(0, selectedIndex - bufferSize);
+      const bufferElement = allResults[bufferTopIndex] as HTMLElement;
+      if (bufferElement) {
+        const bufferRect = bufferElement.getBoundingClientRect();
+        const scrollOffset = bufferRect.top - containerRect.top + container.scrollTop - 10;
+        container.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'auto' });
+      }
+      return;
     }
-  }, [selectedIndex]);
+    
+    // Check if selected element is near bottom edge
+    if (elementBottom > containerHeight - bufferPixels) {
+      const bufferBottomIndex = Math.min(allResults.length - 1, selectedIndex + bufferSize);
+      const bufferElement = allResults[bufferBottomIndex] as HTMLElement;
+      if (bufferElement) {
+        const bufferRect = bufferElement.getBoundingClientRect();
+        const scrollOffset = bufferRect.bottom - containerRect.top + container.scrollTop - containerHeight + 10;
+        container.scrollTo({ top: scrollOffset, behavior: 'auto' });
+      }
+    }
+  }, [selectedIndex, results.length]);
 
   // Handle result click
   const handleResultClick = (result: SearchResult) => {
@@ -383,7 +453,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                     onClick={() => handleResultClick(result)}
                     type="button"
                     onMouseEnter={() => setSelectedIndex(index)}
+                    data-search-result-index={index}
                   >
+                    <span className={styles['search-result-number']}>{index + 1}</span>
                     <div className={styles['search-result-icon']}>
                       {getCategoryIcon(result.category)}
                     </div>

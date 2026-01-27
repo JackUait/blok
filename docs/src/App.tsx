@@ -4,6 +4,7 @@ import { HomePage } from "./pages/HomePage";
 import { DemoPage } from "./pages/DemoPage";
 import { ApiPage } from "./pages/ApiPage";
 import { MigrationPage } from "./pages/MigrationPage";
+import { RecipesPage } from "./pages/RecipesPage";
 import ChangelogPage from "./pages/ChangelogPage";
 
 const ScrollHandler = () => {
@@ -44,6 +45,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/demo" element={<DemoPage />} />
+        <Route path="/recipes" element={<RecipesPage />} />
         <Route path="/docs" element={<ApiPage />} />
         <Route path="/migration" element={<MigrationPage />} />
         <Route path="/changelog" element={<ChangelogPage />} />

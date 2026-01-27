@@ -202,6 +202,62 @@ describe('ApiPage', () => {
     expect(sections.length).toBeGreaterThan(0);
   });
 
+  describe('initial active section state', () => {
+    it('should initialize with quick-start as the default active section', () => {
+      // Mock window.location.hash to be empty
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hash: '' },
+      });
+
+      render(
+        <MemoryRouter>
+          <ApiPage />
+        </MemoryRouter>
+      );
+
+      // The sidebar should show quick-start as active since it's the first visible section
+      const quickStartLink = screen.getByTestId('api-sidebar-link-quick-start');
+      expect(quickStartLink).toHaveClass('active');
+    });
+
+    it('should not show core as active on initial load', () => {
+      // Mock window.location.hash to be empty
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hash: '' },
+      });
+
+      render(
+        <MemoryRouter>
+          <ApiPage />
+        </MemoryRouter>
+      );
+
+      // The core link should not have the active class initially
+      const coreLink = screen.getByTestId('api-sidebar-link-core');
+      expect(coreLink).not.toHaveClass('active');
+    });
+
+    it('should initialize with hash section when provided in URL', () => {
+      // Mock window.location.hash to be #core
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hash: '#core' },
+      });
+
+      render(
+        <MemoryRouter>
+          <ApiPage />
+        </MemoryRouter>
+      );
+
+      // The core link should be active when URL hash is #core
+      const coreLink = screen.getByTestId('api-sidebar-link-core');
+      expect(coreLink).toHaveClass('active');
+    });
+  });
+
   describe('anchor link navigation', () => {
     it('should update URL hash when clicking anchor links', async () => {
       const pushStateSpy = vi.spyOn(window.history, 'pushState');

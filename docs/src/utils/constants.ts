@@ -5,6 +5,7 @@ import type { NavLink } from '@/types/navigation';
 export const NAV_LINKS: NavLink[] = [
   { href: '/docs', label: 'Docs' },
   { href: '/demo', label: 'Try it out' },
+  { href: '/recipes', label: 'Recipes' },
   { href: '/migration', label: 'Migration' },
   { href: '/changelog', label: 'Changelog' },
   { href: 'https://github.com/JackUait/blok', label: 'GitHub', external: true },

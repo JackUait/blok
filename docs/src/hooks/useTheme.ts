@@ -1,52 +1,58 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
 const STORAGE_KEY = 'blok-docs-theme';
-const VALID_THEMES: Theme[] = ['light', 'dark', 'system'];
+const VALID_THEMES: Theme[] = ['light', 'dark'];
 
 /**
  * Hook to manage light/dark theme with system preference detection
  * and localStorage persistence.
+ *
+ * Behavior:
+ * - On first visit, theme is set to match system preference
+ * - User can explicitly set theme to light or dark
+ * - System theme changes only affect theme if user hasn't explicitly set a preference
  */
 export const useTheme = () => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'system';
-    
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored && VALID_THEMES.includes(stored as Theme)) {
-      return stored as Theme;
-    }
-    return 'system';
-  });
-
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => {
     if (typeof window === 'undefined') return 'light';
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
-  // Compute the resolved theme (what the user actually sees)
-  const resolvedTheme: ResolvedTheme = theme === 'system' ? systemTheme : theme;
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return systemTheme;
+
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored && VALID_THEMES.includes(stored as Theme)) {
+      return stored as Theme;
+    }
+    // No stored value - initialize to system preference
+    return systemTheme;
+  });
 
   // Apply theme to document
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // Set data-theme attribute for CSS
-    root.setAttribute('data-theme', resolvedTheme);
-    
+    root.setAttribute('data-theme', theme);
+
     // Also add class for CSS selectors
     root.classList.remove('light', 'dark');
-    root.classList.add(resolvedTheme);
-  }, [resolvedTheme]);
+    root.classList.add(theme);
+  }, [theme]);
 
   // Listen for system theme changes
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
-      setSystemTheme(e.matches ? 'dark' : 'light');
+      const newSystemTheme = e.matches ? 'dark' : 'light';
+      setSystemTheme(newSystemTheme);
+      // Always update theme when system theme changes
+      setThemeState(newSystemTheme);
     };
 
     mediaQuery.addEventListener('change', handleChange);
@@ -59,19 +65,19 @@ export const useTheme = () => {
     window.localStorage.setItem(STORAGE_KEY, newTheme);
   }, []);
 
-  // Toggle through themes: system -> light -> dark -> system
+  // Toggle between light and dark
   const toggleTheme = useCallback(() => {
-    const order: Theme[] = ['system', 'light', 'dark'];
-    const currentIndex = order.indexOf(theme);
-    const nextIndex = (currentIndex + 1) % order.length;
-    setTheme(order[nextIndex]);
-  }, [theme, setTheme]);
+    setThemeState((prev) => {
+      const newTheme = prev === 'light' ? 'dark' : 'light';
+      window.localStorage.setItem(STORAGE_KEY, newTheme);
+      return newTheme;
+    });
+  }, []);
 
   return {
     theme,
-    resolvedTheme,
+    resolvedTheme: theme,
     setTheme,
     toggleTheme,
-    isSystem: theme === 'system',
   };
 };

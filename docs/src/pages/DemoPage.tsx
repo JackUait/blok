@@ -16,10 +16,6 @@ export const DemoPage: React.FC = () => {
 
         <div className="demo-container">
           <div className="demo-header">
-            <div className="demo-badge">
-              <span className="demo-badge-dot" />
-              <span className="demo-badge-text">Live Demo</span>
-            </div>
             <h1 className="demo-title">
               Experience Blok
             </h1>

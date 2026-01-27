@@ -1,5 +1,7 @@
 <p align="center">
-  <img width="40%" alt="Blok logotype" src="./static/blok.png">
+  <a href="https://blok.jackuait.com" target="_blank" rel="noopener noreferrer">
+    <img width="40%" alt="Blok logotype" src="./static/blok.png">
+  </a>
 </p>
 
 ## Introducing Blok
@@ -127,55 +129,9 @@ Some patterns require manual attention:
 
 Blok supports 68 languages with lazy loading—only English is bundled by default (~3KB). Additional locales are loaded on-demand, keeping your initial bundle small.
 
-### Default Behavior
-
-Out of the box, Blok uses English and auto-detects the user's browser language:
-
 ```typescript
 import { Blok } from '@jackuait/blok';
 
-new Blok({
-  holder: 'editor',
-  // Uses English by default, auto-detects browser language
-});
-```
-
-
-### Preloading Locales
-
-By default, locales are loaded on-demand. If you need to ensure locales are available before initializing the editor—for example, to avoid any loading delay or to support offline usage—you can preload them:
-
-```typescript
-import { Blok } from '@jackuait/blok';
-import { preloadLocales, buildRegistry } from '@jackuait/blok/locales';
-
-// Preload during app startup (triggers network requests and caches the locales)
-await preloadLocales(['en', 'fr', 'de']);
-
-// Build registry from preloaded locales (instant, no network request)
-const locales = await buildRegistry(['en', 'fr', 'de']);
-
-new Blok({
-  holder: 'editor',
-  i18n: {
-    locales,
-    locale: 'auto',
-  }
-});
-```
-
-**When to preload:**
-- Offline support (preload all needed locales before going offline)
-- Eliminating any loading delay during editor initialization
-- Progressive web apps that cache resources upfront
-
-**When not to preload:**
-- Most apps—just use `buildRegistry()` directly and accept the ~50-100ms loading time
-- The on-demand loading is usually imperceptible
-
-### Setting a Specific Locale
-
-```typescript
 new Blok({
   holder: 'editor',
   i18n: {
@@ -184,6 +140,8 @@ new Blok({
   }
 });
 ```
+
+For advanced patterns like preloading locales for offline support, see the [Localization recipe](https://blok.jackuait.com/recipes).
 
 ## Documentation
 

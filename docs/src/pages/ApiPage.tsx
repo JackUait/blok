@@ -8,7 +8,11 @@ import { NAV_LINKS } from '../utils/constants';
 import '../../assets/api.css';
 
 export const ApiPage: React.FC = () => {
-  const [activeSection, setActiveSection] = useState('core');
+  // Initialize active section from URL hash, defaulting to 'quick-start' (first visible section)
+  const [activeSection, setActiveSection] = useState<string>(() => {
+    const hash = window.location.hash.slice(1);
+    return hash || 'quick-start';
+  });
   const scrollTargetRef = useRef<string | null>(null);
 
   // Handle initial URL hash on page load and hash changes

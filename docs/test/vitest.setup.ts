@@ -51,3 +51,6 @@ global.cancelAnimationFrame = vi.fn(clearTimeout);
 
 // Mock scrollIntoView
 HTMLElement.prototype.scrollIntoView = vi.fn();
+
+// Mock scrollTo for elements (used by ApiSidebar)
+HTMLElement.prototype.scrollTo = vi.fn();

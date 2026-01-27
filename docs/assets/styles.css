@@ -3,6 +3,9 @@
    Inspired by the Blok mascot's warm, fun aesthetic
    ============================================ */
 
+/* Import Nunito font for playful feel - @import must come first */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
 /* CSS Custom Properties */
 :root {
   /* Colors - Warm, playful palette matching mascot */
@@ -91,9 +94,6 @@
   --z-dropdown: 200;
   --z-modal: 300;
 }
-
-/* Import Nunito font for playful feel */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 
 /* Dark Mode - Warm dark theme */
 /* Apply when system prefers dark AND no explicit theme is set */

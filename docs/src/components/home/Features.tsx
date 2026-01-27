@@ -69,7 +69,8 @@ const FEATURES: FeatureDetail[] = [
     description: (
       <>
         Press <kbd>/</kbd> or click <kbd>+</kbd> to open the block menu. Insert
-        paragraphs, headers, lists, and custom blocks.
+        paragraphs, headers, lists, and custom blocks instantly. Fuzzy search
+        filters as you type for lightning-fast block insertion.
       </>
     ),
     accent: "orange",
@@ -483,7 +484,7 @@ export const Features: React.FC = () => {
             <button
               type="button"
               key={feature.title}
-              className={`feature-card feature-card--${feature.accent}`}
+              className={`feature-card feature-card--${feature.accent}${index === 0 ? ' feature-card--featured' : ''}`}
               data-feature-card
               style={{ "--animation-order": index } as React.CSSProperties}
               onClick={() => handleFeatureClick(feature)}

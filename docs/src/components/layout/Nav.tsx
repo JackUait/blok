@@ -84,6 +84,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
         <div className="nav-container">
           <Link to="/" className="nav-logo">
             <Logo size={48} />
+            <p>Blok</p>
           </Link>
           <div className={`nav-links ${menuOpen ? "open" : ""}`}>
             <button

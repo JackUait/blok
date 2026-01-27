@@ -79,32 +79,10 @@
   transform: translateX(-50%);
   width: 600px;
   height: 400px;
-  background: 
+  background:
     radial-gradient(ellipse at center, rgba(240, 123, 75, 0.08) 0%, transparent 70%);
   pointer-events: none;
   z-index: -1;
-}
-
-.recipes-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.15) 0%, rgba(212, 164, 184, 0.1) 100%);
-  color: var(--color-coral);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border-radius: var(--radius-full);
-  margin-bottom: var(--spacing-lg);
-  border: 1px solid rgba(240, 123, 75, 0.2);
-  box-shadow: 0 2px 12px rgba(240, 123, 75, 0.1);
-}
-
-.recipes-hero-badge::before {
-  content: '📖';
-  font-size: 14px;
 }
 
 .recipes-hero-title {
@@ -499,40 +477,4 @@
   border-color: var(--color-coral);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(240, 123, 75, 0.3);
-}
-
-/* Category Badge */
-.recipe-category-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  border-radius: var(--radius-full);
-  margin-right: var(--spacing-sm);
-  letter-spacing: 0.02em;
-}
-
-.recipe-category-badge--basics {
-  background: rgba(123, 196, 127, 0.12);
-  color: var(--color-green);
-  border: 1px solid rgba(123, 196, 127, 0.2);
-}
-
-.recipe-category-badge--advanced {
-  background: rgba(240, 123, 75, 0.12);
-  color: var(--color-coral);
-  border: 1px solid rgba(240, 123, 75, 0.2);
-}
-
-.recipe-category-badge--events {
-  background: rgba(197, 147, 168, 0.12);
-  color: var(--color-mauve);
-  border: 1px solid rgba(197, 147, 168, 0.2);
-}
-
-.recipe-category-badge--customization {
-  background: rgba(248, 144, 66, 0.12);
-  color: var(--color-orange);
-  border: 1px solid rgba(248, 144, 66, 0.2);
 }

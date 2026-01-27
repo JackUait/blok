@@ -290,14 +290,3 @@
 .recipes-sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(240, 123, 75, 0.4);
 }
-
-/* Mobile sidebar toggle */
-@media (max-width: 968px) {
-  .api-sidebar.mobile-open,
-  .recipes-sidebar.mobile-open {
-    display: block;
-    position: fixed;
-    inset: 52px 0 0 0;
-    z-index: var(--z-dropdown);
-  }
-}

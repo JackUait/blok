@@ -63,11 +63,15 @@ function extractClassNames(css) {
 
 /**
  * Extract attribute selectors from CSS
+ * Only extracts custom data-* attributes (not standard HTML attributes like role, contenteditable)
+ * Excludes Tailwind arbitrary values like [18px]
  */
 function extractAttributes(css) {
   const processed = stripComments(css);
   const attributes = new Set();
-  const attrRegex = /\[([a-zA-Z0-9_-]+)(?:[~|^$*]?=["'][^"']*["'])?\]/g;
+  // Match only [data-*] attribute selectors
+  // Standard HTML attributes (role, contenteditable, etc.) are excluded since they're always valid
+  const attrRegex = /\[(data-[a-zA-Z0-9_-]+)(?:[~|^$*]?=["'][^"']*["'])?\]/g;
   let match;
 
   while ((match = attrRegex.exec(processed)) !== null) {
@@ -87,6 +91,208 @@ function stripCodeComments(code) {
 }
 
 /**
+ * Global cache for enum/union type values
+ */
+const enumValueCache = new Map();
+
+/**
+ * Extract string values from TypeScript type definitions and object literals
+ */
+function extractEnumValues(code) {
+  const strippedCode = stripCodeComments(code);
+
+  // Pattern 1: type aliases with string unions: type Accent = 'coral' | 'green' | 'pink'
+  const typeAliasRegex = /type\s+(\w+)\s*=\s*(['"])(\w+)\2(?:\s*\|\s*\2(\w+)\2)*/g;
+  let match;
+  while ((match = typeAliasRegex.exec(strippedCode)) !== null) {
+    const typeName = match[1];
+    const values = new Set();
+    const typeDefRegex = new RegExp(`type\\s+${typeName}\\s*=\\s*([^;]+);`);
+    const typeDefMatch = strippedCode.match(typeDefRegex);
+    if (typeDefMatch) {
+      const valuesStr = typeDefMatch[1];
+      const valueRegex = /['"](\w+)['"]/g;
+      let valueMatch;
+      while ((valueMatch = valueRegex.exec(valuesStr)) !== null) {
+        values.add(valueMatch[1]);
+      }
+    }
+    if (values.size > 0) {
+      enumValueCache.set(typeName, values);
+      const lowerFirst = typeName.charAt(0).toLowerCase() + typeName.slice(1);
+      if (lowerFirst !== typeName) {
+        enumValueCache.set(lowerFirst, values);
+      }
+    }
+  }
+
+  // Pattern 2: Generic type unions
+  const unionTypeRegex = /type\s+(\w+)\s*=\s*(?:[^=;]*?\|\s*)?['"](\w+)['"](?:\s*\|\s*['"](\w+)['"])?/g;
+  while ((match = unionTypeRegex.exec(strippedCode)) !== null) {
+    const typeName = match[1];
+    const values = new Set();
+    const fullTypeDefRegex = new RegExp(`type\\s+${typeName}\\s*=\\s*([^;]+);`);
+    const fullMatch = strippedCode.match(fullTypeDefRegex);
+    if (fullMatch) {
+      const allValues = fullMatch[1].match(/['"](\w+)['"]/g);
+      if (allValues) {
+        allValues.forEach(v => {
+          const val = v.replace(/['"]/g, '');
+          values.add(val);
+        });
+      }
+    }
+    if (values.size > 0) {
+      enumValueCache.set(typeName, values);
+    }
+  }
+
+  // Pattern 3: Object/Record properties with string literals: { accent: 'coral' }
+  const objPropertyRegex = /(\w+)\s*:\s*['"](\w+)['"]/g;
+  const propertyMap = new Map();
+  while ((match = objPropertyRegex.exec(strippedCode)) !== null) {
+    const propName = match[1];
+    const value = match[2];
+    if (!propertyMap.has(propName)) {
+      propertyMap.set(propName, new Set());
+    }
+    propertyMap.get(propName).add(value);
+  }
+
+  for (const [propName, values] of propertyMap.entries()) {
+    if (values.size >= 2) {
+      enumValueCache.set(propName, values);
+      if (propName.endsWith('s')) {
+        const singular = propName.slice(0, -1);
+        enumValueCache.set(singular, values);
+      }
+    }
+  }
+
+  // Pattern 4: const objects with literal properties
+  const constObjectRegex = /const\s+(\w+)\s*[=:]\s*\{([^}]+)\}/g;
+  while ((match = constObjectRegex.exec(strippedCode)) !== null) {
+    const objName = match[1];
+    const body = match[2];
+    const keys = new Set();
+    const keyRegex = /(\w+)\s*:/g;
+    let keyMatch;
+    while ((keyMatch = keyRegex.exec(body)) !== null) {
+      keys.add(keyMatch[1]);
+    }
+    if (keys.size > 0) {
+      enumValueCache.set(objName, keys);
+    }
+  }
+
+  // Pattern 5: Special case for ReleaseType
+  const releaseTypeRegex = /type\s+ReleaseType\s*=\s*([^;]+);/;
+  const releaseTypeMatch = strippedCode.match(releaseTypeRegex);
+  if (releaseTypeMatch) {
+    const values = new Set();
+    const valueMatches = releaseTypeMatch[1].match(/['"](\w+)['"]/g);
+    if (valueMatches) {
+      valueMatches.forEach(v => {
+        const val = v.replace(/['"]/g, '');
+        values.add(val);
+      });
+    }
+    if (values.size > 0) {
+      enumValueCache.set('ReleaseType', values);
+      enumValueCache.set('releaseType', values);
+    }
+  }
+
+  // Pattern 6: Special case for WaveVariant
+  const waveVariantRegex = /type\s+WaveVariant\s*=\s*([^;]+);/;
+  const waveVariantMatch = strippedCode.match(waveVariantRegex);
+  if (waveVariantMatch) {
+    const values = new Set();
+    const valueMatches = waveVariantMatch[1].match(/['"](\w+)['"]/g);
+    if (valueMatches) {
+      valueMatches.forEach(v => {
+        const val = v.replace(/['"]/g, '');
+        values.add(val);
+      });
+    }
+    if (values.size > 0) {
+      enumValueCache.set('WaveVariant', values);
+      // Merge with existing variant values if any
+      if (enumValueCache.has('variant')) {
+        const existing = enumValueCache.get('variant');
+        for (const v of values) {
+          existing.add(v);
+        }
+      } else {
+        enumValueCache.set('variant', values);
+      }
+    }
+  }
+
+  // Pattern 7: Special case for SidebarVariant
+  const sidebarVariantRegex = /type\s+SidebarVariant\s*=\s*([^;]+);/;
+  const sidebarVariantMatch = strippedCode.match(sidebarVariantRegex);
+  if (sidebarVariantMatch) {
+    const values = new Set();
+    const valueMatches = sidebarVariantMatch[1].match(/['"](\w+)['"]/g);
+    if (valueMatches) {
+      valueMatches.forEach(v => {
+        const val = v.replace(/['"]/g, '');
+        values.add(val);
+      });
+    }
+    if (values.size > 0) {
+      enumValueCache.set('SidebarVariant', values);
+      // Merge with existing variant values if any
+      if (enumValueCache.has('variant')) {
+        const existing = enumValueCache.get('variant');
+        for (const v of values) {
+          existing.add(v);
+        }
+      } else {
+        enumValueCache.set('variant', values);
+      }
+    }
+  }
+}
+
+/**
+ * Get possible values for a variable name from the enum cache
+ */
+function getEnumValues(varName) {
+  const values = new Set();
+
+  // Direct match
+  if (enumValueCache.has(varName)) {
+    return enumValueCache.get(varName);
+  }
+
+  // Try with different case variations
+  const camelCase = varName.charAt(0).toLowerCase() + varName.slice(1);
+  if (enumValueCache.has(camelCase)) {
+    return enumValueCache.get(camelCase);
+  }
+
+  const PascalCase = varName.charAt(0).toUpperCase() + varName.slice(1);
+  if (enumValueCache.has(PascalCase)) {
+    return enumValueCache.get(PascalCase);
+  }
+
+  // Try without common suffixes
+  for (const suffix of ['Type', 'Variant', 'Option', 'Mode', 'Style']) {
+    const baseName = varName.replace(new RegExp(suffix + '$'), '');
+    if (enumValueCache.has(baseName)) {
+      return enumValueCache.get(baseName);
+    }
+    if (enumValueCache.has(baseName + suffix)) {
+      return enumValueCache.get(baseName + suffix);
+    }
+  }
+
+  return values;
+}
+
+/**
  * Find CSS class and attribute usage in source code
  */
 function findCSSUsage(code) {
@@ -101,7 +307,7 @@ function findCSSUsage(code) {
     classes.add(match[3]);
   }
 
-  // Match className attribute
+  // Match className attribute with quoted strings
   const classNameRegex = /className\s*=\s*{?\s*(['"`])([^'"`]*?[a-zA-Z0-9_-]+[^'"`]*)\1/g;
   while ((match = classNameRegex.exec(strippedCode)) !== null) {
     const classNames = match[2].split(/\s+/);
@@ -110,6 +316,96 @@ function findCSSUsage(code) {
         classes.add(className);
       }
     }
+  }
+
+  // Match className in template literals: className={`class1 ${var} class2`}
+  // Also handles: className={`${variant}-sidebar`} and className={`class-${variant}`}
+  const classNameTemplateRegex = /className\s*=\s*{`([^`]+)`}/g;
+  while ((match = classNameTemplateRegex.exec(strippedCode)) !== null) {
+    // Extract class names from template literal
+    let templateContent = match[1];
+
+    // First, extract string literals inside ${} expressions (e.g., ${"copied"})
+    const templateExprRegex = /\$\{[^}]*(["'])([a-zA-Z0-9_-]+)\1[^}]*\}/g;
+    let exprMatch;
+    while ((exprMatch = templateExprRegex.exec(templateContent)) !== null) {
+      classes.add(exprMatch[2]);
+    }
+
+    // NEW: Extract variable names from ${} expressions for dynamic class generation
+    // Patterns: `${variant}-class`, `class-${variant}`, `${accent}`, `${feature.accent}`, `${release.releaseType}`
+    const varRegex = /\$\{([a-zA-Z0-9_.]+)\}/g;
+    const foundVars = []; // Store both full var path and simple name
+    let varMatch;
+    // Reset regex for the template content
+    varRegex.lastIndex = 0;
+    while ((varMatch = varRegex.exec(templateContent)) !== null) {
+      const varPath = varMatch[1];
+      const lastPart = varPath.includes('.') ? varPath.split('.').pop() : varPath;
+      foundVars.push({ full: varMatch[0], name: lastPart });
+    }
+
+    // For each variable found, check if we have enum values and generate class combinations
+    for (const { full: fullVar, name: varName } of foundVars) {
+      const possibleValues = getEnumValues(varName);
+      if (possibleValues.size > 0) {
+        // Escape the full variable for regex (contains ${} and . which are special chars)
+        const escapedVar = fullVar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // Check for suffix pattern: `prefix-${var}` or `prefix--${var}`
+        // Match any word characters + hyphen before the variable
+        const suffixMatch = templateContent.match(new RegExp(`([a-zA-Z0-9_-]+)-` + escapedVar));
+        if (suffixMatch) {
+          for (const value of possibleValues) {
+            classes.add(`${suffixMatch[1]}-${value}`);
+          }
+        }
+
+        // Check for prefix pattern: `${var}-suffix`
+        const prefixMatch = templateContent.match(new RegExp(escapedVar + `-([a-zA-Z0-9_-]+)`));
+        if (prefixMatch) {
+          for (const value of possibleValues) {
+            classes.add(`${value}-${prefixMatch[1]}`);
+          }
+        }
+
+        // Also add just the values (for cases like bare variable usage)
+        for (const value of possibleValues) {
+          classes.add(value);
+        }
+      }
+    }
+
+    // Then replace ${} expressions with spaces and extract remaining class names
+    templateContent = templateContent.replace(/\$\{[^}]*\}/g, ' ');
+    const classNames = templateContent.split(/\s+/);
+    for (const className of classNames) {
+      if (/^[a-zA-Z0-9_-]+$/.test(className)) {
+        classes.add(className);
+      }
+    }
+  }
+
+  // Match CSS module patterns: styles['class-name'] and styles.className
+  // This handles React CSS modules
+  const cssModuleBracketRegex = /(?:\w+|\.\.\.\w+)\[['"`]([a-zA-Z0-9_-]+)['"`]\]/g;
+  while ((match = cssModuleBracketRegex.exec(strippedCode)) !== null) {
+    classes.add(match[1]);
+  }
+  const cssModuleDotRegex = /(\w+)\.([a-zA-Z0-9_-]+)/g;
+  while ((match = cssModuleDotRegex.exec(strippedCode)) !== null) {
+    // Only if it looks like a styles object (common naming patterns)
+    const objName = match[1];
+    if (objName.endsWith('styles') || objName.endsWith('Styles') || objName.endsWith('css') || objName.endsWith('Css')) {
+      classes.add(match[2]);
+    }
+  }
+
+  // Match string literals in object properties like: block: 'blok-block', button: 'blok-button'
+  // This catches classes exported via API
+  const propertyStringRegex = /(?:\w+)\s*:\s*['"`]([a-zA-Z0-9_-]+)['"`]/g;
+  while ((match = propertyStringRegex.exec(strippedCode)) !== null) {
+    classes.add(match[1]);
   }
 
   // Match dataset properties
@@ -178,14 +474,21 @@ function isTailwindUtility(className) {
 /**
  * Recursively scan a directory for source files
  */
-async function scanDirectory(dir, excludeDirs = ['node_modules', '.git', 'dist', 'build']) {
+async function scanDirectory(dir, excludeDirs = ['node_modules', '.git', 'dist', 'build', 'coverage', 'storybook-static']) {
   const files = [];
+  // Exclude by path pattern (for nested paths)
+  const excludePathPatterns = ['test/unit/scripts/blok-master', 'docs/dist'];
 
   try {
     const entries = await readdir(dir, { withFileTypes: true });
 
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
+
+      // Skip if path matches any exclusion pattern
+      if (shouldExcludePath(fullPath, excludePathPatterns)) {
+        continue;
+      }
 
       if (entry.isDirectory()) {
         if (!excludeDirs.includes(entry.name)) {
@@ -208,10 +511,26 @@ async function scanDirectory(dir, excludeDirs = ['node_modules', '.git', 'dist',
 }
 
 /**
+ * Check if a path should be excluded
+ */
+function shouldExcludePath(fullPath, excludePatterns) {
+  for (const pattern of excludePatterns) {
+    if (fullPath.includes(pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Find all CSS files in a directory
  */
 async function findCSSFiles(dir, extensions = ['.css']) {
   const files = [];
+  // Exclude by directory name
+  const excludeDirs = ['node_modules', '.git', 'dist', 'build', 'coverage', 'storybook-static'];
+  // Exclude by path pattern (for nested paths)
+  const excludePathPatterns = ['test/unit/scripts/blok-master', 'docs/dist'];
 
   async function scan(currentDir) {
     const entries = await readdir(currentDir, { withFileTypes: true });
@@ -219,8 +538,13 @@ async function findCSSFiles(dir, extensions = ['.css']) {
     for (const entry of entries) {
       const fullPath = join(currentDir, entry.name);
 
+      // Skip if path matches any exclusion pattern
+      if (shouldExcludePath(fullPath, excludePathPatterns)) {
+        continue;
+      }
+
       if (entry.isDirectory()) {
-        if (!['node_modules', '.git', 'dist', 'build'].includes(entry.name)) {
+        if (!excludeDirs.includes(entry.name)) {
           await scan(fullPath);
         }
       } else if (entry.isFile()) {
@@ -391,6 +715,19 @@ Examples:
   console.error(`\nScanning source files in: ${srcDir}`);
   const sourceFiles = await scanDirectory(srcDir);
 
+  // Pass 1: Extract enum/type values from all files first
+  // This is needed because template literals in one file may reference types defined in another
+  console.error('  Extracting type definitions...');
+  for (const filePath of sourceFiles) {
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      extractEnumValues(content);
+    } catch {
+      // Skip files that can't be read
+    }
+  }
+
+  // Pass 2: Scan for CSS usage (now that we have the enum cache populated)
   const allUsedClasses = new Set();
   const allUsedAttributes = new Set();
 

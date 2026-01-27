@@ -82,26 +82,6 @@
   z-index: 1;
 }
 
-.migration-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-md);
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.08) 100%);
-  color: var(--color-coral);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-radius: var(--radius-full);
-  margin-bottom: var(--spacing-lg);
-  border: 1px solid rgba(240, 123, 75, 0.2);
-}
-
-.migration-hero-badge svg {
-  color: var(--color-coral);
-}
-
 .migration-hero-title {
   font-size: var(--font-size-5xl);
   font-weight: 800;
@@ -129,146 +109,6 @@
   max-width: 600px;
   margin: 0 auto var(--spacing-2xl);
   line-height: 1.7;
-}
-
-/* Benefits Bar */
-.migration-benefits {
-  display: flex;
-  justify-content: center;
-  gap: var(--spacing-xl);
-  flex-wrap: wrap;
-}
-
-@media (max-width: 768px) {
-  .migration-benefits {
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-md);
-  }
-}
-
-.migration-benefit {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
-  transition: all var(--transition-fast);
-}
-
-.migration-benefit:hover {
-  border-color: rgba(240, 123, 75, 0.3);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.migration-benefit-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.15) 0%, rgba(212, 164, 184, 0.1) 100%);
-  border-radius: var(--radius-lg);
-  color: var(--color-coral);
-  flex-shrink: 0;
-}
-
-.migration-benefit-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.migration-benefit-title {
-  font-size: var(--font-size-base);
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.migration-benefit-desc {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
-
-/* Timeline Step Indicator */
-.migration-timeline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  margin-bottom: var(--spacing-3xl);
-  position: relative;
-  z-index: 1;
-}
-
-@media (max-width: 640px) {
-  .migration-timeline {
-    flex-direction: column;
-    gap: var(--spacing-sm);
-  }
-}
-
-.migration-timeline-step {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background: var(--color-surface);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  transition: all var(--transition-fast);
-}
-
-.migration-timeline-step.active {
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.1) 0%, rgba(212, 164, 184, 0.08) 100%);
-  border-color: rgba(240, 123, 75, 0.3);
-}
-
-.migration-timeline-step.active .migration-timeline-number {
-  background: var(--gradient-coral-pink);
-  color: white;
-  box-shadow: 0 2px 8px rgba(240, 123, 75, 0.3);
-}
-
-.migration-timeline-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--color-background);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  color: var(--color-text-tertiary);
-  transition: all var(--transition-fast);
-}
-
-.migration-timeline-label {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
-.migration-timeline-step.active .migration-timeline-label {
-  color: var(--color-text-primary);
-}
-
-.migration-timeline-connector {
-  width: 40px;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(240, 123, 75, 0.3), var(--color-border));
-}
-
-@media (max-width: 640px) {
-  .migration-timeline-connector {
-    width: 2px;
-    height: 20px;
-    background: linear-gradient(180deg, rgba(240, 123, 75, 0.3), var(--color-border));
-  }
 }
 
 /* Migration Section */
@@ -982,12 +822,6 @@
   justify-content: center;
   flex-wrap: wrap;
   position: relative;
-}
-
-/* Migration Footer */
-.migration-footer {
-  background: transparent;
-  border-top: 1px solid var(--color-border);
 }
 
 /* Dark mode adjustments */

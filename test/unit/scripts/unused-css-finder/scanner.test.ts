@@ -146,6 +146,78 @@ describe('Source Scanner', () => {
       expect(result.classes).toEqual([]);
       expect(result.attributes).toEqual([]);
     });
+
+    it('should find class names in object property strings (API exports)', () => {
+      const code = `
+        return {
+          block: 'blok-block',
+          button: 'blok-button',
+          input: 'blok-input',
+        };
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('blok-block');
+      expect(result.classes).toContain('blok-button');
+      expect(result.classes).toContain('blok-input');
+    });
+
+    it('should find class names in object property strings with modifiers', () => {
+      const code = `
+        const styles = {
+          inlineToolButton: 'blok-inline-tool-button',
+          inlineToolButtonActive: 'blok-inline-tool-button--active',
+          settingsButtonFocused: 'blok-settings-button--focused',
+        };
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('blok-inline-tool-button');
+      expect(result.classes).toContain('blok-inline-tool-button--active');
+      expect(result.classes).toContain('blok-settings-button--focused');
+    });
+
+    it('should find class names in CSS module bracket notation', () => {
+      const code = `
+        import styles from './Search.module.css';
+        <div className={styles['search-container']}>
+          <input className={styles['search-input']} />
+        </div>
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('search-container');
+      expect(result.classes).toContain('search-input');
+    });
+
+    it('should find class names in CSS module dot notation', () => {
+      const code = `
+        import styles from './Nav.module.css';
+        const navClasses = styles.nav + ' ' + styles.open;
+        <nav className={styles.scrolled} />;
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('nav');
+      expect(result.classes).toContain('open');
+      expect(result.classes).toContain('scrolled');
+    });
+
+    it('should find class names in template literals with variables', () => {
+      const code = `
+        const copied = true;
+        <div className={\`code-copy \${copied ? "copied" : ""}\`}>Copy</div>
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('code-copy');
+      expect(result.classes).toContain('copied');
+    });
+
+    it('should find class names in template literals with multiple classes', () => {
+      const code = `
+        <div className={\`class1 class2 \${variable} class3\`}>Text</div>
+      `;
+      const result = findCSSUsage(code);
+      expect(result.classes).toContain('class1');
+      expect(result.classes).toContain('class2');
+      expect(result.classes).toContain('class3');
+    });
   });
 
   describe('scanFile', () => {
@@ -206,6 +278,32 @@ describe('Source Scanner', () => {
 
       expect(result.allClasses).toContain('local-class');
       expect(result.allClasses).not.toContain('external-class');
+    });
+
+    it('should skip coverage directory', async () => {
+      const coverageDir = join(testDir, 'coverage');
+      await mkdir(coverageDir, { recursive: true });
+      await writeFile(join(coverageDir, 'coverage.ts'), `element.classList.add('coverage-class');`);
+
+      await writeFile(join(testDir, 'local.ts'), `element.classList.add('local-class');`);
+
+      const result = await scanSourceDirectory(testDir);
+
+      expect(result.allClasses).toContain('local-class');
+      expect(result.allClasses).not.toContain('coverage-class');
+    });
+
+    it('should skip storybook-static directory', async () => {
+      const storybookDir = join(testDir, 'storybook-static');
+      await mkdir(storybookDir, { recursive: true });
+      await writeFile(join(storybookDir, 'storybook.ts'), `element.classList.add('storybook-class');`);
+
+      await writeFile(join(testDir, 'local.ts'), `element.classList.add('local-class');`);
+
+      const result = await scanSourceDirectory(testDir);
+
+      expect(result.allClasses).toContain('local-class');
+      expect(result.allClasses).not.toContain('storybook-class');
     });
 
     it('should handle directories with no matching files', async () => {

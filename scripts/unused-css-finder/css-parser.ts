@@ -91,13 +91,17 @@ export function extractClassNames(css: string): string[] {
 
 /**
  * Extract attribute selectors (e.g., [data-blok-selected="true"])
+ * Only extracts custom data-* attributes, not standard HTML attributes like role or contenteditable
+ * Standard HTML attributes are always valid and don't need usage checking
+ * Also excludes Tailwind arbitrary values like [18px]
  */
 function extractAttributeSelectors(css: string): Selector[] {
   const processed = preprocessCSS(css);
   const selectors: Selector[] = [];
 
-  // Match [attr="value"] or [attr='value'] or [attr] patterns
-  const attrRegex = /\[([a-zA-Z0-9_-]+)(?:[~|^$*]?=["'][^"']*["'])?\]/g;
+  // Match only [data-*] attribute selectors
+  // Exclude standard HTML attributes (role, contenteditable, etc.) and Tailwind arbitrary values
+  const attrRegex = /\[(data-[a-zA-Z0-9_-]+)(?:[~|^$*]?=["'][^"']*["'])?\]/g;
   let match;
 
   while ((match = attrRegex.exec(processed)) !== null) {

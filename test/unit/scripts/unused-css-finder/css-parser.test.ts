@@ -203,6 +203,45 @@ describe('CSS Parser', () => {
       const result = extractSelectors(css);
       expect(result).toContainEqual({ type: 'element', value: 'div', raw: 'div' });
     });
+
+    it('should extract only data-* attributes, not standard HTML attributes like role', () => {
+      const css = '[data-blok-selected="true"] [role="listitem"] { background: red; }';
+      const result = extractSelectors(css);
+      const dataAttrs = result.filter(s => s.type === 'attribute');
+      expect(dataAttrs).toContainEqual({
+        type: 'attribute',
+        value: 'data-blok-selected',
+        raw: '[data-blok-selected="true"]',
+      });
+      // Standard HTML attributes should not be extracted as attributes
+      // They are part of HTML spec and don't need usage checking
+      expect(dataAttrs.some(s => s.value === 'role')).toBe(false);
+    });
+
+    it('should not extract contenteditable as a custom attribute', () => {
+      const css = '[data-blok-selected="true"] [contenteditable] { opacity: 0.4; }';
+      const result = extractSelectors(css);
+      const dataAttrs = result.filter(s => s.type === 'attribute');
+      expect(dataAttrs).toContainEqual({
+        type: 'attribute',
+        value: 'data-blok-selected',
+        raw: '[data-blok-selected="true"]',
+      });
+      // contenteditable is a standard HTML attribute
+      expect(dataAttrs.some(s => s.value === 'contenteditable')).toBe(false);
+    });
+
+    it('should not extract Tailwind arbitrary values as attributes', () => {
+      const css = `
+        .blok-loader {
+          @apply before:w-[18px] before:h-[18px] before:-ml-[11px];
+        }
+      `;
+      const result = extractSelectors(css);
+      const attrs = result.filter(s => s.type === 'attribute');
+      // Should not extract numbers or units as attributes
+      expect(attrs.some(s => s.value === '18px' || s.value === '11px')).toBe(false);
+    });
   });
 
   describe('parseCSS', () => {

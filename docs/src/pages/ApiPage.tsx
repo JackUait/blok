@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
+import { MobileSectionNav } from '../components/common/MobileSectionNav';
 import { ApiSection } from '../components/api/ApiSection';
 import { API_SECTIONS, SIDEBAR_SECTIONS } from '../components/api/api-data';
 import { NAV_LINKS } from '../utils/constants';
@@ -122,11 +123,17 @@ export const ApiPage: React.FC = () => {
           variant="api"
           filterLabel="Filter API sections"
         />
-        <main className="api-main" data-blok-testid="api-main">
-          {API_SECTIONS.map((section) => (
-            <ApiSection key={section.id} section={section} />
-          ))}
-        </main>
+        <div className="api-content-wrapper">
+          <MobileSectionNav
+            sections={SIDEBAR_SECTIONS}
+            activeSection={activeSection}
+          />
+          <main className="api-main" data-blok-testid="api-main">
+            {API_SECTIONS.map((section) => (
+              <ApiSection key={section.id} section={section} />
+            ))}
+          </main>
+        </div>
       </div>
       <Footer />
     </>

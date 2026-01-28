@@ -5,6 +5,7 @@ import { CodeBlock } from '../components/common/CodeBlock';
 import { Sidebar } from '../components/common/Sidebar';
 import { RecipeCard } from '../components/recipes/RecipeCard';
 import { KeyboardShortcuts } from '../components/recipes/KeyboardShortcuts';
+import { MobileSectionNav } from '../components/common/MobileSectionNav';
 import { SIDEBAR_SECTIONS } from '../components/recipes/recipes-data';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/recipes.css';
@@ -298,7 +299,12 @@ export const RecipesPage: React.FC = () => {
           variant="recipes"
           filterLabel="Filter recipes"
         />
-        <main className="recipes-main" data-blok-testid="recipes-main">
+        <div className="recipes-content-wrapper">
+          <MobileSectionNav
+            sections={SIDEBAR_SECTIONS}
+            activeSection={activeSection}
+          />
+          <main className="recipes-main" data-blok-testid="recipes-main">
           <section className="recipes-hero">
             <h1 className="recipes-hero-title">Recipes</h1>
             <p className="recipes-hero-description">
@@ -423,6 +429,7 @@ export const RecipesPage: React.FC = () => {
             </div>
           </section>
         </main>
+        </div>
       </div>
       <Footer />
     </>

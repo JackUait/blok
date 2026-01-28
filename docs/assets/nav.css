@@ -259,7 +259,7 @@
   transform: translateY(-7px) rotate(-45deg);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 968px) {
   .nav-links {
     display: none;
   }

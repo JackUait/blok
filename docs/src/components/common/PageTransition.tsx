@@ -6,12 +6,15 @@ interface PageTransitionProps {
   children: ReactNode;
 }
 
+// Subtle, refined page transition - quick and unobtrusive
 const pageVariants: Variants = {
   initial: {
     opacity: 0,
+    y: 8,
   },
   animate: {
     opacity: 1,
+    y: 0,
   },
   exit: {
     opacity: 0,
@@ -20,8 +23,8 @@ const pageVariants: Variants = {
 
 const pageTransition: Transition = {
   type: "tween",
-  ease: "easeInOut",
-  duration: 0.3,
+  ease: [0.25, 0.46, 0.45, 0.94],
+  duration: 0.2,
 };
 
 export const PageTransition = ({ children }: PageTransitionProps) => {

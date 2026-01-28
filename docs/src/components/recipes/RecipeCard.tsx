@@ -31,7 +31,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
       </div>
       {tip && (
         <div className="recipe-card-tip" data-blok-testid="recipe-card-tip">
-          <strong>Pro tip:</strong> {tip}
+          <strong>Pro tip</strong> {tip}
         </div>
       )}
     </div>

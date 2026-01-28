@@ -614,5 +614,61 @@ describe('Source Scanner', () => {
       expect(result.allClasses).toContain('feature-modal--purple');
       expect(result.allClasses).toContain('feature-modal--blue');
     });
+
+    it('should detect classes from WaveVariant type with suffix pattern', async () => {
+      await writeFile(join(testDir, 'WaveDivider.tsx'), `
+        type WaveVariant = 'soft' | 'layered' | 'zigzag' | 'curved' | 'asymmetric';
+
+        interface WaveDividerProps {
+          variant?: WaveVariant;
+        }
+
+        export const WaveDivider: React.FC<WaveDividerProps> = ({ variant = 'soft' }) => {
+          return (
+            <div className={\`wave-divider wave-divider--\${variant}\`}>
+              Wave content
+            </div>
+          );
+        };
+      `, 'utf-8');
+
+      const result = await scanSourceDirectory(testDir);
+
+      // Base class should be detected
+      expect(result.allClasses).toContain('wave-divider');
+
+      // All variant classes should be generated from the WaveVariant type
+      expect(result.allClasses).toContain('wave-divider--soft');
+      expect(result.allClasses).toContain('wave-divider--layered');
+      expect(result.allClasses).toContain('wave-divider--zigzag');
+      expect(result.allClasses).toContain('wave-divider--curved');
+      expect(result.allClasses).toContain('wave-divider--asymmetric');
+    });
+
+    it('should detect classes from SidebarVariant type with prefix pattern', async () => {
+      await writeFile(join(testDir, 'Sidebar.tsx'), `
+        type SidebarVariant = 'api' | 'recipes';
+
+        interface SidebarProps {
+          variant: SidebarVariant;
+        }
+
+        export const Sidebar: React.FC<SidebarProps> = ({ variant }) => {
+          return (
+            <aside className={\`\${variant}-sidebar \${variant}-sidebar-search\`}>
+              Sidebar content
+            </aside>
+          );
+        };
+      `, 'utf-8');
+
+      const result = await scanSourceDirectory(testDir);
+
+      // All variant classes should be generated from the SidebarVariant type
+      expect(result.allClasses).toContain('api-sidebar');
+      expect(result.allClasses).toContain('api-sidebar-search');
+      expect(result.allClasses).toContain('recipes-sidebar');
+      expect(result.allClasses).toContain('recipes-sidebar-search');
+    });
   });
 });

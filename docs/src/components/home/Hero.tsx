@@ -58,14 +58,24 @@ export const Hero: React.FC = () => {
           </div>
         </div>
         <div className="hero-demo" data-blok-testid="hero-demo">
-          <div
+          <Link
+            to="/demo"
             ref={mascotTilt.ref}
             className={`hero-mascot hero-mascot-3d ${mascotTilt.isHovered ? 'hero-mascot-hovered' : ''}`}
             onMouseMove={mascotTilt.onMouseMove}
             onMouseEnter={mascotTilt.onMouseEnter}
             onMouseLeave={mascotTilt.onMouseLeave}
             style={mascotTilt.style}
+            aria-label="Try the demo"
           >
+            {/* Sparkle particles */}
+            <div className="hero-mascot-sparkles" aria-hidden="true">
+              <span className="sparkle sparkle-1" />
+              <span className="sparkle sparkle-2" />
+              <span className="sparkle sparkle-3" />
+              <span className="sparkle sparkle-4" />
+              <span className="sparkle sparkle-5" />
+            </div>
             <img
               src="/mascot.png"
               alt="Blok mascot - a friendly orange character with pink yarn"
@@ -73,7 +83,7 @@ export const Hero: React.FC = () => {
             />
             {/* Floating shadow that moves with tilt */}
             <div className="hero-mascot-shadow" aria-hidden="true" />
-          </div>
+          </Link>
         </div>
       </div>
       <WaveDivider

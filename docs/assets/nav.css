@@ -126,7 +126,7 @@
   color: var(--color-text-primary);
   text-decoration: none;
   position: relative;
-  padding: 6px 14px 6px 6px;
+  padding: 4px 14px 6px 4px;
   margin-left: -6px;
   border-radius: var(--radius-lg);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);

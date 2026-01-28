@@ -274,7 +274,15 @@ export function extractEnumValues(code: string): Map<string, Set<string>> {
     }
     if (values.size > 0) {
       enumValues.set('WaveVariant', values);
-      enumValues.set('variant', values); // lowercase for property names
+      // Merge with existing variant values if any (e.g., from SidebarVariant)
+      if (enumValues.has('variant')) {
+        const existing = enumValues.get('variant')!;
+        for (const v of values) {
+          existing.add(v);
+        }
+      } else {
+        enumValues.set('variant', values);
+      }
     }
   }
 
@@ -573,16 +581,20 @@ export function findCSSUsage(code: string): CSSUsage {
 
         // Check for suffix pattern: `prefix-${var}` or `prefix--${var}`
         // Match any word characters + hyphen before the variable
-        const suffixMatch = templateContent.match(new RegExp(`([a-zA-Z0-9_-]+)-` + escapedVar));
-        if (suffixMatch) {
+        // Use global regex to find all occurrences
+        const suffixRegex = new RegExp(`([a-zA-Z0-9_-]+)-` + escapedVar, 'g');
+        let suffixMatch;
+        while ((suffixMatch = suffixRegex.exec(templateContent)) !== null) {
           for (const value of possibleValues) {
             classes.add(`${suffixMatch[1]}-${value}`);
           }
         }
 
         // Check for prefix pattern: `${var}-suffix`
-        const prefixMatch = templateContent.match(new RegExp(escapedVar + `-([a-zA-Z0-9_-]+)`));
-        if (prefixMatch) {
+        // Use global regex to find all occurrences
+        const prefixRegex = new RegExp(escapedVar + `-([a-zA-Z0-9_-]+)`, 'g');
+        let prefixMatch;
+        while ((prefixMatch = prefixRegex.exec(templateContent)) !== null) {
           for (const value of possibleValues) {
             classes.add(`${value}-${prefixMatch[1]}`);
           }

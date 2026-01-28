@@ -222,7 +222,59 @@ function extractEnumValues(code) {
     }
   }
 
-  // Pattern 4: Extract function return values that contain class names
+  // Pattern 4: WaveVariant type - special case for wave divider variants
+  const waveVariantRegex = /type\s+WaveVariant\s*=\s*([^;]+);/;
+  const waveVariantMatch = strippedCode.match(waveVariantRegex);
+  if (waveVariantMatch) {
+    const values = new Set();
+    const valueMatches = waveVariantMatch[1].match(/['"](\w+)['"]/g);
+    if (valueMatches) {
+      valueMatches.forEach(v => {
+        const val = v.replace(/['"]/g, '');
+        values.add(val);
+      });
+    }
+    if (values.size > 0) {
+      enumValueCache.set('WaveVariant', values);
+      // Merge with existing variant values if any (e.g., from SidebarVariant)
+      if (enumValueCache.has('variant')) {
+        const existing = enumValueCache.get('variant');
+        for (const v of values) {
+          existing.add(v);
+        }
+      } else {
+        enumValueCache.set('variant', values);
+      }
+    }
+  }
+
+  // Pattern 5: SidebarVariant type
+  const sidebarVariantRegex = /type\s+SidebarVariant\s*=\s*([^;]+);/;
+  const sidebarVariantMatch = strippedCode.match(sidebarVariantRegex);
+  if (sidebarVariantMatch) {
+    const values = new Set();
+    const valueMatches = sidebarVariantMatch[1].match(/['"](\w+)['"]/g);
+    if (valueMatches) {
+      valueMatches.forEach(v => {
+        const val = v.replace(/['"]/g, '');
+        values.add(val);
+      });
+    }
+    if (values.size > 0) {
+      enumValueCache.set('SidebarVariant', values);
+      // Merge with existing variant values if any
+      if (enumValueCache.has('variant')) {
+        const existing = enumValueCache.get('variant');
+        for (const v of values) {
+          existing.add(v);
+        }
+      } else {
+        enumValueCache.set('variant', values);
+      }
+    }
+  }
+
+  // Pattern 6: Extract function return values that contain class names
   // function getLinkClassName(link) { return "nav-link" + (active ? " nav-link-active" : ""); }
   // const getLinkClassName = (link: NavLink): string => { return ... }
   const functionRegex = /(?:function\s+(\w+)|const\s+(\w+)\s*=\s*(?:\([^)]*\)(?:\s*:\s*[^={]+)?\s*=>|function)|(\w+)\s*\([^)]*\)\s*{)/g;
@@ -425,16 +477,20 @@ function findCSSUsage(code) {
 
         // Check for suffix pattern: `prefix-${var}` or `prefix--${var}`
         // Match any word characters + hyphen before the variable
-        const suffixMatch = templateContent.match(new RegExp(`([a-zA-Z0-9_-]+)-` + escapedVar));
-        if (suffixMatch) {
+        // Use global regex to find all occurrences
+        const suffixRegex = new RegExp(`([a-zA-Z0-9_-]+)-` + escapedVar, 'g');
+        let suffixMatch;
+        while ((suffixMatch = suffixRegex.exec(templateContent)) !== null) {
           for (const value of possibleValues) {
             classes.add(`${suffixMatch[1]}-${value}`);
           }
         }
 
         // Check for prefix pattern: `${var}-suffix`
-        const prefixMatch = templateContent.match(new RegExp(escapedVar + `-([a-zA-Z0-9_-]+)`));
-        if (prefixMatch) {
+        // Use global regex to find all occurrences
+        const prefixRegex = new RegExp(escapedVar + `-([a-zA-Z0-9_-]+)`, 'g');
+        let prefixMatch;
+        while ((prefixMatch = prefixRegex.exec(templateContent)) !== null) {
           for (const value of possibleValues) {
             classes.add(`${value}-${prefixMatch[1]}`);
           }

@@ -21,30 +21,6 @@ body {
   position: relative;
 }
 
-/* Subtle grain texture overlay for atmosphere */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: var(--noise-texture);
-  opacity: 0.025;
-  pointer-events: none;
-  z-index: 9999;
-  mix-blend-mode: overlay;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) body::before {
-    opacity: 0.04;
-    mix-blend-mode: soft-light;
-  }
-}
-
-:root[data-theme="dark"] body::before {
-  opacity: 0.04;
-  mix-blend-mode: soft-light;
-}
-
 /* Display typography - Use Quicksand for headings */
 h1, h2, h3 {
   font-family: var(--font-family-display);

@@ -197,7 +197,7 @@ export const EditorWrapper: React.FC<{
                 height="64"
                 rx="16"
                 fill="url(#placeholder-gradient)"
-                opacity="0.1"
+                opacity="0.12"
               />
               <rect
                 x="14"
@@ -208,8 +208,9 @@ export const EditorWrapper: React.FC<{
                 stroke="url(#placeholder-gradient)"
                 strokeWidth="2"
               />
-              <rect x="18" y="24" width="16" height="2" rx="1" fill="#007AFF" />
-              <rect x="18" y="30" width="12" height="2" rx="1" fill="#5856D6" />
+              <rect x="18" y="24" width="16" height="2" rx="1" fill="#F07B4B" />
+              <rect x="18" y="30" width="12" height="2" rx="1" fill="#D4A4B8" />
+              <rect x="18" y="36" width="20" height="2" rx="1" fill="#F89042" opacity="0.6" />
               <defs>
                 <linearGradient
                   id="placeholder-gradient"
@@ -218,8 +219,8 @@ export const EditorWrapper: React.FC<{
                   x2="100%"
                   y2="100%"
                 >
-                  <stop offset="0%" stopColor="#007AFF" />
-                  <stop offset="100%" stopColor="#5856D6" />
+                  <stop offset="0%" stopColor="#F07B4B" />
+                  <stop offset="100%" stopColor="#D4A4B8" />
                 </linearGradient>
               </defs>
             </svg>

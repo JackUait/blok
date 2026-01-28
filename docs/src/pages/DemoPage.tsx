@@ -62,12 +62,12 @@ export const DemoPage: React.FC = () => {
 
         <div className="demo-container">
           <div className="demo-header">
+            <span className="demo-live-badge">Interactive Demo</span>
             <h1 className="demo-title">
               Try the <span className="demo-title-gradient">Editor</span>
             </h1>
             <p className="demo-subtitle">
               A fully interactive editor running right here in your browser.
-              <br />
               Type <code className="inline-code">/</code> for commands, drag blocks to reorder, or select text to format.
             </p>
           </div>
@@ -80,7 +80,15 @@ export const DemoPage: React.FC = () => {
                   <span className="demo-chrome-dot demo-chrome-dot--yellow" />
                   <span className="demo-chrome-dot demo-chrome-dot--green" />
                 </div>
-                <div className="demo-chrome-title">Blok Editor</div>
+                <div className="demo-chrome-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                  Blok Editor
+                </div>
                 <div className="demo-chrome-actions">
                   <button
                     className="demo-action-btn"

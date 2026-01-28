@@ -462,16 +462,21 @@ export const Features: React.FC = () => {
       <div className="features-bg">
         <div className="features-blob features-blob-1" />
         <div className="features-blob features-blob-2" />
+        <div className="features-blob features-blob-3" />
         <div className="features-grid-pattern" />
+        {/* Floating orbs */}
+        <div className="features-orb features-orb-1" />
+        <div className="features-orb features-orb-2" />
+        <div className="features-orb features-orb-3" />
+        <div className="features-orb features-orb-4" />
       </div>
 
       <div className="container">
         <div className="section-header">
           <span className="section-eyebrow">Why Blok</span>
           <h2 className="section-title">
-            Built for developers,
-            <br />
-            designed for users
+            <span className="section-title-line">Built for developers,</span>
+            <span className="section-title-line">designed for users</span>
           </h2>
           <p className="section-description">
             Everything you need to create powerful editing experiences in your
@@ -498,6 +503,11 @@ export const Features: React.FC = () => {
                 <p className="feature-description">{feature.description}</p>
               </div>
               <div className="feature-card-shine" />
+              <div className="feature-card-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
             </button>
           ))}
         </div>

@@ -386,19 +386,39 @@ export const RecipesPage: React.FC = () => {
 
           <section className="recipes-cta">
             <div className="recipes-cta-card">
+              <div className="recipes-cta-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                <span>Community</span>
+              </div>
               <h2>Have a recipe to share?</h2>
               <p>
-                We're always looking for new patterns and best practices from the community.
+                Your patterns and techniques could help thousands of developers build better editors.
               </p>
               <div className="recipes-cta-actions">
                 <a
                   href="https://github.com/JackUait/blok/discussions"
-                  className="btn btn--secondary"
+                  className="recipes-cta-btn"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Share on GitHub
+                  <span className="recipes-cta-btn-text">Contribute a Recipe</span>
+                  <span className="recipes-cta-btn-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </span>
                 </a>
+              </div>
+              <div className="recipes-cta-decoration" aria-hidden="true">
+                <svg viewBox="0 0 80 80" fill="none">
+                  <circle cx="40" cy="40" r="38" strokeWidth="1" />
+                  <circle cx="40" cy="40" r="28" strokeWidth="1" />
+                  <circle cx="40" cy="40" r="18" strokeWidth="1" />
+                  <circle cx="40" cy="40" r="8" strokeWidth="1" />
+                </svg>
               </div>
             </div>
           </section>

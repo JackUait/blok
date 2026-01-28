@@ -170,14 +170,28 @@ function isInOperator(line: string, pos: number, punct: string, inString: boolea
       if (/\w\s*:/.test(line.substring(Math.max(0, pos - 5), pos + 1))) {
         return true;
       }
-    }
 
-    // Check for ? in ternary: identifier ? identifier : identifier
-    // The regex matches word + space + ?, so check if there's a corresponding : later
-    if (punct === '?' && beforeChar === ' ') {
-      const afterPart = line.substring(pos, Math.min(pos + 50, line.length));
-      if (/\s:\s/.test(afterPart) || /\s:\w/.test(afterPart)) {
-        return true;
+      // Check for : that is part of a ternary operator (e.g., ? ... : or } ... :)
+      // Look for a ? earlier in the line (within reasonable distance)
+      if (punct === ':') {
+        // Check if : is preceded by } or ] (closing object/array in ternary)
+        // Pattern: ? { ... } : or ? [ ... ] :
+        if (beforeChar === ' ' || beforeChar === '}' || beforeChar === ']') {
+          const beforePart = line.substring(Math.max(0, pos - 100), pos);
+          // Look for ? in the preceding part (ternary operator)
+          if (/\?\s*(?:{|\[|\w)/.test(beforePart)) {
+            return true;
+          }
+        }
+      }
+
+      // Check for ? in ternary: identifier ? identifier : identifier
+      // The regex matches word + space + ?, so check if there's a corresponding : later
+      if (punct === '?' && beforeChar === ' ') {
+        const afterPart = line.substring(pos, Math.min(pos + 50, line.length));
+        if (/\s:\s/.test(afterPart) || /\s:\w/.test(afterPart)) {
+          return true;
+        }
       }
     }
   }
@@ -281,6 +295,38 @@ function isCssClassLine(line: string): boolean {
   ];
 
   return cssPatterns.some(pattern => pattern.test(line));
+}
+
+/**
+ * Check if the punctuation mark is part of a CSS pseudo-class or CSS syntax
+ * Patterns: :has, :not, :nth-child, :first-child, etc.
+ * Also checks for CSS property patterns like "36px ;" or "color :"
+ */
+function isCssPunctuation(line: string, pos: number, punct: string): boolean {
+  if (punct === ':') {
+    // Check for CSS pseudo-classes: :has, :not, :nth, :first, :last, :before, :after, etc.
+    const afterPart = line.substring(pos + 1, Math.min(pos + 15, line.length));
+    if (/^has\(|^not\(|^nth-|^first-|^last-|^before\(|^after\(/.test(afterPart)) {
+      return true;
+    }
+
+    // Check for CSS property pattern: "word + space + :" followed by value (not in French text)
+    // Pattern: "margin :", "color :", etc. in CSS strings
+    const beforePart = line.substring(Math.max(0, pos - 15), pos);
+    if (/\b(margin|padding|color|background|width|height|border|font|text|display|position|top|left|right|bottom)\s+$/.test(beforePart)) {
+      return true;
+    }
+  }
+
+  if (punct === ';') {
+    // Check for CSS property value ending: "36px ;", "red ;", etc.
+    const beforePart = line.substring(Math.max(0, pos - 20), pos);
+    if (/\d+(?:px|em|rem|%|vh|vw|deg|s|ms)\s+$/.test(beforePart)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -397,6 +443,11 @@ export function findTypographyIssues(code: string): { issues: TypographyIssue[] 
 
           // Skip technical context
           if (isTechnicalContext(beforeContext)) {
+            continue;
+          }
+
+          // Skip if this looks like CSS syntax (pseudo-classes, property values, etc.)
+          if (isCssPunctuation(line, punctPos, punct)) {
             continue;
           }
 

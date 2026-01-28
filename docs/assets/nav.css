@@ -135,38 +135,33 @@
 .nav-logo p {
   background: linear-gradient(
     135deg,
-    var(--color-text-primary) 0%,
-    var(--color-coral) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  transition: all 0.3s ease;
-}
-
-.nav-logo:hover {
-  background: rgba(240, 123, 75, 0.06);
-}
-
-.nav-logo:hover p {
-  background: linear-gradient(
-    135deg,
     var(--color-coral) 0%,
     var(--color-pink) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  margin-top: 6px;
 }
 
-.nav-logo svg {
+.nav-logo:hover p {
+  letter-spacing: 0.02em;
+  transform: translateX(4px);
+  filter: drop-shadow(0 0 12px rgba(240, 123, 75, 0.5));
+}
+
+.nav-logo svg,
+.nav-logo img {
   width: 44px;
   height: 44px;
   transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   filter: drop-shadow(0 3px 10px rgba(240, 123, 75, 0.25));
 }
 
-.nav-logo:hover svg {
-  transform: rotate(-8deg) scale(1.12);
+.nav-logo:hover svg,
+.nav-logo:hover img {
+  transform: rotate(-4deg) scale(1.1);
   filter: drop-shadow(0 6px 20px rgba(240, 123, 75, 0.4));
 }
 

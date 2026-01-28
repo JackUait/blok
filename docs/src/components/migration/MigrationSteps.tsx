@@ -77,6 +77,10 @@ export const MigrationSteps: React.FC = () => {
               className="migration-table reference-table"
               data-blok-testid="migration-table"
             >
+              <colgroup>
+                <col style={{ width: '50%' }} />
+                <col style={{ width: '50%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>

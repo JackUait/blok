@@ -132,7 +132,8 @@ describe('MigrationSteps', () => {
     render(<MigrationSteps />);
 
     const cards = screen.getAllByTestId('change-card');
-    const diffMarkers = screen.getAllByText('-');
+    // Use Unicode minus sign (−) which is used in the component
+    const diffMarkers = screen.getAllByText('−');
     const addMarkers = screen.getAllByText('+');
 
     expect(cards).toHaveLength(6);

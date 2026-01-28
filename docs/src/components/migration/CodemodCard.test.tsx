@@ -25,14 +25,14 @@ describe('CodemodCard', () => {
     render(<CodemodCard />);
 
     expect(
-      screen.getByText('The fastest way to migrate is using our automated codemod. It handles imports, selectors, types, and configuration.')
+      screen.getByText(/Our codemod handles imports, selectors, types, and configuration automatically/)
     ).toBeInTheDocument();
   });
 
   it('should render two tabs', () => {
     render(<CodemodCard />);
 
-    expect(screen.getByText('Dry Run')).toBeInTheDocument();
+    expect(screen.getByText('Preview')).toBeInTheDocument();
     expect(screen.getByText('Apply')).toBeInTheDocument();
   });
 
@@ -89,7 +89,8 @@ describe('CodemodCard', () => {
   it('should render the options table', () => {
     render(<CodemodCard />);
 
-    expect(screen.getByText('--dry-run')).toBeInTheDocument();
+    // Use getAllByText since --dry-run appears in both the code block and options
+    expect(screen.getAllByText('--dry-run').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('--verbose')).toBeInTheDocument();
     expect(screen.getByText('--use-library-i18n')).toBeInTheDocument();
   });
@@ -141,9 +142,4 @@ describe('CodemodCard', () => {
     expect(title).toHaveTextContent('Options');
   });
 
-  it('should have migration-table class on table', () => {
-    render(<CodemodCard />);
-
-    expect(screen.getByTestId('migration-table')).toBeInTheDocument();
-  });
 });

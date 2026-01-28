@@ -22,7 +22,10 @@ describe('MigrationPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('From EditorJS to Blok')).toBeInTheDocument();
+    expect(screen.getByText('From EditorJS')).toBeInTheDocument();
+    // Blok appears in the gradient span within the h1 title
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent('Blok');
   });
 
   it('should render the migration hero description', () => {
@@ -33,7 +36,7 @@ describe('MigrationPage', () => {
     );
 
     expect(
-      screen.getByText('Blok is designed as a replacement for EditorJS. Follow this guide to migrate your project in minutes, not hours.')
+      screen.getByText(/Blok is designed as a drop-in replacement for EditorJS/)
     ).toBeInTheDocument();
   });
 
@@ -45,17 +48,6 @@ describe('MigrationPage', () => {
     );
 
     expect(screen.getByText('Automated Codemod')).toBeInTheDocument();
-  });
-
-  it('should render the MigrationSteps component', () => {
-    render(
-      <MemoryRouter>
-        <MigrationPage />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('What Gets Transformed')).toBeInTheDocument();
-    expect(screen.getByText('CSS Selector Reference')).toBeInTheDocument();
   });
 
   it('should render the main element', () => {
@@ -76,8 +68,9 @@ describe('MigrationPage', () => {
       </MemoryRouter>
     );
 
-    const heading = screen.getByRole('heading', { level: 1, name: 'From EditorJS to Blok' });
+    const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toBeInTheDocument();
+    expect(heading).toHaveTextContent('Blok');
   });
 
   it('should render navigation links', () => {

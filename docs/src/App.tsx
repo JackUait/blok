@@ -43,6 +43,14 @@ const ScrollHandler = () => {
 const App = () => {
   const location = useLocation();
 
+  // Disable browser's automatic scroll restoration on page reload
+  // This prevents the browser from scrolling back to the previous position
+  useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   return (
     <>
       <ScrollHandler />

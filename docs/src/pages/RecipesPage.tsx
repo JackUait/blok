@@ -5,7 +5,6 @@ import { CodeBlock } from '../components/common/CodeBlock';
 import { Sidebar } from '../components/common/Sidebar';
 import { RecipeCard } from '../components/recipes/RecipeCard';
 import { KeyboardShortcuts } from '../components/recipes/KeyboardShortcuts';
-import { QuickTips } from '../components/recipes/QuickTips';
 import { SIDEBAR_SECTIONS } from '../components/recipes/recipes-data';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/recipes.css';
@@ -196,7 +195,7 @@ export const RecipesPage: React.FC = () => {
   // Initialize active section from URL hash
   const [activeSection, setActiveSection] = useState<string>(() => {
     const hash = window.location.hash.slice(1);
-    return hash || 'quick-tips';
+    return hash || 'keyboard-shortcuts';
   });
   const scrollTargetRef = useRef<string | null>(null);
 
@@ -306,19 +305,6 @@ export const RecipesPage: React.FC = () => {
               Practical tips, patterns, and code snippets to help you get the most out of Blok.
               From basic setup to advanced customization.
             </p>
-          </section>
-
-          <section id="quick-tips" className="recipes-section">
-            <h2 className="recipes-section-title">
-              <span className="recipes-section-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-              </span>
-              Quick Tips
-            </h2>
-            <QuickTips />
           </section>
 
           <section id="keyboard-shortcuts" className="recipes-section">

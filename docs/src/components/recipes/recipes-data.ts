@@ -16,7 +16,6 @@ export const SIDEBAR_SECTIONS: RecipeSidebarSection[] = [
   {
     title: 'Quick Reference',
     links: [
-      { id: 'quick-tips', label: 'Quick Tips' },
       { id: 'keyboard-shortcuts', label: 'Keyboard Shortcuts' },
     ],
   },

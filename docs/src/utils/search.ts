@@ -173,15 +173,6 @@ const RECIPES: Array<{
   keywords: string[];
 }> = [
   {
-    id: 'recipe-quick-tips',
-    title: 'Quick Tips',
-    description: 'Quick tips for using Blok effectively',
-    keywords: [
-      'nest', 'nested', 'drag', 'drop', 'settings', 'menu',
-      'paste', 'rich', 'content', 'autosave', 'onchange',
-    ],
-  },
-  {
     id: 'recipe-keyboard-shortcuts',
     title: 'Keyboard Shortcuts',
     description: 'All keyboard shortcuts for Blok editor',

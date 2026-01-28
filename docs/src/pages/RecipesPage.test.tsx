@@ -47,17 +47,6 @@ describe('RecipesPage', () => {
     expect(screen.getByText('Cookbook')).toBeInTheDocument();
   });
 
-  it('should render the Quick Tips section', () => {
-    render(
-      <MemoryRouter>
-        <RecipesPage />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Quick Tips')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-tips')).toBeInTheDocument();
-  });
-
   it('should render the Keyboard Shortcuts section', () => {
     render(
       <MemoryRouter>

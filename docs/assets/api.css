@@ -119,9 +119,10 @@
 }
 
 .api-section-title {
+  font-family: var(--font-family-display);
   font-size: var(--font-size-3xl);
-  font-weight: 800;
-  letter-spacing: var(--letter-spacing-tight);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-display);
   margin-bottom: var(--spacing-sm);
   position: relative;
   display: flex;
@@ -225,13 +226,15 @@
 }
 
 .api-block-title {
+  font-family: var(--font-family-display);
   font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: var(--spacing-lg);
   color: var(--color-text-primary);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  letter-spacing: -0.02em;
 }
 
 .api-block-title::after {
@@ -376,13 +379,15 @@
 }
 
 .api-quickstart-content h3 {
+  font-family: var(--font-family-display);
   font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: var(--spacing-xs);
   color: var(--color-text-primary);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  letter-spacing: -0.02em;
 }
 
 /* Numbered circles for steps */

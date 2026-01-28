@@ -117,10 +117,12 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  font-weight: 800;
+  font-family: var(--font-family-display);
+  font-weight: 700;
   font-size: var(--font-size-2xl);
   margin-bottom: var(--spacing-md);
   color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .footer-logo svg {
@@ -214,12 +216,13 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  font-family: var(--font-family-display);
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-lg);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .footer-column-title svg {

@@ -120,9 +120,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font-weight: 800;
-  font-size: 22px;
-  letter-spacing: -0.02em;
+  font-family: var(--font-family-display);
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.03em;
   color: var(--color-text-primary);
   text-decoration: none;
   position: relative;

@@ -212,10 +212,11 @@
 }
 
 .api-card-title {
+  font-family: var(--font-family-display);
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .api-card-content {

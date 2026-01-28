@@ -342,39 +342,78 @@
 }
 
 .hero-eyebrow {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--color-coral);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: var(--spacing-md);
-  padding: 6px 14px;
-  background: rgba(240, 123, 75, 0.12);
+  padding: 8px 18px;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.15) 0%, rgba(212, 164, 184, 0.1) 100%);
+  border: 1px solid rgba(240, 123, 75, 0.2);
   border-radius: var(--radius-full);
+  box-shadow: 0 2px 12px rgba(240, 123, 75, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-shimmer);
+  transform: translateX(-100%);
+  animation: shimmerSlide 3s ease-in-out infinite;
+}
+
+@keyframes shimmerSlide {
+  0%, 100% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
 }
 
 .hero-title {
+  font-family: var(--font-family-display);
   font-size: var(--font-size-5xl);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: var(--letter-spacing-tight);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: var(--letter-spacing-display);
   margin-bottom: var(--spacing-lg);
 }
 
 .hero-title-gradient {
-  background: var(--gradient-coral-pink);
+  background: 
+    linear-gradient(135deg, #F07B4B 0%, #F89042 35%, #D4A4B8 70%, #C593A8 100%);
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradientShift 8s ease-in-out infinite;
+  position: relative;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .hero-description {
   font-size: var(--font-size-xl);
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-xl);
-  max-width: 500px;
+  max-width: 520px;
+  text-wrap: pretty;
 }
 
 @media (max-width: 968px) {

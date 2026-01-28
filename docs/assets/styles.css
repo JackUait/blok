@@ -3,9 +3,6 @@
    Inspired by the Blok mascot's warm, fun aesthetic
    ============================================ */
 
-/* Import Nunito font for playful feel - @import must come first */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
-
 /* Modular CSS imports */
 @import './variables.css';
 @import './reset.css';

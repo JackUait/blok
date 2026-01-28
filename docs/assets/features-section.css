@@ -75,27 +75,30 @@
 .section-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: var(--font-size-sm);
   font-weight: 700;
+  font-family: var(--font-family-display);
   color: var(--color-coral);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: var(--spacing-lg);
-  padding: 8px 18px;
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.08) 100%);
-  border: 1px solid rgba(240, 123, 75, 0.15);
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.14) 0%, rgba(212, 164, 184, 0.08) 100%);
+  border: 1px solid rgba(240, 123, 75, 0.18);
   border-radius: var(--radius-full);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(240, 123, 75, 0.1);
 }
 
 .section-eyebrow::before {
   content: '';
-  width: 6px;
-  height: 6px;
-  background: var(--color-coral);
+  width: 8px;
+  height: 8px;
+  background: var(--gradient-coral-pink);
   border-radius: 50%;
   animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(240, 123, 75, 0.5);
 }
 
 @keyframes pulse {
@@ -104,12 +107,13 @@
 }
 
 .section-title {
+  font-family: var(--font-family-display);
   font-size: clamp(2rem, 5vw, var(--font-size-4xl));
-  font-weight: 800;
-  letter-spacing: var(--letter-spacing-tight);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-display);
   margin-bottom: var(--spacing-md);
-  line-height: 1.15;
-  background: linear-gradient(135deg, var(--color-text-primary) 0%, color-mix(in srgb, var(--color-text-primary) 75%, var(--color-coral)) 100%);
+  line-height: 1.1;
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, color-mix(in srgb, var(--color-text-primary) 70%, var(--color-coral)) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -474,13 +478,18 @@
 }
 
 .feature-title {
+  font-family: var(--font-family-display);
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: var(--spacing-sm);
   color: var(--color-text-primary);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   line-height: 1.25;
-  transition: color 0.3s ease;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.feature-card:hover .feature-title {
+  transform: translateX(2px);
 }
 
 .feature-card:hover .feature-title {

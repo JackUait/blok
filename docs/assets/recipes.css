@@ -551,6 +551,11 @@
 .recipes-section:nth-of-type(5) .recipe-card { animation-delay: 0.25s; }
 .recipes-section:nth-of-type(6) .recipe-card { animation-delay: 0.3s; }
 .recipes-section:nth-of-type(7) .recipe-card { animation-delay: 0.35s; }
+.recipes-section:nth-of-type(8) .recipe-card { animation-delay: 0.4s; }
+.recipes-section:nth-of-type(9) .recipe-card { animation-delay: 0.45s; }
+.recipes-section:nth-of-type(10) .recipe-card { animation-delay: 0.5s; }
+.recipes-section:nth-of-type(11) .recipe-card { animation-delay: 0.55s; }
+.recipes-section:nth-of-type(12) .recipe-card { animation-delay: 0.6s; }
 
 /* Dark mode adjustments for recipe cards */
 :root:not([data-theme="light"]) .recipe-card {

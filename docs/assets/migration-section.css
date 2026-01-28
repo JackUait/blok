@@ -231,12 +231,13 @@
   background: linear-gradient(135deg, rgba(52, 199, 89, 0.2) 0%, rgba(52, 199, 89, 0.1) 100%);
   border: 1px solid rgba(52, 199, 89, 0.4);
   border-radius: var(--radius-full);
+  font-family: var(--font-family-display);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: 600;
   color: #4ade80;
   margin-bottom: var(--spacing-lg);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   box-shadow: 
     0 0 20px rgba(52, 199, 89, 0.2),
     0 0 0 1px rgba(52, 199, 89, 0.1) inset;
@@ -260,9 +261,10 @@
 }
 
 .migration-title {
+  font-family: var(--font-family-display);
   font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 800;
-  letter-spacing: var(--letter-spacing-tight);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-display);
   margin-bottom: var(--spacing-lg);
   color: #f5f5f7;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
@@ -303,12 +305,15 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-xl);
+  font-family: var(--font-family-display);
   font-size: var(--font-size-base);
   font-weight: 600;
   border-radius: var(--radius-lg);
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: all var(--transition-spring);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
 .migration-btn--primary {

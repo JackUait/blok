@@ -4,37 +4,70 @@
   gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-xl);
   font-size: var(--font-size-base);
-  font-weight: 600;
+  font-weight: 700;
+  font-family: var(--font-family-display);
   text-decoration: none;
   border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
+  transition: all var(--transition-spring);
   cursor: pointer;
   border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-shimmer);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::before {
+  transform: translateX(100%);
 }
 
 .btn-primary {
   background: var(--gradient-coral-pink);
   color: white;
-  box-shadow: var(--shadow-md), 0 4px 20px rgba(240, 123, 75, 0.3);
+  box-shadow: 
+    0 2px 8px rgba(240, 123, 75, 0.25),
+    0 8px 24px rgba(240, 123, 75, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn-primary:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: var(--shadow-lg), 0 8px 30px rgba(240, 123, 75, 0.4);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 
+    0 4px 12px rgba(240, 123, 75, 0.3),
+    0 16px 40px rgba(240, 123, 75, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btn-primary:active {
+  transform: translateY(-1px) scale(0.99);
+  box-shadow: 
+    0 2px 6px rgba(240, 123, 75, 0.2),
+    0 4px 16px rgba(240, 123, 75, 0.15);
 }
 
 .btn-secondary {
   background: var(--color-surface);
   color: var(--color-text-primary);
   border: 2px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .btn-secondary:hover {
   border-color: var(--color-coral);
   color: var(--color-coral);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md), 0 8px 24px rgba(240, 123, 75, 0.12);
+}
+
+.btn-secondary:active {
+  transform: translateY(-1px);
 }
 
 /* Hero Demo */

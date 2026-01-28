@@ -8,6 +8,7 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -17,6 +18,50 @@ body {
   color: var(--color-text-primary);
   background-color: var(--color-background);
   overflow-x: hidden;
+  position: relative;
+}
+
+/* Subtle grain texture overlay for atmosphere */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--noise-texture);
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body::before {
+    opacity: 0.04;
+    mix-blend-mode: soft-light;
+  }
+}
+
+:root[data-theme="dark"] body::before {
+  opacity: 0.04;
+  mix-blend-mode: soft-light;
+}
+
+/* Display typography - Use Quicksand for headings */
+h1, h2, h3 {
+  font-family: var(--font-family-display);
+  letter-spacing: var(--letter-spacing-display);
+}
+
+/* Enhanced focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-coral);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(240, 123, 75, 0.25);
+  color: var(--color-text-primary);
 }
 
 /* Custom Scrollbar - Warm, playful style */

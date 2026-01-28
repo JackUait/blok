@@ -1,0 +1,289 @@
+/* Release Highlight - Warm gradient */
+.changelog-release-highlight {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.08) 0%, rgba(212, 164, 184, 0.04) 100%);
+  border-bottom: 1px solid var(--color-divider);
+  position: relative;
+}
+
+.changelog-release-highlight p {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.changelog-release-highlight svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-coral);
+  flex-shrink: 0;
+  stroke-width: 2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-release-highlight {
+    background: linear-gradient(135deg, rgba(245, 147, 103, 0.12) 0%, rgba(212, 164, 184, 0.06) 100%);
+  }
+}
+
+:root[data-theme="dark"] .changelog-release-highlight {
+  background: linear-gradient(135deg, rgba(245, 147, 103, 0.12) 0%, rgba(212, 164, 184, 0.06) 100%);
+}
+
+/* Changes List */
+.changelog-changes {
+  padding: var(--spacing-md) var(--spacing-xl);
+}
+
+.changelog-change {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xs) 0;
+  transition: all var(--transition-fast);
+}
+
+.changelog-change:not(:last-child) {
+  margin-bottom: 2px;
+}
+
+/* Change Category Badge - Refined styling */
+.changelog-change-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  font-family: var(--font-family);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.changelog-change:hover .changelog-change-badge {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.changelog-change-badge.added {
+  background: linear-gradient(135deg, rgba(123, 196, 127, 0.18) 0%, rgba(123, 196, 127, 0.08) 100%);
+  color: var(--color-green);
+  border: 1px solid rgba(123, 196, 127, 0.2);
+}
+
+.changelog-change-badge.changed {
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.18) 0%, rgba(240, 123, 75, 0.08) 100%);
+  color: var(--color-coral);
+  border: 1px solid rgba(240, 123, 75, 0.2);
+}
+
+.changelog-change-badge.fixed {
+  background: linear-gradient(135deg, rgba(212, 164, 184, 0.22) 0%, rgba(197, 147, 168, 0.12) 100%);
+  color: var(--color-mauve);
+  border: 1px solid rgba(212, 164, 184, 0.25);
+}
+
+.changelog-change-badge.deprecated {
+  background: linear-gradient(135deg, rgba(248, 144, 66, 0.18) 0%, rgba(248, 144, 66, 0.08) 100%);
+  color: var(--color-orange);
+  border: 1px solid rgba(248, 144, 66, 0.2);
+}
+
+.changelog-change-badge.removed {
+  background: linear-gradient(135deg, rgba(255, 100, 90, 0.18) 0%, rgba(255, 100, 90, 0.08) 100%);
+  color: #E85A50;
+  border: 1px solid rgba(255, 100, 90, 0.2);
+}
+
+.changelog-change-badge.security {
+  background: linear-gradient(135deg, rgba(197, 147, 168, 0.22) 0%, rgba(175, 120, 145, 0.12) 100%);
+  color: var(--color-pink);
+  border: 1px solid rgba(197, 147, 168, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-change-badge.added {
+    background: linear-gradient(135deg, rgba(123, 196, 127, 0.25) 0%, rgba(123, 196, 127, 0.12) 100%);
+  }
+
+  :root:not([data-theme="light"]) .changelog-change-badge.changed {
+    background: linear-gradient(135deg, rgba(245, 147, 103, 0.25) 0%, rgba(245, 147, 103, 0.12) 100%);
+  }
+
+  :root:not([data-theme="light"]) .changelog-change-badge.fixed {
+    background: linear-gradient(135deg, rgba(212, 164, 184, 0.28) 0%, rgba(197, 147, 168, 0.15) 100%);
+  }
+
+  :root:not([data-theme="light"]) .changelog-change-badge.deprecated {
+    background: linear-gradient(135deg, rgba(248, 144, 66, 0.25) 0%, rgba(248, 144, 66, 0.12) 100%);
+  }
+
+  :root:not([data-theme="light"]) .changelog-change-badge.removed {
+    background: linear-gradient(135deg, rgba(255, 100, 90, 0.25) 0%, rgba(255, 100, 90, 0.12) 100%);
+  }
+
+  :root:not([data-theme="light"]) .changelog-change-badge.security {
+    background: linear-gradient(135deg, rgba(197, 147, 168, 0.28) 0%, rgba(175, 120, 145, 0.15) 100%);
+  }
+}
+
+:root[data-theme="dark"] .changelog-change-badge.added {
+  background: linear-gradient(135deg, rgba(123, 196, 127, 0.25) 0%, rgba(123, 196, 127, 0.12) 100%);
+}
+
+:root[data-theme="dark"] .changelog-change-badge.changed {
+  background: linear-gradient(135deg, rgba(245, 147, 103, 0.25) 0%, rgba(245, 147, 103, 0.12) 100%);
+}
+
+:root[data-theme="dark"] .changelog-change-badge.fixed {
+  background: linear-gradient(135deg, rgba(212, 164, 184, 0.28) 0%, rgba(197, 147, 168, 0.15) 100%);
+}
+
+:root[data-theme="dark"] .changelog-change-badge.deprecated {
+  background: linear-gradient(135deg, rgba(248, 144, 66, 0.25) 0%, rgba(248, 144, 66, 0.12) 100%);
+}
+
+:root[data-theme="dark"] .changelog-change-badge.removed {
+  background: linear-gradient(135deg, rgba(255, 100, 90, 0.25) 0%, rgba(255, 100, 90, 0.12) 100%);
+}
+
+:root[data-theme="dark"] .changelog-change-badge.security {
+  background: linear-gradient(135deg, rgba(197, 147, 168, 0.28) 0%, rgba(175, 120, 145, 0.15) 100%);
+}
+
+.changelog-change-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Change Description */
+.changelog-change-description {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.7;
+  padding-top: 2px;
+  flex: 1;
+}
+
+/* Text Formatting - Title/Description Structure */
+.changelog-title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.changelog-separator {
+  color: var(--color-text-tertiary);
+  margin: 0 2px;
+  font-weight: 400;
+}
+
+.changelog-detail {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+/* Inline Bold Text */
+.changelog-bold {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* Inline Code */
+.changelog-code {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: 0.9em;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.1) 0%, rgba(212, 164, 184, 0.06) 100%);
+  color: var(--color-coral);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(240, 123, 75, 0.12);
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-code {
+    background: linear-gradient(135deg, rgba(245, 147, 103, 0.15) 0%, rgba(212, 164, 184, 0.08) 100%);
+    border-color: rgba(245, 147, 103, 0.18);
+  }
+}
+
+:root[data-theme="dark"] .changelog-code {
+  background: linear-gradient(135deg, rgba(245, 147, 103, 0.15) 0%, rgba(212, 164, 184, 0.08) 100%);
+  border-color: rgba(245, 147, 103, 0.18);
+}
+
+.changelog-change-link {
+  color: var(--color-coral);
+  text-decoration: none;
+  margin-left: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.changelog-change-link:hover {
+  color: var(--color-mauve);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-change-link:hover {
+    color: var(--color-pink);
+  }
+}
+
+:root[data-theme="dark"] .changelog-change-link:hover {
+  color: var(--color-pink);
+}
+
+.changelog-change-link svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Staggered Animation Delays */
+.changelog-release:nth-child(1) { animation-delay: 0s; }
+.changelog-release:nth-child(2) { animation-delay: 0.06s; }
+.changelog-release:nth-child(3) { animation-delay: 0.12s; }
+.changelog-release:nth-child(4) { animation-delay: 0.18s; }
+.changelog-release:nth-child(5) { animation-delay: 0.24s; }
+.changelog-release:nth-child(6) { animation-delay: 0.3s; }
+.changelog-release:nth-child(7) { animation-delay: 0.36s; }
+.changelog-release:nth-child(8) { animation-delay: 0.42s; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .changelog-change {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .changelog-change-badge {
+    align-self: flex-start;
+  }
+
+  .changelog-release-highlight {
+    padding: var(--spacing-md);
+  }
+
+  .changelog-changes {
+    padding: var(--spacing-md);
+  }
+}

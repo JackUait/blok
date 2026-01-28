@@ -1,0 +1,310 @@
+/* Hero Section */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding-top: 60px;
+  padding-bottom: 120px;
+  overflow: visible;
+  background: var(--gradient-hero);
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding-top: 60px;
+  }
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Playful blob decorations */
+.hero-blur {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  animation: blobFloat 8s ease-in-out infinite;
+}
+
+.hero-blur-1 {
+  width: 700px;
+  height: 700px;
+  top: -250px;
+  right: -150px;
+  background: var(--color-coral);
+  opacity: 0.18;
+  animation-delay: 0s;
+}
+
+.hero-blur-2 {
+  width: 600px;
+  height: 600px;
+  bottom: -200px;
+  left: -150px;
+  background: var(--color-pink);
+  opacity: 0.20;
+  animation-delay: -2s;
+}
+
+.hero-blur-3 {
+  width: 500px;
+  height: 500px;
+  top: 40%;
+  left: 40%;
+  transform: translate(-50%, -50%);
+  background: var(--color-orange);
+  opacity: 0.10;
+  animation-delay: -4s;
+}
+
+@keyframes blobFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(20px, -30px) scale(1.05);
+  }
+  66% {
+    transform: translate(-15px, 20px) scale(0.95);
+  }
+}
+
+/* Hero Mascot */
+.hero-mascot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  animation: mascotAppear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s backwards;
+}
+
+@keyframes mascotAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(40px) rotate(-8deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-10px) rotate(2deg);
+  }
+  80% {
+    transform: scale(0.95) translateY(5px) rotate(-1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
+
+/* 3D Mascot container */
+.hero-mascot-3d {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  position: relative;
+}
+
+/* Animated glow effect behind mascot */
+.hero-mascot-3d::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(240, 123, 75, 0.4) 0%,
+    rgba(248, 144, 66, 0.25) 30%,
+    rgba(212, 164, 184, 0.15) 50%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0;
+  animation: 
+    mascotGlowFadeIn 0.6s ease-out 0.8s forwards,
+    mascotGlow 3s ease-in-out 1.4s infinite;
+  pointer-events: none;
+  z-index: -1;
+  will-change: opacity, transform;
+}
+
+@keyframes mascotGlowFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes mascotGlow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+.hero-mascot-3d.hero-mascot-hovered::before {
+  animation: mascotGlowHover 1.5s ease-in-out infinite;
+}
+
+@keyframes mascotGlowHover {
+  0%, 100% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+}
+
+.hero-mascot-image {
+  max-width: 100%;
+  width: 420px;
+  height: auto;
+  filter: drop-shadow(0 20px 60px rgba(240, 123, 75, 0.3));
+  animation: mascotFloat 4s ease-in-out infinite 1.1s;
+  transition: filter var(--transition-slow);
+  transform-style: preserve-3d;
+  position: relative;
+  z-index: 1;
+}
+
+/* Pause float animation when hovering for clean 3D effect */
+.hero-mascot-hovered .hero-mascot-image {
+  animation-play-state: paused;
+  filter: drop-shadow(0 30px 80px rgba(240, 123, 75, 0.4));
+}
+
+/* Dynamic shadow that moves with 3D tilt */
+.hero-mascot-shadow {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(-50px);
+  width: 200px;
+  height: 40px;
+  background: radial-gradient(ellipse, rgba(240, 123, 75, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+  pointer-events: none;
+}
+
+.hero-mascot-hovered .hero-mascot-shadow {
+  opacity: 1;
+}
+
+@keyframes mascotFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@media (max-width: 968px) {
+  .hero-mascot-image {
+    width: 280px;
+  }
+}
+
+.hero-container {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4xl);
+  align-items: center;
+}
+
+@media (max-width: 968px) {
+  .hero-container {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .hero-content {
+    order: 2;
+  }
+  .hero-demo {
+    order: 1;
+  }
+}
+
+.hero-content {
+  animation: fadeInUp 0.8s var(--transition-slow) backwards;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-coral);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-md);
+  padding: 6px 14px;
+  background: rgba(240, 123, 75, 0.12);
+  border-radius: var(--radius-full);
+}
+
+.hero-title {
+  font-size: var(--font-size-5xl);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: var(--letter-spacing-tight);
+  margin-bottom: var(--spacing-lg);
+}
+
+.hero-title-gradient {
+  background: var(--gradient-coral-pink);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-description {
+  font-size: var(--font-size-xl);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xl);
+  max-width: 500px;
+}
+
+@media (max-width: 968px) {
+  .hero-description {
+    max-width: 100%;
+  }
+}
+
+.hero-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 968px) {
+  .hero-actions {
+    justify-content: center;
+  }
+}
+
+/* Buttons - Playful, rounded */

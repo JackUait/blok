@@ -1,0 +1,89 @@
+/* Release Card - Glass morphism style */
+.changelog-release-card {
+  background: linear-gradient(135deg, var(--color-surface) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: all var(--transition-base);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Top accent gradient line */
+.changelog-release-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-coral-pink);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+/* Subtle glow effect */
+.changelog-release-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(180deg, rgba(240, 123, 75, 0.03) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  pointer-events: none;
+}
+
+.changelog-release-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+  border-color: rgba(240, 123, 75, 0.15);
+}
+
+.changelog-release-card:hover::before {
+  opacity: 1;
+}
+
+.changelog-release-card:hover::after {
+  opacity: 1;
+}
+
+.changelog-release.highlight .changelog-release-card {
+  border-color: rgba(240, 123, 75, 0.25);
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(240, 123, 75, 0.08);
+}
+
+.changelog-release.highlight .changelog-release-card::before {
+  opacity: 1;
+}
+
+.changelog-release.highlight .changelog-release-card::after {
+  opacity: 1;
+}
+
+.changelog-release.highlight .changelog-release-card:hover {
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(240, 123, 75, 0.12);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-release-card {
+    background: linear-gradient(135deg, var(--color-surface) 0%, rgba(37, 34, 32, 0.98) 100%);
+  }
+  
+  :root:not([data-theme="light"]) .changelog-release-card::after {
+    background: linear-gradient(180deg, rgba(245, 147, 103, 0.04) 0%, transparent 100%);
+  }
+}
+
+:root[data-theme="dark"] .changelog-release-card {
+  background: linear-gradient(135deg, var(--color-surface) 0%, rgba(37, 34, 32, 0.98) 100%);
+}
+
+:root[data-theme="dark"] .changelog-release-card::after {
+  background: linear-gradient(180deg, rgba(245, 147, 103, 0.04) 0%, transparent 100%);
+}
+
+

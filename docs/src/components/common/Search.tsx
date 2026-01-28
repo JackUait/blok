@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { search, getSearchIndex } from '@/utils/search';
 import type { SearchResult } from '@/types/search';
 import { ModuleIcon } from './ModuleIcon';
-import styles from './Search.module.css';
+import buttonStyles from './SearchButton.module.css';
+import dialogStyles from './SearchDialog.module.css';
+import resultsStyles from './SearchResults.module.css';
+
+// Combined styles object consolidating the split CSS modules
+const styles = { ...buttonStyles, ...dialogStyles, ...resultsStyles };
 
 interface SearchProps {
   open: boolean;

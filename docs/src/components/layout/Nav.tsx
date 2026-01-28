@@ -4,7 +4,7 @@ import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
 import type { NavLink } from "@/types/navigation";
-import searchStyles from "../common/Search.module.css";
+import searchButtonStyles from "../common/SearchButton.module.css";
 
 interface NavProps {
   links: NavLink[];
@@ -88,7 +88,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
           </Link>
           <div className={`nav-links ${menuOpen ? "open" : ""}`}>
             <button
-              className={searchStyles["nav-search-button"]}
+              className={searchButtonStyles["nav-search-button"]}
               onClick={() => setSearchOpen(true)}
               type="button"
             >
@@ -102,7 +102,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                 />
               </svg>
               <span>Search</span>
-              <kbd className={searchStyles["nav-search-shortcut"]}>⌘K</kbd>
+              <kbd className={searchButtonStyles["nav-search-shortcut"]}>⌘K</kbd>
             </button>
             {linksWithActive.map((link) => {
               if (link.external) {

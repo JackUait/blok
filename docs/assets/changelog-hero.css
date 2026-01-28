@@ -1,0 +1,139 @@
+/* ============================================
+   Changelog Styles - Modern, Playful Documentation
+   Matching Blok mascot's warm, friendly aesthetic
+   ============================================ */
+
+/* Changelog Main */
+.changelog-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 120px var(--spacing-xl) var(--spacing-4xl);
+  position: relative;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .changelog-main {
+    padding: 100px var(--spacing-lg) var(--spacing-3xl);
+  }
+}
+
+@media (max-width: 640px) {
+  .changelog-main {
+    padding: 100px var(--spacing-md) var(--spacing-3xl);
+  }
+}
+
+/* Floating gradient orbs - warm coral/pink themed */
+.changelog-gradient-1 {
+  position: fixed;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-coral) 0%, transparent 65%);
+  filter: blur(140px);
+  opacity: 0.12;
+  top: -150px;
+  right: -200px;
+  pointer-events: none;
+  z-index: -1;
+  animation: floatGlow1 25s ease-in-out infinite;
+}
+
+@keyframes floatGlow1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, 30px) scale(1.1); }
+  66% { transform: translate(-20px, 50px) scale(1.05); }
+}
+
+.changelog-gradient-2 {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-pink) 0%, transparent 65%);
+  filter: blur(120px);
+  opacity: 0.10;
+  bottom: -100px;
+  left: -200px;
+  pointer-events: none;
+  z-index: -1;
+  animation: floatGlow2 30s ease-in-out infinite;
+}
+
+@keyframes floatGlow2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, -30px) scale(1.15); }
+}
+
+
+/* Changelog Hero */
+.changelog-hero {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  margin-bottom: var(--spacing-4xl);
+  padding: var(--spacing-xl) 0;
+}
+
+.changelog-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 8px 18px;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.15) 0%, rgba(212, 164, 184, 0.10) 100%);
+  color: var(--color-coral);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--radius-full);
+  margin-bottom: var(--spacing-lg);
+  animation: fadeInUp 0.6s var(--transition-slow) backwards;
+  border: 1px solid rgba(240, 123, 75, 0.15);
+  box-shadow: 0 2px 8px rgba(240, 123, 75, 0.1);
+}
+
+.changelog-hero-badge svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+
+.changelog-hero-title {
+  font-family: var(--font-family);
+  font-size: var(--font-size-6xl);
+  font-weight: 800;
+  letter-spacing: var(--letter-spacing-tighter);
+  margin-bottom: var(--spacing-lg);
+  animation: fadeInUp 0.6s var(--transition-slow) 0.1s backwards;
+  color: var(--color-text-primary);
+  background: var(--gradient-coral-pink);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+@media (max-width: 768px) {
+  .changelog-hero-title {
+    font-size: var(--font-size-4xl);
+  }
+}
+
+@media (max-width: 640px) {
+  .changelog-hero-title {
+    font-size: var(--font-size-3xl);
+  }
+}
+
+.changelog-hero-description {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-secondary);
+  max-width: 520px;
+  margin: 0 auto;
+  animation: fadeInUp 0.6s var(--transition-slow) 0.2s backwards;
+  line-height: 1.7;
+}
+

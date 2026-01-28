@@ -1,0 +1,136 @@
+/* ============================================
+   Search Component - Refined Modern Design
+   ============================================ */
+
+/* Search button in nav - Premium Glass Style */
+.nav-search-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(254, 243, 232, 0.85) 100%
+  );
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(240, 123, 75, 0.15);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 1px 3px rgba(240, 123, 75, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .nav-search-button {
+    background: linear-gradient(
+      135deg,
+      rgba(48, 45, 42, 0.9) 0%,
+      rgba(37, 34, 32, 0.85) 100%
+    );
+    border-color: rgba(245, 147, 103, 0.2);
+    box-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+}
+
+:global(:root[data-theme="dark"]) .nav-search-button {
+  background: linear-gradient(
+    135deg,
+    rgba(48, 45, 42, 0.9) 0%,
+    rgba(37, 34, 32, 0.85) 100%
+  );
+  border-color: rgba(245, 147, 103, 0.2);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Shimmer effect on hover */
+.nav-search-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+}
+
+.nav-search-button:hover::before {
+  left: 150%;
+}
+
+.nav-search-button:hover {
+  border-color: rgba(240, 123, 75, 0.35);
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 16px rgba(240, 123, 75, 0.12),
+    0 2px 4px rgba(240, 123, 75, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.nav-search-button svg {
+  color: var(--color-coral);
+  opacity: 0.7;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  z-index: 1;
+}
+
+.nav-search-button span {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-search-button:hover svg {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.nav-search-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  background: rgba(240, 123, 75, 0.12);
+  border: none;
+  border-radius: 5px;
+  color: var(--color-coral);
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .nav-search-shortcut {
+    background: rgba(245, 147, 103, 0.15);
+  }
+}
+
+:global(:root[data-theme="dark"]) .nav-search-shortcut {
+  background: rgba(245, 147, 103, 0.15);
+}
+
+.nav-search-button:hover .nav-search-shortcut {
+  background: rgba(240, 123, 75, 0.2);
+}
+

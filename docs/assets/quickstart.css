@@ -1,0 +1,344 @@
+/* Quick Start Section - Enhanced Design */
+.quick-start {
+  position: relative;
+  padding: var(--spacing-4xl) 0 calc(var(--spacing-4xl) + 40px);
+  overflow: hidden;
+  background: var(--color-background);
+}
+
+.quick-start-header {
+  margin-bottom: var(--spacing-3xl);
+}
+
+.quick-start-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Primary blur - coral gradient */
+.quick-start-blur--primary {
+  position: absolute;
+  width: 800px;
+  height: 800px;
+  top: 20%;
+  left: -15%;
+  border-radius: 50%;
+  filter: blur(120px);
+  background: var(--color-coral);
+  opacity: 0.08;
+  animation: quickStartFloat 12s ease-in-out infinite;
+}
+
+/* Secondary blur - pink gradient */
+.quick-start-blur--secondary {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  bottom: 10%;
+  right: -10%;
+  border-radius: 50%;
+  filter: blur(100px);
+  background: var(--color-pink);
+  opacity: 0.10;
+  animation: quickStartFloat 10s ease-in-out infinite reverse;
+}
+
+@keyframes quickStartFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+}
+
+/* Subtle grid pattern overlay */
+.quick-start-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, var(--color-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 70%);
+  opacity: 0.6;
+}
+
+/* Floating decorative shapes */
+.quick-start-shape {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.quick-start-shape--1 {
+  width: 20px;
+  height: 20px;
+  top: 15%;
+  right: 20%;
+  background: var(--color-coral);
+  opacity: 0.3;
+  animation: shapeFloat1 6s ease-in-out infinite;
+}
+
+.quick-start-shape--2 {
+  width: 12px;
+  height: 12px;
+  top: 60%;
+  left: 8%;
+  background: var(--color-pink);
+  opacity: 0.4;
+  animation: shapeFloat2 8s ease-in-out infinite;
+}
+
+.quick-start-shape--3 {
+  width: 16px;
+  height: 16px;
+  bottom: 25%;
+  right: 12%;
+  background: var(--color-orange);
+  opacity: 0.25;
+  animation: shapeFloat3 7s ease-in-out infinite;
+}
+
+@keyframes shapeFloat1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-15px, 20px) rotate(180deg); }
+}
+
+@keyframes shapeFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -15px) scale(1.2); }
+}
+
+@keyframes shapeFloat3 {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(10px, -25px); }
+  66% { transform: translate(-10px, 15px); }
+}
+
+/* Install Steps Container with Timeline */
+.install-steps {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xl);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Timeline connector between steps */
+.install-steps-timeline {
+  position: absolute;
+  left: 28px;
+  top: 52px;
+  bottom: 52px;
+  width: 4px;
+  z-index: 0;
+}
+
+.timeline-line {
+  position: absolute;
+  inset: 0;
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+.timeline-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: var(--gradient-coral-pink);
+  border-radius: 2px;
+  transition: height 0.6s ease;
+}
+
+@media (max-width: 768px) {
+  .install-steps-timeline {
+    left: 22px;
+  }
+}
+
+/* Individual Step */
+.install-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: var(--spacing-lg);
+  align-items: start;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: stepFadeIn 0.6s ease forwards;
+  animation-delay: var(--step-delay, 0s);
+}
+
+@keyframes stepFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Step indicator - number + icon */
+.step-indicator {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.step-number {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-coral-pink);
+  color: white;
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  box-shadow: 
+    var(--shadow-md), 
+    0 4px 20px rgba(240, 123, 75, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all var(--transition-fast);
+  position: relative;
+  z-index: 2;
+}
+
+/* Pulse ring animation on step number */
+.step-number::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: var(--gradient-coral-pink);
+  opacity: 0;
+  z-index: -1;
+  animation: stepPulse 2s ease-in-out infinite;
+  animation-delay: calc(var(--step-delay, 0s) + 0.5s);
+}
+
+@keyframes stepPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.15;
+  }
+}
+
+.install-step:hover .step-number {
+  transform: scale(1.08);
+  box-shadow: 
+    var(--shadow-lg), 
+    0 8px 30px rgba(240, 123, 75, 0.4);
+}
+
+/* Step Card */
+.step-card {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.step-card:hover {
+  border-color: rgba(240, 123, 75, 0.3);
+}
+
+/* Glow effect inside card */
+.step-card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(240, 123, 75, 0.06) 0%, transparent 100%);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.step-card-content {
+  position: relative;
+  padding: var(--spacing-xl);
+}
+
+.step-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-primary);
+}
+
+.step-description {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .install-step {
+    grid-template-columns: 48px 1fr;
+    gap: var(--spacing-md);
+  }
+  
+  .step-number {
+    width: 48px;
+    height: 48px;
+    font-size: var(--font-size-lg);
+  }
+  
+  .step-card-content {
+    padding: var(--spacing-lg);
+  }
+
+  .quick-start-shape--1,
+  .quick-start-shape--2,
+  .quick-start-shape--3 {
+    display: none;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .step-card {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  
+  :root:not([data-theme="light"]) .step-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  :root:not([data-theme="light"]) .quick-start-blur--primary,
+  :root:not([data-theme="light"]) .quick-start-blur--secondary {
+    opacity: 0.12;
+  }
+}
+
+:root[data-theme="dark"] .step-card {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme="dark"] .step-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .quick-start-blur--primary,
+:root[data-theme="dark"] .quick-start-blur--secondary {
+  opacity: 0.12;
+}
+
+/* Code Blocks */

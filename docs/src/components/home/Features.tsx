@@ -69,8 +69,7 @@ const FEATURES: FeatureDetail[] = [
     description: (
       <>
         Press <kbd>/</kbd> or click <kbd>+</kbd> to open the block menu. Insert
-        paragraphs, headers, lists, and custom blocks instantly. Fuzzy search
-        filters as you type for lightning-fast block insertion.
+        paragraphs, headers, lists, and custom blocks instantly.
       </>
     ),
     accent: "orange",

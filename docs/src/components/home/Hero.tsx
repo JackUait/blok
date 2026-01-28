@@ -78,7 +78,7 @@ export const Hero: React.FC = () => {
       </div>
       <WaveDivider
         variant="soft"
-        fillColor="var(--color-surface)"
+        fillColor="var(--color-wave-fill)"
         height={120}
         position="bottom"
       />

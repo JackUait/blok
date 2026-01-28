@@ -96,29 +96,36 @@ function stripCodeComments(code) {
 const enumValueCache = new Map();
 
 /**
+ * Cache for function return values that contain class names
+ * Maps function name -> array of class names it can return
+ */
+const functionReturnCache = new Map();
+
+/**
  * Extract string values from TypeScript type definitions and object literals
  */
 function extractEnumValues(code) {
   const strippedCode = stripCodeComments(code);
 
-  // Pattern 1: type aliases with string unions: type Accent = 'coral' | 'green' | 'pink'
-  const typeAliasRegex = /type\s+(\w+)\s*=\s*(['"])(\w+)\2(?:\s*\|\s*\2(\w+)\2)*/g;
+  // Pattern 1: type aliases with string unions (multi-line): type Accent = 'coral' | 'green' | 'pink'
+  // This regex handles multi-line type definitions
+  const multiLineTypeRegex = /type\s+(\w+)\s*=\s*([^;]+);/gs;
   let match;
-  while ((match = typeAliasRegex.exec(strippedCode)) !== null) {
+  while ((match = multiLineTypeRegex.exec(strippedCode)) !== null) {
     const typeName = match[1];
+    const typeBody = match[2];
     const values = new Set();
-    const typeDefRegex = new RegExp(`type\\s+${typeName}\\s*=\\s*([^;]+);`);
-    const typeDefMatch = strippedCode.match(typeDefRegex);
-    if (typeDefMatch) {
-      const valuesStr = typeDefMatch[1];
-      const valueRegex = /['"](\w+)['"]/g;
-      let valueMatch;
-      while ((valueMatch = valueRegex.exec(valuesStr)) !== null) {
-        values.add(valueMatch[1]);
-      }
+
+    // Extract all string literals from the type definition
+    const valueRegex = /['"](\w+)['"]/g;
+    let valueMatch;
+    while ((valueMatch = valueRegex.exec(typeBody)) !== null) {
+      values.add(valueMatch[1]);
     }
+
     if (values.size > 0) {
       enumValueCache.set(typeName, values);
+      // Also store with lowercase first letter
       const lowerFirst = typeName.charAt(0).toLowerCase() + typeName.slice(1);
       if (lowerFirst !== typeName) {
         enumValueCache.set(lowerFirst, values);
@@ -126,132 +133,193 @@ function extractEnumValues(code) {
     }
   }
 
-  // Pattern 2: Generic type unions
-  const unionTypeRegex = /type\s+(\w+)\s*=\s*(?:[^=;]*?\|\s*)?['"](\w+)['"](?:\s*\|\s*['"](\w+)['"])?/g;
-  while ((match = unionTypeRegex.exec(strippedCode)) !== null) {
-    const typeName = match[1];
-    const values = new Set();
-    const fullTypeDefRegex = new RegExp(`type\\s+${typeName}\\s*=\\s*([^;]+);`);
-    const fullMatch = strippedCode.match(fullTypeDefRegex);
-    if (fullMatch) {
-      const allValues = fullMatch[1].match(/['"](\w+)['"]/g);
-      if (allValues) {
-        allValues.forEach(v => {
-          const val = v.replace(/['"]/g, '');
-          values.add(val);
-        });
+  // Pattern 2: Interface property types - extract union types from interface properties
+  // interface FeatureDetail { accent: 'coral' | 'orange' | 'pink' | ... }
+  const interfaceRegex = /interface\s+(\w+)\s*\{([^}]+)\}/gs;
+  while ((match = interfaceRegex.exec(strippedCode)) !== null) {
+    const interfaceName = match[1];
+    const interfaceBody = match[2];
+
+    // Find property with union type: propName: 'a' | 'b' | 'c'
+    const propertyUnionRegex = /(\w+)\s*:\s*(?:['"](\w+)['"](?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?(?:\s*\|\s*['"](\w+)['"])?)/g;
+    let propMatch;
+    while ((propMatch = propertyUnionRegex.exec(interfaceBody)) !== null) {
+      const propName = propMatch[1];
+      const propType = propMatch[2];
+      const values = new Set();
+
+      // Extract all string literals from the property type
+      const propValueRegex = /['"](\w+)['"]/g;
+      let propValueMatch;
+      while ((propValueMatch = propValueRegex.exec(propType)) !== null) {
+        values.add(propValueMatch[1]);
       }
-    }
-    if (values.size > 0) {
-      enumValueCache.set(typeName, values);
-    }
-  }
 
-  // Pattern 3: Object/Record properties with string literals: { accent: 'coral' }
-  const objPropertyRegex = /(\w+)\s*:\s*['"](\w+)['"]/g;
-  const propertyMap = new Map();
-  while ((match = objPropertyRegex.exec(strippedCode)) !== null) {
-    const propName = match[1];
-    const value = match[2];
-    if (!propertyMap.has(propName)) {
-      propertyMap.set(propName, new Set());
-    }
-    propertyMap.get(propName).add(value);
-  }
-
-  for (const [propName, values] of propertyMap.entries()) {
-    if (values.size >= 2) {
-      enumValueCache.set(propName, values);
-      if (propName.endsWith('s')) {
-        const singular = propName.slice(0, -1);
-        enumValueCache.set(singular, values);
+      if (values.size >= 2) {
+        // Store as interface.propertyName and just propertyName
+        enumValueCache.set(`${interfaceName}.${propName}`, values);
+        enumValueCache.set(propName, values);
       }
     }
   }
 
-  // Pattern 4: const objects with literal properties
-  const constObjectRegex = /const\s+(\w+)\s*[=:]\s*\{([^}]+)\}/g;
-  while ((match = constObjectRegex.exec(strippedCode)) !== null) {
-    const objName = match[1];
-    const body = match[2];
-    const keys = new Set();
-    const keyRegex = /(\w+)\s*:/g;
-    let keyMatch;
-    while ((keyMatch = keyRegex.exec(body)) !== null) {
-      keys.add(keyMatch[1]);
-    }
-    if (keys.size > 0) {
-      enumValueCache.set(objName, keys);
-    }
-  }
+  // Pattern 3: Object property values in const arrays/objects
+  // const FEATURES = [{ accent: "coral" }, { accent: "orange" }, ...]
+  // const FEATURES: FeatureDetail[] = [{ accent: "coral" }, ...] (with TypeScript type annotation)
+  // Note: Use balanced bracket counting to handle nested arrays/objects
+  const arrayStartRegex = /const\s+(\w+)\s*(?::\s[^=]+)?\s*=\s*\[/g;
+  while ((match = arrayStartRegex.exec(strippedCode)) !== null) {
+    const arrayName = match[1];
+    const startPos = match.index + match[0].length - 1; // Position of opening [
 
-  // Pattern 5: Special case for ReleaseType
-  const releaseTypeRegex = /type\s+ReleaseType\s*=\s*([^;]+);/;
-  const releaseTypeMatch = strippedCode.match(releaseTypeRegex);
-  if (releaseTypeMatch) {
-    const values = new Set();
-    const valueMatches = releaseTypeMatch[1].match(/['"](\w+)['"]/g);
-    if (valueMatches) {
-      valueMatches.forEach(v => {
-        const val = v.replace(/['"]/g, '');
-        values.add(val);
-      });
-    }
-    if (values.size > 0) {
-      enumValueCache.set('ReleaseType', values);
-      enumValueCache.set('releaseType', values);
-    }
-  }
-
-  // Pattern 6: Special case for WaveVariant
-  const waveVariantRegex = /type\s+WaveVariant\s*=\s*([^;]+);/;
-  const waveVariantMatch = strippedCode.match(waveVariantRegex);
-  if (waveVariantMatch) {
-    const values = new Set();
-    const valueMatches = waveVariantMatch[1].match(/['"](\w+)['"]/g);
-    if (valueMatches) {
-      valueMatches.forEach(v => {
-        const val = v.replace(/['"]/g, '');
-        values.add(val);
-      });
-    }
-    if (values.size > 0) {
-      enumValueCache.set('WaveVariant', values);
-      // Merge with existing variant values if any
-      if (enumValueCache.has('variant')) {
-        const existing = enumValueCache.get('variant');
-        for (const v of values) {
-          existing.add(v);
+    // Find the matching closing bracket
+    let bracketCount = 0;
+    let endPos = startPos;
+    for (let i = startPos; i < strippedCode.length; i++) {
+      if (strippedCode[i] === '[') {
+        bracketCount++;
+      } else if (strippedCode[i] === ']') {
+        bracketCount--;
+        if (bracketCount === 0) {
+          endPos = i;
+          break;
         }
-      } else {
-        enumValueCache.set('variant', values);
+      }
+    }
+
+    const arrayBody = strippedCode.substring(startPos + 1, endPos);
+
+    // Find all property values: { propName: 'value' }
+    const propValueRegex = /(\w+)\s*:\s*['"](\w+)['"]/g;
+    const propertyMap = new Map();
+
+    let propMatch;
+    while ((propMatch = propValueRegex.exec(arrayBody)) !== null) {
+      const propName = propMatch[1];
+      const value = propMatch[2];
+
+      if (!propertyMap.has(propName)) {
+        propertyMap.set(propName, new Set());
+      }
+      propertyMap.get(propName).add(value);
+    }
+
+    // Store property values that have multiple options
+    for (const [propName, values] of propertyMap.entries()) {
+      if (values.size >= 1) {
+        const key = `${arrayName}.${propName}`;
+        if (!enumValueCache.has(propName)) {
+          enumValueCache.set(propName, values);
+        } else {
+          // Merge with existing values
+          const existing = enumValueCache.get(propName);
+          for (const v of values) {
+            existing.add(v);
+          }
+        }
+        enumValueCache.set(key, values);
       }
     }
   }
 
-  // Pattern 7: Special case for SidebarVariant
-  const sidebarVariantRegex = /type\s+SidebarVariant\s*=\s*([^;]+);/;
-  const sidebarVariantMatch = strippedCode.match(sidebarVariantRegex);
-  if (sidebarVariantMatch) {
-    const values = new Set();
-    const valueMatches = sidebarVariantMatch[1].match(/['"](\w+)['"]/g);
-    if (valueMatches) {
-      valueMatches.forEach(v => {
-        const val = v.replace(/['"]/g, '');
-        values.add(val);
-      });
-    }
-    if (values.size > 0) {
-      enumValueCache.set('SidebarVariant', values);
-      // Merge with existing variant values if any
-      if (enumValueCache.has('variant')) {
-        const existing = enumValueCache.get('variant');
-        for (const v of values) {
-          existing.add(v);
+  // Pattern 4: Extract function return values that contain class names
+  // function getLinkClassName(link) { return "nav-link" + (active ? " nav-link-active" : ""); }
+  // const getLinkClassName = (link: NavLink): string => { return ... }
+  const functionRegex = /(?:function\s+(\w+)|const\s+(\w+)\s*=\s*(?:\([^)]*\)(?:\s*:\s*[^={]+)?\s*=>|function)|(\w+)\s*\([^)]*\)\s*{)/g;
+  while ((match = functionRegex.exec(strippedCode)) !== null) {
+    const funcName = match[1] || match[2] || match[3];
+    if (!funcName) continue;
+
+    // Find the function body
+    let funcBody = '';
+    let braceCount = 0;
+    let inFunc = false;
+    let startIdx = match.index + match[0].length;
+
+    for (let i = startIdx; i < strippedCode.length; i++) {
+      const char = strippedCode[i];
+      if (char === '{') {
+        braceCount++;
+        inFunc = true;
+      } else if (char === '}') {
+        braceCount--;
+        if (braceCount === 0 && inFunc) {
+          funcBody = strippedCode.slice(startIdx, i);
+          break;
         }
-      } else {
-        enumValueCache.set('variant', values);
       }
+    }
+
+    if (!funcBody) continue;
+
+    // First, extract local variable assignments (const/let) within the function
+    // For example: const baseClass = "nav-link";
+    const localVars = new Map();
+    const localVarRegex = /(?:const|let)\s+(\w+)\s*=\s*['"]([^'"]+)['"]/g;
+    let localVarMatch;
+    while ((localVarMatch = localVarRegex.exec(funcBody)) !== null) {
+      localVars.set(localVarMatch[1], localVarMatch[2]);
+    }
+
+    // Extract class names from return statements
+    const returnRegex = /return\s+([^;]+);/g;
+    let returnMatch;
+    const funcClasses = new Set();
+
+    while ((returnMatch = returnRegex.exec(funcBody)) !== null) {
+      const returnVal = returnMatch[1];
+
+      // Match template literals with class names
+      const templateRegex = /`([^`]*)`/g;
+      let templateMatch;
+      while ((templateMatch = templateRegex.exec(returnVal)) !== null) {
+        const template = templateMatch[1];
+        // Extract class names (including those in ternary expressions)
+        // Handle: `${base} nav-link-active` and `${base} ${condition ? "class" : ""}`
+        const ternaryRegex = /\?\s*['"](\w+)['"]\s*:/g;
+        let ternaryMatch;
+        while ((ternaryMatch = ternaryRegex.exec(returnVal)) !== null) {
+          funcClasses.add(ternaryMatch[1]);
+        }
+
+        // Extract variable references from template and resolve them
+        const varRefRegex = /\$\{(\w+)\}/g;
+        let varRefMatch;
+        while ((varRefMatch = varRefRegex.exec(template)) !== null) {
+          const varName = varRefMatch[1];
+          if (localVars.has(varName)) {
+            funcClasses.add(localVars.get(varName));
+          }
+        }
+
+        // Extract plain class names from template
+        const plainClasses = template.replace(/\$\{[^}]*\}/g, ' ').replace(/[?:]/g, ' ');
+        const classNames = plainClasses.split(/\s+/);
+        for (const cn of classNames) {
+          if (/^[a-zA-Z0-9_-]+$/.test(cn)) {
+            funcClasses.add(cn);
+          }
+        }
+      }
+
+      // Match string concatenation with class names
+      const stringRegex = /(['"])([a-zA-Z0-9_-]+)\1/g;
+      let stringMatch;
+      while ((stringMatch = stringRegex.exec(returnVal)) !== null) {
+        funcClasses.add(stringMatch[2]);
+      }
+
+      // Match bare variable returns (e.g., return baseClass;)
+      if (/^\s*\w+\s*$/.test(returnVal.trim())) {
+        const varName = returnVal.trim();
+        if (localVars.has(varName)) {
+          funcClasses.add(localVars.get(varName));
+        }
+      }
+    }
+
+    if (funcClasses.size > 0) {
+      functionReturnCache.set(funcName, Array.from(funcClasses));
     }
   }
 }
@@ -322,8 +390,11 @@ function findCSSUsage(code) {
   // Also handles: className={`${variant}-sidebar`} and className={`class-${variant}`}
   const classNameTemplateRegex = /className\s*=\s*{`([^`]+)`}/g;
   while ((match = classNameTemplateRegex.exec(strippedCode)) !== null) {
+    // Save original template content for later regex processing
+    // Must be saved here because 'match' gets overwritten by inner loops
+    const originalTemplate = match[1];
     // Extract class names from template literal
-    let templateContent = match[1];
+    let templateContent = originalTemplate;
 
     // First, extract string literals inside ${} expressions (e.g., ${"copied"})
     const templateExprRegex = /\$\{[^}]*(["'])([a-zA-Z0-9_-]+)\1[^}]*\}/g;
@@ -382,6 +453,35 @@ function findCSSUsage(code) {
     for (const className of classNames) {
       if (/^[a-zA-Z0-9_-]+$/.test(className)) {
         classes.add(className);
+      }
+    }
+
+    // Extract class names from ternary expressions in templates
+    // Pattern: `${cond ? 'class1' : 'class2'}` or `${cond ? 'class' : ''} ${'other'}`
+    // Also handles: `${index === 0 ? ' feature-card--featured' : ''}` where class has leading space
+    const ternaryInTemplateRegex = /\?\s*['"]([a-zA-Z0-9_-]+)['"]\s*:/g;
+    let ternaryMatch;
+    while ((ternaryMatch = ternaryInTemplateRegex.exec(originalTemplate)) !== null) {
+      classes.add(ternaryMatch[1]);
+    }
+
+    // Extract all string literals from templates (catches classes with leading/trailing spaces in ternary)
+    // Pattern: ' class-name' or 'class-name ' inside ternary expressions
+    const hyphenatedClassRegex = /['"]\s*([a-zA-Z0-9_-]+)['"]/g;
+    let hyphenMatch;
+    while ((hyphenMatch = hyphenatedClassRegex.exec(originalTemplate)) !== null) {
+      classes.add(hyphenMatch[1]);
+    }
+  }
+
+  // Match className with function calls: className={getLinkClassName(link)}
+  const classNameFuncRegex = /className\s*=\s*\{([a-zA-Z0-9_]+)\([^)]*\)\}/g;
+  while ((match = classNameFuncRegex.exec(strippedCode)) !== null) {
+    const funcName = match[1];
+    if (functionReturnCache.has(funcName)) {
+      const funcClasses = functionReturnCache.get(funcName);
+      for (const cls of funcClasses) {
+        classes.add(cls);
       }
     }
   }

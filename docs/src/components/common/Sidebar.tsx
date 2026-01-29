@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useI18n } from '../../contexts/I18nContext';
 
 export interface SidebarLink {
   id: string;
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   variant,
   filterLabel = 'Filter sections',
 }) => {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -176,7 +178,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ref={inputRef}
             type="text"
             className={`${variant}-sidebar-search-input`}
-            placeholder="Filter..."
+            placeholder={t('common.filter')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label={filterLabel}
@@ -187,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="button"
               className={`${variant}-sidebar-search-clear`}
               onClick={handleClear}
-              aria-label="Clear search"
+              aria-label={t('common.clearSearch')}
               data-blok-testid={`${variant}-sidebar-search-clear`}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -220,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={`${variant}-sidebar-empty`}
             data-blok-testid={`${variant}-sidebar-empty`}
           >
-            <p>No results</p>
+            <p>{t('common.noResults')}</p>
           </div>
         ) : (
           filteredSections.map((section) => (

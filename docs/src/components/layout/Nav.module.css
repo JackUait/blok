@@ -2,6 +2,129 @@
    Nav Component - Enhanced Animations
    ============================================ */
 
+/* ============================================
+   Navigation Layout Structure
+   ============================================ */
+
+/* Primary navigation links group */
+.navPrimary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* Utility controls group (search, language, theme) */
+.navUtilities {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: var(--spacing-md);
+  margin-left: var(--spacing-md);
+  position: relative;
+}
+
+/* Subtle divider between nav and utilities */
+.navUtilities::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--color-border) 30%,
+    var(--color-border) 70%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+/* Compact search button - icon-focused */
+.searchButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.searchButton:hover {
+  color: var(--color-text-primary);
+  background: rgba(240, 123, 75, 0.06);
+}
+
+.searchButton svg {
+  transition: transform 0.2s ease;
+}
+
+.searchButton:hover svg {
+  transform: scale(1.1);
+}
+
+.searchShortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  transition: all 0.2s ease;
+}
+
+.searchButton:hover .searchShortcut {
+  color: var(--color-coral);
+  border-color: var(--color-coral);
+  background: rgba(240, 123, 75, 0.08);
+}
+
+/* ============================================
+   Mobile responsive - flatten groups
+   ============================================ */
+
+@media (max-width: 968px) {
+  .navPrimary,
+  .navUtilities {
+    flex-direction: column;
+    width: 100%;
+    gap: 0;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .navUtilities {
+    padding-top: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    border-top: 1px solid var(--color-border);
+  }
+  
+  .navUtilities::before {
+    display: none;
+  }
+  
+  .searchButton {
+    width: 100%;
+    justify-content: center;
+    padding: var(--spacing-md);
+  }
+}
+
+/* ============================================
+   Springy transition for the nav element
+   ============================================ */
+
 /* Springy transition for the nav element */
 :global(.nav) {
   transition:
@@ -104,27 +227,9 @@
   position: relative;
 }
 
-/* Hover indicator dot */
-:global(.nav-link)::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%) scale(0);
-  width: 4px;
-  height: 4px;
-  background: var(--color-coral);
-  border-radius: 50%;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-:global(.nav-link:hover)::after {
-  transform: translateX(-50%) scale(1);
-}
-
+/* Active links have background highlight, no dot needed */
 :global(.nav-link-active)::after {
-  transform: translateX(-50%) scale(1);
-  background: var(--color-coral);
+  display: none;
 }
 
 /* Staggered animation on load */

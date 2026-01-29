@@ -1,6 +1,6 @@
-/* Release Card - Glass morphism style */
+/* Release Card - Enhanced depth and warmth */
 .changelog-release-card {
-  background: linear-gradient(135deg, var(--color-surface) 0%, rgba(255, 255, 255, 0.95) 100%);
+  background: var(--color-surface);
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
   overflow: hidden;
@@ -9,7 +9,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Top accent gradient line */
+/* Top accent bar */
 .changelog-release-card::before {
   content: '';
   position: absolute;
@@ -22,23 +22,9 @@
   transition: opacity var(--transition-base);
 }
 
-/* Subtle glow effect */
-.changelog-release-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: linear-gradient(180deg, rgba(240, 123, 75, 0.03) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-  pointer-events: none;
-}
-
 .changelog-release-card:hover {
   box-shadow: var(--shadow-lg);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: rgba(240, 123, 75, 0.15);
 }
 
@@ -46,44 +32,60 @@
   opacity: 1;
 }
 
-.changelog-release-card:hover::after {
-  opacity: 1;
-}
-
+/* Highlight state for major releases */
 .changelog-release.highlight .changelog-release-card {
-  border-color: rgba(240, 123, 75, 0.25);
-  box-shadow: var(--shadow-md), 0 0 0 1px rgba(240, 123, 75, 0.08);
+  border-color: rgba(240, 123, 75, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .changelog-release.highlight .changelog-release-card::before {
   opacity: 1;
 }
 
-.changelog-release.highlight .changelog-release-card::after {
-  opacity: 1;
-}
-
 .changelog-release.highlight .changelog-release-card:hover {
-  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(240, 123, 75, 0.12);
+  box-shadow: var(--shadow-xl);
 }
 
-/* Dark mode */
+/* First release card - extra prominence */
+.changelog-release:first-child .changelog-release-card {
+  border-color: rgba(240, 123, 75, 0.12);
+}
+
+.changelog-release:first-child .changelog-release-card::before {
+  opacity: 0.7;
+}
+
+/* Dark mode - Enhanced visibility for card boundaries */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .changelog-release-card {
-    background: linear-gradient(135deg, var(--color-surface) 0%, rgba(37, 34, 32, 0.98) 100%);
+    background: var(--color-surface);
+    border-color: rgba(254, 243, 232, 0.15);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.25),
+      0 0 0 1px rgba(254, 243, 232, 0.08);
   }
   
-  :root:not([data-theme="light"]) .changelog-release-card::after {
-    background: linear-gradient(180deg, rgba(245, 147, 103, 0.04) 0%, transparent 100%);
+  :root:not([data-theme="light"]) .changelog-release-card:hover {
+    border-color: rgba(245, 147, 103, 0.25);
+    box-shadow: 
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(245, 147, 103, 0.15);
   }
 }
 
 :root[data-theme="dark"] .changelog-release-card {
-  background: linear-gradient(135deg, var(--color-surface) 0%, rgba(37, 34, 32, 0.98) 100%);
+  background: var(--color-surface);
+  border-color: rgba(254, 243, 232, 0.15);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(254, 243, 232, 0.08);
 }
 
-:root[data-theme="dark"] .changelog-release-card::after {
-  background: linear-gradient(180deg, rgba(245, 147, 103, 0.04) 0%, transparent 100%);
+:root[data-theme="dark"] .changelog-release-card:hover {
+  border-color: rgba(245, 147, 103, 0.25);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(245, 147, 103, 0.15);
 }
 
 

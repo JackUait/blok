@@ -15,9 +15,8 @@ import type { Change, Release } from "@/types/changelog";
 // Emoji to category mapping - matches CHANGELOG.md conventions
 const EMOJI_TO_CATEGORY: Record<string, Change["category"]> = {
   "✨": "added",
-  "🐛": "fixed",
+  "🐛": "fix",
   "🔧": "changed", // CI/CD or infrastructure changes
-  "♻️": "changed", // Refactoring
   "🧹": "changed", // Chores
   "🧪": "changed", // Tests
   "⚠️": "deprecated",
@@ -31,19 +30,24 @@ const EMOJI_TO_CATEGORY: Record<string, Change["category"]> = {
   "✅": "changed", // Tests
 };
 
+// Emojis to skip entirely (not shown in changelog)
+const SKIP_EMOJIS = new Set(["♻️"]);
+
 // Fallback text to category mapping for headers without emojis
 const TEXT_TO_CATEGORY: Record<string, Change["category"]> = {
   features: "added",
-  "bug fixes": "fixed",
-  fixes: "fixed",
+  "bug fixes": "fix",
+  fixes: "fix",
   chores: "changed",
-  refactoring: "changed",
   "ci/cd": "changed",
   tests: "changed",
   deprecated: "deprecated",
   removed: "removed",
   security: "security",
 };
+
+// Categories to skip entirely (not shown in changelog)
+const SKIP_CATEGORIES = new Set(["refactoring"]);
 
 const GITHUB_RELEASES_URL = "https://github.com/JackUait/blok/releases";
 
@@ -134,11 +138,21 @@ const parseCategoryHeader = (line: string): ParsedCategory | null => {
   const emojiMatch = content.match(/^(\p{Emoji}+)\s+/u);
   const emoji = emojiMatch ? emojiMatch[1] : "";
 
+  // Skip categories by emoji
+  if (emoji && SKIP_EMOJIS.has(emoji)) {
+    return null;
+  }
+
   // Remove emoji to get the category name
   const rawCategoryName = emoji ? content.replace(emoji, "").trim() : content;
 
   // Clean up any parenthetical links at the end (like PR/commit links)
   const categoryName = rawCategoryName.replace(/\s*\([^)]+\)\s*/g, "").trim();
+
+  // Skip categories that should not be shown
+  if (SKIP_CATEGORIES.has(categoryName.toLowerCase())) {
+    return null;
+  }
 
   // Determine the category type - use emoji if available, otherwise fall back to text
   const category =
@@ -167,18 +181,22 @@ const getCategoryFromText = (categoryName: string): Change["category"] => {
 /**
  * Parse a change item line like:
  * - implement undo/redo ([#33](url)) ([commit](url))
+ * - multiple commits ([hash](url) [hash](url) [hash](url))
  *
  * The CHANGELOG uses a format where markdown links are wrapped in literal parentheses:
- * ([#33](url)) or ([hash](url))
+ * ([#33](url)) or ([hash](url)) or multiple links in one pair of parens
  */
 const parseChangeItem = (line: string): string => {
   // Remove the bullet point
   const withBulletRemoved = line.replace(/^-\s*/, "").trim();
 
   // Remove markdown links wrapped in literal parentheses
-  // Pattern: ([text](url)) - outer parens are literal, inner is markdown link
-  // Step 1: Remove ( [text](url) ) patterns
-  return withBulletRemoved.replace(/\s?\(\[[^\]]*\]\([^)]*\)\)/g, "").trim();
+  // Pattern 1: ([text](url)) - single link in parens
+  // Pattern 2: ([text](url) [text](url) ...) - multiple links in parens
+  // Match opening paren, then one or more [text](url) patterns with optional spaces, then closing paren
+  return withBulletRemoved
+    .replace(/\s?\((?:\[[^\]]*\]\([^)]*\)\s*)+\)/g, "")
+    .trim();
 };
 
 /**
@@ -277,8 +295,10 @@ const convertReleaseToFormat = (
 ): Release => {
   const { version, date, categories } = data;
 
-  // Flatten all changes from all categories
-  const changes: Change[] = categories.flatMap((cat) => cat.changes);
+  // Flatten all changes from all categories, filtering out any with empty descriptions
+  const changes: Change[] = categories
+    .flatMap((cat) => cat.changes)
+    .filter((change) => change.description.trim().length > 0);
 
   // Determine release type
   const releaseType = getReleaseType(version);

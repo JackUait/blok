@@ -1,4 +1,4 @@
-/* Release Highlight - Warm gradient */
+/* Release Highlight - Warm gradient with icon */
 .changelog-release-highlight {
   padding: var(--spacing-md) var(--spacing-xl);
   background: linear-gradient(135deg, rgba(240, 123, 75, 0.08) 0%, rgba(212, 164, 184, 0.04) 100%);
@@ -11,7 +11,7 @@
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -27,12 +27,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .changelog-release-highlight {
-    background: linear-gradient(135deg, rgba(245, 147, 103, 0.12) 0%, rgba(212, 164, 184, 0.06) 100%);
+    background: linear-gradient(135deg, rgba(245, 147, 103, 0.1) 0%, rgba(212, 164, 184, 0.05) 100%);
   }
 }
 
 :root[data-theme="dark"] .changelog-release-highlight {
-  background: linear-gradient(135deg, rgba(245, 147, 103, 0.12) 0%, rgba(212, 164, 184, 0.06) 100%);
+  background: linear-gradient(135deg, rgba(245, 147, 103, 0.1) 0%, rgba(212, 164, 184, 0.05) 100%);
 }
 
 /* Changes List */
@@ -49,15 +49,18 @@
 }
 
 .changelog-change:not(:last-child) {
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
-/* Change Category Badge - Refined styling */
+/* Change Category Badge */
 .changelog-change-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 11px;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  min-width: 90px;
+  margin-top: 2px;
   font-family: var(--font-family);
   font-size: 10px;
   font-weight: 700;
@@ -67,103 +70,53 @@
   flex-shrink: 0;
   white-space: nowrap;
   transition: all var(--transition-fast);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .changelog-change:hover .changelog-change-badge {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
+/* Badge color variants with solid backgrounds */
 .changelog-change-badge.added {
-  background: linear-gradient(135deg, rgba(123, 196, 127, 0.18) 0%, rgba(123, 196, 127, 0.08) 100%);
-  color: var(--color-green);
-  border: 1px solid rgba(123, 196, 127, 0.2);
+  background: linear-gradient(135deg, #7BC47F 0%, #8FD99F 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(123, 196, 127, 0.25);
 }
 
 .changelog-change-badge.changed {
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.18) 0%, rgba(240, 123, 75, 0.08) 100%);
-  color: var(--color-coral);
-  border: 1px solid rgba(240, 123, 75, 0.2);
+  background: linear-gradient(135deg, var(--color-coral) 0%, #F59577 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(240, 123, 75, 0.25);
 }
 
-.changelog-change-badge.fixed {
-  background: linear-gradient(135deg, rgba(212, 164, 184, 0.22) 0%, rgba(197, 147, 168, 0.12) 100%);
-  color: var(--color-mauve);
-  border: 1px solid rgba(212, 164, 184, 0.25);
+.changelog-change-badge.fix {
+  background: linear-gradient(135deg, var(--color-mauve) 0%, var(--color-pink) 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(197, 147, 168, 0.25);
 }
 
 .changelog-change-badge.deprecated {
-  background: linear-gradient(135deg, rgba(248, 144, 66, 0.18) 0%, rgba(248, 144, 66, 0.08) 100%);
-  color: var(--color-orange);
-  border: 1px solid rgba(248, 144, 66, 0.2);
+  background: linear-gradient(135deg, var(--color-orange) 0%, #F5A623 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(248, 144, 66, 0.25);
 }
 
 .changelog-change-badge.removed {
-  background: linear-gradient(135deg, rgba(255, 100, 90, 0.18) 0%, rgba(255, 100, 90, 0.08) 100%);
-  color: #E85A50;
-  border: 1px solid rgba(255, 100, 90, 0.2);
+  background: linear-gradient(135deg, #E85A50 0%, #F07B73 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(232, 90, 80, 0.25);
 }
 
 .changelog-change-badge.security {
-  background: linear-gradient(135deg, rgba(197, 147, 168, 0.22) 0%, rgba(175, 120, 145, 0.12) 100%);
-  color: var(--color-pink);
-  border: 1px solid rgba(197, 147, 168, 0.25);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-change-badge.added {
-    background: linear-gradient(135deg, rgba(123, 196, 127, 0.25) 0%, rgba(123, 196, 127, 0.12) 100%);
-  }
-
-  :root:not([data-theme="light"]) .changelog-change-badge.changed {
-    background: linear-gradient(135deg, rgba(245, 147, 103, 0.25) 0%, rgba(245, 147, 103, 0.12) 100%);
-  }
-
-  :root:not([data-theme="light"]) .changelog-change-badge.fixed {
-    background: linear-gradient(135deg, rgba(212, 164, 184, 0.28) 0%, rgba(197, 147, 168, 0.15) 100%);
-  }
-
-  :root:not([data-theme="light"]) .changelog-change-badge.deprecated {
-    background: linear-gradient(135deg, rgba(248, 144, 66, 0.25) 0%, rgba(248, 144, 66, 0.12) 100%);
-  }
-
-  :root:not([data-theme="light"]) .changelog-change-badge.removed {
-    background: linear-gradient(135deg, rgba(255, 100, 90, 0.25) 0%, rgba(255, 100, 90, 0.12) 100%);
-  }
-
-  :root:not([data-theme="light"]) .changelog-change-badge.security {
-    background: linear-gradient(135deg, rgba(197, 147, 168, 0.28) 0%, rgba(175, 120, 145, 0.15) 100%);
-  }
-}
-
-:root[data-theme="dark"] .changelog-change-badge.added {
-  background: linear-gradient(135deg, rgba(123, 196, 127, 0.25) 0%, rgba(123, 196, 127, 0.12) 100%);
-}
-
-:root[data-theme="dark"] .changelog-change-badge.changed {
-  background: linear-gradient(135deg, rgba(245, 147, 103, 0.25) 0%, rgba(245, 147, 103, 0.12) 100%);
-}
-
-:root[data-theme="dark"] .changelog-change-badge.fixed {
-  background: linear-gradient(135deg, rgba(212, 164, 184, 0.28) 0%, rgba(197, 147, 168, 0.15) 100%);
-}
-
-:root[data-theme="dark"] .changelog-change-badge.deprecated {
-  background: linear-gradient(135deg, rgba(248, 144, 66, 0.25) 0%, rgba(248, 144, 66, 0.12) 100%);
-}
-
-:root[data-theme="dark"] .changelog-change-badge.removed {
-  background: linear-gradient(135deg, rgba(255, 100, 90, 0.25) 0%, rgba(255, 100, 90, 0.12) 100%);
-}
-
-:root[data-theme="dark"] .changelog-change-badge.security {
-  background: linear-gradient(135deg, rgba(197, 147, 168, 0.28) 0%, rgba(175, 120, 145, 0.15) 100%);
+  background: linear-gradient(135deg, #6BBFC7 0%, #8ED4DA 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(107, 191, 199, 0.25);
 }
 
 .changelog-change-badge svg {
   width: 12px;
   height: 12px;
+  opacity: 0.95;
 }
 
 /* Change Description */
@@ -172,11 +125,10 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   line-height: 1.7;
-  padding-top: 2px;
   flex: 1;
 }
 
-/* Text Formatting - Title/Description Structure */
+/* Text Formatting */
 .changelog-title {
   color: var(--color-text-primary);
   font-weight: 600;
@@ -223,6 +175,7 @@
   border-color: rgba(245, 147, 103, 0.18);
 }
 
+/* Change Link */
 .changelog-change-link {
   color: var(--color-coral);
   text-decoration: none;
@@ -263,10 +216,10 @@
 .changelog-release:nth-child(2) { animation-delay: 0.06s; }
 .changelog-release:nth-child(3) { animation-delay: 0.12s; }
 .changelog-release:nth-child(4) { animation-delay: 0.18s; }
-.changelog-release:nth-child(5) { animation-delay: 0.24s; }
-.changelog-release:nth-child(6) { animation-delay: 0.3s; }
-.changelog-release:nth-child(7) { animation-delay: 0.36s; }
-.changelog-release:nth-child(8) { animation-delay: 0.42s; }
+.changelog-release:nth-child(5) { animation-delay: 0.22s; }
+.changelog-release:nth-child(6) { animation-delay: 0.26s; }
+.changelog-release:nth-child(7) { animation-delay: 0.30s; }
+.changelog-release:nth-child(8) { animation-delay: 0.34s; }
 
 /* Responsive */
 @media (max-width: 640px) {
@@ -286,4 +239,48 @@
   .changelog-changes {
     padding: var(--spacing-md);
   }
+}
+
+/* Dark mode - Reduce floating appearance of badges */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-change-badge {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  :root:not([data-theme="light"]) .changelog-change-badge.fix {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  :root:not([data-theme="light"]) .changelog-change-badge.added {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  :root:not([data-theme="light"]) .changelog-change-badge.changed {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  :root:not([data-theme="light"]) .changelog-change-badge.deprecated {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  :root:not([data-theme="light"]) .changelog-change-badge.removed {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  :root:not([data-theme="light"]) .changelog-change-badge.security {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+:root[data-theme="dark"] .changelog-change-badge {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .changelog-change-badge.fix,
+:root[data-theme="dark"] .changelog-change-badge.added,
+:root[data-theme="dark"] .changelog-change-badge.changed,
+:root[data-theme="dark"] .changelog-change-badge.deprecated,
+:root[data-theme="dark"] .changelog-change-badge.removed,
+:root[data-theme="dark"] .changelog-change-badge.security {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }

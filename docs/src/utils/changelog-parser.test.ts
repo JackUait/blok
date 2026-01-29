@@ -112,7 +112,7 @@ describe('changelog-parser', () => {
       const changes = result[0].changes;
 
       expect(changes.find((c) => c.description === 'new feature')?.category).toBe('added');
-      expect(changes.find((c) => c.description === 'fix bug')?.category).toBe('fixed');
+      expect(changes.find((c) => c.description === 'fix bug')?.category).toBe('fix');
       expect(changes.find((c) => c.description === 'update workflow')?.category).toBe('changed');
       expect(changes.find((c) => c.description === 'clean code')?.category).toBe('changed');
       expect(changes.find((c) => c.description === 'update deps')?.category).toBe('changed');
@@ -139,7 +139,7 @@ describe('changelog-parser', () => {
       const changes = result[0].changes;
 
       expect(changes.find((c) => c.description === 'new feature')?.category).toBe('added');
-      expect(changes.find((c) => c.description === 'fix bug')?.category).toBe('fixed');
+      expect(changes.find((c) => c.description === 'fix bug')?.category).toBe('fix');
     });
 
     it('should strip PR and commit links from change descriptions', () => {
@@ -307,7 +307,7 @@ describe('changelog-parser', () => {
       const result = parseChangelog(markdown);
 
       expect(result[0].changes).toHaveLength(1);
-      expect(result[0].changes[0].category).toBe('fixed');
+      expect(result[0].changes[0].category).toBe('fix');
       expect(result[0].changes[0].description).toBe('fix the thing');
     });
 
@@ -349,7 +349,7 @@ describe('changelog-parser', () => {
 
       // Verify changes have categories without markdown links
       first.changes.forEach((change) => {
-        expect(['added', 'changed', 'fixed', 'deprecated', 'removed', 'security']).toContain(change.category);
+        expect(['added', 'changed', 'fix', 'deprecated', 'removed', 'security']).toContain(change.category);
         expect(change.description).not.toContain('](');
         expect(change.description).not.toContain('github.com');
       });
@@ -373,7 +373,7 @@ describe('changelog-parser', () => {
       // Check that we have each category type present in the sample
       const categories = new Set(changes.map((c) => c.category));
       expect(categories.has('added')).toBe(true); // ✨ Features
-      expect(categories.has('fixed')).toBe(true); // 🐛 Bug Fixes
+      expect(categories.has('fix')).toBe(true); // 🐛 Bug Fixes
       expect(categories.has('changed')).toBe(true); // 🔧 CI/CD, ♻️ Refactoring, 🧹 Chores
     });
   });

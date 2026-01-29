@@ -3,8 +3,9 @@ import { Link, useLocation } from "react-router-dom";
 import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
+import { LanguageSelector } from "../common/LanguageSelector";
 import type { NavLink } from "@/types/navigation";
-import searchButtonStyles from "../common/SearchButton.module.css";
+import styles from "./Nav.module.css";
 
 interface NavProps {
   links: NavLink[];
@@ -87,49 +88,57 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
             <p>Blok</p>
           </Link>
           <div className={`nav-links ${menuOpen ? "open" : ""}`}>
-            <button
-              className={searchButtonStyles["nav-search-button"]}
-              onClick={() => setSearchOpen(true)}
-              type="button"
-            >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                <path
-                  d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>Search</span>
-              <kbd className={searchButtonStyles["nav-search-shortcut"]}>⌘K</kbd>
-            </button>
-            {linksWithActive.map((link) => {
-              if (link.external) {
+            {/* Primary Navigation Links */}
+            <div className={styles.navPrimary}>
+              {linksWithActive.map((link) => {
+                if (link.external) {
+                  return (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      className={getLinkClassName(link)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {link.label}
+                    </a>
+                  );
+                }
                 return (
-                  <a
+                  <Link
                     key={link.href}
-                    href={link.href}
+                    to={link.href}
                     className={getLinkClassName(link)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => setMenuOpen(false)}
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 );
-              }
-              return (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={getLinkClassName(link)}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-            <ThemeToggle />
+              })}
+            </div>
+
+            {/* Utility Controls */}
+            <div className={styles.navUtilities}>
+              <button
+                className={styles.searchButton}
+                onClick={() => setSearchOpen(true)}
+                type="button"
+                aria-label="Search (⌘K)"
+              >
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <path
+                    d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <kbd className={styles.searchShortcut}>⌘K</kbd>
+              </button>
+              <LanguageSelector />
+              <ThemeToggle />
+            </div>
           </div>
           <button
             className={`nav-toggle ${menuOpen ? "active" : ""}`}

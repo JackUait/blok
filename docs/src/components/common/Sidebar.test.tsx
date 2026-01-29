@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Sidebar, type SidebarSection } from './Sidebar';
+import { I18nProvider } from '../../contexts/I18nContext';
 
 // Mock scrollTo for JSDOM
 Element.prototype.scrollTo = vi.fn();
@@ -27,6 +28,14 @@ const MOCK_SECTIONS: SidebarSection[] = [
   },
 ];
 
+const I18nWrapper = ({ children }: { children: React.ReactNode }) => (
+  <I18nProvider>{children}</I18nProvider>
+);
+
+const renderWithI18n = (ui: React.ReactElement) => {
+  return render(ui, { wrapper: I18nWrapper });
+};
+
 describe('Sidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,7 +43,7 @@ describe('Sidebar', () => {
 
   describe('with api variant', () => {
     it('should render an aside element with correct testid', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const aside = screen.getByTestId('api-sidebar');
       expect(aside).toBeInTheDocument();
@@ -42,7 +51,7 @@ describe('Sidebar', () => {
     });
 
     it('should render the search input with api prefix', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       expect(searchInput).toBeInTheDocument();
@@ -50,14 +59,14 @@ describe('Sidebar', () => {
     });
 
     it('should apply active class to the active section', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const coreLink = screen.getByTestId('api-sidebar-link-core');
       expect(coreLink).toHaveClass('active');
     });
 
     it('should not apply active class to inactive sections', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const configLink = screen.getByTestId('api-sidebar-link-config');
       expect(configLink).not.toHaveClass('active');
@@ -66,7 +75,7 @@ describe('Sidebar', () => {
 
   describe('with recipes variant', () => {
     it('should render an aside element with correct testid', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
 
       const aside = screen.getByTestId('recipes-sidebar');
       expect(aside).toBeInTheDocument();
@@ -74,7 +83,7 @@ describe('Sidebar', () => {
     });
 
     it('should render the search input with recipes prefix', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
 
       const searchInput = screen.getByTestId('recipes-sidebar-search-input');
       expect(searchInput).toBeInTheDocument();
@@ -82,7 +91,7 @@ describe('Sidebar', () => {
     });
 
     it('should apply active class to the active section', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
 
       const coreLink = screen.getByTestId('recipes-sidebar-link-core');
       expect(coreLink).toHaveClass('active');
@@ -91,7 +100,7 @@ describe('Sidebar', () => {
 
   describe('sections rendering', () => {
     it('should render all sidebar sections', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       expect(screen.getByText('Guide')).toBeInTheDocument();
       expect(screen.getByText('Core')).toBeInTheDocument();
@@ -99,7 +108,7 @@ describe('Sidebar', () => {
     });
 
     it('should render section links', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       expect(screen.getByText('Quick Start')).toBeInTheDocument();
       expect(screen.getByText('Blok Class')).toBeInTheDocument();
@@ -107,7 +116,7 @@ describe('Sidebar', () => {
     });
 
     it('should render nav element', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const nav = screen.getByTestId('api-sidebar-nav');
       expect(nav).toBeInTheDocument();
@@ -115,7 +124,7 @@ describe('Sidebar', () => {
     });
 
     it('should have correct href attributes for links', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const quickStartLink = screen.getByTestId('api-sidebar-link-quick-start');
       expect(quickStartLink).toHaveAttribute('href', '#quick-start');
@@ -127,7 +136,7 @@ describe('Sidebar', () => {
 
   describe('search functionality', () => {
     it('should filter links when typing in search input', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       fireEvent.change(searchInput, { target: { value: 'caret' } });
@@ -140,7 +149,7 @@ describe('Sidebar', () => {
     });
 
     it('should show empty state when no results match', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       fireEvent.change(searchInput, { target: { value: 'xyz123notfound' } });
@@ -150,7 +159,7 @@ describe('Sidebar', () => {
     });
 
     it('should show clear button when search has value', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       fireEvent.change(searchInput, { target: { value: 'test' } });
@@ -160,7 +169,7 @@ describe('Sidebar', () => {
     });
 
     it('should clear search when clear button is clicked', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       fireEvent.change(searchInput, { target: { value: 'caret' } });
@@ -178,7 +187,7 @@ describe('Sidebar', () => {
     });
 
     it('should filter by section ID as well as label', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       fireEvent.change(searchInput, { target: { value: 'blocks-api' } });
@@ -187,7 +196,7 @@ describe('Sidebar', () => {
     });
 
     it('should be case insensitive', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       fireEvent.change(searchInput, { target: { value: 'CARET' } });
@@ -196,7 +205,7 @@ describe('Sidebar', () => {
     });
 
     it('should show keyboard shortcut with tooltip when search is empty', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const shortcut = screen.getByTestId('api-sidebar-search-shortcut');
       expect(shortcut).toBeInTheDocument();
@@ -206,7 +215,7 @@ describe('Sidebar', () => {
 
   describe('filterLabel prop', () => {
     it('should use custom filterLabel for aria-label', () => {
-      render(
+      renderWithI18n(
         <Sidebar
           sections={MOCK_SECTIONS}
           activeSection="core"
@@ -220,7 +229,7 @@ describe('Sidebar', () => {
     });
 
     it('should use default filterLabel when not provided', () => {
-      render(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
       const searchInput = screen.getByTestId('api-sidebar-search-input');
       expect(searchInput).toHaveAttribute('aria-label', 'Filter sections');
@@ -229,7 +238,7 @@ describe('Sidebar', () => {
 
   describe('auto-scroll to active section', () => {
     it('should scroll sidebar when activeSection changes and link is near edge', () => {
-      const { rerender } = render(
+      const { rerender } = renderWithI18n(
         <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
       );
 
@@ -272,7 +281,7 @@ describe('Sidebar', () => {
     });
 
     it('should use auto scroll behavior', () => {
-      const { rerender } = render(
+      const { rerender } = renderWithI18n(
         <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
       );
 

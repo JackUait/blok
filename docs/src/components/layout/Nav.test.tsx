@@ -2,14 +2,24 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Nav } from './Nav';
+import { I18nProvider } from '../../contexts/I18nContext';
 import type { NavLink } from '@/types/navigation';
 
 const mockLinks: NavLink[] = [
   { href: '/docs', label: 'Docs' },
-  { href: '/demo', label: 'Try it out' },
+  { href: '/demo', label: 'Demo' },
   { href: '/migration', label: 'Migration' },
   { href: 'https://github.com/JackUait/blok', label: 'GitHub', external: true },
 ];
+
+const TestWrapper: React.FC<{ children: React.ReactNode; initialPath?: string }> = ({
+  children,
+  initialPath = '/',
+}) => (
+  <MemoryRouter initialEntries={[initialPath]}>
+    <I18nProvider>{children}</I18nProvider>
+  </MemoryRouter>
+);
 
 describe('Nav', () => {
   beforeEach(() => {
@@ -18,9 +28,9 @@ describe('Nav', () => {
 
   it('should render a nav element', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
     const nav = screen.getByRole('navigation');
     expect(nav).toBeInTheDocument();
@@ -28,22 +38,22 @@ describe('Nav', () => {
 
   it('should render all provided links', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
     expect(screen.getByText('Docs')).toBeInTheDocument();
-    expect(screen.getByText('Try it out')).toBeInTheDocument();
+    expect(screen.getByText('Demo')).toBeInTheDocument();
     expect(screen.getByText('Migration')).toBeInTheDocument();
     expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
 
   it('should render the Logo component', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
     // Logo renders as an img element with alt="Blok"
@@ -53,20 +63,20 @@ describe('Nav', () => {
 
   it('should mark the active link based on current path', () => {
     render(
-      <MemoryRouter initialEntries={['/demo']}>
+      <TestWrapper initialPath="/demo">
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
-    const demoLink = screen.getByText('Try it out');
+    const demoLink = screen.getByText('Demo');
     expect(demoLink).toBeInTheDocument();
   });
 
   it('should render external links with anchor tags', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
     const githubLink = screen.getByRole('link', { name: 'GitHub' });
@@ -77,9 +87,9 @@ describe('Nav', () => {
 
   it('should render a mobile menu toggle button', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
     const toggleButton = screen.getByLabelText('Toggle menu');
@@ -89,9 +99,9 @@ describe('Nav', () => {
 
   it('should have data-nav attribute', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
     const nav = screen.getByRole('navigation');
@@ -100,9 +110,9 @@ describe('Nav', () => {
 
   it('should have data-nav-toggle attribute on toggle button', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
     const toggleButton = screen.getByLabelText('Toggle menu');
@@ -111,13 +121,13 @@ describe('Nav', () => {
 
   it('should render home link with Logo', () => {
     render(
-      <MemoryRouter>
+      <TestWrapper>
         <Nav links={mockLinks} />
-      </MemoryRouter>
+      </TestWrapper>
     );
 
-    // The link's accessible name comes from the logo img's alt text
-    const homeLink = screen.getByRole('link', { name: 'Blok' });
+    // The home link has Logo image and "Blok" text
+    const homeLink = screen.getByRole('link', { name: /Blok/i });
     expect(homeLink).toHaveAttribute('href', '/');
   });
 });

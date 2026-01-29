@@ -1,32 +1,33 @@
-/* Changelog Timeline */
+/* Changelog Timeline - Enhanced Visual Design */
 .changelog-timeline {
   position: relative;
   z-index: 1;
 }
 
-/* Timeline Line - Gradient effect */
+/* Timeline Line - Enhanced gradient with glow effect */
 .changelog-timeline::before {
   content: '';
   position: absolute;
-  left: 105px;
+  left: 100px;
   top: 0;
   bottom: 0;
   width: 3px;
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    var(--color-coral) 5%,
+    rgba(240, 123, 75, 0.25) 3%,
+    var(--color-coral) 15%,
     var(--color-pink) 50%,
-    var(--color-coral) 95%,
+    var(--color-mauve) 85%,
+    rgba(197, 147, 168, 0.25) 97%,
     transparent 100%
   );
-  border-radius: 2px;
-  opacity: 0.3;
+  border-radius: 3px;
 }
 
 @media (max-width: 768px) {
   .changelog-timeline::before {
-    left: 55px;
+    left: 50px;
   }
 }
 
@@ -39,9 +40,20 @@
 /* Release Entry */
 .changelog-release {
   position: relative;
-  padding: var(--spacing-xl) 0;
-  padding-left: 170px;
-  animation: fadeInUp 0.6s var(--transition-slow) backwards;
+  padding: var(--spacing-lg) 0;
+  padding-left: 160px;
+  animation: releaseSlideIn 0.5s var(--transition-spring) backwards;
+}
+
+@keyframes releaseSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @media (max-width: 768px) {
@@ -57,70 +69,53 @@
   }
 }
 
-/* Timeline Dot - Enhanced with pulse animation */
+/* Timeline Dot */
 .changelog-release::before {
   content: '';
   position: absolute;
-  left: 96px;
-  top: calc(var(--spacing-xl) + 6px);
-  width: 20px;
-  height: 20px;
+  left: 92px;
+  top: calc(var(--spacing-lg) + 6px);
+  width: 18px;
+  height: 18px;
   background: var(--color-surface);
   border: 3px solid var(--color-coral);
   border-radius: var(--radius-full);
-  z-index: 2;
+  z-index: 3;
   transition: all var(--transition-base);
   box-shadow: 0 0 0 4px var(--color-surface);
 }
 
-.changelog-release::after {
-  content: '';
-  position: absolute;
-  left: 96px;
-  top: calc(var(--spacing-xl) + 6px);
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  z-index: 1;
-  background: var(--color-coral);
-  opacity: 0;
-  animation: dotPulse 2s ease-in-out infinite;
-}
-
-@keyframes dotPulse {
-  0%, 100% { transform: scale(1); opacity: 0; }
-  50% { transform: scale(1.8); opacity: 0.2; }
-}
-
 @media (max-width: 768px) {
-  .changelog-release::before,
-  .changelog-release::after {
-    left: 46px;
+  .changelog-release::before {
+    left: 42px;
   }
 }
 
 @media (max-width: 640px) {
-  .changelog-release::before,
-  .changelog-release::after {
+  .changelog-release::before {
     display: none;
   }
 }
 
-/* First release - special highlight */
+/* First release - Hero treatment */
 .changelog-release:first-child::before {
+  width: 20px;
+  height: 20px;
+  left: 91px;
+  top: calc(var(--spacing-lg) + 5px);
+  border-width: 3px;
   border-color: var(--color-coral);
-  background: var(--color-coral);
-  box-shadow: 0 0 0 5px var(--color-surface), 0 0 0 8px rgba(240, 123, 75, 0.2);
-  animation: firstDotGlow 2s ease-in-out infinite;
+  background: linear-gradient(135deg, var(--color-coral) 0%, var(--color-orange) 100%);
+  box-shadow: 
+    0 0 0 4px var(--color-surface), 
+    0 0 0 7px rgba(240, 123, 75, 0.15),
+    0 2px 12px rgba(240, 123, 75, 0.25);
 }
 
-@keyframes firstDotGlow {
-  0%, 100% { box-shadow: 0 0 0 5px var(--color-surface), 0 0 0 8px rgba(240, 123, 75, 0.2); }
-  50% { box-shadow: 0 0 0 5px var(--color-surface), 0 0 0 14px rgba(240, 123, 75, 0.1); }
-}
-
-.changelog-release:first-child::after {
-  display: none;
+@media (max-width: 768px) {
+  .changelog-release:first-child::before {
+    left: 41px;
+  }
 }
 
 /* Release type colors for dots */
@@ -128,24 +123,12 @@
   border-color: var(--color-orange);
 }
 
-.changelog-release.major::after {
-  background: var(--color-orange);
-}
-
 .changelog-release.minor::before {
   border-color: var(--color-coral);
 }
 
-.changelog-release.minor::after {
-  background: var(--color-coral);
-}
-
 .changelog-release.patch::before {
   border-color: var(--color-green);
-}
-
-.changelog-release.patch::after {
-  background: var(--color-green);
 }
 
 .changelog-release:hover::before {
@@ -156,18 +139,17 @@
 .changelog-version {
   position: absolute;
   left: 0;
-  top: var(--spacing-xl);
+  top: var(--spacing-lg);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
-  width: 85px;
+  gap: 5px;
+  width: 80px;
 }
 
 @media (max-width: 768px) {
   .changelog-version {
-    left: 0;
-    width: 40px;
+    width: 35px;
   }
 }
 
@@ -187,37 +169,23 @@
 
 .changelog-version-number {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-base);
   text-decoration: none;
   position: relative;
   padding: 4px 8px;
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.08) 0%, rgba(212, 164, 184, 0.05) 100%);
-  border-radius: var(--radius-md);
-}
-
-.changelog-version-number::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 8px;
-  width: 0;
-  height: 2px;
-  background: var(--gradient-coral-pink);
-  transition: width var(--transition-base);
-  border-radius: 2px;
-}
-
-.changelog-version-number:hover::after {
-  width: calc(100% - 16px);
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.06) 0%, rgba(212, 164, 184, 0.03) 100%);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
 }
 
 .changelog-version-number:hover {
   color: var(--color-coral);
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.08) 100%);
+  border-color: rgba(240, 123, 75, 0.3);
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.1) 0%, rgba(212, 164, 184, 0.05) 100%);
 }
 
 .changelog-version-number:visited {
@@ -228,35 +196,33 @@
   color: var(--color-coral);
 }
 
-.changelog-release:hover .changelog-version-number {
-  color: var(--color-coral);
-}
-
-.changelog-release:hover .changelog-version-number:visited {
-  color: var(--color-coral);
-}
-
 @media (max-width: 768px) {
   .changelog-version-number {
-    font-size: var(--font-size-sm);
-    padding: 2px 6px;
+    font-size: 10px;
+    padding: 2px 5px;
   }
 }
 
 @media (max-width: 640px) {
   .changelog-version-number {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-sm);
     padding: 4px 10px;
   }
 }
 
 .changelog-version-date {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--color-text-tertiary);
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
   letter-spacing: 0.02em;
   font-weight: 500;
   text-align: right;
+}
+
+@media (max-width: 768px) {
+  .changelog-version-date {
+    font-size: 8px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -269,58 +235,55 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 56px;
-  padding: 5px 12px;
+  min-width: 44px;
+  padding: 3px 8px;
   font-family: var(--font-family);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 8px;
+  font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   border-radius: var(--radius-full);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition-fast);
+}
+
+.changelog-release:hover .changelog-version-type {
+  transform: scale(1.05);
 }
 
 .changelog-release.major .changelog-version-type {
-  background: linear-gradient(135deg, rgba(255, 149, 0, 0.18) 0%, rgba(255, 149, 0, 0.08) 100%);
-  color: var(--color-orange);
-  border: 1px solid rgba(255, 149, 0, 0.2);
+  background: linear-gradient(135deg, var(--color-orange) 0%, #F5A623 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(248, 144, 66, 0.25);
 }
 
 .changelog-release.minor .changelog-version-type {
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.18) 0%, rgba(240, 123, 75, 0.08) 100%);
-  color: var(--color-coral);
-  border: 1px solid rgba(240, 123, 75, 0.2);
+  background: linear-gradient(135deg, var(--color-coral) 0%, #F59577 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(240, 123, 75, 0.25);
 }
 
 .changelog-release.patch .changelog-version-type {
-  background: linear-gradient(135deg, rgba(52, 199, 89, 0.18) 0%, rgba(52, 199, 89, 0.08) 100%);
-  color: var(--color-green);
-  border: 1px solid rgba(52, 199, 89, 0.2);
+  background: linear-gradient(135deg, var(--color-green) 0%, #8FD99F 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(123, 196, 127, 0.25);
 }
 
+@media (max-width: 768px) {
+  .changelog-version-type {
+    font-size: 7px;
+    min-width: 36px;
+    padding: 2px 6px;
+  }
+}
+
+/* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-release.major .changelog-version-type {
-    background: linear-gradient(135deg, rgba(255, 149, 0, 0.25) 0%, rgba(255, 149, 0, 0.12) 100%);
-  }
-
-  :root:not([data-theme="light"]) .changelog-release.minor .changelog-version-type {
-    background: linear-gradient(135deg, rgba(245, 147, 103, 0.25) 0%, rgba(245, 147, 103, 0.12) 100%);
-  }
-
-  :root:not([data-theme="light"]) .changelog-release.patch .changelog-version-type {
-    background: linear-gradient(135deg, rgba(52, 199, 89, 0.25) 0%, rgba(52, 199, 89, 0.12) 100%);
+  :root:not([data-theme="light"]) .changelog-version-number {
+    background: linear-gradient(135deg, rgba(245, 147, 103, 0.08) 0%, rgba(212, 164, 184, 0.04) 100%);
   }
 }
 
-:root[data-theme="dark"] .changelog-release.major .changelog-version-type {
-  background: linear-gradient(135deg, rgba(255, 149, 0, 0.25) 0%, rgba(255, 149, 0, 0.12) 100%);
-}
-
-:root[data-theme="dark"] .changelog-release.minor .changelog-version-type {
-  background: linear-gradient(135deg, rgba(245, 147, 103, 0.25) 0%, rgba(245, 147, 103, 0.12) 100%);
-}
-
-:root[data-theme="dark"] .changelog-release.patch .changelog-version-type {
-  background: linear-gradient(135deg, rgba(52, 199, 89, 0.25) 0%, rgba(52, 199, 89, 0.12) 100%);
+:root[data-theme="dark"] .changelog-version-number {
+  background: linear-gradient(135deg, rgba(245, 147, 103, 0.08) 0%, rgba(212, 164, 184, 0.04) 100%);
 }
 

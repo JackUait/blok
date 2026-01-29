@@ -33,7 +33,7 @@ const Icons = {
       <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6" />
     </svg>
   ),
-  fixed: () => (
+  fix: () => (
     <svg
       viewBox="0 0 24 24"
       fill="none"
@@ -122,6 +122,9 @@ const Icons = {
 
 const IconFor = ({ name }: { name: keyof typeof Icons }) => {
   const IconComponent = Icons[name];
+  if (!IconComponent) {
+    return null;
+  }
   return <IconComponent />;
 };
 
@@ -273,10 +276,13 @@ const ChangelogPage: React.FC = () => {
 
         <div className="changelog-hero">
           <h1 className="changelog-hero-title">Changelog</h1>
+          <p className="changelog-hero-description">
+            Track every improvement, fix, and feature as Blok evolves
+          </p>
         </div>
 
         <div className="changelog-timeline">
-          {releases.map((release) => (
+          {releases.filter((release) => release.changes.some((c) => c.description.trim().length > 0)).map((release) => (
             <article
               key={release.version}
               className={`changelog-release ${release.releaseType} ${release.highlight ? "highlight" : ""}`}
@@ -309,13 +315,13 @@ const ChangelogPage: React.FC = () => {
                   <div className="changelog-release-highlight">
                     <p>
                       <Icons.sparkles />
-                      {release.highlight}
+                      {formatDescription(release.highlight)}
                     </p>
                   </div>
                 )}
 
                 <div className="changelog-changes">
-                  {release.changes.map((change, index) => (
+                  {release.changes.filter((change) => change.description.trim().length > 0).map((change, index) => (
                     <div key={index} className="changelog-change">
                       <span
                         className={`changelog-change-badge ${change.category}`}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CodeBlock } from "../common/CodeBlock";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
+import { useI18n } from "../../contexts/I18nContext";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
 
@@ -50,6 +51,7 @@ const editor = new Blok({
 const SAVE_CODE = `const data = await editor.save();`;
 
 const QuickStartContent: React.FC = () => {
+  const { t } = useI18n();
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
 
   const getInstallCommand = (manager: PackageManager): string => {
@@ -69,8 +71,8 @@ const QuickStartContent: React.FC = () => {
     <div className="api-quickstart">
       <div className="api-quickstart-step">
         <div className="api-quickstart-content">
-          <h3>Install Blok</h3>
-          <p>Add Blok to your project using your favorite package manager.</p>
+          <h3>{t('api.quickStartSteps.install.title')}</h3>
+          <p>{t('api.quickStartSteps.install.description')}</p>
           <CodeBlock
             code={getInstallCommand(packageManager)}
             language="bash"
@@ -82,15 +84,15 @@ const QuickStartContent: React.FC = () => {
       </div>
       <div className="api-quickstart-step">
         <div className="api-quickstart-content">
-          <h3>Import and configure</h3>
-          <p>Import the editor and tools, then configure your block types.</p>
+          <h3>{t('api.quickStartSteps.configure.title')}</h3>
+          <p>{t('api.quickStartSteps.configure.description')}</p>
           <CodeBlock code={CONFIG_CODE} language="typescript" />
         </div>
       </div>
       <div className="api-quickstart-step">
         <div className="api-quickstart-content">
-          <h3>Save content</h3>
-          <p>Extract clean JSON data ready to save anywhere.</p>
+          <h3>{t('api.quickStartSteps.save.title')}</h3>
+          <p>{t('api.quickStartSteps.save.description')}</p>
           <CodeBlock code={SAVE_CODE} language="typescript" />
         </div>
       </div>
@@ -99,6 +101,8 @@ const QuickStartContent: React.FC = () => {
 };
 
 export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
+  const { t } = useI18n();
+  
   // Render quick-start content specially
   if (section.customType === "quick-start") {
     return (
@@ -143,7 +147,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
       {section.methods && section.methods.length > 0 && (
         <div className="api-block">
-          <h3 className="api-block-title">Methods</h3>
+          <h3 className="api-block-title">{t('api.methods')}</h3>
           {section.methods.map((method, index) => (
             <ApiMethodCard key={index} method={method} sectionId={section.id} />
           ))}
@@ -152,13 +156,13 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
       {section.properties && section.properties.length > 0 && (
         <div className="api-block">
-          <h3 className="api-block-title">Properties</h3>
+          <h3 className="api-block-title">{t('api.properties')}</h3>
           <table className="api-table api-table--with-anchors">
             <thead>
               <tr>
-                <th>Property</th>
-                <th>Type</th>
-                <th>Description</th>
+                <th>{t('api.property')}</th>
+                <th>{t('api.type')}</th>
+                <th>{t('api.description')}</th>
               </tr>
             </thead>
             <tbody>
@@ -194,10 +198,10 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <table className="api-table api-table--with-anchors">
             <thead>
               <tr>
-                {section.id === "config" && <th>Option</th>}
-                <th>{section.id === "config" ? "Type" : "Property"}</th>
-                {section.id === "config" && <th>Default</th>}
-                <th>Description</th>
+                {section.id === "config" && <th>{t('api.option')}</th>}
+                <th>{section.id === "config" ? t('api.type') : t('api.property')}</th>
+                {section.id === "config" && <th>{t('api.default')}</th>}
+                <th>{t('api.description')}</th>
               </tr>
             </thead>
             <tbody>

@@ -4,11 +4,15 @@ import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
 import { MobileSectionNav } from '../components/common/MobileSectionNav';
 import { ApiSection } from '../components/api/ApiSection';
-import { API_SECTIONS, SIDEBAR_SECTIONS } from '../components/api/api-data';
+import { useApiTranslations } from '../hooks/useApiTranslations';
+import { useI18n } from '../contexts/I18nContext';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/api.css';
 
 export const ApiPage: React.FC = () => {
+  const { locale } = useI18n();
+  const { apiSections, sidebarSections, filterLabel } = useApiTranslations();
+  
   // Initialize active section from URL hash, defaulting to 'quick-start' (first visible section)
   const [activeSection, setActiveSection] = useState<string>(() => {
     const hash = window.location.hash.slice(1);
@@ -69,7 +73,7 @@ export const ApiPage: React.FC = () => {
     }, observerOptions);
 
     // Observe all sections
-    API_SECTIONS.forEach((section) => {
+    apiSections.forEach((section) => {
       const element = document.getElementById(section.id);
       if (element) {
         observer.observe(element);
@@ -111,26 +115,28 @@ export const ApiPage: React.FC = () => {
         anchor.removeEventListener('click', handleAnchorClick);
       });
     };
-  }, []);
+  }, [apiSections]);
 
   return (
     <>
       <Nav links={NAV_LINKS} />
       <div className="api-docs" data-blok-testid="api-docs">
         <Sidebar
-          sections={SIDEBAR_SECTIONS}
+          key={`sidebar-${locale}`}
+          sections={sidebarSections}
           activeSection={activeSection}
           variant="api"
-          filterLabel="Filter API sections"
+          filterLabel={filterLabel}
         />
         <div className="api-content-wrapper">
           <MobileSectionNav
-            sections={SIDEBAR_SECTIONS}
+            key={`mobile-nav-${locale}`}
+            sections={sidebarSections}
             activeSection={activeSection}
           />
           <main className="api-main" data-blok-testid="api-main">
-            {API_SECTIONS.map((section) => (
-              <ApiSection key={section.id} section={section} />
+            {apiSections.map((section) => (
+              <ApiSection key={`${locale}-${section.id}`} section={section} />
             ))}
           </main>
         </div>

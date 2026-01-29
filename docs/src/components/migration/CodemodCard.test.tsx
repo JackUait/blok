@@ -15,10 +15,11 @@ describe('CodemodCard', () => {
     expect(screen.getByTestId('codemod-icon')).toBeInTheDocument();
   });
 
-  it('should render the title', () => {
+  it('should render the title and badge', () => {
     render(<CodemodCard />);
 
-    expect(screen.getByText('Automated Codemod')).toBeInTheDocument();
+    expect(screen.getByText('Codemod')).toBeInTheDocument();
+    expect(screen.getByText('Automated')).toBeInTheDocument();
   });
 
   it('should render the description', () => {

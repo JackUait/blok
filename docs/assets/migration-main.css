@@ -286,7 +286,7 @@
   margin-left: calc(-1 * var(--spacing-lg));
   margin-right: calc(-1 * var(--spacing-lg));
   padding: var(--spacing-3xl) var(--spacing-lg);
-  border-radius: 0;
+  border-radius: 32px;
 }
 
 @media (max-width: 640px) {
@@ -340,20 +340,28 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-lg);
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.14) 0%, rgba(212, 164, 184, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.08) 100%);
   color: var(--color-coral);
   font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border-radius: var(--radius-full);
   margin-bottom: var(--spacing-lg);
-  border: 1px solid rgba(240, 123, 75, 0.25);
+  border: 1px solid rgba(240, 123, 75, 0.2);
   box-shadow: 
-    0 2px 12px rgba(240, 123, 75, 0.15),
+    0 2px 12px rgba(240, 123, 75, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.migration-section-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 16px rgba(240, 123, 75, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Animated shimmer on badge */
@@ -367,17 +375,17 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.25) 50%,
     transparent 100%
   );
-  animation: badgeShimmer 4s ease-in-out infinite;
+  animation: badgeShimmer 5s ease-in-out infinite;
 }
 
 @keyframes badgeShimmer {
   0%, 100% {
     left: -100%;
   }
-  50% {
+  40%, 60% {
     left: 100%;
   }
 }
@@ -386,6 +394,11 @@
   color: var(--color-coral);
   position: relative;
   z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.migration-section-badge:hover svg {
+  transform: rotate(-10deg) scale(1.1);
 }
 
 .migration-section-title {
@@ -398,24 +411,47 @@
   position: relative;
 }
 
-/* Subtle underline accent */
+/* Animated underline accent */
 .migration-section-title::after {
   content: '';
   display: block;
-  width: 48px;
-  height: 3px;
+  width: 56px;
+  height: 4px;
   background: var(--gradient-coral-pink);
-  border-radius: 2px;
+  border-radius: var(--radius-full);
   margin: var(--spacing-md) auto 0;
-  opacity: 0.7;
+  opacity: 0.8;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.migration-section-header:hover .migration-section-title::after {
+  width: 80px;
+  opacity: 1;
 }
 
 .migration-section-description {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
-  max-width: 480px;
+  max-width: 520px;
   margin: 0 auto;
-  line-height: 1.7;
+  line-height: 1.75;
+}
+
+/* Section entrance animation */
+.migration-section--surface,
+.migration-section:not(.migration-section--surface) {
+  animation: sectionFadeIn 0.7s ease-out backwards;
+}
+
+@keyframes sectionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Migration Steps Wrapper */
@@ -425,36 +461,143 @@
   z-index: 1;
 }
 
-/* Codemod Card - Enhanced */
+/* Codemod Card - Enhanced with Depth & Motion */
 .codemod-card {
   position: relative;
   background: var(--color-surface);
   border-radius: var(--radius-2xl);
   border: 1px solid var(--color-border);
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  transition: all var(--transition-fast);
+  box-shadow: 
+    var(--shadow-lg),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .codemod-card:hover {
   box-shadow: 
     var(--shadow-xl),
-    0 0 60px rgba(240, 123, 75, 0.1);
+    0 0 80px rgba(240, 123, 75, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  transform: translateY(-2px);
+}
+
+/* Background layers */
+.codemod-card-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .codemod-card-glow {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 280px;
-  background: linear-gradient(180deg, rgba(240, 123, 75, 0.1) 0%, transparent 100%);
+  top: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 500px;
+  background: radial-gradient(ellipse 70% 60% at 50% 30%, rgba(240, 123, 75, 0.08) 0%, rgba(240, 123, 75, 0.03) 40%, transparent 70%);
+  filter: blur(40px);
+  animation: glowDrift 12s ease-in-out infinite;
+}
+
+@keyframes glowDrift {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-45%) scale(1.05);
+    opacity: 0.7;
+  }
+}
+
+.codemod-card-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(240, 123, 75, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(212, 164, 184, 0.03) 0%, transparent 50%);
+}
+
+/* Floating particles */
+.codemod-particles {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
+  overflow: hidden;
+}
+
+.codemod-particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: particleFloat 6s ease-in-out infinite;
+}
+
+.codemod-particle-1 {
+  width: 6px;
+  height: 6px;
+  background: var(--color-coral);
+  top: 15%;
+  right: 12%;
+  opacity: 0.6;
+  animation-delay: 0s;
+}
+
+.codemod-particle-2 {
+  width: 4px;
+  height: 4px;
+  background: var(--color-pink);
+  top: 25%;
+  right: 25%;
+  opacity: 0.5;
+  animation-delay: -1.5s;
+}
+
+.codemod-particle-3 {
+  width: 5px;
+  height: 5px;
+  background: var(--color-orange);
+  top: 10%;
+  right: 35%;
+  opacity: 0.4;
+  animation-delay: -3s;
+}
+
+.codemod-particle-4 {
+  width: 3px;
+  height: 3px;
+  background: var(--color-coral);
+  top: 30%;
+  right: 8%;
+  opacity: 0.5;
+  animation-delay: -4.5s;
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  25% {
+    transform: translate(-8px, 12px) scale(1.2);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(5px, -8px) scale(0.9);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(-3px, 5px) scale(1.1);
+    opacity: 0.6;
+  }
 }
 
 .codemod-card-content {
   position: relative;
   padding: var(--spacing-2xl);
+  z-index: 1;
 }
 
 @media (max-width: 640px) {
@@ -465,142 +608,300 @@
 
 .codemod-header {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+  align-items: flex-start;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
 }
 
 @media (max-width: 640px) {
   .codemod-header {
     flex-direction: column;
+    align-items: center;
     text-align: center;
   }
+}
+
+/* Icon wrapper with orbit */
+.codemod-icon-wrapper {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
 }
 
 .codemod-icon {
   width: 72px;
   height: 72px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gradient-coral-pink);
+  background: linear-gradient(145deg, #f07b4b 0%, #e65a2b 50%, #d44a1d 100%);
   color: white;
-  border-radius: var(--radius-xl);
-  flex-shrink: 0;
+  border-radius: 20px;
   box-shadow: 
-    var(--shadow-md),
-    0 8px 32px rgba(240, 123, 75, 0.3);
-  animation: iconPulse 3s ease-in-out infinite;
-  position: relative;
+    0 4px 16px rgba(240, 123, 75, 0.4),
+    0 8px 32px rgba(240, 123, 75, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .codemod-icon::before {
   content: '';
   position: absolute;
-  inset: -3px;
-  border-radius: calc(var(--radius-xl) + 3px);
-  background: var(--gradient-coral-pink);
-  opacity: 0.3;
-  filter: blur(8px);
+  inset: -4px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(240, 123, 75, 0.5) 0%, rgba(212, 164, 184, 0.3) 100%);
+  opacity: 0.5;
+  filter: blur(12px);
   z-index: -1;
+  transition: opacity 0.4s ease;
 }
 
-@keyframes iconPulse {
+.codemod-card:hover .codemod-icon {
+  transform: translate(-50%, -50%) rotate(-8deg) scale(1.05);
+  box-shadow: 
+    0 6px 24px rgba(240, 123, 75, 0.5),
+    0 12px 48px rgba(240, 123, 75, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.codemod-card:hover .codemod-icon::before {
+  opacity: 0.8;
+}
+
+/* Orbiting elements */
+.codemod-orbit {
+  position: absolute;
+  inset: 0;
+  animation: orbitSpin 12s linear infinite;
+}
+
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.codemod-orbit-dot {
+  position: absolute;
+  border-radius: 50%;
+  animation: orbitPulse 2s ease-in-out infinite;
+}
+
+.codemod-orbit-dot-1 {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, var(--color-coral) 0%, var(--color-orange) 100%);
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 8px rgba(240, 123, 75, 0.5);
+}
+
+.codemod-orbit-dot-2 {
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--color-pink) 0%, var(--color-coral) 100%);
+  bottom: 8px;
+  left: 8px;
+  animation-delay: -0.7s;
+  box-shadow: 0 2px 6px rgba(212, 164, 184, 0.5);
+}
+
+.codemod-orbit-dot-3 {
+  width: 5px;
+  height: 5px;
+  background: var(--color-orange);
+  bottom: 8px;
+  right: 8px;
+  animation-delay: -1.4s;
+  box-shadow: 0 2px 6px rgba(255, 165, 0, 0.4);
+}
+
+@keyframes orbitPulse {
   0%, 100% {
-    box-shadow: var(--shadow-md), 0 8px 32px rgba(240, 123, 75, 0.3);
     transform: scale(1);
+    opacity: 0.9;
   }
   50% {
-    box-shadow: var(--shadow-md), 0 12px 40px rgba(240, 123, 75, 0.45);
-    transform: scale(1.02);
+    transform: scale(1.3);
+    opacity: 0.6;
   }
 }
 
 .codemod-header-text {
   flex: 1;
+  padding-top: var(--spacing-xs);
+}
+
+/* Badge styling */
+.codemod-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.08) 100%);
+  color: var(--color-coral);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--radius-full);
+  margin-bottom: var(--spacing-sm);
+  border: 1px solid rgba(240, 123, 75, 0.2);
+}
+
+.codemod-badge-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-coral);
+  border-radius: 50%;
+  animation: badgeDotPulse 2s ease-in-out infinite;
+}
+
+@keyframes badgeDotPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
 }
 
 .codemod-title {
   font-family: var(--font-family-display);
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
+  font-size: clamp(1.75rem, 4vw, var(--font-size-3xl));
+  font-weight: 800;
+  letter-spacing: -0.03em;
   margin-bottom: var(--spacing-xs);
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .codemod-subtitle {
   color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   margin: 0;
+  line-height: 1.5;
 }
 
 .codemod-description {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-xl);
-  line-height: 1.7;
-  max-width: 600px;
+  line-height: 1.8;
+  max-width: 580px;
 }
 
 .codemod-description code {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  font-size: var(--font-size-sm);
-  padding: 2px 8px;
-  background: rgba(240, 123, 75, 0.1);
+  font-size: 0.9em;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(240, 123, 75, 0.08) 100%);
   color: var(--color-coral);
-  border-radius: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(240, 123, 75, 0.15);
+  font-weight: 500;
 }
 
-/* Codemod Tabs - Enhanced */
+/* Codemod Tabs - Enhanced with polish */
 .codemod-tabs {
-  display: flex;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-lg);
-  background: var(--color-background);
-  padding: 4px;
-  border-radius: var(--radius-full);
-  width: fit-content;
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: var(--spacing-xl);
+  background: linear-gradient(135deg, var(--color-background) 0%, rgba(240, 123, 75, 0.02) 100%);
+  padding: 5px;
+  border-radius: 16px;
   border: 1px solid var(--color-border);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  position: relative;
+}
+
+.codemod-tabs-track {
+  position: absolute;
+  inset: 5px;
+  border-radius: 12px;
+  pointer-events: none;
 }
 
 .codemod-tab {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-xl);
+  gap: 8px;
+  padding: 10px 20px;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-secondary);
   background: transparent;
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: hidden;
 }
 
-.codemod-tab svg {
+.codemod-tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(240, 123, 75, 0.1) 0%, rgba(212, 164, 184, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 12px;
+}
+
+.codemod-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.6;
-  transition: all var(--transition-fast);
+  transition: all 0.3s ease;
+}
+
+.codemod-tab-text {
+  position: relative;
+  z-index: 1;
 }
 
 .codemod-tab:hover {
   color: var(--color-text-primary);
-  background: rgba(240, 123, 75, 0.05);
 }
 
-.codemod-tab:hover svg {
+.codemod-tab:hover::before {
   opacity: 1;
+}
+
+.codemod-tab:hover .codemod-tab-icon {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 .codemod-tab.active {
   color: white;
-  background: var(--gradient-coral-pink);
+  background: linear-gradient(145deg, #f07b4b 0%, #e65a2b 50%, #d44a1d 100%);
   box-shadow: 
-    0 2px 8px rgba(240, 123, 75, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 4px 12px rgba(240, 123, 75, 0.35),
+    0 2px 4px rgba(240, 123, 75, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.codemod-tab.active svg {
+.codemod-tab.active::before {
+  opacity: 0;
+}
+
+.codemod-tab.active .codemod-tab-icon {
   opacity: 1;
 }
 

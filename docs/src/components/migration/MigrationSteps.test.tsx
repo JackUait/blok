@@ -164,13 +164,14 @@ describe('MigrationSteps', () => {
     });
   });
 
-  it('should render table with proper structure', () => {
+  it('should render reference card with proper header legend', () => {
     render(<MigrationSteps />);
 
-    const table = screen.getByTestId('migration-table');
-    const withinTable = within(table);
+    const referenceCard = screen.getByTestId('migration-table');
 
-    expect(withinTable.getByRole('columnheader', { name: 'EditorJS' })).toBeInTheDocument();
-    expect(withinTable.getByRole('columnheader', { name: 'Blok' })).toBeInTheDocument();
+    // Legend shows EditorJS → Blok transformation direction
+    expect(within(referenceCard).getByText('EditorJS')).toBeInTheDocument();
+    expect(within(referenceCard).getByText('Blok')).toBeInTheDocument();
+    expect(within(referenceCard).getByText('8 selectors')).toBeInTheDocument();
   });
 });

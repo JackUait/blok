@@ -1,6 +1,7 @@
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { CodemodCard } from '../components/migration/CodemodCard';
+import { MigrationSteps } from '../components/migration/MigrationSteps';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/migration.css';
 
@@ -54,6 +55,8 @@ export const MigrationPage: React.FC = () => {
         <section className="migration-section">
           <CodemodCard />
         </section>
+
+        <MigrationSteps />
 
         <section className="migration-cta">
           <div className="migration-cta-card">

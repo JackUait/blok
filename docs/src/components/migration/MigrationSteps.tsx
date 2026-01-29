@@ -39,11 +39,13 @@ export const MigrationSteps: React.FC = () => {
               <div className="change-card-content">
                 <div className="diff-block">
                   <div className="diff-removed">
-                    <span className="diff-marker">−</span>
+                    <span className="diff-accent-bar" aria-hidden="true" />
+                    <span className="diff-marker" aria-label="Removed">−</span>
                     <code>{item.removed}</code>
                   </div>
                   <div className="diff-added">
-                    <span className="diff-marker">+</span>
+                    <span className="diff-accent-bar" aria-hidden="true" />
+                    <span className="diff-marker" aria-label="Added">+</span>
                     <code>{item.added}</code>
                   </div>
                 </div>
@@ -71,50 +73,44 @@ export const MigrationSteps: React.FC = () => {
           </p>
         </div>
 
-        <div className="reference-card">
-          <div className="reference-table-wrapper">
-            <table
-              className="migration-table reference-table"
-              data-blok-testid="migration-table"
-            >
-              <colgroup>
-                <col style={{ width: '50%' }} />
-                <col style={{ width: '50%' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>
-                    <span className="table-header-icon table-header-icon--old">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </span>
-                    EditorJS
-                  </th>
-                  <th>
-                    <span className="table-header-icon table-header-icon--new">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="20,6 9,17 4,12" />
-                      </svg>
-                    </span>
-                    Blok
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {CSS_MAPPINGS.map((mapping, index) => (
-                  <tr key={index}>
-                    <td>
-                      <code className="code-old">{mapping.editorjs}</code>
-                    </td>
-                    <td>
-                      <code className="code-new">{mapping.blok}</code>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="reference-card" data-blok-testid="migration-table">
+          <div className="reference-card-header">
+            <div className="reference-legend">
+              <div className="reference-legend-item reference-legend-item--old">
+                <span className="reference-legend-dot" />
+                <span>EditorJS</span>
+              </div>
+              <svg className="reference-legend-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+              <div className="reference-legend-item reference-legend-item--new">
+                <span className="reference-legend-dot" />
+                <span>Blok</span>
+              </div>
+            </div>
+            <span className="reference-count">{CSS_MAPPINGS.length} selectors</span>
+          </div>
+          <div className="reference-mappings">
+            {CSS_MAPPINGS.map((mapping, index) => (
+              <div
+                key={index}
+                className="reference-mapping"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="reference-mapping-old">
+                  <code>{mapping.editorjs}</code>
+                </div>
+                <div className="reference-mapping-connector">
+                  <span className="reference-mapping-line" />
+                  <svg className="reference-mapping-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+                <div className="reference-mapping-new">
+                  <code>{mapping.blok}</code>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

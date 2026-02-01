@@ -222,41 +222,101 @@
   display: none;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: 5px;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   padding: 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border: 1.5px solid var(--color-border);
   cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  border-radius: var(--radius-full);
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Radial glow on hover */
+.nav-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: radial-gradient(circle at center, rgba(240, 123, 75, 0.15) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.nav-toggle:hover::after {
+  opacity: 1;
 }
 
 .nav-toggle:hover {
-  background: var(--color-surface-elevated);
-  border-color: var(--color-coral);
+  border-color: rgba(240, 123, 75, 0.4);
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(240, 123, 75, 0.08);
+}
+
+.nav-toggle:active {
+  transform: scale(0.95);
+}
+
+.nav-toggle.active {
+  border-color: rgba(240, 123, 75, 0.5);
+  background: rgba(240, 123, 75, 0.06);
 }
 
 .nav-toggle span {
-  width: 18px;
+  display: block;
   height: 2px;
   margin: 0 auto;
-  background: var(--color-text-primary);
   border-radius: 2px;
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s ease;
+  transition:
+    width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease,
+    background 0.3s ease;
 }
 
+/* Staggered widths for a tapered look */
+.nav-toggle span:nth-child(1) {
+  width: 18px;
+  background: var(--color-text-primary);
+}
+
+.nav-toggle span:nth-child(2) {
+  width: 14px;
+  background: var(--color-text-secondary);
+}
+
+.nav-toggle span:nth-child(3) {
+  width: 10px;
+  background: var(--color-text-tertiary);
+}
+
+/* Hover: equalize widths */
+.nav-toggle:hover span {
+  width: 18px;
+  background: var(--color-coral);
+}
+
+/* Active: morph to X */
 .nav-toggle.active span:nth-child(1) {
+  width: 18px;
   transform: translateY(7px) rotate(45deg);
+  background: var(--color-coral);
 }
 
 .nav-toggle.active span:nth-child(2) {
+  width: 0;
   opacity: 0;
 }
 
 .nav-toggle.active span:nth-child(3) {
+  width: 18px;
   transform: translateY(-7px) rotate(-45deg);
+  background: var(--color-coral);
 }
 
 @media (max-width: 968px) {

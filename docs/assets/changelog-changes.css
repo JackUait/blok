@@ -1,8 +1,7 @@
-/* Release Highlight - Warm gradient with icon */
+/* Release Highlight - Subtle */
 .changelog-release-highlight {
-  padding: var(--spacing-md) var(--spacing-xl);
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.08) 0%, rgba(212, 164, 184, 0.04) 100%);
-  border-bottom: 1px solid var(--color-divider);
+  padding: var(--spacing-sm) 0;
+  margin-bottom: var(--spacing-sm);
   position: relative;
 }
 
@@ -10,34 +9,26 @@
   margin: 0;
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-weight: 500;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-sm);
+  line-height: 1.6;
 }
 
 .changelog-release-highlight svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   color: var(--color-coral);
   flex-shrink: 0;
   stroke-width: 2;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-release-highlight {
-    background: linear-gradient(135deg, rgba(245, 147, 103, 0.1) 0%, rgba(212, 164, 184, 0.05) 100%);
-  }
-}
-
-:root[data-theme="dark"] .changelog-release-highlight {
-  background: linear-gradient(135deg, rgba(245, 147, 103, 0.1) 0%, rgba(212, 164, 184, 0.05) 100%);
+  margin-top: 2px;
 }
 
 /* Changes List */
 .changelog-changes {
-  padding: var(--spacing-md) var(--spacing-xl);
+  padding: 0;
 }
 
 .changelog-change {
@@ -45,86 +36,87 @@
   align-items: flex-start;
   gap: var(--spacing-md);
   padding: var(--spacing-xs) 0;
-  transition: all var(--transition-fast);
 }
 
 .changelog-change:not(:last-child) {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
-/* Change Category Badge */
+/* Change Category Badge - Minimal text labels */
 .changelog-change-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 5px 10px;
-  min-width: 90px;
-  margin-top: 2px;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 72px;
+  margin-top: 3px;
   font-family: var(--font-family);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-radius: var(--radius-full);
+  letter-spacing: 0.04em;
   flex-shrink: 0;
   white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-
-.changelog-change:hover .changelog-change-badge {
-  transform: translateY(-1px);
-}
-
-/* Badge color variants with solid backgrounds */
-.changelog-change-badge.added {
-  background: linear-gradient(135deg, #7BC47F 0%, #8FD99F 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(123, 196, 127, 0.25);
-}
-
-.changelog-change-badge.changed {
-  background: linear-gradient(135deg, var(--color-coral) 0%, #F59577 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(240, 123, 75, 0.25);
-}
-
-.changelog-change-badge.fix {
-  background: linear-gradient(135deg, var(--color-mauve) 0%, var(--color-pink) 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(197, 147, 168, 0.25);
-}
-
-.changelog-change-badge.deprecated {
-  background: linear-gradient(135deg, var(--color-orange) 0%, #F5A623 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(248, 144, 66, 0.25);
-}
-
-.changelog-change-badge.removed {
-  background: linear-gradient(135deg, #E85A50 0%, #F07B73 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(232, 90, 80, 0.25);
-}
-
-.changelog-change-badge.security {
-  background: linear-gradient(135deg, #6BBFC7 0%, #8ED4DA 100%);
-  color: white;
-  box-shadow: 0 2px 6px rgba(107, 191, 199, 0.25);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
 }
 
 .changelog-change-badge svg {
-  width: 12px;
-  height: 12px;
-  opacity: 0.95;
+  width: 11px;
+  height: 11px;
+  opacity: 0.7;
 }
+
+/* Badge color variants - subtle text colors only */
+.changelog-change-badge.added {
+  color: #5a9e5e;
+}
+
+.changelog-change-badge.changed {
+  color: var(--color-coral);
+}
+
+.changelog-change-badge.fix {
+  color: var(--color-mauve);
+}
+
+.changelog-change-badge.deprecated {
+  color: #c9913c;
+}
+
+.changelog-change-badge.removed {
+  color: #c95a52;
+}
+
+.changelog-change-badge.security {
+  color: #5a9ea4;
+}
+
+/* Dark mode badge colors */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-change-badge.added { color: #8FD99F; }
+  :root:not([data-theme="light"]) .changelog-change-badge.changed { color: var(--color-coral); }
+  :root:not([data-theme="light"]) .changelog-change-badge.fix { color: var(--color-pink); }
+  :root:not([data-theme="light"]) .changelog-change-badge.deprecated { color: #F5A623; }
+  :root:not([data-theme="light"]) .changelog-change-badge.removed { color: #F07B73; }
+  :root:not([data-theme="light"]) .changelog-change-badge.security { color: #8ED4DA; }
+}
+
+:root[data-theme="dark"] .changelog-change-badge.added { color: #8FD99F; }
+:root[data-theme="dark"] .changelog-change-badge.changed { color: var(--color-coral); }
+:root[data-theme="dark"] .changelog-change-badge.fix { color: var(--color-pink); }
+:root[data-theme="dark"] .changelog-change-badge.deprecated { color: #F5A623; }
+:root[data-theme="dark"] .changelog-change-badge.removed { color: #F07B73; }
+:root[data-theme="dark"] .changelog-change-badge.security { color: #8ED4DA; }
 
 /* Change Description */
 .changelog-change-description {
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  line-height: 1.7;
+  line-height: 1.6;
   flex: 1;
 }
 
@@ -151,28 +143,15 @@
   font-weight: 600;
 }
 
-/* Inline Code */
+/* Inline Code - Clean and simple */
 .changelog-code {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
-  font-size: 0.9em;
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.1) 0%, rgba(212, 164, 184, 0.06) 100%);
-  color: var(--color-coral);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(240, 123, 75, 0.12);
+  font-size: 0.88em;
+  background: var(--color-divider);
+  color: var(--color-text-primary);
+  padding: 2px 5px;
+  border-radius: 4px;
   white-space: nowrap;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-code {
-    background: linear-gradient(135deg, rgba(245, 147, 103, 0.15) 0%, rgba(212, 164, 184, 0.08) 100%);
-    border-color: rgba(245, 147, 103, 0.18);
-  }
-}
-
-:root[data-theme="dark"] .changelog-code {
-  background: linear-gradient(135deg, rgba(245, 147, 103, 0.15) 0%, rgba(212, 164, 184, 0.08) 100%);
-  border-color: rgba(245, 147, 103, 0.18);
 }
 
 /* Change Link */
@@ -183,43 +162,32 @@
   font-size: var(--font-size-xs);
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  transition: all var(--transition-fast);
+  gap: 3px;
+  transition: opacity var(--transition-smooth);
   font-weight: 600;
-  opacity: 0.85;
+  opacity: 0.8;
 }
 
 .changelog-change-link:hover {
-  color: var(--color-mauve);
+  opacity: 1;
   text-decoration: underline;
   text-underline-offset: 2px;
-  opacity: 1;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-change-link:hover {
-    color: var(--color-pink);
-  }
-}
-
-:root[data-theme="dark"] .changelog-change-link:hover {
-  color: var(--color-pink);
 }
 
 .changelog-change-link svg {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
 }
 
 /* Staggered Animation Delays */
 .changelog-release:nth-child(1) { animation-delay: 0s; }
-.changelog-release:nth-child(2) { animation-delay: 0.06s; }
-.changelog-release:nth-child(3) { animation-delay: 0.12s; }
-.changelog-release:nth-child(4) { animation-delay: 0.18s; }
-.changelog-release:nth-child(5) { animation-delay: 0.22s; }
-.changelog-release:nth-child(6) { animation-delay: 0.26s; }
-.changelog-release:nth-child(7) { animation-delay: 0.30s; }
-.changelog-release:nth-child(8) { animation-delay: 0.34s; }
+.changelog-release:nth-child(2) { animation-delay: 0.05s; }
+.changelog-release:nth-child(3) { animation-delay: 0.1s; }
+.changelog-release:nth-child(4) { animation-delay: 0.15s; }
+.changelog-release:nth-child(5) { animation-delay: 0.18s; }
+.changelog-release:nth-child(6) { animation-delay: 0.21s; }
+.changelog-release:nth-child(7) { animation-delay: 0.24s; }
+.changelog-release:nth-child(8) { animation-delay: 0.27s; }
 
 /* Responsive */
 @media (max-width: 640px) {
@@ -233,54 +201,6 @@
   }
 
   .changelog-release-highlight {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
   }
-
-  .changelog-changes {
-    padding: var(--spacing-md);
-  }
-}
-
-/* Dark mode - Reduce floating appearance of badges */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-change-badge {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-  
-  :root:not([data-theme="light"]) .changelog-change-badge.fix {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-  
-  :root:not([data-theme="light"]) .changelog-change-badge.added {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-  
-  :root:not([data-theme="light"]) .changelog-change-badge.changed {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-  
-  :root:not([data-theme="light"]) .changelog-change-badge.deprecated {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-  
-  :root:not([data-theme="light"]) .changelog-change-badge.removed {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-  
-  :root:not([data-theme="light"]) .changelog-change-badge.security {
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
-}
-
-:root[data-theme="dark"] .changelog-change-badge {
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-:root[data-theme="dark"] .changelog-change-badge.fix,
-:root[data-theme="dark"] .changelog-change-badge.added,
-:root[data-theme="dark"] .changelog-change-badge.changed,
-:root[data-theme="dark"] .changelog-change-badge.deprecated,
-:root[data-theme="dark"] .changelog-change-badge.removed,
-:root[data-theme="dark"] .changelog-change-badge.security {
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }

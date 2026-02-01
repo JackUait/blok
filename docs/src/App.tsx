@@ -11,12 +11,22 @@ import { PageTransition } from "./components/common/PageTransition";
 
 const ScrollHandler = () => {
   const { pathname, hash } = useLocation();
-  const initialPath = useRef(pathname);
+  const isInitialLoad = useRef(true);
+  const previousPathname = useRef(pathname);
 
   useEffect(() => {
-    // Handle hash scrolling
-    const shouldScrollToTop = !hash && pathname !== initialPath.current;
-    if (shouldScrollToTop) {
+    // On initial page load (including reload), let the browser handle scroll restoration
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      previousPathname.current = pathname;
+      return;
+    }
+
+    // Handle navigation between routes
+    const isNewRoute = pathname !== previousPathname.current;
+    previousPathname.current = pathname;
+
+    if (isNewRoute && !hash) {
       window.scrollTo(0, 0);
       return;
     }
@@ -43,11 +53,10 @@ const ScrollHandler = () => {
 const App = () => {
   const location = useLocation();
 
-  // Disable browser's automatic scroll restoration on page reload
-  // This prevents the browser from scrolling back to the previous position
+  // Let the browser restore scroll position on page reload
   useEffect(() => {
     if ('scrollRestoration' in history) {
-      history.scrollRestoration = 'manual';
+      history.scrollRestoration = 'auto';
     }
   }, []);
 

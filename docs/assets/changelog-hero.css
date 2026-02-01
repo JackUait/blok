@@ -1,11 +1,11 @@
 /* ============================================
-   Changelog Styles - Modern, Playful Documentation
-   Enhanced design with warm, friendly aesthetic
+   Changelog Styles - Clean Editorial Design
+   Typography-first approach with restrained accents
    ============================================ */
 
 /* Changelog Main */
 .changelog-main {
-  max-width: 900px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 100px var(--spacing-xl) var(--spacing-4xl);
   position: relative;
@@ -24,134 +24,48 @@
   }
 }
 
-/* Floating gradient orbs - warm coral/pink themed with enhanced depth */
-.changelog-gradient-1 {
-  position: fixed;
-  width: 800px;
-  height: 800px;
-  border-radius: 50%;
-  background: 
-    radial-gradient(circle at 30% 40%, var(--color-coral) 0%, transparent 50%),
-    radial-gradient(circle at 70% 60%, var(--color-orange) 0%, transparent 45%);
-  filter: blur(120px);
-  opacity: 0.14;
-  top: -200px;
-  right: -250px;
-  pointer-events: none;
-  z-index: -1;
-  animation: floatGlow1 20s ease-in-out infinite;
-}
-
-@keyframes floatGlow1 {
-  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  25% { transform: translate(30px, 20px) scale(1.05) rotate(2deg); }
-  50% { transform: translate(50px, 40px) scale(1.1) rotate(0deg); }
-  75% { transform: translate(20px, 60px) scale(1.03) rotate(-2deg); }
-}
-
+/* Background orbs - hidden for cleaner look */
+.changelog-gradient-1,
 .changelog-gradient-2 {
-  position: fixed;
-  width: 700px;
-  height: 700px;
-  border-radius: 50%;
-  background: 
-    radial-gradient(circle at 60% 50%, var(--color-pink) 0%, transparent 50%),
-    radial-gradient(circle at 30% 70%, var(--color-mauve) 0%, transparent 40%);
-  filter: blur(100px);
-  opacity: 0.12;
-  bottom: -150px;
-  left: -200px;
-  pointer-events: none;
-  z-index: -1;
-  animation: floatGlow2 25s ease-in-out infinite;
+  display: none;
 }
 
-@keyframes floatGlow2 {
-  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  33% { transform: translate(-30px, -20px) scale(1.08) rotate(-3deg); }
-  66% { transform: translate(-50px, -40px) scale(1.12) rotate(2deg); }
-}
-
-/* Changelog Hero */
+/* Changelog Hero - Minimal, editorial */
 .changelog-hero {
-  text-align: center;
+  text-align: left;
   position: relative;
   z-index: 1;
   margin-bottom: var(--spacing-3xl);
   padding: var(--spacing-xl) 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .changelog-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 10px 20px;
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.12) 0%, rgba(212, 164, 184, 0.08) 100%);
-  color: var(--color-coral);
-  font-family: var(--font-family);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border-radius: var(--radius-full);
-  margin-bottom: var(--spacing-lg);
-  animation: fadeInUp 0.6s var(--transition-slow) backwards;
-  border: 1px solid rgba(240, 123, 75, 0.12);
-  box-shadow: 
-    0 2px 12px rgba(240, 123, 75, 0.08),
-    inset 0 1px 1px rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(8px);
-}
-
-.changelog-hero-badge svg {
-  width: 14px;
-  height: 14px;
-  stroke-width: 2.5;
+  display: none;
 }
 
 .changelog-hero-title {
   font-family: var(--font-family-display);
-  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-size: clamp(2rem, 6vw, 3rem);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-display);
-  margin-bottom: var(--spacing-md);
-  animation: heroTitleReveal 0.8s var(--transition-spring) backwards;
+  margin-bottom: var(--spacing-sm);
   color: var(--color-text-primary);
-  background: var(--gradient-coral-pink);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1.1;
-  position: relative;
-  display: inline-block;
-}
-
-@keyframes heroTitleReveal {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.97);
-    filter: blur(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
+  line-height: 1.2;
 }
 
 .changelog-hero-description {
-  font-size: var(--font-size-lg);
-  color: var(--color-text-secondary);
-  max-width: 480px;
-  margin: var(--spacing-md) auto 0;
-  animation: fadeInUp 0.6s var(--transition-slow) 0.25s backwards;
-  line-height: 1.75;
+  font-size: var(--font-size-base);
+  color: var(--color-text-tertiary);
+  max-width: 400px;
+  margin: 0;
+  line-height: 1.6;
   font-weight: 500;
 }
 
 @media (max-width: 640px) {
   .changelog-hero-description {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-sm);
   }
 }
 

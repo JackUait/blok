@@ -1,91 +1,28 @@
-/* Release Card - Enhanced depth and warmth */
+/* Release Card - Clean and minimal */
 .changelog-release-card {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 0;
+  border: none;
   overflow: hidden;
-  transition: all var(--transition-base);
   position: relative;
-  box-shadow: var(--shadow-sm);
 }
 
-/* Top accent bar */
+/* No accent bar */
 .changelog-release-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--gradient-coral-pink);
-  opacity: 0;
-  transition: opacity var(--transition-base);
+  display: none;
 }
 
 .changelog-release-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-  border-color: rgba(240, 123, 75, 0.15);
+  /* No hover effects */
 }
 
-.changelog-release-card:hover::before {
-  opacity: 1;
-}
-
-/* Highlight state for major releases */
+/* No special highlight state */
 .changelog-release.highlight .changelog-release-card {
-  border-color: rgba(240, 123, 75, 0.2);
-  box-shadow: var(--shadow-md);
+  /* Clean */
 }
 
-.changelog-release.highlight .changelog-release-card::before {
-  opacity: 1;
-}
-
-.changelog-release.highlight .changelog-release-card:hover {
-  box-shadow: var(--shadow-xl);
-}
-
-/* First release card - extra prominence */
 .changelog-release:first-child .changelog-release-card {
-  border-color: rgba(240, 123, 75, 0.12);
-}
-
-.changelog-release:first-child .changelog-release-card::before {
-  opacity: 0.7;
-}
-
-/* Dark mode - Enhanced visibility for card boundaries */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-release-card {
-    background: var(--color-surface);
-    border-color: rgba(254, 243, 232, 0.15);
-    box-shadow: 
-      0 2px 8px rgba(0, 0, 0, 0.25),
-      0 0 0 1px rgba(254, 243, 232, 0.08);
-  }
-  
-  :root:not([data-theme="light"]) .changelog-release-card:hover {
-    border-color: rgba(245, 147, 103, 0.25);
-    box-shadow: 
-      0 8px 24px rgba(0, 0, 0, 0.35),
-      0 0 0 1px rgba(245, 147, 103, 0.15);
-  }
-}
-
-:root[data-theme="dark"] .changelog-release-card {
-  background: var(--color-surface);
-  border-color: rgba(254, 243, 232, 0.15);
-  box-shadow: 
-    0 2px 8px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(254, 243, 232, 0.08);
-}
-
-:root[data-theme="dark"] .changelog-release-card:hover {
-  border-color: rgba(245, 147, 103, 0.25);
-  box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(245, 147, 103, 0.15);
+  /* No special treatment */
 }
 
 

@@ -60,11 +60,11 @@ describe('App', () => {
     expect(heading).toBeInTheDocument();
   });
 
-  it('should set scrollRestoration to manual to prevent browser auto-scroll on reload', () => {
+  it('should set scrollRestoration to auto to preserve scroll position on reload', () => {
     // Create a mock history with scrollRestoration property
     const mockHistory = {
       ...originalHistory,
-      scrollRestoration: 'auto' as 'auto' | 'manual',
+      scrollRestoration: 'manual' as 'auto' | 'manual',
     };
 
     // Override global history
@@ -80,7 +80,7 @@ describe('App', () => {
       </MemoryRouter>
     );
 
-    // After app renders, scrollRestoration should be set to 'manual'
-    expect(mockHistory.scrollRestoration).toBe('manual');
+    // After app renders, scrollRestoration should be set to 'auto'
+    expect(mockHistory.scrollRestoration).toBe('auto');
   });
 });

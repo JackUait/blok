@@ -55,6 +55,23 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
   // Handle Cmd/Ctrl + K to open search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -116,29 +133,29 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                 );
               })}
             </div>
+          </div>
 
-            {/* Utility Controls */}
-            <div className={styles.navUtilities}>
-              <button
-                className={styles.searchButton}
-                onClick={() => setSearchOpen(true)}
-                type="button"
-                aria-label="Search (⌘K)"
-              >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                  <path
-                    d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <kbd className={styles.searchShortcut}>⌘K</kbd>
-              </button>
-              <LanguageSelector />
-              <ThemeToggle />
-            </div>
+          {/* Utility Controls - outside nav-links so they stay visible on mobile */}
+          <div className={styles.navUtilities}>
+            <button
+              className={styles.searchButton}
+              onClick={() => setSearchOpen(true)}
+              type="button"
+              aria-label="Search (⌘K)"
+            >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                <path
+                  d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zM19 19l-4.35-4.35"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <kbd className={styles.searchShortcut}>⌘K</kbd>
+            </button>
+            <LanguageSelector />
+            <ThemeToggle />
           </div>
           <button
             className={`nav-toggle ${menuOpen ? "active" : ""}`}

@@ -1,34 +1,18 @@
-/* Changelog Timeline - Enhanced Visual Design */
+/* Changelog Timeline - Clean Editorial Design */
 .changelog-timeline {
   position: relative;
   z-index: 1;
 }
 
-/* Timeline Line - Enhanced gradient with glow effect */
+/* Timeline Line - Subtle and refined */
 .changelog-timeline::before {
   content: '';
   position: absolute;
-  left: 100px;
+  left: 6px;
   top: 0;
   bottom: 0;
-  width: 3px;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(240, 123, 75, 0.25) 3%,
-    var(--color-coral) 15%,
-    var(--color-pink) 50%,
-    var(--color-mauve) 85%,
-    rgba(197, 147, 168, 0.25) 97%,
-    transparent 100%
-  );
-  border-radius: 3px;
-}
-
-@media (max-width: 768px) {
-  .changelog-timeline::before {
-    left: 50px;
-  }
+  width: 1px;
+  background: var(--color-border);
 }
 
 @media (max-width: 640px) {
@@ -41,24 +25,18 @@
 .changelog-release {
   position: relative;
   padding: var(--spacing-lg) 0;
-  padding-left: 160px;
-  animation: releaseSlideIn 0.5s var(--transition-spring) backwards;
+  padding-left: 40px;
+  animation: releaseSlideIn 0.4s var(--transition-smooth) backwards;
 }
 
 @keyframes releaseSlideIn {
   from {
     opacity: 0;
-    transform: translateX(-15px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (max-width: 768px) {
-  .changelog-release {
-    padding-left: 80px;
+    transform: translateY(0);
   }
 }
 
@@ -69,26 +47,18 @@
   }
 }
 
-/* Timeline Dot */
+/* Timeline Dot - Simple and clean */
 .changelog-release::before {
   content: '';
   position: absolute;
-  left: 92px;
-  top: calc(var(--spacing-lg) + 6px);
-  width: 18px;
-  height: 18px;
-  background: var(--color-surface);
-  border: 3px solid var(--color-coral);
+  left: 2px;
+  top: calc(var(--spacing-lg) + 8px);
+  width: 9px;
+  height: 9px;
+  background: var(--color-text-tertiary);
   border-radius: var(--radius-full);
   z-index: 3;
-  transition: all var(--transition-base);
-  box-shadow: 0 0 0 4px var(--color-surface);
-}
-
-@media (max-width: 768px) {
-  .changelog-release::before {
-    left: 42px;
-  }
+  transition: background var(--transition-smooth);
 }
 
 @media (max-width: 640px) {
@@ -97,95 +67,44 @@
   }
 }
 
-/* First release - Hero treatment */
+/* First release dot - accent color */
 .changelog-release:first-child::before {
-  width: 20px;
-  height: 20px;
-  left: 91px;
-  top: calc(var(--spacing-lg) + 5px);
-  border-width: 3px;
-  border-color: var(--color-coral);
-  background: linear-gradient(135deg, var(--color-coral) 0%, var(--color-orange) 100%);
-  box-shadow: 
-    0 0 0 4px var(--color-surface), 
-    0 0 0 7px rgba(240, 123, 75, 0.15),
-    0 2px 12px rgba(240, 123, 75, 0.25);
+  background: var(--color-coral);
 }
 
-@media (max-width: 768px) {
-  .changelog-release:first-child::before {
-    left: 41px;
-  }
-}
-
-/* Release type colors for dots */
+/* Release type colors - subtle differentiation */
 .changelog-release.major::before {
-  border-color: var(--color-orange);
+  background: var(--color-text-primary);
 }
 
 .changelog-release.minor::before {
-  border-color: var(--color-coral);
+  background: var(--color-text-secondary);
 }
 
 .changelog-release.patch::before {
-  border-color: var(--color-green);
+  background: var(--color-text-tertiary);
 }
 
-.changelog-release:hover::before {
-  transform: scale(1.15);
-}
-
-/* Version Badge */
+/* Version Badge - Editorial style */
 .changelog-version {
-  position: absolute;
-  left: 0;
-  top: var(--spacing-lg);
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  width: 80px;
-}
-
-@media (max-width: 768px) {
-  .changelog-version {
-    width: 35px;
-  }
-}
-
-@media (max-width: 640px) {
-  .changelog-version {
-    position: relative;
-    left: 0;
-    top: 0;
-    width: auto;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
-  }
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .changelog-version-number {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-size: var(--font-size-base);
+  font-weight: 600;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
-  transition: all var(--transition-base);
   text-decoration: none;
-  position: relative;
-  padding: 4px 8px;
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.06) 0%, rgba(212, 164, 184, 0.03) 100%);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
+  transition: color var(--transition-smooth);
 }
 
 .changelog-version-number:hover {
   color: var(--color-coral);
-  border-color: rgba(240, 123, 75, 0.3);
-  background: linear-gradient(135deg, rgba(240, 123, 75, 0.1) 0%, rgba(212, 164, 184, 0.05) 100%);
 }
 
 .changelog-version-number:visited {
@@ -196,94 +115,49 @@
   color: var(--color-coral);
 }
 
-@media (max-width: 768px) {
-  .changelog-version-number {
-    font-size: 10px;
-    padding: 2px 5px;
-  }
-}
-
-@media (max-width: 640px) {
-  .changelog-version-number {
-    font-size: var(--font-size-sm);
-    padding: 4px 10px;
-  }
-}
-
 .changelog-version-date {
-  font-size: 9px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
-  letter-spacing: 0.02em;
+  font-family: var(--font-family);
   font-weight: 500;
-  text-align: right;
 }
 
-@media (max-width: 768px) {
-  .changelog-version-date {
-    font-size: 8px;
-  }
-}
-
-@media (max-width: 640px) {
-  .changelog-version-date {
-    font-size: var(--font-size-xs);
-  }
-}
-
+/* Version type badge - minimal */
 .changelog-version-type {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  padding: 3px 8px;
+  padding: 2px 8px;
   font-family: var(--font-family);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
-}
-
-.changelog-release:hover .changelog-version-type {
-  transform: scale(1.05);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  background: var(--color-divider);
 }
 
 .changelog-release.major .changelog-version-type {
-  background: linear-gradient(135deg, var(--color-orange) 0%, #F5A623 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(248, 144, 66, 0.25);
+  color: var(--color-text-primary);
+  background: rgba(45, 42, 38, 0.08);
 }
 
 .changelog-release.minor .changelog-version-type {
-  background: linear-gradient(135deg, var(--color-coral) 0%, #F59577 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(240, 123, 75, 0.25);
+  color: var(--color-text-secondary);
 }
 
 .changelog-release.patch .changelog-version-type {
-  background: linear-gradient(135deg, var(--color-green) 0%, #8FD99F 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(123, 196, 127, 0.25);
-}
-
-@media (max-width: 768px) {
-  .changelog-version-type {
-    font-size: 7px;
-    min-width: 36px;
-    padding: 2px 6px;
-  }
+  color: var(--color-text-tertiary);
 }
 
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .changelog-version-number {
-    background: linear-gradient(135deg, rgba(245, 147, 103, 0.08) 0%, rgba(212, 164, 184, 0.04) 100%);
+  :root:not([data-theme="light"]) .changelog-release.major .changelog-version-type {
+    background: rgba(254, 243, 232, 0.08);
   }
 }
 
-:root[data-theme="dark"] .changelog-version-number {
-  background: linear-gradient(135deg, rgba(245, 147, 103, 0.08) 0%, rgba(212, 164, 184, 0.04) 100%);
+:root[data-theme="dark"] .changelog-release.major .changelog-version-type {
+  background: rgba(254, 243, 232, 0.08);
 }
 

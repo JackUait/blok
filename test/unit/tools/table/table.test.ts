@@ -131,6 +131,32 @@ describe('Table Tool', () => {
     });
   });
 
+  describe('heading row', () => {
+    it('marks first row as heading when withHeadings is true', () => {
+      const options = createTableOptions({
+        withHeadings: true,
+        content: [['H1', 'H2'], ['D1', 'D2']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const firstRow = element.querySelector('[data-blok-table-row]');
+      expect(firstRow?.hasAttribute('data-blok-table-heading')).toBe(true);
+    });
+
+    it('does not mark first row as heading when withHeadings is false', () => {
+      const options = createTableOptions({
+        withHeadings: false,
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const firstRow = element.querySelector('[data-blok-table-row]');
+      expect(firstRow?.hasAttribute('data-blok-table-heading')).toBe(false);
+    });
+  });
+
   describe('validate', () => {
     it('returns true for table with content', () => {
       const options = createTableOptions();

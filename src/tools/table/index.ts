@@ -100,6 +100,10 @@ export class Table implements BlockTool {
     wrapper.appendChild(gridEl);
     this.element = wrapper;
 
+    if (this.data.withHeadings) {
+      this.updateHeadingStyles();
+    }
+
     return wrapper;
   }
 

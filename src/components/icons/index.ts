@@ -240,3 +240,11 @@ export const IconListChecklist = `
 </svg>
 `;
 
+// Table icon
+export const IconTable = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M2 8h16M2 12h16M7 4v12M13 4v12" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+

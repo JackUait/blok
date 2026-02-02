@@ -1,6 +1,8 @@
 import type { SearchIndexItem, SearchResult } from '@/types/search';
 import { API_SECTIONS, SIDEBAR_SECTIONS } from '@/components/api/api-data';
 
+export type { SearchIndexItem };
+
 // Map section IDs to their module (sidebar section) titles
 const SECTION_TO_MODULE: Record<string, string> = {};
 
@@ -34,32 +36,41 @@ const splitIdentifier = (text: string): string[] => {
     .filter(Boolean);
 };
 
+// Find aliases matching a word
+const findAliases = (word: string): string[] => {
+  const wordLower = word.toLowerCase();
+  const result: string[] = [];
+
+  for (const [key, aliases] of Object.entries(ALIASES)) {
+    if (wordLower.includes(key) || aliases.some(a => wordLower.includes(a))) {
+      result.push(key, ...aliases);
+    }
+  }
+
+  return result;
+};
+
 const createKeywords = (...parts: (string | undefined)[]): string[] => {
   const keywords: string[] = [];
-  
+
   for (const part of parts) {
     if (!part) continue;
-    
+
     // Add the original words
     const words = part.toLowerCase().split(/\s+/);
     keywords.push(...words);
-    
+
     // Add split identifiers (for camelCase method names)
     for (const word of words) {
       keywords.push(...splitIdentifier(word));
     }
-    
+
     // Add aliases
     for (const word of words) {
-      const wordLower = word.toLowerCase();
-      for (const [key, aliases] of Object.entries(ALIASES)) {
-        if (wordLower.includes(key) || aliases.some(a => wordLower.includes(a))) {
-          keywords.push(key, ...aliases);
-        }
-      }
+      keywords.push(...findAliases(word));
     }
   }
-  
+
   // Remove duplicates
   return [...new Set(keywords)];
 };
@@ -306,6 +317,21 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
   return index;
 };
 
+// Build Levenshtein matrix row
+const buildMatrixRow = (a: string, b: string, row: number, prevRow: number[]): number[] => {
+  const result = [row];
+
+  for (const j of Array.from({ length: a.length }, (_, idx) => idx + 1)) {
+    const cost = b.charAt(row - 1) === a.charAt(j - 1)
+      ? prevRow[j - 1]
+      : Math.min(prevRow[j - 1] + 1, result[j - 1] + 1, prevRow[j] + 1);
+
+    result.push(cost);
+  }
+
+  return result;
+};
+
 // Calculate Levenshtein distance for typo tolerance
 const levenshteinDistance = (a: string, b: string): number => {
   if (a.length === 0) return b.length;
@@ -314,30 +340,40 @@ const levenshteinDistance = (a: string, b: string): number => {
   // Only calculate for short strings (performance)
   if (a.length > 15 || b.length > 15) return Math.abs(a.length - b.length);
 
-  const matrix: number[][] = [];
+  const initialRow = Array.from({ length: a.length + 1 }, (_, j) => j);
 
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
+  const finalMatrix = Array.from({ length: b.length }, (_, i) => i + 1).reduce(
+    (prev, row) => [...prev, buildMatrixRow(a, b, row, prev[prev.length - 1])],
+    [initialRow]
+  );
 
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
-        );
-      }
-    }
+  return finalMatrix[b.length][a.length];
+};
+
+// Score a single word via typo tolerance
+const typoScore = (queryLower: string, textWords: string[]): number => {
+  if (queryLower.length < 4) return 0;
+
+  for (const word of textWords) {
+    const distance = levenshteinDistance(queryLower, word);
+
+    if (distance === 1) return 50;
+    if (distance === 2 && queryLower.length >= 6) return 30;
   }
 
-  return matrix[b.length][a.length];
+  return 0;
+};
+
+// Score a single word via alias matching
+const aliasScore = (queryLower: string, textLower: string): number => {
+  for (const [key, aliases] of Object.entries(ALIASES)) {
+    const isQueryAlias = queryLower === key || aliases.includes(queryLower);
+    const textMatchesAlias = textLower.includes(key) || aliases.some(a => textLower.includes(a));
+
+    if (isQueryAlias && textMatchesAlias) return 40;
+  }
+
+  return 0;
 };
 
 // Score a single word match against text
@@ -359,47 +395,55 @@ const wordScore = (queryWord: string, text: string): number => {
   if (textLower.includes(queryLower)) return 60;
 
   // Typo tolerance (within 1-2 edit distance for words 4+ chars)
-  if (queryLower.length >= 4) {
-    for (const word of textWords) {
-      const distance = levenshteinDistance(queryLower, word);
-      if (distance === 1) return 50;
-      if (distance === 2 && queryLower.length >= 6) return 30;
-    }
-  }
+  const typo = typoScore(queryLower, textWords);
+
+  if (typo > 0) return typo;
 
   // Check aliases
-  for (const [key, aliases] of Object.entries(ALIASES)) {
-    if (queryLower === key || aliases.includes(queryLower)) {
-      if (textLower.includes(key) || aliases.some(a => textLower.includes(a))) {
-        return 40;
-      }
-    }
-  }
-
-  return 0;
+  return aliasScore(queryLower, textLower);
 };
 
 // Score multi-word query against text (all words should match)
 const multiWordScore = (query: string, text: string): number => {
   const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
-  
+
   if (queryWords.length === 0) return 0;
   if (queryWords.length === 1) return wordScore(queryWords[0], text);
 
   // For multi-word queries, calculate score for each word
   const wordScores = queryWords.map(word => wordScore(word, text));
-  
+
   // All words must have some match
+  const matchingWords = wordScores.filter(s => s > 0).length;
+
+  if (wordScores.some(score => score === 0) && matchingWords === 0) {
+    return 0;
+  }
+
   if (wordScores.some(score => score === 0)) {
-    // If not all words match, reduce score significantly
-    const matchingWords = wordScores.filter(s => s > 0).length;
-    if (matchingWords === 0) return 0;
     return (matchingWords / queryWords.length) * 20;
   }
 
   // Average score with bonus for having all words match
   const avgScore = wordScores.reduce((a, b) => a + b, 0) / wordScores.length;
   return avgScore * 1.2; // 20% bonus for full match
+};
+
+// Score a keyword match for a single query word
+const scoreKeywordMatch = (kw: string, qw: string): number => {
+  if (kw === qw) return 70;
+  if (kw.startsWith(qw)) return 50;
+  if (kw.includes(qw)) return 30;
+  return 0;
+};
+
+// Calculate the best keyword score for an item
+const calcKeywordScore = (keywords: string[], queryWords: string[]): number => {
+  const scores = keywords.flatMap(kw =>
+    queryWords.map(qw => scoreKeywordMatch(kw, qw))
+  );
+
+  return Math.max(0, ...scores);
 };
 
 // Search the index
@@ -410,6 +454,7 @@ export const search = (query: string, index: SearchIndexItem[]): SearchResult[] 
   }
 
   const results: SearchResult[] = [];
+  const queryWords = trimmedQuery.toLowerCase().split(/\s+/);
 
   for (const item of index) {
     // Calculate score based on title, description, and keywords
@@ -419,19 +464,7 @@ export const search = (query: string, index: SearchIndexItem[]): SearchResult[] 
       : 0;
 
     // Check keywords with direct word matching
-    let keywordScore = 0;
-    const queryWords = trimmedQuery.toLowerCase().split(/\s+/);
-    for (const kw of item.keywords) {
-      for (const qw of queryWords) {
-        if (kw === qw) {
-          keywordScore = Math.max(keywordScore, 70);
-        } else if (kw.startsWith(qw)) {
-          keywordScore = Math.max(keywordScore, 50);
-        } else if (kw.includes(qw)) {
-          keywordScore = Math.max(keywordScore, 30);
-        }
-      }
-    }
+    const keywordScore = calcKeywordScore(item.keywords, queryWords);
 
     const totalScore = titleScore + descScore + keywordScore;
 

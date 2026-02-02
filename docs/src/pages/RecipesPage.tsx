@@ -236,16 +236,15 @@ export const RecipesPage: React.FC = () => {
     };
 
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          if (scrollTargetRef.current) {
-            if (entry.target.id === scrollTargetRef.current) {
-              scrollTargetRef.current = null;
-            }
-            return;
-          }
-          setActiveSection(entry.target.id);
+      entries.filter((entry) => entry.isIntersecting).forEach((entry) => {
+        if (scrollTargetRef.current && entry.target.id === scrollTargetRef.current) {
+          scrollTargetRef.current = null;
+          return;
         }
+        if (scrollTargetRef.current) {
+          return;
+        }
+        setActiveSection(entry.target.id);
       });
     }, observerOptions);
 

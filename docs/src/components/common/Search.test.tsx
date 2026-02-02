@@ -108,7 +108,7 @@ describe('Search', () => {
 
   describe('module grouping', () => {
     it('should group search results by module', async () => {
-      const { container } = render(
+      render(
         <MemoryRouter>
           <Search open={true} onClose={vi.fn()} />
         </MemoryRouter>
@@ -123,7 +123,7 @@ describe('Search', () => {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Find all module headers
-      const moduleHeaders = container.querySelectorAll('[data-blok-testid="search-module-header"]');
+      const moduleHeaders = screen.getAllByTestId('search-module-header');
 
       // Should have at least one module header
       expect(moduleHeaders.length).toBeGreaterThan(0);
@@ -136,7 +136,7 @@ describe('Search', () => {
     });
 
     it('should display module headers in correct order', async () => {
-      const { container } = render(
+      render(
         <MemoryRouter>
           <Search open={true} onClose={vi.fn()} />
         </MemoryRouter>
@@ -151,7 +151,7 @@ describe('Search', () => {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Get module headers in order
-      const moduleHeaders = Array.from(container.querySelectorAll('[data-blok-testid="search-module-header"]'));
+      const moduleHeaders = screen.getAllByTestId('search-module-header');
       const moduleTitles = moduleHeaders.map(h => h.textContent?.trim()).filter(Boolean);
 
       // Module headers should be grouped (no duplicates)
@@ -160,7 +160,7 @@ describe('Search', () => {
     });
 
     it('should show results under their respective module headers', async () => {
-      const { container } = render(
+      render(
         <MemoryRouter>
           <Search open={true} onClose={vi.fn()} />
         </MemoryRouter>
@@ -175,16 +175,13 @@ describe('Search', () => {
       await new Promise(resolve => setTimeout(resolve, 200));
 
       // Find module headers
-      const moduleHeaders = container.querySelectorAll('[data-blok-testid="search-module-header"]');
+      const moduleHeaders = screen.getAllByTestId('search-module-header');
 
-      if (moduleHeaders.length > 0) {
-        // Check that results exist after module headers
-        const firstHeader = moduleHeaders[0] as HTMLElement;
-        const nextElement = firstHeader.nextElementSibling;
+      // Should have at least one module header with results following it
+      expect(moduleHeaders.length).toBeGreaterThan(0);
 
-        // Next element should be a result or another header
-        expect(nextElement).toBeTruthy();
-      }
+      // Verify that the first module header has visible text content
+      expect(moduleHeaders[0]).toHaveTextContent(/.+/);
     });
   });
 });

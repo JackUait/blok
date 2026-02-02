@@ -7,7 +7,9 @@
 export const highlightCode = (code: string): string => {
   // Store strings with placeholders
   const strings: string[] = [];
-  let processed = code
+  const comments: string[] = [];
+
+  const withStringsExtracted = code
     // Escape HTML first
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -19,10 +21,8 @@ export const highlightCode = (code: string): string => {
       return placeholder;
     });
 
-  // Store comments with placeholders
-  const comments: string[] = [];
-  processed = processed
-    // Extract comments and replace with placeholders
+  // Extract comments and replace with placeholders
+  const withCommentsExtracted = withStringsExtracted
     .replace(/(\/\/.*)/g, (match) => {
       const placeholder = `__COMMENT_${comments.length}__`;
       comments.push(`<span class="token-comment">${match}</span>`);
@@ -30,7 +30,7 @@ export const highlightCode = (code: string): string => {
     });
 
   // Now apply other transformations (they won't match inside strings/comments)
-  processed = processed
+  const withTokensHighlighted = withCommentsExtracted
     // Keywords
     .replace(
       /\b(import|from|const|let|var|function|class|new|return|if|else|async|await|export|default|interface|type|extends)\b/g,
@@ -41,15 +41,16 @@ export const highlightCode = (code: string): string => {
     // Functions
     .replace(/\b([a-zA-Z_]\w*)\s*\(/g, '<span class="token-function">$1</span>(');
 
-  // Restore comments first
-  comments.forEach((replacement, i) => {
-    processed = processed.replace(`__COMMENT_${i}__`, replacement);
-  });
+  // Restore comments first, then strings
+  const withCommentsRestored = comments.reduce(
+    (result, replacement, i) => result.replace(`__COMMENT_${i}__`, replacement),
+    withTokensHighlighted
+  );
 
-  // Restore strings
-  strings.forEach((replacement, i) => {
-    processed = processed.replace(`__STRING_${i}__`, replacement);
-  });
+  const withStringsRestored = strings.reduce(
+    (result, replacement, i) => result.replace(`__STRING_${i}__`, replacement),
+    withCommentsRestored
+  );
 
-  return processed;
+  return withStringsRestored;
 };

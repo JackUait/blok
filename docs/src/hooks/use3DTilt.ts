@@ -15,11 +15,11 @@ interface Use3DTiltOptions {
 }
 
 interface Use3DTiltReturn {
-  ref: React.RefCallback<HTMLDivElement>;
+  ref: React.RefCallback<HTMLElement>;
   style: React.CSSProperties;
   glareStyle: React.CSSProperties;
   isHovered: boolean;
-  onMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseMove: (e: React.MouseEvent<HTMLElement>) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }
@@ -31,7 +31,7 @@ interface Use3DTiltReturn {
 export const use3DTilt = (options: Use3DTiltOptions = {}): Use3DTiltReturn => {
   const { maxTilt = 15, scale = 1.05, transitionSpeed = 400 } = options;
 
-  const elementRef = useRef<HTMLDivElement | null>(null);
+  const elementRef = useRef<HTMLElement | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isSettled, setIsSettled] = useState(false); // Track if entry transition is complete
   const [tilt, setTilt] = useState<TiltState>({
@@ -44,7 +44,7 @@ export const use3DTilt = (options: Use3DTiltOptions = {}): Use3DTiltReturn => {
   const frameId = useRef<number | null>(null);
   const settleTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const ref = useCallback((node: HTMLDivElement | null) => {
+  const ref = useCallback((node: HTMLElement | null) => {
     elementRef.current = node;
   }, []);
 
@@ -96,7 +96,7 @@ export const use3DTilt = (options: Use3DTiltOptions = {}): Use3DTiltReturn => {
   );
 
   const onMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (e: React.MouseEvent<HTMLElement>) => {
       if (frameId.current !== null) {
         cancelAnimationFrame(frameId.current);
       }

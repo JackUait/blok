@@ -22,23 +22,26 @@ export const defaultLocale: Locale = 'en';
 /**
  * Get a nested translation value from a dot-notation key
  */
-export function getTranslation(locale: Locale, key: string): string {
+const getTranslation = (locale: Locale, key: string): string => {
   const keys = key.split('.');
-  let current: Translations | string = translations[locale];
-  
-  for (const k of keys) {
-    if (typeof current === 'string') {
-      return key; // Key not found, return the key itself
+  const result = keys.reduce<Translations | string>((acc, k) => {
+    if (typeof acc === 'string') {
+      return acc;
     }
-    current = current[k] as Translations | string;
-    if (current === undefined) {
-      // Fallback to English if key not found
-      if (locale !== 'en') {
-        return getTranslation('en', key);
-      }
-      return key;
-    }
+    const next = acc[k];
+    return next === undefined ? acc : next;
+  }, translations[locale]);
+
+  if (typeof result === 'string') {
+    return result;
   }
-  
-  return typeof current === 'string' ? current : key;
-}
+
+  // Fallback to English if key not found
+  if (locale !== 'en') {
+    return getTranslation('en', key);
+  }
+
+  return key;
+};
+
+export { getTranslation };

@@ -276,8 +276,10 @@ describe('Sidebar', () => {
       // Change activeSection
       rerender(<Sidebar sections={MOCK_SECTIONS} activeSection="events-api" variant="api" />);
 
-      // Verify scroll was called
+      // Verify scroll was called with auto behavior
       expect(scrollToSpy).toHaveBeenCalled();
+      const scrollArgs = scrollToSpy.mock.calls[0][0] as ScrollToOptions;
+      expect(scrollArgs.behavior).toBe('auto');
     });
 
     it('should use auto scroll behavior', () => {

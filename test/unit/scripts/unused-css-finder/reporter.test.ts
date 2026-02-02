@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateReport, ReportFormat } from '../../../../scripts/unused-css-finder/reporter';
+import { generateReport } from '../../../../scripts/unused-css-finder/reporter';
 import type { UnusedCSSReport } from '../../../../scripts/unused-css-finder/analyzer';
 
 describe('Reporter', () => {

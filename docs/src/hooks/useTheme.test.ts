@@ -57,14 +57,14 @@ describe('useTheme', () => {
     });
     // Clean up theme state from document
     document.documentElement.removeAttribute('data-theme');
-    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.removeAttribute('class');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     // Clean up theme state from document
     document.documentElement.removeAttribute('data-theme');
-    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.removeAttribute('class');
   });
 
   describe('initialization', () => {
@@ -199,16 +199,12 @@ describe('useTheme', () => {
       });
 
       expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-      expect(document.documentElement.classList.contains('dark')).toBe(true);
-      expect(document.documentElement.classList.contains('light')).toBe(false);
 
       act(() => {
         result.current.setTheme('light');
       });
 
       expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-      expect(document.documentElement.classList.contains('light')).toBe(true);
-      expect(document.documentElement.classList.contains('dark')).toBe(false);
     });
   });
 

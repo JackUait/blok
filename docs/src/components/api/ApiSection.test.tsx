@@ -275,9 +275,9 @@ describe('ApiSection', () => {
   it('should render property rows with id for anchor navigation', () => {
     render(<ApiSection section={mockSection} />);
 
-    const propRow = document.getElementById('test-section-prop-testproperty');
+    const propRow = screen.getByTestId('test-section-prop-testproperty');
     expect(propRow).toBeInTheDocument();
-    expect(propRow?.tagName.toLowerCase()).toBe('tr');
+    expect(propRow.tagName.toLowerCase()).toBe('tr');
   });
 
   it('should render anchor links for config options', () => {
@@ -295,11 +295,11 @@ describe('ApiSection', () => {
   it('should render config option rows with id for anchor navigation', () => {
     render(<ApiSection section={mockConfigSection} />);
 
-    const holderRow = document.getElementById('config-holder');
+    const holderRow = screen.getByTestId('config-holder');
     expect(holderRow).toBeInTheDocument();
-    expect(holderRow?.tagName.toLowerCase()).toBe('tr');
+    expect(holderRow.tagName.toLowerCase()).toBe('tr');
 
-    const toolsRow = document.getElementById('config-tools');
+    const toolsRow = screen.getByTestId('config-tools');
     expect(toolsRow).toBeInTheDocument();
   });
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { scanSourceDirectory, findCSSUsage, scanFile, extractEnumValues, extractFunctionReturns, clearEnumValueCache, getFunctionReturnCache } from '../../../../scripts/unused-css-finder/scanner';
+import { scanSourceDirectory, findCSSUsage, scanFile, extractEnumValues, extractFunctionReturns, clearEnumValueCache } from '../../../../scripts/unused-css-finder/scanner';
 import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { analyzeUnusedCSS, UnusedCSSReport } from '../../../../scripts/unused-css-finder/analyzer';
+import { analyzeUnusedCSS } from '../../../../scripts/unused-css-finder/analyzer';
 import type { ParsedCSS } from '../../../../scripts/unused-css-finder/css-parser';
 import type { ScanResult } from '../../../../scripts/unused-css-finder/scanner';
 

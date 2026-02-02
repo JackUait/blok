@@ -150,43 +150,59 @@ const formatDescription = (text: string): React.ReactNode => {
 
   const formatPart = (part: string, key: number): React.ReactNode => {
     // Match **bold** and `code` patterns
-    const tokens: React.ReactNode[] = [];
-    let lastIndex = 0;
     const regex = /(\*\*[^*]+\*\*)|(`[^`]+`)/g;
-    let match;
+    const matches = Array.from(part.matchAll(regex));
 
-    while ((match = regex.exec(part)) !== null) {
-      // Add text before match
-      if (match.index > lastIndex) {
-        tokens.push(part.slice(lastIndex, match.index));
-      }
+    if (matches.length === 0) {
+      return part;
+    }
 
-      const matched = match[0];
-      if (matched.startsWith("**") && matched.endsWith("**")) {
-        // Bold text
-        tokens.push(
-          <strong key={`${key}-${match.index}`} className="changelog-bold">
+    const tokens: React.ReactNode[] = [];
+    const buildToken = (matched: string, matchIndex: number): React.ReactNode => {
+      const isBold = matched.startsWith("**") && matched.endsWith("**");
+      const isCode = matched.startsWith("`") && matched.endsWith("`");
+
+      if (isBold) {
+        return (
+          <strong key={`${key}-${matchIndex}`} className="changelog-bold">
             {matched.slice(2, -2)}
           </strong>
         );
-      } else if (matched.startsWith("`") && matched.endsWith("`")) {
-        // Code text
-        tokens.push(
-          <code key={`${key}-${match.index}`} className="changelog-code">
+      }
+
+      if (isCode) {
+        return (
+          <code key={`${key}-${matchIndex}`} className="changelog-code">
             {matched.slice(1, -1)}
           </code>
         );
       }
 
-      lastIndex = match.index + matched.length;
+      return matched;
+    };
+
+    matches.reduce((lastIndex, match) => {
+      const matchIndex = match.index ?? 0;
+      const matched = match[0];
+
+      if (matchIndex > lastIndex) {
+        tokens.push(part.slice(lastIndex, matchIndex));
+      }
+
+      tokens.push(buildToken(matched, matchIndex));
+
+      return matchIndex + matched.length;
+    }, 0);
+
+    // Add remaining text after last match
+    const lastMatch = matches[matches.length - 1];
+    const lastMatchEnd = (lastMatch.index ?? 0) + lastMatch[0].length;
+
+    if (lastMatchEnd < part.length) {
+      tokens.push(part.slice(lastMatchEnd));
     }
 
-    // Add remaining text
-    if (lastIndex < part.length) {
-      tokens.push(part.slice(lastIndex));
-    }
-
-    return tokens.length > 0 ? tokens : part;
+    return tokens;
   };
 
   if (hasEmDash) {

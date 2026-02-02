@@ -14,13 +14,13 @@ describe('Footer', () => {
     expect(footer).toBeInTheDocument();
   });
 
-  it('should render the Blok logo', () => {
+  it('should render the Blok mascot', () => {
     render(
       <MemoryRouter>
         <Footer />
       </MemoryRouter>
     );
-    expect(screen.getByText('Blok')).toBeInTheDocument();
+    expect(screen.getByAltText('Blok mascot')).toBeInTheDocument();
   });
 
   it('should render the tagline', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { search, getSearchIndex, type SearchIndexItem } from './search';
+import { search, getSearchIndex } from './search';
 
 describe('search', () => {
   describe('recipe search', () => {

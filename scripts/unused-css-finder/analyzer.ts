@@ -93,18 +93,25 @@ const TAILWIND_PATTERNS = [
 /**
  * Check if a class name is likely a Tailwind utility class
  */
-function isTailwindUtility(className: string): boolean {
+const isTailwindUtility = (className: string): boolean => {
   return TAILWIND_PATTERNS.some(pattern => pattern.test(className));
-}
+};
+
+/**
+ * Determine if a class should be included based on Tailwind filter settings
+ */
+const shouldIncludeClass = (className: string, ignoreTailwindUtilities: boolean): boolean => {
+  return !ignoreTailwindUtilities || !isTailwindUtility(className);
+};
 
 /**
  * Analyze CSS definitions vs usage to find unused CSS
  */
-export function analyzeUnusedCSS(
+export const analyzeUnusedCSS = (
   cssFiles: ParsedCSS[],
   sourceScan: ScanResult,
   options: AnalyzerOptions = {},
-): UnusedCSSReport {
+): UnusedCSSReport => {
   const { ignoreTailwindUtilities = true } = options;
 
   // Collect all defined classes and attributes
@@ -112,14 +119,10 @@ export function analyzeUnusedCSS(
   const definedAttributes = new Set<string>();
 
   for (const cssFile of cssFiles) {
-    for (const className of cssFile.classes) {
-      if (!ignoreTailwindUtilities || !isTailwindUtility(className)) {
-        definedClasses.add(className);
-      }
-    }
-    for (const attr of cssFile.attributes) {
-      definedAttributes.add(attr);
-    }
+    cssFile.classes
+      .filter(className => shouldIncludeClass(className, ignoreTailwindUtilities))
+      .forEach(className => definedClasses.add(className));
+    cssFile.attributes.forEach(attr => definedAttributes.add(attr));
   }
 
   // Convert source scan to Sets for easier lookup
@@ -154,9 +157,9 @@ export function analyzeUnusedCSS(
   const unusedByFile: Record<string, FileUnusedItems> = {};
 
   for (const cssFile of cssFiles) {
-    const fileUnusedClasses = cssFile.classes.filter(
-      c => !ignoreTailwindUtilities || !isTailwindUtility(c),
-    ).filter(c => !usedClassesSet.has(c));
+    const fileUnusedClasses = cssFile.classes
+      .filter(c => shouldIncludeClass(c, ignoreTailwindUtilities))
+      .filter(c => !usedClassesSet.has(c));
 
     const fileUnusedAttributes = cssFile.attributes.filter(a => !usedAttributesSet.has(a));
 
@@ -198,4 +201,4 @@ export function analyzeUnusedCSS(
     unusedAttributes,
     unusedByFile,
   };
-}
+};

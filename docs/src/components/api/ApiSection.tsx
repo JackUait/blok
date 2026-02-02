@@ -169,7 +169,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
               {section.properties.map((prop) => {
                 const propId = generatePropertyId(section.id, prop.name);
                 return (
-                  <tr key={prop.name} id={propId} className="api-table-row">
+                  <tr key={prop.name} id={propId} className="api-table-row" data-blok-testid={propId}>
                     <td>
                       <a href={`#${propId}`} className="api-anchor-link api-anchor-link--table" aria-label={`Link to ${prop.name}`}>#</a>
                       <code>{prop.name}</code>
@@ -208,7 +208,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
               {section.table.map((row) => {
                 const optionId = generateOptionId(section.id, row.option);
                 return (
-                  <tr key={row.option} id={optionId} className="api-table-row">
+                  <tr key={row.option} id={optionId} className="api-table-row" data-blok-testid={optionId}>
                     <td>
                       <a href={`#${optionId}`} className="api-anchor-link api-anchor-link--table" aria-label={`Link to ${row.option}`}>#</a>
                       <code>{row.option}</code>

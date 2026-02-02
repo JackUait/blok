@@ -41,10 +41,14 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
     // Also match if query is longer: e.g., query "blocks" should highlight "block"
     if (qw.length >= 4) {
       // Try progressively shorter prefixes (minimum 3 chars)
-      for (let len = qw.length - 1; len >= 3; len--) {
-        const prefix = qw.slice(0, len).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        patterns.push(`\\b${prefix}\\b`);
-      }
+      const prefixPatterns = Array.from(
+        { length: qw.length - 3 },
+        (_, i) => {
+          const prefix = qw.slice(0, qw.length - 1 - i).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          return `\\b${prefix}\\b`;
+        }
+      );
+      patterns.push(...prefixPatterns);
     }
   }
   
@@ -62,6 +66,40 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
       part
     )
   );
+};
+
+/** Group search results by module, preserving a predefined module order. */
+const groupResultsByModule = (searchResults: SearchResult[]): SearchResult[] => {
+  const moduleOrder = ['Guide', 'Core', 'API Modules', 'Data', 'Page'];
+  const groupedByModule = new Map<string, SearchResult[]>();
+
+  for (const result of searchResults) {
+    const existing = groupedByModule.get(result.module);
+
+    if (existing) {
+      existing.push(result);
+    } else {
+      groupedByModule.set(result.module, [result]);
+    }
+  }
+
+  const orderedResults: SearchResult[] = [];
+
+  for (const module of moduleOrder) {
+    const moduleResults = groupedByModule.get(module);
+
+    if (!moduleResults) continue;
+
+    orderedResults.push(...moduleResults);
+  }
+
+  for (const [module, moduleResults] of groupedByModule) {
+    if (moduleOrder.includes(module)) continue;
+
+    orderedResults.push(...moduleResults);
+  }
+
+  return orderedResults;
 };
 
 const CLOSE_ANIMATION_MS = 200;
@@ -88,18 +126,19 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
 
   // Reset state when closed
   useEffect(() => {
-    if (!open) {
-      setQuery('');
-      setDebouncedQuery('');
-      setResults([]);
-      setSelectedIndex(0);
-      setIsClosing(false);
-      setIsKeyboardNavMode(false);
-      if (keyboardNavTimerRef.current) {
-        clearTimeout(keyboardNavTimerRef.current);
-        keyboardNavTimerRef.current = null;
-      }
-    }
+    if (open) return;
+
+    setQuery('');
+    setDebouncedQuery('');
+    setResults([]);
+    setSelectedIndex(0);
+    setIsClosing(false);
+    setIsKeyboardNavMode(false);
+
+    if (!keyboardNavTimerRef.current) return;
+
+    clearTimeout(keyboardNavTimerRef.current);
+    keyboardNavTimerRef.current = null;
   }, [open]);
 
   // Cleanup keyboard nav timer on unmount
@@ -177,41 +216,16 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
 
   // Search functionality with debounced query
   useEffect(() => {
-    if (debouncedQuery.trim()) {
-      const searchResults = search(debouncedQuery, getSearchIndex());
-
-      // Group results by module, keeping items sorted by rank within each module
-      const moduleOrder = ['Guide', 'Core', 'API Modules', 'Data', 'Page'];
-      const groupedByModule = new Map<string, SearchResult[]>();
-
-      for (const result of searchResults) {
-        if (!groupedByModule.has(result.module)) {
-          groupedByModule.set(result.module, []);
-        }
-        groupedByModule.get(result.module)!.push(result);
-      }
-
-      // Flatten results grouped by module, maintaining module order
-      const orderedResults: SearchResult[] = [];
-      for (const module of moduleOrder) {
-        const moduleResults = groupedByModule.get(module);
-        if (moduleResults) {
-          orderedResults.push(...moduleResults);
-        }
-      }
-
-      // Add any remaining modules not in the predefined order
-      for (const [module, moduleResults] of groupedByModule) {
-        if (!moduleOrder.includes(module)) {
-          orderedResults.push(...moduleResults);
-        }
-      }
-
-      setResults(orderedResults);
-      setSelectedIndex(0);
-    } else {
+    if (!debouncedQuery.trim()) {
       setResults([]);
+      return;
     }
+
+    const searchResults = search(debouncedQuery, getSearchIndex());
+    const orderedResults = groupResultsByModule(searchResults);
+
+    setResults(orderedResults);
+    setSelectedIndex(0);
   }, [debouncedQuery]);
 
   // Handle result click
@@ -262,6 +276,26 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
     [results, selectedIndex, handleResultClick]
   );
 
+  // Scroll a buffer element into view within the results container
+  const scrollBufferElement = useCallback((
+    bufferElement: Element | undefined,
+    container: HTMLElement,
+    containerRect: DOMRect,
+    edge: 'top' | 'bottom'
+  ) => {
+    if (!bufferElement) return;
+
+    const bufferRect = bufferElement.getBoundingClientRect();
+
+    const scrollOffset = edge === 'top'
+      ? bufferRect.top - containerRect.top + container.scrollTop - 10
+      : bufferRect.bottom - containerRect.top + container.scrollTop - container.clientHeight + 10;
+
+    const topValue = edge === 'top' ? Math.max(0, scrollOffset) : scrollOffset;
+    container.scrollTo({ top: topValue, behavior: 'auto' });
+    inputRef.current?.focus();
+  }, []);
+
   // Scroll selected result into view with buffer (only for keyboard navigation)
   const scrollSelectedIntoView = useCallback(() => {
     if (!resultsRef.current || results.length === 0) return;
@@ -289,30 +323,16 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
     // Check if selected element is near top edge
     if (elementTop < bufferPixels) {
       const bufferTopIndex = Math.max(0, selectedIndex - bufferSize);
-      const bufferElement = allResults[bufferTopIndex] as HTMLElement;
-      if (bufferElement) {
-        const bufferRect = bufferElement.getBoundingClientRect();
-        const scrollOffset = bufferRect.top - containerRect.top + container.scrollTop - 10;
-        container.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'auto' });
-        // Ensure input stays focused after scroll (some browsers lose focus on scrollTo)
-        inputRef.current?.focus();
-      }
+      scrollBufferElement(allResults[bufferTopIndex], container, containerRect, 'top');
       return;
     }
 
     // Check if selected element is near bottom edge
-    if (elementBottom > containerHeight - bufferPixels) {
-      const bufferBottomIndex = Math.min(allResults.length - 1, selectedIndex + bufferSize);
-      const bufferElement = allResults[bufferBottomIndex] as HTMLElement;
-      if (bufferElement) {
-        const bufferRect = bufferElement.getBoundingClientRect();
-        const scrollOffset = bufferRect.bottom - containerRect.top + container.scrollTop - containerHeight + 10;
-        container.scrollTo({ top: scrollOffset, behavior: 'auto' });
-        // Ensure input stays focused after scroll (some browsers lose focus on scrollTo)
-        inputRef.current?.focus();
-      }
-    }
-  }, [selectedIndex, results.length]);
+    if (elementBottom <= containerHeight - bufferPixels) return;
+
+    const bufferBottomIndex = Math.min(allResults.length - 1, selectedIndex + bufferSize);
+    scrollBufferElement(allResults[bufferBottomIndex], container, containerRect, 'bottom');
+  }, [selectedIndex, results.length, scrollBufferElement]);
 
   useEffect(() => {
     scrollSelectedIntoView();

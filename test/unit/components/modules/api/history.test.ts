@@ -63,6 +63,7 @@ describe('HistoryAPI', () => {
       historyApi.methods.undo();
 
       expect(blok.YjsManager.undo).toHaveBeenCalled();
+      expect(historyApi.methods).toHaveProperty('undo');
     });
 
     it('exposes a redo method that proxies to the class method', () => {
@@ -71,6 +72,7 @@ describe('HistoryAPI', () => {
       historyApi.methods.redo();
 
       expect(blok.YjsManager.redo).toHaveBeenCalled();
+      expect(historyApi.methods).toHaveProperty('redo');
     });
 
     it('exposes a canUndo method that proxies to the class method', () => {
@@ -99,13 +101,16 @@ describe('HistoryAPI', () => {
       historyApi.methods.clear();
 
       expect(blok.YjsManager.clear).toHaveBeenCalled();
+      expect(historyApi.methods).toHaveProperty('clear');
     });
   });
 
   describe('undo', () => {
     it('calls YjsManager.undo', () => {
       const { historyApi, blok } = createHistoryApi();
+      blok.YjsManager.canUndo.mockReturnValue(true);
 
+      expect(historyApi.canUndo()).toBe(true);
       historyApi.undo();
 
       expect(blok.YjsManager.undo).toHaveBeenCalledTimes(1);
@@ -115,7 +120,9 @@ describe('HistoryAPI', () => {
   describe('redo', () => {
     it('calls YjsManager.redo', () => {
       const { historyApi, blok } = createHistoryApi();
+      blok.YjsManager.canRedo.mockReturnValue(true);
 
+      expect(historyApi.canRedo()).toBe(true);
       historyApi.redo();
 
       expect(blok.YjsManager.redo).toHaveBeenCalledTimes(1);
@@ -163,12 +170,16 @@ describe('HistoryAPI', () => {
   });
 
   describe('clear', () => {
-    it('calls YjsManager.clear', () => {
+    it('calls YjsManager.clear and resets undo/redo state', () => {
       const { historyApi, blok } = createHistoryApi();
+      blok.YjsManager.canUndo.mockReturnValue(false);
+      blok.YjsManager.canRedo.mockReturnValue(false);
 
       historyApi.clear();
 
       expect(blok.YjsManager.clear).toHaveBeenCalledTimes(1);
+      expect(historyApi.canUndo()).toBe(false);
+      expect(historyApi.canRedo()).toBe(false);
     });
   });
 });

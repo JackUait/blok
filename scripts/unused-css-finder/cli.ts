@@ -8,68 +8,86 @@ import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import type { ParsedCSS } from './css-parser.js';
+import type { ScanResult } from './scanner.js';
+import type { UnusedCSSReport } from './analyzer.js';
+import type { ReportFormat } from './reporter.js';
+
+const currentFilename = fileURLToPath(import.meta.url);
+const currentDirname = dirname(currentFilename);
+
+interface ImportedModule {
+  parseCSS: (content: string, filePath: string) => ParsedCSS;
+  scanSourceDirectory: (dir: string) => Promise<ScanResult>;
+  analyzeUnusedCSS: (parsedCSS: ParsedCSS[], sourceScan: ScanResult, options: { ignoreTailwindUtilities: boolean }) => UnusedCSSReport;
+  generateReport: (report: UnusedCSSReport, format: ReportFormat) => string;
+}
 
 // Import the module - using the .js extension as required by TypeScript ESM
-async function importModule() {
-  const modulePath = join(__dirname, 'index.js');
-  return await import(modulePath);
-}
+const importModule = async (): Promise<ImportedModule> => {
+  const modulePath = join(currentDirname, 'index.js');
+  return await import(modulePath) as ImportedModule;
+};
+
+/**
+ * Get CSS file extension for a filename
+ */
+const getCSSExtension = (filename: string): string => {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.module.css')) return '.module.css';
+  if (lower.endsWith('.css')) return '.css';
+  return '';
+};
+
+/**
+ * Check if a directory should be skipped during scanning
+ */
+const isExcludedDir = (name: string): boolean => {
+  return ['node_modules', '.git', 'dist', 'build'].includes(name);
+};
 
 /**
  * Find all CSS files in a directory
  */
-async function findCSSFiles(dir, extensions = ['.css']) {
+const findCSSFiles = async (dir: string, extensions: string[] = ['.css']): Promise<string[]> => {
   const { readdir } = await import('node:fs/promises');
   const { join: pathJoin } = await import('node:path');
 
-  const files = [];
+  const files: string[] = [];
 
-  async function scan(currentDir) {
+  const scan = async (currentDir: string): Promise<void> => {
     const entries = await readdir(currentDir, { withFileTypes: true });
 
     for (const entry of entries) {
       const fullPath = pathJoin(currentDir, entry.name);
 
-      if (entry.isDirectory()) {
-        // Skip node_modules and similar
-        if (!['node_modules', '.git', 'dist', 'build'].includes(entry.name)) {
-          await scan(fullPath);
-        }
-      } else if (entry.isFile()) {
-        const ext = entry.name.toLowerCase().endsWith('.css') ? '.css' :
-                    entry.name.toLowerCase().endsWith('.module.css') ? '.module.css' : '';
-        if (extensions.includes(ext)) {
-          files.push(fullPath);
-        }
+      if (entry.isDirectory() && !isExcludedDir(entry.name)) {
+        await scan(fullPath);
+        continue;
+      }
+
+      if (!entry.isFile()) continue;
+
+      const ext = getCSSExtension(entry.name);
+      if (extensions.includes(ext)) {
+        files.push(fullPath);
       }
     }
-  }
+  };
 
   await scan(dir);
   return files;
+};
+
+interface CLIOptions {
+  cssDir: string;
+  srcDir: string;
+  format: ReportFormat;
+  output: string | null;
+  ignoreTailwind: boolean;
 }
 
-/**
- * Main CLI function
- */
-async function main() {
-  const args = process.argv.slice(2);
-  const { parseCSS, scanSourceDirectory, analyzeUnusedCSS, generateReport } = await importModule();
-
-  // Parse CLI arguments
-  let cssDir = '.';
-  let srcDir = '.';
-  let format = 'text';
-  let output = null;
-  let ignoreTailwind = true;
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-
-    if (arg === '--help' || arg === '-h') {
-      console.log(`
+const HELP_TEXT = `
 Unused CSS Finder - Find and report unused CSS classes and data attributes
 
 Usage:
@@ -87,28 +105,78 @@ Examples:
   unused-css-finder --css-dir ./src/styles --src-dir ./src
   unused-css-finder --format json --output report.json
   unused-css-finder --include-tailwind
-      `);
+`;
+
+const VALID_FORMATS = ['text', 'json', 'markdown'];
+
+/**
+ * Parse CLI arguments into options
+ */
+/**
+ * Get the value for a flag argument (the next arg after the flag)
+ */
+const getFlagValue = (args: string[], index: number): string | undefined => {
+  return args[index + 1];
+};
+
+const parseArgs = (args: string[]): CLIOptions | null => {
+  const options: CLIOptions = {
+    cssDir: '.',
+    srcDir: '.',
+    format: 'text',
+    output: null,
+    ignoreTailwind: true,
+  };
+
+  const flagHandlers: Record<string, (value: string) => void> = {
+    '--css-dir': (value: string) => { options.cssDir = value; },
+    '--src-dir': (value: string) => { options.srcDir = value; },
+    '--format': (value: string) => { options.format = value as ReportFormat; },
+    '--output': (value: string) => { options.output = value; },
+  };
+
+  const skipIndices = new Set<number>();
+
+  args.forEach((arg, i) => {
+    if (skipIndices.has(i)) return;
+
+    if (arg === '--help' || arg === '-h') {
+      console.log(HELP_TEXT);
       process.exit(0);
     }
 
-    if (arg === '--css-dir' && args[i + 1]) {
-      cssDir = args[++i];
-    } else if (arg === '--src-dir' && args[i + 1]) {
-      srcDir = args[++i];
-    } else if (arg === '--format' && args[i + 1]) {
-      format = args[++i];
-    } else if (arg === '--output' && args[i + 1]) {
-      output = args[++i];
-    } else if (arg === '--include-tailwind') {
-      ignoreTailwind = false;
+    if (arg === '--include-tailwind') {
+      options.ignoreTailwind = false;
+      return;
     }
-  }
 
-  // Validate format
-  if (!['text', 'json', 'markdown'].includes(format)) {
-    console.error(`Error: Invalid format '${format}'. Must be one of: text, json, markdown`);
+    const handler = flagHandlers[arg];
+    const value = getFlagValue(args, i);
+    if (handler && value) {
+      handler(value);
+      skipIndices.add(i + 1);
+    }
+  });
+
+  if (!VALID_FORMATS.includes(options.format)) {
+    console.error(`Error: Invalid format '${options.format}'. Must be one of: text, json, markdown`);
     process.exit(1);
   }
+
+  return options;
+};
+
+/**
+ * Main CLI function
+ */
+const main = async (): Promise<void> => {
+  const args = process.argv.slice(2);
+  const { parseCSS, scanSourceDirectory, analyzeUnusedCSS, generateReport } = await importModule();
+
+  const options = parseArgs(args);
+  if (!options) return;
+
+  const { cssDir, srcDir, format, output, ignoreTailwind } = options;
 
   // Find CSS files
   console.error(`Scanning CSS files in: ${cssDir}`);
@@ -122,7 +190,7 @@ Examples:
   console.error(`Found ${cssFiles.length} CSS file(s)`);
 
   // Parse CSS files
-  const parsedCSS = [];
+  const parsedCSS: ParsedCSS[] = [];
   for (const filePath of cssFiles) {
     const content = await readFile(filePath, 'utf-8');
     const parsed = parseCSS(content, filePath);
@@ -156,10 +224,10 @@ Examples:
   if (report.unusedClassesCount > 0 || report.unusedAttributesCount > 0) {
     process.exit(1);
   }
-}
+};
 
 // Run
-main().catch(err => {
+main().catch((err: Error) => {
   console.error(`Error: ${err.message}`);
   process.exit(1);
 });

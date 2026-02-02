@@ -45,11 +45,9 @@ export class TableGrid {
 
     table.className = twMerge(TABLE_CLASSES);
 
-    for (let r = 0; r < rows; r++) {
-      const row = this.createRow(cols);
-
-      table.appendChild(row);
-    }
+    Array.from({ length: rows }).forEach(() => {
+      table.appendChild(this.createRow(cols));
+    });
 
     return table;
   }
@@ -213,9 +211,9 @@ export class TableGrid {
     row.className = twMerge(ROW_CLASSES);
     row.setAttribute(ROW_ATTR, '');
 
-    for (let c = 0; c < cols; c++) {
+    Array.from({ length: cols }).forEach(() => {
       row.appendChild(this.createCell());
-    }
+    });
 
     return row;
   }

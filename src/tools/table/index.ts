@@ -3,13 +3,14 @@ import type {
   BlockTool,
   BlockToolConstructorOptions,
   PasteConfig,
-  SanitizerConfig,
   ToolboxConfig,
 } from '../../../types';
+import type { ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+
 import { TableGrid } from './table-core';
 import type { TableData, TableConfig } from './types';
 
@@ -67,7 +68,7 @@ export class Table implements BlockTool {
     };
   }
 
-  public static get sanitize(): SanitizerConfig {
+  public static get sanitize(): ToolSanitizerConfig {
     return {
       content: {
         br: true,

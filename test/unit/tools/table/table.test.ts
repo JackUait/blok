@@ -51,7 +51,11 @@ describe('Table Tool', () => {
     it('has paste config for table tags', () => {
       const config = Table.pasteConfig;
 
-      expect(config.tags).toContain('TABLE');
+      expect(config).not.toBe(false);
+
+      if (config !== false) {
+        expect(config.tags).toContain('TABLE');
+      }
     });
   });
 
@@ -61,7 +65,7 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      expect(element.getAttribute('data-blok-tool')).toBe('table');
+      expect(element).toHaveAttribute('data-blok-tool', 'table');
     });
 
     it('renders default 2x2 grid when no data provided', () => {

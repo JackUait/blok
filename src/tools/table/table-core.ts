@@ -14,12 +14,20 @@ const ROW_CLASSES = [
 ];
 
 const CELL_CLASSES = [
-  'flex-1',
   'p-2',
   'min-h-[2em]',
   'outline-none',
   'leading-normal',
 ];
+
+/**
+ * Generate equal column widths that sum to 100
+ */
+export const equalWidths = (cols: number): number[] => {
+  const width = Math.round((100 / cols) * 100) / 100;
+
+  return Array.from({ length: cols }, () => width);
+};
 
 interface TableGridOptions {
   readOnly: boolean;
@@ -45,15 +53,17 @@ export class TableGrid {
   /**
    * Create a grid element with specified rows and columns
    */
-  public createGrid(rows: number, cols: number): HTMLDivElement {
+  public createGrid(rows: number, cols: number, colWidths?: number[]): HTMLDivElement {
     const table = document.createElement('div');
 
     table.className = twMerge(TABLE_CLASSES);
     table.style.borderTop = BORDER_STYLE;
     table.style.borderLeft = BORDER_STYLE;
 
+    const widths = colWidths ?? equalWidths(cols);
+
     Array.from({ length: rows }).forEach(() => {
-      table.appendChild(this.createRow(cols));
+      table.appendChild(this.createRow(cols, widths));
     });
 
     return table;
@@ -118,7 +128,8 @@ export class TableGrid {
     }
 
     const cols = this.getColumnCount(table);
-    const row = this.createRow(cols);
+    const widths = this.getColWidths(table);
+    const row = this.createRow(cols, widths);
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
 
     if (index !== undefined && index < rows.length) {
@@ -152,9 +163,23 @@ export class TableGrid {
     }
 
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+    const oldColCount = this.getColumnCount(table);
+    const newColCount = oldColCount + 1;
+    const newColWidth = Math.round((100 / newColCount) * 100) / 100;
+    const scaleFactor = (100 - newColWidth) / 100;
 
     rows.forEach(row => {
-      const cell = this.createCell();
+      // Scale existing cells
+      const existingCells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+      existingCells.forEach(cell => {
+        const el = cell as HTMLElement;
+        const oldWidth = parseFloat(el.style.width) || (100 / oldColCount);
+
+        el.style.width = `${Math.round(oldWidth * scaleFactor * 100) / 100}%`;
+      });
+
+      const cell = this.createCell(newColWidth);
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
 
       if (index !== undefined && index < cells.length) {
@@ -176,8 +201,26 @@ export class TableGrid {
     rows.forEach(row => {
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
 
-      if (index < cells.length) {
-        cells[index].remove();
+      if (index >= cells.length) {
+        return;
+      }
+
+      const removedWidth = parseFloat((cells[index] as HTMLElement).style.width) || 0;
+
+      cells[index].remove();
+
+      // Redistribute removed width to remaining cells
+      const remaining = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+      if (remaining.length > 0 && removedWidth > 0) {
+        const extra = removedWidth / remaining.length;
+
+        remaining.forEach(cell => {
+          const el = cell as HTMLElement;
+          const currentWidth = parseFloat(el.style.width) || 0;
+
+          el.style.width = `${Math.round((currentWidth + extra) * 100) / 100}%`;
+        });
       }
     });
   }
@@ -222,16 +265,38 @@ export class TableGrid {
   }
 
   /**
+   * Read column widths from the DOM
+   */
+  public getColWidths(table: HTMLElement): number[] {
+    const firstRow = table.querySelector(`[${ROW_ATTR}]`);
+
+    if (!firstRow) {
+      return [];
+    }
+
+    const cells = firstRow.querySelectorAll(`[${CELL_ATTR}]`);
+    const widths: number[] = [];
+
+    cells.forEach(cell => {
+      const w = parseFloat((cell as HTMLElement).style.width);
+
+      widths.push(isNaN(w) ? 0 : w);
+    });
+
+    return widths;
+  }
+
+  /**
    * Create a single row with N cells
    */
-  private createRow(cols: number): HTMLElement {
+  private createRow(cols: number, colWidths: number[]): HTMLElement {
     const row = document.createElement('div');
 
     row.className = twMerge(ROW_CLASSES);
     row.setAttribute(ROW_ATTR, '');
 
-    Array.from({ length: cols }).forEach(() => {
-      row.appendChild(this.createCell());
+    Array.from({ length: cols }).forEach((_, i) => {
+      row.appendChild(this.createCell(colWidths[i]));
     });
 
     return row;
@@ -240,12 +305,17 @@ export class TableGrid {
   /**
    * Create a single cell
    */
-  private createCell(): HTMLElement {
+  private createCell(widthPercent?: number): HTMLElement {
     const cell = document.createElement('div');
 
     cell.className = twMerge(CELL_CLASSES);
     cell.style.borderRight = BORDER_STYLE;
     cell.style.borderBottom = BORDER_STYLE;
+
+    if (widthPercent !== undefined) {
+      cell.style.width = `${widthPercent}%`;
+    }
+
     cell.setAttribute(CELL_ATTR, '');
     cell.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
 

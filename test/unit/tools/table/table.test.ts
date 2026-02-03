@@ -202,6 +202,47 @@ describe('Table Tool', () => {
     });
   });
 
+  describe('column widths', () => {
+    it('applies equal widths when no colWidths provided', () => {
+      const options = createTableOptions({
+        content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      expect(firstCell.style.width).toBe('33.33%');
+    });
+
+    it('applies custom colWidths from data', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+        colWidths: [60, 40],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
+
+      expect((cells[0] as HTMLElement).style.width).toBe('60%');
+      expect((cells[1] as HTMLElement).style.width).toBe('40%');
+    });
+
+    it('falls back to equal widths when colWidths length mismatches columns', () => {
+      const options = createTableOptions({
+        content: [['A', 'B', 'C']],
+        colWidths: [50, 50],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      expect(firstCell.style.width).toBe('33.33%');
+    });
+  });
+
   describe('onPaste', () => {
     it('extracts data from pasted HTML table', () => {
       const options = createTableOptions();

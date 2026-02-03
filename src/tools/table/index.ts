@@ -94,7 +94,7 @@ export class Table implements BlockTool {
     const rows = this.data.content.length || this.config.rows || DEFAULT_ROWS;
     const cols = this.data.content[0]?.length || this.config.cols || DEFAULT_COLS;
 
-    const gridEl = this.grid.createGrid(rows, cols);
+    const gridEl = this.grid.createGrid(rows, cols, this.data.colWidths);
 
     if (this.data.content.length > 0) {
       this.grid.fillGrid(gridEl, this.data.content);
@@ -119,11 +119,15 @@ export class Table implements BlockTool {
    */
   public save(blockContent: HTMLElement): TableData {
     const gridEl = blockContent.firstElementChild as HTMLElement;
+    const colWidths = this.grid.getColWidths(gridEl);
+    const cols = colWidths.length;
+    const isEqual = cols > 0 && colWidths.every(w => Math.abs(w - colWidths[0]) < 0.1);
 
     return {
       withHeadings: this.data.withHeadings,
       stretched: this.data.stretched,
       content: this.grid.getData(gridEl),
+      ...(isEqual ? {} : { colWidths }),
     };
   }
 
@@ -213,10 +217,16 @@ export class Table implements BlockTool {
       };
     }
 
+    const tableData = data as TableData;
+    const cols = tableData.content?.[0]?.length;
+    const colWidths = tableData.colWidths;
+    const validWidths = colWidths && cols && colWidths.length === cols ? colWidths : undefined;
+
     return {
-      withHeadings: (data as TableData).withHeadings ?? this.config.withHeadings ?? false,
-      stretched: (data as TableData).stretched ?? this.config.stretched ?? false,
-      content: (data as TableData).content ?? [],
+      withHeadings: tableData.withHeadings ?? this.config.withHeadings ?? false,
+      stretched: tableData.stretched ?? this.config.stretched ?? false,
+      content: tableData.content ?? [],
+      colWidths: validWidths,
     };
   }
 

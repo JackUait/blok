@@ -172,4 +172,33 @@ describe('Table Tool', () => {
       expect(table.validate({ withHeadings: false, content: [] })).toBe(false);
     });
   });
+
+  describe('keyboard navigation', () => {
+    it('moves to next cell on Tab key', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+
+      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      firstCell.focus();
+
+      const event = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      firstCell.dispatchEvent(event);
+
+      // Check that event was prevented (navigation handled)
+      expect(event.defaultPrevented).toBe(true);
+
+      document.body.removeChild(element);
+    });
+  });
 });

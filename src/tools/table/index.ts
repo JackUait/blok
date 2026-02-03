@@ -12,6 +12,7 @@ import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableGrid } from './table-core';
+import { TableKeyboard } from './table-keyboard';
 import type { TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 2;
@@ -32,6 +33,7 @@ export class Table implements BlockTool {
   private config: TableConfig;
   private data: TableData;
   private grid: TableGrid;
+  private keyboard: TableKeyboard | null = null;
   private element: HTMLDivElement | null = null;
 
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<TableData, TableConfig>) {
@@ -102,6 +104,10 @@ export class Table implements BlockTool {
 
     if (this.data.withHeadings) {
       this.updateHeadingStyles();
+    }
+
+    if (!this.readOnly) {
+      this.setupKeyboardNavigation(gridEl);
     }
 
     return wrapper;
@@ -194,5 +200,39 @@ export class Table implements BlockTool {
     } else {
       firstRow.removeAttribute('data-blok-table-heading');
     }
+  }
+
+  private setupKeyboardNavigation(gridEl: HTMLElement): void {
+    this.keyboard = new TableKeyboard(this.grid, gridEl);
+
+    gridEl.addEventListener('keydown', (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+
+      if (!target.hasAttribute('data-blok-table-cell')) {
+        return;
+      }
+
+      const position = this.getCellPosition(gridEl, target);
+
+      if (position) {
+        this.keyboard?.handleKeyDown(event, position);
+      }
+    });
+  }
+
+  private getCellPosition(gridEl: HTMLElement, cell: HTMLElement): { row: number; col: number } | null {
+    const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const cells = rows[rowIndex].querySelectorAll('[data-blok-table-cell]');
+
+      for (let colIndex = 0; colIndex < cells.length; colIndex++) {
+        if (cells[colIndex] === cell) {
+          return { row: rowIndex, col: colIndex };
+        }
+      }
+    }
+
+    return null;
   }
 }

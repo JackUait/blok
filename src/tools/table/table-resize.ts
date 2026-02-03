@@ -50,10 +50,6 @@ export class TableResize {
     document.removeEventListener('pointerup', this.boundPointerUp);
   }
 
-  public updateWidths(widths: number[]): void {
-    this.colWidths = [...widths];
-  }
-
   private onPointerDown(e: PointerEvent): void {
     const target = e.target as HTMLElement;
 

@@ -16,8 +16,8 @@ import { TableGrid } from './table-core';
 import { TableKeyboard } from './table-keyboard';
 import type { TableData, TableConfig } from './types';
 
-const DEFAULT_ROWS = 2;
-const DEFAULT_COLS = 2;
+const DEFAULT_ROWS = 3;
+const DEFAULT_COLS = 3;
 
 const WRAPPER_CLASSES = [
   'overflow-x-auto',

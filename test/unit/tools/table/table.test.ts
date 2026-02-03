@@ -68,16 +68,16 @@ describe('Table Tool', () => {
       expect(element).toHaveAttribute('data-blok-tool', 'table');
     });
 
-    it('renders default 2x2 grid when no data provided', () => {
+    it('renders default 3x3 grid when no data provided', () => {
       const options = createTableOptions();
       const table = new Table(options);
       const element = table.render();
 
       const rows = element.querySelectorAll('[data-blok-table-row]');
-      expect(rows).toHaveLength(2);
+      expect(rows).toHaveLength(3);
 
       const cells = rows[0].querySelectorAll('[data-blok-table-cell]');
-      expect(cells).toHaveLength(2);
+      expect(cells).toHaveLength(3);
     });
 
     it('renders grid from provided content data', () => {

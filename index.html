@@ -72,7 +72,7 @@
   <!-- Initialization -->
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Bold, Italic, Link } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Bold, Italic, Link } from './src/tools/index.ts';
 
     window.Blok = Blok;
 
@@ -117,6 +117,7 @@
           placeholder: 'Header',
         },
         list: List,
+        table: Table,
         // Inline tools
         bold: Bold,
         italic: Italic,
@@ -366,6 +367,55 @@
             data: {
               style: "unordered",
               text: "Back to main level"
+            }
+          },
+          {
+            type: "header",
+            id: "table-section-header",
+            data: {
+              text: "Tables",
+              level: 2
+            }
+          },
+          {
+            id: "table-description",
+            type: "paragraph",
+            data: {
+              text: "Tables support keyboard navigation (Tab to move between cells, Enter to move down) and can be pasted from other applications."
+            }
+          },
+          {
+            id: "table-example-1",
+            type: "table",
+            data: {
+              withHeadings: true,
+              content: [
+                ["Feature", "Status", "Notes"],
+                ["Grid rendering", "✅ Complete", "Supports any size"],
+                ["Keyboard navigation", "✅ Complete", "Tab and Enter keys"],
+                ["Paste support", "✅ Complete", "HTML tables supported"],
+                ["Heading row", "✅ Complete", "Toggle in settings"]
+              ]
+            }
+          },
+          {
+            type: "header",
+            id: "simple-table-header",
+            data: {
+              text: "Simple Table (No Headers)",
+              level: 3
+            }
+          },
+          {
+            id: "table-example-2",
+            type: "table",
+            data: {
+              withHeadings: false,
+              content: [
+                ["Row 1, Cell 1", "Row 1, Cell 2"],
+                ["Row 2, Cell 1", "Row 2, Cell 2"],
+                ["Row 3, Cell 1", "Row 3, Cell 2"]
+              ]
             }
           },
         ]

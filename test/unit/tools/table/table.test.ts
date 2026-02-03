@@ -91,7 +91,7 @@ describe('Table Tool', () => {
       expect(rows).toHaveLength(2);
 
       const firstCell = element.querySelector('[data-blok-table-cell]');
-      expect(firstCell?.innerHTML).toBe('A');
+      expect(firstCell?.textContent).toBe('A');
     });
 
     it('respects config rows and cols for empty tables', () => {
@@ -240,6 +240,49 @@ describe('Table Tool', () => {
       const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
 
       expect(firstCell.style.width).toBe('33.33%');
+    });
+  });
+
+  describe('resize handles', () => {
+    it('adds resize handles to all cells except last column in edit mode', () => {
+      const options = createTableOptions({
+        content: [['A', 'B', 'C']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const handles = element.querySelectorAll('[data-blok-table-resize]');
+
+      // 1 row * 2 handles (first and second column, not third)
+      expect(handles).toHaveLength(2);
+    });
+
+    it('does not add resize handles in readOnly mode', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({ content: [['A', 'B', 'C']] }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      const handles = element.querySelectorAll('[data-blok-table-resize]');
+
+      expect(handles).toHaveLength(0);
+    });
+
+    it('positions resize handle on right edge of cell', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      expect(handle).not.toBeNull();
+      expect(handle.style.position).toBe('absolute');
+      expect(handle.style.right).toBe('0px');
+      expect(handle.style.cursor).toBe('col-resize');
     });
   });
 

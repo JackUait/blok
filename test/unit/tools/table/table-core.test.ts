@@ -172,4 +172,24 @@ describe('TableGrid', () => {
       expect(cell?.innerHTML).toBe('C');
     });
   });
+
+  describe('max limits', () => {
+    it('addRow respects maxRows', () => {
+      const grid = new TableGrid({ readOnly: false, maxRows: 2 });
+      const element = grid.createGrid(2, 2);
+
+      const added = grid.addRow(element);
+      expect(added).toBeNull();
+      expect(grid.getRowCount(element)).toBe(2);
+    });
+
+    it('addColumn respects maxCols', () => {
+      const grid = new TableGrid({ readOnly: false, maxCols: 3 });
+      const element = grid.createGrid(2, 3);
+
+      const result = grid.addColumn(element);
+      expect(result).toBe(false);
+      expect(grid.getColumnCount(element)).toBe(3);
+    });
+  });
 });

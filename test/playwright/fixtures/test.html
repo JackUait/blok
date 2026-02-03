@@ -6,7 +6,7 @@
 <body>
   <script type="module">
     import { Blok, DATA_ATTR, version } from '/dist/blok.mjs?_v=1';
-    import { Header, Paragraph, List, Bold, Italic, Link, Convert } from '/dist/tools.mjs?_v=1';
+    import { Header, Paragraph, List, Table, Bold, Italic, Link, Convert } from '/dist/tools.mjs?_v=1';
 
     // Create default tools configuration (mimics pre-modular behavior)
     // Block tools with inlineToolbar enabled
@@ -73,6 +73,7 @@
     BlokWithDefaults.Header = Header;
     BlokWithDefaults.Paragraph = Paragraph;
     BlokWithDefaults.List = List;
+    BlokWithDefaults.Table = Table;
     BlokWithDefaults.Bold = Bold;
     BlokWithDefaults.Italic = Italic;
     BlokWithDefaults.Link = Link;

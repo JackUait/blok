@@ -15,6 +15,8 @@ export interface TableData extends BlockToolData {
   content: string[][];
   /** Column widths as percentages (e.g., [33, 33, 34]). Omit for equal widths. */
   colWidths?: number[];
+  /** Table width as a percentage of the container (default 100). Omit when full width. */
+  tableWidth?: number;
 }
 
 /**

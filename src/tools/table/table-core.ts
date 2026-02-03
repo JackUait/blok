@@ -2,7 +2,6 @@ import { twMerge } from '../../components/utils/tw';
 
 const ROW_ATTR = 'data-blok-table-row';
 const CELL_ATTR = 'data-blok-table-cell';
-const RESIZE_ATTR = 'data-blok-table-resize';
 
 const TABLE_CLASSES = [
   'w-full',
@@ -89,13 +88,8 @@ export class TableGrid {
         }
 
         const cell = cells[colIndex] as HTMLElement;
-        const handle = cell.querySelector(`[${RESIZE_ATTR}]`);
 
         cell.innerHTML = cellContent;
-
-        if (handle) {
-          cell.appendChild(handle);
-        }
       });
     });
   }
@@ -189,20 +183,12 @@ export class TableGrid {
 
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
       const isAppend = index === undefined || index >= cells.length;
-      const cell = this.createCell(newColWidth, isAppend);
+      const cell = this.createCell(newColWidth);
 
       if (!isAppend) {
         row.insertBefore(cell, cells[index]);
 
         return;
-      }
-
-      // Add handle to previous last cell
-      const prevLast = cells[cells.length - 1] as HTMLElement | undefined;
-      const needsHandle = prevLast && !this.readOnly && !prevLast.querySelector(`[${RESIZE_ATTR}]`);
-
-      if (needsHandle) {
-        prevLast.appendChild(this.createResizeHandle());
       }
 
       row.appendChild(cell);
@@ -306,15 +292,10 @@ export class TableGrid {
   }
 
   /**
-   * Get cell content HTML excluding internal elements like resize handles
+   * Get cell content HTML
    */
   private getCellContent(cell: HTMLElement): string {
-    const clone = cell.cloneNode(true) as HTMLElement;
-    const handle = clone.querySelector(`[${RESIZE_ATTR}]`);
-
-    handle?.remove();
-
-    return clone.innerHTML;
+    return cell.innerHTML;
   }
 
   /**
@@ -327,7 +308,7 @@ export class TableGrid {
     row.setAttribute(ROW_ATTR, '');
 
     Array.from({ length: cols }).forEach((_, i) => {
-      row.appendChild(this.createCell(colWidths[i], i === cols - 1));
+      row.appendChild(this.createCell(colWidths[i]));
     });
 
     return row;
@@ -336,13 +317,12 @@ export class TableGrid {
   /**
    * Create a single cell
    */
-  private createCell(widthPercent?: number, isLastCol = false): HTMLElement {
+  private createCell(widthPercent?: number): HTMLElement {
     const cell = document.createElement('div');
 
     cell.className = twMerge(CELL_CLASSES);
     cell.style.borderRight = BORDER_STYLE;
     cell.style.borderBottom = BORDER_STYLE;
-    cell.style.position = 'relative';
 
     if (widthPercent !== undefined) {
       cell.style.width = `${widthPercent}%`;
@@ -351,35 +331,6 @@ export class TableGrid {
     cell.setAttribute(CELL_ATTR, '');
     cell.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
 
-    if (!this.readOnly && !isLastCol) {
-      cell.appendChild(this.createResizeHandle());
-    }
-
     return cell;
-  }
-
-  private createResizeHandle(): HTMLElement {
-    const handle = document.createElement('div');
-
-    handle.setAttribute(RESIZE_ATTR, '');
-    handle.style.position = 'absolute';
-    handle.style.right = '0px';
-    handle.style.top = '0px';
-    handle.style.bottom = '0px';
-    handle.style.width = '6px';
-    handle.style.cursor = 'col-resize';
-    handle.style.zIndex = '1';
-    handle.style.transform = 'translateX(50%)';
-    handle.setAttribute('contenteditable', 'false');
-
-    handle.addEventListener('mouseenter', () => {
-      handle.style.borderRight = '2px solid #3b82f6';
-    });
-
-    handle.addEventListener('mouseleave', () => {
-      handle.style.borderRight = '';
-    });
-
-    return handle;
   }
 }

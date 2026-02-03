@@ -244,7 +244,7 @@ describe('Table Tool', () => {
   });
 
   describe('resize handles', () => {
-    it('adds resize handles to all cells except last column in edit mode', () => {
+    it('adds resize handles for each column including right edge', () => {
       const options = createTableOptions({
         content: [['A', 'B', 'C']],
       });
@@ -253,8 +253,8 @@ describe('Table Tool', () => {
 
       const handles = element.querySelectorAll('[data-blok-table-resize]');
 
-      // 1 row * 2 handles (first and second column, not third)
-      expect(handles).toHaveLength(2);
+      // 3 columns → 3 handles (2 between pairs + 1 at right edge)
+      expect(handles).toHaveLength(3);
     });
 
     it('does not add resize handles in readOnly mode', () => {
@@ -283,16 +283,16 @@ describe('Table Tool', () => {
 
       handle.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
 
-      expect(handle.style.borderRight).toBe('2px solid rgb(59, 130, 246)');
+      expect(handle.style.background).toContain('rgb(59, 130, 246)');
 
       handle.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
 
-      expect(handle.style.borderRight).toBe('');
+      expect(handle.style.background).toBe('');
 
       document.body.removeChild(element);
     });
 
-    it('positions resize handle on right edge of cell', () => {
+    it('positions resize handles on the grid element', () => {
       const options = createTableOptions({
         content: [['A', 'B']],
       });
@@ -303,7 +303,8 @@ describe('Table Tool', () => {
 
       expect(handle).not.toBeNull();
       expect(handle.style.position).toBe('absolute');
-      expect(handle.style.right).toBe('0px');
+      expect(handle.style.top).toBe('0px');
+      expect(handle.style.bottom).toBe('0px');
       expect(handle.style.cursor).toBe('col-resize');
     });
   });

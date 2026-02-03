@@ -102,6 +102,10 @@ export class Table implements BlockTool {
       this.grid.fillGrid(gridEl, this.data.content);
     }
 
+    if (this.data.tableWidth !== undefined && Math.abs(this.data.tableWidth - 100) > 0.01) {
+      gridEl.style.width = `${this.data.tableWidth}%`;
+    }
+
     wrapper.appendChild(gridEl);
     this.element = wrapper;
 
@@ -126,11 +130,14 @@ export class Table implements BlockTool {
     const cols = colWidths.length;
     const isEqual = cols > 0 && colWidths.every(w => Math.abs(w - colWidths[0]) < 0.1);
 
+    const tableWidth = this.data.tableWidth;
+
     return {
       withHeadings: this.data.withHeadings,
       stretched: this.data.stretched,
       content: this.grid.getData(gridEl),
       ...(isEqual ? {} : { colWidths }),
+      ...(tableWidth !== undefined && Math.abs(tableWidth - 100) > 0.01 ? { tableWidth } : {}),
     };
   }
 
@@ -232,6 +239,7 @@ export class Table implements BlockTool {
       stretched: tableData.stretched ?? this.config.stretched ?? false,
       content: tableData.content ?? [],
       colWidths: validWidths,
+      tableWidth: tableData.tableWidth,
     };
   }
 
@@ -262,9 +270,11 @@ export class Table implements BlockTool {
   private setupResize(gridEl: HTMLElement): void {
     const cols = this.grid.getColumnCount(gridEl);
     const widths = this.data.colWidths ?? equalWidths(cols);
+    const tableWidth = this.data.tableWidth ?? 100;
 
-    this.resize = new TableResize(gridEl, widths, (newWidths: number[]) => {
+    this.resize = new TableResize(gridEl, widths, tableWidth, (newWidths: number[], newTableWidth: number) => {
       this.data.colWidths = newWidths;
+      this.data.tableWidth = newTableWidth;
     });
   }
 

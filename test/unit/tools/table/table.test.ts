@@ -201,4 +201,50 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
   });
+
+  describe('onPaste', () => {
+    it('extracts data from pasted HTML table', () => {
+      const options = createTableOptions();
+      const table = new Table(options);
+
+      table.render();
+
+      const tableEl = document.createElement('table');
+
+      tableEl.innerHTML = '<tr><td>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr>';
+
+      const event = {
+        detail: { data: tableEl },
+      } as unknown as CustomEvent;
+
+      table.onPaste(event);
+
+      // After paste, save should return the pasted content
+      const saved = table.save(table.render());
+
+      expect(saved.content).toEqual([['A', 'B'], ['C', 'D']]);
+    });
+
+    it('detects headings from thead', () => {
+      const options = createTableOptions();
+      const table = new Table(options);
+
+      table.render();
+
+      const tableEl = document.createElement('table');
+
+      tableEl.innerHTML = '<thead><tr><th>H1</th><th>H2</th></tr></thead><tbody><tr><td>A</td><td>B</td></tr></tbody>';
+
+      const event = {
+        detail: { data: tableEl },
+      } as unknown as CustomEvent;
+
+      table.onPaste(event);
+
+      const saved = table.save(table.render());
+
+      expect(saved.withHeadings).toBe(true);
+      expect(saved.content[0]).toEqual(['H1', 'H2']);
+    });
+  });
 });

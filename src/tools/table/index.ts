@@ -2,6 +2,7 @@ import type {
   API,
   BlockTool,
   BlockToolConstructorOptions,
+  HTMLPasteEvent,
   PasteConfig,
   ToolboxConfig,
 } from '../../../types';
@@ -151,6 +152,58 @@ export class Table implements BlockTool {
         isActive: this.data.withHeadings,
       },
     ];
+  }
+
+  /**
+   * Handle paste of HTML table
+   */
+  public onPaste(event: HTMLPasteEvent): void {
+    const content = event.detail.data;
+    const rows = content.querySelectorAll('tr');
+    const tableContent: string[][] = [];
+    let withHeadings = false;
+
+    // Detect headings from thead
+    const thead = content.querySelector('thead');
+
+    if (thead) {
+      withHeadings = true;
+    }
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td, th');
+      const rowData: string[] = [];
+
+      cells.forEach(cell => {
+        rowData.push(cell.innerHTML);
+      });
+
+      if (rowData.length > 0) {
+        tableContent.push(rowData);
+      }
+    });
+
+    // Also detect headings from th elements in first row
+    if (!withHeadings) {
+      const firstRow = rows[0];
+
+      if (firstRow?.querySelector('th')) {
+        withHeadings = true;
+      }
+    }
+
+    this.data = {
+      withHeadings,
+      content: tableContent,
+    };
+
+    // Re-render with new data
+    if (this.element?.parentNode) {
+      const newElement = this.render();
+
+      this.element.parentNode.replaceChild(newElement, this.element);
+      this.element = newElement;
+    }
   }
 
   /**

@@ -372,6 +372,14 @@ export class TableGrid {
     handle.style.transform = 'translateX(50%)';
     handle.setAttribute('contenteditable', 'false');
 
+    handle.addEventListener('mouseenter', () => {
+      handle.style.borderRight = '2px solid #3b82f6';
+    });
+
+    handle.addEventListener('mouseleave', () => {
+      handle.style.borderRight = '';
+    });
+
     return handle;
   }
 }

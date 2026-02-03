@@ -270,6 +270,28 @@ describe('Table Tool', () => {
       expect(handles).toHaveLength(0);
     });
 
+    it('shows blue indicator on handle hover', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+
+      const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+      expect(handle.style.borderRight).toBe('2px solid rgb(59, 130, 246)');
+
+      handle.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+      expect(handle.style.borderRight).toBe('');
+
+      document.body.removeChild(element);
+    });
+
     it('positions resize handle on right edge of cell', () => {
       const options = createTableOptions({
         content: [['A', 'B']],

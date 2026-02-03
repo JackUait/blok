@@ -14,13 +14,13 @@ const ROW_CLASSES = [
 
 const CELL_CLASSES = [
   'flex-1',
-  'border',
-  'border-gray-200',
   'p-2',
   'min-h-[2em]',
   'outline-none',
   'leading-normal',
 ];
+
+const CELL_BORDER_STYLE = '1px solid #d1d5db';
 
 interface TableGridOptions {
   readOnly: boolean;
@@ -243,6 +243,7 @@ export class TableGrid {
     const cell = document.createElement('div');
 
     cell.className = twMerge(CELL_CLASSES);
+    cell.style.border = CELL_BORDER_STYLE;
     cell.setAttribute(CELL_ATTR, '');
     cell.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
 

@@ -14,6 +14,10 @@ describe('Table static configs', () => {
   it('paste config handles TABLE, TR, TH, TD tags', () => {
     const config = Table.pasteConfig;
 
-    expect(config.tags).toEqual(expect.arrayContaining(['TABLE', 'TR', 'TH', 'TD']));
+    expect(config).not.toBe(false);
+
+    if (config !== false) {
+      expect(config.tags).toEqual(expect.arrayContaining(['TABLE', 'TR', 'TH', 'TD']));
+    }
   });
 });

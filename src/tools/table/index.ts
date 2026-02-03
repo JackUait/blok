@@ -161,14 +161,6 @@ export class Table implements BlockTool {
     const content = event.detail.data;
     const rows = content.querySelectorAll('tr');
     const tableContent: string[][] = [];
-    let withHeadings = false;
-
-    // Detect headings from thead
-    const thead = content.querySelector('thead');
-
-    if (thead) {
-      withHeadings = true;
-    }
 
     rows.forEach(row => {
       const cells = row.querySelectorAll('td, th');
@@ -183,17 +175,14 @@ export class Table implements BlockTool {
       }
     });
 
-    // Also detect headings from th elements in first row
-    if (!withHeadings) {
-      const firstRow = rows[0];
-
-      if (firstRow?.querySelector('th')) {
-        withHeadings = true;
-      }
-    }
+    // Detect headings from thead or th elements in first row
+    const hasTheadHeadings = content.querySelector('thead') !== null;
+    const hasThHeadings = rows[0]?.querySelector('th') !== null;
+    const withHeadings = hasTheadHeadings || hasThHeadings;
 
     this.data = {
       withHeadings,
+      stretched: this.data.stretched,
       content: tableContent,
     };
 

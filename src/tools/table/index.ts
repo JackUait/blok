@@ -221,18 +221,21 @@ export class Table implements BlockTool {
   }
 
   private getCellPosition(gridEl: HTMLElement, cell: HTMLElement): { row: number; col: number } | null {
-    const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+    const rows = Array.from(gridEl.querySelectorAll('[data-blok-table-row]'));
 
-    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-      const cells = rows[rowIndex].querySelectorAll('[data-blok-table-cell]');
+    const rowIndex = rows.findIndex(row => {
+      const cells = Array.from(row.querySelectorAll('[data-blok-table-cell]'));
 
-      for (let colIndex = 0; colIndex < cells.length; colIndex++) {
-        if (cells[colIndex] === cell) {
-          return { row: rowIndex, col: colIndex };
-        }
-      }
+      return cells.includes(cell);
+    });
+
+    if (rowIndex === -1) {
+      return null;
     }
 
-    return null;
+    const cells = Array.from(rows[rowIndex].querySelectorAll('[data-blok-table-cell]'));
+    const colIndex = cells.indexOf(cell);
+
+    return { row: rowIndex, col: colIndex };
   }
 }

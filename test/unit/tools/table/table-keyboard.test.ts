@@ -61,24 +61,24 @@ describe('TableKeyboard', () => {
   describe('handleKeyDown', () => {
     it('prevents default for Tab key and focuses next cell', () => {
       const keyboard = new TableKeyboard(grid, gridElement);
-      const cell = grid.getCell(gridElement, 0, 0)!;
-      const nextCell = grid.getCell(gridElement, 0, 1)!;
+      const cell = grid.getCell(gridElement, 0, 0);
+      const nextCell = grid.getCell(gridElement, 0, 1);
 
-      cell.focus();
+      expect(cell).not.toBeNull();
+      expect(nextCell).not.toBeNull();
 
-      const focusSpy = vi.spyOn(nextCell, 'focus');
+      cell?.focus();
 
       const event = new KeyboardEvent('keydown', {
         key: 'Tab',
         bubbles: true,
         cancelable: true,
       });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
 
       keyboard.handleKeyDown(event, { row: 0, col: 0 });
 
-      expect(preventDefaultSpy).toHaveBeenCalled();
-      expect(focusSpy).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+      expect(nextCell).toHaveFocus();
     });
 
     it('adds new row when Enter is pressed at last row', () => {

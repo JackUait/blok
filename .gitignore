@@ -11,6 +11,8 @@ npm-debug.log
 yarn-error.log
 .yarn/cache
 .yarn/install-state.gz
+docs/.yarn/
+docs/node_modules/
 install-state.gz
 
 test-results

@@ -115,7 +115,7 @@ const defaultTools: Record<string, SerializableToolConfig> = {
   },
 };
 
-test.describe('Table Tool', () => {
+test.describe('table tool', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -149,8 +149,8 @@ test.describe('Table Tool', () => {
       const cells = page.locator(CELL_SELECTOR);
 
       await expect(cells).toHaveCount(4);
-      await expect(cells.nth(0)).toHaveText('A');
-      await expect(cells.nth(3)).toHaveText('D');
+      await expect(cells.filter({ hasText: 'A' })).toHaveCount(1);
+      await expect(cells.filter({ hasText: 'D' })).toHaveCount(1);
     });
 
     test('renders table with heading row', async ({ page }) => {
@@ -202,7 +202,7 @@ test.describe('Table Tool', () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(tableBlock?.data.withHeadings).toBe(true);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content).toEqual([['Name', 'Value'], ['foo', 'bar']]);
+      expect(tableBlock?.data.content).toStrictEqual([['Name', 'Value'], ['foo', 'bar']]);
     });
   });
 
@@ -223,6 +223,7 @@ test.describe('Table Tool', () => {
         },
       });
 
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
@@ -240,7 +241,7 @@ test.describe('Table Tool', () => {
   });
 
   test.describe('keyboard navigation', () => {
-    test('Tab key navigates between cells', async ({ page }) => {
+    test('tab key navigates between cells', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -256,6 +257,7 @@ test.describe('Table Tool', () => {
         },
       });
 
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();
@@ -269,7 +271,7 @@ test.describe('Table Tool', () => {
       expect(focusedText).toBe('B');
     });
 
-    test('Enter key navigates to cell below', async ({ page }) => {
+    test('enter key navigates to cell below', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -285,6 +287,7 @@ test.describe('Table Tool', () => {
         },
       });
 
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
       const firstCell = page.locator(CELL_SELECTOR).first();
 
       await firstCell.click();

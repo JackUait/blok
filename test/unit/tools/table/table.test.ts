@@ -286,6 +286,33 @@ describe('Table Tool', () => {
     });
   });
 
+  describe('save with colWidths', () => {
+    it('saves colWidths when columns have custom widths', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+        colWidths: [70, 30],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      expect(saved.colWidths).toEqual([70, 30]);
+    });
+
+    it('omits colWidths when columns have equal widths', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      expect(saved.colWidths).toBeUndefined();
+    });
+  });
+
   describe('onPaste', () => {
     it('extracts data from pasted HTML table', () => {
       const options = createTableOptions();

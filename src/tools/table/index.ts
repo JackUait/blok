@@ -12,8 +12,9 @@ import { DATA_ATTR } from '../../components/constants';
 import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
-import { TableGrid } from './table-core';
+import { TableGrid, equalWidths } from './table-core';
 import { TableKeyboard } from './table-keyboard';
+import { TableResize } from './table-resize';
 import type { TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -35,6 +36,7 @@ export class Table implements BlockTool {
   private data: TableData;
   private grid: TableGrid;
   private keyboard: TableKeyboard | null = null;
+  private resize: TableResize | null = null;
   private element: HTMLDivElement | null = null;
 
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<TableData, TableConfig>) {
@@ -109,6 +111,7 @@ export class Table implements BlockTool {
 
     if (!this.readOnly) {
       this.setupKeyboardNavigation(gridEl);
+      this.setupResize(gridEl);
     }
 
     return wrapper;
@@ -203,6 +206,8 @@ export class Table implements BlockTool {
    * Clean up
    */
   public destroy(): void {
+    this.resize?.destroy();
+    this.resize = null;
     this.element = null;
   }
 
@@ -252,6 +257,15 @@ export class Table implements BlockTool {
     } else {
       firstRow.removeAttribute('data-blok-table-heading');
     }
+  }
+
+  private setupResize(gridEl: HTMLElement): void {
+    const cols = this.grid.getColumnCount(gridEl);
+    const widths = this.data.colWidths ?? equalWidths(cols);
+
+    this.resize = new TableResize(gridEl, widths, (newWidths: number[]) => {
+      this.data.colWidths = newWidths;
+    });
   }
 
   private setupKeyboardNavigation(gridEl: HTMLElement): void {

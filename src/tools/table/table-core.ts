@@ -5,8 +5,9 @@ const CELL_ATTR = 'data-blok-table-cell';
 
 const TABLE_CLASSES = [
   'w-full',
-  'border-collapse',
 ];
+
+const BORDER_STYLE = '1px solid #d1d5db';
 
 const ROW_CLASSES = [
   'flex',
@@ -19,8 +20,6 @@ const CELL_CLASSES = [
   'outline-none',
   'leading-normal',
 ];
-
-const CELL_BORDER_STYLE = '1px solid #d1d5db';
 
 interface TableGridOptions {
   readOnly: boolean;
@@ -50,6 +49,8 @@ export class TableGrid {
     const table = document.createElement('div');
 
     table.className = twMerge(TABLE_CLASSES);
+    table.style.borderTop = BORDER_STYLE;
+    table.style.borderLeft = BORDER_STYLE;
 
     Array.from({ length: rows }).forEach(() => {
       table.appendChild(this.createRow(cols));
@@ -243,7 +244,8 @@ export class TableGrid {
     const cell = document.createElement('div');
 
     cell.className = twMerge(CELL_CLASSES);
-    cell.style.border = CELL_BORDER_STYLE;
+    cell.style.borderRight = BORDER_STYLE;
+    cell.style.borderBottom = BORDER_STYLE;
     cell.setAttribute(CELL_ATTR, '');
     cell.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
 

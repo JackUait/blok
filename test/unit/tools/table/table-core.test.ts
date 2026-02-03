@@ -39,10 +39,10 @@ describe('TableGrid', () => {
       grid.fillGrid(element, [['A', 'B'], ['C', 'D']]);
 
       const cells = element.querySelectorAll('[data-blok-table-cell]');
-      expect(cells[0].innerHTML).toBe('A');
-      expect(cells[1].innerHTML).toBe('B');
-      expect(cells[2].innerHTML).toBe('C');
-      expect(cells[3].innerHTML).toBe('D');
+      expect(cells[0].textContent).toBe('A');
+      expect(cells[1].textContent).toBe('B');
+      expect(cells[2].textContent).toBe('C');
+      expect(cells[3].textContent).toBe('D');
     });
   });
 
@@ -91,7 +91,7 @@ describe('TableGrid', () => {
 
       // New row should be empty, at index 1
       const newRowCells = rows[1].querySelectorAll('[data-blok-table-cell]');
-      expect(newRowCells[0].innerHTML).toBe('');
+      expect(newRowCells[0].textContent).toBe('');
     });
   });
 
@@ -169,7 +169,7 @@ describe('TableGrid', () => {
       grid.fillGrid(element, [['A', 'B'], ['C', 'D']]);
 
       const cell = grid.getCell(element, 1, 0);
-      expect(cell?.innerHTML).toBe('C');
+      expect(cell?.textContent).toBe('C');
     });
   });
 

@@ -85,7 +85,7 @@ export class TableGrid {
   }
 
   /**
-   * Extract 2D array from grid DOM, excluding empty rows
+   * Extract 2D array from grid DOM
    */
   public getData(table: HTMLElement): string[][] {
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
@@ -99,11 +99,7 @@ export class TableGrid {
         rowData.push(this.getCellContent(cell as HTMLElement));
       });
 
-      const isEmpty = rowData.every(cell => cell.trim() === '');
-
-      if (!isEmpty) {
-        result.push(rowData);
-      }
+      result.push(rowData);
     });
 
     return result;

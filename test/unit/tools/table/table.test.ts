@@ -120,6 +120,41 @@ describe('Table Tool', () => {
       expect(saved.content).toEqual([['A', 'B'], ['C', 'D']]);
     });
 
+    it('preserves empty rows added by the user', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      // Simulate user clicking "Add Row" — appends an empty row
+      const grid = element.firstElementChild as HTMLElement;
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(2);
+
+      // Create an empty row manually (same as addRow does)
+      const newRow = document.createElement('div');
+
+      newRow.setAttribute('data-blok-table-row', '');
+
+      for (let i = 0; i < 2; i++) {
+        const cell = document.createElement('div');
+
+        cell.setAttribute('data-blok-table-cell', '');
+        cell.setAttribute('contenteditable', 'true');
+        newRow.appendChild(cell);
+      }
+
+      grid.appendChild(newRow);
+
+      // Save should preserve the empty row
+      const saved = table.save(element);
+
+      expect(saved.content).toHaveLength(3);
+      expect(saved.content[2]).toEqual(['', '']);
+    });
+
     it('preserves withHeadings setting', () => {
       const options = createTableOptions({ withHeadings: true, content: [['H1'], ['D1']] });
       const table = new Table(options);

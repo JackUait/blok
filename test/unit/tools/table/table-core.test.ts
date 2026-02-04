@@ -68,14 +68,14 @@ describe('TableGrid', () => {
       expect(data).toEqual([['A', 'B'], ['C', 'D']]);
     });
 
-    it('excludes completely empty rows', () => {
+    it('preserves empty rows in extracted data', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(3, 2);
 
       grid.fillGrid(element, [['A', 'B'], ['', ''], ['C', 'D']]);
 
       const data = grid.getData(element);
-      expect(data).toEqual([['A', 'B'], ['C', 'D']]);
+      expect(data).toEqual([['A', 'B'], ['', ''], ['C', 'D']]);
     });
   });
 

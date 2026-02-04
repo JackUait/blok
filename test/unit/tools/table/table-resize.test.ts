@@ -113,13 +113,14 @@ describe('TableResize', () => {
       expect(handle.parentElement).toBe(grid);
     });
 
-    it('handles span full table height', () => {
+    it('handles span full table height including the top border', () => {
       grid = createMultiRowGrid(3, [500, 500]);
       new TableResize(grid, [500, 500], vi.fn());
 
       const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
 
-      expect(handle.style.top).toBe('0px');
+      // Negative top offset so the handle covers the grid top border
+      expect(handle.style.top).toBe('-1px');
       expect(handle.style.bottom).toBe('0px');
       expect(handle.style.position).toBe('absolute');
     });

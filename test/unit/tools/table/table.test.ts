@@ -351,7 +351,7 @@ describe('Table Tool', () => {
 
       expect(handle).not.toBeNull();
       expect(handle.style.position).toBe('absolute');
-      expect(handle.style.top).toBe('0px');
+      expect(handle.style.top).toBe('-1px');
       expect(handle.style.bottom).toBe('0px');
       expect(handle.style.cursor).toBe('col-resize');
 

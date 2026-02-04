@@ -72,7 +72,7 @@ export class TableResize {
     handle.setAttribute(RESIZE_ATTR, '');
     handle.setAttribute('data-col', String(colIndex));
     handle.style.position = 'absolute';
-    handle.style.top = '0px';
+    handle.style.top = `-${BORDER_WIDTH}px`;
     handle.style.bottom = '0px';
     handle.style.width = `${HANDLE_HIT_WIDTH}px`;
     handle.style.left = `${leftPx - HANDLE_HIT_WIDTH / 2}px`;

@@ -467,4 +467,143 @@ test.describe('table tool', () => {
       expect(finalTableWidth).toBeLessThan(initialTableWidth - 50);
     });
   });
+
+  test.describe('add row/column controls', () => {
+    test('add-row button appears on hover and adds a row when clicked', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      // Hover over the table to reveal controls
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await expect(addRowBtn).toBeVisible();
+
+      await addRowBtn.click();
+
+      // Should now have 3 rows
+      const rows = page.locator('[data-blok-table-row]');
+
+      await expect(rows).toHaveCount(3);
+    });
+
+    test('add-column button appears on hover and adds a column when clicked', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      await expect(addColBtn).toBeVisible();
+
+      await addColBtn.click();
+
+      // First row should now have 3 cells
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const cells = firstRow.locator(CELL_SELECTOR);
+
+      await expect(cells).toHaveCount(3);
+    });
+
+    test('new row data is saved correctly', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await addRowBtn.click();
+
+      // Type in the new row's first cell
+      const newCell = page.locator('[data-blok-table-row]').nth(2).locator(CELL_SELECTOR).first();
+
+      await newCell.click();
+      await page.keyboard.type('New');
+
+      const savedData = await page.evaluate(async () => {
+        return window.blokInstance?.save();
+      });
+
+      const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(tableBlock?.data.content).toHaveLength(3);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(tableBlock?.data.content[2][0]).toBe('New');
+    });
+
+    test('add controls are not present in readOnly mode', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      // Toggle readOnly
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      await expect(addRowBtn).toHaveCount(0);
+      await expect(addColBtn).toHaveCount(0);
+    });
+  });
 });

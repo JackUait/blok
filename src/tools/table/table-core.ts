@@ -10,7 +10,8 @@ const ROW_CLASSES = [
 ];
 
 const CELL_CLASSES = [
-  'p-2',
+  'py-1',
+  'px-2',
   'min-h-[2em]',
   'outline-none',
   'leading-normal',
@@ -185,7 +186,7 @@ export class TableGrid {
   }
 
   /**
-   * Add column in px mode: keep existing widths, add new column with average width
+   * Add column in px mode: keep existing widths, add new column at half the average width
    */
   private addColumnPx(rows: NodeListOf<Element>, oldColCount: number, index?: number): void {
     const firstRow = rows[0];
@@ -196,7 +197,7 @@ export class TableGrid {
     );
 
     const newColWidth = oldColCount > 0
-      ? Math.round((totalWidth / oldColCount) * 100) / 100
+      ? Math.round((totalWidth / oldColCount / 2) * 100) / 100
       : 0;
 
     rows.forEach(row => {
@@ -215,11 +216,11 @@ export class TableGrid {
   }
 
   /**
-   * Add column in % mode: redistribute widths so all columns sum to 100%
+   * Add column in % mode: shrink existing columns slightly and add new column at half the average width
    */
   private addColumnPercent(rows: NodeListOf<Element>, oldColCount: number, index?: number): void {
-    const newColCount = oldColCount + 1;
-    const scaleFactor = (newColCount - 1) / newColCount;
+    const halfColFraction = 0.5 / oldColCount;
+    const scaleFactor = 1 - halfColFraction;
 
     rows.forEach(row => {
       const existingCells = row.querySelectorAll(`[${CELL_ATTR}]`);
@@ -232,7 +233,7 @@ export class TableGrid {
         el.style.width = `${newWidth}%`;
       });
 
-      const newColWidth = Math.round((100 / newColCount) * 100) / 100;
+      const newColWidth = Math.round((100 / oldColCount / 2) * 100) / 100;
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
       const isAppend = index === undefined || index >= cells.length;
       const cell = this.createCell(`${newColWidth}%`);

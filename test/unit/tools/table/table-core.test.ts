@@ -257,7 +257,7 @@ describe('TableGrid', () => {
       expect(newCellWidth).toBeGreaterThan(0);
     });
 
-    it('sets new column width to average of existing columns when colWidths provided', () => {
+    it('sets new column width to half the average of existing columns when colWidths provided', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(1, 3);
 
@@ -266,8 +266,45 @@ describe('TableGrid', () => {
       const cells = element.querySelectorAll('[data-blok-table-row]')[0]
         .querySelectorAll('[data-blok-table-cell]');
 
-      // Average of [200, 300, 100] = 200
-      expect((cells[3] as HTMLElement).style.width).toBe('200px');
+      // Average of [200, 300, 100] = 200, half = 100
+      expect((cells[3] as HTMLElement).style.width).toBe('100px');
+    });
+
+    it('sets new column width to half the average in px mode without colWidths param', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 3);
+
+      // Set px widths directly on cells (simulating resize)
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
+
+      (cells[0] as HTMLElement).style.width = '200px';
+      (cells[1] as HTMLElement).style.width = '200px';
+      (cells[2] as HTMLElement).style.width = '200px';
+
+      grid.addColumn(element);
+
+      const allCells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      // Average = 200, half = 100
+      expect((allCells[3] as HTMLElement).style.width).toBe('100px');
+    });
+
+    it('sets new column width to half the average in percent mode', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 3);
+
+      // Default percent mode: each column ~33.33%
+      grid.addColumn(element);
+
+      const allCells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      // Average = 33.33%, half = 16.67%
+      const newColWidth = parseFloat((allCells[3] as HTMLElement).style.width);
+
+      expect(newColWidth).toBeCloseTo(16.67, 1);
+      expect((allCells[3] as HTMLElement).style.width).toMatch(/%$/);
     });
 
     it('applies colWidths to all rows when adding column', () => {
@@ -284,8 +321,8 @@ describe('TableGrid', () => {
         expect(cells).toHaveLength(3);
         expect((cells[0] as HTMLElement).style.width).toBe('250px');
         expect((cells[1] as HTMLElement).style.width).toBe('350px');
-        // New column
-        expect((cells[2] as HTMLElement).style.width).toBe('300px');
+        // New column: half the average of [250, 350] = 300, half = 150
+        expect((cells[2] as HTMLElement).style.width).toBe('150px');
       });
     });
   });

@@ -12,7 +12,7 @@ import { DATA_ATTR } from '../../components/constants';
 import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
-import { TableGrid, equalWidths } from './table-core';
+import { TableGrid } from './table-core';
 import { TableKeyboard } from './table-keyboard';
 import { TableResize } from './table-resize';
 import type { TableData, TableConfig } from './types';
@@ -102,8 +102,8 @@ export class Table implements BlockTool {
       this.grid.fillGrid(gridEl, this.data.content);
     }
 
-    if (this.data.tableWidth !== undefined && Math.abs(this.data.tableWidth - 100) > 0.01) {
-      gridEl.style.width = `${this.data.tableWidth}%`;
+    if (this.data.colWidths) {
+      this.applyPixelWidths(gridEl, this.data.colWidths);
     }
 
     wrapper.appendChild(gridEl);
@@ -115,10 +115,27 @@ export class Table implements BlockTool {
 
     if (!this.readOnly) {
       this.setupKeyboardNavigation(gridEl);
-      this.setupResize(gridEl);
     }
 
     return wrapper;
+  }
+
+  /**
+   * Called after block element is added to the DOM.
+   * Initializes resize handles now that pixel widths can be measured.
+   */
+  public rendered(): void {
+    if (this.readOnly || !this.element) {
+      return;
+    }
+
+    const gridEl = this.element.firstElementChild as HTMLElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    this.initResize(gridEl);
   }
 
   /**
@@ -126,18 +143,16 @@ export class Table implements BlockTool {
    */
   public save(blockContent: HTMLElement): TableData {
     const gridEl = blockContent.firstElementChild as HTMLElement;
-    const colWidths = this.grid.getColWidths(gridEl);
-    const cols = colWidths.length;
-    const isEqual = cols > 0 && colWidths.every(w => Math.abs(w - colWidths[0]) < 0.1);
-
-    const tableWidth = this.data.tableWidth;
+    const colWidths = this.data.colWidths;
+    const isEqual = colWidths !== undefined
+      && colWidths.length > 0
+      && colWidths.every(w => Math.abs(w - colWidths[0]) < 1);
 
     return {
       withHeadings: this.data.withHeadings,
       stretched: this.data.stretched,
       content: this.grid.getData(gridEl),
-      ...(isEqual ? {} : { colWidths }),
-      ...(tableWidth !== undefined && Math.abs(tableWidth - 100) > 0.01 ? { tableWidth } : {}),
+      ...(colWidths && !isEqual ? { colWidths } : {}),
     };
   }
 
@@ -206,6 +221,14 @@ export class Table implements BlockTool {
 
       this.element.parentNode.replaceChild(newElement, this.element);
       this.element = newElement;
+
+      if (!this.readOnly) {
+        const gridEl = this.element.firstElementChild as HTMLElement;
+
+        if (gridEl) {
+          this.initResize(gridEl);
+        }
+      }
     }
   }
 
@@ -239,7 +262,6 @@ export class Table implements BlockTool {
       stretched: tableData.stretched ?? this.config.stretched ?? false,
       content: tableData.content ?? [],
       colWidths: validWidths,
-      tableWidth: tableData.tableWidth,
     };
   }
 
@@ -267,14 +289,45 @@ export class Table implements BlockTool {
     }
   }
 
-  private setupResize(gridEl: HTMLElement): void {
-    const cols = this.grid.getColumnCount(gridEl);
-    const widths = this.data.colWidths ?? equalWidths(cols);
-    const tableWidth = this.data.tableWidth ?? 100;
+  private initResize(gridEl: HTMLElement): void {
+    this.resize?.destroy();
 
-    this.resize = new TableResize(gridEl, widths, tableWidth, (newWidths: number[], newTableWidth: number) => {
+    const widths = this.data.colWidths ?? this.readPixelWidths(gridEl);
+
+    this.resize = new TableResize(gridEl, widths, (newWidths: number[]) => {
       this.data.colWidths = newWidths;
-      this.data.tableWidth = newTableWidth;
+    });
+  }
+
+  private readPixelWidths(gridEl: HTMLElement): number[] {
+    const firstRow = gridEl.querySelector('[data-blok-table-row]');
+
+    if (!firstRow) {
+      return [];
+    }
+
+    const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
+
+    return Array.from(cells).map(cell =>
+      (cell as HTMLElement).getBoundingClientRect().width
+    );
+  }
+
+  private applyPixelWidths(gridEl: HTMLElement, widths: number[]): void {
+    const totalWidth = widths.reduce((sum, w) => sum + w, 0);
+
+    gridEl.style.width = `${totalWidth}px`;
+
+    const rowEls = gridEl.querySelectorAll('[data-blok-table-row]');
+
+    rowEls.forEach(row => {
+      const cells = row.querySelectorAll('[data-blok-table-cell]');
+
+      cells.forEach((cell, i) => {
+        if (i < widths.length) {
+          (cell as HTMLElement).style.width = `${widths[i]}px`;
+        }
+      });
     });
   }
 

@@ -215,18 +215,18 @@ describe('Table Tool', () => {
       expect(firstCell.style.width).toBe('33.33%');
     });
 
-    it('applies custom colWidths from data', () => {
+    it('applies custom colWidths from data as pixel values', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
-        colWidths: [60, 40],
+        colWidths: [400, 200],
       });
       const table = new Table(options);
       const element = table.render();
 
       const cells = element.querySelectorAll('[data-blok-table-cell]');
 
-      expect((cells[0] as HTMLElement).style.width).toBe('60%');
-      expect((cells[1] as HTMLElement).style.width).toBe('40%');
+      expect((cells[0] as HTMLElement).style.width).toBe('400px');
+      expect((cells[1] as HTMLElement).style.width).toBe('200px');
     });
 
     it('falls back to equal widths when colWidths length mismatches columns', () => {
@@ -244,17 +244,21 @@ describe('Table Tool', () => {
   });
 
   describe('resize handles', () => {
-    it('adds resize handles for each column including right edge', () => {
+    it('adds resize handles for each column', () => {
       const options = createTableOptions({
         content: [['A', 'B', 'C']],
       });
       const table = new Table(options);
       const element = table.render();
 
+      document.body.appendChild(element);
+      table.rendered();
+
       const handles = element.querySelectorAll('[data-blok-table-resize]');
 
-      // 3 columns → 3 handles (2 between pairs + 1 at right edge)
       expect(handles).toHaveLength(3);
+
+      document.body.removeChild(element);
     });
 
     it('does not add resize handles in readOnly mode', () => {
@@ -265,9 +269,14 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
+      document.body.appendChild(element);
+      table.rendered();
+
       const handles = element.querySelectorAll('[data-blok-table-resize]');
 
       expect(handles).toHaveLength(0);
+
+      document.body.removeChild(element);
     });
 
     it('shows blue indicator on handle hover', () => {
@@ -278,6 +287,7 @@ describe('Table Tool', () => {
       const element = table.render();
 
       document.body.appendChild(element);
+      table.rendered();
 
       const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
 
@@ -299,6 +309,9 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
+      document.body.appendChild(element);
+      table.rendered();
+
       const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
 
       expect(handle).not.toBeNull();
@@ -306,6 +319,8 @@ describe('Table Tool', () => {
       expect(handle.style.top).toBe('0px');
       expect(handle.style.bottom).toBe('0px');
       expect(handle.style.cursor).toBe('col-resize');
+
+      document.body.removeChild(element);
     });
   });
 
@@ -313,14 +328,14 @@ describe('Table Tool', () => {
     it('saves colWidths when columns have custom widths', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
-        colWidths: [70, 30],
+        colWidths: [400, 200],
       });
       const table = new Table(options);
       const element = table.render();
 
       const saved = table.save(element);
 
-      expect(saved.colWidths).toEqual([70, 30]);
+      expect(saved.colWidths).toEqual([400, 200]);
     });
 
     it('omits colWidths when columns have equal widths', () => {

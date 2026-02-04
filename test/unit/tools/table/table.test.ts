@@ -324,6 +324,119 @@ describe('Table Tool', () => {
     });
   });
 
+  describe('add row/column controls', () => {
+    it('creates add-row button after rendered()', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]');
+
+      expect(addRowBtn).not.toBeNull();
+
+      document.body.removeChild(element);
+    });
+
+    it('creates add-column button after rendered()', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]');
+
+      expect(addColBtn).not.toBeNull();
+
+      document.body.removeChild(element);
+    });
+
+    it('does not create add controls in readOnly mode', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({ content: [['A', 'B']] }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      expect(element.querySelector('[data-blok-table-add-row]')).toBeNull();
+      expect(element.querySelector('[data-blok-table-add-col]')).toBeNull();
+
+      document.body.removeChild(element);
+    });
+
+    it('clicking add-row appends a new row to the table', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      addRowBtn.click();
+
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(3);
+
+      document.body.removeChild(element);
+    });
+
+    it('clicking add-column appends a new column to the table', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      addColBtn.click();
+
+      const firstRowCells = element.querySelectorAll('[data-blok-table-row]')[0].querySelectorAll('[data-blok-table-cell]');
+
+      expect(firstRowCells).toHaveLength(3);
+
+      document.body.removeChild(element);
+    });
+
+    it('cleans up add controls on destroy', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      table.destroy();
+
+      expect(element.querySelector('[data-blok-table-add-row]')).toBeNull();
+      expect(element.querySelector('[data-blok-table-add-col]')).toBeNull();
+
+      document.body.removeChild(element);
+    });
+  });
+
   describe('save with colWidths', () => {
     it('saves colWidths when columns have custom widths', () => {
       const options = createTableOptions({

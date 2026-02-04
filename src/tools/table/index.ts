@@ -12,6 +12,7 @@ import { DATA_ATTR } from '../../components/constants';
 import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
+import { TableAddControls } from './table-add-controls';
 import { TableGrid } from './table-core';
 import { TableKeyboard } from './table-keyboard';
 import { TableResize } from './table-resize';
@@ -37,6 +38,7 @@ export class Table implements BlockTool {
   private grid: TableGrid;
   private keyboard: TableKeyboard | null = null;
   private resize: TableResize | null = null;
+  private addControls: TableAddControls | null = null;
   private element: HTMLDivElement | null = null;
 
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<TableData, TableConfig>) {
@@ -136,6 +138,7 @@ export class Table implements BlockTool {
     }
 
     this.initResize(gridEl);
+    this.initAddControls(gridEl);
   }
 
   /**
@@ -229,6 +232,7 @@ export class Table implements BlockTool {
 
     if (!this.readOnly && gridEl) {
       this.initResize(gridEl);
+      this.initAddControls(gridEl);
     }
   }
 
@@ -238,6 +242,8 @@ export class Table implements BlockTool {
   public destroy(): void {
     this.resize?.destroy();
     this.resize = null;
+    this.addControls?.destroy();
+    this.addControls = null;
     this.element = null;
   }
 
@@ -287,6 +293,26 @@ export class Table implements BlockTool {
     } else {
       firstRow.removeAttribute('data-blok-table-heading');
     }
+  }
+
+  private initAddControls(gridEl: HTMLElement): void {
+    this.addControls?.destroy();
+
+    if (!this.element) {
+      return;
+    }
+
+    this.addControls = new TableAddControls({
+      wrapper: this.element,
+      grid: gridEl,
+      onAddRow: () => {
+        this.grid.addRow(gridEl);
+      },
+      onAddColumn: () => {
+        this.grid.addColumn(gridEl);
+        this.initResize(gridEl);
+      },
+    });
   }
 
   private initResize(gridEl: HTMLElement): void {

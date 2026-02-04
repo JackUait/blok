@@ -30,8 +30,6 @@ const WRAPPER_CLASSES = [
 
 const WRAPPER_EDIT_CLASSES = [
   'relative',
-  'pt-9',
-  'pl-9',
   'pr-9',
   'pb-9',
 ];
@@ -346,7 +344,6 @@ export class Table implements BlockTool {
     }
 
     this.rowColControls = new TableRowColControls({
-      wrapper: this.element,
       grid: gridEl,
       getColumnCount: () => this.grid.getColumnCount(gridEl),
       getRowCount: () => this.grid.getRowCount(gridEl),

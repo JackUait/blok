@@ -3,7 +3,6 @@ import {
   IconInsertBelow,
   IconInsertLeft,
   IconInsertRight,
-  IconMenu,
   IconMoveDown,
   IconMoveLeft,
   IconMoveRight,
@@ -14,7 +13,7 @@ import {
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
-import { ROW_ATTR } from './table-core';
+import { CELL_ATTR, ROW_ATTR } from './table-core';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -24,9 +23,10 @@ const GRIP_ATTR = 'data-blok-table-grip';
 const GRIP_COL_ATTR = 'data-blok-table-grip-col';
 const GRIP_ROW_ATTR = 'data-blok-table-grip-row';
 const HIDE_DELAY_MS = 150;
-const HOVER_ZONE_PX = 20;
-const GRIP_SIZE = 28;
-const GRIP_OFFSET = GRIP_SIZE / 2;
+const COL_PILL_WIDTH = 40;
+const COL_PILL_HEIGHT = 6;
+const ROW_PILL_WIDTH = 6;
+const ROW_PILL_HEIGHT = 24;
 
 /**
  * Actions that can be performed on rows/columns
@@ -43,7 +43,6 @@ export type RowColAction =
   | { type: 'toggle-heading' };
 
 export interface TableRowColControlsOptions {
-  wrapper: HTMLElement;
   grid: HTMLElement;
   getColumnCount: () => number;
   getRowCount: () => number;
@@ -54,26 +53,20 @@ export interface TableRowColControlsOptions {
 const GRIP_CAPSULE_CLASSES = [
   'absolute',
   'z-[3]',
-  'flex',
-  'items-center',
-  'justify-center',
-  'rounded-lg',
+  'rounded-full',
   'cursor-grab',
   'select-none',
-  'transition-all',
+  'transition-opacity',
   'duration-150',
 ];
 
 const GRIP_IDLE_CLASSES = [
-  'bg-gray-200',
+  'bg-gray-300',
   'opacity-0',
 ];
 
 const GRIP_VISIBLE_CLASSES = [
-  'bg-white',
-  'border',
-  'border-gray-200',
-  'shadow-sm',
+  'bg-gray-400',
   'opacity-100',
 ];
 
@@ -81,7 +74,6 @@ const GRIP_VISIBLE_CLASSES = [
  * Manages row and column grip handles with popover menus and drag-to-reorder.
  */
 export class TableRowColControls {
-  private wrapper: HTMLElement;
   private grid: HTMLElement;
   private getColumnCount: () => number;
   private getRowCount: () => number;
@@ -97,12 +89,11 @@ export class TableRowColControls {
 
   private drag: TableRowColDrag;
 
-  private boundMouseMove: (e: MouseEvent) => void;
-  private boundMouseLeave: () => void;
+  private boundFocusIn: (e: FocusEvent) => void;
+  private boundFocusOut: (e: FocusEvent) => void;
   private boundPointerDown: (e: PointerEvent) => void;
 
   constructor(options: TableRowColControlsOptions) {
-    this.wrapper = options.wrapper;
     this.grid = options.grid;
     this.getColumnCount = options.getColumnCount;
     this.getRowCount = options.getRowCount;
@@ -114,14 +105,14 @@ export class TableRowColControls {
       onAction: this.onAction,
     });
 
-    this.boundMouseMove = this.handleMouseMove.bind(this);
-    this.boundMouseLeave = this.scheduleHideAll.bind(this);
+    this.boundFocusIn = this.handleFocusIn.bind(this);
+    this.boundFocusOut = this.handleFocusOut.bind(this);
     this.boundPointerDown = this.handlePointerDown.bind(this);
 
     this.createGrips();
 
-    this.wrapper.addEventListener('mousemove', this.boundMouseMove);
-    this.wrapper.addEventListener('mouseleave', this.boundMouseLeave);
+    this.grid.addEventListener('focusin', this.boundFocusIn);
+    this.grid.addEventListener('focusout', this.boundFocusOut);
   }
 
   /**
@@ -130,13 +121,14 @@ export class TableRowColControls {
   public refresh(): void {
     this.destroyGrips();
     this.createGrips();
+    this.showGripsForFocusedCell();
   }
 
   public destroy(): void {
     this.closePopover();
     this.drag.cleanup();
-    this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
-    this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);
+    this.grid.removeEventListener('focusin', this.boundFocusIn);
+    this.grid.removeEventListener('focusout', this.boundFocusOut);
     this.clearHideTimeout();
     this.destroyGrips();
   }
@@ -149,14 +141,14 @@ export class TableRowColControls {
       const grip = this.createGripElement('col', i);
 
       this.colGrips.push(grip);
-      this.wrapper.appendChild(grip);
+      this.grid.appendChild(grip);
     });
 
     Array.from({ length: rowCount }).forEach((_, i) => {
       const grip = this.createGripElement('row', i);
 
       this.rowGrips.push(grip);
-      this.wrapper.appendChild(grip);
+      this.grid.appendChild(grip);
     });
 
     this.positionGrips();
@@ -178,9 +170,15 @@ export class TableRowColControls {
     grip.setAttribute(GRIP_ATTR, '');
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
-    grip.innerHTML = IconMenu;
-    grip.style.width = `${GRIP_SIZE}px`;
-    grip.style.height = `${GRIP_SIZE}px`;
+
+    if (type === 'col') {
+      grip.style.width = `${COL_PILL_WIDTH}px`;
+      grip.style.height = `${COL_PILL_HEIGHT}px`;
+    } else {
+      grip.style.width = `${ROW_PILL_WIDTH}px`;
+      grip.style.height = `${ROW_PILL_HEIGHT}px`;
+    }
+
     grip.addEventListener('pointerdown', this.boundPointerDown);
 
     return grip;
@@ -199,19 +197,15 @@ export class TableRowColControls {
 
     const edges = getCumulativeColEdges(this.grid);
 
-    const gridOffsetLeft = this.grid.offsetLeft;
-    const gridOffsetTop = this.grid.offsetTop;
-
     this.colGrips.forEach((grip, i) => {
       if (i + 1 >= edges.length) {
         return;
       }
 
       const centerX = (edges[i] + edges[i + 1]) / 2;
-      const el: HTMLElement = grip;
 
-      el.style.top = `${gridOffsetTop - GRIP_SIZE - 4}px`;
-      el.style.left = `${gridOffsetLeft + centerX - GRIP_OFFSET}px`;
+      grip.style.top = `${-(COL_PILL_HEIGHT / 2)}px`;
+      grip.style.left = `${centerX - COL_PILL_WIDTH / 2}px`;
     });
 
     this.rowGrips.forEach((grip, i) => {
@@ -221,83 +215,79 @@ export class TableRowColControls {
 
       const rowEl = rows[i] as HTMLElement;
       const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
-      const el: HTMLElement = grip;
 
-      el.style.left = `${gridOffsetLeft - GRIP_SIZE - 4}px`;
-      el.style.top = `${gridOffsetTop + centerY - GRIP_OFFSET}px`;
+      grip.style.left = `${-(ROW_PILL_WIDTH / 2)}px`;
+      grip.style.top = `${centerY - ROW_PILL_HEIGHT / 2}px`;
     });
   }
 
-  private handleMouseMove(e: MouseEvent): void {
+  private handleFocusIn(e: FocusEvent): void {
+    const target = e.target as HTMLElement;
+    const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+    if (!cell) {
+      return;
+    }
+
+    this.clearHideTimeout();
+
+    const position = this.getCellPosition(cell);
+
+    if (!position) {
+      return;
+    }
+
+    this.showColGrip(position.col);
+    this.showRowGrip(position.row);
+  }
+
+  private handleFocusOut(_e: FocusEvent): void {
     if (this.activePopover !== null) {
       return;
     }
 
-    const gridRect = this.grid.getBoundingClientRect();
-    const relativeY = e.clientY - gridRect.top;
-    const relativeX = e.clientX - gridRect.left;
-
-    this.clearHideTimeout();
-    this.updateColGripVisibility(relativeX, relativeY);
-    this.updateRowGripVisibility(relativeX, relativeY);
+    this.scheduleHideAll();
   }
 
-  private updateColGripVisibility(relativeX: number, relativeY: number): void {
-    const isNearTopEdge = relativeY < HOVER_ZONE_PX && relativeY >= -HOVER_ZONE_PX;
+  private getCellPosition(cell: HTMLElement): { row: number; col: number } | null {
+    const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
 
-    if (!isNearTopEdge && this.activeColGripIndex >= 0) {
-      this.hideColGrip();
-
-      return;
+    if (!row) {
+      return null;
     }
 
-    if (!isNearTopEdge) {
-      return;
-    }
-
-    const colIndex = this.getColumnIndexAtX(relativeX);
-
-    if (colIndex >= 0 && colIndex < this.colGrips.length) {
-      this.showColGrip(colIndex);
-    }
-  }
-
-  private updateRowGripVisibility(relativeX: number, relativeY: number): void {
-    const isNearLeftEdge = relativeX < HOVER_ZONE_PX && relativeX >= -HOVER_ZONE_PX;
-
-    if (!isNearLeftEdge && this.activeRowGripIndex >= 0) {
-      this.hideRowGrip();
-
-      return;
-    }
-
-    if (!isNearLeftEdge) {
-      return;
-    }
-
-    const rowIndex = this.getRowIndexAtY(relativeY);
-
-    if (rowIndex >= 0 && rowIndex < this.rowGrips.length) {
-      this.showRowGrip(rowIndex);
-    }
-  }
-
-  private getColumnIndexAtX(relativeX: number): number {
-    const edges = getCumulativeColEdges(this.grid);
-
-    return edges.findIndex((edge, i) =>
-      i + 1 < edges.length && relativeX >= edge && relativeX < edges[i + 1]
-    );
-  }
-
-  private getRowIndexAtY(relativeY: number): number {
     const rows = Array.from(this.grid.querySelectorAll(`[${ROW_ATTR}]`));
+    const rowIndex = rows.indexOf(row);
 
-    return rows.findIndex(row => {
-      const rowEl = row as HTMLElement;
+    if (rowIndex < 0) {
+      return null;
+    }
 
-      return relativeY >= rowEl.offsetTop && relativeY < rowEl.offsetTop + rowEl.offsetHeight;
-    });
+    const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+    const colIndex = cells.indexOf(cell);
+
+    if (colIndex < 0) {
+      return null;
+    }
+
+    return { row: rowIndex, col: colIndex };
+  }
+
+  private showGripsForFocusedCell(): void {
+    const focused = this.grid.querySelector<HTMLElement>(`[${CELL_ATTR}]:focus`);
+
+    if (!focused) {
+      return;
+    }
+
+    const position = this.getCellPosition(focused);
+
+    if (!position) {
+      return;
+    }
+
+    this.showColGrip(position.col);
+    this.showRowGrip(position.row);
   }
 
   private showColGrip(index: number): void {
@@ -337,15 +327,11 @@ export class TableRowColControls {
   }
 
   private applyVisibleClasses(grip: HTMLElement): void {
-    const el: HTMLElement = grip;
-
-    el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
+    grip.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
   }
 
   private applyIdleClasses(grip: HTMLElement): void {
-    const el: HTMLElement = grip;
-
-    el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
+    grip.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
   }
 
   private scheduleHideAll(): void {
@@ -432,10 +418,12 @@ export class TableRowColControls {
 
     this.activePopover.on(PopoverEvent.Closed, () => {
       this.destroyPopover();
+      this.scheduleHideAll();
     });
 
     this.activePopover.on(PopoverEvent.ClosedOnActivate, () => {
       this.destroyPopover();
+      this.scheduleHideAll();
     });
 
     this.activePopover.show();

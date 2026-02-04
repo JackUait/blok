@@ -240,6 +240,75 @@ test.describe('table tool', () => {
     });
   });
 
+  test.describe('cell focus', () => {
+    test('focused cell shows blue selection border', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // Focus selection uses box-shadow spread for all 4 sides
+      const boxShadow = await firstCell.evaluate(el =>
+        window.getComputedStyle(el).boxShadow
+      );
+
+      // rgb(59, 130, 246) is blue-500
+      expect(boxShadow).toContain('rgb(59, 130, 246)');
+    });
+
+    test('unfocused cell has no selection border', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      // Without focus, borders should be gray and no blue box-shadow
+      const styles = await firstCell.evaluate(el => {
+        const s = window.getComputedStyle(el);
+
+        return {
+          borderRightColor: s.borderRightColor,
+          borderBottomColor: s.borderBottomColor,
+          boxShadow: s.boxShadow,
+        };
+      });
+
+      const blue = 'rgb(59, 130, 246)';
+
+      expect(styles.borderRightColor).not.toBe(blue);
+      expect(styles.borderBottomColor).not.toBe(blue);
+      expect(styles.boxShadow).toBe('none');
+    });
+  });
+
   test.describe('keyboard navigation', () => {
     test('tab key navigates between cells', async ({ page }) => {
       await createBlok(page, {
@@ -630,37 +699,13 @@ test.describe('table tool', () => {
       });
     };
 
-    /**
-     * Get the bounding box of the grid element (first child of table wrapper)
-     */
-    const getGridBox = async (page: Page): Promise<{ x: number; y: number; width: number; height: number }> => {
-      const box = await page.evaluate(() => {
-        const wrapper = document.querySelector('[data-blok-tool="table"]');
-        const grid = wrapper?.firstElementChild as HTMLElement | null;
-
-        if (!grid) {
-          return null;
-        }
-
-        const rect = grid.getBoundingClientRect();
-
-        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-      });
-
-      if (!box) {
-        throw new Error('Grid not visible');
-      }
-
-      return box;
-    };
-
-    test('column grip appears when hovering near top edge', async ({ page }) => {
+    test('column grip appears when clicking a cell', async ({ page }) => {
       await createTable2x2(page);
 
-      const gridBox = await getGridBox(page);
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
 
-      // Move mouse to the top edge of the grid (within hover zone)
-      await page.mouse.move(gridBox.x + gridBox.width / 4, gridBox.y + 5);
+      await firstCell.click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const colGrip = page.locator(COL_GRIP_SELECTOR).first();
@@ -669,13 +714,13 @@ test.describe('table tool', () => {
       await expect(colGrip).toBeVisible({ timeout: 2000 });
     });
 
-    test('row grip appears when hovering near left edge', async ({ page }) => {
+    test('row grip appears when clicking a cell', async ({ page }) => {
       await createTable2x2(page);
 
-      const gridBox = await getGridBox(page);
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
 
-      // Move mouse to the left edge of the grid (within hover zone)
-      await page.mouse.move(gridBox.x + 5, gridBox.y + gridBox.height / 4);
+      await firstCell.click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
@@ -686,10 +731,11 @@ test.describe('table tool', () => {
     test('clicking column grip opens popover menu', async ({ page }) => {
       await createTable2x2(page);
 
-      const gridBox = await getGridBox(page);
+      // Click cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
 
-      // Hover near top edge to show the grip
-      await page.mouse.move(gridBox.x + gridBox.width / 4, gridBox.y + 5);
+      await firstCell.click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const visibleGrip = page.locator(COL_GRIP_SELECTOR).first();
@@ -706,10 +752,11 @@ test.describe('table tool', () => {
     test('clicking row grip opens popover menu', async ({ page }) => {
       await createTable2x2(page);
 
-      const gridBox = await getGridBox(page);
+      // Click cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
 
-      // Hover near left edge to show the grip
-      await page.mouse.move(gridBox.x + 5, gridBox.y + gridBox.height / 4);
+      await firstCell.click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const visibleGrip = page.locator(ROW_GRIP_SELECTOR).first();
@@ -726,10 +773,11 @@ test.describe('table tool', () => {
     test('insert row below adds a row', async ({ page }) => {
       await createTable2x2(page);
 
-      const gridBox = await getGridBox(page);
+      // Click first cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
 
-      // Show first row grip
-      await page.mouse.move(gridBox.x + 5, gridBox.y + gridBox.height / 4);
+      await firstCell.click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const visibleGrip = page.locator(ROW_GRIP_SELECTOR).first();
@@ -746,10 +794,11 @@ test.describe('table tool', () => {
     test('insert column right adds a column', async ({ page }) => {
       await createTable2x2(page);
 
-      const gridBox = await getGridBox(page);
+      // Click first cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
 
-      // Show first column grip
-      await page.mouse.move(gridBox.x + gridBox.width / 4, gridBox.y + 5);
+      await firstCell.click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const visibleGrip = page.locator(COL_GRIP_SELECTOR).first();
@@ -763,6 +812,87 @@ test.describe('table tool', () => {
       const cells = firstRow.locator(CELL_SELECTOR);
 
       await expect(cells).toHaveCount(3);
+    });
+
+    test('grip pills are children of the grid element, not the wrapper', async ({ page }) => {
+      await createTable2x2(page);
+
+      // Grips should be inside the grid (sibling to rows), not direct children of the wrapper
+      const gripParentInfo = await page.evaluate(() => {
+        const grips = document.querySelectorAll('[data-blok-table-grip]');
+
+        if (grips.length === 0) {
+          return { count: 0, allInsideGrid: false };
+        }
+
+        const allInsideGrid = Array.from(grips).every(grip => {
+          const parent = grip.parentElement;
+
+          // The wrapper has data-blok-tool="table", the grid does not
+          return parent !== null && !parent.hasAttribute('data-blok-tool');
+        });
+
+        return { count: grips.length, allInsideGrid };
+      });
+
+      expect(gripParentInfo.count).toBeGreaterThan(0);
+      expect(gripParentInfo.allInsideGrid).toBe(true);
+    });
+
+    test('grip pills are solid capsules with no icon content', async ({ page }) => {
+      await createTable2x2(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first grip
+      const firstGrip = page.locator(GRIP_SELECTOR).first();
+
+      // Pill should have no child elements (no icon SVG inside)
+      const childCount = await firstGrip.evaluate(el => el.children.length);
+
+      expect(childCount).toBe(0);
+    });
+
+    test('column pill has horizontal capsule dimensions', async ({ page }) => {
+      await createTable2x2(page);
+
+      // Click cell to make grip visible so we can measure it
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(colGrip).toBeVisible();
+
+      const box = await colGrip.boundingBox();
+
+      expect(box).not.toBeNull();
+      // Column pill: ~40px wide x 6px tall
+      expect(box!.width).toBe(40);
+      expect(box!.height).toBe(6);
+    });
+
+    test('row pill has vertical capsule dimensions', async ({ page }) => {
+      await createTable2x2(page);
+
+      // Click cell to make grip visible so we can measure it
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+
+      const box = await rowGrip.boundingBox();
+
+      expect(box).not.toBeNull();
+      // Row pill: ~6px wide x 24px tall
+      expect(box!.width).toBe(6);
+      expect(box!.height).toBe(24);
     });
 
     test('grips not present in readOnly mode', async ({ page }) => {

@@ -216,19 +216,19 @@ export class Table implements BlockTool {
     };
 
     // Re-render with new data
-    if (this.element?.parentNode) {
-      const newElement = this.render();
+    if (!this.element?.parentNode) {
+      return;
+    }
 
-      this.element.parentNode.replaceChild(newElement, this.element);
-      this.element = newElement;
+    const newElement = this.render();
 
-      if (!this.readOnly) {
-        const gridEl = this.element.firstElementChild as HTMLElement;
+    this.element.parentNode.replaceChild(newElement, this.element);
+    this.element = newElement;
 
-        if (gridEl) {
-          this.initResize(gridEl);
-        }
-      }
+    const gridEl = this.element.firstElementChild as HTMLElement;
+
+    if (!this.readOnly && gridEl) {
+      this.initResize(gridEl);
     }
   }
 
@@ -313,19 +313,22 @@ export class Table implements BlockTool {
     );
   }
 
-  private applyPixelWidths(gridEl: HTMLElement, widths: number[]): void {
+  private applyPixelWidths(grid: HTMLElement, widths: number[]): void {
     const totalWidth = widths.reduce((sum, w) => sum + w, 0);
+    const gridStyle: HTMLElement = grid;
 
-    gridEl.style.width = `${totalWidth}px`;
+    gridStyle.style.width = `${totalWidth}px`;
 
-    const rowEls = gridEl.querySelectorAll('[data-blok-table-row]');
+    const rowEls = grid.querySelectorAll('[data-blok-table-row]');
 
     rowEls.forEach(row => {
       const cells = row.querySelectorAll('[data-blok-table-cell]');
 
-      cells.forEach((cell, i) => {
+      cells.forEach((node, i) => {
         if (i < widths.length) {
-          (cell as HTMLElement).style.width = `${widths[i]}px`;
+          const cellEl = node as HTMLElement;
+
+          cellEl.style.width = `${widths[i]}px`;
         }
       });
     });

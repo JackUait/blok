@@ -98,10 +98,11 @@ export class TableResize {
   }
 
   private updateHandlePositions(): void {
-    this.handles.forEach((el, i) => {
+    this.handles.forEach((handle, i) => {
       const leftPx = this.getHandleLeftPx(i);
+      const handleEl: HTMLElement = handle;
 
-      el.style.left = `${leftPx - HANDLE_HIT_WIDTH / 2}px`;
+      handleEl.style.left = `${leftPx - HANDLE_HIT_WIDTH / 2}px`;
     });
   }
 
@@ -143,10 +144,7 @@ export class TableResize {
     }
 
     const deltaPx = e.clientX - this.dragStartX;
-    let newWidth = this.startColWidth + deltaPx;
-
-    // Clamp to minimum
-    newWidth = Math.max(MIN_COL_WIDTH, newWidth);
+    const rawWidth = this.startColWidth + deltaPx;
 
     // Clamp so table does not exceed container width
     const containerWidth = this.gridEl.parentElement?.getBoundingClientRect().width ?? Infinity;
@@ -156,7 +154,7 @@ export class TableResize {
     );
     const maxWidth = containerWidth - otherColumnsWidth;
 
-    newWidth = Math.min(maxWidth, newWidth);
+    const newWidth = Math.min(maxWidth, Math.max(MIN_COL_WIDTH, rawWidth));
 
     this.colWidths[this.dragColIndex] = newWidth;
     this.applyWidths();

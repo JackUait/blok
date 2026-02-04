@@ -607,4 +607,188 @@ test.describe('table tool', () => {
       await expect(addColBtn).toHaveCount(0);
     });
   });
+
+  test.describe('row/column controls', () => {
+    const GRIP_SELECTOR = '[data-blok-table-grip]';
+    const COL_GRIP_SELECTOR = '[data-blok-table-grip-col]';
+    const ROW_GRIP_SELECTOR = '[data-blok-table-grip-row]';
+
+    const createTable2x2 = async (page: Page): Promise<void> => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+    };
+
+    /**
+     * Get the bounding box of the grid element (first child of table wrapper)
+     */
+    const getGridBox = async (page: Page): Promise<{ x: number; y: number; width: number; height: number }> => {
+      const box = await page.evaluate(() => {
+        const wrapper = document.querySelector('[data-blok-tool="table"]');
+        const grid = wrapper?.firstElementChild as HTMLElement | null;
+
+        if (!grid) {
+          return null;
+        }
+
+        const rect = grid.getBoundingClientRect();
+
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      });
+
+      if (!box) {
+        throw new Error('Grid not visible');
+      }
+
+      return box;
+    };
+
+    test('column grip appears when hovering near top edge', async ({ page }) => {
+      await createTable2x2(page);
+
+      const gridBox = await getGridBox(page);
+
+      // Move mouse to the top edge of the grid (within hover zone)
+      await page.mouse.move(gridBox.x + gridBox.width / 4, gridBox.y + 5);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      // Grip should become visible (Playwright considers opacity:0 as hidden)
+      await expect(colGrip).toBeVisible({ timeout: 2000 });
+    });
+
+    test('row grip appears when hovering near left edge', async ({ page }) => {
+      await createTable2x2(page);
+
+      const gridBox = await getGridBox(page);
+
+      // Move mouse to the left edge of the grid (within hover zone)
+      await page.mouse.move(gridBox.x + 5, gridBox.y + gridBox.height / 4);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible({ timeout: 2000 });
+    });
+
+    test('clicking column grip opens popover menu', async ({ page }) => {
+      await createTable2x2(page);
+
+      const gridBox = await getGridBox(page);
+
+      // Hover near top edge to show the grip
+      await page.mouse.move(gridBox.x + gridBox.width / 4, gridBox.y + 5);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const visibleGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(visibleGrip).toBeVisible();
+      await visibleGrip.click();
+
+      // Popover should appear with column menu items
+      await expect(page.getByText('Insert Column Left')).toBeVisible();
+      await expect(page.getByText('Insert Column Right')).toBeVisible();
+      await expect(page.getByText('Delete Column')).toBeVisible();
+    });
+
+    test('clicking row grip opens popover menu', async ({ page }) => {
+      await createTable2x2(page);
+
+      const gridBox = await getGridBox(page);
+
+      // Hover near left edge to show the grip
+      await page.mouse.move(gridBox.x + 5, gridBox.y + gridBox.height / 4);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const visibleGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(visibleGrip).toBeVisible();
+      await visibleGrip.click();
+
+      // Popover should appear with row menu items
+      await expect(page.getByText('Insert Row Above')).toBeVisible();
+      await expect(page.getByText('Insert Row Below')).toBeVisible();
+      await expect(page.getByText('Delete Row')).toBeVisible();
+    });
+
+    test('insert row below adds a row', async ({ page }) => {
+      await createTable2x2(page);
+
+      const gridBox = await getGridBox(page);
+
+      // Show first row grip
+      await page.mouse.move(gridBox.x + 5, gridBox.y + gridBox.height / 4);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const visibleGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(visibleGrip).toBeVisible();
+      await visibleGrip.click();
+      await page.getByText('Insert Row Below').click();
+
+      const rows = page.locator('[data-blok-table-row]');
+
+      await expect(rows).toHaveCount(3);
+    });
+
+    test('insert column right adds a column', async ({ page }) => {
+      await createTable2x2(page);
+
+      const gridBox = await getGridBox(page);
+
+      // Show first column grip
+      await page.mouse.move(gridBox.x + gridBox.width / 4, gridBox.y + 5);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const visibleGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(visibleGrip).toBeVisible();
+      await visibleGrip.click();
+      await page.getByText('Insert Column Right').click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const cells = firstRow.locator(CELL_SELECTOR);
+
+      await expect(cells).toHaveCount(3);
+    });
+
+    test('grips not present in readOnly mode', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      // Toggle readOnly
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      const grips = page.locator(GRIP_SELECTOR);
+
+      await expect(grips).toHaveCount(0);
+    });
+  });
 });

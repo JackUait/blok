@@ -16,6 +16,8 @@ import { TableAddControls } from './table-add-controls';
 import { BORDER_WIDTH, TableGrid } from './table-core';
 import { TableKeyboard } from './table-keyboard';
 import { TableResize } from './table-resize';
+import { TableRowColControls } from './table-row-col-controls';
+import type { RowColAction } from './table-row-col-controls';
 import type { TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -27,6 +29,9 @@ const WRAPPER_CLASSES = [
 ];
 
 const WRAPPER_EDIT_CLASSES = [
+  'relative',
+  'pt-9',
+  'pl-9',
   'pr-9',
   'pb-9',
 ];
@@ -44,6 +49,7 @@ export class Table implements BlockTool {
   private keyboard: TableKeyboard | null = null;
   private resize: TableResize | null = null;
   private addControls: TableAddControls | null = null;
+  private rowColControls: TableRowColControls | null = null;
   private element: HTMLDivElement | null = null;
 
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<TableData, TableConfig>) {
@@ -148,6 +154,7 @@ export class Table implements BlockTool {
 
     this.initResize(gridEl);
     this.initAddControls(gridEl);
+    this.initRowColControls(gridEl);
   }
 
   /**
@@ -239,6 +246,7 @@ export class Table implements BlockTool {
     if (!this.readOnly && gridEl) {
       this.initResize(gridEl);
       this.initAddControls(gridEl);
+      this.initRowColControls(gridEl);
     }
   }
 
@@ -250,6 +258,8 @@ export class Table implements BlockTool {
     this.resize = null;
     this.addControls?.destroy();
     this.addControls = null;
+    this.rowColControls?.destroy();
+    this.rowColControls = null;
     this.element = null;
   }
 
@@ -326,6 +336,99 @@ export class Table implements BlockTool {
         this.addControls?.syncRowButtonWidth();
       },
     });
+  }
+
+  private initRowColControls(gridEl: HTMLElement): void {
+    this.rowColControls?.destroy();
+
+    if (!this.element) {
+      return;
+    }
+
+    this.rowColControls = new TableRowColControls({
+      wrapper: this.element,
+      grid: gridEl,
+      getColumnCount: () => this.grid.getColumnCount(gridEl),
+      getRowCount: () => this.grid.getRowCount(gridEl),
+      isHeadingRow: () => this.data.withHeadings,
+      onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
+    });
+  }
+
+  private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
+    switch (action.type) {
+      case 'insert-row-above':
+        this.grid.addRow(gridEl, action.index);
+        break;
+      case 'insert-row-below':
+        this.grid.addRow(gridEl, action.index + 1);
+        break;
+      case 'insert-col-left':
+        this.handleInsertColumn(gridEl, action.index);
+        break;
+      case 'insert-col-right':
+        this.handleInsertColumn(gridEl, action.index + 1);
+        break;
+      case 'move-row':
+        this.grid.moveRow(gridEl, action.fromIndex, action.toIndex);
+        break;
+      case 'move-col':
+        this.grid.moveColumn(gridEl, action.fromIndex, action.toIndex);
+        this.syncColWidthsAfterMove(action.fromIndex, action.toIndex);
+        break;
+      case 'delete-row':
+        this.grid.deleteRow(gridEl, action.index);
+        break;
+      case 'delete-col':
+        this.grid.deleteColumn(gridEl, action.index);
+        this.syncColWidthsAfterDeleteColumn(action.index);
+        break;
+      case 'toggle-heading':
+        this.data.withHeadings = !this.data.withHeadings;
+        this.updateHeadingStyles();
+        break;
+    }
+
+    this.initResize(gridEl);
+    this.addControls?.syncRowButtonWidth();
+    this.rowColControls?.refresh();
+  }
+
+  private handleInsertColumn(gridEl: HTMLElement, index: number): void {
+    const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
+
+    this.grid.addColumn(gridEl, index, colWidths);
+
+    const halfAvgWidth = Math.round(
+      (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
+    ) / 100;
+    const newWidths = [...colWidths];
+
+    newWidths.splice(index, 0, halfAvgWidth);
+    this.data.colWidths = newWidths;
+  }
+
+  private syncColWidthsAfterMove(fromIndex: number, toIndex: number): void {
+    if (!this.data.colWidths) {
+      return;
+    }
+
+    const widths = [...this.data.colWidths];
+    const [moved] = widths.splice(fromIndex, 1);
+
+    widths.splice(toIndex, 0, moved);
+    this.data.colWidths = widths;
+  }
+
+  private syncColWidthsAfterDeleteColumn(index: number): void {
+    if (!this.data.colWidths) {
+      return;
+    }
+
+    const widths = [...this.data.colWidths];
+
+    widths.splice(index, 1);
+    this.data.colWidths = widths.length > 0 ? widths : undefined;
   }
 
   private initResize(gridEl: HTMLElement): void {

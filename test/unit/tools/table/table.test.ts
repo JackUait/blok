@@ -673,6 +673,63 @@ describe('Table Tool', () => {
     });
   });
 
+  describe('row/column controls', () => {
+    it('creates grip elements after rendered()', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const grips = element.querySelectorAll('[data-blok-table-grip]');
+
+      // 2 columns + 2 rows = 4 grips
+      expect(grips).toHaveLength(4);
+
+      document.body.removeChild(element);
+    });
+
+    it('does not create grip elements in readOnly mode', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({ content: [['A', 'B'], ['C', 'D']] }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const grips = element.querySelectorAll('[data-blok-table-grip]');
+
+      expect(grips).toHaveLength(0);
+
+      document.body.removeChild(element);
+    });
+
+    it('cleans up grip elements on destroy', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      table.destroy();
+
+      const grips = element.querySelectorAll('[data-blok-table-grip]');
+
+      expect(grips).toHaveLength(0);
+
+      document.body.removeChild(element);
+    });
+  });
+
   describe('onPaste', () => {
     it('extracts data from pasted HTML table', () => {
       const options = createTableOptions();

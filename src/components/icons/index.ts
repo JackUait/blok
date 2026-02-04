@@ -248,3 +248,66 @@ export const IconTable = `
 </svg>
 `;
 
+// Insert row above icon
+export const IconInsertAbove = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 3v6m-3-3h6M4 13h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Insert row below icon
+export const IconInsertBelow = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 17v-6m-3 3h6M4 7h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Insert column left icon
+export const IconInsertLeft = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3 10h6M6 7v6M13 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Insert column right icon
+export const IconInsertRight = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M17 10h-6m3-3v6M7 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Move up icon
+export const IconMoveUp = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 16V4m0 0-4 4m4-4 4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Move down icon
+export const IconMoveDown = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 4v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Move left icon
+export const IconMoveLeft = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16 10H4m0 0 4-4M4 10l4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Move right icon
+export const IconMoveRight = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 10h12m0 0-4-4m4 4-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Trash/Delete icon
+export const IconTrash = `
+<svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M5 6h10m-1 0v9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6m2 0V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+

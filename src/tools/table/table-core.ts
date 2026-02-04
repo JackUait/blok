@@ -1,7 +1,7 @@
 import { twMerge } from '../../components/utils/tw';
 
-const ROW_ATTR = 'data-blok-table-row';
-const CELL_ATTR = 'data-blok-table-cell';
+export const ROW_ATTR = 'data-blok-table-row';
+export const CELL_ATTR = 'data-blok-table-cell';
 
 export const BORDER_WIDTH = 1;
 const BORDER_STYLE = `${BORDER_WIDTH}px solid #d1d5db`;
@@ -275,6 +275,66 @@ export class TableGrid {
 
           el.style.width = `${Math.round((currentWidth + extra) * 100) / 100}${unit}`;
         });
+      }
+    });
+  }
+
+  /**
+   * Move a row from one index to another.
+   * The row at fromIndex is removed and inserted at toIndex.
+   */
+  public moveRow(table: HTMLElement, fromIndex: number, toIndex: number): void {
+    if (fromIndex === toIndex) {
+      return;
+    }
+
+    const rows = Array.from(table.querySelectorAll(`[${ROW_ATTR}]`));
+
+    if (fromIndex >= rows.length || toIndex >= rows.length) {
+      return;
+    }
+
+    const row = rows[fromIndex];
+
+    row.remove();
+
+    const updatedRows = Array.from(table.querySelectorAll(`[${ROW_ATTR}]`));
+
+    if (toIndex >= updatedRows.length) {
+      table.appendChild(row);
+    } else {
+      table.insertBefore(row, updatedRows[toIndex]);
+    }
+  }
+
+  /**
+   * Move a column from one index to another.
+   * Reorders cells across all rows.
+   */
+  public moveColumn(table: HTMLElement, fromIndex: number, toIndex: number): void {
+    if (fromIndex === toIndex) {
+      return;
+    }
+
+    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
+
+    rows.forEach(row => {
+      const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+
+      if (fromIndex >= cells.length || toIndex >= cells.length) {
+        return;
+      }
+
+      const cell = cells[fromIndex];
+
+      cell.remove();
+
+      const updatedCells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+
+      if (toIndex >= updatedCells.length) {
+        row.appendChild(cell);
+      } else {
+        row.insertBefore(cell, updatedCells[toIndex]);
       }
     });
   }

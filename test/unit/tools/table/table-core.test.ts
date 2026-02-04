@@ -390,4 +390,135 @@ describe('TableGrid', () => {
     });
   });
 
+  describe('moveRow', () => {
+    it('moves a row from one index to another', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(3, 2);
+
+      grid.fillGrid(element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
+      grid.moveRow(element, 0, 2);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['C', 'D'], ['E', 'F'], ['A', 'B']]);
+    });
+
+    it('moves a row from last to first', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(3, 2);
+
+      grid.fillGrid(element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
+      grid.moveRow(element, 2, 0);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['E', 'F'], ['A', 'B'], ['C', 'D']]);
+    });
+
+    it('does nothing when fromIndex equals toIndex', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(3, 2);
+
+      grid.fillGrid(element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
+      grid.moveRow(element, 1, 1);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['A', 'B'], ['C', 'D'], ['E', 'F']]);
+    });
+
+    it('moves adjacent rows correctly (swap down)', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(3, 2);
+
+      grid.fillGrid(element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
+      grid.moveRow(element, 0, 1);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['C', 'D'], ['A', 'B'], ['E', 'F']]);
+    });
+
+    it('moves adjacent rows correctly (swap up)', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(3, 2);
+
+      grid.fillGrid(element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
+      grid.moveRow(element, 2, 1);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['A', 'B'], ['E', 'F'], ['C', 'D']]);
+    });
+  });
+
+  describe('moveColumn', () => {
+    it('moves a column from one index to another', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(2, 3);
+
+      grid.fillGrid(element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
+      grid.moveColumn(element, 0, 2);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['B', 'C', 'A'], ['E', 'F', 'D']]);
+    });
+
+    it('moves a column from last to first', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(2, 3);
+
+      grid.fillGrid(element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
+      grid.moveColumn(element, 2, 0);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['C', 'A', 'B'], ['F', 'D', 'E']]);
+    });
+
+    it('does nothing when fromIndex equals toIndex', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(2, 3);
+
+      grid.fillGrid(element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
+      grid.moveColumn(element, 1, 1);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['A', 'B', 'C'], ['D', 'E', 'F']]);
+    });
+
+    it('moves adjacent columns correctly (swap right)', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(2, 3);
+
+      grid.fillGrid(element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
+      grid.moveColumn(element, 0, 1);
+
+      const data = grid.getData(element);
+
+      expect(data).toEqual([['B', 'A', 'C'], ['E', 'D', 'F']]);
+    });
+
+    it('preserves cell widths when moving columns', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 3);
+
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
+
+      (cells[0] as HTMLElement).style.width = '100px';
+      (cells[1] as HTMLElement).style.width = '200px';
+      (cells[2] as HTMLElement).style.width = '300px';
+
+      grid.moveColumn(element, 0, 2);
+
+      const movedCells = element.querySelectorAll('[data-blok-table-cell]');
+
+      expect((movedCells[0] as HTMLElement).style.width).toBe('200px');
+      expect((movedCells[1] as HTMLElement).style.width).toBe('300px');
+      expect((movedCells[2] as HTMLElement).style.width).toBe('100px');
+    });
+  });
+
 });

@@ -418,6 +418,47 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('clicking add-column preserves existing column widths and grows the grid', () => {
+      const options = createTableOptions({
+        content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+        colWidths: [200, 200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const gridBefore = element.firstElementChild as HTMLElement;
+      const cellsBefore = gridBefore.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+      const widthsBefore = Array.from(cellsBefore).map(c => (c as HTMLElement).style.width);
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      addColBtn.click();
+
+      const gridAfter = element.firstElementChild as HTMLElement;
+      const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      // Existing columns keep their widths
+      expect((cellsAfter[0] as HTMLElement).style.width).toBe(widthsBefore[0]);
+      expect((cellsAfter[1] as HTMLElement).style.width).toBe(widthsBefore[1]);
+      expect((cellsAfter[2] as HTMLElement).style.width).toBe(widthsBefore[2]);
+
+      // New column added
+      expect(cellsAfter).toHaveLength(4);
+      expect((cellsAfter[3] as HTMLElement).style.width).toMatch(/px$/);
+
+      // Grid width grew (not same as before)
+      const totalAfter = parseFloat(gridAfter.style.width);
+
+      expect(totalAfter).toBeGreaterThan(600);
+
+      document.body.removeChild(element);
+    });
+
     it('cleans up add controls on destroy', () => {
       const options = createTableOptions({
         content: [['A', 'B']],

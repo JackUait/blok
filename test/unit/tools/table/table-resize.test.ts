@@ -250,7 +250,7 @@ describe('TableResize', () => {
       expect(newWidths[1]).toBe(500);
     });
 
-    it('clamps column so table does not exceed container width', () => {
+    it('allows column to exceed container width for horizontal scrolling', () => {
       grid = createGrid([400, 400]);
       const onChange = vi.fn();
 
@@ -259,15 +259,15 @@ describe('TableResize', () => {
 
       const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
 
-      // Try to grow first column by 800px, would make table 1600px > 1000px container
+      // Grow first column by 800px, table becomes 1600px > 1000px container
       handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 400, bubbles: true }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 1200 }));
       document.dispatchEvent(new PointerEvent('pointerup', {}));
 
       const newWidths = onChange.mock.calls[0][0] as number[];
 
-      // First column maxed at containerWidth - other columns = 1000 - 400 = 600
-      expect(newWidths[0]).toBe(600);
+      // Column should grow to full requested width, no clamping
+      expect(newWidths[0]).toBe(1200);
       expect(newWidths[1]).toBe(400);
     });
   });

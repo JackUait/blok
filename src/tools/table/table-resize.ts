@@ -145,16 +145,7 @@ export class TableResize {
 
     const deltaPx = e.clientX - this.dragStartX;
     const rawWidth = this.startColWidth + deltaPx;
-
-    // Clamp so table does not exceed container width
-    const containerWidth = this.gridEl.parentElement?.getBoundingClientRect().width ?? Infinity;
-    const otherColumnsWidth = this.colWidths.reduce(
-      (sum, w, i) => (i === this.dragColIndex ? sum : sum + w),
-      0
-    );
-    const maxWidth = containerWidth - otherColumnsWidth;
-
-    const newWidth = Math.min(maxWidth, Math.max(MIN_COL_WIDTH, rawWidth));
+    const newWidth = Math.max(MIN_COL_WIDTH, rawWidth);
 
     this.colWidths[this.dragColIndex] = newWidth;
     this.applyWidths();

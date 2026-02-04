@@ -24,6 +24,8 @@ const DEFAULT_COLS = 3;
 const WRAPPER_CLASSES = [
   'overflow-x-auto',
   'my-2',
+  'pr-9',
+  'pb-9',
 ];
 
 /**

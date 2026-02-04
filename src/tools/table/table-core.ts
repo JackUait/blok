@@ -31,8 +31,6 @@ export const equalWidths = (cols: number): number[] => {
 
 interface TableGridOptions {
   readOnly: boolean;
-  maxRows?: number;
-  maxCols?: number;
 }
 
 /**
@@ -41,13 +39,9 @@ interface TableGridOptions {
  */
 export class TableGrid {
   private readOnly: boolean;
-  private maxRows?: number;
-  private maxCols?: number;
 
   constructor(options: TableGridOptions) {
     this.readOnly = options.readOnly;
-    this.maxRows = options.maxRows;
-    this.maxCols = options.maxCols;
   }
 
   /**
@@ -122,13 +116,8 @@ export class TableGrid {
   /**
    * Add a row. If index is provided, inserts before that row.
    * Otherwise appends at the end.
-   * Returns null if maxRows limit would be exceeded.
    */
-  public addRow(table: HTMLElement, index?: number): HTMLElement | null {
-    if (this.maxRows !== undefined && this.getRowCount(table) >= this.maxRows) {
-      return null;
-    }
-
+  public addRow(table: HTMLElement, index?: number): HTMLElement {
     const cols = this.getColumnCount(table);
     const widths = this.getColWidths(table);
     const row = this.createRow(cols, widths);
@@ -157,13 +146,8 @@ export class TableGrid {
   /**
    * Add a column. If index is provided, inserts before that column.
    * Otherwise appends at the end.
-   * Returns false if maxCols limit would be exceeded.
    */
   public addColumn(table: HTMLElement, index?: number): boolean {
-    if (this.maxCols !== undefined && this.getColumnCount(table) >= this.maxCols) {
-      return false;
-    }
-
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
     const oldColCount = this.getColumnCount(table);
     const newColCount = oldColCount + 1;

@@ -25,10 +25,6 @@ export interface TableConfig {
   rows?: number;
   /** Initial number of columns (default: 2) */
   cols?: number;
-  /** Maximum number of rows allowed */
-  maxRows?: number;
-  /** Maximum number of columns allowed */
-  maxCols?: number;
   /** Whether to start with heading row enabled */
   withHeadings?: boolean;
   /** Whether to start stretched */

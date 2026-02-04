@@ -411,6 +411,27 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('does not add control padding in readOnly mode', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({ content: [['A', 'B']] }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      // In read-only mode, wrapper should mark itself as read-only
+      // so that control padding (pr-9, pb-9) is omitted
+      expect(element).toHaveAttribute('data-blok-table-readonly');
+    });
+
+    it('does not mark wrapper as readOnly in edit mode', () => {
+      const options = createTableOptions({ content: [['A', 'B']] });
+      const table = new Table(options);
+      const element = table.render();
+
+      expect(element).not.toHaveAttribute('data-blok-table-readonly');
+    });
+
     it('clicking add-row appends a new row to the table', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],

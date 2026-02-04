@@ -40,6 +40,28 @@ describe('TableGrid', () => {
         expect((cell as HTMLElement).style.flexShrink).toBe('0');
       });
     });
+
+    it('creates cells with overflow hidden so text does not bleed into adjacent cells', () => {
+      const grid = new TableGrid({ readOnly: true });
+      const element = grid.createGrid(2, 3);
+
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
+
+      cells.forEach(cell => {
+        expect((cell as HTMLElement).style.overflow).toBe('hidden');
+      });
+    });
+
+    it('creates cells with overflow-wrap break-word so long words wrap within narrow cells', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 2);
+
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
+
+      cells.forEach(cell => {
+        expect((cell as HTMLElement).style.overflowWrap).toBe('break-word');
+      });
+    });
   });
 
   describe('fillGrid', () => {

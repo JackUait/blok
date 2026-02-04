@@ -24,6 +24,9 @@ const DEFAULT_COLS = 3;
 const WRAPPER_CLASSES = [
   'overflow-x-auto',
   'my-2',
+];
+
+const WRAPPER_EDIT_CLASSES = [
   'pr-9',
   'pb-9',
 ];
@@ -94,8 +97,12 @@ export class Table implements BlockTool {
   public render(): HTMLDivElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = twMerge(WRAPPER_CLASSES);
+    wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES);
     wrapper.setAttribute(DATA_ATTR.tool, 'table');
+
+    if (this.readOnly) {
+      wrapper.setAttribute('data-blok-table-readonly', '');
+    }
 
     const rows = this.data.content.length || this.config.rows || DEFAULT_ROWS;
     const cols = this.data.content[0]?.length || this.config.cols || DEFAULT_COLS;

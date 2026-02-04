@@ -407,6 +407,8 @@ export class TableGrid {
     cell.style.borderRight = BORDER_STYLE;
     cell.style.borderBottom = BORDER_STYLE;
     cell.style.flexShrink = '0';
+    cell.style.overflow = 'hidden';
+    cell.style.overflowWrap = 'break-word';
 
     if (width !== undefined) {
       cell.style.width = typeof width === 'string' ? width : `${width}%`;

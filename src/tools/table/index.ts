@@ -13,7 +13,7 @@ import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
-import { TableGrid } from './table-core';
+import { BORDER_WIDTH, TableGrid } from './table-core';
 import { TableKeyboard } from './table-keyboard';
 import { TableResize } from './table-resize';
 import type { TableData, TableConfig } from './types';
@@ -349,7 +349,7 @@ export class Table implements BlockTool {
     const totalWidth = widths.reduce((sum, w) => sum + w, 0);
     const gridStyle: HTMLElement = grid;
 
-    gridStyle.style.width = `${totalWidth}px`;
+    gridStyle.style.width = `${totalWidth + BORDER_WIDTH}px`;
 
     const rowEls = grid.querySelectorAll('[data-blok-table-row]');
 

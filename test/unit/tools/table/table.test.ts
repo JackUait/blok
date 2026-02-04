@@ -633,7 +633,22 @@ describe('Table Tool', () => {
 
       const grid = element.firstElementChild as HTMLElement;
 
-      expect(grid.style.width).toBe('600px');
+      expect(grid.style.width).toBe('601px');
+    });
+
+    it('grid width includes left border so cell borders meet the top border at the corner', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+        colWidths: [400, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const grid = element.firstElementChild as HTMLElement;
+
+      // Grid has a 1px left border with box-sizing: border-box,
+      // so width must be sum of colWidths + 1px to avoid cell overflow
+      expect(grid.style.width).toBe('601px');
     });
   });
 

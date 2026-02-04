@@ -3,7 +3,8 @@ import { twMerge } from '../../components/utils/tw';
 const ROW_ATTR = 'data-blok-table-row';
 const CELL_ATTR = 'data-blok-table-cell';
 
-const BORDER_STYLE = '1px solid #d1d5db';
+export const BORDER_WIDTH = 1;
+const BORDER_STYLE = `${BORDER_WIDTH}px solid #d1d5db`;
 
 const ROW_CLASSES = [
   'flex',

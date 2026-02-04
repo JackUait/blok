@@ -141,11 +141,12 @@ describe('TableResize', () => {
       expect(handle.style.left).toBe('292px');
     });
 
-    it('sets grid width to sum of column widths in pixels', () => {
+    it('sets grid width to sum of column widths plus left border', () => {
       grid = createGrid([300, 400]);
       new TableResize(grid, [300, 400], vi.fn());
 
-      expect(grid.style.width).toBe('700px');
+      // 300 + 400 = 700, plus 1px for the grid left border
+      expect(grid.style.width).toBe('701px');
     });
   });
 
@@ -192,7 +193,7 @@ describe('TableResize', () => {
       expect(newWidths[1]).toBe(500);
     });
 
-    it('updates grid width to sum of columns during drag', () => {
+    it('updates grid width to sum of columns plus left border during drag', () => {
       grid = createGrid([300, 300]);
 
       new TableResize(grid, [300, 300], vi.fn());
@@ -202,8 +203,8 @@ describe('TableResize', () => {
       handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
 
-      // Grid width should now be 400 + 300 = 700px
-      expect(grid.style.width).toBe('700px');
+      // Grid width should now be 400 + 300 = 700, plus 1px for left border
+      expect(grid.style.width).toBe('701px');
 
       document.dispatchEvent(new PointerEvent('pointerup', {}));
     });

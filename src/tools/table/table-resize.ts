@@ -1,3 +1,5 @@
+import { BORDER_WIDTH } from './table-core';
+
 const RESIZE_ATTR = 'data-blok-table-resize';
 const CELL_ATTR = 'data-blok-table-cell';
 const ROW_ATTR = 'data-blok-table-row';
@@ -175,7 +177,7 @@ export class TableResize {
   private applyWidths(): void {
     const totalWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
 
-    this.gridEl.style.width = `${totalWidth}px`;
+    this.gridEl.style.width = `${totalWidth + BORDER_WIDTH}px`;
 
     const rows = this.gridEl.querySelectorAll(`[${ROW_ATTR}]`);
 

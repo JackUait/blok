@@ -561,6 +561,7 @@ test.describe('table tool', () => {
       await addRowBtn.click();
 
       // Type in the new row's first cell
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(2) + first() needed to target the newly added row's first cell
       const newCell = page.locator('[data-blok-table-row]').nth(2).locator(CELL_SELECTOR).first();
 
       await newCell.click();

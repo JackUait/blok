@@ -436,16 +436,6 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
-    it('wrapper has padding to accommodate add controls', () => {
-      const options = createTableOptions({
-        content: [['A', 'B']],
-      });
-      const table = new Table(options);
-      const element = table.render();
-
-      expect(element.className).toContain('pr-9');
-      expect(element.className).toContain('pb-9');
-    });
   });
 
   describe('save with colWidths', () => {

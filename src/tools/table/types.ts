@@ -13,10 +13,8 @@ export interface TableData extends BlockToolData {
   stretched?: boolean;
   /** 2D array of cell HTML content (legacy format) */
   content: string[][];
-  /** Column widths as percentages (e.g., [33, 33, 34]). Omit for equal widths. */
+  /** Column widths in pixels (e.g., [200, 300, 250]). Omit for equal widths. */
   colWidths?: number[];
-  /** Table width as a percentage of the container (default 100). Omit when full width. */
-  tableWidth?: number;
 }
 
 /**

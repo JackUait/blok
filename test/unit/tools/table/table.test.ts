@@ -493,7 +493,7 @@ describe('Table Tool', () => {
       expect(saved.colWidths).toEqual([400, 200]);
     });
 
-    it('omits colWidths when columns have equal widths', () => {
+    it('omits colWidths when none were explicitly set', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -503,6 +503,35 @@ describe('Table Tool', () => {
       const saved = table.save(element);
 
       expect(saved.colWidths).toBeUndefined();
+    });
+
+    it('saves colWidths even when all widths are equal', () => {
+      const options = createTableOptions({
+        content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+        colWidths: [200, 200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      expect(saved.colWidths).toEqual([200, 200, 200]);
+    });
+
+    it('readonly table with colWidths renders grid with explicit pixel width', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({
+          content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+          colWidths: [200, 200, 200],
+        }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      const grid = element.firstElementChild as HTMLElement;
+
+      expect(grid.style.width).toBe('600px');
     });
   });
 

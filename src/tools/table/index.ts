@@ -309,12 +309,12 @@ export class Table implements BlockTool {
       },
       onAddColumn: () => {
         const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
-        const avgWidth = Math.round(
-          (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length) * 100
+        const halfAvgWidth = Math.round(
+          (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
         ) / 100;
 
         this.grid.addColumn(gridEl, undefined, colWidths);
-        this.data.colWidths = [...colWidths, avgWidth];
+        this.data.colWidths = [...colWidths, halfAvgWidth];
         this.initResize(gridEl);
       },
     });

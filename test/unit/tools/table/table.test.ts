@@ -459,6 +459,31 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('clicking add-column creates new column at half the average width', () => {
+      const options = createTableOptions({
+        content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+        colWidths: [200, 200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      addColBtn.click();
+
+      const gridAfter = element.firstElementChild as HTMLElement;
+      const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      // Average of [200, 200, 200] = 200, half = 100
+      expect((cellsAfter[3] as HTMLElement).style.width).toBe('100px');
+
+      document.body.removeChild(element);
+    });
+
     it('cleans up add controls on destroy', () => {
       const options = createTableOptions({
         content: [['A', 'B']],

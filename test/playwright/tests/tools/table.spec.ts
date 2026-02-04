@@ -302,7 +302,7 @@ test.describe('table tool', () => {
   });
 
   test.describe('column resize', () => {
-    test('dragging resize handle changes column widths', async ({ page }) => {
+    test('dragging resize handle changes only the dragged column width', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -318,23 +318,11 @@ test.describe('table tool', () => {
         },
       });
 
-      // Get the resize handle (first one)
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
       const handle = page.locator('[data-blok-table-resize]').first();
 
       await expect(handle).toBeAttached();
 
-      // Get initial widths
-      const initialWidths = await page.evaluate(() => {
-        const cells = document.querySelectorAll('[data-blok-table-cell]');
-
-        return Array.from(cells).slice(0, 2).map(c => (c as HTMLElement).style.width);
-      });
-
-      // Both should be equal initially
-      expect(initialWidths[0]).toBe(initialWidths[1]);
-
-      // Get handle bounding box and drag it
       const handleBox = await handle.boundingBox();
 
       if (!handleBox) {
@@ -344,20 +332,26 @@ test.describe('table tool', () => {
       const startX = handleBox.x + handleBox.width / 2;
       const startY = handleBox.y + handleBox.height / 2;
 
+      // Get initial second column width
+      const initialSecondWidth = await page.evaluate(() => {
+        const cells = document.querySelectorAll('[data-blok-table-cell]');
+
+        return (cells[1] as HTMLElement).getBoundingClientRect().width;
+      });
+
       await page.mouse.move(startX, startY);
       await page.mouse.down();
       await page.mouse.move(startX + 100, startY, { steps: 5 });
       await page.mouse.up();
 
-      // Verify widths changed
-      const newWidths = await page.evaluate(() => {
+      // Second column should be unchanged
+      const finalSecondWidth = await page.evaluate(() => {
         const cells = document.querySelectorAll('[data-blok-table-cell]');
 
-        return Array.from(cells).slice(0, 2).map(c => parseFloat((c as HTMLElement).style.width));
+        return (cells[1] as HTMLElement).getBoundingClientRect().width;
       });
 
-      // First column should be wider, second narrower
-      expect(newWidths[0]).toBeGreaterThan(newWidths[1]);
+      expect(Math.abs(finalSecondWidth - initialSecondWidth)).toBeLessThan(2);
     });
 
     test('resize handles not present in readOnly mode', async ({ page }) => {
@@ -397,23 +391,21 @@ test.describe('table tool', () => {
               data: {
                 withHeadings: false,
                 content: [['A', 'B'], ['C', 'D']],
-                colWidths: [70, 30],
+                colWidths: [400, 200],
               },
             },
           ],
         },
       });
 
-      // First cell should have 70% width
       const firstCellWidth = await page.evaluate(() => {
         const cell = document.querySelector('[data-blok-table-cell]') as HTMLElement;
 
         return cell?.style.width;
       });
 
-      expect(firstCellWidth).toBe('70%');
+      expect(firstCellWidth).toBe('400px');
 
-      // Save and verify data
       const savedData = await page.evaluate(async () => {
         return window.blokInstance?.save();
       });
@@ -421,7 +413,58 @@ test.describe('table tool', () => {
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.colWidths).toStrictEqual([70, 30]);
+      expect(tableBlock?.data.colWidths).toStrictEqual([400, 200]);
+    });
+
+    test('table width changes when column is resized', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const initialTableWidth = await page.evaluate(() => {
+        const table = document.querySelector('[data-blok-tool="table"]');
+        const grid = table?.firstElementChild as HTMLElement;
+
+        return grid?.getBoundingClientRect().width;
+      });
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+      const handle = page.locator('[data-blok-table-resize]').first();
+      const handleBox = await handle.boundingBox();
+
+      if (!handleBox) {
+        throw new Error('Handle not visible');
+      }
+
+      const startX = handleBox.x + handleBox.width / 2;
+      const startY = handleBox.y + handleBox.height / 2;
+
+      // Drag left to shrink
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX - 100, startY, { steps: 5 });
+      await page.mouse.up();
+
+      const finalTableWidth = await page.evaluate(() => {
+        const table = document.querySelector('[data-blok-tool="table"]');
+        const grid = table?.firstElementChild as HTMLElement;
+
+        return grid?.getBoundingClientRect().width;
+      });
+
+      // Table should be ~100px narrower
+      expect(finalTableWidth).toBeLessThan(initialTableWidth - 50);
     });
   });
 });

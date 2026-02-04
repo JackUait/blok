@@ -484,6 +484,48 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('add-row button width matches grid width on initial render with colWidths', () => {
+      const options = createTableOptions({
+        content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+        colWidths: [200, 200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const grid = element.firstElementChild as HTMLElement;
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      expect(addRowBtn.style.width).toBe(grid.style.width);
+
+      document.body.removeChild(element);
+    });
+
+    it('add-row button width matches grid width after adding a column', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+        colWidths: [200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      addColBtn.click();
+
+      const grid = element.firstElementChild as HTMLElement;
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      expect(addRowBtn.style.width).toBe(grid.style.width);
+
+      document.body.removeChild(element);
+    });
+
     it('cleans up add controls on destroy', () => {
       const options = createTableOptions({
         content: [['A', 'B']],

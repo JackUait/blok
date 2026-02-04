@@ -316,6 +316,7 @@ export class Table implements BlockTool {
         this.grid.addColumn(gridEl, undefined, colWidths);
         this.data.colWidths = [...colWidths, halfAvgWidth];
         this.initResize(gridEl);
+        this.addControls?.syncRowButtonWidth();
       },
     });
   }

@@ -60,12 +60,27 @@ export class TableAddControls {
 
     this.wrapper.appendChild(this.addRowBtn);
     this.grid.appendChild(this.addColBtn);
+    this.syncRowButtonWidth();
 
     this.wrapper.addEventListener('mouseenter', this.boundMouseEnter);
     this.wrapper.addEventListener('mouseleave', this.boundMouseLeave);
 
     this.addRowBtn.addEventListener('click', this.boundAddRowClick);
     this.addColBtn.addEventListener('click', this.boundAddColClick);
+  }
+
+  /**
+   * Match the add-row button width to the grid's explicit width.
+   * When the grid has a pixel width (from colWidths), the button must use
+   * the same value so it scrolls with the table instead of staying at 100%
+   * of the wrapper's visible area.
+   */
+  public syncRowButtonWidth(): void {
+    const gridWidth = this.grid.style.width;
+
+    this.addRowBtn.style.width = gridWidth && gridWidth.endsWith('px')
+      ? gridWidth
+      : '100%';
   }
 
   public destroy(): void {

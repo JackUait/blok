@@ -203,9 +203,10 @@ export class TableRowColControls {
       }
 
       const centerX = (edges[i] + edges[i + 1]) / 2;
+      const style = grip.style;
 
-      grip.style.top = `${-(COL_PILL_HEIGHT / 2)}px`;
-      grip.style.left = `${centerX - COL_PILL_WIDTH / 2}px`;
+      style.top = `${-(COL_PILL_HEIGHT / 2)}px`;
+      style.left = `${centerX - COL_PILL_WIDTH / 2}px`;
     });
 
     this.rowGrips.forEach((grip, i) => {
@@ -215,9 +216,10 @@ export class TableRowColControls {
 
       const rowEl = rows[i] as HTMLElement;
       const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
+      const style = grip.style;
 
-      grip.style.left = `${-(ROW_PILL_WIDTH / 2)}px`;
-      grip.style.top = `${centerY - ROW_PILL_HEIGHT / 2}px`;
+      style.left = `${-(ROW_PILL_WIDTH / 2)}px`;
+      style.top = `${centerY - ROW_PILL_HEIGHT / 2}px`;
     });
   }
 
@@ -327,11 +329,15 @@ export class TableRowColControls {
   }
 
   private applyVisibleClasses(grip: HTMLElement): void {
-    grip.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
+    const el = grip;
+
+    el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
   }
 
   private applyIdleClasses(grip: HTMLElement): void {
-    grip.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
+    const el = grip;
+
+    el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
   }
 
   private scheduleHideAll(): void {

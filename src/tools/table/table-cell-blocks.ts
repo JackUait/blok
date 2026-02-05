@@ -116,6 +116,7 @@ export class TableCellBlocks {
   ): Promise<{ blocks: string[] }> {
     // Remove contenteditable from cell
     cell.setAttribute('contenteditable', 'false');
+    // eslint-disable-next-line no-param-reassign
     cell.innerHTML = '';
 
     // Create blocks container

@@ -13,8 +13,8 @@ import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
-import { TableCellBlocks } from './table-cell-blocks';
-import { BORDER_WIDTH, TableGrid } from './table-core';
+import { CELL_BLOCKS_ATTR, TableCellBlocks } from './table-cell-blocks';
+import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR, TableGrid } from './table-core';
 import { TableKeyboard } from './table-keyboard';
 import { TableResize } from './table-resize';
 import { TableRowColControls } from './table-row-col-controls';
@@ -392,11 +392,10 @@ export class Table implements BlockTool {
         this.syncColWidthsAfterMove(action.fromIndex, action.toIndex);
         break;
       case 'delete-row':
-        this.grid.deleteRow(gridEl, action.index);
+        this.deleteRowWithBlockCleanup(gridEl, action.index);
         break;
       case 'delete-col':
-        this.grid.deleteColumn(gridEl, action.index);
-        this.syncColWidthsAfterDeleteColumn(action.index);
+        this.deleteColumnWithBlockCleanup(gridEl, action.index);
         break;
       case 'toggle-heading':
         this.data.withHeadings = !this.data.withHeadings;
@@ -544,5 +543,142 @@ export class Table implements BlockTool {
     const colIndex = cells.indexOf(cell);
 
     return { row: rowIndex, col: colIndex };
+  }
+
+  /**
+   * Delete a row and clean up any nested blocks within its cells
+   */
+  public deleteRowWithCleanup(rowIndex: number): void {
+    if (!this.element) {
+      return;
+    }
+
+    const gridEl = this.element.firstElementChild as HTMLElement;
+
+    if (gridEl) {
+      this.deleteRowWithBlockCleanup(gridEl, rowIndex);
+    }
+  }
+
+  /**
+   * Delete a column and clean up any nested blocks within its cells
+   */
+  public deleteColumnWithCleanup(colIndex: number): void {
+    if (!this.element) {
+      return;
+    }
+
+    const gridEl = this.element.firstElementChild as HTMLElement;
+
+    if (gridEl) {
+      this.deleteColumnWithBlockCleanup(gridEl, colIndex);
+    }
+  }
+
+  /**
+   * Internal helper to delete a row with block cleanup
+   */
+  private deleteRowWithBlockCleanup(gridEl: HTMLElement, rowIndex: number): void {
+    // Collect and delete nested blocks before removing the row
+    const blockIds = this.getBlockIdsInRow(rowIndex);
+
+    this.deleteBlocksByIds(blockIds);
+
+    this.grid.deleteRow(gridEl, rowIndex);
+  }
+
+  /**
+   * Internal helper to delete a column with block cleanup
+   */
+  private deleteColumnWithBlockCleanup(gridEl: HTMLElement, colIndex: number): void {
+    // Collect and delete nested blocks before removing the column
+    const blockIds = this.getBlockIdsInColumn(colIndex);
+
+    this.deleteBlocksByIds(blockIds);
+
+    this.grid.deleteColumn(gridEl, colIndex);
+    this.syncColWidthsAfterDeleteColumn(colIndex);
+  }
+
+  /**
+   * Delete blocks by their IDs
+   */
+  private deleteBlocksByIds(blockIds: string[]): void {
+    // Get block indices in reverse order to avoid index shifting issues during deletion
+    const blockIndices = blockIds
+      .map(id => this.api.blocks.getBlockIndex(id))
+      .filter((index): index is number => index !== undefined)
+      .sort((a, b) => b - a); // Sort descending to delete from end first
+
+    blockIndices.forEach(index => {
+      void this.api.blocks.delete(index);
+    });
+  }
+
+  /**
+   * Get all block IDs from cells in a specific row
+   */
+  public getBlockIdsInRow(rowIndex: number): string[] {
+    if (!this.element) {
+      return [];
+    }
+
+    const rows = this.element.querySelectorAll(`[${ROW_ATTR}]`);
+
+    if (rowIndex >= rows.length) {
+      return [];
+    }
+
+    const row = rows[rowIndex];
+    const blockIds: string[] = [];
+
+    row.querySelectorAll(`[${CELL_BLOCKS_ATTR}]`).forEach(container => {
+      container.querySelectorAll('[data-blok-block]').forEach(block => {
+        const id = block.getAttribute('data-blok-block');
+
+        if (id) {
+          blockIds.push(id);
+        }
+      });
+    });
+
+    return blockIds;
+  }
+
+  /**
+   * Get all block IDs from cells in a specific column
+   */
+  public getBlockIdsInColumn(colIndex: number): string[] {
+    if (!this.element) {
+      return [];
+    }
+
+    const rows = this.element.querySelectorAll(`[${ROW_ATTR}]`);
+    const blockIds: string[] = [];
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+      if (colIndex >= cells.length) {
+        return;
+      }
+
+      const cell = cells[colIndex];
+      const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+      if (!container) {
+        return;
+      }
+
+      container.querySelectorAll('[data-blok-block]').forEach(block => {
+        const id = block.getAttribute('data-blok-block');
+
+        if (id) {
+          blockIds.push(id);
+        }
+      });
+    });
+
+    return blockIds;
   }
 }

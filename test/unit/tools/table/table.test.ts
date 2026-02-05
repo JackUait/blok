@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
-const createMockAPI = (): API => ({
+const createMockAPI = (overrides: Partial<API> = {}): API => ({
   styles: {
     block: 'blok-block',
     inlineToolbar: 'blok-inline-toolbar',
@@ -18,6 +18,13 @@ const createMockAPI = (): API => ({
   i18n: {
     t: (key: string) => key,
   },
+  blocks: {
+    delete: () => {},
+    insert: () => ({ id: 'mock-id' }),
+    getCurrentBlockIndex: () => 0,
+    ...overrides.blocks,
+  },
+  ...overrides,
 } as unknown as API);
 
 const createTableOptions = (
@@ -833,6 +840,423 @@ describe('Table Tool', () => {
 
       expect(saved.withHeadings).toBe(true);
       expect(saved.content[0]).toEqual(['H1', 'H2']);
+    });
+  });
+
+  describe('Row/column operations with block cells', () => {
+    it('should collect block IDs from cells when getting block IDs in a row', () => {
+      const options = createTableOptions({
+        content: [['', ''], ['', '']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      // Set up a block-based cell in first row
+      const firstRowCells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+      const firstCell = firstRowCells[0] as HTMLElement;
+
+      firstCell.setAttribute('contenteditable', 'false');
+      firstCell.innerHTML = '';
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block = document.createElement('div');
+
+      block.setAttribute('data-blok-block', 'list-block-1');
+      container.appendChild(block);
+
+      firstCell.appendChild(container);
+
+      const blockIds = table.getBlockIdsInRow(0);
+
+      expect(blockIds).toContain('list-block-1');
+    });
+
+    it('should collect multiple block IDs from different cells in the same row', () => {
+      const options = createTableOptions({
+        content: [['', ''], ['', '']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      // Set up block-based cells in first row
+      const firstRowCells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      // First cell with one block
+      const firstCell = firstRowCells[0] as HTMLElement;
+
+      firstCell.setAttribute('contenteditable', 'false');
+      firstCell.innerHTML = '';
+
+      const container1 = document.createElement('div');
+
+      container1.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block1 = document.createElement('div');
+
+      block1.setAttribute('data-blok-block', 'list-block-1');
+      container1.appendChild(block1);
+      firstCell.appendChild(container1);
+
+      // Second cell with another block
+      const secondCell = firstRowCells[1] as HTMLElement;
+
+      secondCell.setAttribute('contenteditable', 'false');
+      secondCell.innerHTML = '';
+
+      const container2 = document.createElement('div');
+
+      container2.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block2 = document.createElement('div');
+
+      block2.setAttribute('data-blok-block', 'list-block-2');
+      container2.appendChild(block2);
+      secondCell.appendChild(container2);
+
+      const blockIds = table.getBlockIdsInRow(0);
+
+      expect(blockIds).toContain('list-block-1');
+      expect(blockIds).toContain('list-block-2');
+      expect(blockIds).toHaveLength(2);
+    });
+
+    it('should return empty array when row has no block-based cells', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+
+      table.render();
+
+      const blockIds = table.getBlockIdsInRow(0);
+
+      expect(blockIds).toEqual([]);
+    });
+
+    it('should return empty array for out-of-bounds row index', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+      });
+      const table = new Table(options);
+
+      table.render();
+
+      const blockIds = table.getBlockIdsInRow(999);
+
+      expect(blockIds).toEqual([]);
+    });
+
+    it('should collect block IDs from cells when getting block IDs in a column', () => {
+      const options = createTableOptions({
+        content: [['', ''], ['', '']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      // Set up a block-based cell in first column, second row
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+      const secondRowFirstCell = rows[1].querySelectorAll('[data-blok-table-cell]')[0] as HTMLElement;
+
+      secondRowFirstCell.setAttribute('contenteditable', 'false');
+      secondRowFirstCell.innerHTML = '';
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block = document.createElement('div');
+
+      block.setAttribute('data-blok-block', 'list-block-col-1');
+      container.appendChild(block);
+
+      secondRowFirstCell.appendChild(container);
+
+      const blockIds = table.getBlockIdsInColumn(0);
+
+      expect(blockIds).toContain('list-block-col-1');
+    });
+
+    it('should collect multiple block IDs from different rows in the same column', () => {
+      const options = createTableOptions({
+        content: [['', ''], ['', '']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      // First row, first column
+      const cell1 = rows[0].querySelectorAll('[data-blok-table-cell]')[0] as HTMLElement;
+
+      cell1.setAttribute('contenteditable', 'false');
+      cell1.innerHTML = '';
+
+      const container1 = document.createElement('div');
+
+      container1.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block1 = document.createElement('div');
+
+      block1.setAttribute('data-blok-block', 'block-row-0');
+      container1.appendChild(block1);
+      cell1.appendChild(container1);
+
+      // Second row, first column
+      const cell2 = rows[1].querySelectorAll('[data-blok-table-cell]')[0] as HTMLElement;
+
+      cell2.setAttribute('contenteditable', 'false');
+      cell2.innerHTML = '';
+
+      const container2 = document.createElement('div');
+
+      container2.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block2 = document.createElement('div');
+
+      block2.setAttribute('data-blok-block', 'block-row-1');
+      container2.appendChild(block2);
+      cell2.appendChild(container2);
+
+      const blockIds = table.getBlockIdsInColumn(0);
+
+      expect(blockIds).toContain('block-row-0');
+      expect(blockIds).toContain('block-row-1');
+      expect(blockIds).toHaveLength(2);
+    });
+
+    it('should return empty array when column has no block-based cells', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+
+      table.render();
+
+      const blockIds = table.getBlockIdsInColumn(0);
+
+      expect(blockIds).toEqual([]);
+    });
+
+    it('should return empty array for out-of-bounds column index', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+      });
+      const table = new Table(options);
+
+      table.render();
+
+      const blockIds = table.getBlockIdsInColumn(999);
+
+      expect(blockIds).toEqual([]);
+    });
+
+    it('should collect multiple blocks from a single cell', () => {
+      const options = createTableOptions({
+        content: [['', '']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      cell.setAttribute('contenteditable', 'false');
+      cell.innerHTML = '';
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-table-cell-blocks', '');
+
+      ['block-1', 'block-2', 'block-3'].forEach(id => {
+        const block = document.createElement('div');
+
+        block.setAttribute('data-blok-block', id);
+        container.appendChild(block);
+      });
+
+      cell.appendChild(container);
+
+      const blockIds = table.getBlockIdsInRow(0);
+
+      expect(blockIds).toEqual(['block-1', 'block-2', 'block-3']);
+    });
+
+    it('should delete nested blocks when deleting a row with block-based cells', () => {
+      const mockDelete = vi.fn();
+      const mockGetBlockIndex = vi.fn().mockImplementation((id: string) => {
+        // Return index based on block ID for testing
+        if (id === 'list-block-to-delete') {
+          return 1;
+        }
+
+        return undefined;
+      });
+      const mockApi = createMockAPI({
+        blocks: {
+          delete: mockDelete,
+          insert: vi.fn().mockReturnValue({ id: 'b1' }),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: mockGetBlockIndex,
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['', ''], ['', '']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Set up a block-based cell in first row
+      const firstRowCell = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      firstRowCell.setAttribute('contenteditable', 'false');
+      firstRowCell.innerHTML = '';
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block = document.createElement('div');
+
+      block.setAttribute('data-blok-block', 'list-block-to-delete');
+      container.appendChild(block);
+
+      firstRowCell.appendChild(container);
+
+      // Trigger row deletion via the public method
+      table.deleteRowWithCleanup(0);
+
+      // Verify getBlockIndex was called with the block ID
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('list-block-to-delete');
+
+      // Verify delete was called with the index returned by getBlockIndex
+      expect(mockDelete).toHaveBeenCalledWith(1);
+
+      document.body.removeChild(element);
+    });
+
+    it('should delete nested blocks when deleting a column with block-based cells', () => {
+      const mockDelete = vi.fn();
+      const mockGetBlockIndex = vi.fn().mockImplementation((id: string) => {
+        // Return index based on block ID for testing - higher indices for blocks to be deleted last
+        if (id === 'col-block-0') {
+          return 2;
+        }
+
+        if (id === 'col-block-1') {
+          return 3;
+        }
+
+        return undefined;
+      });
+      const mockApi = createMockAPI({
+        blocks: {
+          delete: mockDelete,
+          insert: vi.fn().mockReturnValue({ id: 'b1' }),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: mockGetBlockIndex,
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['', ''], ['', '']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Set up block-based cells in first column
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach((row, rowIndex) => {
+        const cell = row.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+        cell.setAttribute('contenteditable', 'false');
+        cell.innerHTML = '';
+
+        const container = document.createElement('div');
+
+        container.setAttribute('data-blok-table-cell-blocks', '');
+
+        const block = document.createElement('div');
+
+        block.setAttribute('data-blok-block', `col-block-${rowIndex}`);
+        container.appendChild(block);
+
+        cell.appendChild(container);
+      });
+
+      // Trigger column deletion via the public method
+      table.deleteColumnWithCleanup(0);
+
+      // Verify getBlockIndex was called for both blocks
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('col-block-0');
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('col-block-1');
+
+      // Verify delete was called with the indices (sorted descending to avoid index shift)
+      // Index 3 should be deleted before index 2
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(mockDelete).toHaveBeenNthCalledWith(1, 3);
+      expect(mockDelete).toHaveBeenNthCalledWith(2, 2);
+
+      document.body.removeChild(element);
+    });
+
+    it('should not call delete when row has no block-based cells', () => {
+      const mockDelete = vi.fn();
+      const mockGetBlockIndex = vi.fn().mockReturnValue(undefined);
+      const mockApi = createMockAPI({
+        blocks: {
+          delete: mockDelete,
+          insert: vi.fn().mockReturnValue({ id: 'b1' }),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: mockGetBlockIndex,
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Trigger row deletion via the public method
+      table.deleteRowWithCleanup(0);
+
+      // Verify delete was not called (no blocks to delete)
+      expect(mockDelete).not.toHaveBeenCalled();
+
+      // Also verify the row was actually deleted
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(1);
+
+      document.body.removeChild(element);
     });
   });
 });

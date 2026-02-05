@@ -1,16 +1,22 @@
 import type { BlockToolData } from '../../../types';
 
 /**
- * Cell content can be either:
- * - A string (plain text/HTML, backwards compatible)
- * - An object with block IDs (for nested blocks like lists)
+ * Cell content always contains block IDs.
+ * Every cell in the table is represented as an array of block references.
  */
-export type CellContent = string | { blocks: string[] };
+export type CellContent = { blocks: string[] };
 
 /**
- * Type guard to check if cell content contains blocks
+ * Legacy cell content type for migration from string-based cells.
+ * Used when loading saved data that may contain plain text strings.
  */
-export const isCellWithBlocks = (cell: CellContent): cell is { blocks: string[] } => {
+export type LegacyCellContent = string | CellContent;
+
+/**
+ * Type guard to check if legacy cell content has been migrated to blocks format.
+ * Used during data loading to identify cells that need migration.
+ */
+export const isCellWithBlocks = (cell: LegacyCellContent): cell is CellContent => {
   return typeof cell === 'object' && cell !== null && 'blocks' in cell;
 };
 
@@ -25,8 +31,8 @@ export interface TableData extends BlockToolData {
   withHeadings: boolean;
   /** Whether the table is full-width */
   stretched?: boolean;
-  /** 2D array of cell content (string or block references) */
-  content: CellContent[][];
+  /** 2D array of cell content (may contain legacy string format when loading saved data) */
+  content: LegacyCellContent[][];
   /** Column widths in pixels (e.g., [200, 300, 250]). Omit for equal widths. */
   colWidths?: number[];
 }

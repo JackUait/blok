@@ -5,6 +5,16 @@ describe('TableCellBlocks', () => {
     vi.clearAllMocks();
   });
 
+  describe('CellContent type', () => {
+    it('isCellWithBlocks always returns true for CellContent', async () => {
+      const { isCellWithBlocks } = await import('../../../../src/tools/table/types');
+
+      const cell = { blocks: ['block-1'] };
+
+      expect(isCellWithBlocks(cell)).toBe(true);
+    });
+  });
+
   describe('isInCellBlock', () => {
     it('should return true when element is inside a cell block container', async () => {
       // Create DOM structure: cell > container > block > content

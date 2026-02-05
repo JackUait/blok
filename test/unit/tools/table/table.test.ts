@@ -20,7 +20,13 @@ const createMockAPI = (overrides: Partial<API> = {}): API => ({
   },
   blocks: {
     delete: () => {},
-    insert: () => ({ id: 'mock-id' }),
+    insert: () => {
+      const holder = document.createElement('div');
+
+      holder.setAttribute('data-blok-block', `mock-${Math.random().toString(36).slice(2, 8)}`);
+
+      return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
+    },
     getCurrentBlockIndex: () => 0,
     ...overrides.blocks,
   },
@@ -1273,6 +1279,180 @@ describe('Table Tool', () => {
       const rows = element.querySelectorAll('[data-blok-table-row]');
 
       expect(rows).toHaveLength(1);
+
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('new rows and columns get paragraph blocks', () => {
+    it('should populate new row cells with paragraph blocks when clicking add-row', () => {
+      let insertCallCount = 0;
+      const mockInsert = vi.fn().mockImplementation(() => {
+        insertCallCount++;
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-block', `auto-p-${insertCallCount}`);
+
+        return { id: `auto-p-${insertCallCount}`, holder };
+      });
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: mockInsert,
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['', '']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Record insert calls before add-row (initializeCells calls insert for original cells)
+      const insertCallsBefore = mockInsert.mock.calls.length;
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      addRowBtn.click();
+
+      // New row should have 2 cells, each needing a paragraph block
+      const insertCallsAfter = mockInsert.mock.calls.length;
+
+      expect(insertCallsAfter - insertCallsBefore).toBe(2);
+
+      // Verify the new row's cells have blocks in their containers
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(2);
+
+      const newRowCells = rows[1].querySelectorAll('[data-blok-table-cell]');
+
+      newRowCells.forEach(cell => {
+        const container = cell.querySelector('[data-blok-table-cell-blocks]');
+
+        expect(container).not.toBeNull();
+        expect(container?.querySelector('[data-blok-block]')).not.toBeNull();
+      });
+
+      document.body.removeChild(element);
+    });
+
+    it('should populate new column cells with paragraph blocks when clicking add-column', () => {
+      let insertCallCount = 0;
+      const mockInsert = vi.fn().mockImplementation(() => {
+        insertCallCount++;
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-block', `auto-p-${insertCallCount}`);
+
+        return { id: `auto-p-${insertCallCount}`, holder };
+      });
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: mockInsert,
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['', ''], ['', '']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const insertCallsBefore = mockInsert.mock.calls.length;
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      addColBtn.click();
+
+      // New column adds one cell per row (2 rows), each needing a paragraph block
+      const insertCallsAfter = mockInsert.mock.calls.length;
+
+      expect(insertCallsAfter - insertCallsBefore).toBe(2);
+
+      // Verify each row's last cell (the new column) has a block
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+        const lastCell = cells[cells.length - 1];
+        const container = lastCell.querySelector('[data-blok-table-cell-blocks]');
+
+        expect(container).not.toBeNull();
+        expect(container?.querySelector('[data-blok-block]')).not.toBeNull();
+      });
+
+      document.body.removeChild(element);
+    });
+
+    it('should not insert paragraph blocks for cells that already have blocks', () => {
+      let insertCallCount = 0;
+      const mockInsert = vi.fn().mockImplementation(() => {
+        insertCallCount++;
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-block', `auto-p-${insertCallCount}`);
+
+        return { id: `auto-p-${insertCallCount}`, holder };
+      });
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: mockInsert,
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['', '']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // After initialization, all 2 cells should already have blocks
+      const insertCallsBefore = mockInsert.mock.calls.length;
+
+      // Add a row — 2 new empty cells
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      addRowBtn.click();
+
+      const insertCallsAfterFirstAdd = mockInsert.mock.calls.length;
+
+      // 2 new inserts for the 2 new cells
+      expect(insertCallsAfterFirstAdd - insertCallsBefore).toBe(2);
+
+      // Add another row — 2 more new empty cells, but existing cells should NOT trigger inserts
+      addRowBtn.click();
+
+      const insertCallsAfterSecondAdd = mockInsert.mock.calls.length;
+
+      // Only 2 more inserts (for the 2 new cells), not for the existing ones
+      expect(insertCallsAfterSecondAdd - insertCallsAfterFirstAdd).toBe(2);
 
       document.body.removeChild(element);
     });

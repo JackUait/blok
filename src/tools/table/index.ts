@@ -338,6 +338,7 @@ export class Table implements BlockTool {
       grid: gridEl,
       onAddRow: () => {
         this.grid.addRow(gridEl);
+        this.populateNewCells(gridEl);
       },
       onAddColumn: () => {
         const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
@@ -347,6 +348,7 @@ export class Table implements BlockTool {
 
         this.grid.addColumn(gridEl, undefined, colWidths);
         this.data.colWidths = [...colWidths, halfAvgWidth];
+        this.populateNewCells(gridEl);
         this.initResize(gridEl);
         this.addControls?.syncRowButtonWidth();
       },
@@ -380,15 +382,19 @@ export class Table implements BlockTool {
     switch (action.type) {
       case 'insert-row-above':
         this.grid.addRow(gridEl, action.index);
+        this.populateNewCells(gridEl);
         break;
       case 'insert-row-below':
         this.grid.addRow(gridEl, action.index + 1);
+        this.populateNewCells(gridEl);
         break;
       case 'insert-col-left':
         this.handleInsertColumn(gridEl, action.index);
+        this.populateNewCells(gridEl);
         break;
       case 'insert-col-right':
         this.handleInsertColumn(gridEl, action.index + 1);
+        this.populateNewCells(gridEl);
         break;
       case 'move-row':
         this.grid.moveRow(gridEl, action.fromIndex, action.toIndex);
@@ -512,6 +518,19 @@ export class Table implements BlockTool {
       if (position) {
         this.cellBlocks?.handleKeyDown(event, position);
       }
+    });
+  }
+
+  /**
+   * Ensure every cell in the grid has at least one block.
+   * Called after addRow / addColumn so new empty cells get an initial paragraph.
+   * Cells that already contain blocks are left untouched.
+   */
+  private populateNewCells(gridEl: HTMLElement): void {
+    const cells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
+
+    cells.forEach(cell => {
+      this.cellBlocks?.ensureCellHasBlock(cell as HTMLElement);
     });
   }
 

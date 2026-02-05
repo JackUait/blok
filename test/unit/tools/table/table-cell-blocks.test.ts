@@ -1,3 +1,4 @@
+import type { API } from '../../../../types';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 describe('TableCellBlocks', () => {
@@ -420,6 +421,148 @@ describe('TableCellBlocks', () => {
       expect(result).toBe(true); // Still handled
       expect(onNavigateToCell).not.toHaveBeenCalled(); // No navigation since on last row
       expect(cellBlocks.activeCellWithBlocks).toBeNull(); // But active cell cleared
+    });
+  });
+
+  describe('initializeCells', () => {
+    it('should create a paragraph block for each empty cell', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'block-1',
+        holder: mockBlockHolder,
+      });
+
+      const api = {
+        blocks: { insert: mockInsert },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-1',
+      });
+
+      const result = cellBlocks.initializeCells([['']]);
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: '' },
+        expect.anything(),
+        undefined,
+        false
+      );
+      // Result should be normalized to block references
+      expect(result[0][0]).toEqual({ blocks: ['block-1'] });
+      // Block holder should be mounted in the container
+      expect(container.contains(mockBlockHolder)).toBe(true);
+    });
+
+    it('should migrate legacy string content to paragraph blocks', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'migrated-1',
+        holder: mockBlockHolder,
+      });
+
+      const api = {
+        blocks: { insert: mockInsert },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-1',
+      });
+
+      const result = cellBlocks.initializeCells([['Hello world']]);
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Hello world' },
+        expect.anything(),
+        undefined,
+        false
+      );
+      expect(result[0][0]).toEqual({ blocks: ['migrated-1'] });
+    });
+
+    it('should mount existing block references', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const existingBlockHolder = document.createElement('div');
+      const mockGetBlockIndex = vi.fn().mockReturnValue(0);
+      const mockGetBlockByIndex = vi.fn().mockReturnValue({
+        holder: existingBlockHolder,
+        id: 'existing-1',
+      });
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+        },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-1',
+      });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['existing-1'] }]]);
+
+      expect(api.blocks.insert).not.toHaveBeenCalled();
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('existing-1');
+      expect(container.contains(existingBlockHolder)).toBe(true);
+      expect(result[0][0]).toEqual({ blocks: ['existing-1'] });
     });
   });
 });

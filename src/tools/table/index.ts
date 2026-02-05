@@ -139,6 +139,12 @@ export class Table implements BlockTool {
     if (!this.readOnly) {
       this.setupKeyboardNavigation(gridEl);
       this.initCellBlocks(gridEl);
+
+      const normalizedContent = this.cellBlocks?.initializeCells(this.data.content);
+
+      if (normalizedContent) {
+        this.data.content = normalizedContent;
+      }
     }
 
     return wrapper;

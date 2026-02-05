@@ -1,4 +1,4 @@
-import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
 import type { RowColAction } from './table-row-col-controls';
 
 const DRAG_THRESHOLD = 10;
@@ -31,6 +31,7 @@ export const getCumulativeColEdges = (grid: HTMLElement): number[] => {
 export interface TableDragOptions {
   grid: HTMLElement;
   onAction: (action: RowColAction) => void;
+  onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
 }
 
 /**
@@ -40,6 +41,7 @@ export interface TableDragOptions {
 export class TableRowColDrag {
   private grid: HTMLElement;
   private onAction: (action: RowColAction) => void;
+  private onDragStateChange: ((isDragging: boolean, dragType: 'row' | 'col' | null) => void) | null;
 
   private isDragging = false;
   private dragType: 'row' | 'col' | null = null;
@@ -61,6 +63,7 @@ export class TableRowColDrag {
   constructor(options: TableDragOptions) {
     this.grid = options.grid;
     this.onAction = options.onAction;
+    this.onDragStateChange = options.onDragStateChange ?? null;
 
     this.boundDocPointerMove = this.handleDocPointerMove.bind(this);
     this.boundDocPointerUp = this.handleDocPointerUp.bind(this);
@@ -111,6 +114,7 @@ export class TableRowColDrag {
     document.removeEventListener('pointermove', this.boundDocPointerMove);
     document.removeEventListener('pointerup', this.boundDocPointerUp);
 
+    this.onDragStateChange?.(false, null);
     this.isDragging = false;
     this.dragType = null;
     this.dragFromIndex = -1;
@@ -149,6 +153,7 @@ export class TableRowColDrag {
   private startDrag(): void {
     this.grid.style.userSelect = 'none';
     document.body.style.cursor = 'grabbing';
+    this.onDragStateChange?.(true, this.dragType);
 
     this.highlightSourceCells();
     this.createDropIndicator();
@@ -217,57 +222,21 @@ export class TableRowColDrag {
 
     if (this.dragType === 'row') {
       style.height = '3px';
-      style.left = '0';
+      style.left = `${-BORDER_WIDTH}px`;
       style.right = '0';
       style.transition = 'top 100ms ease';
     } else {
+      const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
+      const bottomPx = lastRow ? lastRow.offsetTop + lastRow.offsetHeight : 0;
+
       style.width = '3px';
-      style.top = '0';
-      style.bottom = '0';
+      style.top = `${-BORDER_WIDTH}px`;
+      style.height = `${bottomPx + BORDER_WIDTH}px`;
       style.transition = 'left 100ms ease';
     }
 
     this.grid.appendChild(this.dropIndicator);
-    this.addIndicatorDots();
-  }
-
-  private addIndicatorDots(): void {
-    if (!this.dropIndicator) {
-      return;
-    }
-
-    const dotSize = 8;
-
-    const createDot = (): HTMLElement => {
-      const dot = document.createElement('div');
-      const dotStyle = dot.style;
-
-      dotStyle.position = 'absolute';
-      dotStyle.width = `${dotSize}px`;
-      dotStyle.height = `${dotSize}px`;
-      dotStyle.borderRadius = '50%';
-      dotStyle.backgroundColor = '#3b82f6';
-
-      return dot;
-    };
-
-    const dotStart = createDot();
-    const dotEnd = createDot();
-
-    if (this.dragType === 'row') {
-      dotStart.style.left = `${-dotSize / 2}px`;
-      dotStart.style.top = `${-dotSize / 2 + 1.5}px`;
-      dotEnd.style.right = `${-dotSize / 2}px`;
-      dotEnd.style.top = `${-dotSize / 2 + 1.5}px`;
-    } else {
-      dotStart.style.top = `${-dotSize / 2}px`;
-      dotStart.style.left = `${-dotSize / 2 + 1.5}px`;
-      dotEnd.style.bottom = `${-dotSize / 2}px`;
-      dotEnd.style.left = `${-dotSize / 2 + 1.5}px`;
-    }
-
-    this.dropIndicator.appendChild(dotStart);
-    this.dropIndicator.appendChild(dotEnd);
   }
 
   private updateDragIndicator(e: PointerEvent): void {
@@ -297,7 +266,7 @@ export class TableRowColDrag {
     const dropIndex = this.getRowDropIndex(relativeY);
     const topPx = this.getRowDropTopPx(dropIndex);
 
-    this.dropIndicator.style.top = `${topPx}px`;
+    this.dropIndicator.style.top = `${topPx - 1.5}px`;
   }
 
   private updateColIndicator(e: PointerEvent, gridRect: DOMRect): void {
@@ -309,7 +278,7 @@ export class TableRowColDrag {
     const dropIndex = this.getColDropIndex(relativeX);
     const edges = getCumulativeColEdges(this.grid);
 
-    this.dropIndicator.style.left = `${edges[dropIndex] ?? 0}px`;
+    this.dropIndicator.style.left = `${(edges[dropIndex] ?? 0) - 1.5}px`;
   }
 
   private finishDrag(e: PointerEvent): void {
@@ -364,6 +333,8 @@ export class TableRowColDrag {
 
     this.ghostEl = ghost;
 
+    const sourceRect = this.getSourceRect();
+
     if (this.dragType === 'row') {
       this.buildRowGhost();
     }
@@ -374,13 +345,53 @@ export class TableRowColDrag {
 
     document.body.appendChild(ghost);
 
-    const rect = ghost.getBoundingClientRect();
+    if (sourceRect) {
+      style.left = `${sourceRect.left}px`;
+      style.top = `${sourceRect.top}px`;
+      this.ghostOffsetX = this.dragStartX - sourceRect.left;
+      this.ghostOffsetY = this.dragStartY - sourceRect.top;
+    }
+  }
 
-    this.ghostOffsetX = rect.width / 2;
-    this.ghostOffsetY = rect.height / 2;
+  private getSourceRect(): DOMRect | null {
+    if (this.dragType === 'row') {
+      return this.getRowSourceRect();
+    }
 
-    style.left = `${this.dragStartX - this.ghostOffsetX}px`;
-    style.top = `${this.dragStartY - this.ghostOffsetY}px`;
+    if (this.dragType === 'col') {
+      return this.getColSourceRect();
+    }
+
+    return null;
+  }
+
+  private getRowSourceRect(): DOMRect | null {
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const sourceRow = rows[this.dragFromIndex] as HTMLElement | undefined;
+
+    return sourceRow?.getBoundingClientRect() ?? null;
+  }
+
+  private getColSourceRect(): DOMRect | null {
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const firstRow = rows[0];
+    const lastRow = rows[rows.length - 1];
+
+    if (!firstRow || !lastRow) {
+      return null;
+    }
+
+    const firstCell = firstRow.querySelectorAll(`[${CELL_ATTR}]`)[this.dragFromIndex] as HTMLElement | undefined;
+    const lastCell = lastRow.querySelectorAll(`[${CELL_ATTR}]`)[this.dragFromIndex] as HTMLElement | undefined;
+
+    if (!firstCell || !lastCell) {
+      return null;
+    }
+
+    const firstRect = firstCell.getBoundingClientRect();
+    const lastRect = lastCell.getBoundingClientRect();
+
+    return new DOMRect(firstRect.left, firstRect.top, firstRect.width, lastRect.bottom - firstRect.top);
   }
 
   private buildRowGhost(): void {
@@ -444,8 +455,13 @@ export class TableRowColDrag {
 
     const style = this.ghostEl.style;
 
-    style.left = `${e.clientX - this.ghostOffsetX}px`;
-    style.top = `${e.clientY - this.ghostOffsetY}px`;
+    if (this.dragType === 'row') {
+      style.top = `${e.clientY - this.ghostOffsetY}px`;
+    }
+
+    if (this.dragType === 'col') {
+      style.left = `${e.clientX - this.ghostOffsetX}px`;
+    }
   }
 
   private getRowDropIndex(relativeY: number): number {

@@ -12,6 +12,8 @@ const HANDLE_HIT_WIDTH = 16;
  * Table width = sum of all column widths.
  */
 export class TableResize {
+  private _enabled = true;
+
   private gridEl: HTMLElement;
   private colWidths: number[];
   private onChange: (widths: number[]) => void;
@@ -24,6 +26,22 @@ export class TableResize {
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerUp: (e: PointerEvent) => void;
+
+  public get enabled(): boolean {
+    return this._enabled;
+  }
+
+  public set enabled(value: boolean) {
+    this._enabled = value;
+
+    const pointerEvents = value ? '' : 'none';
+
+    this.handles.forEach(handle => {
+      const el: HTMLElement = handle;
+
+      el.style.pointerEvents = pointerEvents;
+    });
+  }
 
   constructor(gridEl: HTMLElement, colWidths: number[], onChange: (widths: number[]) => void) {
     this.gridEl = gridEl;
@@ -109,6 +127,10 @@ export class TableResize {
   }
 
   private onPointerDown(e: PointerEvent): void {
+    if (!this._enabled) {
+      return;
+    }
+
     const target = e.target as HTMLElement;
 
     if (!target.hasAttribute(RESIZE_ATTR)) {

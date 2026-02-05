@@ -349,6 +349,13 @@ export class Table implements BlockTool {
       getRowCount: () => this.grid.getRowCount(gridEl),
       isHeadingRow: () => this.data.withHeadings,
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
+      onDragStateChange: (isDragging: boolean) => {
+        if (!this.resize) {
+          return;
+        }
+
+        this.resize.enabled = !isDragging;
+      },
     });
   }
 

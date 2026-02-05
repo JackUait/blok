@@ -44,6 +44,7 @@ export interface TableRowColControlsOptions {
   getRowCount: () => number;
   isHeadingRow: () => boolean;
   onAction: (action: RowColAction) => void;
+  onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
 }
 
 const GRIP_CAPSULE_CLASSES = [
@@ -59,11 +60,13 @@ const GRIP_CAPSULE_CLASSES = [
 const GRIP_IDLE_CLASSES = [
   'bg-gray-300',
   'opacity-0',
+  'pointer-events-none',
 ];
 
 const GRIP_VISIBLE_CLASSES = [
   'bg-gray-400',
   'opacity-100',
+  'pointer-events-auto',
 ];
 
 /**
@@ -100,6 +103,10 @@ export class TableRowColControls {
     this.drag = new TableRowColDrag({
       grid: this.grid,
       onAction: this.onAction,
+      onDragStateChange: (isDragging, dragType) => {
+        this.handleDragStateChange(isDragging, dragType);
+        options.onDragStateChange?.(isDragging, dragType);
+      },
     });
 
     this.boundFocusIn = this.handleFocusIn.bind(this);
@@ -335,6 +342,26 @@ export class TableRowColControls {
     const el = grip;
 
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
+  }
+
+  private handleDragStateChange(isDragging: boolean, dragType: 'row' | 'col' | null): void {
+    if (isDragging) {
+      const gripsToHide = dragType === 'row' ? this.colGrips : this.rowGrips;
+
+      gripsToHide.forEach(grip => {
+        const el: HTMLElement = grip;
+
+        el.style.display = 'none';
+      });
+
+      return;
+    }
+
+    [...this.colGrips, ...this.rowGrips].forEach(grip => {
+      const el: HTMLElement = grip;
+
+      el.style.display = '';
+    });
   }
 
   private scheduleHideAll(): void {

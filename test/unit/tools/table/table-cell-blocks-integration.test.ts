@@ -24,6 +24,10 @@ const createMockAPI = (): API => ({
     }),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
   },
+  events: {
+    on: vi.fn(),
+    off: vi.fn(),
+  },
 } as unknown as API);
 
 const createTableOptions = (

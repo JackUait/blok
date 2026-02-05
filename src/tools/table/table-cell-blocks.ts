@@ -54,6 +54,8 @@ export class TableCellBlocks {
     this.gridElement = options.gridElement;
     this.tableBlockId = options.tableBlockId;
     this.onNavigateToCell = options.onNavigateToCell;
+
+    this.api.events.on('block changed', this.handleBlockMutation);
   }
 
   /**
@@ -279,9 +281,128 @@ export class TableCellBlocks {
   }
 
   /**
+   * Move a block's DOM holder into a cell's blocks container.
+   */
+  public claimBlockForCell(cell: HTMLElement, blockId: string): void {
+    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!container) {
+      return;
+    }
+
+    const index = this.api.blocks.getBlockIndex(blockId);
+
+    if (index === undefined) {
+      return;
+    }
+
+    const block = this.api.blocks.getBlockByIndex(index);
+
+    if (!block) {
+      return;
+    }
+
+    container.appendChild(block.holder);
+  }
+
+  /**
+   * Given a new block's index, find which cell it should belong to
+   * by checking if the previous or next block in the flat list is mounted in a cell.
+   */
+  public findCellForNewBlock(blockIndex: number): HTMLElement | null {
+    // Check the previous block — if it's in a cell, the new block belongs there too
+    if (blockIndex > 0) {
+      const prevBlock = this.api.blocks.getBlockByIndex(blockIndex - 1);
+
+      if (prevBlock) {
+        const cell = prevBlock.holder.closest(`[${CELL_ATTR}]`) as HTMLElement | null;
+
+        if (cell && this.gridElement.contains(cell)) {
+          return cell;
+        }
+      }
+    }
+
+    // Also check the next block (for insert-before cases)
+    const totalBlocks = this.api.blocks.getBlocksCount();
+
+    if (blockIndex < totalBlocks - 1) {
+      const nextBlock = this.api.blocks.getBlockByIndex(blockIndex + 1);
+
+      if (nextBlock) {
+        const cell = nextBlock.holder.closest(`[${CELL_ATTR}]`) as HTMLElement | null;
+
+        if (cell && this.gridElement.contains(cell)) {
+          return cell;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle block mutation events from the editor.
+   * When a block is added, check if it should be claimed by a cell.
+   */
+  private handleBlockMutation = (data: unknown): void => {
+    if (!this.isBlockMutationEvent(data)) {
+      return;
+    }
+
+    const { type, detail } = data.event;
+
+    if (type !== 'block-added') {
+      return;
+    }
+
+    const blockIndex = detail.index;
+
+    if (blockIndex === undefined) {
+      return;
+    }
+
+    // Check if new block's holder is already in a cell (no action needed)
+    const holder = detail.target.holder;
+
+    if (holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+      return;
+    }
+
+    // Check if this block should be in a cell
+    const cell = this.findCellForNewBlock(blockIndex);
+
+    if (cell) {
+      this.claimBlockForCell(cell, detail.target.id);
+    }
+  };
+
+  /**
+   * Type guard for block mutation event payload
+   */
+  private isBlockMutationEvent(data: unknown): data is {
+    event: {
+      type: string;
+      detail: {
+        target: { id: string; holder: HTMLElement };
+        index?: number;
+      };
+    };
+  } {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'event' in data &&
+      typeof (data as Record<string, unknown>).event === 'object' &&
+      (data as Record<string, unknown>).event !== null
+    );
+  }
+
+  /**
    * Clean up event listeners
    */
   destroy(): void {
+    this.api.events.off('block changed', this.handleBlockMutation);
     this._activeCellWithBlocks = null;
   }
 }

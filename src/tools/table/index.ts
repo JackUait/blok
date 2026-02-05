@@ -514,16 +514,6 @@ export class Table implements BlockTool {
       gridElement: gridEl,
       tableBlockId: this.blockId ?? '',
     });
-
-    gridEl.addEventListener('input', (event: Event) => {
-      const target = event.target as HTMLElement;
-
-      if (!target.hasAttribute('data-blok-table-cell')) {
-        return;
-      }
-
-      void this.cellBlocks?.handleCellInput(target);
-    });
   }
 
   private getCellPosition(gridEl: HTMLElement, cell: HTMLElement): { row: number; col: number } | null {

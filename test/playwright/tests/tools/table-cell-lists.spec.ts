@@ -717,55 +717,6 @@ test.describe('table cell lists - markdown shortcut conversion', () => {
     });
   });
 
-  test.describe('exiting list with remaining items does not show paragraph placeholder', () => {
-    test('pressing Enter on empty second list item removes it without creating paragraph in cell', async ({ page }) => {
-      await createBlok(page, {
-        tools: defaultTools,
-        data: {
-          blocks: [
-            {
-              type: 'table',
-              data: {
-                withHeadings: false,
-                content: [['', 'Row 1, Cell 2'], ['Row 2, Cell 1', 'Row 2, Cell 2']],
-              },
-            },
-          ],
-        },
-      });
-
-      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
-
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
-
-      await firstCell.click();
-
-      // Create an unordered list with content
-      await page.keyboard.type('- asd');
-      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
-      await expect(page.locator(LIST_ITEM_SELECTOR)).toContainText('asd');
-
-      // Press Enter to create a new empty list item
-      await page.keyboard.press('Enter');
-
-      // Wait for the new list item to appear
-      await expect(page.locator(LIST_ITEM_SELECTOR)).toHaveCount(2);
-
-      // Press Enter again on empty item to exit the list
-      await page.keyboard.press('Enter');
-
-      // There should be NO paragraph block inside the table cell
-      // The list exit should not create a paragraph with placeholder inside the cell
-      const paragraphInCell = firstCell.locator('[data-blok-tool="paragraph"]');
-
-      await expect(paragraphInCell).toHaveCount(0);
-
-      // The first list item with "asd" should still be visible
-      await expect(page.locator(LIST_ITEM_SELECTOR)).toContainText('asd');
-    });
-  });
-
   test.describe('edge cases', () => {
     test('trigger in non-first cell also creates list', async ({ page }) => {
       await createBlok(page, {

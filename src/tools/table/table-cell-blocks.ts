@@ -322,12 +322,9 @@ export class TableCellBlocks {
   /**
    * Watch for block holders being removed from cell blocks containers.
    * When a container becomes empty (all blocks removed/converted), revert the cell to plain text.
-   * Also schedules cleanup of non-list blocks that appear in cells after convert operations.
    */
   private observeCellBlockContainers(): void {
     this.cellBlocksObserver = new MutationObserver((mutations) => {
-      const containersToCheck = new Set<HTMLElement>();
-
       for (const mutation of mutations) {
         if (mutation.type !== 'childList' || mutation.removedNodes.length === 0) {
           continue;
@@ -351,22 +348,7 @@ export class TableCellBlocks {
         // If the container has no more block holders, revert the cell
         if (container.querySelector(`[${DATA_ATTR.element}]`) === null) {
           this.revertCellToPlainText(container);
-        } else {
-          // Schedule a check for non-list blocks that may appear after a convert
-          containersToCheck.add(container);
         }
-      }
-
-      // After processing all mutations, schedule cleanup of non-list blocks.
-      // Use requestAnimationFrame to run after the current DOM batch settles.
-      if (containersToCheck.size > 0) {
-        requestAnimationFrame(() => {
-          for (const container of containersToCheck) {
-            if (container.isConnected) {
-              this.removeNonListBlocksFromCell(container);
-            }
-          }
-        });
       }
     });
 
@@ -374,37 +356,6 @@ export class TableCellBlocks {
       childList: true,
       subtree: true,
     });
-  }
-
-  /**
-   * Remove any non-list blocks from a cell blocks container, but only when
-   * list blocks still remain. When a list item is converted to a paragraph
-   * (e.g. Enter on empty item) while other list items exist, the paragraph's
-   * holder ends up inside the cell. We detect and clean it up.
-   *
-   * If no list blocks remain, we skip (revertCellToPlainText handles that case).
-   */
-  private removeNonListBlocksFromCell(container: HTMLElement): void {
-    const getToolName = (holder: HTMLElement): string | null =>
-      holder.querySelector(`[${DATA_ATTR.tool}]`)?.getAttribute(DATA_ATTR.tool) ?? null;
-
-    const blockHolders = Array.from(container.querySelectorAll<HTMLElement>(`[${DATA_ATTR.element}]`));
-    const hasListBlocks = blockHolders.some(holder => getToolName(holder) === 'list');
-
-    if (!hasListBlocks) {
-      return;
-    }
-
-    const nonListHolders = blockHolders.filter(holder => getToolName(holder) !== 'list');
-
-    for (const holder of nonListHolders) {
-      const blockId = holder.getAttribute('data-blok-id');
-      const blockIndex = blockId ? this.api.blocks.getBlockIndex(blockId) : undefined;
-
-      if (blockIndex !== undefined) {
-        void this.api.blocks.delete(blockIndex);
-      }
-    }
   }
 
   /**

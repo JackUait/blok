@@ -1,0 +1,194 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { TableData, TableConfig } from '../../../../src/tools/table/types';
+import type { API, BlockToolConstructorOptions, BlockAPI } from '../../../../types';
+
+const createMockAPI = (): API => ({
+  styles: {
+    block: 'blok-block',
+    inlineToolbar: 'blok-inline-toolbar',
+    inlineToolButton: 'blok-inline-tool-button',
+    inlineToolButtonActive: 'blok-inline-tool-button--active',
+    input: 'blok-input',
+    loader: 'blok-loader',
+    button: 'blok-button',
+    settingsButton: 'blok-settings-button',
+    settingsButtonActive: 'blok-settings-button--active',
+  },
+  i18n: {
+    t: (key: string) => key,
+  },
+  blocks: {
+    insert: vi.fn().mockReturnValue({ id: 'list-item-1' }),
+    getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+  },
+} as unknown as API);
+
+const createTableOptions = (
+  data: Partial<TableData> = {},
+  config: TableConfig = {},
+  blockId = 'table-block-1'
+): BlockToolConstructorOptions<TableData, TableConfig> => ({
+  data: { withHeadings: false, content: [], ...data } as TableData,
+  config,
+  api: createMockAPI(),
+  readOnly: false,
+  block: { id: blockId } as BlockAPI,
+});
+
+describe('Table tool with cell blocks integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('initialization', () => {
+    it('should initialize TableCellBlocks when rendered in edit mode', async () => {
+      const { Table } = await import('../../../../src/tools/table/index');
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      // Table should render successfully
+      expect(element.querySelector('[data-blok-table-row]')).not.toBeNull();
+
+      // Verify we have cells
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
+      expect(cells.length).toBe(4);
+    });
+
+    it('should NOT initialize TableCellBlocks in readOnly mode', async () => {
+      const { Table } = await import('../../../../src/tools/table/index');
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({
+          content: [['A', 'B'], ['C', 'D']],
+        }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      // Table should still render
+      expect(element.querySelector('[data-blok-table-row]')).not.toBeNull();
+    });
+  });
+
+  describe('input handling for markdown triggers', () => {
+    it('should listen for input events on cells', async () => {
+      const { Table } = await import('../../../../src/tools/table/index');
+      const options = createTableOptions({
+        content: [['', '']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+      expect(cell).not.toBeNull();
+
+      // Simulate typing a markdown trigger
+      cell.textContent = '- ';
+      const inputEvent = new InputEvent('input', { bubbles: true });
+      cell.dispatchEvent(inputEvent);
+
+      // Cleanup
+      document.body.removeChild(element);
+    });
+
+    it('should convert cell to blocks when markdown trigger detected', async () => {
+      const { Table } = await import('../../../../src/tools/table/index');
+      const mockApi = createMockAPI();
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['', '']] } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as BlockAPI,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      // Simulate typing markdown trigger
+      cell.textContent = '- Item';
+      const inputEvent = new InputEvent('input', { bubbles: true });
+      cell.dispatchEvent(inputEvent);
+
+      // Wait for async conversion
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Verify API was called to insert a list block
+      expect(mockApi.blocks.insert).toHaveBeenCalledWith(
+        'listItem',
+        expect.objectContaining({
+          text: 'Item',
+          style: 'unordered',
+          depth: 0,
+        }),
+        {},
+        undefined,
+        true
+      );
+
+      document.body.removeChild(element);
+    });
+
+    it('should not trigger conversion for non-markdown content', async () => {
+      const { Table } = await import('../../../../src/tools/table/index');
+      const mockApi = createMockAPI();
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, content: [['', '']] } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as BlockAPI,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      // Type regular content (not a markdown trigger)
+      cell.textContent = 'Hello world';
+      const inputEvent = new InputEvent('input', { bubbles: true });
+      cell.dispatchEvent(inputEvent);
+
+      // Wait for any async operations
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // API should not be called
+      expect(mockApi.blocks.insert).not.toHaveBeenCalled();
+
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('cleanup', () => {
+    it('should clean up TableCellBlocks on destroy', async () => {
+      const { Table } = await import('../../../../src/tools/table/index');
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Should not throw on destroy
+      expect(() => table.destroy()).not.toThrow();
+
+      document.body.removeChild(element);
+    });
+  });
+});

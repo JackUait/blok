@@ -13,6 +13,7 @@ import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
+import { TableCellBlocks } from './table-cell-blocks';
 import { BORDER_WIDTH, TableGrid } from './table-core';
 import { TableKeyboard } from './table-keyboard';
 import { TableResize } from './table-resize';
@@ -48,14 +49,17 @@ export class Table implements BlockTool {
   private resize: TableResize | null = null;
   private addControls: TableAddControls | null = null;
   private rowColControls: TableRowColControls | null = null;
+  private cellBlocks: TableCellBlocks | null = null;
   private element: HTMLDivElement | null = null;
+  private blockId: string | undefined;
 
-  constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<TableData, TableConfig>) {
+  constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<TableData, TableConfig>) {
     this.api = api;
     this.readOnly = readOnly;
     this.config = config ?? {};
     this.data = this.normalizeData(data);
     this.grid = new TableGrid({ readOnly });
+    this.blockId = block?.id;
   }
 
   /**
@@ -130,6 +134,7 @@ export class Table implements BlockTool {
 
     if (!this.readOnly) {
       this.setupKeyboardNavigation(gridEl);
+      this.initCellBlocks(gridEl);
     }
 
     return wrapper;
@@ -258,6 +263,8 @@ export class Table implements BlockTool {
     this.addControls = null;
     this.rowColControls?.destroy();
     this.rowColControls = null;
+    this.cellBlocks?.destroy();
+    this.cellBlocks = null;
     this.element = null;
   }
 
@@ -495,6 +502,24 @@ export class Table implements BlockTool {
       if (position) {
         this.keyboard?.handleKeyDown(event, position);
       }
+    });
+  }
+
+  private initCellBlocks(gridEl: HTMLElement): void {
+    this.cellBlocks = new TableCellBlocks({
+      api: this.api,
+      gridElement: gridEl,
+      tableBlockId: this.blockId ?? '',
+    });
+
+    gridEl.addEventListener('input', (event: Event) => {
+      const target = event.target as HTMLElement;
+
+      if (!target.hasAttribute('data-blok-table-cell')) {
+        return;
+      }
+
+      void this.cellBlocks?.handleCellInput(target);
     });
   }
 

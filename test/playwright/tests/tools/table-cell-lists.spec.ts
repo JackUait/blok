@@ -382,6 +382,206 @@ test.describe('table cell lists - markdown shortcut conversion', () => {
     });
   });
 
+  // Keyboard navigation tests are skipped until block integration is wired up.
+  // The TableCellBlocks.handleKeyDown method handles Tab/Shift+Tab/Shift+Enter,
+  // but the keyboard event listener is not yet connected for nested blocks.
+  // These tests document the expected behavior for when the wiring is complete.
+  test.describe.skip('keyboard navigation in cell lists', () => {
+    test('tab should navigate from list item to next cell', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['', 'Second cell'], ['', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // Create a list in first cell
+      await page.keyboard.type('- Item 1');
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Tab should navigate to second cell
+      await page.keyboard.press('Tab');
+
+      // Focus should be in second cell (or its content)
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
+      const secondCell = page.locator(CELL_SELECTOR).nth(1);
+      const hasFocus = await secondCell.evaluate(el => el.contains(document.activeElement) || el === document.activeElement);
+
+      expect(hasFocus).toBe(true);
+    });
+
+    test('shift+Tab should navigate from list item to previous cell', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['First cell', ''], ['', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // Click on second cell
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
+      const secondCell = page.locator(CELL_SELECTOR).nth(1);
+
+      await secondCell.click();
+
+      // Create a list in second cell
+      await page.keyboard.type('- Item');
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Shift+Tab should navigate to first cell
+      await page.keyboard.press('Shift+Tab');
+
+      // Focus should be in first cell (or its content)
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+      const hasFocus = await firstCell.evaluate(el => el.contains(document.activeElement) || el === document.activeElement);
+
+      expect(hasFocus).toBe(true);
+    });
+
+    test('shift+Enter should exit list and navigate to cell below', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['', ''], ['Cell below', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // Click on first cell
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // Create a list in first cell
+      await page.keyboard.type('- Item');
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Shift+Enter should exit list to cell below
+      await page.keyboard.press('Shift+Enter');
+
+      // Focus should be in cell below (first column, second row)
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(2) needed to target third cell (first cell of second row)
+      const cellBelow = page.locator(CELL_SELECTOR).nth(2);
+      const hasFocus = await cellBelow.evaluate(el => el.contains(document.activeElement) || el === document.activeElement);
+
+      expect(hasFocus).toBe(true);
+    });
+
+    test('tab at end of row should wrap to first cell of next row', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['', ''], ['First cell row 2', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // Click on second cell (last cell of first row)
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
+      const secondCell = page.locator(CELL_SELECTOR).nth(1);
+
+      await secondCell.click();
+
+      // Create a list in second cell
+      await page.keyboard.type('- Item');
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Tab should wrap to first cell of next row
+      await page.keyboard.press('Tab');
+
+      // Focus should be in first cell of second row (index 2 in 2x2 table)
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(2) needed to target third cell
+      const firstCellRow2 = page.locator(CELL_SELECTOR).nth(2);
+      const hasFocus = await firstCellRow2.evaluate(el => el.contains(document.activeElement) || el === document.activeElement);
+
+      expect(hasFocus).toBe(true);
+    });
+
+    test('shift+Tab at start of row should wrap to last cell of previous row', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['', 'Last cell row 1'], ['', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // Click on first cell of second row (index 2)
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(2) needed to target third cell
+      const firstCellRow2 = page.locator(CELL_SELECTOR).nth(2);
+
+      await firstCellRow2.click();
+
+      // Create a list in this cell
+      await page.keyboard.type('- Item');
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Shift+Tab should wrap to last cell of first row
+      await page.keyboard.press('Shift+Tab');
+
+      // Focus should be in last cell of first row (index 1)
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
+      const lastCellRow1 = page.locator(CELL_SELECTOR).nth(1);
+      const hasFocus = await lastCellRow1.evaluate(el => el.contains(document.activeElement) || el === document.activeElement);
+
+      expect(hasFocus).toBe(true);
+    });
+  });
+
   test.describe('edge cases', () => {
     test('trigger in non-first cell also creates list', async ({ page }) => {
       await createBlok(page, {

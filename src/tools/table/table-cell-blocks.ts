@@ -132,18 +132,24 @@ export class TableCellBlocks {
       depth: 0,
     };
 
-    // Insert the block (this creates it in BlockManager)
+    // Insert the block (this creates it in BlockManager, initially in the main editor)
     const block = this.api.blocks.insert(
-      'listItem',
+      'list',
       listItemData,
       {},
       undefined, // index - append at end
       true // needToFocus
     );
 
-    // The block's DOM will be mounted by the BlockManager
-    // We need to move it into our container
-    // For now, return the block ID - actual DOM mounting will be handled in integration
+    // Move the block's holder from the main editor into the cell container
+    container.appendChild(block.holder);
+
+    // Focus the list item's contenteditable so subsequent keystrokes go into it
+    const editable = block.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+    if (editable) {
+      editable.focus();
+    }
 
     return { blocks: [block.id] };
   }

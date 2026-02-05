@@ -18,7 +18,10 @@ const createMockAPI = (): API => ({
     t: (key: string) => key,
   },
   blocks: {
-    insert: vi.fn().mockReturnValue({ id: 'list-item-1' }),
+    insert: vi.fn().mockReturnValue({
+      id: 'list-item-1',
+      holder: document.createElement('div'),
+    }),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
   },
 } as unknown as API);
@@ -127,7 +130,7 @@ describe('Table tool with cell blocks integration', () => {
 
       // Verify API was called to insert a list block
       expect(mockApi.blocks.insert).toHaveBeenCalledWith(
-        'listItem',
+        'list',
         expect.objectContaining({
           text: 'Item',
           style: 'unordered',

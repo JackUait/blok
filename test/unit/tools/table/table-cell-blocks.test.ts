@@ -185,7 +185,7 @@ describe('TableCellBlocks', () => {
 
       mockApi = {
         blocks: {
-          insert: vi.fn().mockReturnValue({ id: 'list-item-1' }),
+          insert: vi.fn().mockReturnValue({ id: 'list-item-1', holder: document.createElement('div') }),
         },
       };
 
@@ -221,7 +221,7 @@ describe('TableCellBlocks', () => {
       expect(result.blocks).toContain('list-item-1');
     });
 
-    it('should insert a listItem block with correct data', async () => {
+    it('should insert a list block with correct data', async () => {
       const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const cellBlocks = new TableCellBlocks({
@@ -233,7 +233,7 @@ describe('TableCellBlocks', () => {
       await cellBlocks.convertCellToBlocks(cell, 'ordered', 'First item');
 
       expect(mockApi.blocks.insert).toHaveBeenCalledWith(
-        'listItem',
+        'list',
         expect.objectContaining({
           text: 'First item',
           style: 'ordered',
@@ -260,7 +260,7 @@ describe('TableCellBlocks', () => {
 
       mockApi = {
         blocks: {
-          insert: vi.fn().mockReturnValue({ id: 'list-item-1' }),
+          insert: vi.fn().mockReturnValue({ id: 'list-item-1', holder: document.createElement('div') }),
         },
       };
 

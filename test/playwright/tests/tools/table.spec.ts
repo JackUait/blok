@@ -262,13 +262,22 @@ test.describe('table tool', () => {
 
       await firstCell.click();
 
-      // Focus selection uses box-shadow spread for all 4 sides
-      const boxShadow = await firstCell.evaluate(el =>
-        window.getComputedStyle(el).boxShadow
-      );
+      // Right and bottom borders should be blue, box-shadow provides top/left
+      const styles = await firstCell.evaluate(el => {
+        const s = window.getComputedStyle(el);
 
-      // rgb(59, 130, 246) is blue-500
-      expect(boxShadow).toContain('rgb(59, 130, 246)');
+        return {
+          borderRightColor: s.borderRightColor,
+          borderBottomColor: s.borderBottomColor,
+          boxShadow: s.boxShadow,
+        };
+      });
+
+      const blue = 'rgb(59, 130, 246)';
+
+      expect(styles.borderRightColor).toBe(blue);
+      expect(styles.borderBottomColor).toBe(blue);
+      expect(styles.boxShadow).toContain(blue);
     });
 
     test('unfocused cell has no selection border', async ({ page }) => {

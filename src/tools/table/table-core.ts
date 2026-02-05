@@ -1,8 +1,7 @@
 import { twMerge } from '../../components/utils/tw';
 
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import type { CellContent } from './types';
-import { isCellWithBlocks } from './types';
+import type { CellContent, LegacyCellContent } from './types';
 
 export const ROW_ATTR = 'data-blok-table-row';
 export const CELL_ATTR = 'data-blok-table-cell';
@@ -65,33 +64,11 @@ export class TableGrid {
   }
 
   /**
-   * Fill grid cells with content from 2D array
+   * No-op. Cell content is populated by TableCellBlocks.initializeCells().
+   * Kept for API compatibility with render() callers.
    */
-  public fillGrid(table: HTMLElement, content: CellContent[][]): void {
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
-
-    content.forEach((rowData, rowIndex) => {
-      if (rowIndex >= rows.length) {
-        return;
-      }
-
-      const cells = rows[rowIndex].querySelectorAll(`[${CELL_ATTR}]`);
-
-      rowData.forEach((cellContent, colIndex) => {
-        if (colIndex >= cells.length) {
-          return;
-        }
-
-        const cell = cells[colIndex] as HTMLElement;
-
-        // Skip block-based cells - they're mounted separately
-        if (isCellWithBlocks(cellContent)) {
-          return;
-        }
-
-        cell.innerHTML = cellContent;
-      });
-    });
+  public fillGrid(_table: HTMLElement, _content: LegacyCellContent[][]): void {
+    // Content is populated by TableCellBlocks.initializeCells()
   }
 
   /**

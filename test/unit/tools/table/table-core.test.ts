@@ -121,17 +121,18 @@ describe('TableGrid', () => {
   });
 
   describe('fillGrid', () => {
-    it('populates cells with content from 2D array', () => {
+    it('should not modify cell contents', () => {
       const grid = new TableGrid({ readOnly: false });
-      const element = grid.createGrid(2, 2);
+      const gridEl = grid.createGrid(1, 1);
 
-      grid.fillGrid(element, [['A', 'B'], ['C', 'D']]);
+      grid.fillGrid(gridEl, [['Hello']]);
 
-      const cells = element.querySelectorAll('[data-blok-table-cell]');
-      expect(cells[0].textContent).toBe('A');
-      expect(cells[1].textContent).toBe('B');
-      expect(cells[2].textContent).toBe('C');
-      expect(cells[3].textContent).toBe('D');
+      const cell = gridEl.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const container = cell.querySelector('[data-blok-table-cell-blocks]');
+
+      // Container should exist and be empty (fillGrid should not populate it)
+      expect(container).not.toBeNull();
+      expect(container?.children.length).toBe(0);
     });
   });
 
@@ -178,7 +179,6 @@ describe('TableGrid', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 2);
 
-      grid.fillGrid(element, [['R1', 'R1'], ['R2', 'R2']]);
       grid.addRow(element, 1);
 
       const rows = element.querySelectorAll('[data-blok-table-row]');
@@ -267,7 +267,6 @@ describe('TableGrid', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 2);
 
-      grid.fillGrid(element, [['A', 'B'], ['C', 'D']]);
       grid.addColumn(element);
 
       const rows = element.querySelectorAll('[data-blok-table-row]');
@@ -448,10 +447,13 @@ describe('TableGrid', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 2);
 
-      grid.fillGrid(element, [['A', 'B'], ['C', 'D']]);
+      fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D']]);
 
       const cell = grid.getCell(element, 1, 0);
-      expect(cell?.textContent).toBe('C');
+      const container = cell?.querySelector('[data-blok-table-cell-blocks]');
+      const block = container?.querySelector('[data-blok-block="C"]');
+
+      expect(block).not.toBeNull();
     });
   });
 

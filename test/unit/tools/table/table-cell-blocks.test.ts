@@ -360,4 +360,294 @@ describe('TableCellBlocks', () => {
       expect(convertSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('handleKeyDown in cell blocks', () => {
+    let mockApi: { blocks: { delete: ReturnType<typeof vi.fn> } };
+    let gridEl: HTMLElement;
+    let cell: HTMLElement;
+    let onNavigateToCell: (position: { row: number; col: number }) => void;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockApi = { blocks: { delete: vi.fn() } };
+
+      // Create grid with rows
+      gridEl = document.createElement('div');
+
+      const row1 = document.createElement('div');
+      row1.setAttribute('data-blok-table-row', '');
+
+      cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      row1.appendChild(cell);
+
+      const cell2 = document.createElement('div');
+      cell2.setAttribute('data-blok-table-cell', '');
+      cell2.setAttribute('contenteditable', 'true');
+      row1.appendChild(cell2);
+
+      gridEl.appendChild(row1);
+
+      const row2 = document.createElement('div');
+      row2.setAttribute('data-blok-table-row', '');
+
+      const cell3 = document.createElement('div');
+      cell3.setAttribute('data-blok-table-cell', '');
+      cell3.setAttribute('contenteditable', 'true');
+      row2.appendChild(cell3);
+
+      gridEl.appendChild(row2);
+
+      onNavigateToCell = vi.fn();
+    });
+
+    it('should navigate to next cell on Tab', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      cellBlocks.setActiveCellWithBlocks({ row: 0, col: 0 });
+
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+      const preventDefault = vi.spyOn(event, 'preventDefault');
+
+      cellBlocks.handleKeyDown(event, cell);
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(onNavigateToCell).toHaveBeenCalledWith({ row: 0, col: 1 });
+    });
+
+    it('should navigate to previous cell on Shift+Tab', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      cellBlocks.setActiveCellWithBlocks({ row: 0, col: 1 });
+
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true });
+
+      cellBlocks.handleKeyDown(event, cell);
+
+      expect(onNavigateToCell).toHaveBeenCalledWith({ row: 0, col: 0 });
+    });
+
+    it('should navigate to cell below on Shift+Enter', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      cellBlocks.setActiveCellWithBlocks({ row: 0, col: 0 });
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true });
+
+      cellBlocks.handleKeyDown(event, cell);
+
+      expect(onNavigateToCell).toHaveBeenCalledWith({ row: 1, col: 0 });
+    });
+
+    it('should wrap to next row when Tab at end of row', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      // Last column of first row
+      cellBlocks.setActiveCellWithBlocks({ row: 0, col: 1 });
+
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+
+      cellBlocks.handleKeyDown(event, cell);
+
+      expect(onNavigateToCell).toHaveBeenCalledWith({ row: 1, col: 0 });
+    });
+
+    it('should wrap to previous row when Shift+Tab at start of row', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      // First column of second row
+      cellBlocks.setActiveCellWithBlocks({ row: 1, col: 0 });
+
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true });
+
+      cellBlocks.handleKeyDown(event, cell);
+
+      expect(onNavigateToCell).toHaveBeenCalledWith({ row: 0, col: 1 });
+    });
+
+    it('should not navigate if no active cell with blocks', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      // No active cell set
+
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+
+      cellBlocks.handleKeyDown(event, cell);
+
+      expect(onNavigateToCell).not.toHaveBeenCalled();
+    });
+
+    it('should clear active cell when navigating on Shift+Enter at last row', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      // Last row
+      cellBlocks.setActiveCellWithBlocks({ row: 1, col: 0 });
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true });
+
+      cellBlocks.handleKeyDown(event, cell);
+
+      // Should not navigate since we're at the last row
+      expect(onNavigateToCell).not.toHaveBeenCalled();
+      // Active cell should be cleared
+      expect(cellBlocks.activeCellWithBlocks).toBeNull();
+    });
+  });
+
+  describe('handleEnterInList', () => {
+    let mockApi: { blocks: { insert: ReturnType<typeof vi.fn> } };
+    let gridEl: HTMLElement;
+    let onNavigateToCell: (position: { row: number; col: number }) => void;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockApi = { blocks: { insert: vi.fn().mockReturnValue({ id: 'b1' }) } };
+
+      gridEl = document.createElement('div');
+
+      const row1 = document.createElement('div');
+
+      row1.setAttribute('data-blok-table-row', '');
+      const cell1 = document.createElement('div');
+
+      cell1.setAttribute('data-blok-table-cell', '');
+      row1.appendChild(cell1);
+      gridEl.appendChild(row1);
+
+      const row2 = document.createElement('div');
+
+      row2.setAttribute('data-blok-table-row', '');
+      const cell2 = document.createElement('div');
+
+      cell2.setAttribute('data-blok-table-cell', '');
+      row2.appendChild(cell2);
+      gridEl.appendChild(row2);
+
+      onNavigateToCell = vi.fn();
+    });
+
+    it('should exit to cell below when Enter pressed on empty list item', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      cellBlocks.setActiveCellWithBlocks({ row: 0, col: 0 });
+
+      const isEmpty = true;
+      const result = cellBlocks.handleEnterInList(isEmpty);
+
+      expect(result).toBe(true); // Handled
+      expect(onNavigateToCell).toHaveBeenCalledWith({ row: 1, col: 0 });
+    });
+
+    it('should return false (not handled) for non-empty list item', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      cellBlocks.setActiveCellWithBlocks({ row: 0, col: 0 });
+
+      const isEmpty = false;
+      const result = cellBlocks.handleEnterInList(isEmpty);
+
+      expect(result).toBe(false); // Not handled
+      expect(onNavigateToCell).not.toHaveBeenCalled();
+    });
+
+    it('should return false when no active cell with blocks', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      // Don't set active cell
+      const result = cellBlocks.handleEnterInList(true);
+
+      expect(result).toBe(false);
+      expect(onNavigateToCell).not.toHaveBeenCalled();
+    });
+
+    it('should clear active cell when on last row', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+        onNavigateToCell,
+      });
+
+      // Set to last row (row 1, which is the second row)
+      cellBlocks.setActiveCellWithBlocks({ row: 1, col: 0 });
+
+      const result = cellBlocks.handleEnterInList(true);
+
+      expect(result).toBe(true); // Still handled
+      expect(onNavigateToCell).not.toHaveBeenCalled(); // No navigation since on last row
+      expect(cellBlocks.activeCellWithBlocks).toBeNull(); // But active cell cleared
+    });
+  });
 });

@@ -55,10 +55,15 @@ interface CellPosition {
   col: number;
 }
 
+interface CellNavigationCallback {
+  (position: CellPosition): void;
+}
+
 interface TableCellBlocksOptions {
   api: API;
   gridElement: HTMLElement;
   tableBlockId: string;
+  onNavigateToCell?: CellNavigationCallback;
 }
 
 /**
@@ -70,11 +75,13 @@ export class TableCellBlocks {
   private gridElement: HTMLElement;
   private tableBlockId: string;
   private _activeCellWithBlocks: CellPosition | null = null;
+  private onNavigateToCell?: CellNavigationCallback;
 
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
     this.tableBlockId = options.tableBlockId;
+    this.onNavigateToCell = options.onNavigateToCell;
   }
 
   /**
@@ -162,6 +169,144 @@ export class TableCellBlocks {
     }
 
     await this.convertCellToBlocks(cell, trigger.style, trigger.textAfter);
+  }
+
+  /**
+   * Handle keyboard navigation within cell blocks
+   * @param event - The keyboard event
+   * @param _cell - The cell element (unused but available for future use)
+   */
+  handleKeyDown(event: KeyboardEvent, _cell: HTMLElement): void {
+    const position = this._activeCellWithBlocks;
+
+    if (!position) {
+      return;
+    }
+
+    // Tab -> next cell
+    if (event.key === 'Tab' && !event.shiftKey) {
+      event.preventDefault();
+      this.handleTabNavigation(position);
+
+      return;
+    }
+
+    // Shift+Tab -> previous cell
+    if (event.key === 'Tab' && event.shiftKey) {
+      event.preventDefault();
+      this.handleShiftTabNavigation(position);
+
+      return;
+    }
+
+    // Shift+Enter -> exit to cell below
+    if (event.key === 'Enter' && event.shiftKey) {
+      event.preventDefault();
+      this.exitListToNextCell(position);
+
+      return;
+    }
+  }
+
+  /**
+   * Handle Tab navigation to next cell
+   */
+  private handleTabNavigation(position: CellPosition): void {
+    const nextCol = position.col + 1;
+    const totalCols = this.getColumnCount();
+
+    // Navigate to next column in same row
+    if (nextCol < totalCols) {
+      this.navigateToCell({ row: position.row, col: nextCol });
+
+      return;
+    }
+
+    // Wrap to first column of next row
+    const nextRow = position.row + 1;
+
+    if (nextRow < this.getRowCount()) {
+      this.navigateToCell({ row: nextRow, col: 0 });
+    }
+  }
+
+  /**
+   * Handle Shift+Tab navigation to previous cell
+   */
+  private handleShiftTabNavigation(position: CellPosition): void {
+    const prevCol = position.col - 1;
+
+    // Navigate to previous column in same row
+    if (prevCol >= 0) {
+      this.navigateToCell({ row: position.row, col: prevCol });
+
+      return;
+    }
+
+    // Wrap to last column of previous row
+    const prevRow = position.row - 1;
+
+    if (prevRow >= 0) {
+      this.navigateToCell({ row: prevRow, col: this.getColumnCount() - 1 });
+    }
+  }
+
+  /**
+   * Handle Enter key in a list item within a cell
+   * @param isEmpty - whether the list item content is empty
+   * @returns true if handled (exit list), false if not handled (let default behavior)
+   */
+  handleEnterInList(isEmpty: boolean): boolean {
+    if (!this._activeCellWithBlocks) {
+      return false;
+    }
+
+    // If empty, exit list and navigate to cell below
+    if (isEmpty) {
+      this.exitListToNextCell(this._activeCellWithBlocks);
+
+      return true;
+    }
+
+    // Not empty - let default list behavior (create new item) occur
+    return false;
+  }
+
+  /**
+   * Navigate to a different cell
+   */
+  private navigateToCell(position: CellPosition): void {
+    this.clearActiveCellWithBlocks();
+    this.onNavigateToCell?.(position);
+  }
+
+  /**
+   * Exit list and navigate to the cell below
+   */
+  private exitListToNextCell(currentPosition: CellPosition): void {
+    const nextRow = currentPosition.row + 1;
+
+    if (nextRow < this.getRowCount()) {
+      this.navigateToCell({ row: nextRow, col: currentPosition.col });
+    } else {
+      this.clearActiveCellWithBlocks();
+    }
+  }
+
+  /**
+   * Get the number of rows in the table
+   */
+  private getRowCount(): number {
+    return this.gridElement.querySelectorAll('[data-blok-table-row]').length;
+  }
+
+  /**
+   * Get the number of columns in the table (based on first row)
+   */
+  private getColumnCount(): number {
+    const firstRow = this.gridElement.querySelector('[data-blok-table-row]');
+
+    return firstRow?.querySelectorAll('[data-blok-table-cell]').length ?? 0;
   }
 
   /**

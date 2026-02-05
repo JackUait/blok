@@ -501,15 +501,16 @@ export class Table implements BlockTool {
 
     gridEl.addEventListener('keydown', (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
+      const cell = target.closest<HTMLElement>('[data-blok-table-cell]');
 
-      if (!target.hasAttribute('data-blok-table-cell')) {
+      if (!cell) {
         return;
       }
 
-      const position = this.getCellPosition(gridEl, target);
+      const position = this.getCellPosition(gridEl, cell);
 
       if (position) {
-        this.keyboard?.handleKeyDown(event, position);
+        this.cellBlocks?.handleKeyDown(event, position);
       }
     });
   }

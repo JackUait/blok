@@ -80,15 +80,9 @@ export class TableCellBlocks {
   /**
    * Handle keyboard navigation within cell blocks
    * @param event - The keyboard event
-   * @param _cell - The cell element (unused but available for future use)
+   * @param position - The current cell position
    */
-  handleKeyDown(event: KeyboardEvent, _cell: HTMLElement): void {
-    const position = this._activeCellWithBlocks;
-
-    if (!position) {
-      return;
-    }
-
+  handleKeyDown(event: KeyboardEvent, position: CellPosition): void {
     // Tab -> next cell
     if (event.key === 'Tab' && !event.shiftKey) {
       event.preventDefault();
@@ -101,14 +95,6 @@ export class TableCellBlocks {
     if (event.key === 'Tab' && event.shiftKey) {
       event.preventDefault();
       this.handleShiftTabNavigation(position);
-
-      return;
-    }
-
-    // Shift+Enter -> exit to cell below
-    if (event.key === 'Enter' && event.shiftKey) {
-      event.preventDefault();
-      this.exitListToNextCell(position);
 
       return;
     }
@@ -144,7 +130,7 @@ export class TableCellBlocks {
 
     // Navigate to previous column in same row
     if (prevCol >= 0) {
-      this.navigateToCell({ row: position.row, col: prevCol });
+      this.navigateToCell({ row: position.row, col: prevCol }, true);
 
       return;
     }
@@ -153,50 +139,40 @@ export class TableCellBlocks {
     const prevRow = position.row - 1;
 
     if (prevRow >= 0) {
-      this.navigateToCell({ row: prevRow, col: this.getColumnCount() - 1 });
+      this.navigateToCell({ row: prevRow, col: this.getColumnCount() - 1 }, true);
     }
   }
 
   /**
-   * Handle Enter key in a list item within a cell
-   * @param isEmpty - whether the list item content is empty
-   * @returns true if handled (exit list), false if not handled (let default behavior)
+   * Navigate to a different cell, focusing the appropriate contenteditable element
+   * @param position - Target cell position
+   * @param focusLast - If true, focus the last contenteditable; otherwise focus the first
    */
-  handleEnterInList(isEmpty: boolean): boolean {
-    if (!this._activeCellWithBlocks) {
-      return false;
-    }
-
-    // If empty, exit list and navigate to cell below
-    if (isEmpty) {
-      this.exitListToNextCell(this._activeCellWithBlocks);
-
-      return true;
-    }
-
-    // Not empty - let default list behavior (create new item) occur
-    return false;
-  }
-
-  /**
-   * Navigate to a different cell
-   */
-  private navigateToCell(position: CellPosition): void {
+  private navigateToCell(position: CellPosition, focusLast = false): void {
     this.clearActiveCellWithBlocks();
-    this.onNavigateToCell?.(position);
-  }
 
-  /**
-   * Exit list and navigate to the cell below
-   */
-  private exitListToNextCell(currentPosition: CellPosition): void {
-    const nextRow = currentPosition.row + 1;
+    const cell = this.getCell(position.row, position.col);
 
-    if (nextRow < this.getRowCount()) {
-      this.navigateToCell({ row: nextRow, col: currentPosition.col });
-    } else {
-      this.clearActiveCellWithBlocks();
+    if (!cell) {
+      return;
     }
+
+    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!container) {
+      return;
+    }
+
+    const editables = container.querySelectorAll<HTMLElement>('[contenteditable="true"]');
+
+    if (editables.length === 0) {
+      return;
+    }
+
+    const target = focusLast ? editables[editables.length - 1] : editables[0];
+
+    target.focus();
+    this.onNavigateToCell?.(position);
   }
 
   /**
@@ -213,6 +189,22 @@ export class TableCellBlocks {
     const firstRow = this.gridElement.querySelector('[data-blok-table-row]');
 
     return firstRow?.querySelectorAll('[data-blok-table-cell]').length ?? 0;
+  }
+
+  /**
+   * Get a cell element by row and column index
+   */
+  private getCell(row: number, col: number): HTMLElement | null {
+    const rows = this.gridElement.querySelectorAll('[data-blok-table-row]');
+    const rowEl = rows[row];
+
+    if (!rowEl) {
+      return null;
+    }
+
+    const cells = rowEl.querySelectorAll('[data-blok-table-cell]');
+
+    return (cells[col] as HTMLElement | undefined) ?? null;
   }
 
   /**

@@ -109,4 +109,65 @@ describe('TableCellBlocks', () => {
       expect(detectMarkdownListTrigger('2. ')).toBeNull(); // Only "1. " triggers
     });
   });
+
+  describe('TableCellBlocks class', () => {
+    let mockApi: {
+      blocks: {
+        insert: ReturnType<typeof vi.fn>;
+        delete: ReturnType<typeof vi.fn>;
+        getBlockByIndex: ReturnType<typeof vi.fn>;
+        getBlockIndex: ReturnType<typeof vi.fn>;
+        getCurrentBlockIndex: ReturnType<typeof vi.fn>;
+        getBlocksCount: ReturnType<typeof vi.fn>;
+      };
+    };
+    let gridEl: HTMLElement;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+
+      mockApi = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'new-block-id' }),
+          delete: vi.fn(),
+          getBlockByIndex: vi.fn(),
+          getBlockIndex: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+        },
+      };
+
+      gridEl = document.createElement('div');
+    });
+
+    it('should instantiate with API and grid element', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      expect(cellBlocks).toBeInstanceOf(TableCellBlocks);
+    });
+
+    it('should track active cell with blocks', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      expect(cellBlocks.activeCellWithBlocks).toBeNull();
+
+      cellBlocks.setActiveCellWithBlocks({ row: 0, col: 1 });
+      expect(cellBlocks.activeCellWithBlocks).toEqual({ row: 0, col: 1 });
+
+      cellBlocks.clearActiveCellWithBlocks();
+      expect(cellBlocks.activeCellWithBlocks).toBeNull();
+    });
+  });
 });

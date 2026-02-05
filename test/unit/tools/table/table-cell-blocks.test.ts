@@ -61,4 +61,52 @@ describe('TableCellBlocks', () => {
       expect(getCellFromElement(div)).toBeNull();
     });
   });
+
+  describe('detectMarkdownListTrigger', () => {
+    it('should detect unordered list trigger "- "', async () => {
+      const { detectMarkdownListTrigger } = await import(
+        '../../../../src/tools/table/table-cell-blocks'
+      );
+
+      const result = detectMarkdownListTrigger('- ');
+      expect(result).toEqual({ style: 'unordered', textAfter: '' });
+    });
+
+    it('should detect ordered list trigger "1. "', async () => {
+      const { detectMarkdownListTrigger } = await import(
+        '../../../../src/tools/table/table-cell-blocks'
+      );
+
+      const result = detectMarkdownListTrigger('1. ');
+      expect(result).toEqual({ style: 'ordered', textAfter: '' });
+    });
+
+    it('should detect checklist trigger "[] "', async () => {
+      const { detectMarkdownListTrigger } = await import(
+        '../../../../src/tools/table/table-cell-blocks'
+      );
+
+      const result = detectMarkdownListTrigger('[] ');
+      expect(result).toEqual({ style: 'checklist', textAfter: '' });
+    });
+
+    it('should capture text after trigger', async () => {
+      const { detectMarkdownListTrigger } = await import(
+        '../../../../src/tools/table/table-cell-blocks'
+      );
+
+      const result = detectMarkdownListTrigger('- Hello world');
+      expect(result).toEqual({ style: 'unordered', textAfter: 'Hello world' });
+    });
+
+    it('should return null for non-matching content', async () => {
+      const { detectMarkdownListTrigger } = await import(
+        '../../../../src/tools/table/table-cell-blocks'
+      );
+
+      expect(detectMarkdownListTrigger('Hello world')).toBeNull();
+      expect(detectMarkdownListTrigger('--')).toBeNull();
+      expect(detectMarkdownListTrigger('2. ')).toBeNull(); // Only "1. " triggers
+    });
+  });
 });

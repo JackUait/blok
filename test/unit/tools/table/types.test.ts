@@ -19,8 +19,11 @@ describe('TableData types', () => {
     };
 
     const cell = data.content[0][1];
-    expect(typeof cell).toBe('object');
-    expect((cell as { blocks: string[] }).blocks).toEqual(['block-1', 'block-2']);
+    expect(isCellWithBlocks(cell)).toBe(true);
+
+    if (isCellWithBlocks(cell)) {
+      expect(cell.blocks).toEqual(['block-1', 'block-2']);
+    }
   });
 
   describe('isCellWithBlocks', () => {

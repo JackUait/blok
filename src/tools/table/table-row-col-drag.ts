@@ -2,6 +2,7 @@ import { CELL_ATTR, ROW_ATTR } from './table-core';
 import type { RowColAction } from './table-row-col-controls';
 
 const DRAG_THRESHOLD = 10;
+const GHOST_ATTR = 'data-blok-table-drag-ghost';
 
 /**
  * Build cumulative column edge positions from the first row's cells.
@@ -47,6 +48,9 @@ export class TableRowColDrag {
   private dragStartY = 0;
   private dropIndicator: HTMLElement | null = null;
   private dragOverlayCells: HTMLElement[] = [];
+  private ghostEl: HTMLElement | null = null;
+  private ghostOffsetX = 0;
+  private ghostOffsetY = 0;
 
   private boundDocPointerMove: (e: PointerEvent) => void;
   private boundDocPointerUp: (e: PointerEvent) => void;
@@ -88,16 +92,21 @@ export class TableRowColDrag {
 
   public cleanup(): void {
     this.grid.style.userSelect = '';
+    document.body.style.cursor = '';
 
     this.dragOverlayCells.forEach(overlayCell => {
       const el: HTMLElement = overlayCell;
 
       el.style.backgroundColor = '';
+      el.style.opacity = '';
     });
     this.dragOverlayCells = [];
 
     this.dropIndicator?.remove();
     this.dropIndicator = null;
+
+    this.ghostEl?.remove();
+    this.ghostEl = null;
 
     document.removeEventListener('pointermove', this.boundDocPointerMove);
     document.removeEventListener('pointerup', this.boundDocPointerUp);
@@ -119,6 +128,7 @@ export class TableRowColDrag {
 
     if (this.isDragging) {
       this.updateDragIndicator(e);
+      this.updateGhostPosition(e);
     }
   }
 
@@ -138,9 +148,11 @@ export class TableRowColDrag {
 
   private startDrag(): void {
     this.grid.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
 
     this.highlightSourceCells();
     this.createDropIndicator();
+    this.createGhost();
   }
 
   private highlightSourceCells(): void {
@@ -169,7 +181,8 @@ export class TableRowColDrag {
     cells.forEach(node => {
       const cellEl = node as HTMLElement;
 
-      cellEl.style.backgroundColor = '#eff6ff';
+      cellEl.style.backgroundColor = '#dbeafe';
+      cellEl.style.opacity = '0.6';
       this.dragOverlayCells.push(cellEl);
     });
   }
@@ -184,30 +197,77 @@ export class TableRowColDrag {
 
       const cellEl = cells[this.dragFromIndex] as HTMLElement;
 
-      cellEl.style.backgroundColor = '#eff6ff';
+      cellEl.style.backgroundColor = '#dbeafe';
+      cellEl.style.opacity = '0.6';
       this.dragOverlayCells.push(cellEl);
     });
   }
 
   private createDropIndicator(): void {
     this.dropIndicator = document.createElement('div');
-    this.dropIndicator.style.position = 'absolute';
-    this.dropIndicator.style.backgroundColor = '#3b82f6';
-    this.dropIndicator.style.zIndex = '5';
-    this.dropIndicator.style.pointerEvents = 'none';
+
+    const style = this.dropIndicator.style;
+
+    style.position = 'absolute';
+    style.backgroundColor = '#3b82f6';
+    style.borderRadius = '1.5px';
+    style.zIndex = '5';
+    style.pointerEvents = 'none';
     this.dropIndicator.setAttribute('contenteditable', 'false');
 
     if (this.dragType === 'row') {
-      this.dropIndicator.style.height = '2px';
-      this.dropIndicator.style.left = '0';
-      this.dropIndicator.style.right = '0';
+      style.height = '3px';
+      style.left = '0';
+      style.right = '0';
+      style.transition = 'top 100ms ease';
     } else {
-      this.dropIndicator.style.width = '2px';
-      this.dropIndicator.style.top = '0';
-      this.dropIndicator.style.bottom = '0';
+      style.width = '3px';
+      style.top = '0';
+      style.bottom = '0';
+      style.transition = 'left 100ms ease';
     }
 
     this.grid.appendChild(this.dropIndicator);
+    this.addIndicatorDots();
+  }
+
+  private addIndicatorDots(): void {
+    if (!this.dropIndicator) {
+      return;
+    }
+
+    const dotSize = 8;
+
+    const createDot = (): HTMLElement => {
+      const dot = document.createElement('div');
+      const dotStyle = dot.style;
+
+      dotStyle.position = 'absolute';
+      dotStyle.width = `${dotSize}px`;
+      dotStyle.height = `${dotSize}px`;
+      dotStyle.borderRadius = '50%';
+      dotStyle.backgroundColor = '#3b82f6';
+
+      return dot;
+    };
+
+    const dotStart = createDot();
+    const dotEnd = createDot();
+
+    if (this.dragType === 'row') {
+      dotStart.style.left = `${-dotSize / 2}px`;
+      dotStart.style.top = `${-dotSize / 2 + 1.5}px`;
+      dotEnd.style.right = `${-dotSize / 2}px`;
+      dotEnd.style.top = `${-dotSize / 2 + 1.5}px`;
+    } else {
+      dotStart.style.top = `${-dotSize / 2}px`;
+      dotStart.style.left = `${-dotSize / 2 + 1.5}px`;
+      dotEnd.style.bottom = `${-dotSize / 2}px`;
+      dotEnd.style.left = `${-dotSize / 2 + 1.5}px`;
+    }
+
+    this.dropIndicator.appendChild(dotStart);
+    this.dropIndicator.appendChild(dotEnd);
   }
 
   private updateDragIndicator(e: PointerEvent): void {
@@ -284,6 +344,108 @@ export class TableRowColDrag {
     if (dropIndex !== this.dragFromIndex) {
       this.onAction({ type: 'move-col', fromIndex: this.dragFromIndex, toIndex: dropIndex });
     }
+  }
+
+  private createGhost(): void {
+    const ghost = document.createElement('div');
+
+    ghost.setAttribute(GHOST_ATTR, '');
+    ghost.setAttribute('contenteditable', 'false');
+
+    const style = ghost.style;
+
+    style.position = 'fixed';
+    style.pointerEvents = 'none';
+    style.opacity = '0.5';
+    style.zIndex = '50';
+    style.borderRadius = '4px';
+    style.overflow = 'hidden';
+    style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+
+    this.ghostEl = ghost;
+
+    if (this.dragType === 'row') {
+      this.buildRowGhost();
+    }
+
+    if (this.dragType === 'col') {
+      this.buildColumnGhost();
+    }
+
+    document.body.appendChild(ghost);
+
+    const rect = ghost.getBoundingClientRect();
+
+    this.ghostOffsetX = rect.width / 2;
+    this.ghostOffsetY = rect.height / 2;
+
+    style.left = `${this.dragStartX - this.ghostOffsetX}px`;
+    style.top = `${this.dragStartY - this.ghostOffsetY}px`;
+  }
+
+  private buildRowGhost(): void {
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const sourceRow = rows[this.dragFromIndex] as HTMLElement | undefined;
+
+    if (!sourceRow || !this.ghostEl) {
+      return;
+    }
+
+    const ghostStyle = this.ghostEl.style;
+
+    ghostStyle.display = 'flex';
+    ghostStyle.height = `${sourceRow.offsetHeight}px`;
+
+    const cells = sourceRow.querySelectorAll(`[${CELL_ATTR}]`);
+
+    cells.forEach(cell => {
+      const cellEl = cell as HTMLElement;
+      const clone = cellEl.cloneNode(true) as HTMLElement;
+
+      clone.style.width = `${cellEl.offsetWidth}px`;
+      clone.style.flexShrink = '0';
+      clone.removeAttribute('contenteditable');
+      this.ghostEl?.appendChild(clone);
+    });
+  }
+
+  private buildColumnGhost(): void {
+    if (!this.ghostEl) {
+      return;
+    }
+
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const ghostStyle = this.ghostEl.style;
+
+    ghostStyle.display = 'flex';
+    ghostStyle.flexDirection = 'column';
+
+    rows.forEach(row => {
+      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+      if (this.dragFromIndex >= cells.length) {
+        return;
+      }
+
+      const cellEl = cells[this.dragFromIndex] as HTMLElement;
+      const clone = cellEl.cloneNode(true) as HTMLElement;
+
+      clone.style.width = `${cellEl.offsetWidth}px`;
+      clone.style.height = `${cellEl.offsetHeight}px`;
+      clone.removeAttribute('contenteditable');
+      this.ghostEl?.appendChild(clone);
+    });
+  }
+
+  private updateGhostPosition(e: PointerEvent): void {
+    if (!this.ghostEl) {
+      return;
+    }
+
+    const style = this.ghostEl.style;
+
+    style.left = `${e.clientX - this.ghostOffsetX}px`;
+    style.top = `${e.clientY - this.ghostOffsetY}px`;
   }
 
   private getRowDropIndex(relativeY: number): number {

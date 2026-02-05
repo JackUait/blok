@@ -758,6 +758,28 @@ test.describe('table tool', () => {
       await expect(page.getByText('Delete Column')).toBeVisible();
     });
 
+    test('column popover does not show move options', async ({ page }) => {
+      await createTable2x2(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(colGrip).toBeVisible();
+      await colGrip.click();
+
+      // Popover should be open
+      await expect(page.getByText('Insert Column Left')).toBeVisible();
+
+      // Move options should NOT exist
+      await expect(page.getByText('Move Column Left')).toHaveCount(0);
+      await expect(page.getByText('Move Column Right')).toHaveCount(0);
+    });
+
     test('clicking row grip opens popover menu', async ({ page }) => {
       await createTable2x2(page);
 
@@ -777,6 +799,28 @@ test.describe('table tool', () => {
       await expect(page.getByText('Insert Row Above')).toBeVisible();
       await expect(page.getByText('Insert Row Below')).toBeVisible();
       await expect(page.getByText('Delete Row')).toBeVisible();
+    });
+
+    test('row popover does not show move options', async ({ page }) => {
+      await createTable2x2(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+      await rowGrip.click();
+
+      // Popover should be open
+      await expect(page.getByText('Insert Row Above')).toBeVisible();
+
+      // Move options should NOT exist
+      await expect(page.getByText('Move Row Up')).toHaveCount(0);
+      await expect(page.getByText('Move Row Down')).toHaveCount(0);
     });
 
     test('insert row below adds a row', async ({ page }) => {
@@ -974,6 +1018,235 @@ test.describe('table tool', () => {
       const stackErrors = errors.filter(e => e.includes('stack'));
 
       expect(stackErrors).toHaveLength(0);
+    });
+
+    test('popover closes when clicking outside', async ({ page }) => {
+      await createTable2x2(page);
+
+      // Click first cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+      await rowGrip.click();
+
+      // Popover should be open
+      await expect(page.getByText('Insert Row Below')).toBeVisible();
+
+      // Click outside the popover (on the page body, away from the table)
+      await page.mouse.click(10, 10);
+
+      // Popover should be removed from the DOM
+      await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
+    });
+  });
+
+  test.describe('drag reorder', () => {
+    const ROW_GRIP_SELECTOR = '[data-blok-table-grip-row]';
+    const COL_GRIP_SELECTOR = '[data-blok-table-grip-col]';
+
+    const createTable3x3 = async (page: Page): Promise<void> => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [
+                  ['A1', 'A2', 'A3'],
+                  ['B1', 'B2', 'B3'],
+                  ['C1', 'C2', 'C3'],
+                ],
+              },
+            },
+          ],
+        },
+      });
+    };
+
+    test('dragging row grip shows ghost preview element', async ({ page }) => {
+      await createTable3x3(page);
+
+      // Click cell to show grip
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      await page.locator(CELL_SELECTOR).first().click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+
+      const gripBox = await rowGrip.boundingBox();
+
+      if (!gripBox) {
+        throw new Error('Grip not visible');
+      }
+
+      const startX = gripBox.x + gripBox.width / 2;
+      const startY = gripBox.y + gripBox.height / 2;
+
+      // Start drag — move beyond threshold (10px)
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY + 50, { steps: 5 });
+
+      // Ghost element should appear
+      const ghost = page.locator('[data-blok-table-drag-ghost]');
+
+      await expect(ghost).toBeVisible();
+
+      // Clean up
+      await page.mouse.up();
+
+      // Ghost should be removed after drop
+      await expect(ghost).toHaveCount(0);
+    });
+
+    test('dragging column grip reorders column and shows ghost', async ({ page }) => {
+      await createTable3x3(page);
+
+      // Click cell in second column to show its grip
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
+      await page.locator(CELL_SELECTOR).nth(1).click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second column grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).nth(1);
+
+      await expect(colGrip).toBeVisible();
+
+      const gripBox = await colGrip.boundingBox();
+
+      if (!gripBox) {
+        throw new Error('Grip not visible');
+      }
+
+      // Get the left edge of the table so we can drag past column 0
+      const tableBox = await page.locator(TABLE_SELECTOR).boundingBox();
+
+      if (!tableBox) {
+        throw new Error('Table not visible');
+      }
+
+      const startX = gripBox.x + gripBox.width / 2;
+      const startY = gripBox.y + gripBox.height / 2;
+      const targetX = tableBox.x;
+
+      // Drag column 1 to the left edge of the table (past column 0)
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(targetX, startY, { steps: 10 });
+
+      // Ghost should be visible during drag
+      const ghost = page.locator('[data-blok-table-drag-ghost]');
+
+      await expect(ghost).toBeVisible();
+
+      await page.mouse.up();
+
+      // Ghost removed
+      await expect(ghost).toHaveCount(0);
+
+      // Column should have been reordered: A2 is now in first column
+      const savedData = await page.evaluate(async () => {
+        return window.blokInstance?.save();
+      });
+
+      const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(tableBlock?.data.content[0][0]).toBe('A2');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(tableBlock?.data.content[0][1]).toBe('A1');
+    });
+
+    test('dragging row grip reorders row data', async ({ page }) => {
+      await createTable3x3(page);
+
+      // Click cell in first row to show its grip
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      await page.locator(CELL_SELECTOR).first().click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+
+      const gripBox = await rowGrip.boundingBox();
+
+      if (!gripBox) {
+        throw new Error('Grip not visible');
+      }
+
+      const startX = gripBox.x + gripBox.width / 2;
+      const startY = gripBox.y + gripBox.height / 2;
+
+      // Drag row 0 down past row 1 (use row height to move exactly one row)
+      const rowHeight = await page.evaluate(() => {
+        const row = document.querySelector('[data-blok-table-row]') as HTMLElement;
+
+        return row?.offsetHeight ?? 40;
+      });
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY + rowHeight, { steps: 10 });
+      await page.mouse.up();
+
+      const savedData = await page.evaluate(async () => {
+        return window.blokInstance?.save();
+      });
+
+      const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
+
+      // Row A should have moved down by one — B1 is now first row
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(tableBlock?.data.content[0][0]).toBe('B1');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(tableBlock?.data.content[1][0]).toBe('A1');
+    });
+
+    test('cursor changes to grabbing during drag', async ({ page }) => {
+      await createTable3x3(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      await page.locator(CELL_SELECTOR).first().click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+
+      const gripBox = await rowGrip.boundingBox();
+
+      if (!gripBox) {
+        throw new Error('Grip not visible');
+      }
+
+      const startX = gripBox.x + gripBox.width / 2;
+      const startY = gripBox.y + gripBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY + 50, { steps: 5 });
+
+      // Body cursor should be 'grabbing' during drag
+      const cursor = await page.evaluate(() => document.body.style.cursor);
+
+      expect(cursor).toBe('grabbing');
+
+      await page.mouse.up();
+
+      // Cursor should be restored
+      const cursorAfter = await page.evaluate(() => document.body.style.cursor);
+
+      expect(cursorAfter).toBe('');
     });
   });
 });

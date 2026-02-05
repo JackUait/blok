@@ -3,10 +3,6 @@ import {
   IconInsertBelow,
   IconInsertLeft,
   IconInsertRight,
-  IconMoveDown,
-  IconMoveLeft,
-  IconMoveRight,
-  IconMoveUp,
   IconTrash,
   IconHeading,
 } from '../../components/icons';
@@ -92,6 +88,7 @@ export class TableRowColControls {
   private boundFocusIn: (e: FocusEvent) => void;
   private boundFocusOut: (e: FocusEvent) => void;
   private boundPointerDown: (e: PointerEvent) => void;
+  private boundDocPointerDown: ((e: PointerEvent) => void) | null = null;
 
   constructor(options: TableRowColControlsOptions) {
     this.grid = options.grid;
@@ -429,6 +426,32 @@ export class TableRowColControls {
     });
 
     this.activePopover.show();
+    this.addOutsideClickListener(grip);
+  }
+
+  private addOutsideClickListener(grip: HTMLElement): void {
+    this.boundDocPointerDown = (e: PointerEvent): void => {
+      const target = e.target as Node;
+
+      if (grip.contains(target)) {
+        return;
+      }
+
+      if (this.activePopover?.hasNode(target)) {
+        return;
+      }
+
+      this.destroyPopover();
+    };
+
+    document.addEventListener('pointerdown', this.boundDocPointerDown);
+  }
+
+  private removeOutsideClickListener(): void {
+    if (this.boundDocPointerDown !== null) {
+      document.removeEventListener('pointerdown', this.boundDocPointerDown);
+      this.boundDocPointerDown = null;
+    }
   }
 
   private destroyPopover(): void {
@@ -436,13 +459,12 @@ export class TableRowColControls {
       const popover = this.activePopover;
 
       this.activePopover = null;
+      this.removeOutsideClickListener();
       popover.destroy();
     }
   }
 
   private buildColumnMenu(colIndex: number): PopoverItemParams[] {
-    const colCount = this.getColumnCount();
-
     return [
       {
         icon: IconInsertLeft,
@@ -462,25 +484,6 @@ export class TableRowColControls {
       },
       { type: PopoverItemType.Separator },
       {
-        icon: IconMoveLeft,
-        title: 'Move Column Left',
-        isDisabled: colIndex === 0,
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'move-col', fromIndex: colIndex, toIndex: colIndex - 1 });
-        },
-      },
-      {
-        icon: IconMoveRight,
-        title: 'Move Column Right',
-        isDisabled: colIndex >= colCount - 1,
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'move-col', fromIndex: colIndex, toIndex: colIndex + 1 });
-        },
-      },
-      { type: PopoverItemType.Separator },
-      {
         icon: IconTrash,
         title: 'Delete Column',
         confirmation: {
@@ -495,7 +498,6 @@ export class TableRowColControls {
   }
 
   private buildRowMenu(rowIndex: number): PopoverItemParams[] {
-    const rowCount = this.getRowCount();
     const baseItems: PopoverItemParams[] = [
       {
         icon: IconInsertAbove,
@@ -511,25 +513,6 @@ export class TableRowColControls {
         closeOnActivate: true,
         onActivate: (): void => {
           this.onAction({ type: 'insert-row-below', index: rowIndex });
-        },
-      },
-      { type: PopoverItemType.Separator },
-      {
-        icon: IconMoveUp,
-        title: 'Move Row Up',
-        isDisabled: rowIndex === 0,
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'move-row', fromIndex: rowIndex, toIndex: rowIndex - 1 });
-        },
-      },
-      {
-        icon: IconMoveDown,
-        title: 'Move Row Down',
-        isDisabled: rowIndex >= rowCount - 1,
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'move-row', fromIndex: rowIndex, toIndex: rowIndex + 1 });
         },
       },
     ];

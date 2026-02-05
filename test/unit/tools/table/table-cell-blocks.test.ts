@@ -245,4 +245,119 @@ describe('TableCellBlocks', () => {
       );
     });
   });
+
+  describe('handleCellInput', () => {
+    let mockApi: {
+      blocks: {
+        insert: ReturnType<typeof vi.fn>;
+      };
+    };
+    let gridEl: HTMLElement;
+    let cell: HTMLElement;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+
+      mockApi = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'list-item-1' }),
+        },
+      };
+
+      gridEl = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      gridEl.appendChild(row);
+
+      cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('contenteditable', 'true');
+      row.appendChild(cell);
+    });
+
+    it('should detect markdown trigger and convert cell', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      const convertSpy = vi
+        .spyOn(cellBlocks, 'convertCellToBlocks')
+        .mockResolvedValue({ blocks: ['b1'] });
+
+      cell.textContent = '- ';
+
+      await cellBlocks.handleCellInput(cell);
+
+      expect(convertSpy).toHaveBeenCalledWith(cell, 'unordered', '');
+    });
+
+    it('should pass text after trigger to convertCellToBlocks', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      const convertSpy = vi
+        .spyOn(cellBlocks, 'convertCellToBlocks')
+        .mockResolvedValue({ blocks: ['b1'] });
+
+      cell.textContent = '1. Start typing';
+
+      await cellBlocks.handleCellInput(cell);
+
+      expect(convertSpy).toHaveBeenCalledWith(cell, 'ordered', 'Start typing');
+    });
+
+    it('should not convert if no markdown trigger detected', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      const convertSpy = vi
+        .spyOn(cellBlocks, 'convertCellToBlocks')
+        .mockResolvedValue({ blocks: ['b1'] });
+
+      cell.textContent = 'Regular text';
+
+      await cellBlocks.handleCellInput(cell);
+
+      expect(convertSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not convert if cell already has blocks', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      const convertSpy = vi
+        .spyOn(cellBlocks, 'convertCellToBlocks')
+        .mockResolvedValue({ blocks: ['b1'] });
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-table-cell-blocks', '');
+      cell.appendChild(container);
+      cell.setAttribute('contenteditable', 'false');
+
+      await cellBlocks.handleCellInput(cell);
+
+      expect(convertSpy).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -141,6 +141,30 @@ export class TableCellBlocks {
   }
 
   /**
+   * Handle input event on a cell to detect markdown triggers
+   */
+  async handleCellInput(cell: HTMLElement): Promise<void> {
+    // Skip if cell already has blocks
+    if (cell.querySelector(`[${CELL_BLOCKS_ATTR}]`)) {
+      return;
+    }
+
+    // Skip if not contenteditable
+    if (cell.getAttribute('contenteditable') !== 'true') {
+      return;
+    }
+
+    const content = cell.textContent ?? '';
+    const trigger = detectMarkdownListTrigger(content);
+
+    if (!trigger) {
+      return;
+    }
+
+    await this.convertCellToBlocks(cell, trigger.style, trigger.textAfter);
+  }
+
+  /**
    * Clean up event listeners
    */
   destroy(): void {

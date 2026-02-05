@@ -342,8 +342,31 @@ export class TableCellBlocks {
   }
 
   /**
+   * Ensure a cell has at least one block.
+   * If the blocks container is empty, insert an empty paragraph.
+   */
+  public ensureCellHasBlock(cell: HTMLElement): void {
+    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`) as HTMLElement | null;
+
+    if (!container) {
+      return;
+    }
+
+    const hasBlocks = container.querySelector('[data-blok-block]') !== null;
+
+    if (hasBlocks) {
+      return;
+    }
+
+    const block = this.api.blocks.insert('paragraph', { text: '' }, {}, undefined, true);
+
+    container.appendChild(block.holder);
+  }
+
+  /**
    * Handle block mutation events from the editor.
    * When a block is added, check if it should be claimed by a cell.
+   * When a block is removed, ensure no cell is left empty.
    */
   private handleBlockMutation = (data: unknown): void => {
     if (!this.isBlockMutationEvent(data)) {
@@ -351,6 +374,17 @@ export class TableCellBlocks {
     }
 
     const { type, detail } = data.event;
+
+    if (type === 'block-removed') {
+      // Check all cells in grid for empty containers
+      const cells = this.gridElement.querySelectorAll(`[${CELL_ATTR}]`);
+
+      cells.forEach(cell => {
+        this.ensureCellHasBlock(cell as HTMLElement);
+      });
+
+      return;
+    }
 
     if (type !== 'block-added') {
       return;

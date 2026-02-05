@@ -852,6 +852,147 @@ describe('TableCellBlocks', () => {
     });
   });
 
+  describe('empty cell guarantee', () => {
+    it('should insert a paragraph block when cell has no blocks', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'replacement-p',
+        holder: mockBlockHolder,
+      });
+
+      const api = {
+        blocks: { insert: mockInsert },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      // Container is empty — no block holders
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      cellBlocks.ensureCellHasBlock(cell);
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: '' },
+        expect.anything(),
+        undefined,
+        true
+      );
+      expect(container.contains(mockBlockHolder)).toBe(true);
+    });
+
+    it('should NOT insert a block when cell already has blocks', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockInsert = vi.fn();
+
+      const api = {
+        blocks: { insert: mockInsert },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      const existingBlock = document.createElement('div');
+      existingBlock.setAttribute('data-blok-block', 'existing-1');
+      container.appendChild(existingBlock);
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      cellBlocks.ensureCellHasBlock(cell);
+
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+
+    it('should auto-fill cell when block-removed event leaves cell empty', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'auto-p',
+        holder: mockBlockHolder,
+      });
+
+      let blockChangedCallback: ((data: unknown) => void) | undefined;
+
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlockIndex: vi.fn(),
+          getBlockByIndex: vi.fn(),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+        },
+        events: {
+          on: vi.fn((eventName: string, cb: (data: unknown) => void) => {
+            if (eventName === 'block changed') {
+              blockChangedCallback = cb;
+            }
+          }),
+          off: vi.fn(),
+        },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      // Block that will be "removed"
+      const removedBlock = document.createElement('div');
+      removedBlock.setAttribute('data-blok-block', 'removed-1');
+      container.appendChild(removedBlock);
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      // Simulate block removal — remove from DOM, then fire event
+      removedBlock.remove();
+
+      blockChangedCallback?.({
+        event: {
+          type: 'block-removed',
+          detail: {
+            target: { id: 'removed-1', holder: removedBlock },
+            index: 0,
+          },
+        },
+      });
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: '' },
+        expect.anything(),
+        undefined,
+        true
+      );
+    });
+  });
+
   describe('initializeCells', () => {
     it('should create a paragraph block for each empty cell', async () => {
       const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');

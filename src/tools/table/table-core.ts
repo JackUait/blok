@@ -1,5 +1,9 @@
 import { twMerge } from '../../components/utils/tw';
 
+import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
+import type { CellContent } from './types';
+import { isCellWithBlocks } from './types';
+
 export const ROW_ATTR = 'data-blok-table-row';
 export const CELL_ATTR = 'data-blok-table-cell';
 
@@ -64,7 +68,7 @@ export class TableGrid {
   /**
    * Fill grid cells with content from 2D array
    */
-  public fillGrid(table: HTMLElement, content: string[][]): void {
+  public fillGrid(table: HTMLElement, content: CellContent[][]): void {
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
 
     content.forEach((rowData, rowIndex) => {
@@ -81,6 +85,11 @@ export class TableGrid {
 
         const cell = cells[colIndex] as HTMLElement;
 
+        // Skip block-based cells - they're mounted separately
+        if (isCellWithBlocks(cellContent)) {
+          return;
+        }
+
         cell.innerHTML = cellContent;
       });
     });
@@ -89,13 +98,13 @@ export class TableGrid {
   /**
    * Extract 2D array from grid DOM
    */
-  public getData(table: HTMLElement): string[][] {
+  public getData(table: HTMLElement): CellContent[][] {
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
-    const result: string[][] = [];
+    const result: CellContent[][] = [];
 
     rows.forEach(row => {
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-      const rowData: string[] = [];
+      const rowData: CellContent[] = [];
 
       cells.forEach(cell => {
         rowData.push(this.getCellContent(cell as HTMLElement));
@@ -402,9 +411,21 @@ export class TableGrid {
   }
 
   /**
-   * Get cell content HTML
+   * Get cell content - returns string for plain text or block object for nested blocks
    */
-  private getCellContent(cell: HTMLElement): string {
+  private getCellContent(cell: HTMLElement): CellContent {
+    // Check if cell has blocks
+    const blocksContainer = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (blocksContainer) {
+      const blockElements = blocksContainer.querySelectorAll('[data-blok-block]');
+      const blockIds = Array.from(blockElements)
+        .map(el => el.getAttribute('data-blok-block') ?? '')
+        .filter(id => id !== '');
+
+      return { blocks: blockIds };
+    }
+
     return cell.innerHTML;
   }
 

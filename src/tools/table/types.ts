@@ -10,9 +10,9 @@ export type CellContent = string | { blocks: string[] };
 /**
  * Type guard to check if cell content contains blocks
  */
-export function isCellWithBlocks(cell: CellContent): cell is { blocks: string[] } {
+export const isCellWithBlocks = (cell: CellContent): cell is { blocks: string[] } => {
   return typeof cell === 'object' && cell !== null && 'blocks' in cell;
-}
+};
 
 /**
  * Data format for the Table tool.

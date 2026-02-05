@@ -28,7 +28,7 @@ function fillWithBlocks(grid: TableGrid, element: HTMLElement, labels: string[][
 
       const blockHolder = document.createElement('div');
 
-      blockHolder.setAttribute('data-blok-block', label);
+      blockHolder.setAttribute('data-blok-id', label);
       container.appendChild(blockHolder);
     });
   });
@@ -146,7 +146,7 @@ describe('TableGrid', () => {
       const container = cell.querySelector('[data-blok-table-cell-blocks]') as HTMLElement;
       const blockHolder = document.createElement('div');
 
-      blockHolder.setAttribute('data-blok-block', 'block-123');
+      blockHolder.setAttribute('data-blok-id', 'block-123');
       container.appendChild(blockHolder);
 
       const data = grid.getData(gridEl);
@@ -451,7 +451,7 @@ describe('TableGrid', () => {
 
       const cell = grid.getCell(element, 1, 0);
       const container = cell?.querySelector('[data-blok-table-cell-blocks]');
-      const block = container?.querySelector('[data-blok-block="C"]');
+      const block = container?.querySelector('[data-blok-id="C"]');
 
       expect(block).not.toBeNull();
     });

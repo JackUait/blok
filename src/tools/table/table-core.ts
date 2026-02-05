@@ -396,9 +396,9 @@ export class TableGrid {
       return { blocks: [] };
     }
 
-    const blockElements = blocksContainer.querySelectorAll('[data-blok-block]');
+    const blockElements = blocksContainer.querySelectorAll('[data-blok-id]');
     const blockIds = Array.from(blockElements)
-      .map(el => el.getAttribute('data-blok-block') ?? '')
+      .map(el => el.getAttribute('data-blok-id') ?? '')
       .filter(id => id !== '');
 
     return { blocks: blockIds };

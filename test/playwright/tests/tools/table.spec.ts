@@ -201,8 +201,32 @@ test.describe('table tool', () => {
       expect(tableBlock).toBeDefined();
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(tableBlock?.data.withHeadings).toBe(true);
+
+      // Cells now contain block references, not strings
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content).toStrictEqual([['Name', 'Value'], ['foo', 'bar']]);
+      const content = tableBlock?.data.content as { blocks: string[] }[][];
+
+      expect(content).toHaveLength(2);
+      expect(content[0]).toHaveLength(2);
+
+      // Each cell should have a blocks array with at least one block ID
+      for (const row of content) {
+        for (const cell of row) {
+          expect(cell).toHaveProperty('blocks');
+          expect(cell.blocks.length).toBeGreaterThanOrEqual(1);
+        }
+      }
+
+      // Verify the paragraph blocks contain the original text
+      const paragraphBlocks = savedData?.blocks.filter((b: { type: string }) => b.type === 'paragraph');
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const paragraphTexts = paragraphBlocks?.map((b: { data: { text: string } }) => b.data.text) as string[];
+
+      expect(paragraphTexts).toContain('Name');
+      expect(paragraphTexts).toContain('Value');
+      expect(paragraphTexts).toContain('foo');
+      expect(paragraphTexts).toContain('bar');
     });
   });
 
@@ -223,25 +247,36 @@ test.describe('table tool', () => {
         },
       });
 
+      // Click the contenteditable paragraph block inside the first cell
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
-      await firstCell.click();
+      await firstCellEditable.click();
       await page.keyboard.type('Hello');
 
       const savedData = await page.evaluate(async () => {
         return window.blokInstance?.save();
       });
 
+      // The cell's paragraph block should contain the typed text
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const content = tableBlock?.data.content as { blocks: string[] }[][];
+      const firstCellBlockId = content[0][0].blocks[0];
+
+      // Find the paragraph block with this ID
+      const cellParagraph = savedData?.blocks.find(
+        (b: { id?: string }) => b.id === firstCellBlockId
+      );
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content[0][0]).toBe('Hello');
+      expect((cellParagraph as { data: { text: string } })?.data.text).toBe('Hello');
     });
   });
 
   test.describe('cell focus', () => {
-    test('focused cell shows blue selection border', async ({ page }) => {
+    test('focused cell shows grip pills as active indicator', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -257,27 +292,21 @@ test.describe('table tool', () => {
         },
       });
 
+      // Click the contenteditable inside the first cell to trigger focus
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
-      await firstCell.click();
+      await firstCellEditable.click();
 
-      // Right and bottom borders should be blue, box-shadow provides top/left
-      const styles = await firstCell.evaluate(el => {
-        const s = window.getComputedStyle(el);
+      // In the always-blocks model, cells are not contenteditable so they don't get
+      // browser focus styling. The focused cell is indicated by visible grip pills.
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator('[data-blok-table-grip-col]').first();
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator('[data-blok-table-grip-row]').first();
 
-        return {
-          borderRightColor: s.borderRightColor,
-          borderBottomColor: s.borderBottomColor,
-          boxShadow: s.boxShadow,
-        };
-      });
-
-      const blue = 'rgb(59, 130, 246)';
-
-      expect(styles.borderRightColor).toBe(blue);
-      expect(styles.borderBottomColor).toBe(blue);
-      expect(styles.boxShadow).toContain(blue);
+      await expect(colGrip).toBeVisible({ timeout: 2000 });
+      await expect(rowGrip).toBeVisible({ timeout: 2000 });
     });
 
     test('unfocused cell has no selection border', async ({ page }) => {
@@ -349,7 +378,7 @@ test.describe('table tool', () => {
       expect(focusedText).toBe('B');
     });
 
-    test('enter key navigates to cell below', async ({ page }) => {
+    test('enter key creates new block in same cell instead of navigating', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -365,17 +394,37 @@ test.describe('table tool', () => {
         },
       });
 
+      // Click the contenteditable inside the first cell
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
-      await firstCell.click();
+      await firstCellEditable.click();
+
+      // Move caret to end of text
+      await page.keyboard.press('End');
       await page.keyboard.press('Enter');
 
-      const focusedText = await page.evaluate(() => {
-        return document.activeElement?.textContent;
+      // Focus should still be within the first cell (not navigated to cell below)
+      const focusedCellIndex = await page.evaluate(() => {
+        const activeEl = document.activeElement;
+
+        if (!activeEl) {
+          return -1;
+        }
+
+        const cell = activeEl.closest('[data-blok-table-cell]');
+
+        if (!cell) {
+          return -1;
+        }
+
+        const allCells = Array.from(document.querySelectorAll('[data-blok-table-cell]'));
+
+        return allCells.indexOf(cell);
       });
 
-      expect(focusedText).toBe('C');
+      // Index 0 = first cell. Enter should keep focus in the same cell.
+      expect(focusedCellIndex).toBe(0);
     });
   });
 
@@ -638,11 +687,13 @@ test.describe('table tool', () => {
 
       await addRowBtn.click();
 
-      // Type in the new row's first cell
+      // Type in the new row's first cell — click the contenteditable inside
       // eslint-disable-next-line playwright/no-nth-methods -- nth(2) + first() needed to target the newly added row's first cell
-      const newCell = page.locator('[data-blok-table-row]').nth(2).locator(CELL_SELECTOR).first();
+      const newCellEditable = page.locator('[data-blok-table-row]').nth(2)
+        .locator(CELL_SELECTOR).first()
+        .locator('[contenteditable="true"]').first();
 
-      await newCell.click();
+      await newCellEditable.click();
       await page.keyboard.type('New');
 
       const savedData = await page.evaluate(async () => {
@@ -652,9 +703,22 @@ test.describe('table tool', () => {
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content).toHaveLength(3);
+      const content = tableBlock?.data.content as { blocks: string[] }[][];
+
+      expect(content).toHaveLength(3);
+
+      // The new row's first cell should have a block
+      const newCellBlockId = content[2][0].blocks[0];
+
+      expect(newCellBlockId).toBeDefined();
+
+      // Find the paragraph block and verify it contains 'New'
+      const cellParagraph = savedData?.blocks.find(
+        (b: { id?: string }) => b.id === newCellBlockId
+      );
+
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content[2][0]).toBe('New');
+      expect((cellParagraph as { data: { text: string } })?.data.text).toBe('New');
     });
 
     test('add controls are not present in readOnly mode', async ({ page }) => {
@@ -979,11 +1043,11 @@ test.describe('table tool', () => {
 
       await createTable2x2(page);
 
-      // Click first cell to show grips
+      // Click contenteditable inside first cell to show grips
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
 
-      await firstCell.click();
+      await firstCellEditable.click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
@@ -1001,9 +1065,9 @@ test.describe('table tool', () => {
       // Popover should be fully removed from the DOM after closing
       await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
 
-      // Click a cell to re-show grips, then click grip again to reopen popover
+      // Click contenteditable inside a cell to re-show grips, then click grip again to reopen popover
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      await page.locator(CELL_SELECTOR).first().click();
+      await page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first().click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const rowGripAfter = page.locator(ROW_GRIP_SELECTOR).first();
@@ -1112,9 +1176,9 @@ test.describe('table tool', () => {
     test('dragging column grip reorders column and shows ghost', async ({ page }) => {
       await createTable3x3(page);
 
-      // Click cell in second column to show its grip
+      // Click contenteditable in second column cell to show its grip
       // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
-      await page.locator(CELL_SELECTOR).nth(1).click();
+      await page.locator(CELL_SELECTOR).nth(1).locator('[contenteditable="true"]').first().click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second column grip
       const colGrip = page.locator(COL_GRIP_SELECTOR).nth(1);
@@ -1154,24 +1218,24 @@ test.describe('table tool', () => {
       await expect(ghost).toHaveCount(0);
 
       // Column should have been reordered: A2 is now in first column
-      const savedData = await page.evaluate(async () => {
-        return window.blokInstance?.save();
-      });
+      // Verify by checking the text content of cells in the first row
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific cells
+      const firstCellText = await firstRow.locator(CELL_SELECTOR).nth(0).textContent();
+      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific cells
+      const secondCellText = await firstRow.locator(CELL_SELECTOR).nth(1).textContent();
 
-      const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content[0][0]).toBe('A2');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content[0][1]).toBe('A1');
+      expect(firstCellText?.trim()).toBe('A2');
+      expect(secondCellText?.trim()).toBe('A1');
     });
 
     test('dragging row grip reorders row data', async ({ page }) => {
       await createTable3x3(page);
 
-      // Click cell in first row to show its grip
+      // Click contenteditable in first cell to show its grip
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      await page.locator(CELL_SELECTOR).first().click();
+      await page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first().click();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
       const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
@@ -1199,17 +1263,18 @@ test.describe('table tool', () => {
       await page.mouse.move(startX, startY + rowHeight, { steps: 10 });
       await page.mouse.up();
 
-      const savedData = await page.evaluate(async () => {
-        return window.blokInstance?.save();
-      });
-
-      const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
-
       // Row A should have moved down by one — B1 is now first row
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content[0][0]).toBe('B1');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(tableBlock?.data.content[1][0]).toBe('A1');
+      // Verify by checking the text content of cells
+      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific rows
+      const firstRowFirstCell = page.locator('[data-blok-table-row]').nth(0).locator(CELL_SELECTOR).first();
+      // eslint-disable-next-line playwright/no-nth-methods -- nth() needed to target specific rows
+      const secondRowFirstCell = page.locator('[data-blok-table-row]').nth(1).locator(CELL_SELECTOR).first();
+
+      const firstRowText = await firstRowFirstCell.textContent();
+      const secondRowText = await secondRowFirstCell.textContent();
+
+      expect(firstRowText?.trim()).toBe('B1');
+      expect(secondRowText?.trim()).toBe('A1');
     });
 
     test('cursor changes to grabbing during drag', async ({ page }) => {

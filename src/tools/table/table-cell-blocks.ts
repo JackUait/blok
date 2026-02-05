@@ -352,7 +352,7 @@ export class TableCellBlocks {
       return;
     }
 
-    const hasBlocks = container.querySelector('[data-blok-block]') !== null;
+    const hasBlocks = container.querySelector('[data-blok-id]') !== null;
 
     if (hasBlocks) {
       return;

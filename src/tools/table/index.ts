@@ -645,8 +645,8 @@ export class Table implements BlockTool {
     const blockIds: string[] = [];
 
     row.querySelectorAll(`[${CELL_BLOCKS_ATTR}]`).forEach(container => {
-      container.querySelectorAll('[data-blok-block]').forEach(block => {
-        const id = block.getAttribute('data-blok-block');
+      container.querySelectorAll('[data-blok-id]').forEach(block => {
+        const id = block.getAttribute('data-blok-id');
 
         if (id) {
           blockIds.push(id);
@@ -682,8 +682,8 @@ export class Table implements BlockTool {
         return;
       }
 
-      container.querySelectorAll('[data-blok-block]').forEach(block => {
-        const id = block.getAttribute('data-blok-block');
+      container.querySelectorAll('[data-blok-id]').forEach(block => {
+        const id = block.getAttribute('data-blok-id');
 
         if (id) {
           blockIds.push(id);

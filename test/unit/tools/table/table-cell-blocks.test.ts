@@ -27,7 +27,7 @@ describe('TableCellBlocks', () => {
       cell.appendChild(container);
 
       const block = document.createElement('div');
-      block.setAttribute('data-blok-block', 'block-1');
+      block.setAttribute('data-blok-id', 'block-1');
       container.appendChild(block);
 
       const content = document.createElement('div');
@@ -157,7 +157,7 @@ describe('TableCellBlocks', () => {
 
       const block = document.createElement('div');
 
-      block.setAttribute('data-blok-block', `blk-${Math.random()}`);
+      block.setAttribute('data-blok-id', `blk-${Math.random()}`);
 
       const editable = document.createElement('div');
 
@@ -312,7 +312,7 @@ describe('TableCellBlocks', () => {
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0 = document.createElement('div');
-      block0.setAttribute('data-blok-block', 'b0');
+      block0.setAttribute('data-blok-id', 'b0');
       const editable0 = document.createElement('div');
       editable0.setAttribute('contenteditable', 'true');
       block0.appendChild(editable0);
@@ -325,7 +325,7 @@ describe('TableCellBlocks', () => {
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
-      block1.setAttribute('data-blok-block', 'b1');
+      block1.setAttribute('data-blok-id', 'b1');
       const editable1 = document.createElement('div');
       editable1.setAttribute('contenteditable', 'true');
       block1.appendChild(editable1);
@@ -363,12 +363,12 @@ describe('TableCellBlocks', () => {
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0a = document.createElement('div');
-      block0a.setAttribute('data-blok-block', 'b0a');
+      block0a.setAttribute('data-blok-id', 'b0a');
       const editable0a = document.createElement('div');
       editable0a.setAttribute('contenteditable', 'true');
       block0a.appendChild(editable0a);
       const block0b = document.createElement('div');
-      block0b.setAttribute('data-blok-block', 'b0b');
+      block0b.setAttribute('data-blok-id', 'b0b');
       const editable0b = document.createElement('div');
       editable0b.setAttribute('contenteditable', 'true');
       block0b.appendChild(editable0b);
@@ -382,7 +382,7 @@ describe('TableCellBlocks', () => {
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
-      block1.setAttribute('data-blok-block', 'b1');
+      block1.setAttribute('data-blok-id', 'b1');
       const editable1 = document.createElement('div');
       editable1.setAttribute('contenteditable', 'true');
       block1.appendChild(editable1);
@@ -420,7 +420,7 @@ describe('TableCellBlocks', () => {
       const cont00 = document.createElement('div');
       cont00.setAttribute(CELL_BLOCKS_ATTR, '');
       const blk00 = document.createElement('div');
-      blk00.setAttribute('data-blok-block', 'b00');
+      blk00.setAttribute('data-blok-id', 'b00');
       const ed00 = document.createElement('div');
       ed00.setAttribute('contenteditable', 'true');
       blk00.appendChild(ed00);
@@ -436,7 +436,7 @@ describe('TableCellBlocks', () => {
       const cont10 = document.createElement('div');
       cont10.setAttribute(CELL_BLOCKS_ATTR, '');
       const blk10 = document.createElement('div');
-      blk10.setAttribute('data-blok-block', 'b10');
+      blk10.setAttribute('data-blok-id', 'b10');
       const ed10 = document.createElement('div');
       ed10.setAttribute('contenteditable', 'true');
       blk10.appendChild(ed10);
@@ -478,7 +478,7 @@ describe('TableCellBlocks', () => {
       // Existing block already in cell
       const existingBlock = document.createElement('div');
 
-      existingBlock.setAttribute('data-blok-block', 'existing-1');
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
       container.appendChild(existingBlock);
       cell.appendChild(container);
       row.appendChild(cell);
@@ -487,7 +487,7 @@ describe('TableCellBlocks', () => {
       // New block holder (not yet in cell — simulating it landing in main editor)
       const newBlockHolder = document.createElement('div');
 
-      newBlockHolder.setAttribute('data-blok-block', 'new-1');
+      newBlockHolder.setAttribute('data-blok-id', 'new-1');
 
       const api = {
         blocks: {
@@ -535,7 +535,7 @@ describe('TableCellBlocks', () => {
 
       const existingBlock = document.createElement('div');
 
-      existingBlock.setAttribute('data-blok-block', 'existing-1');
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
       container.appendChild(existingBlock);
       cell.appendChild(container);
       row.appendChild(cell);
@@ -543,7 +543,7 @@ describe('TableCellBlocks', () => {
 
       const newBlockHolder = document.createElement('div');
 
-      newBlockHolder.setAttribute('data-blok-block', 'new-1');
+      newBlockHolder.setAttribute('data-blok-id', 'new-1');
 
       const api = {
         blocks: {
@@ -629,7 +629,7 @@ describe('TableCellBlocks', () => {
 
       const existingBlock = document.createElement('div');
 
-      existingBlock.setAttribute('data-blok-block', 'existing-1');
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
       container.appendChild(existingBlock);
       cell.appendChild(container);
       row.appendChild(cell);
@@ -637,7 +637,7 @@ describe('TableCellBlocks', () => {
 
       const newBlockHolder = document.createElement('div');
 
-      newBlockHolder.setAttribute('data-blok-block', 'new-1');
+      newBlockHolder.setAttribute('data-blok-id', 'new-1');
 
       const api = {
         blocks: {
@@ -702,13 +702,13 @@ describe('TableCellBlocks', () => {
 
       const existingBlock = document.createElement('div');
 
-      existingBlock.setAttribute('data-blok-block', 'existing-1');
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
       container.appendChild(existingBlock);
 
       // New block already in the container (already claimed)
       const newBlockHolder = document.createElement('div');
 
-      newBlockHolder.setAttribute('data-blok-block', 'new-1');
+      newBlockHolder.setAttribute('data-blok-id', 'new-1');
       container.appendChild(newBlockHolder);
 
       cell.appendChild(container);
@@ -777,7 +777,7 @@ describe('TableCellBlocks', () => {
 
       const existingBlock = document.createElement('div');
 
-      existingBlock.setAttribute('data-blok-block', 'existing-1');
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
       container.appendChild(existingBlock);
       cell.appendChild(container);
       row.appendChild(cell);
@@ -786,7 +786,7 @@ describe('TableCellBlocks', () => {
       // A block not in any cell (previous to index 0)
       const outsideBlock = document.createElement('div');
 
-      outsideBlock.setAttribute('data-blok-block', 'outside-1');
+      outsideBlock.setAttribute('data-blok-id', 'outside-1');
 
       const api = {
         blocks: {
@@ -820,11 +820,11 @@ describe('TableCellBlocks', () => {
 
       const outsideBlock1 = document.createElement('div');
 
-      outsideBlock1.setAttribute('data-blok-block', 'out-1');
+      outsideBlock1.setAttribute('data-blok-id', 'out-1');
 
       const outsideBlock2 = document.createElement('div');
 
-      outsideBlock2.setAttribute('data-blok-block', 'out-2');
+      outsideBlock2.setAttribute('data-blok-id', 'out-2');
 
       const api = {
         blocks: {
@@ -911,7 +911,7 @@ describe('TableCellBlocks', () => {
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       const existingBlock = document.createElement('div');
-      existingBlock.setAttribute('data-blok-block', 'existing-1');
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
       container.appendChild(existingBlock);
       cell.appendChild(container);
       row.appendChild(cell);
@@ -962,7 +962,7 @@ describe('TableCellBlocks', () => {
 
       // Block that will be "removed"
       const removedBlock = document.createElement('div');
-      removedBlock.setAttribute('data-blok-block', 'removed-1');
+      removedBlock.setAttribute('data-blok-id', 'removed-1');
       container.appendChild(removedBlock);
       cell.appendChild(container);
       row.appendChild(cell);
@@ -1154,7 +1154,7 @@ describe('TableCellBlocks', () => {
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       const block = document.createElement('div');
 
-      block.setAttribute('data-blok-block', 'b1');
+      block.setAttribute('data-blok-id', 'b1');
       const editable = document.createElement('div');
 
       editable.setAttribute('contenteditable', 'true');

@@ -23,7 +23,7 @@ const createMockAPI = (overrides: Partial<API> = {}): API => ({
     insert: () => {
       const holder = document.createElement('div');
 
-      holder.setAttribute('data-blok-block', `mock-${Math.random().toString(36).slice(2, 8)}`);
+      holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
 
       return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
     },
@@ -112,7 +112,7 @@ describe('Table Tool', () => {
       const firstCell = element.querySelector('[data-blok-table-cell]');
       const blocksContainer = firstCell?.querySelector('[data-blok-table-cell-blocks]');
       expect(blocksContainer).not.toBeNull();
-      expect(blocksContainer?.querySelector('[data-blok-block]')).not.toBeNull();
+      expect(blocksContainer?.querySelector('[data-blok-id]')).not.toBeNull();
     });
 
     it('respects config rows and cols for empty tables', () => {
@@ -219,7 +219,7 @@ describe('Table Tool', () => {
 
       const block = document.createElement('div');
 
-      block.setAttribute('data-blok-block', 'list-1');
+      block.setAttribute('data-blok-id', 'list-1');
       container.appendChild(block);
 
       cell.appendChild(container);
@@ -252,7 +252,7 @@ describe('Table Tool', () => {
       ['list-1', 'list-2', 'list-3'].forEach(id => {
         const block = document.createElement('div');
 
-        block.setAttribute('data-blok-block', id);
+        block.setAttribute('data-blok-id', id);
         container.appendChild(block);
       });
 
@@ -910,7 +910,7 @@ describe('Table Tool', () => {
 
       const block = document.createElement('div');
 
-      block.setAttribute('data-blok-block', 'list-block-1');
+      block.setAttribute('data-blok-id', 'list-block-1');
       container.appendChild(block);
 
       firstCell.appendChild(container);
@@ -943,7 +943,7 @@ describe('Table Tool', () => {
 
       const block1 = document.createElement('div');
 
-      block1.setAttribute('data-blok-block', 'list-block-1');
+      block1.setAttribute('data-blok-id', 'list-block-1');
       container1.appendChild(block1);
       firstCell.appendChild(container1);
 
@@ -959,7 +959,7 @@ describe('Table Tool', () => {
 
       const block2 = document.createElement('div');
 
-      block2.setAttribute('data-blok-block', 'list-block-2');
+      block2.setAttribute('data-blok-id', 'list-block-2');
       container2.appendChild(block2);
       secondCell.appendChild(container2);
 
@@ -1020,7 +1020,7 @@ describe('Table Tool', () => {
 
       const block = document.createElement('div');
 
-      block.setAttribute('data-blok-block', 'list-block-col-1');
+      block.setAttribute('data-blok-id', 'list-block-col-1');
       container.appendChild(block);
 
       secondRowFirstCell.appendChild(container);
@@ -1051,7 +1051,7 @@ describe('Table Tool', () => {
 
       const block1 = document.createElement('div');
 
-      block1.setAttribute('data-blok-block', 'block-row-0');
+      block1.setAttribute('data-blok-id', 'block-row-0');
       container1.appendChild(block1);
       cell1.appendChild(container1);
 
@@ -1067,7 +1067,7 @@ describe('Table Tool', () => {
 
       const block2 = document.createElement('div');
 
-      block2.setAttribute('data-blok-block', 'block-row-1');
+      block2.setAttribute('data-blok-id', 'block-row-1');
       container2.appendChild(block2);
       cell2.appendChild(container2);
 
@@ -1127,7 +1127,7 @@ describe('Table Tool', () => {
       ['block-1', 'block-2', 'block-3'].forEach(id => {
         const block = document.createElement('div');
 
-        block.setAttribute('data-blok-block', id);
+        block.setAttribute('data-blok-id', id);
         container.appendChild(block);
       });
 
@@ -1163,7 +1163,7 @@ describe('Table Tool', () => {
             insertCounter++;
             const holder = document.createElement('div');
 
-            holder.setAttribute('data-blok-block', `mock-block-${insertCounter}`);
+            holder.setAttribute('data-blok-id', `mock-block-${insertCounter}`);
 
             return { id: `mock-block-${insertCounter}`, holder };
           }),
@@ -1198,7 +1198,7 @@ describe('Table Tool', () => {
 
       const block = document.createElement('div');
 
-      block.setAttribute('data-blok-block', 'list-block-to-delete');
+      block.setAttribute('data-blok-id', 'list-block-to-delete');
       container.appendChild(block);
 
       firstRowCell.appendChild(container);
@@ -1237,7 +1237,7 @@ describe('Table Tool', () => {
             insertCounter++;
             const holder = document.createElement('div');
 
-            holder.setAttribute('data-blok-block', `mock-block-${insertCounter}`);
+            holder.setAttribute('data-blok-id', `mock-block-${insertCounter}`);
 
             return { id: `mock-block-${insertCounter}`, holder };
           }),
@@ -1274,7 +1274,7 @@ describe('Table Tool', () => {
 
         const block = document.createElement('div');
 
-        block.setAttribute('data-blok-block', `col-block-${rowIndex}`);
+        block.setAttribute('data-blok-id', `col-block-${rowIndex}`);
         container.appendChild(block);
 
         cell.appendChild(container);
@@ -1307,7 +1307,7 @@ describe('Table Tool', () => {
             insertCounter++;
             const holder = document.createElement('div');
 
-            holder.setAttribute('data-blok-block', `mock-block-${insertCounter}`);
+            holder.setAttribute('data-blok-id', `mock-block-${insertCounter}`);
 
             return { id: `mock-block-${insertCounter}`, holder };
           }),
@@ -1351,7 +1351,7 @@ describe('Table Tool', () => {
         insertCallCount++;
         const holder = document.createElement('div');
 
-        holder.setAttribute('data-blok-block', `auto-p-${insertCallCount}`);
+        holder.setAttribute('data-blok-id', `auto-p-${insertCallCount}`);
 
         return { id: `auto-p-${insertCallCount}`, holder };
       });
@@ -1399,7 +1399,7 @@ describe('Table Tool', () => {
         const container = cell.querySelector('[data-blok-table-cell-blocks]');
 
         expect(container).not.toBeNull();
-        expect(container?.querySelector('[data-blok-block]')).not.toBeNull();
+        expect(container?.querySelector('[data-blok-id]')).not.toBeNull();
       });
 
       document.body.removeChild(element);
@@ -1411,7 +1411,7 @@ describe('Table Tool', () => {
         insertCallCount++;
         const holder = document.createElement('div');
 
-        holder.setAttribute('data-blok-block', `auto-p-${insertCallCount}`);
+        holder.setAttribute('data-blok-id', `auto-p-${insertCallCount}`);
 
         return { id: `auto-p-${insertCallCount}`, holder };
       });
@@ -1456,7 +1456,7 @@ describe('Table Tool', () => {
         const container = lastCell.querySelector('[data-blok-table-cell-blocks]');
 
         expect(container).not.toBeNull();
-        expect(container?.querySelector('[data-blok-block]')).not.toBeNull();
+        expect(container?.querySelector('[data-blok-id]')).not.toBeNull();
       });
 
       document.body.removeChild(element);
@@ -1468,7 +1468,7 @@ describe('Table Tool', () => {
         insertCallCount++;
         const holder = document.createElement('div');
 
-        holder.setAttribute('data-blok-block', `auto-p-${insertCallCount}`);
+        holder.setAttribute('data-blok-id', `auto-p-${insertCallCount}`);
 
         return { id: `auto-p-${insertCallCount}`, holder };
       });

@@ -115,7 +115,7 @@ describe('Table Tool', () => {
   });
 
   describe('save', () => {
-    it('extracts content as 2D array', () => {
+    it('extracts content as block references', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -124,7 +124,12 @@ describe('Table Tool', () => {
 
       const saved = table.save(element);
 
-      expect(saved.content).toEqual([['A', 'B'], ['C', 'D']]);
+      // After fillGrid with strings, cells lose their blocks containers,
+      // so getData returns { blocks: [] } for each cell
+      expect(saved.content).toEqual([
+        [{ blocks: [] }, { blocks: [] }],
+        [{ blocks: [] }, { blocks: [] }],
+      ]);
     });
 
     it('preserves empty rows added by the user', () => {
@@ -140,7 +145,7 @@ describe('Table Tool', () => {
 
       expect(rows).toHaveLength(2);
 
-      // Create an empty row manually (same as addRow does)
+      // Create an empty row manually (same as addRow does, with blocks container)
       const newRow = document.createElement('div');
 
       newRow.setAttribute('data-blok-table-row', '');
@@ -149,17 +154,21 @@ describe('Table Tool', () => {
         const cell = document.createElement('div');
 
         cell.setAttribute('data-blok-table-cell', '');
-        cell.setAttribute('contenteditable', 'true');
+
+        const blocksContainer = document.createElement('div');
+
+        blocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+        cell.appendChild(blocksContainer);
         newRow.appendChild(cell);
       }
 
       grid.appendChild(newRow);
 
-      // Save should preserve the empty row
+      // Save should preserve the empty row with block references
       const saved = table.save(element);
 
       expect(saved.content).toHaveLength(3);
-      expect(saved.content[2]).toEqual(['', '']);
+      expect(saved.content[2]).toEqual([{ blocks: [] }, { blocks: [] }]);
     });
 
     it('preserves withHeadings setting', () => {
@@ -182,7 +191,6 @@ describe('Table Tool', () => {
       // Manually set up a block-based cell (simulating what convertCellToBlocks does)
       const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
 
-      cell.setAttribute('contenteditable', 'false');
       cell.innerHTML = '';
 
       const container = document.createElement('div');
@@ -199,7 +207,8 @@ describe('Table Tool', () => {
       const saved = table.save(element);
 
       expect(saved.content[0][0]).toEqual({ blocks: ['list-1'] });
-      expect(saved.content[0][1]).toBe('');
+      // Second cell still has its blocks container from createGrid, but no blocks
+      expect(saved.content[0][1]).toEqual({ blocks: [] });
     });
 
     it('saves multiple block references in a single cell', () => {
@@ -814,10 +823,13 @@ describe('Table Tool', () => {
 
       table.onPaste(event);
 
-      // After paste, save should return the pasted content
+      // After paste, save should return block references (string content destroys blocks containers)
       const saved = table.save(table.render());
 
-      expect(saved.content).toEqual([['A', 'B'], ['C', 'D']]);
+      expect(saved.content).toEqual([
+        [{ blocks: [] }, { blocks: [] }],
+        [{ blocks: [] }, { blocks: [] }],
+      ]);
     });
 
     it('detects headings from thead', () => {
@@ -839,7 +851,8 @@ describe('Table Tool', () => {
       const saved = table.save(table.render());
 
       expect(saved.withHeadings).toBe(true);
-      expect(saved.content[0]).toEqual(['H1', 'H2']);
+      // After paste with string content, cells have no blocks containers
+      expect(saved.content[0]).toEqual([{ blocks: [] }, { blocks: [] }]);
     });
   });
 

@@ -410,22 +410,21 @@ export class TableGrid {
   }
 
   /**
-   * Get cell content - returns string for plain text or block object for nested blocks
+   * Get cell content as block references
    */
   private getCellContent(cell: HTMLElement): CellContent {
-    // Check if cell has blocks
     const blocksContainer = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
 
-    if (blocksContainer) {
-      const blockElements = blocksContainer.querySelectorAll('[data-blok-block]');
-      const blockIds = Array.from(blockElements)
-        .map(el => el.getAttribute('data-blok-block') ?? '')
-        .filter(id => id !== '');
-
-      return { blocks: blockIds };
+    if (!blocksContainer) {
+      return { blocks: [] };
     }
 
-    return cell.innerHTML;
+    const blockElements = blocksContainer.querySelectorAll('[data-blok-block]');
+    const blockIds = Array.from(blockElements)
+      .map(el => el.getAttribute('data-blok-block') ?? '')
+      .filter(id => id !== '');
+
+    return { blocks: blockIds };
   }
 
   /**

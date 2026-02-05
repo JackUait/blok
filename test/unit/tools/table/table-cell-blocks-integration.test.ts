@@ -122,6 +122,9 @@ describe('Table tool with cell blocks integration', () => {
 
       document.body.appendChild(element);
 
+      // Record insert calls from initializeCells (happens during render)
+      const insertCallsBefore = (mockApi.blocks.insert as ReturnType<typeof vi.fn>).mock.calls.length;
+
       const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
 
       // Type regular content
@@ -132,8 +135,10 @@ describe('Table tool with cell blocks integration', () => {
       // Wait for any async operations
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      // API should not be called
-      expect(mockApi.blocks.insert).not.toHaveBeenCalled();
+      // No additional insert calls should have been made after the input event
+      const insertCallsAfter = (mockApi.blocks.insert as ReturnType<typeof vi.fn>).mock.calls.length;
+
+      expect(insertCallsAfter).toBe(insertCallsBefore);
 
       document.body.removeChild(element);
     });

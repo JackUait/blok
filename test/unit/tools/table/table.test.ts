@@ -108,8 +108,11 @@ describe('Table Tool', () => {
       const rows = element.querySelectorAll('[data-blok-table-row]');
       expect(rows).toHaveLength(2);
 
+      // Each cell now has a blocks container with a mounted paragraph block
       const firstCell = element.querySelector('[data-blok-table-cell]');
-      expect(firstCell?.textContent).toBe('A');
+      const blocksContainer = firstCell?.querySelector('[data-blok-table-cell-blocks]');
+      expect(blocksContainer).not.toBeNull();
+      expect(blocksContainer?.querySelector('[data-blok-block]')).not.toBeNull();
     });
 
     it('respects config rows and cols for empty tables', () => {
@@ -135,12 +138,18 @@ describe('Table Tool', () => {
 
       const saved = table.save(element);
 
-      // After fillGrid with strings, cells lose their blocks containers,
-      // so getData returns { blocks: [] } for each cell
-      expect(saved.content).toEqual([
-        [{ blocks: [] }, { blocks: [] }],
-        [{ blocks: [] }, { blocks: [] }],
-      ]);
+      // initializeCells converts string content to paragraph blocks,
+      // so each cell now has a block reference
+      expect(saved.content).toHaveLength(2);
+      expect(saved.content[0]).toHaveLength(2);
+      expect(saved.content[1]).toHaveLength(2);
+
+      // Each cell should have exactly one block
+      saved.content.flat().forEach(cell => {
+        expect(cell).toHaveProperty('blocks');
+        expect(cell.blocks).toHaveLength(1);
+        expect(cell.blocks[0]).toMatch(/^mock-/);
+      });
     });
 
     it('preserves empty rows added by the user', () => {
@@ -218,8 +227,10 @@ describe('Table Tool', () => {
       const saved = table.save(element);
 
       expect(saved.content[0][0]).toEqual({ blocks: ['list-1'] });
-      // Second cell still has its blocks container from createGrid, but no blocks
-      expect(saved.content[0][1]).toEqual({ blocks: [] });
+      // Second cell has a paragraph block inserted by initializeCells
+      expect(saved.content[0][1]).toHaveProperty('blocks');
+      expect(saved.content[0][1].blocks).toHaveLength(1);
+      expect(saved.content[0][1].blocks[0]).toMatch(/^mock-/);
     });
 
     it('saves multiple block references in a single cell', () => {
@@ -834,13 +845,18 @@ describe('Table Tool', () => {
 
       table.onPaste(event);
 
-      // After paste, save should return block references (string content destroys blocks containers)
+      // After paste, re-render creates cells with paragraph blocks via initializeCells
       const saved = table.save(table.render());
 
-      expect(saved.content).toEqual([
-        [{ blocks: [] }, { blocks: [] }],
-        [{ blocks: [] }, { blocks: [] }],
-      ]);
+      expect(saved.content).toHaveLength(2);
+      expect(saved.content[0]).toHaveLength(2);
+
+      // Each cell gets a paragraph block from initializeCells
+      saved.content.flat().forEach(cell => {
+        expect(cell).toHaveProperty('blocks');
+        expect(cell.blocks).toHaveLength(1);
+        expect(cell.blocks[0]).toMatch(/^mock-/);
+      });
     });
 
     it('detects headings from thead', () => {
@@ -862,8 +878,13 @@ describe('Table Tool', () => {
       const saved = table.save(table.render());
 
       expect(saved.withHeadings).toBe(true);
-      // After paste with string content, cells have no blocks containers
-      expect(saved.content[0]).toEqual([{ blocks: [] }, { blocks: [] }]);
+      // After paste, cells get paragraph blocks from initializeCells
+      expect(saved.content[0]).toHaveLength(2);
+      saved.content[0].forEach(cell => {
+        expect(cell).toHaveProperty('blocks');
+        expect(cell.blocks).toHaveLength(1);
+        expect(cell.blocks[0]).toMatch(/^mock-/);
+      });
     });
   });
 
@@ -949,7 +970,7 @@ describe('Table Tool', () => {
       expect(blockIds).toHaveLength(2);
     });
 
-    it('should return empty array when row has no block-based cells', () => {
+    it('should return block IDs for row with initialized cells', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -957,9 +978,13 @@ describe('Table Tool', () => {
 
       table.render();
 
+      // With always-blocks, every cell gets a paragraph block during initializeCells
       const blockIds = table.getBlockIdsInRow(0);
 
-      expect(blockIds).toEqual([]);
+      expect(blockIds).toHaveLength(2);
+      blockIds.forEach(id => {
+        expect(id).toMatch(/^mock-/);
+      });
     });
 
     it('should return empty array for out-of-bounds row index', () => {
@@ -1053,7 +1078,7 @@ describe('Table Tool', () => {
       expect(blockIds).toHaveLength(2);
     });
 
-    it('should return empty array when column has no block-based cells', () => {
+    it('should return block IDs for column with initialized cells', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -1061,9 +1086,13 @@ describe('Table Tool', () => {
 
       table.render();
 
+      // With always-blocks, every cell gets a paragraph block during initializeCells
       const blockIds = table.getBlockIdsInColumn(0);
 
-      expect(blockIds).toEqual([]);
+      expect(blockIds).toHaveLength(2);
+      blockIds.forEach(id => {
+        expect(id).toMatch(/^mock-/);
+      });
     });
 
     it('should return empty array for out-of-bounds column index', () => {
@@ -1106,7 +1135,14 @@ describe('Table Tool', () => {
 
       const blockIds = table.getBlockIdsInRow(0);
 
-      expect(blockIds).toEqual(['block-1', 'block-2', 'block-3']);
+      // First cell has 3 manually added blocks, second cell has 1 from initializeCells
+      expect(blockIds).toContain('block-1');
+      expect(blockIds).toContain('block-2');
+      expect(blockIds).toContain('block-3');
+      expect(blockIds.slice(0, 3)).toEqual(['block-1', 'block-2', 'block-3']);
+      // Second cell also contributes a block from initializeCells
+      expect(blockIds).toHaveLength(4);
+      expect(blockIds[3]).toMatch(/^mock-/);
     });
 
     it('should delete nested blocks when deleting a row with block-based cells', () => {
@@ -1119,10 +1155,18 @@ describe('Table Tool', () => {
 
         return undefined;
       });
+      let insertCounter = 0;
       const mockApi = createMockAPI({
         blocks: {
           delete: mockDelete,
-          insert: vi.fn().mockReturnValue({ id: 'b1' }),
+          insert: vi.fn().mockImplementation(() => {
+            insertCounter++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-block', `mock-block-${insertCounter}`);
+
+            return { id: `mock-block-${insertCounter}`, holder };
+          }),
           getCurrentBlockIndex: vi.fn().mockReturnValue(0),
           getBlockIndex: mockGetBlockIndex,
         },
@@ -1185,10 +1229,18 @@ describe('Table Tool', () => {
 
         return undefined;
       });
+      let insertCounter = 0;
       const mockApi = createMockAPI({
         blocks: {
           delete: mockDelete,
-          insert: vi.fn().mockReturnValue({ id: 'b1' }),
+          insert: vi.fn().mockImplementation(() => {
+            insertCounter++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-block', `mock-block-${insertCounter}`);
+
+            return { id: `mock-block-${insertCounter}`, holder };
+          }),
           getCurrentBlockIndex: vi.fn().mockReturnValue(0),
           getBlockIndex: mockGetBlockIndex,
         },
@@ -1244,13 +1296,21 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
-    it('should not call delete when row has no block-based cells', () => {
+    it('should not call delete when block indices are not found', () => {
       const mockDelete = vi.fn();
       const mockGetBlockIndex = vi.fn().mockReturnValue(undefined);
+      let insertCounter = 0;
       const mockApi = createMockAPI({
         blocks: {
           delete: mockDelete,
-          insert: vi.fn().mockReturnValue({ id: 'b1' }),
+          insert: vi.fn().mockImplementation(() => {
+            insertCounter++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-block', `mock-block-${insertCounter}`);
+
+            return { id: `mock-block-${insertCounter}`, holder };
+          }),
           getCurrentBlockIndex: vi.fn().mockReturnValue(0),
           getBlockIndex: mockGetBlockIndex,
         },

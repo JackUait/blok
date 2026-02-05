@@ -333,6 +333,32 @@ test.describe('table cells — always-blocks model', () => {
     });
   });
 
+  test.describe('toolbar suppression', () => {
+    test('block toolbar should not appear for blocks inside table cells', async ({ page }) => {
+      await create2x2Table(page);
+
+      // Click into a cell's editable area to give it focus
+      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
+      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
+
+      await firstEditable.click();
+
+      // Hover over the cell block to trigger the block-hovered event
+      await firstEditable.hover();
+
+      // Wait a moment for toolbar to potentially appear
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- checking non-appearance requires a brief wait
+      await page.waitForTimeout(300);
+
+      // The plus button and settings toggler should not be visible for cell blocks
+      const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
+      const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
+
+      await expect(plusButton).not.toBeVisible();
+      await expect(settingsToggler).not.toBeVisible();
+    });
+  });
+
   test.describe('cell navigation', () => {
     test('Tab at end of row wraps to next row', async ({ page }) => {
       await create2x2Table(page);

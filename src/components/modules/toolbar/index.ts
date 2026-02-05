@@ -326,6 +326,16 @@ export class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
+    /**
+     * Don't show toolbar for blocks inside table cells.
+     * Uses the DOM attribute directly to avoid cross-module dependency on the table tool.
+     */
+    if (targetBlock.holder.closest('[data-blok-table-cell-blocks]')) {
+      this.close();
+
+      return;
+    }
+
     /** Clean up draggable on previous block if any */
     if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
       this.hoveredBlock.cleanupDraggable();

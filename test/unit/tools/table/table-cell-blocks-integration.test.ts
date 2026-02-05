@@ -103,7 +103,7 @@ describe('Table tool with cell blocks integration', () => {
       document.body.removeChild(element);
     });
 
-    it('should convert cell to blocks when markdown trigger detected', async () => {
+    it('should not call blocks.insert for regular input events', async () => {
       const { Table } = await import('../../../../src/tools/table/index');
       const mockApi = createMockAPI();
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
@@ -120,48 +120,7 @@ describe('Table tool with cell blocks integration', () => {
 
       const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
 
-      // Simulate typing markdown trigger
-      cell.textContent = '- Item';
-      const inputEvent = new InputEvent('input', { bubbles: true });
-      cell.dispatchEvent(inputEvent);
-
-      // Wait for async conversion
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      // Verify API was called to insert a list block
-      expect(mockApi.blocks.insert).toHaveBeenCalledWith(
-        'list',
-        expect.objectContaining({
-          text: 'Item',
-          style: 'unordered',
-          depth: 0,
-        }),
-        {},
-        undefined,
-        true
-      );
-
-      document.body.removeChild(element);
-    });
-
-    it('should not trigger conversion for non-markdown content', async () => {
-      const { Table } = await import('../../../../src/tools/table/index');
-      const mockApi = createMockAPI();
-      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, content: [['', '']] } as TableData,
-        config: {},
-        api: mockApi,
-        readOnly: false,
-        block: { id: 'table-1' } as BlockAPI,
-      };
-      const table = new Table(options);
-      const element = table.render();
-
-      document.body.appendChild(element);
-
-      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
-
-      // Type regular content (not a markdown trigger)
+      // Type regular content
       cell.textContent = 'Hello world';
       const inputEvent = new InputEvent('input', { bubbles: true });
       cell.dispatchEvent(inputEvent);

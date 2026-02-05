@@ -9,7 +9,6 @@ export const CELL_ATTR = 'data-blok-table-cell';
 
 export const BORDER_WIDTH = 1;
 const BORDER_STYLE = `${BORDER_WIDTH}px solid #d1d5db`;
-const FOCUS_BORDER_STYLE = `${BORDER_WIDTH}px solid #3b82f6`;
 
 const ROW_CLASSES = [
   'flex',
@@ -497,29 +496,11 @@ export class TableGrid {
     }
 
     cell.setAttribute(CELL_ATTR, '');
-    cell.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
 
-    if (!this.readOnly) {
-      cell.addEventListener('focus', () => {
-        cell.style.borderRight = FOCUS_BORDER_STYLE;
-        cell.style.borderBottom = FOCUS_BORDER_STYLE;
-        cell.style.boxShadow = [
-          `-${BORDER_WIDTH}px 0 0 0 #3b82f6`,
-          `0 -${BORDER_WIDTH}px 0 0 #3b82f6`,
-          `-${BORDER_WIDTH}px -${BORDER_WIDTH}px 0 0 #3b82f6`,
-        ].join(', ');
-        cell.style.position = 'relative';
-        cell.style.zIndex = '1';
-      });
+    const blocksContainer = document.createElement('div');
 
-      cell.addEventListener('blur', () => {
-        cell.style.borderRight = BORDER_STYLE;
-        cell.style.borderBottom = BORDER_STYLE;
-        cell.style.boxShadow = '';
-        cell.style.position = '';
-        cell.style.zIndex = '';
-      });
-    }
+    blocksContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+    cell.appendChild(blocksContainer);
 
     return cell;
   }

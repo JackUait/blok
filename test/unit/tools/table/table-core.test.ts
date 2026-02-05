@@ -14,20 +14,35 @@ describe('TableGrid', () => {
       expect(cellsInFirstRow).toHaveLength(3);
     });
 
-    it('makes cells contentEditable when not readOnly', () => {
+    it('cell should not be contenteditable', () => {
       const grid = new TableGrid({ readOnly: false });
-      const element = grid.createGrid(1, 1);
+      const element = grid.createGrid(2, 2);
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
 
-      const cell = element.querySelector('[data-blok-table-cell]');
-      expect(cell?.getAttribute('contenteditable')).toBe('true');
+      cells.forEach(cell => {
+        expect(cell.getAttribute('contenteditable')).not.toBe('true');
+      });
     });
 
-    it('makes cells non-editable when readOnly', () => {
+    it('cell should not be contenteditable in readOnly mode either', () => {
       const grid = new TableGrid({ readOnly: true });
       const element = grid.createGrid(1, 1);
-
       const cell = element.querySelector('[data-blok-table-cell]');
-      expect(cell?.getAttribute('contenteditable')).toBe('false');
+
+      expect(cell?.getAttribute('contenteditable')).not.toBe('true');
+      expect(cell?.getAttribute('contenteditable')).not.toBe('false');
+    });
+
+    it('cell should have a blocks container', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(2, 2);
+      const cells = element.querySelectorAll('[data-blok-table-cell]');
+
+      cells.forEach(cell => {
+        const container = cell.querySelector('[data-blok-table-cell-blocks]');
+
+        expect(container).not.toBeNull();
+      });
     });
 
     it('creates cells with flex-shrink 0 so they do not compress when table overflows', () => {
@@ -219,7 +234,7 @@ describe('TableGrid', () => {
       grid.addColumn(element, 1);
 
       const data = grid.getData(element);
-      expect(data).toEqual([['A', '', 'B'], ['C', '', 'D']]);
+      expect(data).toEqual([['A', { blocks: [] }, 'B'], ['C', { blocks: [] }, 'D']]);
     });
 
     it('keeps existing pixel widths unchanged and adds new column with default width', () => {

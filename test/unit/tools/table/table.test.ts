@@ -164,6 +164,66 @@ describe('Table Tool', () => {
 
       expect(saved.withHeadings).toBe(true);
     });
+
+    it('saves block references for cells with nested blocks', () => {
+      const options = createTableOptions({
+        content: [['', '']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      // Manually set up a block-based cell (simulating what convertCellToBlocks does)
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      cell.setAttribute('contenteditable', 'false');
+      cell.innerHTML = '';
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-table-cell-blocks', '');
+
+      const block = document.createElement('div');
+
+      block.setAttribute('data-blok-block', 'list-1');
+      container.appendChild(block);
+
+      cell.appendChild(container);
+
+      const saved = table.save(element);
+
+      expect(saved.content[0][0]).toEqual({ blocks: ['list-1'] });
+      expect(saved.content[0][1]).toBe('');
+    });
+
+    it('saves multiple block references in a single cell', () => {
+      const options = createTableOptions({
+        content: [['']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      cell.setAttribute('contenteditable', 'false');
+      cell.innerHTML = '';
+
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-table-cell-blocks', '');
+
+      ['list-1', 'list-2', 'list-3'].forEach(id => {
+        const block = document.createElement('div');
+
+        block.setAttribute('data-blok-block', id);
+        container.appendChild(block);
+      });
+
+      cell.appendChild(container);
+
+      const saved = table.save(element);
+
+      expect(saved.content[0][0]).toEqual({ blocks: ['list-1', 'list-2', 'list-3'] });
+    });
   });
 
   describe('heading row', () => {

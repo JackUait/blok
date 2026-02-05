@@ -920,9 +920,9 @@ test.describe('table tool', () => {
 
       const colBox = await colGrip.boundingBox();
 
-      // Column pill: ~40px wide x 6px tall
-      expect(colBox?.width).toBe(40);
-      expect(colBox?.height).toBe(6);
+      // Column pill: ~32px wide x 4px tall
+      expect(colBox?.width).toBe(32);
+      expect(colBox?.height).toBe(4);
     });
 
     test('row pill has vertical capsule dimensions', async ({ page }) => {
@@ -941,9 +941,9 @@ test.describe('table tool', () => {
 
       const rowBox = await rowGrip.boundingBox();
 
-      // Row pill: ~6px wide x 24px tall
-      expect(rowBox?.width).toBe(6);
-      expect(rowBox?.height).toBe(24);
+      // Row pill: ~4px wide x 20px tall
+      expect(rowBox?.width).toBe(4);
+      expect(rowBox?.height).toBe(20);
     });
 
     test('grips not present in readOnly mode', async ({ page }) => {

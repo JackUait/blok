@@ -19,10 +19,10 @@ const GRIP_ATTR = 'data-blok-table-grip';
 const GRIP_COL_ATTR = 'data-blok-table-grip-col';
 const GRIP_ROW_ATTR = 'data-blok-table-grip-row';
 const HIDE_DELAY_MS = 150;
-const COL_PILL_WIDTH = 40;
-const COL_PILL_HEIGHT = 6;
-const ROW_PILL_WIDTH = 6;
-const ROW_PILL_HEIGHT = 24;
+const COL_PILL_WIDTH = 32;
+const COL_PILL_HEIGHT = 4;
+const ROW_PILL_WIDTH = 4;
+const ROW_PILL_HEIGHT = 20;
 
 /**
  * Actions that can be performed on rows/columns
@@ -53,7 +53,7 @@ const GRIP_CAPSULE_CLASSES = [
   'rounded-full',
   'cursor-grab',
   'select-none',
-  'transition-opacity',
+  'transition-[opacity,background-color]',
   'duration-150',
 ];
 
@@ -64,7 +64,8 @@ const GRIP_IDLE_CLASSES = [
 ];
 
 const GRIP_VISIBLE_CLASSES = [
-  'bg-gray-400',
+  'bg-gray-300',
+  'hover:bg-gray-400',
   'opacity-100',
   'pointer-events-auto',
 ];

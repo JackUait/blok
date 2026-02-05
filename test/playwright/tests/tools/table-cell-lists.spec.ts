@@ -582,6 +582,141 @@ test.describe('table cell lists - markdown shortcut conversion', () => {
     });
   });
 
+  test.describe('cell reverts to plain text when list is removed', () => {
+    test('pressing Enter on empty list item reverts cell to interactive plain text', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['', ''], ['', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // Create an unordered list in the first cell
+      await page.keyboard.type('- ');
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+      await expect(page.locator(LIST_ITEM_SELECTOR)).toBeVisible();
+
+      // Press Enter on empty list item — this should exit the list
+      await page.keyboard.press('Enter');
+
+      // The blocks container should be removed from the cell
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toHaveCount(0);
+
+      // The cell should be editable again (contenteditable="true")
+      await expect(firstCell).toHaveAttribute('contenteditable', 'true');
+
+      // Verify the cell is interactive: typing should work
+      await firstCell.click();
+      await page.keyboard.type('Plain text');
+      await expect(firstCell).toContainText('Plain text');
+    });
+
+    test('pressing Backspace at start of list item reverts cell to interactive plain text', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['', ''], ['', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // Create an unordered list with text
+      await page.keyboard.type('- Hello');
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Move to start and press Backspace to convert list to paragraph
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Backspace');
+
+      // The blocks container should be removed from the cell
+      await expect(page.locator(CELL_BLOCKS_SELECTOR)).toHaveCount(0);
+
+      // The cell should be editable again
+      await expect(firstCell).toHaveAttribute('contenteditable', 'true');
+
+      // The text content should be preserved
+      await expect(firstCell).toContainText('Hello');
+    });
+
+    test('other cells remain unaffected when one cell reverts', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['', ''], ['', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      // Create a list in first cell
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+      await page.keyboard.type('- Item 1');
+      await expect(firstCell.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Create a list in second cell
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) needed to target second cell
+      const secondCell = page.locator(CELL_SELECTOR).nth(1);
+
+      await secondCell.click();
+      await page.keyboard.type('- Item 2');
+      await expect(secondCell.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+
+      // Go back to first cell and remove its list (Enter on empty item)
+      await firstCell.locator(LIST_ITEM_SELECTOR).click();
+      await page.keyboard.press('Control+A');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Enter');
+
+      // First cell should revert to plain text
+      await expect(firstCell.locator(CELL_BLOCKS_SELECTOR)).toHaveCount(0);
+      await expect(firstCell).toHaveAttribute('contenteditable', 'true');
+
+      // Second cell should still have its list
+      await expect(secondCell.locator(CELL_BLOCKS_SELECTOR)).toBeVisible();
+      await expect(secondCell.locator(LIST_ITEM_SELECTOR)).toBeVisible();
+    });
+  });
+
   test.describe('edge cases', () => {
     test('trigger in non-first cell also creates list', async ({ page }) => {
       await createBlok(page, {

@@ -170,4 +170,79 @@ describe('TableCellBlocks', () => {
       expect(cellBlocks.activeCellWithBlocks).toBeNull();
     });
   });
+
+  describe('convertCellToBlocks', () => {
+    let mockApi: {
+      blocks: {
+        insert: ReturnType<typeof vi.fn>;
+      };
+    };
+    let gridEl: HTMLElement;
+    let cell: HTMLElement;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+
+      mockApi = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'list-item-1' }),
+        },
+      };
+
+      gridEl = document.createElement('div');
+
+      // Create a cell
+      cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('contenteditable', 'true');
+      cell.textContent = '- Item text';
+      gridEl.appendChild(cell);
+    });
+
+    it('should convert cell from contenteditable to block container', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      const result = await cellBlocks.convertCellToBlocks(cell, 'unordered', 'Item text');
+
+      // Cell should no longer be contenteditable
+      expect(cell.getAttribute('contenteditable')).toBe('false');
+
+      // Should have a blocks container
+      const container = cell.querySelector('[data-blok-table-cell-blocks]');
+      expect(container).not.toBeNull();
+
+      // Should return block IDs
+      expect(result.blocks).toContain('list-item-1');
+    });
+
+    it('should insert a listItem block with correct data', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const cellBlocks = new TableCellBlocks({
+        api: mockApi as never,
+        gridElement: gridEl,
+        tableBlockId: 'table-1',
+      });
+
+      await cellBlocks.convertCellToBlocks(cell, 'ordered', 'First item');
+
+      expect(mockApi.blocks.insert).toHaveBeenCalledWith(
+        'listItem',
+        expect.objectContaining({
+          text: 'First item',
+          style: 'ordered',
+          depth: 0,
+        }),
+        {}, // config
+        undefined, // index
+        true // needToFocus
+      );
+    });
+  });
 });

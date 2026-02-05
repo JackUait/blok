@@ -1,5 +1,5 @@
 import type { API } from '../../../types';
-import type { ListItemStyle } from '../list/types';
+import type { ListItemData, ListItemStyle } from '../list/types';
 
 import { CELL_ATTR } from './table-core';
 
@@ -96,6 +96,48 @@ export class TableCellBlocks {
    */
   clearActiveCellWithBlocks(): void {
     this._activeCellWithBlocks = null;
+  }
+
+  /**
+   * Convert a plain text cell to a block-based cell
+   * @returns The cell content object with block IDs
+   */
+  async convertCellToBlocks(
+    cell: HTMLElement,
+    style: ListItemStyle,
+    initialText: string
+  ): Promise<{ blocks: string[] }> {
+    // Remove contenteditable from cell
+    cell.setAttribute('contenteditable', 'false');
+    cell.innerHTML = '';
+
+    // Create blocks container
+    const container = document.createElement('div');
+
+    container.setAttribute(CELL_BLOCKS_ATTR, '');
+    cell.appendChild(container);
+
+    // Create the first list item block
+    const listItemData: ListItemData = {
+      text: initialText,
+      style,
+      depth: 0,
+    };
+
+    // Insert the block (this creates it in BlockManager)
+    const block = this.api.blocks.insert(
+      'listItem',
+      listItemData,
+      {},
+      undefined, // index - append at end
+      true // needToFocus
+    );
+
+    // The block's DOM will be mounted by the BlockManager
+    // We need to move it into our container
+    // For now, return the block ID - actual DOM mounting will be handled in integration
+
+    return { blocks: [block.id] };
   }
 
   /**

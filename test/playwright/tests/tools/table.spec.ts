@@ -927,5 +927,53 @@ test.describe('table tool', () => {
 
       await expect(grips).toHaveCount(0);
     });
+
+    test('popover reopens after closing via menu item click', async ({ page }) => {
+      const errors: string[] = [];
+
+      page.on('pageerror', (err) => errors.push(err.message));
+
+      await createTable2x2(page);
+
+      // Click first cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+
+      // Open popover and click a menu item (which closes it via closeOnActivate)
+      await rowGrip.click();
+      await expect(page.getByText('Insert Row Below')).toBeVisible();
+      await page.getByText('Insert Row Below').click();
+
+      // Wait for action to take effect (row inserted)
+      await expect(page.locator('[data-blok-table-row]')).toHaveCount(3);
+
+      // Popover should be fully removed from the DOM after closing
+      await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
+
+      // Click a cell to re-show grips, then click grip again to reopen popover
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      await page.locator(CELL_SELECTOR).first().click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const rowGripAfter = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGripAfter).toBeVisible();
+      await rowGripAfter.click();
+
+      // Popover should reopen with row menu items
+      await expect(page.getByText('Insert Row Above')).toBeVisible();
+
+      // No stack overflow errors should have occurred
+      const stackErrors = errors.filter(e => e.includes('stack'));
+
+      expect(stackErrors).toHaveLength(0);
+    });
   });
 });

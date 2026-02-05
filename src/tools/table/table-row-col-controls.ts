@@ -125,7 +125,7 @@ export class TableRowColControls {
   }
 
   public destroy(): void {
-    this.closePopover();
+    this.destroyPopover();
     this.drag.cleanup();
     this.grid.removeEventListener('focusin', this.boundFocusIn);
     this.grid.removeEventListener('focusout', this.boundFocusOut);
@@ -402,7 +402,8 @@ export class TableRowColControls {
   // ── Popover menus ────────────────────────────────────────────
 
   private openPopover(type: 'row' | 'col', index: number): void {
-    this.closePopover();
+    this.destroyPopover();
+    this.clearHideTimeout();
 
     const grip = type === 'col'
       ? this.colGrips[index]
@@ -427,25 +428,15 @@ export class TableRowColControls {
       this.scheduleHideAll();
     });
 
-    this.activePopover.on(PopoverEvent.ClosedOnActivate, () => {
-      this.destroyPopover();
-      this.scheduleHideAll();
-    });
-
     this.activePopover.show();
-  }
-
-  private closePopover(): void {
-    if (this.activePopover !== null) {
-      this.activePopover.hide();
-      this.destroyPopover();
-    }
   }
 
   private destroyPopover(): void {
     if (this.activePopover !== null) {
-      this.activePopover.destroy();
+      const popover = this.activePopover;
+
       this.activePopover = null;
+      popover.destroy();
     }
   }
 

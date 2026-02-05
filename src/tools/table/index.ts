@@ -15,7 +15,6 @@ import { twMerge } from '../../components/utils/tw';
 import { TableAddControls } from './table-add-controls';
 import { CELL_BLOCKS_ATTR, TableCellBlocks } from './table-cell-blocks';
 import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR, TableGrid } from './table-core';
-import { TableKeyboard } from './table-keyboard';
 import { TableResize } from './table-resize';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
@@ -45,7 +44,6 @@ export class Table implements BlockTool {
   private config: TableConfig;
   private data: TableData;
   private grid: TableGrid;
-  private keyboard: TableKeyboard | null = null;
   private resize: TableResize | null = null;
   private addControls: TableAddControls | null = null;
   private rowColControls: TableRowColControls | null = null;
@@ -503,8 +501,6 @@ export class Table implements BlockTool {
   }
 
   private setupKeyboardNavigation(gridEl: HTMLElement): void {
-    this.keyboard = new TableKeyboard(this.grid, gridEl);
-
     gridEl.addEventListener('keydown', (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       const cell = target.closest<HTMLElement>('[data-blok-table-cell]');

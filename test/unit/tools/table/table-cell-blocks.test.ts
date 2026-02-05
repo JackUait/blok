@@ -1137,4 +1137,43 @@ describe('TableCellBlocks', () => {
       expect(result[0][0]).toEqual({ blocks: ['existing-1'] });
     });
   });
+
+  describe('Enter key in cell', () => {
+    it('should not be prevented by table keyboard handler', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      const block = document.createElement('div');
+
+      block.setAttribute('data-blok-block', 'b1');
+      const editable = document.createElement('div');
+
+      editable.setAttribute('contenteditable', 'true');
+      block.appendChild(editable);
+      container.appendChild(block);
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      const preventSpy = vi.spyOn(event, 'preventDefault');
+
+      cellBlocks.handleKeyDown(event, { row: 0, col: 0 });
+
+      // Enter should NOT be prevented — let the editor handle it
+      expect(preventSpy).not.toHaveBeenCalled();
+    });
+  });
 });

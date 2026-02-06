@@ -317,6 +317,74 @@ describe('TableResize', () => {
     });
   });
 
+  describe('handle appear animation', () => {
+    it('handles start invisible with transition for smooth animation', () => {
+      grid = createGrid([300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      expect(handle.style.opacity).toBe('0');
+      expect(handle.style.transition).toContain('opacity');
+    });
+
+    it('handles always have the gradient background set', () => {
+      grid = createGrid([300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      expect(handle.style.background).toContain('linear-gradient');
+    });
+
+    it('handle becomes visible on mouseenter', () => {
+      grid = createGrid([300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new MouseEvent('mouseenter'));
+
+      expect(handle.style.opacity).toBe('1');
+    });
+
+    it('handle becomes invisible on mouseleave', () => {
+      grid = createGrid([300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new MouseEvent('mouseenter'));
+      handle.dispatchEvent(new MouseEvent('mouseleave'));
+
+      expect(handle.style.opacity).toBe('0');
+    });
+
+    it('handle stays visible during drag even after mouseleave', () => {
+      grid = createGrid([300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      handle.dispatchEvent(new MouseEvent('mouseleave'));
+
+      expect(handle.style.opacity).toBe('1');
+    });
+
+    it('handle becomes invisible after drag ends', () => {
+      grid = createGrid([300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      expect(handle.style.opacity).toBe('0');
+    });
+  });
+
   describe('destroy', () => {
     it('removes event listeners on destroy', () => {
       grid = createGrid([300, 300]);

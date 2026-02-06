@@ -96,17 +96,20 @@ export class TableResize {
     handle.style.left = `${leftPx - HANDLE_HIT_WIDTH / 2}px`;
     handle.style.cursor = 'col-resize';
     handle.style.zIndex = '2';
+    handle.style.background = 'linear-gradient(to right, transparent 7px, #3b82f6 7px, #3b82f6 9px, transparent 9px)';
+    handle.style.opacity = '0';
+    handle.style.transition = 'opacity 150ms ease';
     handle.setAttribute('contenteditable', 'false');
 
     handle.addEventListener('mouseenter', () => {
       if (!this.isDragging) {
-        handle.style.background = 'linear-gradient(to right, transparent 7px, #3b82f6 7px, #3b82f6 9px, transparent 9px)';
+        handle.style.opacity = '1';
       }
     });
 
     handle.addEventListener('mouseleave', () => {
       if (!this.isDragging) {
-        handle.style.background = '';
+        handle.style.opacity = '0';
       }
     });
 
@@ -152,7 +155,7 @@ export class TableResize {
 
     this.gridEl.style.userSelect = 'none';
 
-    target.style.background = 'linear-gradient(to right, transparent 7px, #3b82f6 7px, #3b82f6 9px, transparent 9px)';
+    target.style.opacity = '1';
 
     if (target.setPointerCapture) {
       target.setPointerCapture(e.pointerId);
@@ -187,7 +190,7 @@ export class TableResize {
     const activeHandle = this.handles[this.dragColIndex];
 
     if (activeHandle) {
-      activeHandle.style.background = '';
+      activeHandle.style.opacity = '0';
     }
 
     document.removeEventListener('pointermove', this.boundPointerMove);

@@ -251,28 +251,28 @@ export const IconTable = `
 // Insert row above icon
 export const IconInsertAbove = `
 <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 3v6m-3-3h6M4 13h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10 3l-3.5 3.5M10 3l3.5 3.5M10 3v8M4 15h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Insert row below icon
 export const IconInsertBelow = `
 <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 17v-6m-3 3h6M4 7h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10 17l-3.5-3.5M10 17l3.5-3.5M10 17V9M4 5h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Insert column left icon
 export const IconInsertLeft = `
 <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M3 10h6M6 7v6M13 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M3 10l3.5-3.5M3 10l3.5 3.5M3 10h8M15 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Insert column right icon
 export const IconInsertRight = `
 <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M17 10h-6m3-3v6M7 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M17 10l-3.5-3.5M17 10l-3.5 3.5M17 10H9M5 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

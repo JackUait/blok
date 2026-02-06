@@ -1,0 +1,71 @@
+import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions, BlockToolData } from './block-tool';
+import { MenuConfig } from './menu-config';
+
+/**
+ * Cell content always contains block IDs.
+ * Every cell in the table is represented as an array of block references.
+ */
+export interface CellContent {
+  blocks: string[];
+}
+
+/**
+ * Table Tool's input and output data format
+ */
+export interface TableData extends BlockToolData {
+  /** Whether the first row is a heading row */
+  withHeadings: boolean;
+  /** Whether the table is full-width */
+  stretched?: boolean;
+  /** 2D array of cell content */
+  content: CellContent[][];
+  /** Column widths in pixels (e.g., [200, 300, 250]). Omit for equal widths. */
+  colWidths?: number[];
+}
+
+/**
+ * Table Tool's configuration
+ */
+export interface TableConfig {
+  /** Initial number of rows (default: 3) */
+  rows?: number;
+  /** Initial number of columns (default: 3) */
+  cols?: number;
+  /** Whether to start with heading row enabled */
+  withHeadings?: boolean;
+  /** Whether to start stretched */
+  stretched?: boolean;
+}
+
+/**
+ * Table Tool for the Blok Editor
+ * Renders a 2D grid of block-based cells
+ */
+export interface Table extends BlockTool {
+  /**
+   * Return Tool's view
+   */
+  render(): HTMLElement;
+
+  /**
+   * Returns table block tunes config
+   */
+  renderSettings(): MenuConfig;
+
+  /**
+   * Validate Table block data
+   */
+  validate(blockData: TableData): boolean;
+
+  /**
+   * Extract Tool's data from the view
+   */
+  save(): TableData;
+}
+
+/**
+ * Table Tool constructor
+ */
+export interface TableConstructable extends BlockToolConstructable {
+  new(config: BlockToolConstructorOptions<TableData, TableConfig>): Table;
+}

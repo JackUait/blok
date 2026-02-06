@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { TableData, CellContent } from '../../../../src/tools/table/types';
+import type { TableData, CellContent, LegacyCellContent } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 
 describe('TableData types', () => {
@@ -33,12 +33,12 @@ describe('TableData types', () => {
     });
 
     it('should return false for string cell content', () => {
-      const cell: CellContent = 'Plain text';
+      const cell: LegacyCellContent = 'Plain text';
       expect(isCellWithBlocks(cell)).toBe(false);
     });
 
     it('should return false for empty string', () => {
-      const cell: CellContent = '';
+      const cell: LegacyCellContent = '';
       expect(isCellWithBlocks(cell)).toBe(false);
     });
   });

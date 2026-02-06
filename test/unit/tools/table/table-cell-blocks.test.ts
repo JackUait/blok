@@ -670,7 +670,7 @@ describe('TableCellBlocks', () => {
 
       expect(onCall).toBeDefined();
 
-      const handler = onCall[1] as (data: unknown) => void;
+      const handler = onCall?.[1] as (data: unknown) => void;
 
       // Simulate a block-added event
       handler({
@@ -744,7 +744,7 @@ describe('TableCellBlocks', () => {
       const onCall = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(
         (call: unknown[]) => call[0] === 'block changed'
       );
-      const handler = onCall[1] as (data: unknown) => void;
+      const handler = onCall?.[1] as (data: unknown) => void;
 
       // Simulate a block-added event for a block that's already in cell
       handler({

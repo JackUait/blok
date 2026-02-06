@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
+import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 const createMockAPI = (overrides: Partial<API> = {}): API => ({
@@ -146,9 +147,11 @@ describe('Table Tool', () => {
 
       // Each cell should have exactly one block
       saved.content.flat().forEach(cell => {
-        expect(cell).toHaveProperty('blocks');
-        expect(cell.blocks).toHaveLength(1);
-        expect(cell.blocks[0]).toMatch(/^mock-/);
+        expect(isCellWithBlocks(cell)).toBe(true);
+        if (isCellWithBlocks(cell)) {
+          expect(cell.blocks).toHaveLength(1);
+          expect(cell.blocks[0]).toMatch(/^mock-/);
+        }
       });
     });
 
@@ -228,9 +231,13 @@ describe('Table Tool', () => {
 
       expect(saved.content[0][0]).toEqual({ blocks: ['list-1'] });
       // Second cell has a paragraph block inserted by initializeCells
-      expect(saved.content[0][1]).toHaveProperty('blocks');
-      expect(saved.content[0][1].blocks).toHaveLength(1);
-      expect(saved.content[0][1].blocks[0]).toMatch(/^mock-/);
+      const secondCell = saved.content[0][1];
+
+      expect(isCellWithBlocks(secondCell)).toBe(true);
+      if (isCellWithBlocks(secondCell)) {
+        expect(secondCell.blocks).toHaveLength(1);
+        expect(secondCell.blocks[0]).toMatch(/^mock-/);
+      }
     });
 
     it('saves multiple block references in a single cell', () => {
@@ -853,9 +860,11 @@ describe('Table Tool', () => {
 
       // Each cell gets a paragraph block from initializeCells
       saved.content.flat().forEach(cell => {
-        expect(cell).toHaveProperty('blocks');
-        expect(cell.blocks).toHaveLength(1);
-        expect(cell.blocks[0]).toMatch(/^mock-/);
+        expect(isCellWithBlocks(cell)).toBe(true);
+        if (isCellWithBlocks(cell)) {
+          expect(cell.blocks).toHaveLength(1);
+          expect(cell.blocks[0]).toMatch(/^mock-/);
+        }
       });
     });
 
@@ -881,9 +890,11 @@ describe('Table Tool', () => {
       // After paste, cells get paragraph blocks from initializeCells
       expect(saved.content[0]).toHaveLength(2);
       saved.content[0].forEach(cell => {
-        expect(cell).toHaveProperty('blocks');
-        expect(cell.blocks).toHaveLength(1);
-        expect(cell.blocks[0]).toMatch(/^mock-/);
+        expect(isCellWithBlocks(cell)).toBe(true);
+        if (isCellWithBlocks(cell)) {
+          expect(cell.blocks).toHaveLength(1);
+          expect(cell.blocks[0]).toMatch(/^mock-/);
+        }
       });
     });
   });

@@ -467,6 +467,9 @@ export class Table implements BlockTool {
       () => {
         this.rowColControls?.hideAllGrips();
       },
+      () => {
+        this.addControls?.syncRowButtonWidth();
+      },
     );
   }
 

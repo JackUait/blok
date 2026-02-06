@@ -385,6 +385,36 @@ describe('TableResize', () => {
     });
   });
 
+  describe('onDrag callback', () => {
+    it('calls onDrag on each pointermove during drag', () => {
+      grid = createGrid([300, 300]);
+      const onDrag = vi.fn();
+
+      new TableResize(grid, [300, 300], vi.fn(), undefined, onDrag);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 350 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+
+      expect(onDrag).toHaveBeenCalledTimes(2);
+
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+    });
+
+    it('does not call onDrag when not dragging', () => {
+      grid = createGrid([300, 300]);
+      const onDrag = vi.fn();
+
+      new TableResize(grid, [300, 300], vi.fn(), undefined, onDrag);
+
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+
+      expect(onDrag).not.toHaveBeenCalled();
+    });
+  });
+
   describe('destroy', () => {
     it('removes event listeners on destroy', () => {
       grid = createGrid([300, 300]);

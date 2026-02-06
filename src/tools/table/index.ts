@@ -457,9 +457,17 @@ export class Table implements BlockTool {
 
     const widths = this.data.colWidths ?? this.readPixelWidths(gridEl);
 
-    this.resize = new TableResize(gridEl, widths, (newWidths: number[]) => {
-      this.data.colWidths = newWidths;
-    });
+    this.resize = new TableResize(
+      gridEl,
+      widths,
+      (newWidths: number[]) => {
+        this.data.colWidths = newWidths;
+        this.rowColControls?.positionGrips();
+      },
+      () => {
+        this.rowColControls?.hideAllGrips();
+      },
+    );
   }
 
   private readPixelWidths(gridEl: HTMLElement): number[] {

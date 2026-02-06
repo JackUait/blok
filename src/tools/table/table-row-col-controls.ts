@@ -89,8 +89,8 @@ export class TableRowColControls {
 
   private drag: TableRowColDrag;
 
-  private boundFocusIn: (e: FocusEvent) => void;
-  private boundFocusOut: (e: FocusEvent) => void;
+  private boundMouseOver: (e: MouseEvent) => void;
+  private boundMouseLeave: (e: MouseEvent) => void;
   private boundPointerDown: (e: PointerEvent) => void;
   private boundDocPointerDown: ((e: PointerEvent) => void) | null = null;
 
@@ -110,14 +110,14 @@ export class TableRowColControls {
       },
     });
 
-    this.boundFocusIn = this.handleFocusIn.bind(this);
-    this.boundFocusOut = this.handleFocusOut.bind(this);
+    this.boundMouseOver = this.handleMouseOver.bind(this);
+    this.boundMouseLeave = this.handleMouseLeave.bind(this);
     this.boundPointerDown = this.handlePointerDown.bind(this);
 
     this.createGrips();
 
-    this.grid.addEventListener('focusin', this.boundFocusIn);
-    this.grid.addEventListener('focusout', this.boundFocusOut);
+    this.grid.addEventListener('mouseover', this.boundMouseOver);
+    this.grid.addEventListener('mouseleave', this.boundMouseLeave);
   }
 
   /**
@@ -126,14 +126,13 @@ export class TableRowColControls {
   public refresh(): void {
     this.destroyGrips();
     this.createGrips();
-    this.showGripsForFocusedCell();
   }
 
   public destroy(): void {
     this.destroyPopover();
     this.drag.cleanup();
-    this.grid.removeEventListener('focusin', this.boundFocusIn);
-    this.grid.removeEventListener('focusout', this.boundFocusOut);
+    this.grid.removeEventListener('mouseover', this.boundMouseOver);
+    this.grid.removeEventListener('mouseleave', this.boundMouseLeave);
     this.clearHideTimeout();
     this.destroyGrips();
   }
@@ -190,9 +189,10 @@ export class TableRowColControls {
   }
 
   /**
-   * Position grips relative to their row/column
+   * Reposition grips to match current row/column layout.
+   * Called after resize or structural changes.
    */
-  private positionGrips(): void {
+  public positionGrips(): void {
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
     const firstRow = rows[0];
 
@@ -228,7 +228,7 @@ export class TableRowColControls {
     });
   }
 
-  private handleFocusIn(e: FocusEvent): void {
+  private handleMouseOver(e: MouseEvent): void {
     const target = e.target as HTMLElement;
     const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
@@ -248,7 +248,7 @@ export class TableRowColControls {
     this.showRowGrip(position.row);
   }
 
-  private handleFocusOut(_e: FocusEvent): void {
+  private handleMouseLeave(): void {
     if (this.activePopover !== null) {
       return;
     }
@@ -280,21 +280,13 @@ export class TableRowColControls {
     return { row: rowIndex, col: colIndex };
   }
 
-  private showGripsForFocusedCell(): void {
-    const focused = this.grid.querySelector<HTMLElement>(`[${CELL_ATTR}]:focus`);
-
-    if (!focused) {
-      return;
-    }
-
-    const position = this.getCellPosition(focused);
-
-    if (!position) {
-      return;
-    }
-
-    this.showColGrip(position.col);
-    this.showRowGrip(position.row);
+  /**
+   * Immediately hide all grips (no delay). Used when resize drag starts.
+   */
+  public hideAllGrips(): void {
+    this.clearHideTimeout();
+    this.hideColGrip();
+    this.hideRowGrip();
   }
 
   private showColGrip(index: number): void {
@@ -337,12 +329,14 @@ export class TableRowColControls {
     const el = grip;
 
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
+    el.setAttribute('data-blok-table-grip-visible', '');
   }
 
   private applyIdleClasses(grip: HTMLElement): void {
     const el = grip;
 
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
+    el.removeAttribute('data-blok-table-grip-visible');
   }
 
   private handleDragStateChange(isDragging: boolean, dragType: 'row' | 'col' | null): void {

@@ -17,6 +17,7 @@ export class TableResize {
   private gridEl: HTMLElement;
   private colWidths: number[];
   private onChange: (widths: number[]) => void;
+  private onDragStart: (() => void) | null;
   private isDragging = false;
   private dragStartX = 0;
   private dragColIndex = -1;
@@ -43,10 +44,11 @@ export class TableResize {
     });
   }
 
-  constructor(gridEl: HTMLElement, colWidths: number[], onChange: (widths: number[]) => void) {
+  constructor(gridEl: HTMLElement, colWidths: number[], onChange: (widths: number[]) => void, onDragStart?: () => void) {
     this.gridEl = gridEl;
     this.colWidths = [...colWidths];
     this.onChange = onChange;
+    this.onDragStart = onDragStart ?? null;
 
     this.boundPointerDown = this.onPointerDown.bind(this);
     this.boundPointerMove = this.onPointerMove.bind(this);
@@ -153,6 +155,7 @@ export class TableResize {
     this.dragStartX = e.clientX;
     this.startColWidth = this.colWidths[this.dragColIndex];
 
+    this.onDragStart?.();
     this.gridEl.style.userSelect = 'none';
 
     target.style.opacity = '1';

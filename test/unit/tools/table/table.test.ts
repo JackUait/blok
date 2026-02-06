@@ -430,7 +430,7 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
-    it('shows blue indicator on handle hover', () => {
+    it('shows blue indicator on handle hover via opacity', () => {
       const options = createTableOptions({
         content: [['A', 'B']],
       });
@@ -442,13 +442,15 @@ describe('Table Tool', () => {
 
       const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
 
+      expect(handle.style.opacity).toBe('0');
+
       handle.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
 
-      expect(handle.style.background).toContain('rgb(59, 130, 246)');
+      expect(handle.style.opacity).toBe('1');
 
       handle.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
 
-      expect(handle.style.background).toBe('');
+      expect(handle.style.opacity).toBe('0');
 
       document.body.removeChild(element);
     });
@@ -842,6 +844,41 @@ describe('Table Tool', () => {
 
       expect(grips).toHaveLength(0);
 
+      document.body.removeChild(element);
+    });
+
+    it('hides grips when resize drag starts', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+        colWidths: [200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Show grips by hovering a cell
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      const visibleBefore = element.querySelectorAll('[data-blok-table-grip-visible]');
+
+      expect(visibleBefore.length).toBeGreaterThan(0);
+
+      // Start resize drag
+      const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, bubbles: true }));
+
+      // All grips should be hidden
+      const visibleAfter = element.querySelectorAll('[data-blok-table-grip-visible]');
+
+      expect(visibleAfter.length).toBe(0);
+
+      // Clean up drag
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
       document.body.removeChild(element);
     });
   });

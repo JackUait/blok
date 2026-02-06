@@ -182,6 +182,15 @@ export class BlockEvents extends Module {
    * @param {InputEvent} event - input event
    */
   public input(event: InputEvent): void {
+    /**
+     * Ensure currentBlock is set from the input target.
+     * The debounced selectionchange handler may not have fired yet,
+     * leaving currentBlock undefined for blocks inside table cells.
+     */
+    if (event.target instanceof Node) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
     // Handle smart grouping for undo
     this.handleSmartGrouping(event);
 

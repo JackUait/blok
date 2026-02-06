@@ -57,6 +57,14 @@ export class TableCellBlocks {
   private cellsPendingCheck = new Set<HTMLElement>();
   private pendingCheckScheduled = false;
 
+  /**
+   * Maps a flat-list block index to the cell it was in when block-removed fired.
+   * Used during replace operations: block-removed fires while the holder is still
+   * in the cell DOM, then block-added fires at the same index after the holder
+   * has been removed. This map lets the block-added handler find the correct cell.
+   */
+  private removedBlockCells = new Map<number, HTMLElement>();
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -399,6 +407,12 @@ export class TableCellBlocks {
     const { type, detail } = data.event;
 
     if (type === 'block-removed') {
+      // Record which cell the removed block was in (holder is still in cell DOM
+      // at this point during a replace operation). This lets the subsequent
+      // block-added handler find the correct cell even when no adjacent block
+      // remains in the cell.
+      this.recordRemovedBlockCell(detail);
+
       // Schedule deferred empty-cell checks instead of running immediately.
       // This avoids creating spurious paragraphs during BlockManager.replace(),
       // where block-removed is immediately followed by block-added.
@@ -430,8 +444,15 @@ export class TableCellBlocks {
       return;
     }
 
+    // Check if a block was just removed at this index (replace operation).
+    // Use the recorded cell so the replacement lands in the correct cell,
+    // even when no adjacent block remains there.
+    const removedCell = this.removedBlockCells.get(blockIndex);
+
+    this.removedBlockCells.delete(blockIndex);
+
     // Check if this block should be in a cell
-    const cell = this.findCellForNewBlock(blockIndex);
+    const cell = removedCell ?? this.findCellForNewBlock(blockIndex);
 
     if (cell) {
       this.claimBlockForCell(cell, detail.target.id);
@@ -440,6 +461,23 @@ export class TableCellBlocks {
       this.cellsPendingCheck.delete(cell);
     }
   };
+
+  /**
+   * If the removed block's holder is currently inside a cell of this table,
+   * record the mapping so a subsequent block-added at the same index can
+   * find the correct cell.
+   */
+  private recordRemovedBlockCell(detail: { target: { holder: HTMLElement }; index?: number }): void {
+    if (detail.index === undefined) {
+      return;
+    }
+
+    const cell = detail.target.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+    if (cell && this.gridElement.contains(cell)) {
+      this.removedBlockCells.set(detail.index, cell);
+    }
+  }
 
   /**
    * Schedule a microtask to run ensureCellHasBlock for all cells still pending.
@@ -461,6 +499,7 @@ export class TableCellBlocks {
       }
 
       this.cellsPendingCheck.clear();
+      this.removedBlockCells.clear();
     });
   }
 
@@ -532,5 +571,6 @@ export class TableCellBlocks {
     this.api.events.off('block changed', this.handleBlockMutation);
     this._activeCellWithBlocks = null;
     this.cellsPendingCheck.clear();
+    this.removedBlockCells.clear();
   }
 }

@@ -427,6 +427,22 @@ describe('BlockEvents', () => {
       expect(() => blockEvents.input(event)).not.toThrow();
     });
 
+    it('sets current block from event target before processing shortcuts', () => {
+      const setCurrentBlockByChildNode = vi.fn();
+      const target = document.createElement('div');
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          setCurrentBlockByChildNode,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createInputEvent({ target } as unknown as Partial<InputEvent>);
+
+      blockEvents.input(event);
+
+      expect(setCurrentBlockByChildNode).toHaveBeenCalledWith(target);
+    });
+
     describe('smart grouping', () => {
       it('marks boundary when space is typed', () => {
         let pendingBoundary = false;

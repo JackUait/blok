@@ -14,7 +14,6 @@ import type { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
-import { Dom as $ } from '../../dom';
 import { BlockChanged } from '../../events';
 import { generateBlockId } from '../../utils';
 
@@ -710,17 +709,13 @@ export class BlockManager extends Module {
    */
   public setCurrentBlockByChildNode(childNode: Node): Block | undefined {
     /**
-     * If node is Text TextNode
+     * Find the block whose holder contains this child node.
+     * Uses the blocks array (not DOM children of the working area)
+     * so that blocks inside table cells are found correctly.
      */
-    const normalizedChildNode = ($.isElement(childNode) ? childNode : childNode.parentNode) as HTMLElement | null;
+    const block = this.repository.getBlockByChildNode(childNode);
 
-    if (!normalizedChildNode) {
-      return undefined;
-    }
-
-    const firstLevelBlock = normalizedChildNode.closest(`[${DATA_ATTR.element}]`);
-
-    if (!firstLevelBlock) {
+    if (!block) {
       return undefined;
     }
 
@@ -728,7 +723,7 @@ export class BlockManager extends Module {
      * Support multiple Blok instances,
      * by checking whether the found block belongs to the current instance
      */
-    const blokWrapper = firstLevelBlock.closest(`[${DATA_ATTR.editor}]`);
+    const blokWrapper = block.holder.closest(`[${DATA_ATTR.editor}]`);
     const wrapper = this.Blok.UI.nodes.wrapper;
     const isBlockBelongsToCurrentInstance = blokWrapper?.isEqualNode(wrapper);
 
@@ -736,23 +731,11 @@ export class BlockManager extends Module {
       return undefined;
     }
 
-    /**
-     * Update current Block's index
-     */
-    if (!(firstLevelBlock instanceof HTMLElement)) {
-      return undefined;
-    }
+    this.currentBlockIndex = this.repository.getBlockIndex(block);
 
-    this.currentBlockIndex = this.blocksStore.nodes.indexOf(firstLevelBlock);
+    block.updateCurrentInput();
 
-    /**
-     * Update current block active input
-     */
-    const currentBlock = this.currentBlock;
-
-    currentBlock?.updateCurrentInput();
-
-    return currentBlock;
+    return block;
   }
 
   /**

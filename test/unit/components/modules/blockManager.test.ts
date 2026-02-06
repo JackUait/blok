@@ -696,6 +696,48 @@ describe('BlockManager', () => {
     ui.nodes.wrapper.remove();
   });
 
+  it('sets current block by a child node inside a table cell (block holder moved out of working area)', () => {
+    const { blockManager } = createBlockManager({
+      initialBlocks: [
+        createBlockStub({ id: 'table-block' }),
+        createBlockStub({ id: 'cell-block' }),
+      ],
+    });
+
+    const ui = (blockManager as unknown as { Blok: BlokModules }).Blok.UI;
+
+    ui.nodes.wrapper.setAttribute('data-blok-editor', '');
+    ui.nodes.wrapper.appendChild(ui.nodes.redactor);
+    document.body.appendChild(ui.nodes.wrapper);
+
+    const blocks = blockManager.blocks;
+
+    // Simulate table cell structure: move block holder from working area into a cell container
+    const cellContainer = document.createElement('div');
+    cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+    const cell = document.createElement('div');
+    cell.setAttribute('data-blok-table-cell', '');
+    cell.appendChild(cellContainer);
+
+    // The table block's holder contains the cell structure
+    blocks[0].holder.appendChild(cell);
+
+    // Move cell-block's holder into the cell container (out of the working area)
+    cellContainer.appendChild(blocks[1].holder);
+
+    // Create a child node inside the cell block's contenteditable
+    const childNode = document.createElement('span');
+    blocks[1].holder.appendChild(childNode);
+
+    // This should find the block even though its holder is not a direct child of working area
+    const current = blockManager.setCurrentBlockByChildNode(childNode);
+
+    expect(current).toBe(blocks[1]);
+    expect(blockManager.currentBlockIndex).toBe(1);
+
+    ui.nodes.wrapper.remove();
+  });
+
   it('splits block with provided data and returns new block', () => {
     const originalBlock = createBlockStub({ id: 'original', name: 'list' });
 

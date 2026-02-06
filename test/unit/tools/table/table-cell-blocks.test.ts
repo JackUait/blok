@@ -1105,6 +1105,128 @@ describe('TableCellBlocks', () => {
       // The replacement block should have been claimed into the cell
       expect(container.contains(replacementHolder)).toBe(true);
     });
+
+    it('should claim replacement block into the correct cell when cell has a single block', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const spuriousBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'spurious-p',
+        holder: spuriousBlockHolder,
+      });
+
+      let blockChangedCallback: ((data: unknown) => void) | undefined;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+
+      // Cell (0,0) with a single block — the one being replaced
+      const cell00 = document.createElement('div');
+      cell00.setAttribute('data-blok-table-cell', '');
+      const container00 = document.createElement('div');
+      container00.setAttribute(CELL_BLOCKS_ATTR, '');
+      const paraBlock = document.createElement('div');
+      paraBlock.setAttribute('data-blok-id', 'para-1');
+      container00.appendChild(paraBlock);
+      cell00.appendChild(container00);
+
+      // Cell (0,1) with a single block — NOT the target cell
+      const cell01 = document.createElement('div');
+      cell01.setAttribute('data-blok-table-cell', '');
+      const container01 = document.createElement('div');
+      container01.setAttribute(CELL_BLOCKS_ATTR, '');
+      const otherBlock = document.createElement('div');
+      otherBlock.setAttribute('data-blok-id', 'other-1');
+      container01.appendChild(otherBlock);
+      cell01.appendChild(container01);
+
+      row.appendChild(cell00);
+      row.appendChild(cell01);
+      gridElement.appendChild(row);
+
+      // The replacement block (e.g. a list) — not yet in any cell
+      const replacementHolder = document.createElement('div');
+      replacementHolder.setAttribute('data-blok-id', 'list-1');
+
+      // The table block itself sits at index 0 in the flat list
+      const tableBlockHolder = document.createElement('div');
+      tableBlockHolder.setAttribute('data-blok-id', 'table-1');
+
+      // After replace: flat list is [table(0), list-1(1), other-1(2)]
+      // Before replace: flat list was [table(0), para-1(1), other-1(2)]
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'list-1') return 1;
+            if (id === 'other-1') return 2;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'table-1', holder: tableBlockHolder };
+            if (index === 1) return { id: 'list-1', holder: replacementHolder };
+            if (index === 2) return { id: 'other-1', holder: otherBlock };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(3),
+        },
+        events: {
+          on: vi.fn((eventName: string, cb: (data: unknown) => void) => {
+            if (eventName === 'block changed') {
+              blockChangedCallback = cb;
+            }
+          }),
+          off: vi.fn(),
+        },
+      } as unknown as API;
+
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      // Step 1: block-removed fires BEFORE holder.remove()
+      // At this point paraBlock.holder is still inside container00 in cell00
+      blockChangedCallback?.({
+        event: {
+          type: 'block-removed',
+          detail: {
+            target: { id: 'para-1', holder: paraBlock },
+            index: 1,
+          },
+        },
+      });
+
+      // Step 2: Editor removes old holder from DOM (blocks.ts:173)
+      paraBlock.remove();
+
+      // Step 3: Editor inserts new holder into main editor area (not in any cell)
+      // (In reality this happens via insertAdjacentElement on the table block)
+
+      // Step 4: block-added fires with new holder NOT in any cell
+      // Without the fix, findCellForNewBlock(1) checks:
+      //   index 0 → tableBlockHolder (not in any cell) → null
+      //   index 2 → otherBlock in cell01 → returns cell01 (WRONG!)
+      blockChangedCallback?.({
+        event: {
+          type: 'block-added',
+          detail: {
+            target: { id: 'list-1', holder: replacementHolder },
+            index: 1,
+          },
+        },
+      });
+
+      // Flush microtask queue
+      await Promise.resolve();
+
+      // The replacement block should be in cell (0,0), NOT cell (0,1)
+      expect(container00.contains(replacementHolder)).toBe(true);
+      expect(container01.contains(replacementHolder)).toBe(false);
+
+      // No spurious paragraph should have been inserted
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
   });
 
   describe('initializeCells', () => {

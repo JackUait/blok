@@ -288,6 +288,34 @@ test.describe('table cells — always-blocks model', () => {
       expect(content === 'none' || content === '').toBeTruthy();
     });
 
+    test('new paragraph created by Enter in table cell shows no placeholder', async ({ page }) => {
+      await create2x2Table(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
+
+      await firstEditable.click();
+      await page.keyboard.type('First line');
+
+      // Press Enter to create a new paragraph block inside the cell
+      await page.keyboard.press('Enter');
+
+      // The new paragraph's editable should have no placeholder
+      // eslint-disable-next-line playwright/no-nth-methods -- second editable in cell is the new paragraph
+      const firstCell = page.locator(CELL_SELECTOR).first();
+      const editables = firstCell.locator('[contenteditable="true"]');
+
+      // Wait for the new editable to appear
+      await expect(editables).toHaveCount(2);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets the second (new) editable
+      const newEditable = editables.nth(1);
+
+      const content = await getBeforePseudoContent(newEditable);
+
+      expect(content === 'none' || content === '').toBeTruthy();
+    });
+
     test('paragraph placeholder does not appear after clearing text in table cell', async ({ page }) => {
       await create2x2Table(page);
 

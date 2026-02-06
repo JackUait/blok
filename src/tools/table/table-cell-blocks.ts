@@ -454,10 +454,13 @@ export class TableCellBlocks {
     }
 
     // For non-replace inserts: if the holder is already in a cell (placed
-    // by insertToDOM next to an adjacent cell block), no action needed.
+    // by insertToDOM next to an adjacent cell block), just strip placeholders.
     const holder = detail.target.holder;
+    const existingContainer = holder.closest<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
-    if (holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+    if (existingContainer) {
+      this.stripPlaceholders(existingContainer);
+
       return;
     }
 

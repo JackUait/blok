@@ -5,7 +5,7 @@ import { TableGrid } from '../../../../src/tools/table/table-core';
  * Place mock block elements into cells' blocks containers.
  * Each label becomes a block ID so getData() returns { blocks: [label] }.
  */
-function fillWithBlocks(grid: TableGrid, element: HTMLElement, labels: string[][]): void {
+const fillWithBlocks = (grid: TableGrid, element: HTMLElement, labels: string[][]): void => {
   const rows = element.querySelectorAll('[data-blok-table-row]');
 
   labels.forEach((rowLabels, rowIndex) => {
@@ -32,12 +32,12 @@ function fillWithBlocks(grid: TableGrid, element: HTMLElement, labels: string[][
       container.appendChild(blockHolder);
     });
   });
-}
+};
 
 /** Shorthand to create a block-reference cell value */
-function b(id: string): { blocks: string[] } {
+const b = (id: string): { blocks: string[] } => {
   return { blocks: [id] };
-}
+};
 
 /** Shorthand for an empty cell (no blocks) */
 const empty = { blocks: [] };

@@ -968,7 +968,8 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      // Constructor subscribes to block events (side effect only)
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
 
       // Simulate block removal — remove from DOM, then fire event
       removedBlock.remove();

@@ -235,7 +235,7 @@ export class TableCellBlocks {
           return;
         }
 
-        const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`) as HTMLElement | null;
+        const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
         if (!container) {
           return;
@@ -311,31 +311,30 @@ export class TableCellBlocks {
    */
   public findCellForNewBlock(blockIndex: number): HTMLElement | null {
     // Check the previous block — if it's in a cell, the new block belongs there too
-    if (blockIndex > 0) {
-      const prevBlock = this.api.blocks.getBlockByIndex(blockIndex - 1);
+    const prevCell = this.findCellForAdjacentBlock(blockIndex - 1);
 
-      if (prevBlock) {
-        const cell = prevBlock.holder.closest(`[${CELL_ATTR}]`) as HTMLElement | null;
-
-        if (cell && this.gridElement.contains(cell)) {
-          return cell;
-        }
-      }
+    if (prevCell) {
+      return prevCell;
     }
 
     // Also check the next block (for insert-before cases)
-    const totalBlocks = this.api.blocks.getBlocksCount();
+    return this.findCellForAdjacentBlock(blockIndex + 1);
+  }
 
-    if (blockIndex < totalBlocks - 1) {
-      const nextBlock = this.api.blocks.getBlockByIndex(blockIndex + 1);
+  /**
+   * Check if a block at the given index is mounted inside a cell in this grid.
+   * Returns the cell element if found, null otherwise.
+   */
+  private findCellForAdjacentBlock(adjacentIndex: number): HTMLElement | null {
+    if (adjacentIndex < 0 || adjacentIndex >= this.api.blocks.getBlocksCount()) {
+      return null;
+    }
 
-      if (nextBlock) {
-        const cell = nextBlock.holder.closest(`[${CELL_ATTR}]`) as HTMLElement | null;
+    const block = this.api.blocks.getBlockByIndex(adjacentIndex);
+    const cell = block?.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
-        if (cell && this.gridElement.contains(cell)) {
-          return cell;
-        }
-      }
+    if (cell && this.gridElement.contains(cell)) {
+      return cell;
     }
 
     return null;
@@ -346,7 +345,7 @@ export class TableCellBlocks {
    * If the blocks container is empty, insert an empty paragraph.
    */
   public ensureCellHasBlock(cell: HTMLElement): void {
-    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`) as HTMLElement | null;
+    const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
     if (!container) {
       return;
@@ -430,6 +429,46 @@ export class TableCellBlocks {
       typeof (data as Record<string, unknown>).event === 'object' &&
       (data as Record<string, unknown>).event !== null
     );
+  }
+
+  /**
+   * Collect all block IDs from the given cell elements
+   */
+  public getBlockIdsFromCells(cells: NodeListOf<Element> | Element[]): string[] {
+    const blockIds: string[] = [];
+    const cellArray = Array.from(cells);
+
+    cellArray.forEach(cell => {
+      const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+      if (!container) {
+        return;
+      }
+
+      container.querySelectorAll('[data-blok-id]').forEach(block => {
+        const id = block.getAttribute('data-blok-id');
+
+        if (id) {
+          blockIds.push(id);
+        }
+      });
+    });
+
+    return blockIds;
+  }
+
+  /**
+   * Delete blocks by their IDs (in reverse index order to avoid shifting issues)
+   */
+  public deleteBlocks(blockIds: string[]): void {
+    const blockIndices = blockIds
+      .map(id => this.api.blocks.getBlockIndex(id))
+      .filter((index): index is number => index !== undefined)
+      .sort((a, b) => b - a);
+
+    blockIndices.forEach(index => {
+      void this.api.blocks.delete(index);
+    });
   }
 
   /**

@@ -19,6 +19,7 @@ const CELL_CLASSES = [
   'min-h-[2em]',
   'outline-none',
   'leading-normal',
+  'text-sm',
 ];
 
 /**

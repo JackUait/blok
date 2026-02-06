@@ -1376,5 +1376,32 @@ test.describe('table tool', () => {
       expect(toolStyles.marginTop).toBe('0px');
       expect(toolStyles.marginBottom).toBe('0px');
     });
+
+    test('table cells use 14px font size', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['Hello', 'World']],
+              },
+            },
+          ],
+        },
+      });
+
+      const cell = page.locator(CELL_SELECTOR).first();
+
+      await expect(cell).toBeVisible();
+
+      const fontSize = await cell.evaluate((el) => {
+        return window.getComputedStyle(el).fontSize;
+      });
+
+      expect(fontSize).toBe('14px');
+    });
   });
 });

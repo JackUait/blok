@@ -30,8 +30,7 @@ const WRAPPER_CLASSES = [
 
 const WRAPPER_EDIT_CLASSES = [
   'relative',
-  'pr-9',
-  'pb-9',
+  'pr-5',
 ];
 
 /**

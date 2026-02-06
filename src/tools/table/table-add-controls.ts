@@ -1,28 +1,30 @@
+import { IconPlus } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
 const HIDE_DELAY_MS = 150;
 
-const SHARED_CLASSES = [
+const HIT_AREA_CLASSES = [
   'flex',
   'items-center',
   'justify-center',
   'cursor-pointer',
-  'border',
-  'border-gray-300',
-  'rounded-full',
-  'hover:bg-gray-50',
   'transition-opacity',
   'duration-150',
 ];
 
-const PLUS_CLASSES = [
-  'text-gray-400',
-  'text-sm',
-  'select-none',
-  'pointer-events-none',
+const VISUAL_CLASSES = [
+  'flex',
+  'items-center',
+  'justify-center',
+  'border',
+  'border-gray-300',
+  'rounded-full',
+  'group-hover/add:bg-gray-50',
 ];
+
+const ICON_SIZE = '12';
 
 interface TableAddControlsOptions {
   wrapper: HTMLElement;
@@ -119,19 +121,24 @@ export class TableAddControls {
   private createAddRowButton(): HTMLElement {
     const btn = document.createElement('div');
 
-    btn.className = twMerge(SHARED_CLASSES);
+    btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'items-start');
     btn.setAttribute(ADD_ROW_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
     btn.style.opacity = '0';
+    btn.style.boxSizing = 'content-box';
     btn.style.width = '100%';
-    btn.style.height = '28px';
-    btn.style.marginTop = '4px';
+    btn.style.height = '32px';
+    btn.style.padding = '4px 8px 0';
+    btn.style.marginLeft = '-8px';
 
-    const plus = document.createElement('span');
+    const visual = document.createElement('div');
 
-    plus.className = twMerge(PLUS_CLASSES);
-    plus.textContent = '+';
-    btn.appendChild(plus);
+    visual.className = twMerge(VISUAL_CLASSES);
+    visual.style.width = '100%';
+    visual.style.height = '16px';
+
+    this.appendIcon(visual);
+    btn.appendChild(visual);
 
     return btn;
   }
@@ -139,22 +146,38 @@ export class TableAddControls {
   private createAddColumnButton(): HTMLElement {
     const btn = document.createElement('div');
 
-    btn.className = twMerge(SHARED_CLASSES);
+    btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'justify-start');
     btn.setAttribute(ADD_COL_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
     btn.style.opacity = '0';
     btn.style.position = 'absolute';
-    btn.style.right = '-32px';
+    btn.style.right = '-36px';
     btn.style.top = '0px';
     btn.style.bottom = '0px';
-    btn.style.width = '28px';
+    btn.style.width = '32px';
 
-    const plus = document.createElement('span');
+    const visual = document.createElement('div');
 
-    plus.className = twMerge(PLUS_CLASSES);
-    plus.textContent = '+';
-    btn.appendChild(plus);
+    visual.className = twMerge(VISUAL_CLASSES);
+    visual.style.width = '16px';
+    visual.style.height = '100%';
+
+    this.appendIcon(visual);
+    btn.appendChild(visual);
 
     return btn;
+  }
+
+  private appendIcon(parent: HTMLElement): void {
+    parent.insertAdjacentHTML('beforeend', IconPlus);
+
+    const svg = parent.querySelector('svg');
+
+    if (svg) {
+      svg.setAttribute('width', ICON_SIZE);
+      svg.setAttribute('height', ICON_SIZE);
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.classList.add('text-gray-500', 'pointer-events-none');
+    }
   }
 }

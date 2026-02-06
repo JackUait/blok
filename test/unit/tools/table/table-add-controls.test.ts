@@ -70,7 +70,7 @@ describe('TableAddControls', () => {
       expect(addColBtn).not.toBeNull();
     });
 
-    it('add-row button contains a "+" text', () => {
+    it('add-row button contains a plus SVG icon', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -82,10 +82,10 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      expect(addRowBtn.textContent).toBe('+');
+      expect(addRowBtn.querySelector('svg')).not.toBeNull();
     });
 
-    it('add-column button contains a "+" text', () => {
+    it('add-column button contains a plus SVG icon', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -97,7 +97,7 @@ describe('TableAddControls', () => {
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addColBtn.textContent).toBe('+');
+      expect(addColBtn.querySelector('svg')).not.toBeNull();
     });
 
     it('both buttons are contenteditable false', () => {

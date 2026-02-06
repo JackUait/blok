@@ -1314,4 +1314,67 @@ test.describe('table tool', () => {
       expect(cursorAfter).toBe('');
     });
   });
+
+  test.describe('cell styling', () => {
+    test('block wrappers and tool elements inside table cells have no extra spacing', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['Hello', 'World']],
+              },
+            },
+          ],
+        },
+      });
+
+      const blockWrapper = page.locator(`${CELL_SELECTOR} [data-blok-element]`).first();
+
+      await expect(blockWrapper).toBeVisible();
+
+      const wrapperStyles = await blockWrapper.evaluate((el) => {
+        const computed = window.getComputedStyle(el);
+
+        return {
+          paddingTop: computed.paddingTop,
+          paddingBottom: computed.paddingBottom,
+          marginTop: computed.marginTop,
+          marginBottom: computed.marginBottom,
+        };
+      });
+
+      expect(wrapperStyles.paddingTop).toBe('0px');
+      expect(wrapperStyles.paddingBottom).toBe('0px');
+      expect(wrapperStyles.marginTop).toBe('0px');
+      expect(wrapperStyles.marginBottom).toBe('0px');
+
+      const toolBlock = page.locator(`${CELL_SELECTOR} .blok-block`).first();
+
+      await expect(toolBlock).toBeVisible();
+
+      const toolStyles = await toolBlock.evaluate((el) => {
+        const computed = window.getComputedStyle(el);
+
+        return {
+          paddingTop: computed.paddingTop,
+          paddingBottom: computed.paddingBottom,
+          paddingLeft: computed.paddingLeft,
+          paddingRight: computed.paddingRight,
+          marginTop: computed.marginTop,
+          marginBottom: computed.marginBottom,
+        };
+      });
+
+      expect(toolStyles.paddingTop).toBe('0px');
+      expect(toolStyles.paddingBottom).toBe('0px');
+      expect(toolStyles.paddingLeft).toBe('0px');
+      expect(toolStyles.paddingRight).toBe('0px');
+      expect(toolStyles.marginTop).toBe('0px');
+      expect(toolStyles.marginBottom).toBe('0px');
+    });
+  });
 });

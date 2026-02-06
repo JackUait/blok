@@ -469,6 +469,27 @@ describe('PopoverAbstract', () => {
       expect(element).not.toHaveAttribute(DATA_ATTR.hidden);
     });
 
+    it('toggles all items when multiple items share the same name', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Table 1', name: 'table', onActivate: vi.fn() },
+          { title: 'Other', name: 'other', onActivate: vi.fn() },
+          { title: 'Table 2', name: 'table', onActivate: vi.fn() },
+        ],
+      });
+
+      popover.toggleItemHiddenByName('table', true);
+
+      const items = popover.getItemsForTests();
+      const table1 = (items[0] as PopoverItemDefault).getElement();
+      const other = (items[1] as PopoverItemDefault).getElement();
+      const table2 = (items[2] as PopoverItemDefault).getElement();
+
+      expect(table1).toHaveAttribute(DATA_ATTR.hidden, 'true');
+      expect(other).not.toHaveAttribute(DATA_ATTR.hidden);
+      expect(table2).toHaveAttribute(DATA_ATTR.hidden, 'true');
+    });
+
     it('does nothing when no items match the name', () => {
       const popover = createPopover({
         items: [

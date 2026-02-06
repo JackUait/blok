@@ -1543,6 +1543,192 @@ describe('TableCellBlocks', () => {
     });
   });
 
+  describe('getBlockIdsFromCells', () => {
+    it('should collect block IDs from cells with blocks', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+
+      // Cell with two blocks
+      const cell0 = document.createElement('div');
+      cell0.setAttribute('data-blok-table-cell', '');
+      const container0 = document.createElement('div');
+      container0.setAttribute(CELL_BLOCKS_ATTR, '');
+      const block0a = document.createElement('div');
+      block0a.setAttribute('data-blok-id', 'block-a');
+      const block0b = document.createElement('div');
+      block0b.setAttribute('data-blok-id', 'block-b');
+      container0.appendChild(block0a);
+      container0.appendChild(block0b);
+      cell0.appendChild(container0);
+
+      // Cell with one block
+      const cell1 = document.createElement('div');
+      cell1.setAttribute('data-blok-table-cell', '');
+      const container1 = document.createElement('div');
+      container1.setAttribute(CELL_BLOCKS_ATTR, '');
+      const block1 = document.createElement('div');
+      block1.setAttribute('data-blok-id', 'block-c');
+      container1.appendChild(block1);
+      cell1.appendChild(container1);
+
+      row.appendChild(cell0);
+      row.appendChild(cell1);
+      gridElement.appendChild(row);
+
+      const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const ids = cellBlocks.getBlockIdsFromCells([cell0, cell1]);
+
+      expect(ids).toEqual(['block-a', 'block-b', 'block-c']);
+    });
+
+    it('should return empty array for cells without a blocks container', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+
+      // Cell without a blocks container
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+
+      const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const ids = cellBlocks.getBlockIdsFromCells([cell]);
+
+      expect(ids).toEqual([]);
+    });
+
+    it('should return empty array for cells with empty blocks container', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+
+      const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const ids = cellBlocks.getBlockIdsFromCells([cell]);
+
+      expect(ids).toEqual([]);
+    });
+  });
+
+  describe('deleteBlocks', () => {
+    it('should delete blocks in reverse index order to avoid shifting', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockDelete = vi.fn();
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'b1') return 0;
+            if (id === 'b2') return 1;
+            if (id === 'b3') return 2;
+
+            return undefined;
+          }),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      cellBlocks.deleteBlocks(['b1', 'b2', 'b3']);
+
+      // Should delete in reverse order: 2, 1, 0
+      expect(mockDelete).toHaveBeenCalledTimes(3);
+      expect(mockDelete.mock.calls[0][0]).toBe(2);
+      expect(mockDelete.mock.calls[1][0]).toBe(1);
+      expect(mockDelete.mock.calls[2][0]).toBe(0);
+    });
+
+    it('should skip block IDs that have no index', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockDelete = vi.fn();
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'b1') return 0;
+
+            return undefined;
+          }),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      cellBlocks.deleteBlocks(['b1', 'nonexistent', 'also-missing']);
+
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+      expect(mockDelete).toHaveBeenCalledWith(0);
+    });
+  });
+
+  describe('initializeCells with multiple blocks per cell', () => {
+    it('should mount all block references when cell has multiple blocks', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const holderA = document.createElement('div');
+      const holderB = document.createElement('div');
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'block-a') return 0;
+            if (id === 'block-b') return 1;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'block-a', holder: holderA };
+            if (index === 1) return { id: 'block-b', holder: holderB };
+
+            return undefined;
+          }),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['block-a', 'block-b'] }]]);
+
+      expect(container.contains(holderA)).toBe(true);
+      expect(container.contains(holderB)).toBe(true);
+      // Should preserve the original block references
+      expect(result[0][0]).toEqual({ blocks: ['block-a', 'block-b'] });
+      // Should not have called insert (blocks already exist)
+      expect(api.blocks.insert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Enter key in cell', () => {
     it('should not be prevented by table keyboard handler', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');

@@ -45,14 +45,12 @@ interface TableCellBlocksOptions {
 export class TableCellBlocks {
   private api: API;
   private gridElement: HTMLElement;
-  private tableBlockId: string;
   private _activeCellWithBlocks: CellPosition | null = null;
   private onNavigateToCell?: CellNavigationCallback;
 
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
-    this.tableBlockId = options.tableBlockId;
     this.onNavigateToCell = options.onNavigateToCell;
 
     this.api.events.on('block changed', this.handleBlockMutation);

@@ -249,12 +249,27 @@ export class TableCellBlocks {
           container.appendChild(block.holder);
           normalizedRow.push({ blocks: [block.id] });
         }
+
+        this.stripPlaceholders(container);
       });
 
       normalizedContent.push(normalizedRow);
     });
 
     return normalizedContent;
+  }
+
+  /**
+   * Remove placeholder attributes from contenteditable elements inside a cell container.
+   * Blocks in table cells should feel like plain table fields, not standalone paragraphs.
+   */
+  private stripPlaceholders(container: HTMLElement): void {
+    container.querySelectorAll<HTMLElement>('[data-blok-placeholder-active]').forEach(el => {
+      el.removeAttribute('data-blok-placeholder-active');
+    });
+    container.querySelectorAll<HTMLElement>('[data-placeholder]').forEach(el => {
+      el.removeAttribute('data-placeholder');
+    });
   }
 
   /**
@@ -282,7 +297,7 @@ export class TableCellBlocks {
    * Move a block's DOM holder into a cell's blocks container.
    */
   public claimBlockForCell(cell: HTMLElement, blockId: string): void {
-    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+    const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
     if (!container) {
       return;
@@ -301,6 +316,7 @@ export class TableCellBlocks {
     }
 
     container.appendChild(block.holder);
+    this.stripPlaceholders(container);
   }
 
   /**
@@ -358,6 +374,7 @@ export class TableCellBlocks {
     const block = this.api.blocks.insert('paragraph', { text: '' }, {}, undefined, true);
 
     container.appendChild(block.holder);
+    this.stripPlaceholders(container);
   }
 
   /**

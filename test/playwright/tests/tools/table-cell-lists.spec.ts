@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
@@ -330,6 +330,56 @@ test.describe('table cells — always-blocks model', () => {
 
       await expect(firstCell).toContainText('First line');
       await expect(firstCell).toContainText('Second line');
+    });
+  });
+
+  test.describe('placeholder suppression', () => {
+    /**
+     * Get the computed ::before pseudo-element content for an element.
+     * Returns 'none' or '' when no placeholder is visible.
+     */
+    const getBeforePseudoContent = (locator: Locator): Promise<string> => {
+      return locator.evaluate((el) => {
+        const view = el.ownerDocument.defaultView;
+
+        if (!view) {
+          return 'none';
+        }
+
+        return view.getComputedStyle(el, '::before').getPropertyValue('content').replace(/['"]/g, '');
+      });
+    };
+
+    test('paragraph inside table cell shows no placeholder when focused', async ({ page }) => {
+      await create2x2Table(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
+
+      await firstEditable.click();
+
+      const content = await getBeforePseudoContent(firstEditable);
+
+      expect(content === 'none' || content === '').toBeTruthy();
+    });
+
+    test('paragraph placeholder does not appear after clearing text in table cell', async ({ page }) => {
+      await create2x2Table(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
+
+      await firstEditable.click();
+      await page.keyboard.type('temp');
+
+      const selectAll = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+
+      await page.keyboard.press(selectAll);
+      await page.keyboard.press('Backspace');
+
+      const content = await getBeforePseudoContent(firstEditable);
+
+      expect(content === 'none' || content === '').toBeTruthy();
     });
   });
 

@@ -11,7 +11,6 @@ import type {
 import type { MoveEvent } from '../../../types/tools/hook-events';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { setupPlaceholder } from '../../components/utils/placeholder';
-import { isInCellBlock } from '../table/table-cell-blocks';
 
 import {
   rerenderListItem,
@@ -266,11 +265,6 @@ export class ListItem implements BlockTool {
     }
 
     if (event.key !== 'Tab') {
-      return;
-    }
-
-    // When inside a table cell, let Tab bubble up for cell navigation
-    if (this._element && isInCellBlock(this._element)) {
       return;
     }
 

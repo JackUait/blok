@@ -93,9 +93,6 @@ export class Table implements BlockTool {
         b: true,
         i: true,
         a: { href: true },
-        ul: true,
-        ol: true,
-        li: true,
         input: { type: true, checked: true },
       },
     };

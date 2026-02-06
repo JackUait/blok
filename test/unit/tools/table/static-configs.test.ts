@@ -9,15 +9,6 @@ describe('Table static configs', () => {
     expect(config.content).toHaveProperty('br', true);
     expect(config.content).toHaveProperty('b', true);
     expect(config.content).toHaveProperty('a');
-  });
-
-  it('sanitize allows list elements for cell lists', () => {
-    const config = Table.sanitize;
-
-    expect(config.content).toBeDefined();
-    expect(config.content).toHaveProperty('ul', true);
-    expect(config.content).toHaveProperty('ol', true);
-    expect(config.content).toHaveProperty('li', true);
     expect(config.content).toHaveProperty('input', { type: true, checked: true });
   });
 

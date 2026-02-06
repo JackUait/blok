@@ -4,7 +4,8 @@ import {
   IconInsertLeft,
   IconInsertRight,
   IconTrash,
-  IconTable,
+  IconHeaderRow,
+  IconHeaderColumn,
 } from '../../components/icons';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
@@ -492,6 +493,23 @@ export class TableRowColControls {
   }
 
   private buildColumnMenu(colIndex: number): PopoverItemParams[] {
+    const headingItems: PopoverItemParams[] = colIndex === 0
+      ? [
+        {
+          type: PopoverItemType.Html,
+          element: createHeadingToggle({
+            icon: IconHeaderColumn,
+            label: 'Header column',
+            isActive: this.isHeadingColumn(),
+            onToggle: () => {
+              this.onAction({ type: 'toggle-heading-column' });
+            },
+          }),
+        },
+        { type: PopoverItemType.Separator },
+      ]
+      : [];
+
     const baseItems: PopoverItemParams[] = [
       {
         icon: IconInsertLeft,
@@ -511,23 +529,6 @@ export class TableRowColControls {
       },
     ];
 
-    const headingItems: PopoverItemParams[] = colIndex === 0
-      ? [
-        { type: PopoverItemType.Separator },
-        {
-          type: PopoverItemType.Html,
-          element: createHeadingToggle({
-            icon: IconTable,
-            label: 'Header column',
-            isActive: this.isHeadingColumn(),
-            onToggle: () => {
-              this.onAction({ type: 'toggle-heading-column' });
-            },
-          }),
-        },
-      ]
-      : [];
-
     const deleteItems: PopoverItemParams[] = [
       { type: PopoverItemType.Separator },
       {
@@ -543,10 +544,27 @@ export class TableRowColControls {
       },
     ];
 
-    return [...baseItems, ...headingItems, ...deleteItems];
+    return [...headingItems, ...baseItems, ...deleteItems];
   }
 
   private buildRowMenu(rowIndex: number): PopoverItemParams[] {
+    const headingItems: PopoverItemParams[] = rowIndex === 0
+      ? [
+        {
+          type: PopoverItemType.Html,
+          element: createHeadingToggle({
+            icon: IconHeaderRow,
+            label: 'Header row',
+            isActive: this.isHeadingRow(),
+            onToggle: () => {
+              this.onAction({ type: 'toggle-heading' });
+            },
+          }),
+        },
+        { type: PopoverItemType.Separator },
+      ]
+      : [];
+
     const baseItems: PopoverItemParams[] = [
       {
         icon: IconInsertAbove,
@@ -566,23 +584,6 @@ export class TableRowColControls {
       },
     ];
 
-    const headingItems: PopoverItemParams[] = rowIndex === 0
-      ? [
-        { type: PopoverItemType.Separator },
-        {
-          type: PopoverItemType.Html,
-          element: createHeadingToggle({
-            icon: IconTable,
-            label: 'Header row',
-            isActive: this.isHeadingRow(),
-            onToggle: () => {
-              this.onAction({ type: 'toggle-heading' });
-            },
-          }),
-        },
-      ]
-      : [];
-
     const deleteItems: PopoverItemParams[] = [
       { type: PopoverItemType.Separator },
       {
@@ -598,6 +599,6 @@ export class TableRowColControls {
       },
     ];
 
-    return [...baseItems, ...headingItems, ...deleteItems];
+    return [...headingItems, ...baseItems, ...deleteItems];
   }
 }

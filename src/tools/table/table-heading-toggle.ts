@@ -1,33 +1,45 @@
 import { twMerge } from '../../components/utils/tw';
 
+/**
+ * Matches the default popover item container styling from popover-item-default.const.ts
+ */
 const TOGGLE_ROW_CLASSES = [
   'flex',
   'items-center',
-  'gap-2',
-  'px-3',
-  'py-2',
-  'cursor-pointer',
   'select-none',
-  'min-w-[200px]',
+  'border-none',
+  'bg-transparent',
+  'rounded-md',
+  'p-[var(--item-padding)]',
+  'text-text-primary',
+  'mb-px',
+  'cursor-pointer',
+  'can-hover:hover:bg-item-hover-bg',
 ];
 
+/**
+ * Matches the default popover item icon styling
+ */
 const ICON_WRAPPER_CLASSES = [
   'flex',
   'items-center',
   'justify-center',
   'w-[26px]',
   'h-[26px]',
-  'shrink-0',
-  '[&_svg]:w-5',
-  '[&_svg]:h-5',
-  'text-gray-600',
+  'mr-2',
+  '[&_svg]:w-icon',
+  '[&_svg]:h-icon',
 ];
 
+/**
+ * Matches the default popover item title styling
+ */
 const LABEL_CLASSES = [
-  'flex-1',
+  'mr-auto',
+  'truncate',
   'text-sm',
-  'text-gray-800',
-  'leading-normal',
+  'font-medium',
+  'leading-5',
 ];
 
 const TRACK_CLASSES = [

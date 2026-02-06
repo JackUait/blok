@@ -924,7 +924,7 @@ describe('TableCellBlocks', () => {
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
-    it('should auto-fill cell when block-removed event leaves cell empty', async () => {
+    it('should auto-fill cell when block-removed event leaves cell empty (after microtask)', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const mockBlockHolder = document.createElement('div');
@@ -984,6 +984,12 @@ describe('TableCellBlocks', () => {
         },
       });
 
+      // ensureCellHasBlock is now deferred — should NOT have been called yet
+      expect(mockInsert).not.toHaveBeenCalled();
+
+      // Flush the microtask queue
+      await Promise.resolve();
+
       expect(mockInsert).toHaveBeenCalledWith(
         'paragraph',
         { text: '' },
@@ -991,6 +997,113 @@ describe('TableCellBlocks', () => {
         undefined,
         true
       );
+    });
+
+    it('should NOT create a spurious paragraph when block-removed is immediately followed by block-added (replace scenario)', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'spurious-p',
+        holder: mockBlockHolder,
+      });
+
+      let blockChangedCallback: ((data: unknown) => void) | undefined;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+
+      // Cell with two blocks: the first will be replaced, the second provides adjacency
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      // Block being replaced (paragraph -> list)
+      const originalBlock = document.createElement('div');
+      originalBlock.setAttribute('data-blok-id', 'para-1');
+      container.appendChild(originalBlock);
+
+      // Second block in same cell (provides adjacency for findCellForNewBlock)
+      const siblingBlock = document.createElement('div');
+      siblingBlock.setAttribute('data-blok-id', 'sibling-1');
+      container.appendChild(siblingBlock);
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // The replacement block (e.g. a list) that will be added at index 0
+      const replacementHolder = document.createElement('div');
+      replacementHolder.setAttribute('data-blok-id', 'list-1');
+
+      // After replace: flat list is [list-1 (index 0), sibling-1 (index 1)]
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'list-1') return 0;
+            if (id === 'sibling-1') return 1;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'list-1', holder: replacementHolder };
+            if (index === 1) return { id: 'sibling-1', holder: siblingBlock };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(2),
+        },
+        events: {
+          on: vi.fn((eventName: string, cb: (data: unknown) => void) => {
+            if (eventName === 'block changed') {
+              blockChangedCallback = cb;
+            }
+          }),
+          off: vi.fn(),
+        },
+      } as unknown as API;
+
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      // Step 1: block-removed fires (paragraph is being replaced)
+      // Remove the old block from DOM as the editor would
+      originalBlock.remove();
+
+      blockChangedCallback?.({
+        event: {
+          type: 'block-removed',
+          detail: {
+            target: { id: 'para-1', holder: originalBlock },
+            index: 0,
+          },
+        },
+      });
+
+      // Step 2: block-added fires immediately (replacement list block)
+      // replacementHolder is NOT yet in a cell, so findCellForNewBlock will find
+      // the sibling at index 1 in the same cell and claim it there
+      blockChangedCallback?.({
+        event: {
+          type: 'block-added',
+          detail: {
+            target: { id: 'list-1', holder: replacementHolder },
+            index: 0,
+          },
+        },
+      });
+
+      // Flush microtask queue
+      await Promise.resolve();
+
+      // The deferred ensureCellHasBlock should have been cancelled for the cell,
+      // so no spurious paragraph was inserted
+      expect(mockInsert).not.toHaveBeenCalled();
+
+      // The replacement block should have been claimed into the cell
+      expect(container.contains(replacementHolder)).toBe(true);
     });
   });
 

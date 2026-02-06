@@ -48,6 +48,15 @@ export class TableCellBlocks {
   private _activeCellWithBlocks: CellPosition | null = null;
   private onNavigateToCell?: CellNavigationCallback;
 
+  /**
+   * Cells that need an empty-check after a block-removed event.
+   * A pending microtask will call ensureCellHasBlock for each cell still in this Set.
+   * If a block-added event claims a block into a cell before the microtask runs,
+   * that cell is removed from the Set, cancelling the check.
+   */
+  private cellsPendingCheck = new Set<HTMLElement>();
+  private pendingCheckScheduled = false;
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -390,12 +399,16 @@ export class TableCellBlocks {
     const { type, detail } = data.event;
 
     if (type === 'block-removed') {
-      // Check all cells in grid for empty containers
-      const cells = this.gridElement.querySelectorAll(`[${CELL_ATTR}]`);
+      // Schedule deferred empty-cell checks instead of running immediately.
+      // This avoids creating spurious paragraphs during BlockManager.replace(),
+      // where block-removed is immediately followed by block-added.
+      const cells = this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`);
 
       cells.forEach(cell => {
-        this.ensureCellHasBlock(cell as HTMLElement);
+        this.cellsPendingCheck.add(cell);
       });
+
+      this.schedulePendingCellCheck();
 
       return;
     }
@@ -422,8 +435,34 @@ export class TableCellBlocks {
 
     if (cell) {
       this.claimBlockForCell(cell, detail.target.id);
+
+      // Cancel the pending empty-check for this cell since it now has a block
+      this.cellsPendingCheck.delete(cell);
     }
   };
+
+  /**
+   * Schedule a microtask to run ensureCellHasBlock for all cells still pending.
+   * If a block-added event removes a cell from the pending set before the microtask runs,
+   * that cell's check is effectively cancelled.
+   */
+  private schedulePendingCellCheck(): void {
+    if (this.pendingCheckScheduled) {
+      return;
+    }
+
+    this.pendingCheckScheduled = true;
+
+    queueMicrotask(() => {
+      this.pendingCheckScheduled = false;
+
+      for (const cell of this.cellsPendingCheck) {
+        this.ensureCellHasBlock(cell);
+      }
+
+      this.cellsPendingCheck.clear();
+    });
+  }
 
   /**
    * Type guard for block mutation event payload
@@ -492,5 +531,6 @@ export class TableCellBlocks {
   destroy(): void {
     this.api.events.off('block changed', this.handleBlockMutation);
     this._activeCellWithBlocks = null;
+    this.cellsPendingCheck.clear();
   }
 }

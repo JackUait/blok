@@ -137,3 +137,12 @@
 [data-blok-table-cell-blocks] .blok-block {
   @apply p-0 m-0;
 }
+
+/**
+ * Table heading styles
+ * Applied to first row (heading row) and first column (heading column) cells
+ */
+[data-blok-table-heading] [data-blok-table-cell],
+[data-blok-table-heading-col] {
+  @apply font-semibold bg-gray-50;
+}

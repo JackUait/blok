@@ -4,12 +4,13 @@ import {
   IconInsertLeft,
   IconInsertRight,
   IconTrash,
-  IconHeading,
+  IconTable,
 } from '../../components/icons';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
 import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { createHeadingToggle } from './table-heading-toggle';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -36,13 +37,15 @@ export type RowColAction =
   | { type: 'move-col'; fromIndex: number; toIndex: number }
   | { type: 'delete-row'; index: number }
   | { type: 'delete-col'; index: number }
-  | { type: 'toggle-heading' };
+  | { type: 'toggle-heading' }
+  | { type: 'toggle-heading-column' };
 
 export interface TableRowColControlsOptions {
   grid: HTMLElement;
   getColumnCount: () => number;
   getRowCount: () => number;
   isHeadingRow: () => boolean;
+  isHeadingColumn: () => boolean;
   onAction: (action: RowColAction) => void;
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
 }
@@ -78,6 +81,7 @@ export class TableRowColControls {
   private getColumnCount: () => number;
   private getRowCount: () => number;
   private isHeadingRow: () => boolean;
+  private isHeadingColumn: () => boolean;
   private onAction: (action: RowColAction) => void;
 
   private colGrips: HTMLElement[] = [];
@@ -99,6 +103,7 @@ export class TableRowColControls {
     this.getColumnCount = options.getColumnCount;
     this.getRowCount = options.getRowCount;
     this.isHeadingRow = options.isHeadingRow;
+    this.isHeadingColumn = options.isHeadingColumn;
     this.onAction = options.onAction;
 
     this.drag = new TableRowColDrag({
@@ -487,7 +492,7 @@ export class TableRowColControls {
   }
 
   private buildColumnMenu(colIndex: number): PopoverItemParams[] {
-    return [
+    const baseItems: PopoverItemParams[] = [
       {
         icon: IconInsertLeft,
         title: 'Insert Column Left',
@@ -504,6 +509,26 @@ export class TableRowColControls {
           this.onAction({ type: 'insert-col-right', index: colIndex });
         },
       },
+    ];
+
+    const headingItems: PopoverItemParams[] = colIndex === 0
+      ? [
+        { type: PopoverItemType.Separator },
+        {
+          type: PopoverItemType.Html,
+          element: createHeadingToggle({
+            icon: IconTable,
+            label: 'Header column',
+            isActive: this.isHeadingColumn(),
+            onToggle: () => {
+              this.onAction({ type: 'toggle-heading-column' });
+            },
+          }),
+        },
+      ]
+      : [];
+
+    const deleteItems: PopoverItemParams[] = [
       { type: PopoverItemType.Separator },
       {
         icon: IconTrash,
@@ -517,6 +542,8 @@ export class TableRowColControls {
         },
       },
     ];
+
+    return [...baseItems, ...headingItems, ...deleteItems];
   }
 
   private buildRowMenu(rowIndex: number): PopoverItemParams[] {
@@ -543,14 +570,15 @@ export class TableRowColControls {
       ? [
         { type: PopoverItemType.Separator },
         {
-          icon: IconHeading,
-          title: 'Set as Heading',
-          isActive: this.isHeadingRow(),
-          toggle: true,
-          closeOnActivate: true,
-          onActivate: (): void => {
-            this.onAction({ type: 'toggle-heading' });
-          },
+          type: PopoverItemType.Html,
+          element: createHeadingToggle({
+            icon: IconTable,
+            label: 'Header row',
+            isActive: this.isHeadingRow(),
+            onToggle: () => {
+              this.onAction({ type: 'toggle-heading' });
+            },
+          }),
         },
       ]
       : [];

@@ -25,6 +25,7 @@ export const normalizeTableData = (
 ): TableData => {
   return {
     withHeadings: (data.withHeadings as boolean) ?? defaults?.withHeadings ?? false,
+    withHeadingColumn: (data.withHeadingColumn as boolean) ?? false,
     stretched: (data.stretched as boolean) ?? defaults?.stretched ?? false,
     content: Array.isArray(data.content) ? data.content as string[][] : [],
   };

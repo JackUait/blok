@@ -130,6 +130,10 @@ export class Table implements BlockTool {
       this.updateHeadingStyles();
     }
 
+    if (this.data.withHeadingColumn) {
+      this.updateHeadingColumnStyles();
+    }
+
     if (!this.readOnly) {
       this.setupKeyboardNavigation(gridEl);
       this.initCellBlocks(gridEl);
@@ -173,6 +177,7 @@ export class Table implements BlockTool {
 
     return {
       withHeadings: this.data.withHeadings,
+      withHeadingColumn: this.data.withHeadingColumn,
       stretched: this.data.stretched,
       content: this.grid.getData(gridEl),
       ...(colWidths ? { colWidths } : {}),
@@ -234,6 +239,7 @@ export class Table implements BlockTool {
 
     this.data = {
       withHeadings,
+      withHeadingColumn: this.data.withHeadingColumn,
       stretched: this.data.stretched,
       content: tableContent,
     };
@@ -278,6 +284,7 @@ export class Table implements BlockTool {
     if (!isTableData) {
       return {
         withHeadings: this.config.withHeadings ?? false,
+        withHeadingColumn: false,
         stretched: this.config.stretched ?? false,
         content: [],
       };
@@ -290,6 +297,7 @@ export class Table implements BlockTool {
 
     return {
       withHeadings: tableData.withHeadings ?? this.config.withHeadings ?? false,
+      withHeadingColumn: tableData.withHeadingColumn ?? false,
       stretched: tableData.stretched ?? this.config.stretched ?? false,
       content: tableData.content ?? [],
       colWidths: validWidths,
@@ -318,6 +326,34 @@ export class Table implements BlockTool {
     } else {
       firstRow.removeAttribute('data-blok-table-heading');
     }
+  }
+
+  private updateHeadingColumnStyles(): void {
+    if (!this.element) {
+      return;
+    }
+
+    const gridEl = this.element.firstElementChild as HTMLElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+
+    rows.forEach(row => {
+      const firstCell = row.querySelector('[data-blok-table-cell]');
+
+      if (!firstCell) {
+        return;
+      }
+
+      if (this.data.withHeadingColumn) {
+        firstCell.setAttribute('data-blok-table-heading-col', '');
+      } else {
+        firstCell.removeAttribute('data-blok-table-heading-col');
+      }
+    });
   }
 
   private initAddControls(gridEl: HTMLElement): void {
@@ -361,6 +397,7 @@ export class Table implements BlockTool {
       getColumnCount: () => this.grid.getColumnCount(gridEl),
       getRowCount: () => this.grid.getRowCount(gridEl),
       isHeadingRow: () => this.data.withHeadings,
+      isHeadingColumn: () => this.data.withHeadingColumn,
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
       onDragStateChange: (isDragging: boolean) => {
         if (!this.resize) {
@@ -406,6 +443,10 @@ export class Table implements BlockTool {
       case 'toggle-heading':
         this.data.withHeadings = !this.data.withHeadings;
         this.updateHeadingStyles();
+        break;
+      case 'toggle-heading-column':
+        this.data.withHeadingColumn = !this.data.withHeadingColumn;
+        this.updateHeadingColumnStyles();
         break;
     }
 

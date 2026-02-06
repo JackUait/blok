@@ -48,7 +48,7 @@ const createTableOptions = (
   data: Partial<TableData> = {},
   config: TableConfig = {}
 ): BlockToolConstructorOptions<TableData, TableConfig> => ({
-  data: { withHeadings: false, content: [], ...data } as TableData,
+  data: { withHeadings: false, withHeadingColumn: false, content: [], ...data } as TableData,
   config,
   api: createMockAPI(),
   readOnly: false,
@@ -308,19 +308,80 @@ describe('Table Tool', () => {
     });
   });
 
+  describe('heading column', () => {
+    it('marks first cell in each row as heading column when withHeadingColumn is true', () => {
+      const options = createTableOptions({
+        withHeadingColumn: true,
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const firstCell = row.querySelector('[data-blok-table-cell]');
+
+        expect(firstCell?.hasAttribute('data-blok-table-heading-col')).toBe(true);
+      });
+    });
+
+    it('does not mark first cell as heading column when withHeadingColumn is false', () => {
+      const options = createTableOptions({
+        withHeadingColumn: false,
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const firstCell = row.querySelector('[data-blok-table-cell]');
+
+        expect(firstCell?.hasAttribute('data-blok-table-heading-col')).toBe(false);
+      });
+    });
+
+    it('saves withHeadingColumn setting', () => {
+      const options = createTableOptions({
+        withHeadingColumn: true,
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      expect(saved.withHeadingColumn).toBe(true);
+    });
+
+    it('defaults withHeadingColumn to false when not provided', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      expect(saved.withHeadingColumn).toBe(false);
+    });
+  });
+
   describe('validate', () => {
     it('returns true for table with content', () => {
       const options = createTableOptions();
       const table = new Table(options);
 
-      expect(table.validate({ withHeadings: false, content: [['A']] })).toBe(true);
+      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [['A']] })).toBe(true);
     });
 
     it('returns false for table with no content rows', () => {
       const options = createTableOptions();
       const table = new Table(options);
 
-      expect(table.validate({ withHeadings: false, content: [] })).toBe(false);
+      expect(table.validate({ withHeadings: false, withHeadingColumn: false, content: [] })).toBe(false);
     });
   });
 
@@ -1243,7 +1304,7 @@ describe('Table Tool', () => {
         },
       } as never);
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, content: [['', ''], ['', '']] },
+        data: { withHeadings: false, withHeadingColumn: false, content: [['', ''], ['', '']] },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -1317,7 +1378,7 @@ describe('Table Tool', () => {
         },
       } as never);
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, content: [['', ''], ['', '']] },
+        data: { withHeadings: false, withHeadingColumn: false, content: [['', ''], ['', '']] },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -1387,7 +1448,7 @@ describe('Table Tool', () => {
         },
       } as never);
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']] },
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -1434,7 +1495,7 @@ describe('Table Tool', () => {
         },
       } as never);
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, content: [['', '']] },
+        data: { withHeadings: false, withHeadingColumn: false, content: [['', '']] },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -1494,7 +1555,7 @@ describe('Table Tool', () => {
         },
       } as never);
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, content: [['', ''], ['', '']] },
+        data: { withHeadings: false, withHeadingColumn: false, content: [['', ''], ['', '']] },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -1551,7 +1612,7 @@ describe('Table Tool', () => {
         },
       } as never);
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, content: [['', '']] },
+        data: { withHeadings: false, withHeadingColumn: false, content: [['', '']] },
         config: {},
         api: mockApi,
         readOnly: false,

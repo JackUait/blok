@@ -75,6 +75,7 @@ describe('TableRowColControls', () => {
         getColumnCount: () => 2,
         getRowCount: () => 2,
         isHeadingRow: () => false,
+        isHeadingColumn: () => false,
         onAction: vi.fn(),
       });
 
@@ -98,6 +99,7 @@ describe('TableRowColControls', () => {
         getColumnCount: () => 3,
         getRowCount: () => 2,
         isHeadingRow: () => false,
+        isHeadingColumn: () => false,
         onAction: vi.fn(),
       });
 
@@ -125,6 +127,7 @@ describe('TableRowColControls', () => {
         getColumnCount: () => 2,
         getRowCount: () => 2,
         isHeadingRow: () => false,
+        isHeadingColumn: () => false,
         onAction: vi.fn(),
       });
 
@@ -154,6 +157,7 @@ describe('TableRowColControls', () => {
         getColumnCount: () => 2,
         getRowCount: () => 2,
         isHeadingRow: () => false,
+        isHeadingColumn: () => false,
         onAction: vi.fn(),
       });
 
@@ -185,6 +189,7 @@ describe('TableRowColControls', () => {
         getColumnCount: () => 2,
         getRowCount: () => 2,
         isHeadingRow: () => false,
+        isHeadingColumn: () => false,
         onAction: vi.fn(),
       });
 
@@ -209,6 +214,7 @@ describe('TableRowColControls', () => {
         getColumnCount: () => 2,
         getRowCount: () => 2,
         isHeadingRow: () => false,
+        isHeadingColumn: () => false,
         onAction: vi.fn(),
       });
 
@@ -225,6 +231,7 @@ describe('TableRowColControls', () => {
         getColumnCount: () => 2,
         getRowCount: () => 2,
         isHeadingRow: () => false,
+        isHeadingColumn: () => false,
         onAction: vi.fn(),
       });
 

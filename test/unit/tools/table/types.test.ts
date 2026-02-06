@@ -6,6 +6,7 @@ describe('TableData types', () => {
   it('should accept string cell content for backwards compatibility', () => {
     const data: TableData = {
       withHeadings: false,
+      withHeadingColumn: false,
       content: [['Hello', 'World']],
     };
 
@@ -15,6 +16,7 @@ describe('TableData types', () => {
   it('should accept block-based cell content', () => {
     const data: TableData = {
       withHeadings: false,
+      withHeadingColumn: false,
       content: [['Plain text', { blocks: ['block-1', 'block-2'] }]],
     };
 

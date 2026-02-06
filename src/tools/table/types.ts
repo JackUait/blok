@@ -29,6 +29,8 @@ export const isCellWithBlocks = (cell: LegacyCellContent): cell is CellContent =
 export interface TableData extends BlockToolData {
   /** Whether the first row is a heading row */
   withHeadings: boolean;
+  /** Whether the first column is a heading column */
+  withHeadingColumn: boolean;
   /** Whether the table is full-width */
   stretched?: boolean;
   /** 2D array of cell content (may contain legacy string format when loading saved data) */

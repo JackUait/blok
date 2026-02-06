@@ -4,40 +4,45 @@ import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
-const createMockAPI = (overrides: Partial<API> = {}): API => ({
-  styles: {
-    block: 'blok-block',
-    inlineToolbar: 'blok-inline-toolbar',
-    inlineToolButton: 'blok-inline-tool-button',
-    inlineToolButtonActive: 'blok-inline-tool-button--active',
-    input: 'blok-input',
-    loader: 'blok-loader',
-    button: 'blok-button',
-    settingsButton: 'blok-settings-button',
-    settingsButtonActive: 'blok-settings-button--active',
-  },
-  i18n: {
-    t: (key: string) => key,
-  },
-  blocks: {
-    delete: () => {},
-    insert: () => {
-      const holder = document.createElement('div');
+const createMockAPI = (overrides: Partial<API> = {}): API => {
+  const { blocks: blocksOverrides, events: eventsOverrides, ...restOverrides } = overrides as Record<string, unknown>;
 
-      holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
-
-      return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
+  return {
+    styles: {
+      block: 'blok-block',
+      inlineToolbar: 'blok-inline-toolbar',
+      inlineToolButton: 'blok-inline-tool-button',
+      inlineToolButtonActive: 'blok-inline-tool-button--active',
+      input: 'blok-input',
+      loader: 'blok-loader',
+      button: 'blok-button',
+      settingsButton: 'blok-settings-button',
+      settingsButtonActive: 'blok-settings-button--active',
     },
-    getCurrentBlockIndex: () => 0,
-    ...overrides.blocks,
-  },
-  events: {
-    on: vi.fn(),
-    off: vi.fn(),
-    ...overrides.events,
-  },
-  ...overrides,
-} as unknown as API);
+    i18n: {
+      t: (key: string) => key,
+    },
+    blocks: {
+      delete: () => {},
+      insert: () => {
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
+
+        return { id: `mock-${Math.random().toString(36).slice(2, 8)}`, holder };
+      },
+      getCurrentBlockIndex: () => 0,
+      getBlocksCount: () => 0,
+      ...(blocksOverrides as Record<string, unknown>),
+    },
+    events: {
+      on: vi.fn(),
+      off: vi.fn(),
+      ...(eventsOverrides as Record<string, unknown>),
+    },
+    ...restOverrides,
+  } as unknown as API;
+};
 
 const createTableOptions = (
   data: Partial<TableData> = {},
@@ -106,6 +111,8 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
+      table.rendered();
+
       const rows = element.querySelectorAll('[data-blok-table-row]');
       expect(rows).toHaveLength(2);
 
@@ -136,6 +143,8 @@ describe('Table Tool', () => {
       });
       const table = new Table(options);
       const element = table.render();
+
+      table.rendered();
 
       const saved = table.save(element);
 
@@ -210,6 +219,8 @@ describe('Table Tool', () => {
       });
       const table = new Table(options);
       const element = table.render();
+
+      table.rendered();
 
       // Manually set up a block-based cell (simulating what convertCellToBlocks does)
       const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
@@ -853,7 +864,11 @@ describe('Table Tool', () => {
       table.onPaste(event);
 
       // After paste, re-render creates cells with paragraph blocks via initializeCells
-      const saved = table.save(table.render());
+      const pastedElement = table.render();
+
+      table.rendered();
+
+      const saved = table.save(pastedElement);
 
       expect(saved.content).toHaveLength(2);
       expect(saved.content[0]).toHaveLength(2);
@@ -884,7 +899,11 @@ describe('Table Tool', () => {
 
       table.onPaste(event);
 
-      const saved = table.save(table.render());
+      const pastedElement = table.render();
+
+      table.rendered();
+
+      const saved = table.save(pastedElement);
 
       expect(saved.withHeadings).toBe(true);
       // After paste, cells get paragraph blocks from initializeCells
@@ -988,6 +1007,7 @@ describe('Table Tool', () => {
       const table = new Table(options);
 
       table.render();
+      table.rendered();
 
       // With always-blocks, every cell gets a paragraph block during initializeCells
       const blockIds = table.getBlockIdsInRow(0);
@@ -1096,6 +1116,7 @@ describe('Table Tool', () => {
       const table = new Table(options);
 
       table.render();
+      table.rendered();
 
       // With always-blocks, every cell gets a paragraph block during initializeCells
       const blockIds = table.getBlockIdsInColumn(0);
@@ -1125,6 +1146,8 @@ describe('Table Tool', () => {
       });
       const table = new Table(options);
       const element = table.render();
+
+      table.rendered();
 
       const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
 

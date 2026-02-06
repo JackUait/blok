@@ -261,7 +261,7 @@ export class TableCellBlocks {
           normalizedRow.push(cellContent);
         } else {
           const text = typeof cellContent === 'string' ? cellContent : '';
-          const block = this.api.blocks.insert('paragraph', { text }, {}, undefined, false);
+          const block = this.api.blocks.insert('paragraph', { text }, {}, this.api.blocks.getBlocksCount(), false);
 
           container.appendChild(block.holder);
           normalizedRow.push({ blocks: [block.id] });
@@ -388,7 +388,7 @@ export class TableCellBlocks {
       return;
     }
 
-    const block = this.api.blocks.insert('paragraph', { text: '' }, {}, undefined, true);
+    const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
 
     container.appendChild(block.holder);
     this.stripPlaceholders(container);
@@ -437,27 +437,35 @@ export class TableCellBlocks {
       return;
     }
 
-    // Check if new block's holder is already in a cell (no action needed)
+    // Check if a block was just removed at this index (replace operation).
+    // Use the recorded cell so the replacement lands in the correct cell.
+    const removedCell = this.removedBlockCells.get(blockIndex);
+
+    this.removedBlockCells.delete(blockIndex);
+
+    // For replace operations, always move the block to the recorded cell.
+    // blocksStore.insert() places the holder adjacent to the previous block
+    // in the DOM, which may be inside a different cell.
+    if (removedCell) {
+      this.claimBlockForCell(removedCell, detail.target.id);
+      this.cellsPendingCheck.delete(removedCell);
+
+      return;
+    }
+
+    // For non-replace inserts: if the holder is already in a cell (placed
+    // by insertToDOM next to an adjacent cell block), no action needed.
     const holder = detail.target.holder;
 
     if (holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
       return;
     }
 
-    // Check if a block was just removed at this index (replace operation).
-    // Use the recorded cell so the replacement lands in the correct cell,
-    // even when no adjacent block remains there.
-    const removedCell = this.removedBlockCells.get(blockIndex);
-
-    this.removedBlockCells.delete(blockIndex);
-
-    // Check if this block should be in a cell
-    const cell = removedCell ?? this.findCellForNewBlock(blockIndex);
+    // Check if this block should be in a cell based on adjacency
+    const cell = this.findCellForNewBlock(blockIndex);
 
     if (cell) {
       this.claimBlockForCell(cell, detail.target.id);
-
-      // Cancel the pending empty-check for this cell since it now has a block
       this.cellsPendingCheck.delete(cell);
     }
   };

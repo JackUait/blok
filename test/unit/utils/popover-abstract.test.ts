@@ -434,6 +434,58 @@ describe('PopoverAbstract', () => {
     });
   });
 
+  describe('toggleItemHiddenByName()', () => {
+    it('hides items matching the given name', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'First', name: 'first', onActivate: vi.fn() },
+          { title: 'Table', name: 'table', onActivate: vi.fn() },
+        ],
+      });
+
+      popover.toggleItemHiddenByName('table', true);
+
+      const tableItem = popover.getItemsForTests()[1] as PopoverItemDefault;
+      const element = tableItem.getElement();
+
+      expect(element).toHaveAttribute(DATA_ATTR.hidden, 'true');
+    });
+
+    it('shows items matching the given name when isHidden is false', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'First', name: 'first', onActivate: vi.fn() },
+          { title: 'Table', name: 'table', onActivate: vi.fn() },
+        ],
+      });
+
+      // Hide then show
+      popover.toggleItemHiddenByName('table', true);
+      popover.toggleItemHiddenByName('table', false);
+
+      const tableItem = popover.getItemsForTests()[1] as PopoverItemDefault;
+      const element = tableItem.getElement();
+
+      expect(element).not.toHaveAttribute(DATA_ATTR.hidden);
+    });
+
+    it('does nothing when no items match the name', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'First', name: 'first', onActivate: vi.fn() },
+        ],
+      });
+
+      // Should not throw
+      popover.toggleItemHiddenByName('nonexistent', true);
+
+      const firstItem = popover.getItemsForTests()[0] as PopoverItemDefault;
+      const element = firstItem.getElement();
+
+      expect(element).not.toHaveAttribute(DATA_ATTR.hidden);
+    });
+  });
+
   describe('event listener wiring', () => {
     it('translate DOM click events into handleItemClick calls', () => {
       const popover = createPopover();

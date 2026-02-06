@@ -165,6 +165,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Toggles hidden state of all items matching the given name
+   * @param name - name of the items to toggle
+   * @param isHidden - true to hide, false to show
+   */
+  public toggleItemHiddenByName(name: string, isHidden: boolean): void {
+    this.items
+      .filter(item => item.name === name)
+      .forEach(item => item.toggleHidden(isHidden));
+  }
+
+  /**
    * Looks for the item by name and imitates click on it
    * @param name - name of the item to activate
    */

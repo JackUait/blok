@@ -863,7 +863,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1) },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -887,7 +887,7 @@ describe('TableCellBlocks', () => {
         'paragraph',
         { text: '' },
         expect.anything(),
-        undefined,
+        1,
         true
       );
       expect(container.contains(mockBlockHolder)).toBe(true);
@@ -899,7 +899,7 @@ describe('TableCellBlocks', () => {
       const mockInsert = vi.fn();
 
       const api = {
-        blocks: { insert: mockInsert },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1) },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -994,7 +994,7 @@ describe('TableCellBlocks', () => {
         'paragraph',
         { text: '' },
         expect.anything(),
-        undefined,
+        0,
         true
       );
     });
@@ -1241,7 +1241,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1) },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -1271,7 +1271,7 @@ describe('TableCellBlocks', () => {
         'paragraph',
         { text: '' },
         expect.anything(),
-        undefined,
+        1,
         false
       );
       // Result should be normalized to block references
@@ -1290,7 +1290,7 @@ describe('TableCellBlocks', () => {
       });
 
       const api = {
-        blocks: { insert: mockInsert },
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1) },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -1320,7 +1320,7 @@ describe('TableCellBlocks', () => {
         'paragraph',
         { text: 'Hello world' },
         expect.anything(),
-        undefined,
+        1,
         false
       );
       expect(result[0][0]).toEqual({ blocks: ['migrated-1'] });
@@ -1371,6 +1371,175 @@ describe('TableCellBlocks', () => {
       expect(mockGetBlockIndex).toHaveBeenCalledWith('existing-1');
       expect(container.contains(existingBlockHolder)).toBe(true);
       expect(result[0][0]).toEqual({ blocks: ['existing-1'] });
+    });
+  });
+
+  describe('stripPlaceholders safety for non-paragraph blocks', () => {
+    it('should be a no-op when cell contains a non-paragraph block without placeholder attributes', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const headerHolder = document.createElement('div');
+      headerHolder.setAttribute('data-blok-id', 'header-1');
+
+      const headerContent = document.createElement('h2');
+      headerContent.setAttribute('contenteditable', 'true');
+      headerContent.textContent = 'My Header';
+      headerHolder.appendChild(headerContent);
+
+      const mockGetBlockIndex = vi.fn().mockReturnValue(0);
+      const mockGetBlockByIndex = vi.fn().mockReturnValue({
+        id: 'header-1',
+        holder: headerHolder,
+      });
+
+      const api = {
+        blocks: {
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      // claimBlockForCell calls stripPlaceholders internally
+      cellBlocks.claimBlockForCell(cell, 'header-1');
+
+      // Block should be mounted in the container
+      expect(container.contains(headerHolder)).toBe(true);
+      // Header content should be completely unchanged
+      expect(headerContent.textContent).toBe('My Header');
+      expect(headerContent.tagName).toBe('H2');
+      expect(headerContent.getAttribute('contenteditable')).toBe('true');
+      // Should have no placeholder attributes (and none should have been added)
+      expect(headerContent.hasAttribute('data-blok-placeholder-active')).toBe(false);
+      expect(headerContent.hasAttribute('data-placeholder')).toBe(false);
+    });
+
+    it('should strip placeholder attrs from paragraph but leave header block untouched in mixed cell', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Paragraph block WITH placeholder attributes
+      const paragraphHolder = document.createElement('div');
+      paragraphHolder.setAttribute('data-blok-id', 'para-1');
+
+      const paragraphContent = document.createElement('div');
+      paragraphContent.setAttribute('contenteditable', 'true');
+      paragraphContent.setAttribute('data-blok-placeholder-active', 'true');
+      paragraphContent.setAttribute('data-placeholder', 'Type something...');
+      paragraphContent.textContent = '';
+      paragraphHolder.appendChild(paragraphContent);
+
+      // Header block WITHOUT placeholder attributes
+      const headerHolder = document.createElement('div');
+      headerHolder.setAttribute('data-blok-id', 'header-1');
+
+      const headerContent = document.createElement('h2');
+      headerContent.setAttribute('contenteditable', 'true');
+      headerContent.textContent = 'My Header';
+      headerHolder.appendChild(headerContent);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'para-1') return 0;
+            if (id === 'header-1') return 1;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'para-1', holder: paragraphHolder };
+            if (index === 1) return { id: 'header-1', holder: headerHolder };
+
+            return undefined;
+          }),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      // initializeCells calls stripPlaceholders after mounting blocks
+      cellBlocks.initializeCells([[{ blocks: ['para-1', 'header-1'] }]]);
+
+      // Paragraph's placeholder attributes should be stripped
+      expect(paragraphContent.hasAttribute('data-blok-placeholder-active')).toBe(false);
+      expect(paragraphContent.hasAttribute('data-placeholder')).toBe(false);
+
+      // Header block should be completely untouched
+      expect(headerContent.textContent).toBe('My Header');
+      expect(headerContent.tagName).toBe('H2');
+      expect(headerContent.getAttribute('contenteditable')).toBe('true');
+      expect(headerContent.hasAttribute('data-blok-placeholder-active')).toBe(false);
+      expect(headerContent.hasAttribute('data-placeholder')).toBe(false);
+    });
+
+    it('should not error when ensureCellHasBlock triggers stripPlaceholders on a cell with code block content', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const codeBlockHolder = document.createElement('div');
+      codeBlockHolder.setAttribute('data-blok-id', 'code-1');
+
+      const codeContent = document.createElement('pre');
+      const codeElement = document.createElement('code');
+      codeElement.textContent = 'const x = 42;';
+      codeContent.appendChild(codeElement);
+      codeBlockHolder.appendChild(codeContent);
+
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'code-1',
+        holder: codeBlockHolder,
+      });
+
+      const api = {
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1) },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      // Container is empty — ensureCellHasBlock will insert and call stripPlaceholders
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      // Should not throw — stripPlaceholders should be safe even for code blocks
+      expect(() => cellBlocks.ensureCellHasBlock(cell)).not.toThrow();
+
+      // Code content should be unchanged
+      expect(codeElement.textContent).toBe('const x = 42;');
+      expect(codeContent.tagName).toBe('PRE');
     });
   });
 

@@ -134,8 +134,6 @@ export class Table implements BlockTool {
     if (!this.readOnly) {
       this.setupKeyboardNavigation(gridEl);
       this.initCellBlocks(gridEl);
-
-      this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
     }
 
     return wrapper;
@@ -155,6 +153,12 @@ export class Table implements BlockTool {
     if (!gridEl) {
       return;
     }
+
+    // Initialize cell blocks here (after Yjs fromJSON has run) so that
+    // cell paragraph blocks are synced to both BlocksStore and Yjs.
+    // Creating them during render() would cause a desync: fromJSON wipes
+    // the Yjs array after render() but before rendered().
+    this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
 
     this.initResize(gridEl);
     this.initAddControls(gridEl);

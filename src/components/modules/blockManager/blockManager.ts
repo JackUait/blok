@@ -411,9 +411,12 @@ export class BlockManager extends Module {
    * @param index - index where to insert
    */
   public insertMany(blocks: Block[], index = 0): void {
-    this.blocksStore.insertMany(blocks, index);
-
-    // Load blocks into Yjs with 'load' origin (not tracked by undo manager)
+    // Load blocks into Yjs BEFORE adding to the store.
+    // blocksStore.insertMany() triggers rendered() on each block, which may
+    // create nested blocks (e.g., table cell paragraphs) via api.blocks.insert().
+    // Those nested inserts sync to Yjs. If fromJSON() ran after, it would wipe
+    // them (fromJSON replaces the entire Yjs array). Running fromJSON first
+    // ensures nested blocks created during rendered() persist in Yjs.
     const blockDataArray: OutputBlockData<string, Record<string, unknown>>[] = blocks.map(block => {
       const tunes = block.preservedTunes;
 
@@ -428,6 +431,8 @@ export class BlockManager extends Module {
     });
 
     this.Blok.YjsManager.fromJSON(blockDataArray);
+
+    this.blocksStore.insertMany(blocks, index);
 
     // Apply indentation for blocks with parentId (hierarchical structure)
     blocks.forEach(block => {

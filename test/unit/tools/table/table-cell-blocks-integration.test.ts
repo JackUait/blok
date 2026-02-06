@@ -23,6 +23,7 @@ const createMockAPI = (): API => ({
       holder: document.createElement('div'),
     }),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+    getBlocksCount: vi.fn().mockReturnValue(1),
   },
   events: {
     on: vi.fn(),

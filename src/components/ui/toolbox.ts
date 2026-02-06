@@ -154,6 +154,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private currentContentEditable: Element | null = null;
 
   /**
+   * Whether the toolbox was opened inside a table cell.
+   * Used to restore the table item visibility on close.
+   */
+  private isInsideTableCell = false;
+
+  /**
    * Toolbox constructor
    * @param options - available parameters
    * @param options.api - Blok API methods
@@ -264,6 +270,19 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.api.blocks.stopBlockMutationWatching(currentBlockIndex);
 
+    const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
+
+    /**
+     * Hide the table tool when the caret is inside a table cell
+     * to prevent nested tables.
+     */
+    this.isInsideTableCell = currentBlock !== undefined
+      && currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    if (this.isInsideTableCell) {
+      this.popover?.toggleItemHiddenByName('table', true);
+    }
+
     this.popover?.show();
     this.opened = true;
     this.emit(ToolboxEvent.Opened);
@@ -274,6 +293,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Close Toolbox
    */
   public close(): void {
+    if (this.isInsideTableCell) {
+      this.popover?.toggleItemHiddenByName('table', false);
+      this.isInsideTableCell = false;
+    }
+
     this.popover?.hide();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
@@ -339,6 +363,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Handles popover close event
    */
   private onPopoverClose = (): void => {
+    if (this.isInsideTableCell) {
+      this.popover?.toggleItemHiddenByName('table', false);
+      this.isInsideTableCell = false;
+    }
+
     this.stopListeningToBlockInput();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);

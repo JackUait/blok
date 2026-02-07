@@ -315,16 +315,14 @@ export class Table implements BlockTool {
       return;
     }
 
-    const firstRow = gridEl.querySelector('[data-blok-table-row]');
+    const rows = gridEl.querySelectorAll('[data-blok-table-row]');
 
-    if (!firstRow) {
-      return;
-    }
+    rows.forEach(row => {
+      row.removeAttribute('data-blok-table-heading');
+    });
 
-    if (this.data.withHeadings) {
-      firstRow.setAttribute('data-blok-table-heading', '');
-    } else {
-      firstRow.removeAttribute('data-blok-table-heading');
+    if (this.data.withHeadings && rows.length > 0) {
+      rows[0].setAttribute('data-blok-table-heading', '');
     }
   }
 
@@ -339,21 +337,23 @@ export class Table implements BlockTool {
       return;
     }
 
-    const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+    const allCells = gridEl.querySelectorAll('[data-blok-table-cell]');
 
-    rows.forEach(row => {
-      const firstCell = row.querySelector('[data-blok-table-cell]');
-
-      if (!firstCell) {
-        return;
-      }
-
-      if (this.data.withHeadingColumn) {
-        firstCell.setAttribute('data-blok-table-heading-col', '');
-      } else {
-        firstCell.removeAttribute('data-blok-table-heading-col');
-      }
+    allCells.forEach(cell => {
+      cell.removeAttribute('data-blok-table-heading-col');
     });
+
+    if (this.data.withHeadingColumn) {
+      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const firstCell = row.querySelector('[data-blok-table-cell]');
+
+        if (firstCell) {
+          firstCell.setAttribute('data-blok-table-heading-col', '');
+        }
+      });
+    }
   }
 
   private initAddControls(gridEl: HTMLElement): void {
@@ -442,14 +442,14 @@ export class Table implements BlockTool {
         break;
       case 'toggle-heading':
         this.data.withHeadings = !this.data.withHeadings;
-        this.updateHeadingStyles();
         break;
       case 'toggle-heading-column':
         this.data.withHeadingColumn = !this.data.withHeadingColumn;
-        this.updateHeadingColumnStyles();
         break;
     }
 
+    this.updateHeadingStyles();
+    this.updateHeadingColumnStyles();
     this.initResize(gridEl);
     this.addControls?.syncRowButtonWidth();
     this.rowColControls?.refresh();

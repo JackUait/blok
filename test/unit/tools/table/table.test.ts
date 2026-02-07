@@ -306,6 +306,32 @@ describe('Table Tool', () => {
       const firstRow = element.querySelector('[data-blok-table-row]');
       expect(firstRow?.hasAttribute('data-blok-table-heading')).toBe(false);
     });
+
+    it('clears stale heading attribute from non-first rows when re-applying heading styles', () => {
+      const options = createTableOptions({
+        withHeadings: true,
+        content: [['H1', 'H2'], ['D1', 'D2'], ['D3', 'D4']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const gridEl = element.firstElementChild as HTMLElement;
+      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+
+      // Simulate stale state: heading attr left on row 1 (as if a row was inserted above)
+      rows[1].setAttribute('data-blok-table-heading', '');
+
+      // Toggle heading off then on via the public renderSettings API
+      const settings = table.renderSettings() as Array<{ onActivate: () => void }>;
+
+      settings[0].onActivate(); // toggle off
+      settings[0].onActivate(); // toggle on
+
+      // Only row 0 should have heading
+      expect(rows[0]).toHaveAttribute('data-blok-table-heading');
+      expect(rows[1]).not.toHaveAttribute('data-blok-table-heading');
+      expect(rows[2]).not.toHaveAttribute('data-blok-table-heading');
+    });
   });
 
   describe('heading column', () => {

@@ -30,34 +30,138 @@
       padding-left: 15px;
       padding-right: 15px;
     }
+
+    /* Playground tabs */
+    .playground-tab {
+      position: relative;
+      padding: 0 16px;
+      height: 50px;
+      line-height: 50px;
+      font-size: 13px;
+      color: #999;
+      cursor: pointer;
+      transition: color 0.15s;
+      background: none;
+      border: none;
+      font-family: inherit;
+    }
+    .playground-tab:hover { color: #333; }
+    .playground-tab[aria-selected="true"] { color: #000; font-weight: 600; }
+    .playground-tab[aria-selected="true"]::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: #000;
+      border-radius: 1px;
+    }
+
+    /* Status bar controls */
+    .statusbar-toggle {
+      font-family: 'PT Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1a1a1a;
+      background: none;
+      border: 1px solid #f0f0f0;
+      border-radius: 4px;
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .statusbar-toggle:hover {
+      border-color: #ddd;
+      background: #f7f7f8;
+    }
+
+    /* Icon gallery */
+    .icon-gallery { padding: 40px 0 100px; }
+    .icon-group { margin-bottom: 40px; }
+    .icon-group-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 2px;
+    }
+    .icon-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 12px;
+      border-radius: 8px;
+      transition: background 0.12s;
+      cursor: default;
+    }
+    .icon-cell:hover { background: #f7f7f8; }
+    .icon-cell .icon-preview {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a1a1a;
+    }
+    .icon-cell .icon-preview svg {
+      width: 24px;
+      height: 24px;
+    }
+    .icon-cell .icon-name {
+      font-size: 10px;
+      font-family: 'PT Mono', monospace;
+      color: #999;
+      text-align: center;
+      word-break: break-all;
+    }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 <body class="font-sans text-sm leading-relaxed m-0 bg-white text-black">
   <div class="text-base">
-    <div class="flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-[#e8e8eb]">
-      <a class="font-bold text-inherit no-underline" href="https://github.com/JackUait/blok">Blok</a>
+    <div class="flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 border-b border-[#e8e8eb]">
+      <a class="font-bold text-inherit no-underline mr-6" href="https://github.com/JackUait/blok">Blok</a>
+      <div role="tablist">
+        <button class="playground-tab" role="tab" aria-selected="true" data-tab="editor">Editor</button>
+        <button class="playground-tab" role="tab" aria-selected="false" data-tab="icons">Icons</button>
+      </div>
     </div>
-    <div class="thin-mode-content max-w-content mx-auto antialiased max-md:px-5">
-      <div id="blok"></div>
-      <div class="flex items-center fixed bottom-0 left-0 right-0 bg-white rounded-t-lg border-t border-[#e8e8eb] shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
-        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
-          Readonly:
-          <b id="readonly-state">
-            Off
-          </b>
-          &nbsp;
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
-            toggle
-          </button>
-        </div>
-        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="enableThinModeButton">
-            <span class="toggle-text-swap" data-default-text="Enable" data-toggled-text="Disable"></span>
-            thin mode
-          </button>
+
+    <!-- Editor tab -->
+    <div id="tab-editor" class="mt-[30px]" role="tabpanel">
+      <div class="thin-mode-content max-w-content mx-auto antialiased max-md:px-5">
+        <div id="blok"></div>
+        <div class="flex items-center gap-6 fixed bottom-0 left-0 right-0 bg-white border-t border-[#f0f0f0] text-[11px] tracking-[0.08em] uppercase px-[30px] max-md:px-5 py-3 z-[1] select-none max-md:hidden" style="font-family: 'PT Mono', monospace; color: #999;">
+          <div class="flex items-center gap-2">
+            <span>Readonly</span>
+            <button class="statusbar-toggle" id="toggleReadOnlyButton">
+              <span id="readonly-state">Off</span>
+            </button>
+          </div>
+          <div class="flex items-center">
+            <button class="statusbar-toggle" id="enableThinModeButton">
+              <span class="toggle-text-swap" data-default-text="Enable" data-toggled-text="Disable"></span>
+              thin mode
+            </button>
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- Icons tab -->
+    <div id="tab-icons" class="hidden" role="tabpanel">
+      <div class="max-w-4xl mx-auto px-[30px] max-md:px-5 icon-gallery" id="icon-gallery"></div>
     </div>
   </div>
 
@@ -73,6 +177,7 @@
   <script type="module">
     import { Blok } from './src/blok.ts';
     import { Paragraph, Header, List, Table, Bold, Italic, Link } from './src/tools/index.ts';
+    import * as Icons from './src/components/icons/index.ts';
 
     window.Blok = Blok;
 
@@ -459,6 +564,78 @@
     })
 
     window.blok = blok;
+
+    /**
+     * Tab switching
+     */
+    const tabs = document.querySelectorAll('[role="tab"]');
+    const bottomBar = document.querySelector('#tab-editor .fixed');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+
+        tabs.forEach(t => t.setAttribute('aria-selected', 'false'));
+        tab.setAttribute('aria-selected', 'true');
+
+        document.getElementById('tab-editor').classList.toggle('hidden', target !== 'editor');
+        document.getElementById('tab-icons').classList.toggle('hidden', target !== 'icons');
+
+        if (bottomBar) {
+          bottomBar.classList.toggle('hidden', target !== 'editor');
+        }
+      });
+    });
+
+    /**
+     * Icon gallery - group icons by category and render them
+     */
+    const iconGroups = {
+      'UI & Navigation': ['IconCross', 'IconMenu', 'IconPlus', 'IconChevronLeft', 'IconChevronRight', 'IconSearch'],
+      'Inline Formatting': ['IconBold', 'IconItalic', 'IconLink', 'IconReplace'],
+      'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable'],
+      'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight'],
+      'Utility': ['IconTrash', 'IconWarning'],
+    };
+
+    const gallery = document.getElementById('icon-gallery');
+
+    for (const [groupName, iconNames] of Object.entries(iconGroups)) {
+      const group = document.createElement('div');
+      group.className = 'icon-group';
+
+      const title = document.createElement('div');
+      title.className = 'icon-group-title';
+      title.textContent = groupName;
+      group.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'icon-grid';
+
+      for (const name of iconNames) {
+        const svg = Icons[name];
+        if (!svg) continue;
+
+        const cell = document.createElement('div');
+        cell.className = 'icon-cell';
+
+        const preview = document.createElement('div');
+        preview.className = 'icon-preview';
+        preview.innerHTML = svg;
+
+        const label = document.createElement('div');
+        label.className = 'icon-name';
+        label.textContent = name;
+
+        cell.appendChild(preview);
+        cell.appendChild(label);
+        grid.appendChild(cell);
+      }
+
+      group.appendChild(grid);
+      gallery.appendChild(group);
+    }
   </script>
 </body>
 </html>

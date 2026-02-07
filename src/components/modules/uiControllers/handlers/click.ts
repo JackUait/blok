@@ -68,8 +68,6 @@ export const analyzeClickContext = (
  *
  * Responsibilities:
  * - Clear current block when clicking outside editor
- * - Close BlockSettings when appropriate
- * - Move toolbar when clicking in redactor after closing settings
  * - Clear block selection
  * - Close inline toolbar
  *
@@ -106,16 +104,6 @@ export const createDocumentClickedHandler = (
        * so users can continue interacting with the editor even after clicking outside
        */
       Blok.BlockManager.unsetCurrentBlock();
-    }
-
-    const shouldCloseBlockSettings = Blok.BlockSettings.opened && !context.doNotProcess;
-    if (shouldCloseBlockSettings) {
-      Blok.BlockSettings.close();
-    }
-
-    if (shouldCloseBlockSettings && context.clickedInsideRedactor) {
-      const clickedBlock = Blok.BlockManager.getBlockByChildNode(context.target);
-      Blok.Toolbar.moveAndOpen(clickedBlock);
     }
 
     /**

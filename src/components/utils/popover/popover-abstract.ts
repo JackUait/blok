@@ -7,6 +7,7 @@ import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './com
 import type { PopoverItem, PopoverItemRenderParamsMap , PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchInput } from './components/search-input';
+import { PopoverRegistry } from './popover-registry';
 import { css } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
@@ -124,6 +125,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (this.search !== undefined) {
       this.search.focus();
     }
+
+    const { trigger } = this.params;
+    const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;
+
+    if (isRootWithTrigger) {
+      PopoverRegistry.instance.register(this, trigger);
+    }
   }
 
   /**
@@ -141,6 +149,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (this.search !== undefined) {
       this.search.clear();
     }
+
+    PopoverRegistry.instance.unregister(this);
 
     this.emit(PopoverEvent.Closed);
   }

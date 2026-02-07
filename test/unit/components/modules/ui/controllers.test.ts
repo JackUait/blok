@@ -5,6 +5,8 @@ import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../../types';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
+import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
+import type { PopoverAbstract } from '../../../../../src/components/utils/popover/popover-abstract';
 
 const createBlokStub = (): BlokModules => {
   const blockSettingsWrapper = document.createElement('div');
@@ -132,6 +134,7 @@ describe('KeyboardController', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    PopoverRegistry.resetForTests();
   });
 
   afterEach(() => {
@@ -266,18 +269,23 @@ describe('KeyboardController', () => {
       expect(blok.BlockSelection.disableNavigationMode).toHaveBeenCalledWith(false);
     });
 
-    it('closes BlockSettings when open', () => {
-      const { controller, blok } = createKeyboardController();
+    it('closes popover via registry when a popover is open (e.g. BlockSettings)', () => {
+      const { controller } = createKeyboardController();
 
       (controller as unknown as { enable: () => void }).enable();
 
-      blok.BlockSettings.opened = true;
+      const mockPopover = {
+        hide: vi.fn(),
+        hasNode: vi.fn(() => false),
+      } as unknown as PopoverAbstract;
+
+      PopoverRegistry.instance.register(mockPopover, document.createElement('button'));
 
       const event = new KeyboardEvent('keydown', { key: 'Escape' });
+
       document.dispatchEvent(event);
 
-      expect(blok.BlockSettings.close).toHaveBeenCalledTimes(1);
-      // BlockSettings.close() is called without preventing default - event propagates normally
+      expect(mockPopover.hide).toHaveBeenCalledOnce();
       expect(event.defaultPrevented).toBe(false);
     });
 

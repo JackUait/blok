@@ -1,4 +1,5 @@
 import { SelectionUtils as Selection } from '../../../selection/index';
+import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
 
 import { Controller } from './_base';
@@ -258,11 +259,24 @@ export class KeyboardController extends Controller {
     }
 
     /**
-     * Close BlockSettings first if it's open, regardless of selection state.
-     * This prevents navigation mode from being enabled when the user closes block tunes with Escape.
+     * Toolbox needs specific Escape handling for caret restoration,
+     * so check it before the registry
      */
-    if (this.Blok.BlockSettings.opened) {
-      this.Blok.BlockSettings.close();
+    if (this.Blok.Toolbar.toolbox.opened) {
+      this.Blok.Toolbar.toolbox.close();
+      this.Blok.BlockManager.currentBlock &&
+        this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
+
+      return;
+    }
+
+    /**
+     * Close any open popover via registry (BlockSettings, table grips, future popovers).
+     * Must come before block selection clearing to prevent navigation mode
+     * from being enabled when closing block settings.
+     */
+    if (PopoverRegistry.instance.hasOpenPopovers()) {
+      PopoverRegistry.instance.closeTopmost();
 
       return;
     }
@@ -272,14 +286,6 @@ export class KeyboardController extends Controller {
      */
     if (this.Blok.BlockSelection.anyBlockSelected) {
       this.Blok.BlockSelection.clearSelection(event);
-
-      return;
-    }
-
-    if (this.Blok.Toolbar.toolbox.opened) {
-      this.Blok.Toolbar.toolbox.close();
-      this.Blok.BlockManager.currentBlock &&
-        this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
 
       return;
     }

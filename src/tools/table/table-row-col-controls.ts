@@ -97,7 +97,6 @@ export class TableRowColControls {
   private boundMouseOver: (e: MouseEvent) => void;
   private boundMouseLeave: (e: MouseEvent) => void;
   private boundPointerDown: (e: PointerEvent) => void;
-  private boundDocPointerDown: ((e: PointerEvent) => void) | null = null;
 
   constructor(options: TableRowColControlsOptions) {
     this.grid = options.grid;
@@ -454,32 +453,6 @@ export class TableRowColControls {
     });
 
     this.activePopover.show();
-    this.addOutsideClickListener(grip);
-  }
-
-  private addOutsideClickListener(grip: HTMLElement): void {
-    this.boundDocPointerDown = (e: PointerEvent): void => {
-      const target = e.target as Node;
-
-      if (grip.contains(target)) {
-        return;
-      }
-
-      if (this.activePopover?.hasNode(target)) {
-        return;
-      }
-
-      this.destroyPopover();
-    };
-
-    document.addEventListener('pointerdown', this.boundDocPointerDown);
-  }
-
-  private removeOutsideClickListener(): void {
-    if (this.boundDocPointerDown !== null) {
-      document.removeEventListener('pointerdown', this.boundDocPointerDown);
-      this.boundDocPointerDown = null;
-    }
   }
 
   private destroyPopover(): void {
@@ -487,7 +460,6 @@ export class TableRowColControls {
       const popover = this.activePopover;
 
       this.activePopover = null;
-      this.removeOutsideClickListener();
       popover.destroy();
     }
   }

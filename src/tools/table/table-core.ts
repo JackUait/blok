@@ -237,7 +237,6 @@ export class TableGrid {
    */
   public deleteColumn(table: HTMLElement, index: number): void {
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
-    const unit = this.detectWidthUnit(table);
 
     rows.forEach(row => {
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
@@ -246,23 +245,7 @@ export class TableGrid {
         return;
       }
 
-      const removedWidth = parseFloat((cells[index] as HTMLElement).style.width) || 0;
-
       cells[index].remove();
-
-      // Redistribute removed width to remaining cells
-      const remaining = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      if (remaining.length > 0 && removedWidth > 0) {
-        const extra = removedWidth / remaining.length;
-
-        remaining.forEach(cell => {
-          const el = cell as HTMLElement;
-          const currentWidth = parseFloat(el.style.width) || 0;
-
-          el.style.width = `${Math.round((currentWidth + extra) * 100) / 100}${unit}`;
-        });
-      }
     });
   }
 

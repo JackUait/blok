@@ -424,6 +424,42 @@ describe('TableGrid', () => {
 
       expect(data).toEqual([[b('A'), b('C')], [b('D'), b('F')]]);
     });
+
+    it('preserves remaining column widths in px mode', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(2, 3);
+
+      // Set px widths directly on cells
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+
+        (cells[0] as HTMLElement).style.width = '200px';
+        (cells[1] as HTMLElement).style.width = '300px';
+        (cells[2] as HTMLElement).style.width = '100px';
+      });
+
+      grid.deleteColumn(element, 1);
+
+      const widths = grid.getColWidths(element);
+
+      expect(widths).toEqual([200, 100]);
+    });
+
+    it('preserves remaining column widths in percent mode', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(2, 3);
+
+      // Default widths are equal percentages (~33.33% each)
+      const widthsBefore = grid.getColWidths(element);
+
+      grid.deleteColumn(element, 1);
+
+      const widthsAfter = grid.getColWidths(element);
+
+      expect(widthsAfter).toEqual([widthsBefore[0], widthsBefore[2]]);
+    });
   });
 
   describe('row and column count', () => {

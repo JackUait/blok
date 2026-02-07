@@ -5,7 +5,7 @@
  */
 import type { API, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
-import { IconCross } from '../icons';
+import { IconTrash } from '../icons';
 
 /**
  *
@@ -35,9 +35,10 @@ export class DeleteTune implements BlockTune {
    */
   public render(): MenuConfig {
     return {
-      icon: IconCross,
+      icon: IconTrash,
       title: this.api.i18n.t('blockSettings.delete'),
       name: 'delete',
+      isDestructive: true,
       onActivate: (): void => this.handleClick(),
     };
   }

@@ -505,13 +505,11 @@ export class TableRowColControls {
       { type: PopoverItemType.Separator },
       {
         icon: IconTrash,
-        title: 'Delete Column',
-        confirmation: {
-          title: 'Click to confirm',
-          icon: IconTrash,
-          onActivate: (): void => {
-            this.onAction({ type: 'delete-col', index: colIndex });
-          },
+        title: 'Delete',
+        isDestructive: true,
+        closeOnActivate: true,
+        onActivate: (): void => {
+          this.onAction({ type: 'delete-col', index: colIndex });
         },
       },
     ];
@@ -560,13 +558,11 @@ export class TableRowColControls {
       { type: PopoverItemType.Separator },
       {
         icon: IconTrash,
-        title: 'Delete Row',
-        confirmation: {
-          title: 'Click to confirm',
-          icon: IconTrash,
-          onActivate: (): void => {
-            this.onAction({ type: 'delete-row', index: rowIndex });
-          },
+        title: 'Delete',
+        isDestructive: true,
+        closeOnActivate: true,
+        onActivate: (): void => {
+          this.onAction({ type: 'delete-row', index: rowIndex });
         },
       },
     ];

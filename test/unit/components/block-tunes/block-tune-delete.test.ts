@@ -1,4 +1,4 @@
-import { IconCross } from '../../../../src/components/icons';
+import { IconTrash } from '../../../../src/components/icons';
 import type { Mock } from 'vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,9 +48,10 @@ describe('DeleteTune', () => {
     const config = tune.render() as MenuConfigWithActivate;
 
     expect(i18n.t).toHaveBeenCalledWith('blockSettings.delete');
-    expect(config.icon).toBe(IconCross);
+    expect(config.icon).toBe(IconTrash);
     expect(config.title).toBe('blockSettings.delete');
     expect(config.name).toBe('delete');
+    expect(config.isDestructive).toBe(true);
 
     config.onActivate?.(config);
 

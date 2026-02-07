@@ -10,12 +10,13 @@ export const css = {
    * Note: noHover state is handled via [data-blok-popover-item-no-hover] which disables hover
    * Priority order: active < hover < focus (focus wins when navigating with keyboard)
    */
-  item: 'flex items-center select-none border-none bg-transparent rounded-md p-[var(--item-padding)] text-text-primary mb-px [&[data-blok-popover-item-active]]:bg-icon-active-bg [&[data-blok-popover-item-active]]:text-icon-active-text can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg [&[data-blok-force-hover]]:cursor-pointer [&[data-blok-force-hover]]:bg-item-hover-bg [&[data-blok-focused="true"]]:bg-item-focus-bg [&[data-blok-popover-item-no-hover]]:hover:bg-transparent [&[data-blok-popover-item-no-hover]]:cursor-default',
+  item: 'flex items-center select-none border-none bg-transparent rounded-md p-[var(--item-padding)] text-text-primary mb-px [&[data-blok-popover-item-active]]:bg-icon-active-bg [&[data-blok-popover-item-active]]:text-icon-active-text can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg [&[data-blok-force-hover]]:cursor-pointer [&[data-blok-force-hover]]:bg-item-hover-bg [&[data-blok-focused="true"]]:bg-item-focus-bg [&[data-blok-popover-item-no-hover]]:hover:bg-transparent [&[data-blok-popover-item-no-hover]]:cursor-default can-hover:[&[data-blok-popover-item-destructive]]:hover:text-item-destructive-text can-hover:[&[data-blok-popover-item-destructive]]:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
 
   /**
    * Item disabled state
    */
   itemDisabled: 'cursor-default pointer-events-none text-text-secondary',
+
 
   /**
    * Icon container styles

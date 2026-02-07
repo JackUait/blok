@@ -206,6 +206,9 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.isDisabled) {
       root.setAttribute(DATA_ATTR.disabled, 'true');
     }
+    if ('isDestructive' in params && params.isDestructive) {
+      root.setAttribute(DATA_ATTR.popoverItemDestructive, 'true');
+    }
     if (this.isActive) {
       root.setAttribute(DATA_ATTR.popoverItemActive, 'true');
     }

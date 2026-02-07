@@ -5,7 +5,7 @@ import { BlockAPI } from '../../block/api';
 import { Dom as $ } from '../../dom';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { Flipper } from '../../flipper';
-import { IconReplace, IconCross } from '../../icons';
+import { IconReplace, IconTrash } from '../../icons';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
@@ -375,9 +375,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       items.push(...commonTunes);
     } else {
       items.push({
-        icon: IconCross,
+        icon: IconTrash,
         title: this.Blok.I18n.t('blockSettings.delete'),
         name: 'delete',
+        isDestructive: true,
         closeOnActivate: true,
         onActivate: () => {
           const { BlockManager, Caret, Toolbar } = this.Blok;

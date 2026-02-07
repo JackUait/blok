@@ -819,7 +819,7 @@ test.describe('table tool', () => {
       // Popover should appear with column menu items
       await expect(page.getByText('Insert Column Left')).toBeVisible();
       await expect(page.getByText('Insert Column Right')).toBeVisible();
-      await expect(page.getByText('Delete Column')).toBeVisible();
+      await expect(page.getByText('Delete')).toBeVisible();
     });
 
     test('column popover does not show move options', async ({ page }) => {
@@ -862,7 +862,7 @@ test.describe('table tool', () => {
       // Popover should appear with row menu items
       await expect(page.getByText('Insert Row Above')).toBeVisible();
       await expect(page.getByText('Insert Row Below')).toBeVisible();
-      await expect(page.getByText('Delete Row')).toBeVisible();
+      await expect(page.getByText('Delete')).toBeVisible();
     });
 
     test('row popover does not show move options', async ({ page }) => {
@@ -1106,6 +1106,57 @@ test.describe('table tool', () => {
       await page.mouse.click(10, 10);
 
       // Popover should be removed from the DOM
+      await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
+    });
+
+    test('delete column removes column with single click and closes popover', async ({ page }) => {
+      await createTable2x2(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(colGrip).toBeVisible();
+      await colGrip.click();
+
+      // Click Delete — should delete immediately (no confirmation step)
+      await page.getByText('Delete').click();
+
+      // Column should be deleted (1 cell per row instead of 2)
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+      const firstRow = page.locator('[data-blok-table-row]').first();
+
+      await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(1);
+
+      // Popover should be closed
+      await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
+    });
+
+    test('delete row removes row with single click and closes popover', async ({ page }) => {
+      await createTable2x2(page);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- last() targets second row to avoid header row edge cases
+      const lastCell = page.locator(CELL_SELECTOR).last();
+
+      await lastCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- last() targets the second row grip
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).last();
+
+      await expect(rowGrip).toBeVisible();
+      await rowGrip.click();
+
+      // Click Delete — should delete immediately (no confirmation step)
+      await page.getByText('Delete').click();
+
+      // Row should be deleted (1 row instead of 2)
+      await expect(page.locator('[data-blok-table-row]')).toHaveCount(1);
+
+      // Popover should be closed
       await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
     });
   });

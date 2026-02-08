@@ -6,8 +6,8 @@ const mockHide = vi.fn();
 const mockCreateTooltipContent = vi.fn((_lines: string[]) => document.createElement('div'));
 
 vi.mock('../../../../src/components/utils/tooltip', () => ({
-  onHover: (...args: unknown[]): void => mockOnHover(...(args as [unknown, unknown, unknown])),
-  hide: (): void => mockHide(),
+  onHover: (...args: unknown[]): void => { mockOnHover(...(args as [unknown, unknown, unknown])); },
+  hide: (): void => { mockHide(); },
 }));
 
 vi.mock('../../../../src/components/modules/toolbar/tooltip', () => ({
@@ -196,7 +196,8 @@ describe('TableAddControls', () => {
       rect: DOMRect = new DOMRect(0, 0, 200, 100),
     ): void => {
       vi.spyOn(gridEl, 'getBoundingClientRect').mockReturnValue(rect);
-      target.dispatchEvent(new MouseEvent('mousemove', { clientX, clientY, bubbles: true }));
+      const hoverEvent = new MouseEvent('mousemove', { clientX, clientY, bubbles: true });
+      target.dispatchEvent(hoverEvent);
     };
 
     it('buttons start hidden (opacity 0)', () => {
@@ -296,7 +297,8 @@ describe('TableAddControls', () => {
 
       // Show both buttons first
       moveNear(wrapper, grid, 190, 90);
-      wrapper.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      const exitEvent = new MouseEvent('mouseleave', { bubbles: true });
+      wrapper.dispatchEvent(exitEvent);
 
       vi.advanceTimersByTime(200);
 
@@ -358,6 +360,7 @@ describe('TableAddControls', () => {
       simulateClick(addRowBtn);
 
       expect(onAddRow).toHaveBeenCalledTimes(1);
+      expect(addRowBtn).toBeInTheDocument();
     });
 
     it('calls onAddColumn when add-column button is clicked', () => {
@@ -378,6 +381,7 @@ describe('TableAddControls', () => {
       simulateClick(addColBtn);
 
       expect(onAddColumn).toHaveBeenCalledTimes(1);
+      expect(addColBtn).toBeInTheDocument();
     });
   });
 
@@ -420,7 +424,8 @@ describe('TableAddControls', () => {
       wrapper.appendChild(addRowBtn);
 
       vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100));
-      wrapper.dispatchEvent(new MouseEvent('mousemove', { clientX: 190, clientY: 90, bubbles: true }));
+      const staleHoverEvent = new MouseEvent('mousemove', { clientX: 190, clientY: 90, bubbles: true });
+      wrapper.dispatchEvent(staleHoverEvent);
 
       // The manually-added element should stay at opacity 0 since listeners were removed
       expect(addRowBtn.style.opacity).toBe('0');
@@ -531,8 +536,8 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      expect(addRowBtn.className).toContain('cursor-row-resize');
-      expect(addRowBtn.className).not.toContain('cursor-pointer');
+      expect(addRowBtn).toHaveClass('cursor-row-resize');
+      expect(addRowBtn).not.toHaveClass('cursor-pointer');
     });
 
     it('add-column button has a col-resize cursor', () => {
@@ -548,8 +553,8 @@ describe('TableAddControls', () => {
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addColBtn.className).toContain('cursor-col-resize');
-      expect(addColBtn.className).not.toContain('cursor-pointer');
+      expect(addColBtn).toHaveClass('cursor-col-resize');
+      expect(addColBtn).not.toHaveClass('cursor-pointer');
     });
   });
 
@@ -609,6 +614,7 @@ describe('TableAddControls', () => {
       simulateDrag(addRowBtn, 'row', 200, 100);
 
       expect(callbacks.onDragRemoveRow).toHaveBeenCalled();
+      expect(addRowBtn).toBeInTheDocument();
     });
 
     it('calls onDragRemoveCol when dragging add-col button leftwards', () => {
@@ -630,6 +636,7 @@ describe('TableAddControls', () => {
       simulateDrag(addColBtn, 'col', 300, 100);
 
       expect(callbacks.onDragRemoveCol).toHaveBeenCalled();
+      expect(addColBtn).toBeInTheDocument();
     });
 
     it('calls onDragEnd after drag-to-remove completes', () => {
@@ -650,6 +657,7 @@ describe('TableAddControls', () => {
       simulateDrag(addRowBtn, 'row', 200, 100);
 
       expect(callbacks.onDragEnd).toHaveBeenCalled();
+      expect(addRowBtn).toBeInTheDocument();
     });
   });
 
@@ -701,6 +709,7 @@ describe('TableAddControls', () => {
       simulateDragStart(addRowBtn, 'row', 0, 10);
 
       expect(callbacks.onDragStart).toHaveBeenCalledTimes(1);
+      expect(addRowBtn).toBeInTheDocument();
     });
 
     it('calls onDragStart when column drag exceeds threshold', () => {
@@ -722,6 +731,7 @@ describe('TableAddControls', () => {
       simulateDragStart(addColBtn, 'col', 0, 10);
 
       expect(callbacks.onDragStart).toHaveBeenCalledTimes(1);
+      expect(addColBtn).toBeInTheDocument();
     });
 
     it('does not call onDragStart before threshold is exceeded', () => {
@@ -760,7 +770,6 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       addRowBtn.setPointerCapture = vi.fn();
 
       addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
@@ -789,6 +798,7 @@ describe('TableAddControls', () => {
       }));
 
       expect(callbacks.onDragStart).toHaveBeenCalledTimes(1);
+      expect(addRowBtn).toBeInTheDocument();
     });
   });
 
@@ -880,7 +890,6 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       addRowBtn.setPointerCapture = vi.fn();
 
       addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
@@ -898,6 +907,7 @@ describe('TableAddControls', () => {
       }));
 
       expect(mockHide).toHaveBeenCalledTimes(1);
+      expect(addRowBtn).toBeInTheDocument();
     });
 
     it('does not set a native title attribute on either button', () => {
@@ -914,8 +924,8 @@ describe('TableAddControls', () => {
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addRowBtn.hasAttribute('title')).toBe(false);
-      expect(addColBtn.hasAttribute('title')).toBe(false);
+      expect(addRowBtn).not.toHaveAttribute('title');
+      expect(addColBtn).not.toHaveAttribute('title');
     });
   });
 });

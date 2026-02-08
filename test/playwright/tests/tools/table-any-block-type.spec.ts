@@ -23,12 +23,23 @@ declare global {
 
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
-const CELL_SELECTOR = '[data-blok-table-cell]';
-const CELL_EDITABLE_SELECTOR = `${CELL_SELECTOR} [contenteditable="true"]`;
-
 const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 const TOOLBOX_CONTAINER_SELECTOR = `${TOOLBOX_POPOVER_SELECTOR} [data-blok-testid="popover-container"]`;
 const TOOLBOX_ITEM_SELECTOR = `${TOOLBOX_POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
+
+/**
+ * Returns a locator for a specific cell in the table grid.
+ * Uses Playwright locator chaining with data-attribute selectors.
+ */
+const getCell = (page: Page, row: number, col: number): ReturnType<Page['locator']> =>
+  page.locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=${row}`)
+    .locator(`[data-blok-table-cell] >> nth=${col}`);
+
+/**
+ * Returns a locator for the editable area inside a specific cell.
+ */
+const getCellEditable = (page: Page, row: number, col: number): ReturnType<Page['locator']> =>
+  getCell(page, row, col).locator('[contenteditable="true"]');
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
@@ -197,10 +208,7 @@ test.describe('table cells — any block type', () => {
       await create2x2Table(page);
 
       // Click into first cell's editable area
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
-
-      await firstEditable.click();
+      await getCellEditable(page, 0, 0).click();
       await page.keyboard.type('/');
 
       // The toolbox popover container should become visible
@@ -211,40 +219,31 @@ test.describe('table cells — any block type', () => {
       await create2x2Table(page);
 
       // Click into first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
-
-      await firstEditable.click();
+      await getCellEditable(page, 0, 0).click();
       await page.keyboard.type('/');
 
       // Wait for toolbox to open
       await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
 
-      // Click the first heading entry (Heading 1) from toolbox
-      const headingItem = page.locator(TOOLBOX_ITEM_SELECTOR).filter({ hasText: /Heading/ }).first();
-
-      await headingItem.click();
+      // Click the Heading 1 entry from toolbox
+      await page.locator(`${TOOLBOX_ITEM_SELECTOR}[data-blok-item-name="header"]`).click();
 
       // Type content into the heading
       await page.keyboard.type('Hello');
 
       // Verify a heading exists inside the first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCell = getCell(page, 0, 0);
       const headingInCell = firstCell.locator('[data-blok-tool="header"]');
 
       await expect(headingInCell).toBeVisible();
       await expect(headingInCell).toContainText('Hello');
     });
 
-    test('Table tool does NOT appear in toolbox inside a cell', async ({ page }) => {
+    test('table tool does not appear in toolbox inside a cell', async ({ page }) => {
       await create2x2Table(page);
 
       // Click into first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
-
-      await firstEditable.click();
+      await getCellEditable(page, 0, 0).click();
       await page.keyboard.type('/');
 
       // Wait for toolbox to open
@@ -262,15 +261,11 @@ test.describe('table cells — any block type', () => {
       await create2x2Table(page);
 
       // Click into first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
-
-      await firstEditable.click();
+      await getCellEditable(page, 0, 0).click();
       await page.keyboard.type('# Title');
 
       // The cell should now contain a heading block with "Title"
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCell = getCell(page, 0, 0);
       const headingInCell = firstCell.locator('[data-blok-tool="header"]');
 
       await expect(headingInCell).toBeVisible();
@@ -281,15 +276,11 @@ test.describe('table cells — any block type', () => {
       await create2x2Table(page);
 
       // Click into first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
-
-      await firstEditable.click();
+      await getCellEditable(page, 0, 0).click();
       await page.keyboard.type('- Item');
 
       // The cell should now contain a list block
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCell = getCell(page, 0, 0);
       const listInCell = firstCell.locator('[data-blok-tool="list"]');
 
       await expect(listInCell).toBeVisible();
@@ -297,22 +288,18 @@ test.describe('table cells — any block type', () => {
     });
   });
 
-  test.describe('HTML paste in table cells', () => {
+  test.describe('html paste in table cells', () => {
     test('pasting <h2> HTML creates heading block in cell', async ({ page }) => {
       await create2x2Table(page);
 
       // Click into first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
-
-      await firstEditable.click();
+      await getCellEditable(page, 0, 0).click();
 
       // Paste HTML heading content
       await pasteHtml(page, '<h2>Pasted</h2>');
 
       // The cell should now contain a heading block with "Pasted"
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
+      const firstCell = getCell(page, 0, 0);
       const headingInCell = firstCell.locator('[data-blok-tool="header"]');
 
       await expect(headingInCell).toBeVisible();
@@ -323,21 +310,17 @@ test.describe('table cells — any block type', () => {
       await create2x2Table(page);
 
       // Click into first cell
-      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-      const firstEditable = page.locator(CELL_EDITABLE_SELECTOR).first();
-
-      await firstEditable.click();
+      await getCellEditable(page, 0, 0).click();
 
       // Paste HTML list content
       await pasteHtml(page, '<ul><li>A</li><li>B</li></ul>');
 
       // The cell should now contain a list block
-      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
-      const firstCell = page.locator(CELL_SELECTOR).first();
-      const listsInCell = firstCell.locator('[data-blok-tool="list"]');
+      const firstCell = getCell(page, 0, 0);
+      const listInCell = firstCell.locator('[data-blok-tool="list"]');
 
       // Paste may create one list block per <li>, so expect at least one
-      await expect(listsInCell.first()).toBeVisible();
+      await expect(listInCell).toHaveCount(1);
       await expect(firstCell).toContainText('A');
     });
   });

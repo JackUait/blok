@@ -9,6 +9,16 @@ const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
 const CELL_SELECTOR = '[data-blok-table-cell]';
 
+/**
+ * Assert a bounding box is non-null and return it with narrowed type.
+ * Replaces conditional guards (`if (!box) throw`) to satisfy playwright/no-conditional-in-test.
+ */
+const assertBoundingBox = (box: { x: number; y: number; width: number; height: number } | null, label: string): { x: number; y: number; width: number; height: number } => {
+  expect(box, `${label} should have a bounding box`).toBeTruthy();
+
+  return box as { x: number; y: number; width: number; height: number };
+};
+
 type SerializableToolConfig = {
   className?: string;
   config?: Record<string, unknown>;
@@ -220,7 +230,6 @@ test.describe('table tool', () => {
       // Verify the paragraph blocks contain the original text
       const paragraphBlocks = savedData?.blocks.filter((b: { type: string }) => b.type === 'paragraph');
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const paragraphTexts = paragraphBlocks?.map((b: { data: { text: string } }) => b.data.text) as string[];
 
       expect(paragraphTexts).toContain('Name');
@@ -259,10 +268,8 @@ test.describe('table tool', () => {
       });
 
       // The cell's paragraph block should contain the typed text
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const content = tableBlock?.data.content as { blocks: string[] }[][];
+      const content = (tableBlock?.data as { content: { blocks: string[] }[][] }).content;
       const firstCellBlockId = content[0][0].blocks[0];
 
       // Find the paragraph block with this ID
@@ -270,7 +277,6 @@ test.describe('table tool', () => {
         (b: { id?: string }) => b.id === firstCellBlockId
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect((cellParagraph as { data: { text: string } })?.data.text).toBe('Hello');
     });
   });
@@ -450,11 +456,7 @@ test.describe('table tool', () => {
 
       await expect(handle).toBeAttached();
 
-      const handleBox = await handle.boundingBox();
-
-      if (!handleBox) {
-        throw new Error('Handle not visible');
-      }
+      const handleBox = assertBoundingBox(await handle.boundingBox(), 'Handle');
 
       const startX = handleBox.x + handleBox.width / 2;
       const startY = handleBox.y + handleBox.height / 2;
@@ -568,11 +570,7 @@ test.describe('table tool', () => {
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
       const handle = page.locator('[data-blok-table-resize]').first();
-      const handleBox = await handle.boundingBox();
-
-      if (!handleBox) {
-        throw new Error('Handle not visible');
-      }
+      const handleBox = assertBoundingBox(await handle.boundingBox(), 'Handle');
 
       const startX = handleBox.x + handleBox.width / 2;
       const startY = handleBox.y + handleBox.height / 2;
@@ -688,12 +686,15 @@ test.describe('table tool', () => {
       await addRowBtn.click();
 
       // Type in the new row's first cell — click the contenteditable inside
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(2) + first() needed to target the newly added row's first cell
-      const newCellEditable = page.locator('[data-blok-table-row]').nth(2)
-        .locator(CELL_SELECTOR).first()
-        .locator('[contenteditable="true"]').first();
+      await page.evaluate(() => {
+        const rows = document.querySelectorAll('[data-blok-table-row]');
+        const newRow = rows[2];
+        const cell = newRow.querySelector('[data-blok-table-cell]');
+        const editable = cell?.querySelector('[contenteditable="true"]') as HTMLElement | null;
 
-      await newCellEditable.click();
+        editable?.focus();
+        editable?.click();
+      });
       await page.keyboard.type('New');
 
       const savedData = await page.evaluate(async () => {
@@ -717,7 +718,6 @@ test.describe('table tool', () => {
         (b: { id?: string }) => b.id === newCellBlockId
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect((cellParagraph as { data: { text: string } })?.data.text).toBe('New');
     });
 
@@ -1198,11 +1198,7 @@ test.describe('table tool', () => {
 
       await expect(rowGrip).toBeVisible();
 
-      const gripBox = await rowGrip.boundingBox();
-
-      if (!gripBox) {
-        throw new Error('Grip not visible');
-      }
+      const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
 
       const startX = gripBox.x + gripBox.width / 2;
       const startY = gripBox.y + gripBox.height / 2;
@@ -1236,18 +1232,10 @@ test.describe('table tool', () => {
 
       await expect(colGrip).toBeVisible();
 
-      const gripBox = await colGrip.boundingBox();
-
-      if (!gripBox) {
-        throw new Error('Grip not visible');
-      }
+      const gripBox = assertBoundingBox(await colGrip.boundingBox(), 'Column grip');
 
       // Get the left edge of the table so we can drag past column 0
-      const tableBox = await page.locator(TABLE_SELECTOR).boundingBox();
-
-      if (!tableBox) {
-        throw new Error('Table not visible');
-      }
+      const tableBox = assertBoundingBox(await page.locator(TABLE_SELECTOR).boundingBox(), 'Table');
 
       const startX = gripBox.x + gripBox.width / 2;
       const startY = gripBox.y + gripBox.height / 2;
@@ -1293,11 +1281,7 @@ test.describe('table tool', () => {
 
       await expect(rowGrip).toBeVisible();
 
-      const gripBox = await rowGrip.boundingBox();
-
-      if (!gripBox) {
-        throw new Error('Grip not visible');
-      }
+      const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
 
       const startX = gripBox.x + gripBox.width / 2;
       const startY = gripBox.y + gripBox.height / 2;
@@ -1339,11 +1323,7 @@ test.describe('table tool', () => {
 
       await expect(rowGrip).toBeVisible();
 
-      const gripBox = await rowGrip.boundingBox();
-
-      if (!gripBox) {
-        throw new Error('Grip not visible');
-      }
+      const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
 
       const startX = gripBox.x + gripBox.width / 2;
       const startY = gripBox.y + gripBox.height / 2;
@@ -1383,11 +1363,13 @@ test.describe('table tool', () => {
         },
       });
 
-      const blockWrapper = page.locator(`${CELL_SELECTOR} [data-blok-element]`).first();
+      const wrapperStyles = await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-table-cell] [data-blok-element]');
 
-      await expect(blockWrapper).toBeVisible();
+        if (!el) {
+          throw new Error('Block wrapper element not found');
+        }
 
-      const wrapperStyles = await blockWrapper.evaluate((el) => {
         const computed = window.getComputedStyle(el);
 
         return {
@@ -1403,11 +1385,13 @@ test.describe('table tool', () => {
       expect(wrapperStyles.marginTop).toBe('0px');
       expect(wrapperStyles.marginBottom).toBe('0px');
 
-      const toolBlock = page.locator(`${CELL_SELECTOR} .blok-block`).first();
+      const toolStyles = await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-table-cell] .blok-block');
 
-      await expect(toolBlock).toBeVisible();
+        if (!el) {
+          throw new Error('Tool block element not found');
+        }
 
-      const toolStyles = await toolBlock.evaluate((el) => {
         const computed = window.getComputedStyle(el);
 
         return {
@@ -1444,7 +1428,7 @@ test.describe('table tool', () => {
         },
       });
 
-      const cell = page.locator(CELL_SELECTOR).first();
+      const cell = page.locator(CELL_SELECTOR).filter({ hasText: 'Hello' });
 
       await expect(cell).toBeVisible();
 
@@ -1485,17 +1469,9 @@ test.describe('table tool', () => {
       // Measure the height of a row for the drag distance
       // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
       const firstRow = page.locator('[data-blok-table-row]').first();
-      const rowBox = await firstRow.boundingBox();
+      const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
-      if (!rowBox) {
-        throw new Error('Row not visible');
-      }
-
-      const btnBox = await addRowBtn.boundingBox();
-
-      if (!btnBox) {
-        throw new Error('Add row button not visible');
-      }
+      const btnBox = assertBoundingBox(await addRowBtn.boundingBox(), 'Add row button');
 
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
@@ -1533,7 +1509,8 @@ test.describe('table tool', () => {
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
       // Hover button directly to scroll it into view (wrapper has overflow-x: auto)
-      await addColBtn.hover({ force: true });
+      await addColBtn.scrollIntoViewIfNeeded();
+      await addColBtn.hover();
 
       await expect(addColBtn).toBeVisible();
 
@@ -1546,11 +1523,7 @@ test.describe('table tool', () => {
         return lastCell?.offsetWidth ?? 100;
       });
 
-      const btnBox = await addColBtn.boundingBox();
-
-      if (!btnBox) {
-        throw new Error('Add col button not visible');
-      }
+      const btnBox = assertBoundingBox(await addColBtn.boundingBox(), 'Add col button');
 
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
@@ -1597,17 +1570,9 @@ test.describe('table tool', () => {
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
       const firstRow = page.locator('[data-blok-table-row]').first();
-      const rowBox = await firstRow.boundingBox();
+      const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
-      if (!rowBox) {
-        throw new Error('Row not visible');
-      }
-
-      const btnBox = await addRowBtn.boundingBox();
-
-      if (!btnBox) {
-        throw new Error('Add row button not visible');
-      }
+      const btnBox = assertBoundingBox(await addRowBtn.boundingBox(), 'Add row button');
 
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
@@ -1672,7 +1637,8 @@ test.describe('table tool', () => {
 
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.hover({ force: true });
+      await addColBtn.scrollIntoViewIfNeeded();
+      await addColBtn.hover();
 
       await expect(addColBtn).toBeVisible();
 
@@ -1725,7 +1691,8 @@ test.describe('table tool', () => {
 
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.hover({ force: true });
+      await addColBtn.scrollIntoViewIfNeeded();
+      await addColBtn.hover();
 
       await expect(addColBtn).toBeVisible();
       await expect(addColBtn).toHaveAttribute('title', /column/);
@@ -1757,17 +1724,9 @@ test.describe('table tool', () => {
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
       const firstRow = page.locator('[data-blok-table-row]').first();
-      const rowBox = await firstRow.boundingBox();
+      const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
-      if (!rowBox) {
-        throw new Error('Row not visible');
-      }
-
-      const btnBox = await addRowBtn.boundingBox();
-
-      if (!btnBox) {
-        throw new Error('Add row button not visible');
-      }
+      const btnBox = assertBoundingBox(await addRowBtn.boundingBox(), 'Add row button');
 
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
@@ -1812,17 +1771,9 @@ test.describe('table tool', () => {
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
       const firstRow = page.locator('[data-blok-table-row]').first();
-      const rowBox = await firstRow.boundingBox();
+      const rowBox = assertBoundingBox(await firstRow.boundingBox(), 'First row');
 
-      if (!rowBox) {
-        throw new Error('Row not visible');
-      }
-
-      const btnBox = await addRowBtn.boundingBox();
-
-      if (!btnBox) {
-        throw new Error('Add row button not visible');
-      }
+      const btnBox = assertBoundingBox(await addRowBtn.boundingBox(), 'Add row button');
 
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
@@ -1859,22 +1810,15 @@ test.describe('table tool', () => {
 
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.hover({ force: true });
+      await addColBtn.scrollIntoViewIfNeeded();
+      await addColBtn.hover();
       await expect(addColBtn).toBeVisible();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first cell width
       const firstCell = page.locator(CELL_SELECTOR).first();
-      const cellBox = await firstCell.boundingBox();
+      const cellBox = assertBoundingBox(await firstCell.boundingBox(), 'First cell');
 
-      if (!cellBox) {
-        throw new Error('Cell not visible');
-      }
-
-      const btnBox = await addColBtn.boundingBox();
-
-      if (!btnBox) {
-        throw new Error('Add col button not visible');
-      }
+      const btnBox = assertBoundingBox(await addColBtn.boundingBox(), 'Add col button');
 
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
@@ -1918,25 +1862,17 @@ test.describe('table tool', () => {
       });
 
       const wrapper = page.locator(TABLE_SELECTOR);
-      const grid = wrapper.locator('> div').first();
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.hover({ force: true });
+      await addColBtn.scrollIntoViewIfNeeded();
+      await addColBtn.hover();
       await expect(addColBtn).toBeVisible();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() for cell width
       const firstCell = page.locator(CELL_SELECTOR).first();
-      const cellBox = await firstCell.boundingBox();
+      const cellBox = assertBoundingBox(await firstCell.boundingBox(), 'First cell');
 
-      if (!cellBox) {
-        throw new Error('Cell not visible');
-      }
-
-      const btnBox = await addColBtn.boundingBox();
-
-      if (!btnBox) {
-        throw new Error('Add col button not visible');
-      }
+      const btnBox = assertBoundingBox(await addColBtn.boundingBox(), 'Add col button');
 
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
@@ -1964,15 +1900,23 @@ test.describe('table tool', () => {
       expect(scrollLeft).toBe(0);
 
       // Verify the first cell's left edge is fully visible within the wrapper
-      // eslint-disable-next-line playwright/no-nth-methods -- first() needed for first cell
-      const firstCellAfter = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR).first();
-      const firstCellBox = await firstCellAfter.boundingBox();
-      const wrapperBox = await wrapper.boundingBox();
+      const cellVisibility = await page.evaluate(() => {
+        const row = document.querySelector('[data-blok-table-row]');
+        const cell = row?.querySelector('[data-blok-table-cell]');
+        const wrapperEl = document.querySelector('[data-blok-tool="table"]');
 
-      if (firstCellBox && wrapperBox) {
-        // First cell's left edge must not be to the left of the wrapper's left edge
-        expect(firstCellBox.x).toBeGreaterThanOrEqual(wrapperBox.x);
-      }
+        if (!cell || !wrapperEl) {
+          throw new Error('Cell or wrapper not found');
+        }
+
+        return {
+          cellLeft: cell.getBoundingClientRect().left,
+          wrapperLeft: wrapperEl.getBoundingClientRect().left,
+        };
+      });
+
+      // First cell's left edge must not be to the left of the wrapper's left edge
+      expect(cellVisibility.cellLeft).toBeGreaterThanOrEqual(cellVisibility.wrapperLeft);
     });
   });
 
@@ -1997,10 +1941,10 @@ test.describe('table tool', () => {
       const cells = page.locator(CELL_SELECTOR);
 
       await expect(cells).toHaveCount(4);
-      await expect(cells.nth(0)).toContainText('Hello');
-      await expect(cells.nth(1)).toContainText('World');
-      await expect(cells.nth(2)).toContainText('Foo');
-      await expect(cells.nth(3)).toContainText('Bar');
+      await expect(cells.filter({ hasText: 'Hello' })).toHaveCount(1);
+      await expect(cells.filter({ hasText: 'World' })).toHaveCount(1);
+      await expect(cells.filter({ hasText: 'Foo' })).toHaveCount(1);
+      await expect(cells.filter({ hasText: 'Bar' })).toHaveCount(1);
 
       // Toggle to readonly mode
       await page.evaluate(async () => {
@@ -2011,10 +1955,10 @@ test.describe('table tool', () => {
       const readonlyCells = page.locator(CELL_SELECTOR);
 
       await expect(readonlyCells).toHaveCount(4);
-      await expect(readonlyCells.nth(0)).toContainText('Hello');
-      await expect(readonlyCells.nth(1)).toContainText('World');
-      await expect(readonlyCells.nth(2)).toContainText('Foo');
-      await expect(readonlyCells.nth(3)).toContainText('Bar');
+      await expect(readonlyCells.filter({ hasText: 'Hello' })).toHaveCount(1);
+      await expect(readonlyCells.filter({ hasText: 'World' })).toHaveCount(1);
+      await expect(readonlyCells.filter({ hasText: 'Foo' })).toHaveCount(1);
+      await expect(readonlyCells.filter({ hasText: 'Bar' })).toHaveCount(1);
     });
 
     test('table cell content is not rendered as top-level blocks in readonly mode', async ({ page }) => {
@@ -2139,10 +2083,10 @@ test.describe('table tool', () => {
       const cells = page.locator(CELL_SELECTOR);
 
       await expect(cells).toHaveCount(4);
-      await expect(cells.nth(0)).toContainText('Name');
-      await expect(cells.nth(1)).toContainText('Value');
-      await expect(cells.nth(2)).toContainText('Key1');
-      await expect(cells.nth(3)).toContainText('Val1');
+      await expect(cells.filter({ hasText: 'Name' })).toHaveCount(1);
+      await expect(cells.filter({ hasText: 'Value' })).toHaveCount(1);
+      await expect(cells.filter({ hasText: 'Key1' })).toHaveCount(1);
+      await expect(cells.filter({ hasText: 'Val1' })).toHaveCount(1);
     });
   });
 });

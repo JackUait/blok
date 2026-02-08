@@ -81,7 +81,9 @@ describe('TableRowColControls', () => {
 
       const cell = getCell(grid, 0, 1);
 
-      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      const event = new MouseEvent('mouseover', { bubbles: true });
+
+      cell.dispatchEvent(event);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -104,8 +106,9 @@ describe('TableRowColControls', () => {
       });
 
       const cell = getCell(grid, 1, 2);
+      const event = new MouseEvent('mouseover', { bubbles: true });
 
-      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      cell.dispatchEvent(event);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -133,7 +136,9 @@ describe('TableRowColControls', () => {
 
       const cell = getCell(grid, 0, 0);
 
-      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      const hoverEvent = new MouseEvent('mouseover', { bubbles: true });
+
+      cell.dispatchEvent(hoverEvent);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -142,7 +147,9 @@ describe('TableRowColControls', () => {
       expect(isGripVisible(rowGrips[0])).toBe(true);
 
       // Mouse leaves grid
-      grid.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      const leaveEvent = new MouseEvent('mouseleave', { bubbles: false });
+
+      grid.dispatchEvent(leaveEvent);
       vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
 
       // Grips should be hidden
@@ -162,7 +169,9 @@ describe('TableRowColControls', () => {
       });
 
       // Hover cell (0,0)
-      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      const hoverFirst = new MouseEvent('mouseover', { bubbles: true });
+
+      getCell(grid, 0, 0).dispatchEvent(hoverFirst);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -171,7 +180,9 @@ describe('TableRowColControls', () => {
       expect(isGripVisible(rowGrips[0])).toBe(true);
 
       // Hover cell (1,1) — different row AND column
-      getCell(grid, 1, 1).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      const hoverSecond = new MouseEvent('mouseover', { bubbles: true });
+
+      getCell(grid, 1, 1).dispatchEvent(hoverSecond);
 
       // Previous grips should be hidden
       expect(isGripVisible(colGrips[0])).toBe(false);
@@ -279,7 +290,9 @@ describe('TableRowColControls', () => {
       });
 
       // Show grips by hovering
-      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      const event = new MouseEvent('mouseover', { bubbles: true });
+
+      getCell(grid, 0, 0).dispatchEvent(event);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);

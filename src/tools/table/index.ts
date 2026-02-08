@@ -434,15 +434,17 @@ export class Table implements BlockTool {
       onDragRemoveCol: () => {
         const colCount = this.grid.getColumnCount(gridEl);
 
-        if (colCount > 1 && this.isColumnEmpty(gridEl, colCount - 1)) {
-          this.deleteColumnWithBlockCleanup(gridEl, colCount - 1);
-
-          if (this.data.colWidths) {
-            this.applyPixelWidths(gridEl, this.data.colWidths);
-          }
-
-          this.initResize(gridEl);
+        if (colCount <= 1 || !this.isColumnEmpty(gridEl, colCount - 1)) {
+          return;
         }
+
+        this.deleteColumnWithBlockCleanup(gridEl, colCount - 1);
+
+        if (this.data.colWidths) {
+          this.applyPixelWidths(gridEl, this.data.colWidths);
+        }
+
+        this.initResize(gridEl);
       },
       onDragEnd: () => {
         this.initResize(gridEl);

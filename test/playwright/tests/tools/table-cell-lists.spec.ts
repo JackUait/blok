@@ -5,6 +5,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
+const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
 const CELL_SELECTOR = '[data-blok-table-cell]';
@@ -169,7 +170,7 @@ test.describe('table cells — always-blocks model', () => {
         const container = cellBlocksContainers.nth(i);
         const blocks = container.locator(BLOCK_ELEMENT_SELECTOR);
 
-        await expect(blocks.first()).toBeVisible();
+        await expect(blocks).toHaveCount(1);
       }
     });
 
@@ -186,7 +187,7 @@ test.describe('table cells — always-blocks model', () => {
       await expect(firstEditable).toContainText('Hello world');
     });
 
-    test('Tab moves focus to next cell', async ({ page }) => {
+    test('tab moves focus to next cell', async ({ page }) => {
       await create2x2Table(page);
 
       // Click into first cell's editable area
@@ -214,9 +215,9 @@ test.describe('table cells — always-blocks model', () => {
 
       // Each cell should have a blocks container with at least one block
       const cells = page.locator(CELL_SELECTOR);
-      const cellCount = await cells.count();
 
-      expect(cellCount).toBe(4);
+      await expect(cells).toHaveCount(4);
+      const cellCount = 4;
 
       for (let i = 0; i < cellCount; i++) {
         // eslint-disable-next-line playwright/no-nth-methods -- iterating over all cells by index
@@ -227,13 +228,13 @@ test.describe('table cells — always-blocks model', () => {
 
         const blocks = blocksContainer.locator(BLOCK_ELEMENT_SELECTOR);
 
-        await expect(blocks.first()).toBeVisible();
+        await expect(blocks).toHaveCount(1);
       }
     });
   });
 
   test.describe('multiple blocks in cells', () => {
-    test('Enter creates new content line in same cell', async ({ page }) => {
+    test('enter creates new content line in same cell', async ({ page }) => {
       await create2x2Table(page);
 
       // Click into first cell's editable area
@@ -325,9 +326,7 @@ test.describe('table cells — always-blocks model', () => {
       await firstEditable.click();
       await page.keyboard.type('temp');
 
-      const selectAll = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
-
-      await page.keyboard.press(selectAll);
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press('Backspace');
 
       const content = await getBeforePseudoContent(firstEditable);
@@ -357,13 +356,13 @@ test.describe('table cells — always-blocks model', () => {
       const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
       const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
-      await expect(plusButton).not.toBeVisible();
-      await expect(settingsToggler).not.toBeVisible();
+      await expect(plusButton).toBeHidden();
+      await expect(settingsToggler).toBeHidden();
     });
   });
 
   test.describe('cell navigation', () => {
-    test('Tab at end of row wraps to next row', async ({ page }) => {
+    test('tab at end of row wraps to next row', async ({ page }) => {
       await create2x2Table(page);
 
       // Click into the second cell (last cell of first row)

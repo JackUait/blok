@@ -186,7 +186,7 @@ describe('TableGrid', () => {
 
       // New row should be empty, at index 1
       const newRowCells = rows[1].querySelectorAll('[data-blok-table-cell]');
-      expect(newRowCells[0].textContent).toBe('');
+      expect(newRowCells[0]).toHaveTextContent('');
     });
 
     it('preserves pixel widths when existing cells use px units', () => {

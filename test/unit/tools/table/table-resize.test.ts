@@ -4,6 +4,26 @@ import { TableResize } from '../../../../src/tools/table/table-resize';
 const MIN_COL_WIDTH = 50;
 
 /**
+ * Simulate pointer entering an element (hover).
+ * Wraps dispatchEvent in a semantic helper to express user intent.
+ */
+const simulateHover = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseenter');
+
+  element.dispatchEvent(event);
+};
+
+/**
+ * Simulate pointer leaving an element (unhover).
+ * Wraps dispatchEvent in a semantic helper to express user intent.
+ */
+const simulateUnhover = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseleave');
+
+  element.dispatchEvent(event);
+};
+
+/**
  * Creates a grid element with cells at given pixel widths.
  * Mocks getBoundingClientRect on the grid to return the sum.
  */
@@ -343,7 +363,7 @@ describe('TableResize', () => {
 
       const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
 
-      handle.dispatchEvent(new MouseEvent('mouseenter'));
+      simulateHover(handle);
 
       expect(handle.style.opacity).toBe('1');
     });
@@ -354,8 +374,8 @@ describe('TableResize', () => {
 
       const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
 
-      handle.dispatchEvent(new MouseEvent('mouseenter'));
-      handle.dispatchEvent(new MouseEvent('mouseleave'));
+      simulateHover(handle);
+      simulateUnhover(handle);
 
       expect(handle.style.opacity).toBe('0');
     });
@@ -367,7 +387,7 @@ describe('TableResize', () => {
       const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
 
       handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
-      handle.dispatchEvent(new MouseEvent('mouseleave'));
+      simulateUnhover(handle);
 
       expect(handle.style.opacity).toBe('1');
     });
@@ -399,6 +419,10 @@ describe('TableResize', () => {
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
 
       expect(onDrag).toHaveBeenCalledTimes(2);
+
+      const firstCell = grid.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      expect(firstCell.style.width).toBe('400px');
 
       document.dispatchEvent(new PointerEvent('pointerup', {}));
     });

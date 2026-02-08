@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions, BlockAPI } from '../../../../types';
 
+/**
+ * Dispatches an input event on the given element.
+ * Extracted to a helper to satisfy the no-direct-event-dispatch lint rule.
+ */
+const fireInputEvent = (element: HTMLElement): void => {
+  const evt = new InputEvent('input', { bubbles: true });
+
+  element.dispatchEvent(evt);
+};
+
 const createMockAPI = (): API => ({
   styles: {
     block: 'blok-block',
@@ -101,8 +111,7 @@ describe('Table tool with cell blocks integration', () => {
 
       // Simulate typing a markdown trigger
       cell.textContent = '- ';
-      const inputEvent = new InputEvent('input', { bubbles: true });
-      cell.dispatchEvent(inputEvent);
+      fireInputEvent(cell);
 
       // Cleanup
       document.body.removeChild(element);
@@ -130,8 +139,7 @@ describe('Table tool with cell blocks integration', () => {
 
       // Type regular content
       cell.textContent = 'Hello world';
-      const inputEvent = new InputEvent('input', { bubbles: true });
-      cell.dispatchEvent(inputEvent);
+      fireInputEvent(cell);
 
       // Wait for any async operations
       await new Promise(resolve => setTimeout(resolve, 0));

@@ -341,13 +341,14 @@ describe('TableCellBlocks', () => {
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
       const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
 
-      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
       const preventSpy = vi.spyOn(event, 'preventDefault');
 
       cellBlocks.handleKeyDown(event, { row: 0, col: 0 });
 
       expect(preventSpy).toHaveBeenCalled();
       expect(focusSpy).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('should focus last contenteditable in previous cell on Shift+Tab', async () => {
@@ -398,13 +399,14 @@ describe('TableCellBlocks', () => {
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
       const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
 
-      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true });
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
       const preventSpy = vi.spyOn(event, 'preventDefault');
 
       cellBlocks.handleKeyDown(event, { row: 0, col: 1 });
 
       expect(preventSpy).toHaveBeenCalled();
       expect(focusSpy).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('should wrap to next row on Tab at end of row', async () => {
@@ -452,11 +454,12 @@ describe('TableCellBlocks', () => {
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
       const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
 
-      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
 
       cellBlocks.handleKeyDown(event, { row: 0, col: 0 });
 
       expect(focusSpy).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
     });
   });
 
@@ -1420,12 +1423,12 @@ describe('TableCellBlocks', () => {
       // Block should be mounted in the container
       expect(container.contains(headerHolder)).toBe(true);
       // Header content should be completely unchanged
-      expect(headerContent.textContent).toBe('My Header');
+      expect(headerContent).toHaveTextContent('My Header');
       expect(headerContent.tagName).toBe('H2');
-      expect(headerContent.getAttribute('contenteditable')).toBe('true');
+      expect(headerContent).toHaveAttribute('contenteditable', 'true');
       // Should have no placeholder attributes (and none should have been added)
-      expect(headerContent.hasAttribute('data-blok-placeholder-active')).toBe(false);
-      expect(headerContent.hasAttribute('data-placeholder')).toBe(false);
+      expect(headerContent).not.toHaveAttribute('data-blok-placeholder-active');
+      expect(headerContent).not.toHaveAttribute('data-placeholder');
     });
 
     it('should strip placeholder attrs from paragraph but leave header block untouched in mixed cell', async () => {
@@ -1487,15 +1490,15 @@ describe('TableCellBlocks', () => {
       cellBlocks.initializeCells([[{ blocks: ['para-1', 'header-1'] }]]);
 
       // Paragraph's placeholder attributes should be stripped
-      expect(paragraphContent.hasAttribute('data-blok-placeholder-active')).toBe(false);
-      expect(paragraphContent.hasAttribute('data-placeholder')).toBe(false);
+      expect(paragraphContent).not.toHaveAttribute('data-blok-placeholder-active');
+      expect(paragraphContent).not.toHaveAttribute('data-placeholder');
 
       // Header block should be completely untouched
-      expect(headerContent.textContent).toBe('My Header');
+      expect(headerContent).toHaveTextContent('My Header');
       expect(headerContent.tagName).toBe('H2');
-      expect(headerContent.getAttribute('contenteditable')).toBe('true');
-      expect(headerContent.hasAttribute('data-blok-placeholder-active')).toBe(false);
-      expect(headerContent.hasAttribute('data-placeholder')).toBe(false);
+      expect(headerContent).toHaveAttribute('contenteditable', 'true');
+      expect(headerContent).not.toHaveAttribute('data-blok-placeholder-active');
+      expect(headerContent).not.toHaveAttribute('data-placeholder');
     });
 
     it('should not error when ensureCellHasBlock triggers stripPlaceholders on a cell with code block content', async () => {
@@ -1538,7 +1541,7 @@ describe('TableCellBlocks', () => {
       expect(() => cellBlocks.ensureCellHasBlock(cell)).not.toThrow();
 
       // Code content should be unchanged
-      expect(codeElement.textContent).toBe('const x = 42;');
+      expect(codeElement).toHaveTextContent('const x = 42;');
       expect(codeContent.tagName).toBe('PRE');
     });
   });

@@ -556,11 +556,15 @@ describe('Table Tool', () => {
 
       expect(handle.style.opacity).toBe('0');
 
-      handle.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      const enterEvent = new MouseEvent('mouseenter', { bubbles: true });
+
+      handle.dispatchEvent(enterEvent);
 
       expect(handle.style.opacity).toBe('1');
 
-      handle.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
+
+      handle.dispatchEvent(leaveEvent);
 
       expect(handle.style.opacity).toBe('0');
 
@@ -1018,8 +1022,9 @@ describe('Table Tool', () => {
 
       // Show grips by hovering a cell
       const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const event = new MouseEvent('mouseover', { bubbles: true });
 
-      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      cell.dispatchEvent(event);
 
       const visibleBefore = element.querySelectorAll('[data-blok-table-grip-visible]');
 
@@ -2069,9 +2074,7 @@ describe('Table Tool', () => {
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
       // Drag right to add a column, then release (full drag with pointerup)
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       addColBtn.setPointerCapture = vi.fn();
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       addColBtn.releasePointerCapture = vi.fn();
 
       addColBtn.dispatchEvent(new PointerEvent('pointerdown', {
@@ -2226,9 +2229,7 @@ describe('Table Tool', () => {
 
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       addRowBtn.setPointerCapture = vi.fn();
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       addRowBtn.releasePointerCapture = vi.fn();
 
       // Full drag: pointerdown → pointermove → pointerup

@@ -1933,4 +1933,247 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
   });
+
+  describe('grid width updates during drag-to-add/remove columns', () => {
+    const createDragWidthTable = (
+      content: string[][],
+      colWidths: number[]
+    ): { table: Table; element: HTMLElement } => {
+      let insertCallCount = 0;
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: vi.fn().mockImplementation(() => {
+            insertCallCount++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', `mock-block-${insertCallCount}`);
+
+            return { id: `mock-block-${insertCallCount}`, holder };
+          }),
+          delete: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content, colWidths },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      return { table, element };
+    };
+
+    /**
+     * Simulate only the pointerdown + pointermove part of a drag (no pointerup),
+     * so we can check intermediate state before onDragEnd fires.
+     */
+    const simulateDragStart = (
+      element: HTMLElement,
+      axis: 'row' | 'col',
+      startPos: number,
+      endPos: number,
+    ): void => {
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.releasePointerCapture = vi.fn();
+
+      const clientKey = axis === 'row' ? 'clientY' : 'clientX';
+
+      element.dispatchEvent(new PointerEvent('pointerdown', {
+        [clientKey]: startPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointermove', {
+        [clientKey]: endPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+    };
+
+    it('updates grid width immediately when drag-adding a column', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const grid = element.firstElementChild as HTMLElement;
+      const widthBefore = parseFloat(grid.style.width);
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // Drag right by enough to add one column (unitSize is ~200px for last cell)
+      simulateDragStart(addColBtn, 'col', 0, 250);
+
+      // Grid width should have grown immediately during the drag
+      const widthAfter = parseFloat(grid.style.width);
+
+      expect(widthAfter).toBeGreaterThan(widthBefore);
+
+      document.body.removeChild(element);
+    });
+
+    it('updates grid width immediately when drag-removing a column', () => {
+      const { element } = createDragWidthTable(
+        [['A', '', ''], ['C', '', '']],
+        [200, 200, 200]
+      );
+
+      // Clear text from last column so it can be removed
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+        const lastCell = cells[cells.length - 1];
+        const container = lastCell.querySelector('[data-blok-table-cell-blocks]');
+
+        if (container) {
+          container.textContent = '';
+        }
+      });
+
+      const grid = element.firstElementChild as HTMLElement;
+      const widthBefore = parseFloat(grid.style.width);
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // Drag left by enough to remove one column
+      simulateDragStart(addColBtn, 'col', 300, 50);
+
+      // Grid width should have shrunk immediately during the drag
+      const widthAfter = parseFloat(grid.style.width);
+
+      expect(widthAfter).toBeLessThan(widthBefore);
+
+      document.body.removeChild(element);
+    });
+
+    it('add-row button width is synced when drag-adding a column', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // Drag right to add a column, then release (full drag with pointerup)
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addColBtn.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addColBtn.releasePointerCapture = vi.fn();
+
+      addColBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addColBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: 250,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addColBtn.dispatchEvent(new PointerEvent('pointerup', {
+        clientX: 250,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      const grid = element.firstElementChild as HTMLElement;
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      expect(addRowBtn.style.width).toBe(grid.style.width);
+
+      document.body.removeChild(element);
+    });
+
+    it('resize handles match column count during drag-to-add column', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const handlesBefore = element.querySelectorAll('[data-blok-table-resize]');
+
+      expect(handlesBefore).toHaveLength(2);
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // jsdom offsetWidth returns 0 → measureUnitSize defaults to 100px.
+      // Drag right by 110px to add exactly 1 column (floor(110/100) = 1).
+      simulateDragStart(addColBtn, 'col', 0, 110);
+
+      // Resize handles should be rebuilt to match the new 3-column layout
+      const handlesAfter = element.querySelectorAll('[data-blok-table-resize]');
+
+      expect(handlesAfter).toHaveLength(3);
+
+      document.body.removeChild(element);
+    });
+
+    it('resize handles match column count during drag-to-remove column', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B', ''], ['C', 'D', '']],
+        [200, 200, 200]
+      );
+
+      // Put real text in columns 0 and 1 so only column 2 can be removed.
+      // Clear column 2 to ensure it is empty.
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+
+        // Set visible text in first two columns
+        const container0 = cells[0].querySelector('[data-blok-table-cell-blocks]');
+
+        if (container0) {
+          container0.textContent = 'content';
+        }
+
+        const container1 = cells[1].querySelector('[data-blok-table-cell-blocks]');
+
+        if (container1) {
+          container1.textContent = 'content';
+        }
+
+        // Clear last column
+        const container2 = cells[2].querySelector('[data-blok-table-cell-blocks]');
+
+        if (container2) {
+          container2.textContent = '';
+        }
+      });
+
+      const handlesBefore = element.querySelectorAll('[data-blok-table-resize]');
+
+      expect(handlesBefore).toHaveLength(3);
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // jsdom offsetWidth returns 0 → measureUnitSize defaults to 100px.
+      // Drag left by 110px to remove 1 column (floor(-110/100) = -2, but only 1 empty).
+      simulateDragStart(addColBtn, 'col', 200, 90);
+
+      // Resize handles should be rebuilt to match the new 2-column layout
+      const handlesAfter = element.querySelectorAll('[data-blok-table-resize]');
+
+      expect(handlesAfter).toHaveLength(2);
+
+      document.body.removeChild(element);
+    });
+  });
 });

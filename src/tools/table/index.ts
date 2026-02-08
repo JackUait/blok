@@ -410,14 +410,22 @@ export class Table implements BlockTool {
 
         this.grid.addColumn(gridEl, undefined, colWidths);
         this.data.colWidths = [...colWidths, halfAvgWidth];
+        this.applyPixelWidths(gridEl, this.data.colWidths);
         this.populateNewCells(gridEl);
         this.updateHeadingColumnStyles();
+        this.initResize(gridEl);
       },
       onDragRemoveCol: () => {
         const colCount = this.grid.getColumnCount(gridEl);
 
         if (colCount > 1 && this.isColumnEmpty(gridEl, colCount - 1)) {
           this.deleteColumnWithBlockCleanup(gridEl, colCount - 1);
+
+          if (this.data.colWidths) {
+            this.applyPixelWidths(gridEl, this.data.colWidths);
+          }
+
+          this.initResize(gridEl);
         }
       },
       onDragEnd: () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { TableAddControls } from '../../../../src/tools/table/table-add-controls';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
@@ -31,12 +31,56 @@ const createGridAndWrapper = (rows: number, cols: number): { wrapper: HTMLDivEle
   return { wrapper, grid };
 };
 
+const defaultDragCallbacks = (): {
+  onDragAddRow: () => void;
+  onDragRemoveRow: () => void;
+  onDragAddCol: () => void;
+  onDragRemoveCol: () => void;
+  onDragEnd: () => void;
+} => ({
+  onDragAddRow: vi.fn(),
+  onDragRemoveRow: vi.fn(),
+  onDragAddCol: vi.fn(),
+  onDragRemoveCol: vi.fn(),
+  onDragEnd: vi.fn(),
+});
+
+/**
+ * Simulate a click via pointer events (pointerdown + pointerup at same position).
+ * Mocks setPointerCapture and releasePointerCapture for jsdom compatibility.
+ */
+const simulateClick = (element: HTMLElement): void => {
+  // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+  element.setPointerCapture = vi.fn();
+  // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+  element.releasePointerCapture = vi.fn();
+
+  element.dispatchEvent(new PointerEvent('pointerdown', {
+    clientX: 0,
+    clientY: 0,
+    pointerId: 1,
+    bubbles: true,
+  }));
+
+  element.dispatchEvent(new PointerEvent('pointerup', {
+    clientX: 0,
+    clientY: 0,
+    pointerId: 1,
+    bubbles: true,
+  }));
+};
+
 describe('TableAddControls', () => {
   let wrapper: HTMLDivElement;
   let grid: HTMLDivElement;
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     wrapper?.remove();
+    vi.restoreAllMocks();
   });
 
   describe('button creation', () => {
@@ -48,6 +92,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`);
@@ -63,6 +108,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`);
@@ -78,6 +124,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
@@ -93,6 +140,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
@@ -108,6 +156,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`);
@@ -143,6 +192,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
@@ -160,6 +210,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       // Grid rect: top=0, left=0, width=200, height=100 → bottom=100, right=200
@@ -181,6 +232,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       // Move cursor near right (x=190) but far from bottom (y=20)
@@ -201,6 +253,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       // Near both edges
@@ -223,6 +276,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       // Show both buttons first
@@ -250,6 +304,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       // Show add-row by moving near bottom
@@ -280,11 +335,12 @@ describe('TableAddControls', () => {
         grid,
         onAddRow,
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      addRowBtn.click();
+      simulateClick(addRowBtn);
 
       expect(onAddRow).toHaveBeenCalledTimes(1);
     });
@@ -299,11 +355,12 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn,
+        ...defaultDragCallbacks(),
       });
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      addColBtn.click();
+      simulateClick(addColBtn);
 
       expect(onAddColumn).toHaveBeenCalledTimes(1);
     });
@@ -318,6 +375,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       controls.destroy();
@@ -334,6 +392,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       controls.destroy();
@@ -363,6 +422,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow,
         onAddColumn,
+        ...defaultDragCallbacks(),
       });
 
       // Grab references before destroy removes them
@@ -375,8 +435,13 @@ describe('TableAddControls', () => {
       wrapper.appendChild(addRowBtn);
       grid.appendChild(addColBtn);
 
-      addRowBtn.click();
-      addColBtn.click();
+      addRowBtn.setPointerCapture = vi.fn();
+      addRowBtn.releasePointerCapture = vi.fn();
+      addColBtn.setPointerCapture = vi.fn();
+      addColBtn.releasePointerCapture = vi.fn();
+
+      simulateClick(addRowBtn);
+      simulateClick(addColBtn);
 
       expect(onAddRow).not.toHaveBeenCalled();
       expect(onAddColumn).not.toHaveBeenCalled();
@@ -392,6 +457,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`);
@@ -409,6 +475,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`);
@@ -424,6 +491,7 @@ describe('TableAddControls', () => {
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
       });
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;

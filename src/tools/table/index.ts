@@ -389,6 +389,42 @@ export class Table implements BlockTool {
         this.addControls?.syncRowButtonWidth();
         this.rowColControls?.refresh();
       },
+      onDragAddRow: () => {
+        this.grid.addRow(gridEl);
+        this.populateNewCells(gridEl);
+        this.updateHeadingStyles();
+        this.updateHeadingColumnStyles();
+      },
+      onDragRemoveRow: () => {
+        const rowCount = this.grid.getRowCount(gridEl);
+
+        if (rowCount > 1) {
+          this.deleteRowWithBlockCleanup(gridEl, rowCount - 1);
+        }
+      },
+      onDragAddCol: () => {
+        const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
+        const halfAvgWidth = Math.round(
+          (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
+        ) / 100;
+
+        this.grid.addColumn(gridEl, undefined, colWidths);
+        this.data.colWidths = [...colWidths, halfAvgWidth];
+        this.populateNewCells(gridEl);
+        this.updateHeadingColumnStyles();
+      },
+      onDragRemoveCol: () => {
+        const colCount = this.grid.getColumnCount(gridEl);
+
+        if (colCount > 1) {
+          this.deleteColumnWithBlockCleanup(gridEl, colCount - 1);
+        }
+      },
+      onDragEnd: () => {
+        this.initResize(gridEl);
+        this.addControls?.syncRowButtonWidth();
+        this.rowColControls?.refresh();
+      },
     });
   }
 

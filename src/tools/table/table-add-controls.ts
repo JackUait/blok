@@ -4,6 +4,7 @@ import { twMerge } from '../../components/utils/tw';
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
 const HIDE_DELAY_MS = 150;
+const DRAG_THRESHOLD = 5;
 
 /**
  * How close (px) the cursor must be to a grid edge for
@@ -32,16 +33,30 @@ const VISUAL_CLASSES = [
 
 const ICON_SIZE = '12';
 
+interface DragState {
+  axis: 'row' | 'col';
+  startPos: number;
+  unitSize: number;
+  addedCount: number;
+  pointerId: number;
+}
+
 interface TableAddControlsOptions {
   wrapper: HTMLElement;
   grid: HTMLElement;
   onAddRow: () => void;
   onAddColumn: () => void;
+  onDragAddRow: () => void;
+  onDragRemoveRow: () => void;
+  onDragAddCol: () => void;
+  onDragRemoveCol: () => void;
+  onDragEnd: () => void;
 }
 
 /**
  * Manages hover-to-reveal "+" buttons for adding rows and columns to the table.
  * Buttons only appear when the cursor is near the relevant edge of the grid.
+ * Supports both click (add one) and drag (add multiple) interactions.
  */
 export class TableAddControls {
   private wrapper: HTMLElement;
@@ -52,11 +67,21 @@ export class TableAddControls {
   private colHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private rowVisible = false;
   private colVisible = false;
+  private dragState: DragState | null = null;
 
   private boundMouseMove: (e: MouseEvent) => void;
   private boundMouseLeave: () => void;
   private boundAddRowClick: () => void;
   private boundAddColClick: () => void;
+  private onDragAddRow: () => void;
+  private onDragRemoveRow: () => void;
+  private onDragAddCol: () => void;
+  private onDragRemoveCol: () => void;
+  private onDragEnd: () => void;
+  private boundPointerMove: (e: PointerEvent) => void;
+  private boundPointerUp: (e: PointerEvent) => void;
+  private boundRowPointerDown: (e: PointerEvent) => void;
+  private boundColPointerDown: (e: PointerEvent) => void;
 
   constructor(options: TableAddControlsOptions) {
     this.wrapper = options.wrapper;
@@ -64,8 +89,17 @@ export class TableAddControls {
 
     this.boundAddRowClick = options.onAddRow;
     this.boundAddColClick = options.onAddColumn;
+    this.onDragAddRow = options.onDragAddRow;
+    this.onDragRemoveRow = options.onDragRemoveRow;
+    this.onDragAddCol = options.onDragAddCol;
+    this.onDragRemoveCol = options.onDragRemoveCol;
+    this.onDragEnd = options.onDragEnd;
     this.boundMouseMove = this.handleMouseMove.bind(this);
     this.boundMouseLeave = this.handleMouseLeave.bind(this);
+    this.boundPointerMove = this.handlePointerMove.bind(this);
+    this.boundPointerUp = this.handlePointerUp.bind(this);
+    this.boundRowPointerDown = (e: PointerEvent): void => this.handlePointerDown('row', e);
+    this.boundColPointerDown = (e: PointerEvent): void => this.handlePointerDown('col', e);
 
     this.addRowBtn = this.createAddRowButton();
     this.addColBtn = this.createAddColumnButton();
@@ -77,8 +111,8 @@ export class TableAddControls {
     this.wrapper.addEventListener('mousemove', this.boundMouseMove);
     this.wrapper.addEventListener('mouseleave', this.boundMouseLeave);
 
-    this.addRowBtn.addEventListener('click', this.boundAddRowClick);
-    this.addColBtn.addEventListener('click', this.boundAddColClick);
+    this.addRowBtn.addEventListener('pointerdown', this.boundRowPointerDown);
+    this.addColBtn.addEventListener('pointerdown', this.boundColPointerDown);
   }
 
   /**
@@ -98,14 +132,130 @@ export class TableAddControls {
   public destroy(): void {
     this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);
-    this.addRowBtn.removeEventListener('click', this.boundAddRowClick);
-    this.addColBtn.removeEventListener('click', this.boundAddColClick);
+    this.addRowBtn.removeEventListener('pointerdown', this.boundRowPointerDown);
+    this.addColBtn.removeEventListener('pointerdown', this.boundColPointerDown);
+
+    if (this.dragState) {
+      const target = this.dragState.axis === 'row' ? this.addRowBtn : this.addColBtn;
+
+      target.removeEventListener('pointermove', this.boundPointerMove);
+      target.removeEventListener('pointerup', this.boundPointerUp);
+      document.body.style.cursor = '';
+      this.dragState = null;
+    }
 
     this.clearRowTimeout();
     this.clearColTimeout();
 
     this.addRowBtn.remove();
     this.addColBtn.remove();
+  }
+
+  private handlePointerDown(axis: 'row' | 'col', e: PointerEvent): void {
+    e.preventDefault();
+
+    const target = axis === 'row' ? this.addRowBtn : this.addColBtn;
+
+    target.setPointerCapture(e.pointerId);
+
+    const unitSize = this.measureUnitSize(axis);
+
+    this.dragState = {
+      axis,
+      startPos: axis === 'row' ? e.clientY : e.clientX,
+      unitSize,
+      addedCount: 0,
+      pointerId: e.pointerId,
+    };
+
+    target.addEventListener('pointermove', this.boundPointerMove);
+    target.addEventListener('pointerup', this.boundPointerUp);
+  }
+
+  private handlePointerMove(e: PointerEvent): void {
+    if (!this.dragState) {
+      return;
+    }
+
+    const { axis, startPos, unitSize } = this.dragState;
+    const currentPos = axis === 'row' ? e.clientY : e.clientX;
+    const delta = currentPos - startPos;
+    const targetCount = Math.max(0, Math.floor(delta / unitSize));
+
+    while (this.dragState.addedCount < targetCount) {
+      if (axis === 'row') {
+        this.onDragAddRow();
+      } else {
+        this.onDragAddCol();
+      }
+
+      this.dragState.addedCount++;
+    }
+
+    while (this.dragState.addedCount > targetCount) {
+      if (axis === 'row') {
+        this.onDragRemoveRow();
+      } else {
+        this.onDragRemoveCol();
+      }
+
+      this.dragState.addedCount--;
+    }
+
+    if (Math.abs(delta) > DRAG_THRESHOLD) {
+      document.body.style.cursor = axis === 'row' ? 'row-resize' : 'col-resize';
+    }
+  }
+
+  private handlePointerUp(e: PointerEvent): void {
+    if (!this.dragState) {
+      return;
+    }
+
+    const { axis, startPos, addedCount, pointerId } = this.dragState;
+    const currentPos = axis === 'row' ? e.clientY : e.clientX;
+    const totalMovement = Math.abs(currentPos - startPos);
+
+    const target = axis === 'row' ? this.addRowBtn : this.addColBtn;
+
+    target.releasePointerCapture(pointerId);
+    target.removeEventListener('pointermove', this.boundPointerMove);
+    target.removeEventListener('pointerup', this.boundPointerUp);
+
+    document.body.style.cursor = '';
+    this.dragState = null;
+
+    if (totalMovement < DRAG_THRESHOLD) {
+      const clickHandler = axis === 'row' ? this.boundAddRowClick : this.boundAddColClick;
+
+      clickHandler();
+
+      return;
+    }
+
+    if (addedCount > 0) {
+      this.onDragEnd();
+    }
+  }
+
+  private measureUnitSize(axis: 'row' | 'col'): number {
+    if (axis === 'row') {
+      const rows = this.grid.querySelectorAll('[data-blok-table-row]');
+      const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
+
+      return lastRow?.offsetHeight ?? 30;
+    }
+
+    const firstRow = this.grid.querySelector('[data-blok-table-row]');
+
+    if (!firstRow) {
+      return 100;
+    }
+
+    const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
+    const lastCell = cells[cells.length - 1] as HTMLElement | undefined;
+
+    return lastCell?.offsetWidth ?? 100;
   }
 
   private handleMouseMove(e: MouseEvent): void {
@@ -150,7 +300,7 @@ export class TableAddControls {
   }
 
   private scheduleHideRow(): void {
-    if (!this.rowVisible || this.rowHideTimeout !== null) {
+    if (!this.rowVisible || this.rowHideTimeout !== null || this.dragState?.axis === 'row') {
       return;
     }
 
@@ -162,7 +312,7 @@ export class TableAddControls {
   }
 
   private scheduleHideCol(): void {
-    if (!this.colVisible || this.colHideTimeout !== null) {
+    if (!this.colVisible || this.colHideTimeout !== null || this.dragState?.axis === 'col') {
       return;
     }
 

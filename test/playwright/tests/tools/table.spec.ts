@@ -1975,4 +1975,133 @@ test.describe('table tool', () => {
       }
     });
   });
+
+  test.describe('readonly mode preserves cell content', () => {
+    test('table cells retain their text content after toggling to readonly mode', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['Hello', 'World'], ['Foo', 'Bar']],
+              },
+            },
+          ],
+        },
+      });
+
+      // Verify content is visible in edit mode
+      const cells = page.locator(CELL_SELECTOR);
+
+      await expect(cells).toHaveCount(4);
+      await expect(cells.nth(0)).toContainText('Hello');
+      await expect(cells.nth(1)).toContainText('World');
+      await expect(cells.nth(2)).toContainText('Foo');
+      await expect(cells.nth(3)).toContainText('Bar');
+
+      // Toggle to readonly mode
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      // Cells must still contain text after readonly toggle
+      const readonlyCells = page.locator(CELL_SELECTOR);
+
+      await expect(readonlyCells).toHaveCount(4);
+      await expect(readonlyCells.nth(0)).toContainText('Hello');
+      await expect(readonlyCells.nth(1)).toContainText('World');
+      await expect(readonlyCells.nth(2)).toContainText('Foo');
+      await expect(readonlyCells.nth(3)).toContainText('Bar');
+    });
+
+    test('table cell content is not rendered as top-level blocks in readonly mode', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['CellA', 'CellB']],
+              },
+            },
+          ],
+        },
+      });
+
+      // Toggle to readonly mode
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      // Cell content must be inside the table, not rendered as separate blocks outside
+      const tableWrapper = page.locator(TABLE_SELECTOR);
+
+      await expect(tableWrapper).toHaveCount(1);
+      await expect(tableWrapper).toContainText('CellA');
+      await expect(tableWrapper).toContainText('CellB');
+
+      // Toggle back to edit mode and save to verify data integrity
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      const savedData = await page.evaluate(async () => {
+        return window.blokInstance?.save();
+      });
+
+      const tableBlock = savedData?.blocks.find(b => b.type === 'table');
+
+      expect(tableBlock).toBeDefined();
+
+      // Table data content should have cells with block references, not empty arrays
+      const content = (tableBlock?.data as { content: Array<Array<{ blocks: string[] }>> }).content;
+
+      expect(content).toHaveLength(1);
+      expect(content[0]).toHaveLength(2);
+      content[0].forEach(cell => {
+        expect(cell.blocks.length).toBeGreaterThan(0);
+      });
+    });
+
+    test('table content survives readonly round-trip (edit -> readonly -> edit)', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: true,
+                content: [['Name', 'Value'], ['Key1', 'Val1']],
+              },
+            },
+          ],
+        },
+      });
+
+      // Toggle to readonly
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      // Toggle back to edit mode
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      // Content must still be visible in the table cells
+      const cells = page.locator(CELL_SELECTOR);
+
+      await expect(cells).toHaveCount(4);
+      await expect(cells.nth(0)).toContainText('Name');
+      await expect(cells.nth(1)).toContainText('Value');
+      await expect(cells.nth(2)).toContainText('Key1');
+      await expect(cells.nth(3)).toContainText('Val1');
+    });
+  });
 });

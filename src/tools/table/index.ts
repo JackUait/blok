@@ -19,6 +19,7 @@ import { TableResize } from './table-resize';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import type { TableData, TableConfig } from './types';
+import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -146,13 +147,19 @@ export class Table implements BlockTool {
    * Initializes resize handles now that pixel widths can be measured.
    */
   public rendered(): void {
-    if (this.readOnly || !this.element) {
+    if (!this.element) {
       return;
     }
 
     const gridEl = this.element.firstElementChild as HTMLElement;
 
     if (!gridEl) {
+      return;
+    }
+
+    if (this.readOnly) {
+      this.mountCellBlocksReadOnly(gridEl);
+
       return;
     }
 
@@ -658,6 +665,59 @@ export class Table implements BlockTool {
       api: this.api,
       gridElement: gridEl,
       tableBlockId: this.blockId ?? '',
+    });
+  }
+
+  /**
+   * Mount block holders into cell DOM containers in readonly mode.
+   * In readonly mode we skip the full TableCellBlocks infrastructure (no keyboard
+   * navigation, no mutation handling) but still need blocks to appear inside cells.
+   */
+  private mountCellBlocksReadOnly(gridEl: HTMLElement): void {
+    const rowElements = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+
+    this.data.content.forEach((rowData, rowIndex) => {
+      const row = rowElements[rowIndex];
+
+      if (!row) {
+        return;
+      }
+
+      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+      rowData.forEach((cellContent, colIndex) => {
+        const cell = cells[colIndex] as HTMLElement | undefined;
+
+        if (!cell) {
+          return;
+        }
+
+        const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+        if (!container) {
+          return;
+        }
+
+        if (!isCellWithBlocks(cellContent)) {
+          return;
+        }
+
+        for (const blockId of cellContent.blocks) {
+          const index = this.api.blocks.getBlockIndex(blockId);
+
+          if (index === undefined) {
+            continue;
+          }
+
+          const block = this.api.blocks.getBlockByIndex(index);
+
+          if (!block) {
+            continue;
+          }
+
+          container.appendChild(block.holder);
+        }
+      });
     });
   }
 

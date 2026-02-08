@@ -2340,5 +2340,70 @@ describe('Table Tool', () => {
 
       document.body.removeChild(element);
     });
+
+    it('rendered() mounts block holders into cell containers in readonly mode', () => {
+      const blockId1 = 'block-ro-0-0';
+      const blockId2 = 'block-ro-0-1';
+
+      const holders: Record<string, HTMLElement> = {};
+
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn().mockImplementation((id: string) => {
+            const map: Record<string, number> = {
+              [blockId1]: 0,
+              [blockId2]: 1,
+            };
+
+            return map[id];
+          }),
+          getBlockByIndex: vi.fn().mockImplementation((index: number) => {
+            const ids = [blockId1, blockId2];
+            const id = ids[index];
+
+            if (!holders[id]) {
+              holders[id] = document.createElement('div');
+              holders[id].setAttribute('data-blok-id', id);
+              holders[id].textContent = `Content of ${id}`;
+            }
+
+            return { id, holder: holders[id] };
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(2),
+        },
+      } as never);
+
+      const savedContent: Array<Array<{ blocks: string[] }>> = [
+        [{ blocks: [blockId1] }, { blocks: [blockId2] }],
+      ];
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: savedContent,
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: true,
+        block: { id: 'table-readonly-mount' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Block holders must be inside the cell blocks containers, not floating elsewhere
+      const cellBlockContainers = element.querySelectorAll('[data-blok-table-cell-blocks]');
+
+      expect(cellBlockContainers).toHaveLength(2);
+      expect(cellBlockContainers[0].querySelector(`[data-blok-id="${blockId1}"]`)).not.toBeNull();
+      expect(cellBlockContainers[1].querySelector(`[data-blok-id="${blockId2}"]`)).not.toBeNull();
+
+      document.body.removeChild(element);
+    });
   });
 });

@@ -13,13 +13,32 @@ import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
-import { CELL_BLOCKS_ATTR, TableCellBlocks } from './table-cell-blocks';
-import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR, TableGrid } from './table-core';
+import { TableCellBlocks } from './table-cell-blocks';
+import { TableGrid } from './table-core';
+import {
+  applyPixelWidths,
+  computeHalfAvgWidth,
+  computeInsertColumnWidths,
+  deleteColumnWithBlockCleanup,
+  deleteRowWithBlockCleanup,
+  enableScrollOverflow,
+  getBlockIdsInColumn,
+  getBlockIdsInRow,
+  isColumnEmpty,
+  isRowEmpty,
+  mountCellBlocksReadOnly,
+  normalizeTableData,
+  populateNewCells,
+  readPixelWidths,
+  setupKeyboardNavigation,
+  syncColWidthsAfterMove,
+  updateHeadingColumnStyles,
+  updateHeadingStyles,
+} from './table-operations';
 import { TableResize } from './table-resize';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import type { TableData, TableConfig } from './types';
-import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -54,14 +73,11 @@ export class Table implements BlockTool {
     this.api = api;
     this.readOnly = readOnly;
     this.config = config ?? {};
-    this.data = this.normalizeData(data);
+    this.data = normalizeTableData(data, config ?? {});
     this.grid = new TableGrid({ readOnly });
     this.blockId = block?.id;
   }
 
-  /**
-   * Toolbox configuration
-   */
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconTable,
@@ -97,9 +113,6 @@ export class Table implements BlockTool {
     };
   }
 
-  /**
-   * Render the table
-   */
   public render(): HTMLDivElement {
     const wrapper = document.createElement('div');
 
@@ -120,32 +133,28 @@ export class Table implements BlockTool {
     }
 
     if (this.data.colWidths) {
-      this.applyPixelWidths(gridEl, this.data.colWidths);
+      applyPixelWidths(gridEl, this.data.colWidths);
     }
 
     wrapper.appendChild(gridEl);
     this.element = wrapper;
 
     if (this.data.withHeadings) {
-      this.updateHeadingStyles();
+      updateHeadingStyles(this.element, this.data.withHeadings);
     }
 
     if (this.data.withHeadingColumn) {
-      this.updateHeadingColumnStyles();
+      updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
     }
 
     if (!this.readOnly) {
-      this.setupKeyboardNavigation(gridEl);
       this.initCellBlocks(gridEl);
+      setupKeyboardNavigation(gridEl, this.cellBlocks);
     }
 
     return wrapper;
   }
 
-  /**
-   * Called after block element is added to the DOM.
-   * Initializes resize handles now that pixel widths can be measured.
-   */
   public rendered(): void {
     if (!this.element) {
       return;
@@ -158,15 +167,11 @@ export class Table implements BlockTool {
     }
 
     if (this.readOnly) {
-      this.mountCellBlocksReadOnly(gridEl);
+      mountCellBlocksReadOnly(gridEl, this.data.content, this.api);
 
       return;
     }
 
-    // Initialize cell blocks here (after Yjs fromJSON has run) so that
-    // cell paragraph blocks are synced to both BlocksStore and Yjs.
-    // Creating them during render() would cause a desync: fromJSON wipes
-    // the Yjs array after render() but before rendered().
     this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
 
     this.initResize(gridEl);
@@ -174,9 +179,6 @@ export class Table implements BlockTool {
     this.initRowColControls(gridEl);
   }
 
-  /**
-   * Extract data from the rendered table
-   */
   public save(blockContent: HTMLElement): TableData {
     const gridEl = blockContent.firstElementChild as HTMLElement;
     const colWidths = this.data.colWidths;
@@ -193,16 +195,10 @@ export class Table implements BlockTool {
     };
   }
 
-  /**
-   * Validate saved data
-   */
   public validate(savedData: TableData): boolean {
     return savedData.content.length > 0;
   }
 
-  /**
-   * Render block settings
-   */
   public renderSettings(): MenuConfig {
     return [
       {
@@ -212,7 +208,7 @@ export class Table implements BlockTool {
           : 'tools.table.withHeadings'),
         onActivate: (): void => {
           this.data.withHeadings = !this.data.withHeadings;
-          this.updateHeadingStyles();
+          updateHeadingStyles(this.element, this.data.withHeadings);
         },
         closeOnActivate: true,
         isActive: this.data.withHeadings,
@@ -220,9 +216,6 @@ export class Table implements BlockTool {
     ];
   }
 
-  /**
-   * Handle paste of HTML table
-   */
   public onPaste(event: HTMLPasteEvent): void {
     const content = event.detail.data;
     const rows = content.querySelectorAll('tr');
@@ -241,7 +234,6 @@ export class Table implements BlockTool {
       }
     });
 
-    // Detect headings from thead or th elements in first row
     const hasTheadHeadings = content.querySelector('thead') !== null;
     const hasThHeadings = rows[0]?.querySelector('th') !== null;
     const withHeadings = hasTheadHeadings || hasThHeadings;
@@ -253,7 +245,6 @@ export class Table implements BlockTool {
       content: tableContent,
     };
 
-    // Re-render with new data
     if (!this.element?.parentNode) {
       return;
     }
@@ -272,9 +263,6 @@ export class Table implements BlockTool {
     }
   }
 
-  /**
-   * Clean up
-   */
   public destroy(): void {
     this.resize?.destroy();
     this.resize = null;
@@ -287,82 +275,28 @@ export class Table implements BlockTool {
     this.element = null;
   }
 
-  private normalizeData(data: TableData | Record<string, never>): TableData {
-    const isTableData = typeof data === 'object' && data !== null && 'content' in data;
+  public deleteRowWithCleanup(rowIndex: number): void {
+    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
-    if (!isTableData) {
-      return {
-        withHeadings: this.config.withHeadings ?? false,
-        withHeadingColumn: false,
-        stretched: this.config.stretched ?? false,
-        content: [],
-      };
-    }
-
-    const tableData = data as TableData;
-    const cols = tableData.content?.[0]?.length;
-    const colWidths = tableData.colWidths;
-    const validWidths = colWidths && cols && colWidths.length === cols ? colWidths : undefined;
-
-    return {
-      withHeadings: tableData.withHeadings ?? this.config.withHeadings ?? false,
-      withHeadingColumn: tableData.withHeadingColumn ?? false,
-      stretched: tableData.stretched ?? this.config.stretched ?? false,
-      content: tableData.content ?? [],
-      colWidths: validWidths,
-    };
-  }
-
-  private updateHeadingStyles(): void {
-    if (!this.element) {
-      return;
-    }
-
-    const gridEl = this.element.firstElementChild as HTMLElement;
-
-    if (!gridEl) {
-      return;
-    }
-
-    const rows = gridEl.querySelectorAll('[data-blok-table-row]');
-
-    rows.forEach(row => {
-      row.removeAttribute('data-blok-table-heading');
-    });
-
-    if (this.data.withHeadings && rows.length > 0) {
-      rows[0].setAttribute('data-blok-table-heading', '');
+    if (gridEl) {
+      deleteRowWithBlockCleanup(gridEl, rowIndex, this.grid, this.cellBlocks);
     }
   }
 
-  private updateHeadingColumnStyles(): void {
-    if (!this.element) {
-      return;
+  public deleteColumnWithCleanup(colIndex: number): void {
+    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
+
+    if (gridEl) {
+      this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, colIndex, this.data.colWidths, this.grid, this.cellBlocks);
     }
+  }
 
-    const gridEl = this.element.firstElementChild as HTMLElement;
+  public getBlockIdsInRow(rowIndex: number): string[] {
+    return getBlockIdsInRow(this.element, this.cellBlocks, rowIndex);
+  }
 
-    if (!gridEl) {
-      return;
-    }
-
-    const allCells = gridEl.querySelectorAll('[data-blok-table-cell]');
-
-    allCells.forEach(cell => {
-      cell.removeAttribute('data-blok-table-heading-col');
-    });
-
-    if (this.data.withHeadingColumn) {
-      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
-
-      rows.forEach(row => {
-        const firstCell = row.querySelector('[data-blok-table-cell]');
-
-        if (firstCell) {
-          firstCell.setAttribute('data-blok-table-heading-col', '');
-        }
-      });
-    }
+  public getBlockIdsInColumn(colIndex: number): string[] {
+    return getBlockIdsInColumn(this.element, this.cellBlocks, colIndex);
   }
 
   private initAddControls(gridEl: HTMLElement): void {
@@ -377,23 +311,21 @@ export class Table implements BlockTool {
       grid: gridEl,
       onAddRow: () => {
         this.grid.addRow(gridEl);
-        this.populateNewCells(gridEl);
-        this.updateHeadingStyles();
-        this.updateHeadingColumnStyles();
+        populateNewCells(gridEl, this.cellBlocks);
+        updateHeadingStyles(this.element, this.data.withHeadings);
+        updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
         this.initResize(gridEl);
         this.addControls?.syncRowButtonWidth();
         this.rowColControls?.refresh();
       },
       onAddColumn: () => {
-        const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
-        const halfAvgWidth = Math.round(
-          (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
-        ) / 100;
+        const colWidths = this.data.colWidths ?? readPixelWidths(gridEl);
+        const halfAvgWidth = computeHalfAvgWidth(colWidths);
 
         this.grid.addColumn(gridEl, undefined, colWidths);
         this.data.colWidths = [...colWidths, halfAvgWidth];
-        this.populateNewCells(gridEl);
-        this.updateHeadingColumnStyles();
+        populateNewCells(gridEl, this.cellBlocks);
+        updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
         this.initResize(gridEl);
         this.addControls?.syncRowButtonWidth();
         this.rowColControls?.refresh();
@@ -407,41 +339,39 @@ export class Table implements BlockTool {
       },
       onDragAddRow: () => {
         this.grid.addRow(gridEl);
-        this.populateNewCells(gridEl);
-        this.updateHeadingStyles();
-        this.updateHeadingColumnStyles();
+        populateNewCells(gridEl, this.cellBlocks);
+        updateHeadingStyles(this.element, this.data.withHeadings);
+        updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
       },
       onDragRemoveRow: () => {
         const rowCount = this.grid.getRowCount(gridEl);
 
-        if (rowCount > 1 && this.isRowEmpty(gridEl, rowCount - 1)) {
-          this.deleteRowWithBlockCleanup(gridEl, rowCount - 1);
+        if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
+          deleteRowWithBlockCleanup(gridEl, rowCount - 1, this.grid, this.cellBlocks);
         }
       },
       onDragAddCol: () => {
-        const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
-        const halfAvgWidth = Math.round(
-          (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
-        ) / 100;
+        const colWidths = this.data.colWidths ?? readPixelWidths(gridEl);
+        const halfAvgWidth = computeHalfAvgWidth(colWidths);
 
         this.grid.addColumn(gridEl, undefined, colWidths);
         this.data.colWidths = [...colWidths, halfAvgWidth];
-        this.applyPixelWidths(gridEl, this.data.colWidths);
-        this.populateNewCells(gridEl);
-        this.updateHeadingColumnStyles();
+        applyPixelWidths(gridEl, this.data.colWidths);
+        populateNewCells(gridEl, this.cellBlocks);
+        updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
         this.initResize(gridEl);
       },
       onDragRemoveCol: () => {
         const colCount = this.grid.getColumnCount(gridEl);
 
-        if (colCount <= 1 || !this.isColumnEmpty(gridEl, colCount - 1)) {
+        if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
           return;
         }
 
-        this.deleteColumnWithBlockCleanup(gridEl, colCount - 1);
+        this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, colCount - 1, this.data.colWidths, this.grid, this.cellBlocks);
 
         if (this.data.colWidths) {
-          this.applyPixelWidths(gridEl, this.data.colWidths);
+          applyPixelWidths(gridEl, this.data.colWidths);
         }
 
         this.initResize(gridEl);
@@ -486,32 +416,32 @@ export class Table implements BlockTool {
     switch (action.type) {
       case 'insert-row-above':
         this.grid.addRow(gridEl, action.index);
-        this.populateNewCells(gridEl);
+        populateNewCells(gridEl, this.cellBlocks);
         break;
       case 'insert-row-below':
         this.grid.addRow(gridEl, action.index + 1);
-        this.populateNewCells(gridEl);
+        populateNewCells(gridEl, this.cellBlocks);
         break;
       case 'insert-col-left':
-        this.handleInsertColumn(gridEl, action.index);
-        this.populateNewCells(gridEl);
+        this.data.colWidths = computeInsertColumnWidths(gridEl, action.index, this.data, this.grid);
+        populateNewCells(gridEl, this.cellBlocks);
         break;
       case 'insert-col-right':
-        this.handleInsertColumn(gridEl, action.index + 1);
-        this.populateNewCells(gridEl);
+        this.data.colWidths = computeInsertColumnWidths(gridEl, action.index + 1, this.data, this.grid);
+        populateNewCells(gridEl, this.cellBlocks);
         break;
       case 'move-row':
         this.grid.moveRow(gridEl, action.fromIndex, action.toIndex);
         break;
       case 'move-col':
         this.grid.moveColumn(gridEl, action.fromIndex, action.toIndex);
-        this.syncColWidthsAfterMove(action.fromIndex, action.toIndex);
+        this.data.colWidths = syncColWidthsAfterMove(this.data.colWidths, action.fromIndex, action.toIndex);
         break;
       case 'delete-row':
-        this.deleteRowWithBlockCleanup(gridEl, action.index);
+        deleteRowWithBlockCleanup(gridEl, action.index, this.grid, this.cellBlocks);
         break;
       case 'delete-col':
-        this.deleteColumnWithBlockCleanup(gridEl, action.index);
+        this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, action.index, this.data.colWidths, this.grid, this.cellBlocks);
         break;
       case 'toggle-heading':
         this.data.withHeadings = !this.data.withHeadings;
@@ -521,58 +451,21 @@ export class Table implements BlockTool {
         break;
     }
 
-    this.updateHeadingStyles();
-    this.updateHeadingColumnStyles();
+    updateHeadingStyles(this.element, this.data.withHeadings);
+    updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
     this.initResize(gridEl);
     this.addControls?.syncRowButtonWidth();
     this.rowColControls?.refresh();
-  }
-
-  private handleInsertColumn(gridEl: HTMLElement, index: number): void {
-    const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
-
-    this.grid.addColumn(gridEl, index, colWidths);
-
-    const halfAvgWidth = Math.round(
-      (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
-    ) / 100;
-    const newWidths = [...colWidths];
-
-    newWidths.splice(index, 0, halfAvgWidth);
-    this.data.colWidths = newWidths;
-  }
-
-  private syncColWidthsAfterMove(fromIndex: number, toIndex: number): void {
-    if (!this.data.colWidths) {
-      return;
-    }
-
-    const widths = [...this.data.colWidths];
-    const [moved] = widths.splice(fromIndex, 1);
-
-    widths.splice(toIndex, 0, moved);
-    this.data.colWidths = widths;
-  }
-
-  private syncColWidthsAfterDeleteColumn(index: number): void {
-    if (!this.data.colWidths) {
-      return;
-    }
-
-    const widths = [...this.data.colWidths];
-
-    widths.splice(index, 1);
-    this.data.colWidths = widths.length > 0 ? widths : undefined;
   }
 
   private initResize(gridEl: HTMLElement): void {
     this.resize?.destroy();
 
     const isPercentMode = this.data.colWidths === undefined;
-    const widths = this.data.colWidths ?? this.readPixelWidths(gridEl);
+    const widths = this.data.colWidths ?? readPixelWidths(gridEl);
 
     if (!isPercentMode) {
-      this.enableScrollOverflow();
+      enableScrollOverflow(this.element);
     }
 
     this.resize = new TableResize(
@@ -580,7 +473,7 @@ export class Table implements BlockTool {
       widths,
       (newWidths: number[]) => {
         this.data.colWidths = newWidths;
-        this.enableScrollOverflow();
+        enableScrollOverflow(this.element);
         this.rowColControls?.positionGrips();
       },
       () => {
@@ -593,292 +486,11 @@ export class Table implements BlockTool {
     );
   }
 
-  private enableScrollOverflow(): void {
-    this.element?.classList.add('overflow-x-auto');
-  }
-
-  private readPixelWidths(gridEl: HTMLElement): number[] {
-    const firstRow = gridEl.querySelector('[data-blok-table-row]');
-
-    if (!firstRow) {
-      return [];
-    }
-
-    const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
-
-    return Array.from(cells).map(cell =>
-      (cell as HTMLElement).getBoundingClientRect().width
-    );
-  }
-
-  private applyPixelWidths(grid: HTMLElement, widths: number[]): void {
-    const totalWidth = widths.reduce((sum, w) => sum + w, 0);
-    const gridStyle: HTMLElement = grid;
-
-    gridStyle.style.width = `${totalWidth + BORDER_WIDTH}px`;
-
-    const rowEls = grid.querySelectorAll('[data-blok-table-row]');
-
-    rowEls.forEach(row => {
-      const cells = row.querySelectorAll('[data-blok-table-cell]');
-
-      cells.forEach((node, i) => {
-        if (i < widths.length) {
-          const cellEl = node as HTMLElement;
-
-          cellEl.style.width = `${widths[i]}px`;
-        }
-      });
-    });
-  }
-
-  private setupKeyboardNavigation(gridEl: HTMLElement): void {
-    gridEl.addEventListener('keydown', (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      const cell = target.closest<HTMLElement>('[data-blok-table-cell]');
-
-      if (!cell) {
-        return;
-      }
-
-      const position = this.getCellPosition(gridEl, cell);
-
-      if (position) {
-        this.cellBlocks?.handleKeyDown(event, position);
-      }
-    });
-  }
-
-  /**
-   * Ensure every cell in the grid has at least one block.
-   * Called after addRow / addColumn so new empty cells get an initial paragraph.
-   * Cells that already contain blocks are left untouched.
-   */
-  private populateNewCells(gridEl: HTMLElement): void {
-    const cells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
-
-    cells.forEach(cell => {
-      this.cellBlocks?.ensureCellHasBlock(cell as HTMLElement);
-    });
-  }
-
   private initCellBlocks(gridEl: HTMLElement): void {
     this.cellBlocks = new TableCellBlocks({
       api: this.api,
       gridElement: gridEl,
       tableBlockId: this.blockId ?? '',
     });
-  }
-
-  /**
-   * Mount block holders into cell DOM containers in readonly mode.
-   * In readonly mode we skip the full TableCellBlocks infrastructure (no keyboard
-   * navigation, no mutation handling) but still need blocks to appear inside cells.
-   */
-  private mountCellBlocksReadOnly(gridEl: HTMLElement): void {
-    const rowElements = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-
-    this.data.content.forEach((rowData, rowIndex) => {
-      const row = rowElements[rowIndex];
-
-      if (!row) {
-        return;
-      }
-
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      rowData.forEach((cellContent, colIndex) => {
-        const cell = cells[colIndex] as HTMLElement | undefined;
-
-        if (!cell) {
-          return;
-        }
-
-        const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
-
-        if (!container) {
-          return;
-        }
-
-        if (!isCellWithBlocks(cellContent)) {
-          return;
-        }
-
-        for (const blockId of cellContent.blocks) {
-          const index = this.api.blocks.getBlockIndex(blockId);
-
-          if (index === undefined) {
-            continue;
-          }
-
-          const block = this.api.blocks.getBlockByIndex(index);
-
-          if (!block) {
-            continue;
-          }
-
-          container.appendChild(block.holder);
-        }
-      });
-    });
-  }
-
-  private getCellPosition(gridEl: HTMLElement, cell: HTMLElement): { row: number; col: number } | null {
-    const rows = Array.from(gridEl.querySelectorAll('[data-blok-table-row]'));
-
-    const rowIndex = rows.findIndex(row => {
-      const cells = Array.from(row.querySelectorAll('[data-blok-table-cell]'));
-
-      return cells.includes(cell);
-    });
-
-    if (rowIndex === -1) {
-      return null;
-    }
-
-    const cells = Array.from(rows[rowIndex].querySelectorAll('[data-blok-table-cell]'));
-    const colIndex = cells.indexOf(cell);
-
-    return { row: rowIndex, col: colIndex };
-  }
-
-  /**
-   * Delete a row and clean up any nested blocks within its cells
-   */
-  public deleteRowWithCleanup(rowIndex: number): void {
-    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
-
-    if (gridEl) {
-      this.deleteRowWithBlockCleanup(gridEl, rowIndex);
-    }
-  }
-
-  /**
-   * Delete a column and clean up any nested blocks within its cells
-   */
-  public deleteColumnWithCleanup(colIndex: number): void {
-    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
-
-    if (gridEl) {
-      this.deleteColumnWithBlockCleanup(gridEl, colIndex);
-    }
-  }
-
-  private deleteRowWithBlockCleanup(gridEl: HTMLElement, rowIndex: number): void {
-    const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-    const row = rows[rowIndex];
-
-    if (row && this.cellBlocks) {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      this.cellBlocks.deleteBlocks(this.cellBlocks.getBlockIdsFromCells(cells));
-    }
-
-    this.grid.deleteRow(gridEl, rowIndex);
-  }
-
-  private deleteColumnWithBlockCleanup(gridEl: HTMLElement, colIndex: number): void {
-    if (this.cellBlocks) {
-      const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-      const cellsInColumn: Element[] = [];
-
-      rows.forEach(row => {
-        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-        if (colIndex < cells.length) {
-          cellsInColumn.push(cells[colIndex]);
-        }
-      });
-
-      this.cellBlocks.deleteBlocks(this.cellBlocks.getBlockIdsFromCells(cellsInColumn));
-    }
-
-    this.grid.deleteColumn(gridEl, colIndex);
-    this.syncColWidthsAfterDeleteColumn(colIndex);
-  }
-
-  /**
-   * Get all block IDs from cells in a specific row
-   */
-  public getBlockIdsInRow(rowIndex: number): string[] {
-    if (!this.element) {
-      return [];
-    }
-
-    const rows = this.element.querySelectorAll(`[${ROW_ATTR}]`);
-    const row = rows[rowIndex];
-
-    if (!row) {
-      return [];
-    }
-
-    return this.cellBlocks?.getBlockIdsFromCells(row.querySelectorAll(`[${CELL_ATTR}]`)) ?? [];
-  }
-
-  /**
-   * Get all block IDs from cells in a specific column
-   */
-  public getBlockIdsInColumn(colIndex: number): string[] {
-    if (!this.element) {
-      return [];
-    }
-
-    const rows = this.element.querySelectorAll(`[${ROW_ATTR}]`);
-    const cellsInColumn: Element[] = [];
-
-    rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      if (colIndex < cells.length) {
-        cellsInColumn.push(cells[colIndex]);
-      }
-    });
-
-    return this.cellBlocks?.getBlockIdsFromCells(cellsInColumn) ?? [];
-  }
-
-  /**
-   * Check if all cells in a row have empty text content.
-   * Used by drag-to-remove to prevent removing rows with user content.
-   */
-  private isRowEmpty(gridEl: HTMLElement, rowIndex: number): boolean {
-    const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-    const row = rows[rowIndex];
-
-    if (!row) {
-      return true;
-    }
-
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-    return Array.from(cells).every(cell => this.isCellEmpty(cell as HTMLElement));
-  }
-
-  /**
-   * Check if all cells in a column have empty text content.
-   * Used by drag-to-remove to prevent removing columns with user content.
-   */
-  private isColumnEmpty(gridEl: HTMLElement, colIndex: number): boolean {
-    const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-
-    return Array.from(rows).every(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-      const cell = cells[colIndex] as HTMLElement | undefined;
-
-      return !cell || this.isCellEmpty(cell);
-    });
-  }
-
-  /**
-   * Check if a cell has no visible text content.
-   */
-  private isCellEmpty(cell: HTMLElement): boolean {
-    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
-
-    if (!container) {
-      return true;
-    }
-
-    return (container.textContent ?? '').trim().length === 0;
   }
 }

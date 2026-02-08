@@ -229,8 +229,14 @@ export class TableCellSelection {
     const firstRect = firstCell.getBoundingClientRect();
     const lastRect = lastCell.getBoundingClientRect();
 
-    const top = firstRect.top - gridRect.top;
-    const left = firstRect.left - gridRect.left;
+    // Subtract grid border widths: getBoundingClientRect() measures from
+    // the border-box edge, but position:absolute offsets from the padding-box edge.
+    const gridStyle = getComputedStyle(this.grid);
+    const borderTop = parseFloat(gridStyle.borderTopWidth) || 0;
+    const borderLeft = parseFloat(gridStyle.borderLeftWidth) || 0;
+
+    const top = firstRect.top - gridRect.top - borderTop;
+    const left = firstRect.left - gridRect.left - borderLeft;
     const width = lastRect.right - firstRect.left;
     const height = lastRect.bottom - firstRect.top;
 

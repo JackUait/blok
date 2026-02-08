@@ -13,9 +13,6 @@ const OVERLAY_ATTR = 'data-blok-table-selection-overlay';
 const createGrid = (rows: number, cols: number): HTMLElement => {
   const grid = document.createElement('div');
 
-  grid.style.borderTop = '1px solid #d1d5db';
-  grid.style.borderLeft = '1px solid #d1d5db';
-
   for (let r = 0; r < rows; r++) {
     const row = document.createElement('div');
 
@@ -25,8 +22,6 @@ const createGrid = (rows: number, cols: number): HTMLElement => {
       const cell = document.createElement('div');
 
       cell.setAttribute(CELL_ATTR, '');
-      cell.style.borderRight = '1px solid #d1d5db';
-      cell.style.borderBottom = '1px solid #d1d5db';
       cell.style.width = '100px';
       row.appendChild(cell);
     }
@@ -341,6 +336,68 @@ describe('TableCellSelection', () => {
       // width = 310 - 110 = 200, height = 130 - 50 = 80.
       expect(overlay.style.top).toBe('40px');
       expect(overlay.style.left).toBe('100px');
+      expect(overlay.style.width).toBe('200px');
+      expect(overlay.style.height).toBe('80px');
+    });
+
+    it('compensates for grid border width so overlay aligns with cell edges', () => {
+      // Simulate a real browser where grid has 1px borders and cells start
+      // 1px inside the grid's border-box. The overlay (position:absolute)
+      // positions from the padding-box, so we must subtract the border.
+      const gridLeft = 10;
+      const gridTop = 10;
+      const borderWidth = 1;
+      const cellWidth = 100;
+      const cellHeight = 40;
+
+      // Grid border-box rect
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        top: gridTop,
+        left: gridLeft,
+        bottom: gridTop + 3 * cellHeight + borderWidth,
+        right: gridLeft + 3 * cellWidth + borderWidth,
+        width: 3 * cellWidth + borderWidth,
+        height: 3 * cellHeight + borderWidth,
+        x: gridLeft,
+        y: gridTop,
+        toJSON: () => ({}),
+      });
+
+      // Cells start 1px inside the grid (after the border)
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+
+      rows.forEach((row, r) => {
+        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+        cells.forEach((cell, c) => {
+          vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+            top: gridTop + borderWidth + r * cellHeight,
+            left: gridLeft + borderWidth + c * cellWidth,
+            bottom: gridTop + borderWidth + (r + 1) * cellHeight,
+            right: gridLeft + borderWidth + (c + 1) * cellWidth,
+            width: cellWidth,
+            height: cellHeight,
+            x: gridLeft + borderWidth + c * cellWidth,
+            y: gridTop + borderWidth + r * cellHeight,
+            toJSON: () => ({}),
+          });
+        });
+      });
+
+      // Mock getComputedStyle to return actual border widths
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        borderTopWidth: '1px',
+        borderLeftWidth: '1px',
+      } as CSSStyleDeclaration);
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`) as HTMLElement;
+
+      // Without border compensation: top = (10+1) - 10 = 1px (wrong!)
+      // With border compensation: top = (10+1) - 10 - 1 = 0px (correct)
+      expect(overlay.style.top).toBe('0px');
+      expect(overlay.style.left).toBe('0px');
       expect(overlay.style.width).toBe('200px');
       expect(overlay.style.height).toBe('80px');
     });

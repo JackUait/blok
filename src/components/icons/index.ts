@@ -326,7 +326,9 @@ export const IconMoveRight = `
 // Trash/Delete icon
 export const IconTrash = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M5 6.5h10M13 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 7 14.5v-8M8.5 6.5V5.25A1.25 1.25 0 0 1 9.75 4h.5a1.25 1.25 0 0 1 1.25 1.25V6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8.5 9.5v3M11.5 9.5v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M4.5 6.5h11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M8 6.5V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.5 6.5l.5 8.5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1l.5-8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.5 9.5v3.5M11.5 9.5v3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;

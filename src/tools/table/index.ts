@@ -14,6 +14,7 @@ import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
 import { TableCellBlocks } from './table-cell-blocks';
+import { TableCellSelection } from './table-cell-selection';
 import { TableGrid } from './table-core';
 import {
   applyPixelWidths,
@@ -35,7 +36,6 @@ import {
   updateHeadingColumnStyles,
   updateHeadingStyles,
 } from './table-operations';
-import { TableCellSelection } from './table-cell-selection';
 import { TableResize } from './table-resize';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';

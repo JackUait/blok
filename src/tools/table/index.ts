@@ -13,7 +13,7 @@ import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
-import { TableCellBlocks } from './table-cell-blocks';
+import { CELL_BLOCKS_ATTR, TableCellBlocks } from './table-cell-blocks';
 import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR, TableGrid } from './table-core';
 import { TableResize } from './table-resize';
 import { TableRowColControls } from './table-row-col-controls';
@@ -398,7 +398,7 @@ export class Table implements BlockTool {
       onDragRemoveRow: () => {
         const rowCount = this.grid.getRowCount(gridEl);
 
-        if (rowCount > 1) {
+        if (rowCount > 1 && this.isRowEmpty(gridEl, rowCount - 1)) {
           this.deleteRowWithBlockCleanup(gridEl, rowCount - 1);
         }
       },
@@ -416,7 +416,7 @@ export class Table implements BlockTool {
       onDragRemoveCol: () => {
         const colCount = this.grid.getColumnCount(gridEl);
 
-        if (colCount > 1) {
+        if (colCount > 1 && this.isColumnEmpty(gridEl, colCount - 1)) {
           this.deleteColumnWithBlockCleanup(gridEl, colCount - 1);
         }
       },
@@ -741,5 +741,50 @@ export class Table implements BlockTool {
     });
 
     return this.cellBlocks?.getBlockIdsFromCells(cellsInColumn) ?? [];
+  }
+
+  /**
+   * Check if all cells in a row have empty text content.
+   * Used by drag-to-remove to prevent removing rows with user content.
+   */
+  private isRowEmpty(gridEl: HTMLElement, rowIndex: number): boolean {
+    const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+    const row = rows[rowIndex];
+
+    if (!row) {
+      return true;
+    }
+
+    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+    return Array.from(cells).every(cell => this.isCellEmpty(cell as HTMLElement));
+  }
+
+  /**
+   * Check if all cells in a column have empty text content.
+   * Used by drag-to-remove to prevent removing columns with user content.
+   */
+  private isColumnEmpty(gridEl: HTMLElement, colIndex: number): boolean {
+    const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+
+    return Array.from(rows).every(row => {
+      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+      const cell = cells[colIndex] as HTMLElement | undefined;
+
+      return !cell || this.isCellEmpty(cell);
+    });
+  }
+
+  /**
+   * Check if a cell has no visible text content.
+   */
+  private isCellEmpty(cell: HTMLElement): boolean {
+    const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!container) {
+      return true;
+    }
+
+    return (container.textContent ?? '').trim().length === 0;
   }
 }

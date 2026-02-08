@@ -1746,4 +1746,191 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
   });
+
+  describe('drag-to-remove skips rows/columns with content', () => {
+    /**
+     * Simulate a pointer drag on an element:
+     * pointerdown at startPos, pointermove to endPos, pointerup at endPos.
+     */
+    const simulateDrag = (
+      element: HTMLElement,
+      axis: 'row' | 'col',
+      startPos: number,
+      endPos: number,
+    ): void => {
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.releasePointerCapture = vi.fn();
+
+      const clientKey = axis === 'row' ? 'clientY' : 'clientX';
+
+      element.dispatchEvent(new PointerEvent('pointerdown', {
+        [clientKey]: startPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointermove', {
+        [clientKey]: endPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointerup', {
+        [clientKey]: endPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+    };
+
+    const createDragRemoveTable = (
+      content: string[][]
+    ): { table: Table; element: HTMLElement } => {
+      let insertCallCount = 0;
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: vi.fn().mockImplementation(() => {
+            insertCallCount++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', `mock-block-${insertCallCount}`);
+
+            return { id: `mock-block-${insertCallCount}`, holder };
+          }),
+          delete: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      return { table, element };
+    };
+
+    it('does not remove the last row when it has non-empty text content', () => {
+      const { element } = createDragRemoveTable([['A', 'B'], ['C', 'D']]);
+
+      // Put text content in the last row's cells to simulate non-empty cells
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+      const lastRowCells = rows[1].querySelectorAll('[data-blok-table-cell]');
+
+      lastRowCells.forEach(cell => {
+        const container = cell.querySelector('[data-blok-table-cell-blocks]');
+
+        if (container) {
+          container.textContent = 'some content';
+        }
+      });
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      // Drag upward by a large amount to attempt removing the last row
+      simulateDrag(addRowBtn, 'row', 200, 100);
+
+      // The row should NOT have been removed because it has content
+      expect(element.querySelectorAll('[data-blok-table-row]')).toHaveLength(2);
+
+      document.body.removeChild(element);
+    });
+
+    it('removes the last row when all its cells are empty', () => {
+      const { element } = createDragRemoveTable([['A', 'B'], ['', '']]);
+
+      // Ensure last row cells are empty (clear any text from block initialization)
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+      const lastRowCells = rows[1].querySelectorAll('[data-blok-table-cell]');
+
+      lastRowCells.forEach(cell => {
+        const container = cell.querySelector('[data-blok-table-cell-blocks]');
+
+        if (container) {
+          container.textContent = '';
+        }
+      });
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      // Drag upward to remove the last row
+      simulateDrag(addRowBtn, 'row', 200, 100);
+
+      // The empty row should have been removed
+      expect(element.querySelectorAll('[data-blok-table-row]')).toHaveLength(1);
+
+      document.body.removeChild(element);
+    });
+
+    it('does not remove the last column when it has non-empty text content', () => {
+      const { element } = createDragRemoveTable([['A', 'B'], ['C', 'D']]);
+
+      // Put text content in last column cells
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+        const lastCell = cells[cells.length - 1];
+        const container = lastCell.querySelector('[data-blok-table-cell-blocks]');
+
+        if (container) {
+          container.textContent = 'some content';
+        }
+      });
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // Drag leftward to attempt removing the last column
+      simulateDrag(addColBtn, 'col', 300, 100);
+
+      // The column should NOT have been removed
+      const firstRowCells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      expect(firstRowCells).toHaveLength(2);
+
+      document.body.removeChild(element);
+    });
+
+    it('removes the last column when all its cells are empty', () => {
+      const { element } = createDragRemoveTable([['A', ''], ['C', '']]);
+
+      // Ensure last column cells are empty
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+        const lastCell = cells[cells.length - 1];
+        const container = lastCell.querySelector('[data-blok-table-cell-blocks]');
+
+        if (container) {
+          container.textContent = '';
+        }
+      });
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // Drag leftward to remove the last column
+      simulateDrag(addColBtn, 'col', 300, 100);
+
+      // The empty column should have been removed
+      const firstRowCells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      expect(firstRowCells).toHaveLength(1);
+
+      document.body.removeChild(element);
+    });
+  });
 });

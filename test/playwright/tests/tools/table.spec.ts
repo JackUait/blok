@@ -1785,5 +1785,113 @@ test.describe('table tool', () => {
 
       await expect(rows).toHaveCount(1);
     });
+
+    test('dragging add-row button upward does not remove rows with content', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await expect(addRowBtn).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const rowBox = await firstRow.boundingBox();
+
+      if (!rowBox) {
+        throw new Error('Row not visible');
+      }
+
+      const btnBox = await addRowBtn.boundingBox();
+
+      if (!btnBox) {
+        throw new Error('Add row button not visible');
+      }
+
+      const startX = btnBox.x + btnBox.width / 2;
+      const startY = btnBox.y + btnBox.height / 2;
+
+      // Drag up by 2 row heights to attempt removing rows
+      const dragDistance = rowBox.height * 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY - dragDistance, { steps: 10 });
+      await page.mouse.up();
+
+      // Both rows have content so neither should be removed
+      const rows = page.locator('[data-blok-table-row]');
+
+      await expect(rows).toHaveCount(2);
+    });
+
+    test('dragging add-col button leftward does not remove columns with content', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      await addColBtn.hover({ force: true });
+      await expect(addColBtn).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first cell width
+      const firstCell = page.locator(CELL_SELECTOR).first();
+      const cellBox = await firstCell.boundingBox();
+
+      if (!cellBox) {
+        throw new Error('Cell not visible');
+      }
+
+      const btnBox = await addColBtn.boundingBox();
+
+      if (!btnBox) {
+        throw new Error('Add col button not visible');
+      }
+
+      const startX = btnBox.x + btnBox.width / 2;
+      const startY = btnBox.y + btnBox.height / 2;
+
+      // Drag left by 2 column widths to attempt removing columns
+      const dragDistance = cellBox.width * 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX - dragDistance, startY, { steps: 10 });
+      await page.mouse.up();
+
+      // Both columns have content so neither should be removed
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+      const firstRowCells = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR);
+
+      await expect(firstRowCells).toHaveCount(2);
+    });
   });
 });

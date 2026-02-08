@@ -569,6 +569,118 @@ describe('TableRowColControls', () => {
     });
   });
 
+  describe('drag hides all grips', () => {
+    it('hides both row and column grips when dragging a row', () => {
+      grid = createGrid(2, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      // Pointerdown on a row grip to start tracking
+      const rowGrip = rowGrips[0];
+
+      rowGrip.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 0,
+      }));
+
+      // Move pointer beyond drag threshold (10px)
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 20,
+      }));
+
+      // ALL grips should be hidden — both row and column
+      colGrips.forEach(grip => expect(grip.style.display).toBe('none'));
+      rowGrips.forEach(grip => expect(grip.style.display).toBe('none'));
+
+      // Clean up drag state
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    });
+
+    it('hides both row and column grips when dragging a column', () => {
+      grid = createGrid(2, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      // Pointerdown on a column grip to start tracking
+      const colGrip = colGrips[1];
+
+      colGrip.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 50,
+        clientY: 0,
+      }));
+
+      // Move pointer beyond drag threshold (10px)
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: 70,
+        clientY: 0,
+      }));
+
+      // ALL grips should be hidden — both row and column
+      colGrips.forEach(grip => expect(grip.style.display).toBe('none'));
+      rowGrips.forEach(grip => expect(grip.style.display).toBe('none'));
+
+      // Clean up drag state
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    });
+
+    it('restores all grips when drag ends', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      // Start a drag on a row grip
+      rowGrips[0].dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 20,
+      }));
+
+      // End the drag
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // All grips should be restored
+      colGrips.forEach(grip => expect(grip.style.display).toBe(''));
+      rowGrips.forEach(grip => expect(grip.style.display).toBe(''));
+    });
+  });
+
   describe('hideAllGrips', () => {
     it('immediately hides all visible grips without delay', () => {
       grid = createGrid(2, 2);

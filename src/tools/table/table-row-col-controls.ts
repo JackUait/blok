@@ -375,23 +375,11 @@ export class TableRowColControls {
     el.removeAttribute('data-blok-table-grip-visible');
   }
 
-  private handleDragStateChange(isDragging: boolean, dragType: 'row' | 'col' | null): void {
-    if (isDragging) {
-      const gripsToHide = dragType === 'row' ? this.colGrips : this.rowGrips;
-
-      gripsToHide.forEach(grip => {
-        const el: HTMLElement = grip;
-
-        el.style.display = 'none';
-      });
-
-      return;
-    }
-
+  private handleDragStateChange(isDragging: boolean, _dragType: 'row' | 'col' | null): void {
     [...this.colGrips, ...this.rowGrips].forEach(grip => {
       const el: HTMLElement = grip;
 
-      el.style.display = '';
+      el.style.display = isDragging ? 'none' : '';
     });
   }
 

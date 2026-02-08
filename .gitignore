@@ -44,3 +44,6 @@ test-results/*.json
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# Playwright CLI snapshots
+.playwright-cli/

@@ -173,12 +173,15 @@ export class Table implements BlockTool {
   public save(blockContent: HTMLElement): TableData {
     const gridEl = blockContent.firstElementChild as HTMLElement;
     const colWidths = this.data.colWidths;
+    const content = this.readOnly
+      ? this.data.content
+      : this.grid.getData(gridEl);
 
     return {
       withHeadings: this.data.withHeadings,
       withHeadingColumn: this.data.withHeadingColumn,
       stretched: this.data.stretched,
-      content: this.grid.getData(gridEl),
+      content,
       ...(colWidths ? { colWidths } : {}),
     };
   }

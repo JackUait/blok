@@ -2260,4 +2260,85 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
   });
+
+  describe('readonly mode preserves content', () => {
+    it('save() returns original block references when rendered in readonly mode', () => {
+      const blockId1 = 'block-cell-0-0';
+      const blockId2 = 'block-cell-0-1';
+      const blockId3 = 'block-cell-1-0';
+      const blockId4 = 'block-cell-1-1';
+
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn().mockImplementation((id: string) => {
+            const map: Record<string, number> = {
+              [blockId1]: 0,
+              [blockId2]: 1,
+              [blockId3]: 2,
+              [blockId4]: 3,
+            };
+
+            return map[id];
+          }),
+          getBlockByIndex: vi.fn().mockImplementation((index: number) => {
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', [blockId1, blockId2, blockId3, blockId4][index]);
+
+            return { id: [blockId1, blockId2, blockId3, blockId4][index], holder };
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(4),
+        },
+      } as never);
+
+      // Simulate what happens during readonly toggle:
+      // The editor saves the table data (with block IDs), then re-renders with readOnly=true
+      const savedContent: Array<Array<{ blocks: string[] }>> = [
+        [{ blocks: [blockId1] }, { blocks: [blockId2] }],
+        [{ blocks: [blockId3] }, { blocks: [blockId4] }],
+      ];
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: savedContent,
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: true,
+        block: { id: 'table-readonly' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // The critical assertion: save() must return the original block references,
+      // not empty arrays. This is what fails before the fix — blocks are never
+      // mounted in readonly mode, so getCellContent finds nothing in the DOM.
+      const saved = table.save(element);
+
+      expect(saved.content).toHaveLength(2);
+      expect(saved.content[0]).toHaveLength(2);
+
+      saved.content.flat().forEach(cell => {
+        expect(isCellWithBlocks(cell)).toBe(true);
+        if (isCellWithBlocks(cell)) {
+          expect(cell.blocks.length).toBeGreaterThan(0);
+        }
+      });
+
+      // Verify specific block IDs are preserved
+      expect(saved.content[0][0]).toEqual({ blocks: [blockId1] });
+      expect(saved.content[0][1]).toEqual({ blocks: [blockId2] });
+      expect(saved.content[1][0]).toEqual({ blocks: [blockId3] });
+      expect(saved.content[1][1]).toEqual({ blocks: [blockId4] });
+
+      document.body.removeChild(element);
+    });
+  });
 });

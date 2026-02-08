@@ -102,6 +102,58 @@ describe('Tooltip utility', () => {
     vi.useRealTimers();
   });
 
+  it('has no transition or transform animation classes on the wrapper', () => {
+    const target = createTargetElement();
+
+    show(target, 'No animation');
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper).not.toBeNull();
+
+    const classes = Array.from(wrapper?.classList ?? []);
+
+    // Should not have any transition classes
+    const hasTransition = classes.some(cls => cls.startsWith('transition'));
+
+    expect(hasTransition).toBe(false);
+
+    // Should not have any duration classes
+    const hasDuration = classes.some(cls => cls.startsWith('duration'));
+
+    expect(hasDuration).toBe(false);
+
+    // Should not have any ease classes
+    const hasEase = classes.some(cls => cls.startsWith('ease'));
+
+    expect(hasEase).toBe(false);
+
+    // Should not have will-change classes
+    const hasWillChange = classes.some(cls => cls.startsWith('will-change'));
+
+    expect(hasWillChange).toBe(false);
+  });
+
+  it('does not apply transform offset classes for any placement', () => {
+    const target = createTargetElement();
+
+    const placements = ['top', 'bottom', 'left', 'right'] as const;
+
+    for (const placement of placements) {
+      show(target, `${placement} tooltip`, { placement });
+
+      const wrapper = getTooltipWrapper();
+      const classes = Array.from(wrapper?.classList ?? []);
+
+      // Should not have any translate classes (the slide-in offset)
+      const hasTranslate = classes.some(cls => cls.startsWith('translate') || cls.startsWith('-translate'));
+
+      expect(hasTranslate, `placement "${placement}" should not have translate classes`).toBe(false);
+
+      hide();
+    }
+  });
+
   it('shows immediately by default when no delay is specified', () => {
     const target = createTargetElement();
 

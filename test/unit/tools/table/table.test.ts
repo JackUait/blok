@@ -915,6 +915,52 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('refreshes grips after clicking add-row', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Initially: 2 columns + 2 rows = 4 grips
+      expect(element.querySelectorAll('[data-blok-table-grip]')).toHaveLength(4);
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      addRowBtn.click();
+
+      // After adding a row: 2 columns + 3 rows = 5 grips
+      expect(element.querySelectorAll('[data-blok-table-grip]')).toHaveLength(5);
+
+      document.body.removeChild(element);
+    });
+
+    it('refreshes grips after clicking add-column', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Initially: 2 columns + 2 rows = 4 grips
+      expect(element.querySelectorAll('[data-blok-table-grip]')).toHaveLength(4);
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      addColBtn.click();
+
+      // After adding a column: 3 columns + 2 rows = 5 grips
+      expect(element.querySelectorAll('[data-blok-table-grip]')).toHaveLength(5);
+
+      document.body.removeChild(element);
+    });
+
     it('cleans up grip elements on destroy', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],

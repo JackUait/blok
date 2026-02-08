@@ -369,6 +369,11 @@ export class Table implements BlockTool {
       onAddRow: () => {
         this.grid.addRow(gridEl);
         this.populateNewCells(gridEl);
+        this.updateHeadingStyles();
+        this.updateHeadingColumnStyles();
+        this.initResize(gridEl);
+        this.addControls?.syncRowButtonWidth();
+        this.rowColControls?.refresh();
       },
       onAddColumn: () => {
         const colWidths = this.data.colWidths ?? this.readPixelWidths(gridEl);
@@ -379,8 +384,10 @@ export class Table implements BlockTool {
         this.grid.addColumn(gridEl, undefined, colWidths);
         this.data.colWidths = [...colWidths, halfAvgWidth];
         this.populateNewCells(gridEl);
+        this.updateHeadingColumnStyles();
         this.initResize(gridEl);
         this.addControls?.syncRowButtonWidth();
+        this.rowColControls?.refresh();
       },
     });
   }

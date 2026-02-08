@@ -501,4 +501,174 @@ describe('TableAddControls', () => {
       expect(addColBtn.style.bottom).toBe('0px');
     });
   });
+
+  describe('cursor', () => {
+    it('add-row button has a row-resize cursor', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.className).toContain('cursor-row-resize');
+      expect(addRowBtn.className).not.toContain('cursor-pointer');
+    });
+
+    it('add-column button has a col-resize cursor', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addColBtn.className).toContain('cursor-col-resize');
+      expect(addColBtn.className).not.toContain('cursor-pointer');
+    });
+  });
+
+  describe('drag to remove', () => {
+    /**
+     * Simulate a pointer drag on an element:
+     * pointerdown at startPos, pointermove to endPos, pointerup at endPos.
+     */
+    const simulateDrag = (
+      element: HTMLElement,
+      axis: 'row' | 'col',
+      startPos: number,
+      endPos: number,
+    ): void => {
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.releasePointerCapture = vi.fn();
+
+      const clientKey = axis === 'row' ? 'clientY' : 'clientX';
+
+      element.dispatchEvent(new PointerEvent('pointerdown', {
+        [clientKey]: startPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointermove', {
+        [clientKey]: endPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointerup', {
+        [clientKey]: endPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+    };
+
+    it('calls onDragRemoveRow when dragging add-row button upwards', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Drag upward by 100px (negative direction) — should trigger removal
+      simulateDrag(addRowBtn, 'row', 200, 100);
+
+      expect(callbacks.onDragRemoveRow).toHaveBeenCalled();
+    });
+
+    it('calls onDragRemoveCol when dragging add-col button leftwards', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      // Drag leftward by 200px (negative direction) — should trigger removal
+      simulateDrag(addColBtn, 'col', 300, 100);
+
+      expect(callbacks.onDragRemoveCol).toHaveBeenCalled();
+    });
+
+    it('calls onDragEnd after drag-to-remove completes', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      simulateDrag(addRowBtn, 'row', 200, 100);
+
+      expect(callbacks.onDragEnd).toHaveBeenCalled();
+    });
+  });
+
+  describe('tooltip', () => {
+    it('add-row button has a title attribute for tooltip', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.getAttribute('title')).toContain('row');
+    });
+
+    it('add-column button has a title attribute for tooltip', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addColBtn.getAttribute('title')).toContain('column');
+    });
+  });
 });

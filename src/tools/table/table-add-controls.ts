@@ -16,7 +16,6 @@ const HIT_AREA_CLASSES = [
   'flex',
   'items-center',
   'justify-center',
-  'cursor-pointer',
   'transition-opacity',
   'duration-150',
 ];
@@ -39,6 +38,7 @@ interface DragState {
   unitSize: number;
   addedCount: number;
   pointerId: number;
+  didDrag: boolean;
 }
 
 interface TableAddControlsOptions {
@@ -113,6 +113,7 @@ export class TableAddControls {
 
     this.addRowBtn.addEventListener('pointerdown', this.boundRowPointerDown);
     this.addColBtn.addEventListener('pointerdown', this.boundColPointerDown);
+
   }
 
   /**
@@ -166,6 +167,7 @@ export class TableAddControls {
       unitSize,
       addedCount: 0,
       pointerId: e.pointerId,
+      didDrag: false,
     };
 
     target.addEventListener('pointermove', this.boundPointerMove);
@@ -180,7 +182,7 @@ export class TableAddControls {
     const { axis, startPos, unitSize } = this.dragState;
     const currentPos = axis === 'row' ? e.clientY : e.clientX;
     const delta = currentPos - startPos;
-    const targetCount = Math.max(0, Math.floor(delta / unitSize));
+    const targetCount = Math.floor(delta / unitSize);
 
     while (this.dragState.addedCount < targetCount) {
       if (axis === 'row') {
@@ -203,18 +205,17 @@ export class TableAddControls {
     }
 
     if (Math.abs(delta) > DRAG_THRESHOLD) {
+      this.dragState.didDrag = true;
       document.body.style.cursor = axis === 'row' ? 'row-resize' : 'col-resize';
     }
   }
 
-  private handlePointerUp(e: PointerEvent): void {
+  private handlePointerUp(_e: PointerEvent): void {
     if (!this.dragState) {
       return;
     }
 
-    const { axis, startPos, addedCount, pointerId } = this.dragState;
-    const currentPos = axis === 'row' ? e.clientY : e.clientX;
-    const totalMovement = Math.abs(currentPos - startPos);
+    const { axis, addedCount, pointerId, didDrag } = this.dragState;
 
     const target = axis === 'row' ? this.addRowBtn : this.addColBtn;
 
@@ -225,7 +226,7 @@ export class TableAddControls {
     document.body.style.cursor = '';
     this.dragState = null;
 
-    if (totalMovement < DRAG_THRESHOLD) {
+    if (!didDrag) {
       const clickHandler = axis === 'row' ? this.boundAddRowClick : this.boundAddColClick;
 
       clickHandler();
@@ -233,7 +234,7 @@ export class TableAddControls {
       return;
     }
 
-    if (addedCount > 0) {
+    if (addedCount !== 0) {
       this.onDragEnd();
     }
   }
@@ -243,7 +244,7 @@ export class TableAddControls {
       const rows = this.grid.querySelectorAll('[data-blok-table-row]');
       const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
 
-      return lastRow?.offsetHeight ?? 30;
+      return lastRow?.offsetHeight || 30;
     }
 
     const firstRow = this.grid.querySelector('[data-blok-table-row]');
@@ -255,7 +256,7 @@ export class TableAddControls {
     const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
     const lastCell = cells[cells.length - 1] as HTMLElement | undefined;
 
-    return lastCell?.offsetWidth ?? 100;
+    return lastCell?.offsetWidth || 100;
   }
 
   private handleMouseMove(e: MouseEvent): void {
@@ -340,9 +341,10 @@ export class TableAddControls {
   private createAddRowButton(): HTMLElement {
     const btn = document.createElement('div');
 
-    btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'items-start');
+    btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'items-start', 'cursor-row-resize');
     btn.setAttribute(ADD_ROW_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
+    btn.setAttribute('title', 'Click to add a row, drag to add or remove');
     btn.style.opacity = '0';
     btn.style.boxSizing = 'content-box';
     btn.style.width = '100%';
@@ -365,9 +367,10 @@ export class TableAddControls {
   private createAddColumnButton(): HTMLElement {
     const btn = document.createElement('div');
 
-    btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'justify-start');
+    btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'justify-start', 'cursor-col-resize');
     btn.setAttribute(ADD_COL_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
+    btn.setAttribute('title', 'Click to add a column, drag to add or remove');
     btn.style.opacity = '0';
     btn.style.position = 'absolute';
     btn.style.right = '-36px';

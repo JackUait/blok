@@ -1612,17 +1612,178 @@ test.describe('table tool', () => {
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
 
-      // Drag down to add rows, then drag back past start to cancel
+      // Drag down to add rows, then drag back to start to cancel
       await page.mouse.move(startX, startY);
       await page.mouse.down();
       await page.mouse.move(startX, startY + rowBox.height * 2, { steps: 5 });
-      await page.mouse.move(startX, startY - 10, { steps: 5 });
+      await page.mouse.move(startX, startY, { steps: 10 });
       await page.mouse.up();
 
       // Should still have only 2 original rows
       const rows = page.locator('[data-blok-table-row]');
 
       await expect(rows).toHaveCount(2);
+    });
+
+    test('add-row button has row-resize cursor', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await expect(addRowBtn).toBeVisible();
+
+      const cursor = await addRowBtn.evaluate(el => getComputedStyle(el).cursor);
+
+      expect(cursor).toBe('row-resize');
+    });
+
+    test('add-col button has col-resize cursor', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      await addColBtn.hover({ force: true });
+
+      await expect(addColBtn).toBeVisible();
+
+      const cursor = await addColBtn.evaluate(el => getComputedStyle(el).cursor);
+
+      expect(cursor).toBe('col-resize');
+    });
+
+    test('add-row button shows tooltip on hover', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await expect(addRowBtn).toBeVisible();
+      await expect(addRowBtn).toHaveAttribute('title', /row/);
+    });
+
+    test('add-col button shows tooltip on hover', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      await addColBtn.hover({ force: true });
+
+      await expect(addColBtn).toBeVisible();
+      await expect(addColBtn).toHaveAttribute('title', /column/);
+    });
+
+    test('dragging add-row button upward removes existing empty rows', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['', ''], ['', '']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await expect(addRowBtn).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const rowBox = await firstRow.boundingBox();
+
+      if (!rowBox) {
+        throw new Error('Row not visible');
+      }
+
+      const btnBox = await addRowBtn.boundingBox();
+
+      if (!btnBox) {
+        throw new Error('Add row button not visible');
+      }
+
+      const startX = btnBox.x + btnBox.width / 2;
+      const startY = btnBox.y + btnBox.height / 2;
+
+      // Drag up by 2 row heights to remove 2 rows
+      const dragDistance = rowBox.height * 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY - dragDistance, { steps: 10 });
+      await page.mouse.up();
+
+      // Should have 1 row remaining (started with 3, removed 2)
+      const rows = page.locator('[data-blok-table-row]');
+
+      await expect(rows).toHaveCount(1);
     });
   });
 });

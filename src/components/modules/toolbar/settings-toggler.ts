@@ -127,9 +127,7 @@ export class SettingsTogglerHandler {
         'group-data-[blok-block-settings-opened=true]:can-hover:hover:cursor-pointer',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
-        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
-        // Not-mobile styles
-        'not-mobile:w-6'
+        'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile'
       ),
       'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {

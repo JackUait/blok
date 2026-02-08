@@ -71,7 +71,16 @@ export class BlockHoverController extends Controller {
         return;
       }
 
-      const hoveredBlockElement = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
+      const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
+
+      /**
+       * If the hovered block is inside a table cell, resolve to the table block instead.
+       * Without this, the toolbar hides itself for nested cell blocks and the table's
+       * block tune settings become inaccessible.
+       */
+      const hoveredBlockElement = closestBlockWrapper?.closest('[data-blok-table-cell-blocks]')
+        ? closestBlockWrapper.closest('[data-blok-table-cell-blocks]')?.closest('[data-blok-testid="block-wrapper"]') ?? null
+        : closestBlockWrapper;
 
       /**
        * If no block element found directly, try the extended hover zone

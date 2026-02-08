@@ -520,6 +520,67 @@ describe('BlockHoverController', () => {
     });
   });
 
+  describe('table cell hover', () => {
+    it('emits BlockHovered for the table block when hovering over a nested cell block', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const tableBlock = createMockBlock('table-block', 100, 400);
+
+      /**
+       * Build DOM hierarchy matching the real table structure:
+       * Table Block wrapper (data-blok-testid="block-wrapper")
+       *   └── Cell Blocks Container (data-blok-table-cell-blocks)
+       *       └── Nested Block wrapper (data-blok-testid="block-wrapper")
+       *           └── Paragraph content
+       */
+      const tableWrapper = tableBlock.holder;
+
+      tableWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableWrapper.appendChild(cellBlocksContainer);
+
+      const nestedBlockWrapper = document.createElement('div');
+
+      nestedBlockWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      cellBlocksContainer.appendChild(nestedBlockWrapper);
+
+      const paragraphContent = document.createElement('p');
+
+      paragraphContent.textContent = 'Cell text';
+      nestedBlockWrapper.appendChild(paragraphContent);
+
+      document.body.appendChild(tableWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [tableBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(tableBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 250,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: paragraphContent });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: tableBlock,
+        target: paragraphContent,
+      });
+
+      /**
+       * Verify getBlockByChildNode was called with the TABLE wrapper, not the nested one
+       */
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(tableWrapper);
+    });
+  });
+
   describe('edge cases', () => {
     it('handles MouseEvent type check', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController();

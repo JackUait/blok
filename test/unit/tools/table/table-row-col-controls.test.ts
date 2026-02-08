@@ -232,6 +232,44 @@ describe('TableRowColControls', () => {
       // Should not throw when called externally
       expect(() => controls.positionGrips()).not.toThrow();
     });
+
+    it('centers column grips on the top border line', () => {
+      const cellWidth = 100;
+
+      grid = createGrid(2, 2, cellWidth);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      // The 1px border sits from y=-1 to y=0 (outside padding box).
+      // Border center is at y=-0.5px, so pill top = -0.5 - 2 = -2.5px
+      expect(colGrips[0].style.top).toBe('-2.5px');
+    });
+
+    it('centers row grips on the left border line', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      // The 1px border sits from x=-1 to x=0 (outside padding box).
+      // Border center is at x=-0.5px, so pill left = -0.5 - 2 = -2.5px
+      expect(rowGrips[0].style.left).toBe('-2.5px');
+    });
   });
 
   describe('setGripsDisplay', () => {

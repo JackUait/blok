@@ -10,7 +10,7 @@ import {
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
-import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
 import { createHeadingToggle } from './table-heading-toggle';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 
@@ -215,7 +215,7 @@ export class TableRowColControls {
       const centerX = (edges[i] + edges[i + 1]) / 2;
       const style = grip.style;
 
-      style.top = `${-(COL_PILL_HEIGHT / 2)}px`;
+      style.top = `${-(COL_PILL_HEIGHT / 2) - BORDER_WIDTH / 2}px`;
       style.left = `${centerX - COL_PILL_WIDTH / 2}px`;
     });
 
@@ -228,7 +228,7 @@ export class TableRowColControls {
       const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
       const style = grip.style;
 
-      style.left = `${-(ROW_PILL_WIDTH / 2)}px`;
+      style.left = `${-(ROW_PILL_WIDTH / 2) - BORDER_WIDTH / 2}px`;
       style.top = `${centerY - ROW_PILL_HEIGHT / 2}px`;
     });
   }

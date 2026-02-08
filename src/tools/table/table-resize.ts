@@ -24,6 +24,7 @@ export class TableResize {
   private dragColIndex = -1;
   private startColWidth = 0;
   private handles: HTMLElement[] = [];
+  private needsInitialApply: boolean;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -45,19 +46,24 @@ export class TableResize {
     });
   }
 
-  constructor(gridEl: HTMLElement, colWidths: number[], onChange: (widths: number[]) => void, onDragStart?: () => void, onDrag?: () => void) {
+  constructor(gridEl: HTMLElement, colWidths: number[], onChange: (widths: number[]) => void, onDragStart?: () => void, onDrag?: () => void, skipInitialApply = false) {
     this.gridEl = gridEl;
     this.colWidths = [...colWidths];
     this.onChange = onChange;
     this.onDragStart = onDragStart ?? null;
     this.onDrag = onDrag ?? null;
+    this.needsInitialApply = skipInitialApply;
 
     this.boundPointerDown = this.onPointerDown.bind(this);
     this.boundPointerMove = this.onPointerMove.bind(this);
     this.boundPointerUp = this.onPointerUp.bind(this);
 
     this.gridEl.style.position = 'relative';
-    this.applyWidths();
+
+    if (!skipInitialApply) {
+      this.applyWidths();
+    }
+
     this.createHandles();
 
     this.gridEl.addEventListener('pointerdown', this.boundPointerDown);
@@ -145,6 +151,12 @@ export class TableResize {
     }
 
     e.preventDefault();
+
+    if (this.needsInitialApply) {
+      this.applyWidths();
+      this.updateHandlePositions();
+      this.needsInitialApply = false;
+    }
 
     const colStr = target.getAttribute('data-col');
 

@@ -24,7 +24,6 @@ const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
 
 const WRAPPER_CLASSES = [
-  'overflow-x-auto',
   'my-2',
 ];
 
@@ -103,7 +102,7 @@ export class Table implements BlockTool {
   public render(): HTMLDivElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES);
+    wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES, this.data.colWidths && 'overflow-x-auto');
     wrapper.setAttribute(DATA_ATTR.tool, 'table');
 
     if (this.readOnly) {
@@ -557,13 +556,19 @@ export class Table implements BlockTool {
   private initResize(gridEl: HTMLElement): void {
     this.resize?.destroy();
 
+    const isPercentMode = this.data.colWidths === undefined;
     const widths = this.data.colWidths ?? this.readPixelWidths(gridEl);
+
+    if (!isPercentMode) {
+      this.enableScrollOverflow();
+    }
 
     this.resize = new TableResize(
       gridEl,
       widths,
       (newWidths: number[]) => {
         this.data.colWidths = newWidths;
+        this.enableScrollOverflow();
         this.rowColControls?.positionGrips();
       },
       () => {
@@ -572,7 +577,12 @@ export class Table implements BlockTool {
       () => {
         this.addControls?.syncRowButtonWidth();
       },
+      isPercentMode,
     );
+  }
+
+  private enableScrollOverflow(): void {
+    this.element?.classList.add('overflow-x-auto');
   }
 
   private readPixelWidths(gridEl: HTMLElement): number[] {

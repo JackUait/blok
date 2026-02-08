@@ -447,4 +447,99 @@ describe('TableResize', () => {
       expect(grid.querySelectorAll('[data-blok-table-resize]')).toHaveLength(0);
     });
   });
+
+  describe('skipInitialApply', () => {
+    /**
+     * Helper: creates a grid with percentage-width cells (like a newly inserted table).
+     */
+    const createPercentGrid = (cols: number): HTMLDivElement => {
+      const container = document.createElement('div');
+      const grid = document.createElement('div');
+      const row = document.createElement('div');
+      const pctWidth = `${Math.round((100 / cols) * 100) / 100}%`;
+
+      row.setAttribute('data-blok-table-row', '');
+
+      Array.from({ length: cols }).forEach(() => {
+        const cell = document.createElement('div');
+
+        cell.setAttribute('data-blok-table-cell', '');
+        cell.style.width = pctWidth;
+        row.appendChild(cell);
+      });
+
+      grid.appendChild(row);
+      container.appendChild(grid);
+      document.body.appendChild(container);
+
+      return grid;
+    };
+
+    it('does not apply pixel widths to cells when skipInitialApply is true', () => {
+      grid = createPercentGrid(3);
+
+      new TableResize(grid, [200, 200, 200], vi.fn(), undefined, undefined, true);
+
+      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+
+      cells.forEach(cell => {
+        expect((cell as HTMLElement).style.width).toBe('33.33%');
+      });
+    });
+
+    it('does not set explicit width on grid when skipInitialApply is true', () => {
+      grid = createPercentGrid(3);
+
+      new TableResize(grid, [200, 200, 200], vi.fn(), undefined, undefined, true);
+
+      expect(grid.style.width).toBe('');
+    });
+
+    it('still creates handles when skipInitialApply is true', () => {
+      grid = createPercentGrid(3);
+
+      new TableResize(grid, [200, 200, 200], vi.fn(), undefined, undefined, true);
+
+      expect(grid.querySelectorAll('[data-blok-table-resize]')).toHaveLength(3);
+    });
+
+    it('applies pixel widths on first pointer down', () => {
+      grid = createPercentGrid(3);
+
+      new TableResize(grid, [200, 200, 200], vi.fn(), undefined, undefined, true);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, bubbles: true }));
+
+      // Grid should now have explicit pixel width: 200+200+200 + 1px border
+      expect(grid.style.width).toBe('601px');
+
+      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+
+      cells.forEach(cell => {
+        expect((cell as HTMLElement).style.width).toBe('200px');
+      });
+
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+    });
+
+    it('allows normal drag after initial apply', () => {
+      grid = createPercentGrid(2);
+      const onChange = vi.fn();
+
+      new TableResize(grid, [300, 300], onChange, undefined, undefined, true);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      const newWidths = onChange.mock.calls[0][0] as number[];
+
+      expect(newWidths[0]).toBe(400);
+      expect(newWidths[1]).toBe(300);
+    });
+  });
 });

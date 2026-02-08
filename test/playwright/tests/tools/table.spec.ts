@@ -2176,7 +2176,7 @@ test.describe('table tool', () => {
       await expect(selected).toHaveCount(0);
     });
 
-    test('selection shows only outer blue border, no inner borders', async ({ page }) => {
+    test('selection overlay covers exactly the selected cells', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -2218,61 +2218,24 @@ test.describe('table tool', () => {
 
       await expect(selected).toHaveCount(4);
 
-      const blue = 'rgb(59, 130, 246)';
+      // Verify the overlay exists with blue border
+      const overlay = page.locator('[data-blok-table-selection-overlay]');
 
-      // Top-left of selection (1,1): blue on top and left, NOT blue on right and bottom (inner edges)
-      const topLeftStyles = await topLeft.evaluate(el => {
-        const s = window.getComputedStyle(el);
+      await expect(overlay).toBeVisible();
 
-        return {
-          borderTopColor: s.borderTopColor,
-          borderLeftColor: s.borderLeftColor,
-          borderRightColor: s.borderRightColor,
-          borderBottomColor: s.borderBottomColor,
-        };
-      });
+      const borderColor = await overlay.evaluate(el => getComputedStyle(el).borderColor);
 
-      expect(topLeftStyles.borderTopColor).toBe(blue);
-      expect(topLeftStyles.borderLeftColor).toBe(blue);
-      expect(topLeftStyles.borderRightColor).not.toBe(blue);
-      expect(topLeftStyles.borderBottomColor).not.toBe(blue);
+      expect(borderColor).toBe('rgb(59, 130, 246)');
 
-      // Top-right of selection (1,2): blue on top and right, NOT blue on left and bottom
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(6) needed for cell at row 1, col 2
-      const topRight = cells.nth(6);
+      // Verify overlay position matches the selected 2x2 area
+      const overlayBox = assertBoundingBox(await overlay.boundingBox(), 'selection overlay');
+      const expectedWidth = bottomRightBox.x + bottomRightBox.width - topLeftBox.x;
+      const expectedHeight = bottomRightBox.y + bottomRightBox.height - topLeftBox.y;
 
-      const topRightStyles = await topRight.evaluate(el => {
-        const s = window.getComputedStyle(el);
-
-        return {
-          borderTopColor: s.borderTopColor,
-          borderRightColor: s.borderRightColor,
-          borderLeftColor: s.borderLeftColor,
-          borderBottomColor: s.borderBottomColor,
-        };
-      });
-
-      expect(topRightStyles.borderTopColor).toBe(blue);
-      expect(topRightStyles.borderRightColor).toBe(blue);
-      expect(topRightStyles.borderLeftColor).not.toBe(blue);
-      expect(topRightStyles.borderBottomColor).not.toBe(blue);
-
-      // Bottom-right of selection (2,2): blue on bottom and right, NOT blue on top and left
-      const bottomRightStyles = await bottomRight.evaluate(el => {
-        const s = window.getComputedStyle(el);
-
-        return {
-          borderTopColor: s.borderTopColor,
-          borderLeftColor: s.borderLeftColor,
-          borderRightColor: s.borderRightColor,
-          borderBottomColor: s.borderBottomColor,
-        };
-      });
-
-      expect(bottomRightStyles.borderRightColor).toBe(blue);
-      expect(bottomRightStyles.borderBottomColor).toBe(blue);
-      expect(bottomRightStyles.borderTopColor).not.toBe(blue);
-      expect(bottomRightStyles.borderLeftColor).not.toBe(blue);
+      expect(overlayBox.width).toBeGreaterThan(expectedWidth - 5);
+      expect(overlayBox.width).toBeLessThan(expectedWidth + 5);
+      expect(overlayBox.height).toBeGreaterThan(expectedHeight - 5);
+      expect(overlayBox.height).toBeLessThan(expectedHeight + 5);
     });
 
     test('clicking a single cell does not create a selection', async ({ page }) => {
@@ -2302,6 +2265,92 @@ test.describe('table tool', () => {
       const selected = page.locator('[data-blok-table-cell-selected]');
 
       await expect(selected).toHaveCount(0);
+    });
+
+    test('edge selection overlay covers only selected cells, not entire grid border', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [
+                  ['A1', 'A2', 'A3', 'A4'],
+                  ['B1', 'B2', 'B3', 'B4'],
+                  ['C1', 'C2', 'C3', 'C4'],
+                  ['D1', 'D2', 'D3', 'D4'],
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await expect(table).toBeVisible();
+
+      const cells = page.locator(CELL_SELECTOR);
+
+      // Select a 2x2 region at the top-left corner: cells (0,0) to (1,1)
+      // In a 4-column grid, cell (0,0) is index 0, cell (1,1) is index 5
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for cell at row 0, col 0
+      const startCell = cells.nth(0);
+      const startBox = assertBoundingBox(await startCell.boundingBox(), 'start cell');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(5) needed for cell at row 1, col 1
+      const endCell = cells.nth(5);
+      const endBox = assertBoundingBox(await endCell.boundingBox(), 'end cell');
+
+      const startX = startBox.x + startBox.width / 2;
+      const startY = startBox.y + startBox.height / 2;
+      const endX = endBox.x + endBox.width / 2;
+      const endY = endBox.y + endBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(endX, endY, { steps: 5 });
+      await page.mouse.up();
+
+      const selected = page.locator('[data-blok-table-cell-selected]');
+
+      await expect(selected).toHaveCount(4);
+
+      // Verify the selection overlay exists and covers only the selected area
+      const overlay = page.locator('[data-blok-table-selection-overlay]');
+
+      await expect(overlay).toBeVisible();
+
+      // Verify overlay has blue border
+      const borderColor = await overlay.evaluate(
+        (el) => getComputedStyle(el).borderColor
+      );
+
+      expect(borderColor).toBe('rgb(59, 130, 246)');
+
+      // Get bounding boxes to compare overlay size against selected area vs full grid
+      const overlayBox = assertBoundingBox(await overlay.boundingBox(), 'selection overlay');
+      const tableBox = assertBoundingBox(await table.boundingBox(), 'table');
+
+      // The selected region is 2 columns out of 4, so the overlay width should be
+      // approximately half the table width, not the full width
+      const expectedWidth = endBox.x + endBox.width - startBox.x;
+      const expectedHeight = endBox.y + endBox.height - startBox.y;
+
+      // Overlay width should match the 2-column selected area (with small tolerance for borders)
+      expect(overlayBox.width).toBeGreaterThan(expectedWidth - 5);
+      expect(overlayBox.width).toBeLessThan(expectedWidth + 5);
+
+      // Overlay height should match the 2-row selected area
+      expect(overlayBox.height).toBeGreaterThan(expectedHeight - 5);
+      expect(overlayBox.height).toBeLessThan(expectedHeight + 5);
+
+      // Critical assertion: overlay must NOT span the full grid width or height
+      // If the bug is present, the overlay would cover all 4 columns / all 4 rows
+      expect(overlayBox.width).toBeLessThan(tableBox.width * 0.75);
+      expect(overlayBox.height).toBeLessThan(tableBox.height * 0.75);
     });
   });
 });

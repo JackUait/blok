@@ -504,6 +504,7 @@ export class Table implements BlockTool {
   }
 
   private initCellSelection(gridEl: HTMLElement): void {
+    this.cellSelection?.destroy();
     this.cellSelection = new TableCellSelection(gridEl);
   }
 }

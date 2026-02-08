@@ -468,6 +468,49 @@ describe('TableAddControls', () => {
     });
   });
 
+  describe('setDisplay', () => {
+    it('hides both buttons when called with false', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const controls = new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      controls.setDisplay(false);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.display).toBe('none');
+      expect(addColBtn.style.display).toBe('none');
+    });
+
+    it('restores both buttons when called with true', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const controls = new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      controls.setDisplay(false);
+      controls.setDisplay(true);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.display).toBe('');
+      expect(addColBtn.style.display).toBe('');
+    });
+  });
+
   describe('positioning', () => {
     it('add-row button is appended after the grid in the wrapper', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));

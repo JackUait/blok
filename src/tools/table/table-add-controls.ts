@@ -135,6 +135,17 @@ export class TableAddControls {
       : '100%';
   }
 
+  /**
+   * Toggle display of both add buttons.
+   * Used to hide controls during row/column drag operations.
+   */
+  public setDisplay(visible: boolean): void {
+    const display = visible ? '' : 'none';
+
+    this.addRowBtn.style.display = display;
+    this.addColBtn.style.display = display;
+  }
+
   public destroy(): void {
     this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);

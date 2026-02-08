@@ -403,11 +403,15 @@ export class Table implements BlockTool {
       isHeadingColumn: () => this.data.withHeadingColumn,
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
       onDragStateChange: (isDragging: boolean) => {
-        if (!this.resize) {
-          return;
+        if (this.resize) {
+          this.resize.enabled = !isDragging;
         }
 
-        this.resize.enabled = !isDragging;
+        this.addControls?.setDisplay(!isDragging);
+
+        if (isDragging) {
+          this.api.toolbar.close({ setExplicitlyClosed: false });
+        }
       },
     });
   }

@@ -89,6 +89,7 @@ export const collapseGrip = (grip: HTMLElement, type: 'col' | 'row', pillSize: n
 
   el.style.transform = getIdleScale(type, pillSize);
   el.classList.remove('bg-gray-200');
+  el.classList.add('bg-gray-300');
 
   const svg = el.querySelector('svg');
 

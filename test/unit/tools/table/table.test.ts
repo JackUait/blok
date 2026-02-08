@@ -2260,6 +2260,76 @@ describe('Table Tool', () => {
 
       document.body.removeChild(element);
     });
+
+    it('closes toolbar when row/column grip drag starts', async () => {
+      let insertCallCount = 0;
+      const toolbarClose = vi.fn();
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: vi.fn().mockImplementation(() => {
+            insertCallCount++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', `mock-block-${insertCallCount}`);
+
+            return { id: `mock-block-${insertCallCount}`, holder };
+          }),
+          delete: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+        },
+        toolbar: {
+          close: toolbarClose,
+          open: vi.fn(),
+          toggleBlockSettings: vi.fn(),
+          toggleToolbox: vi.fn(),
+        },
+      } as never);
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']], colWidths: [200, 200] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Show grips by hovering a cell
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      // Grab the visible grip
+      const grip = element.querySelector('[data-blok-table-grip-visible]') as HTMLElement;
+
+      expect(grip).not.toBeNull();
+
+      // Simulate grip pointerdown → starts tracking on document
+      grip.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 100,
+        bubbles: true,
+      }));
+
+      // Move past drag threshold (10px) to trigger startDrag → onDragStateChange
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: 100,
+        clientY: 120,
+      }));
+
+      expect(toolbarClose).toHaveBeenCalledWith({ setExplicitlyClosed: false });
+
+      // Clean up
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+      document.body.removeChild(element);
+    });
   });
 
   describe('readonly mode preserves content', () => {

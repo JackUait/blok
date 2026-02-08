@@ -508,6 +508,38 @@ describe('TableRowColControls', () => {
       expect(grip.style.transform).toBe('scaleX(0.25)');
     });
 
+    it('grip retains bg-gray-300 after expand then collapse so pill stays visible', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const grip = colGrips[0];
+
+      // Make grip visible by hovering a cell
+      const cell = getCell(grid, 0, 0);
+
+      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      expect(isGripVisible(grip)).toBe(true);
+      expect(grip.classList.contains('bg-gray-300')).toBe(true);
+
+      // Hover the grip (expand) — swaps bg-gray-300 for bg-gray-200
+      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+      expect(grip.classList.contains('bg-gray-200')).toBe(true);
+      expect(grip.classList.contains('bg-gray-300')).toBe(false);
+
+      // Leave the grip (collapse) — bg-gray-300 must be restored
+      grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      expect(grip.classList.contains('bg-gray-300')).toBe(true);
+      expect(grip.classList.contains('bg-gray-200')).toBe(false);
+    });
+
     it('grip width and height stay constant during expand/collapse (no layout animation)', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({

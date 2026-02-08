@@ -5,6 +5,12 @@ const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
 const HIDE_DELAY_MS = 150;
 
+/**
+ * How close (px) the cursor must be to a grid edge for
+ * the corresponding add button to appear.
+ */
+const PROXIMITY_PX = 40;
+
 const HIT_AREA_CLASSES = [
   'flex',
   'items-center',
@@ -35,15 +41,19 @@ interface TableAddControlsOptions {
 
 /**
  * Manages hover-to-reveal "+" buttons for adding rows and columns to the table.
+ * Buttons only appear when the cursor is near the relevant edge of the grid.
  */
 export class TableAddControls {
   private wrapper: HTMLElement;
   private grid: HTMLElement;
   private addRowBtn: HTMLElement;
   private addColBtn: HTMLElement;
-  private hideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private rowHideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private colHideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private rowVisible = false;
+  private colVisible = false;
 
-  private boundMouseEnter: () => void;
+  private boundMouseMove: (e: MouseEvent) => void;
   private boundMouseLeave: () => void;
   private boundAddRowClick: () => void;
   private boundAddColClick: () => void;
@@ -54,8 +64,8 @@ export class TableAddControls {
 
     this.boundAddRowClick = options.onAddRow;
     this.boundAddColClick = options.onAddColumn;
-    this.boundMouseEnter = this.show.bind(this);
-    this.boundMouseLeave = this.scheduleHide.bind(this);
+    this.boundMouseMove = this.handleMouseMove.bind(this);
+    this.boundMouseLeave = this.handleMouseLeave.bind(this);
 
     this.addRowBtn = this.createAddRowButton();
     this.addColBtn = this.createAddColumnButton();
@@ -64,7 +74,7 @@ export class TableAddControls {
     this.grid.appendChild(this.addColBtn);
     this.syncRowButtonWidth();
 
-    this.wrapper.addEventListener('mouseenter', this.boundMouseEnter);
+    this.wrapper.addEventListener('mousemove', this.boundMouseMove);
     this.wrapper.addEventListener('mouseleave', this.boundMouseLeave);
 
     this.addRowBtn.addEventListener('click', this.boundAddRowClick);
@@ -86,36 +96,95 @@ export class TableAddControls {
   }
 
   public destroy(): void {
-    this.wrapper.removeEventListener('mouseenter', this.boundMouseEnter);
+    this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);
     this.addRowBtn.removeEventListener('click', this.boundAddRowClick);
     this.addColBtn.removeEventListener('click', this.boundAddColClick);
 
-    if (this.hideTimeout !== null) {
-      clearTimeout(this.hideTimeout);
-      this.hideTimeout = null;
-    }
+    this.clearRowTimeout();
+    this.clearColTimeout();
 
     this.addRowBtn.remove();
     this.addColBtn.remove();
   }
 
-  private show(): void {
-    if (this.hideTimeout !== null) {
-      clearTimeout(this.hideTimeout);
-      this.hideTimeout = null;
+  private handleMouseMove(e: MouseEvent): void {
+    const gridRect = this.grid.getBoundingClientRect();
+    const distFromBottom = Math.abs(e.clientY - gridRect.bottom);
+    const distFromRight = Math.abs(e.clientX - gridRect.right);
+
+    if (distFromBottom <= PROXIMITY_PX) {
+      this.showRow();
+    } else {
+      this.scheduleHideRow();
     }
 
-    this.addRowBtn.style.opacity = '1';
-    this.addColBtn.style.opacity = '1';
+    if (distFromRight <= PROXIMITY_PX) {
+      this.showCol();
+    } else {
+      this.scheduleHideCol();
+    }
   }
 
-  private scheduleHide(): void {
-    this.hideTimeout = setTimeout(() => {
+  private handleMouseLeave(): void {
+    this.scheduleHideRow();
+    this.scheduleHideCol();
+  }
+
+  private showRow(): void {
+    this.clearRowTimeout();
+
+    if (!this.rowVisible) {
+      this.addRowBtn.style.opacity = '1';
+      this.rowVisible = true;
+    }
+  }
+
+  private showCol(): void {
+    this.clearColTimeout();
+
+    if (!this.colVisible) {
+      this.addColBtn.style.opacity = '1';
+      this.colVisible = true;
+    }
+  }
+
+  private scheduleHideRow(): void {
+    if (!this.rowVisible || this.rowHideTimeout !== null) {
+      return;
+    }
+
+    this.rowHideTimeout = setTimeout(() => {
       this.addRowBtn.style.opacity = '0';
-      this.addColBtn.style.opacity = '0';
-      this.hideTimeout = null;
+      this.rowVisible = false;
+      this.rowHideTimeout = null;
     }, HIDE_DELAY_MS);
+  }
+
+  private scheduleHideCol(): void {
+    if (!this.colVisible || this.colHideTimeout !== null) {
+      return;
+    }
+
+    this.colHideTimeout = setTimeout(() => {
+      this.addColBtn.style.opacity = '0';
+      this.colVisible = false;
+      this.colHideTimeout = null;
+    }, HIDE_DELAY_MS);
+  }
+
+  private clearRowTimeout(): void {
+    if (this.rowHideTimeout !== null) {
+      clearTimeout(this.rowHideTimeout);
+      this.rowHideTimeout = null;
+    }
+  }
+
+  private clearColTimeout(): void {
+    if (this.colHideTimeout !== null) {
+      clearTimeout(this.colHideTimeout);
+      this.colHideTimeout = null;
+    }
   }
 
   private createAddRowButton(): HTMLElement {

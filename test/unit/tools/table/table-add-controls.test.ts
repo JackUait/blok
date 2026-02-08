@@ -119,6 +119,22 @@ describe('TableAddControls', () => {
   });
 
   describe('visibility', () => {
+    /**
+     * Helper: dispatch a mousemove on the wrapper at the given clientX/clientY.
+     * We also stub grid.getBoundingClientRect so the proximity calculation works
+     * inside jsdom (which returns all-zero rects by default).
+     */
+    const moveNear = (
+      target: HTMLElement,
+      gridEl: HTMLElement,
+      clientX: number,
+      clientY: number,
+      rect: DOMRect = new DOMRect(0, 0, 200, 100),
+    ): void => {
+      vi.spyOn(gridEl, 'getBoundingClientRect').mockReturnValue(rect);
+      target.dispatchEvent(new MouseEvent('mousemove', { clientX, clientY, bubbles: true }));
+    };
+
     it('buttons start hidden (opacity 0)', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
@@ -136,7 +152,7 @@ describe('TableAddControls', () => {
       expect(addColBtn.style.opacity).toBe('0');
     });
 
-    it('buttons become visible on wrapper mouseenter', () => {
+    it('add-row button becomes visible when cursor is near the bottom edge', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -146,7 +162,49 @@ describe('TableAddControls', () => {
         onAddColumn: vi.fn(),
       });
 
-      wrapper.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      // Grid rect: top=0, left=0, width=200, height=100 → bottom=100, right=200
+      // Move cursor near bottom (y=90) but far from right (x=50)
+      moveNear(wrapper, grid, 50, 90);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+      expect(addColBtn.style.opacity).toBe('0');
+    });
+
+    it('add-column button becomes visible when cursor is near the right edge', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+      });
+
+      // Move cursor near right (x=190) but far from bottom (y=20)
+      moveNear(wrapper, grid, 190, 20);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('0');
+      expect(addColBtn.style.opacity).toBe('1');
+    });
+
+    it('both buttons visible when cursor is near the bottom-right corner', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+      });
+
+      // Near both edges
+      moveNear(wrapper, grid, 190, 90);
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
@@ -167,7 +225,8 @@ describe('TableAddControls', () => {
         onAddColumn: vi.fn(),
       });
 
-      wrapper.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      // Show both buttons first
+      moveNear(wrapper, grid, 190, 90);
       wrapper.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
 
       vi.advanceTimersByTime(200);
@@ -177,6 +236,34 @@ describe('TableAddControls', () => {
 
       expect(addRowBtn.style.opacity).toBe('0');
       expect(addColBtn.style.opacity).toBe('0');
+
+      vi.useRealTimers();
+    });
+
+    it('button hides when cursor moves away from its edge', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      vi.useFakeTimers();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+      });
+
+      // Show add-row by moving near bottom
+      moveNear(wrapper, grid, 50, 90);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Move away from bottom
+      moveNear(wrapper, grid, 50, 20);
+      vi.advanceTimersByTime(200);
+
+      expect(addRowBtn.style.opacity).toBe('0');
 
       vi.useRealTimers();
     });
@@ -258,7 +345,8 @@ describe('TableAddControls', () => {
       addRowBtn.style.opacity = '0';
       wrapper.appendChild(addRowBtn);
 
-      wrapper.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100));
+      wrapper.dispatchEvent(new MouseEvent('mousemove', { clientX: 190, clientY: 90, bubbles: true }));
 
       // The manually-added element should stay at opacity 0 since listeners were removed
       expect(addRowBtn.style.opacity).toBe('0');

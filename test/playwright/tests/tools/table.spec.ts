@@ -1455,4 +1455,174 @@ test.describe('table tool', () => {
       expect(fontSize).toBe('14px');
     });
   });
+
+  test.describe('drag to add rows/columns', () => {
+    test('dragging add-row button down adds multiple rows', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      // Hover to reveal the add-row button
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await expect(addRowBtn).toBeVisible();
+
+      // Measure the height of a row for the drag distance
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const rowBox = await firstRow.boundingBox();
+
+      if (!rowBox) {
+        throw new Error('Row not visible');
+      }
+
+      const btnBox = await addRowBtn.boundingBox();
+
+      if (!btnBox) {
+        throw new Error('Add row button not visible');
+      }
+
+      const startX = btnBox.x + btnBox.width / 2;
+      const startY = btnBox.y + btnBox.height / 2;
+
+      // Drag down by ~2.5 row heights to add 2 rows
+      const dragDistance = rowBox.height * 2.5;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY + dragDistance, { steps: 10 });
+      await page.mouse.up();
+
+      // Should now have 4 rows (2 original + 2 added)
+      const rows = page.locator('[data-blok-table-row]');
+
+      await expect(rows).toHaveCount(4);
+    });
+
+    test('dragging add-col button right adds multiple columns', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      // Hover button directly to scroll it into view (wrapper has overflow-x: auto)
+      await addColBtn.hover({ force: true });
+
+      await expect(addColBtn).toBeVisible();
+
+      // Measure column width via the grid's last cell offsetWidth
+      const colWidth = await page.evaluate(() => {
+        const row = document.querySelector('[data-blok-table-row]');
+        const cells = row?.querySelectorAll('[data-blok-table-cell]');
+        const lastCell = cells?.[cells.length - 1] as HTMLElement | undefined;
+
+        return lastCell?.offsetWidth ?? 100;
+      });
+
+      const btnBox = await addColBtn.boundingBox();
+
+      if (!btnBox) {
+        throw new Error('Add col button not visible');
+      }
+
+      const startX = btnBox.x + btnBox.width / 2;
+      const startY = btnBox.y + btnBox.height / 2;
+
+      // Drag right by ~2.5 column widths to add 2 columns
+      const dragDistance = colWidth * 2.5;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX + dragDistance, startY, { steps: 10 });
+      await page.mouse.up();
+
+      // First row should now have 4 cells (2 original + 2 added)
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const cells = firstRow.locator(CELL_SELECTOR);
+
+      await expect(cells).toHaveCount(4);
+    });
+
+    test('dragging add-row button back up cancels added rows', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+      await expect(addRowBtn).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const rowBox = await firstRow.boundingBox();
+
+      if (!rowBox) {
+        throw new Error('Row not visible');
+      }
+
+      const btnBox = await addRowBtn.boundingBox();
+
+      if (!btnBox) {
+        throw new Error('Add row button not visible');
+      }
+
+      const startX = btnBox.x + btnBox.width / 2;
+      const startY = btnBox.y + btnBox.height / 2;
+
+      // Drag down to add rows, then drag back past start to cancel
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY + rowBox.height * 2, { steps: 5 });
+      await page.mouse.move(startX, startY - 10, { steps: 5 });
+      await page.mouse.up();
+
+      // Should still have only 2 original rows
+      const rows = page.locator('[data-blok-table-row]');
+
+      await expect(rows).toHaveCount(2);
+    });
+  });
 });

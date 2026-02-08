@@ -2176,6 +2176,105 @@ test.describe('table tool', () => {
       await expect(selected).toHaveCount(0);
     });
 
+    test('selection shows only outer blue border, no inner borders', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [
+                  ['A1', 'A2', 'A3', 'A4'],
+                  ['B1', 'B2', 'B3', 'B4'],
+                  ['C1', 'C2', 'C3', 'C4'],
+                  ['D1', 'D2', 'D3', 'D4'],
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      const cells = page.locator(CELL_SELECTOR);
+
+      // Select a 2x2 interior block: cells (1,1) to (2,2)
+      // In a 4-col grid: row 1 col 1 = index 5, row 2 col 2 = index 10
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(5) needed for cell at row 1, col 1
+      const topLeft = cells.nth(5);
+      const topLeftBox = assertBoundingBox(await topLeft.boundingBox(), 'top-left cell');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(10) needed for cell at row 2, col 2
+      const bottomRight = cells.nth(10);
+      const bottomRightBox = assertBoundingBox(await bottomRight.boundingBox(), 'bottom-right cell');
+
+      await page.mouse.move(topLeftBox.x + topLeftBox.width / 2, topLeftBox.y + topLeftBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(bottomRightBox.x + bottomRightBox.width / 2, bottomRightBox.y + bottomRightBox.height / 2, { steps: 5 });
+      await page.mouse.up();
+
+      const selected = page.locator('[data-blok-table-cell-selected]');
+
+      await expect(selected).toHaveCount(4);
+
+      const blue = 'rgb(59, 130, 246)';
+
+      // Top-left of selection (1,1): blue on top and left, NOT blue on right and bottom (inner edges)
+      const topLeftStyles = await topLeft.evaluate(el => {
+        const s = window.getComputedStyle(el);
+
+        return {
+          borderTopColor: s.borderTopColor,
+          borderLeftColor: s.borderLeftColor,
+          borderRightColor: s.borderRightColor,
+          borderBottomColor: s.borderBottomColor,
+        };
+      });
+
+      expect(topLeftStyles.borderTopColor).toBe(blue);
+      expect(topLeftStyles.borderLeftColor).toBe(blue);
+      expect(topLeftStyles.borderRightColor).not.toBe(blue);
+      expect(topLeftStyles.borderBottomColor).not.toBe(blue);
+
+      // Top-right of selection (1,2): blue on top and right, NOT blue on left and bottom
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(6) needed for cell at row 1, col 2
+      const topRight = cells.nth(6);
+
+      const topRightStyles = await topRight.evaluate(el => {
+        const s = window.getComputedStyle(el);
+
+        return {
+          borderTopColor: s.borderTopColor,
+          borderRightColor: s.borderRightColor,
+          borderLeftColor: s.borderLeftColor,
+          borderBottomColor: s.borderBottomColor,
+        };
+      });
+
+      expect(topRightStyles.borderTopColor).toBe(blue);
+      expect(topRightStyles.borderRightColor).toBe(blue);
+      expect(topRightStyles.borderLeftColor).not.toBe(blue);
+      expect(topRightStyles.borderBottomColor).not.toBe(blue);
+
+      // Bottom-right of selection (2,2): blue on bottom and right, NOT blue on top and left
+      const bottomRightStyles = await bottomRight.evaluate(el => {
+        const s = window.getComputedStyle(el);
+
+        return {
+          borderTopColor: s.borderTopColor,
+          borderLeftColor: s.borderLeftColor,
+          borderRightColor: s.borderRightColor,
+          borderBottomColor: s.borderBottomColor,
+        };
+      });
+
+      expect(bottomRightStyles.borderRightColor).toBe(blue);
+      expect(bottomRightStyles.borderBottomColor).toBe(blue);
+      expect(bottomRightStyles.borderTopColor).not.toBe(blue);
+      expect(bottomRightStyles.borderLeftColor).not.toBe(blue);
+    });
+
     test('clicking a single cell does not create a selection', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,

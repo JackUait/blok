@@ -1,12 +1,28 @@
-import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { CELL_ATTR, BORDER_WIDTH, ROW_ATTR } from './table-core';
 
 const SELECTED_ATTR = 'data-blok-table-cell-selected';
 
-const SELECTION_CLASSES = [
-  'ring-2',
-  'ring-blue-500',
-  'ring-inset',
-];
+const SELECTION_BORDER = '2px solid #3b82f6';
+const TRANSPARENT_BORDER = `${BORDER_WIDTH}px solid transparent`;
+
+interface BorderStyles {
+  top?: string;
+  right?: string;
+  bottom?: string;
+  left?: string;
+}
+
+/**
+ * Apply border styles to a DOM element.
+ */
+const setBorders = (el: HTMLElement, borders: BorderStyles): void => {
+  Object.assign(el.style, {
+    ...(borders.top !== undefined && { borderTop: borders.top }),
+    ...(borders.right !== undefined && { borderRight: borders.right }),
+    ...(borders.bottom !== undefined && { borderBottom: borders.bottom }),
+    ...(borders.left !== undefined && { borderLeft: borders.left }),
+  });
+};
 
 interface CellCoord {
   row: number;
@@ -24,7 +40,7 @@ const isOtherInteractionActive = (grid: HTMLElement): boolean => {
 /**
  * Handles rectangular cell selection via click-and-drag.
  * Selection starts when a pointer drag crosses from one cell into another.
- * Selected cells are highlighted with a blue ring border.
+ * Selected cells are highlighted with a blue outer border around the selection rectangle.
  */
 export class TableCellSelection {
   private grid: HTMLElement;
@@ -33,6 +49,8 @@ export class TableCellSelection {
   private isSelecting = false;
   private hasSelection = false;
   private selectedCells: HTMLElement[] = [];
+  private savedBorders = new Map<HTMLElement, { top: string; right: string; bottom: string; left: string }>();
+  private savedGridBorders: { top: string; left: string } | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -160,12 +178,100 @@ export class TableCellSelection {
   }
 
   private clearSelection(): void {
+    this.restoreModifiedCells();
+    this.hasSelection = false;
+  }
+
+  private saveBorder(cell: HTMLElement): void {
+    if (this.savedBorders.has(cell)) {
+      return;
+    }
+    this.savedBorders.set(cell, {
+      top: cell.style.borderTop,
+      right: cell.style.borderRight,
+      bottom: cell.style.borderBottom,
+      left: cell.style.borderLeft,
+    });
+  }
+
+  private restoreModifiedCells(): void {
+    this.savedBorders.forEach((saved, cell) => {
+      setBorders(cell, saved);
+    });
+
     this.selectedCells.forEach(cell => {
-      SELECTION_CLASSES.forEach(cls => cell.classList.remove(cls));
       cell.removeAttribute(SELECTED_ATTR);
     });
+
+    if (this.savedGridBorders) {
+      this.grid.style.borderTop = this.savedGridBorders.top;
+      this.grid.style.borderLeft = this.savedGridBorders.left;
+    }
+
     this.selectedCells = [];
-    this.hasSelection = false;
+    this.savedBorders.clear();
+    this.savedGridBorders = null;
+  }
+
+  private applyCellBorders(
+    cell: HTMLElement,
+    edges: { isTop: boolean; isBottom: boolean; isLeft: boolean; isRight: boolean },
+    rows: NodeListOf<Element>,
+    rowCells: NodeListOf<Element>,
+    r: number,
+    c: number,
+  ): void {
+    this.saveBorder(cell);
+
+    this.applyTopEdge(cell, edges.isTop, rows, r, c);
+    setBorders(cell, { bottom: edges.isBottom ? SELECTION_BORDER : TRANSPARENT_BORDER });
+    this.applyLeftEdge(cell, edges.isLeft, rowCells, c);
+    setBorders(cell, { right: edges.isRight ? SELECTION_BORDER : TRANSPARENT_BORDER });
+
+    cell.setAttribute(SELECTED_ATTR, '');
+    this.selectedCells.push(cell);
+  }
+
+  private applyTopEdge(cell: HTMLElement, isTop: boolean, rows: NodeListOf<Element>, r: number, c: number): void {
+    if (!isTop) {
+      return;
+    }
+
+    if (r === 0) {
+      this.grid.style.borderTop = SELECTION_BORDER;
+
+      return;
+    }
+
+    // Hide the cell-above's borderBottom and add borderTop on this cell
+    const aboveCell = rows[r - 1]?.querySelectorAll(`[${CELL_ATTR}]`)[c] as HTMLElement | undefined;
+
+    if (aboveCell) {
+      this.saveBorder(aboveCell);
+      setBorders(aboveCell, { bottom: TRANSPARENT_BORDER });
+    }
+    setBorders(cell, { top: SELECTION_BORDER });
+  }
+
+  private applyLeftEdge(cell: HTMLElement, isLeft: boolean, rowCells: NodeListOf<Element>, c: number): void {
+    if (!isLeft) {
+      return;
+    }
+
+    if (c === 0) {
+      this.grid.style.borderLeft = SELECTION_BORDER;
+
+      return;
+    }
+
+    // Hide left neighbor's borderRight and add borderLeft on this cell
+    const leftCell = rowCells[c - 1] as HTMLElement | undefined;
+
+    if (leftCell) {
+      this.saveBorder(leftCell);
+      setBorders(leftCell, { right: TRANSPARENT_BORDER });
+    }
+    setBorders(cell, { left: SELECTION_BORDER });
   }
 
   private paintSelection(): void {
@@ -173,12 +279,8 @@ export class TableCellSelection {
       return;
     }
 
-    // Clear previous selection
-    this.selectedCells.forEach(cell => {
-      SELECTION_CLASSES.forEach(cls => cell.classList.remove(cls));
-      cell.removeAttribute(SELECTED_ATTR);
-    });
-    this.selectedCells = [];
+    // Restore previous selection state
+    this.restoreModifiedCells();
 
     // Compute rectangle bounds
     const minRow = Math.min(this.anchorCell.row, this.extentCell.row);
@@ -187,6 +289,12 @@ export class TableCellSelection {
     const maxCol = Math.max(this.anchorCell.col, this.extentCell.col);
 
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+
+    // Save grid borders before modifying
+    this.savedGridBorders = {
+      top: this.grid.style.borderTop,
+      left: this.grid.style.borderLeft,
+    };
 
     for (let r = minRow; r <= maxRow; r++) {
       const row = rows[r];
@@ -204,9 +312,14 @@ export class TableCellSelection {
           continue;
         }
 
-        SELECTION_CLASSES.forEach(cls => cell.classList.add(cls));
-        cell.setAttribute(SELECTED_ATTR, '');
-        this.selectedCells.push(cell);
+        this.applyCellBorders(
+          cell,
+          { isTop: r === minRow, isBottom: r === maxRow, isLeft: c === minCol, isRight: c === maxCol },
+          rows,
+          cells,
+          r,
+          c,
+        );
       }
     }
   }

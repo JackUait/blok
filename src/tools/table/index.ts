@@ -389,6 +389,13 @@ export class Table implements BlockTool {
         this.addControls?.syncRowButtonWidth();
         this.rowColControls?.refresh();
       },
+      onDragStart: () => {
+        if (this.resize) {
+          this.resize.enabled = false;
+        }
+        this.rowColControls?.hideAllGrips();
+        this.rowColControls?.setGripsDisplay(false);
+      },
       onDragAddRow: () => {
         this.grid.addRow(gridEl);
         this.populateNewCells(gridEl);

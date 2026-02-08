@@ -32,12 +32,14 @@ const createGridAndWrapper = (rows: number, cols: number): { wrapper: HTMLDivEle
 };
 
 const defaultDragCallbacks = (): {
+  onDragStart: () => void;
   onDragAddRow: () => void;
   onDragRemoveRow: () => void;
   onDragAddCol: () => void;
   onDragRemoveCol: () => void;
   onDragEnd: () => void;
 } => ({
+  onDragStart: vi.fn(),
   onDragAddRow: vi.fn(),
   onDragRemoveRow: vi.fn(),
   onDragAddCol: vi.fn(),
@@ -635,6 +637,145 @@ describe('TableAddControls', () => {
       simulateDrag(addRowBtn, 'row', 200, 100);
 
       expect(callbacks.onDragEnd).toHaveBeenCalled();
+    });
+  });
+
+  describe('drag start callback', () => {
+    /**
+     * Simulate only the pointerdown + pointermove part of a drag (no pointerup),
+     * so we can check intermediate state before onDragEnd fires.
+     */
+    const simulateDragStart = (
+      element: HTMLElement,
+      axis: 'row' | 'col',
+      startPos: number,
+      endPos: number,
+    ): void => {
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.setPointerCapture = vi.fn();
+
+      const clientKey = axis === 'row' ? 'clientY' : 'clientX';
+
+      element.dispatchEvent(new PointerEvent('pointerdown', {
+        [clientKey]: startPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointermove', {
+        [clientKey]: endPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+    };
+
+    it('calls onDragStart when row drag exceeds threshold', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Drag downward past threshold (>5px)
+      simulateDragStart(addRowBtn, 'row', 0, 10);
+
+      expect(callbacks.onDragStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onDragStart when column drag exceeds threshold', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      // Drag rightward past threshold (>5px)
+      simulateDragStart(addColBtn, 'col', 0, 10);
+
+      expect(callbacks.onDragStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onDragStart before threshold is exceeded', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Move only 3px — below the 5px threshold
+      simulateDragStart(addRowBtn, 'row', 0, 3);
+
+      expect(callbacks.onDragStart).not.toHaveBeenCalled();
+    });
+
+    it('calls onDragStart only once per drag session', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addRowBtn.setPointerCapture = vi.fn();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientY: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      // Multiple moves past threshold
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 20,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 30,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      expect(callbacks.onDragStart).toHaveBeenCalledTimes(1);
     });
   });
 

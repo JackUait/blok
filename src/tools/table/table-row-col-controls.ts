@@ -286,6 +286,20 @@ export class TableRowColControls {
   }
 
   /**
+   * Show or hide all grip elements by toggling display.
+   * Used to hide grips during add-button drag operations.
+   */
+  public setGripsDisplay(visible: boolean): void {
+    const display = visible ? '' : 'none';
+
+    [...this.colGrips, ...this.rowGrips].forEach(grip => {
+      const el: HTMLElement = grip;
+
+      el.style.display = display;
+    });
+  }
+
+  /**
    * Immediately hide all grips (no delay). Used when resize drag starts.
    */
   public hideAllGrips(): void {

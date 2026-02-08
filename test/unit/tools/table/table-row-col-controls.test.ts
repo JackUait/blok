@@ -223,6 +223,49 @@ describe('TableRowColControls', () => {
     });
   });
 
+  describe('setGripsDisplay', () => {
+    it('hides all grips when called with false', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      controls.setGripsDisplay(false);
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      colGrips.forEach(grip => expect(grip.style.display).toBe('none'));
+      rowGrips.forEach(grip => expect(grip.style.display).toBe('none'));
+    });
+
+    it('restores all grips when called with true', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      controls.setGripsDisplay(false);
+      controls.setGripsDisplay(true);
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      colGrips.forEach(grip => expect(grip.style.display).toBe(''));
+      rowGrips.forEach(grip => expect(grip.style.display).toBe(''));
+    });
+  });
+
   describe('hideAllGrips', () => {
     it('immediately hides all visible grips without delay', () => {
       grid = createGrid(2, 2);

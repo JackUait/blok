@@ -2175,5 +2175,89 @@ describe('Table Tool', () => {
 
       document.body.removeChild(element);
     });
+
+    it('hides resize handles when add-button drag starts', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      // Drag downward past threshold to trigger onDragStart
+      simulateDragStart(addRowBtn, 'row', 0, 10);
+
+      const handles = element.querySelectorAll('[data-blok-table-resize]');
+
+      // All resize handles should have pointer-events disabled during drag
+      handles.forEach(handle => {
+        expect((handle as HTMLElement).style.pointerEvents).toBe('none');
+      });
+
+      document.body.removeChild(element);
+    });
+
+    it('hides grip handles when add-button drag starts', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      // Drag downward past threshold to trigger onDragStart
+      simulateDragStart(addRowBtn, 'row', 0, 10);
+
+      const grips = element.querySelectorAll('[data-blok-table-grip]');
+
+      // All grips should be hidden during drag
+      grips.forEach(grip => {
+        expect((grip as HTMLElement).style.display).toBe('none');
+      });
+
+      document.body.removeChild(element);
+    });
+
+    it('restores grip handles after add-button drag ends', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addRowBtn.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addRowBtn.releasePointerCapture = vi.fn();
+
+      // Full drag: pointerdown → pointermove → pointerup
+      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientY: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointerup', {
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      const grips = element.querySelectorAll('[data-blok-table-grip]');
+
+      // Grips should no longer be hidden after drag ends
+      grips.forEach(grip => {
+        expect((grip as HTMLElement).style.display).not.toBe('none');
+      });
+
+      document.body.removeChild(element);
+    });
   });
 });

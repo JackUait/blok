@@ -46,6 +46,7 @@ interface TableAddControlsOptions {
   grid: HTMLElement;
   onAddRow: () => void;
   onAddColumn: () => void;
+  onDragStart: () => void;
   onDragAddRow: () => void;
   onDragRemoveRow: () => void;
   onDragAddCol: () => void;
@@ -73,6 +74,7 @@ export class TableAddControls {
   private boundMouseLeave: () => void;
   private boundAddRowClick: () => void;
   private boundAddColClick: () => void;
+  private onDragStart: () => void;
   private onDragAddRow: () => void;
   private onDragRemoveRow: () => void;
   private onDragAddCol: () => void;
@@ -89,6 +91,7 @@ export class TableAddControls {
 
     this.boundAddRowClick = options.onAddRow;
     this.boundAddColClick = options.onAddColumn;
+    this.onDragStart = options.onDragStart;
     this.onDragAddRow = options.onDragAddRow;
     this.onDragRemoveRow = options.onDragRemoveRow;
     this.onDragAddCol = options.onDragAddCol;
@@ -204,9 +207,10 @@ export class TableAddControls {
       this.dragState.addedCount--;
     }
 
-    if (Math.abs(delta) > DRAG_THRESHOLD) {
+    if (Math.abs(delta) > DRAG_THRESHOLD && !this.dragState.didDrag) {
       this.dragState.didDrag = true;
       document.body.style.cursor = axis === 'row' ? 'row-resize' : 'col-resize';
+      this.onDragStart();
     }
   }
 

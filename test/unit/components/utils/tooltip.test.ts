@@ -102,6 +102,17 @@ describe('Tooltip utility', () => {
     vi.useRealTimers();
   });
 
+  it('shows immediately by default when no delay is specified', () => {
+    const target = createTargetElement();
+
+    show(target, 'No delay');
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+    expect(wrapper?.style.visibility).toBe('visible');
+  });
+
   it('renders tooltip content, accessible attributes', () => {
     const target = createTargetElement();
 

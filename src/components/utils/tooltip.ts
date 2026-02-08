@@ -193,7 +193,7 @@ class Tooltip {
       marginLeft: 0,
       marginRight: 0,
       marginBottom: 0,
-      delay: 70,
+      delay: 0,
     };
     const showingOptions = Object.assign(basicOptions, options);
 

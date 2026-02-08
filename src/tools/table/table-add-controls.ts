@@ -1,4 +1,6 @@
 import { IconPlus } from '../../components/icons';
+import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
+import { hide as hideTooltip, onHover } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
@@ -210,6 +212,7 @@ export class TableAddControls {
     if (Math.abs(delta) > DRAG_THRESHOLD && !this.dragState.didDrag) {
       this.dragState.didDrag = true;
       document.body.style.cursor = axis === 'row' ? 'row-resize' : 'col-resize';
+      hideTooltip();
       this.onDragStart();
     }
   }
@@ -346,7 +349,6 @@ export class TableAddControls {
     btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'items-start', 'cursor-row-resize');
     btn.setAttribute(ADD_ROW_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
-    btn.setAttribute('title', 'Click to add a row, drag to add or remove');
     btn.style.opacity = '0';
     btn.style.boxSizing = 'content-box';
     btn.style.width = '100%';
@@ -363,6 +365,11 @@ export class TableAddControls {
     this.appendIcon(visual);
     btn.appendChild(visual);
 
+    onHover(btn, createTooltipContent([
+      'Click to add a new row',
+      'Drag to add or remove rows',
+    ]), { placement: 'bottom', marginTop: -16 });
+
     return btn;
   }
 
@@ -372,7 +379,6 @@ export class TableAddControls {
     btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'justify-start', 'cursor-col-resize');
     btn.setAttribute(ADD_COL_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
-    btn.setAttribute('title', 'Click to add a column, drag to add or remove');
     btn.style.opacity = '0';
     btn.style.position = 'absolute';
     btn.style.right = '-36px';
@@ -388,6 +394,11 @@ export class TableAddControls {
 
     this.appendIcon(visual);
     btn.appendChild(visual);
+
+    onHover(btn, createTooltipContent([
+      'Click to add a new column',
+      'Drag to add or remove columns',
+    ]), { placement: 'bottom' });
 
     return btn;
   }

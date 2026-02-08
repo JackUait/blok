@@ -1,6 +1,19 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { TableAddControls } from '../../../../src/tools/table/table-add-controls';
 
+const mockOnHover = vi.fn();
+const mockHide = vi.fn();
+const mockCreateTooltipContent = vi.fn((_lines: string[]) => document.createElement('div'));
+
+vi.mock('../../../../src/components/utils/tooltip', () => ({
+  onHover: (...args: unknown[]): void => mockOnHover(...(args as [unknown, unknown, unknown])),
+  hide: (): void => mockHide(),
+}));
+
+vi.mock('../../../../src/components/modules/toolbar/tooltip', () => ({
+  createTooltipContent: (...args: unknown[]): HTMLElement => mockCreateTooltipContent(...(args as [string[]])),
+}));
+
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
 
@@ -780,7 +793,7 @@ describe('TableAddControls', () => {
   });
 
   describe('tooltip', () => {
-    it('add-row button has a title attribute for tooltip', () => {
+    it('registers a custom tooltip on the add-row button via onHover', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -793,10 +806,14 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      expect(addRowBtn.getAttribute('title')).toContain('row');
+      expect(mockOnHover).toHaveBeenCalledWith(
+        addRowBtn,
+        expect.anything(),
+        expect.objectContaining({ placement: 'bottom', marginTop: -16 }),
+      );
     });
 
-    it('add-column button has a title attribute for tooltip', () => {
+    it('registers a custom tooltip on the add-column button via onHover', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -809,7 +826,96 @@ describe('TableAddControls', () => {
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addColBtn.getAttribute('title')).toContain('column');
+      expect(mockOnHover).toHaveBeenCalledWith(
+        addColBtn,
+        expect.anything(),
+        expect.objectContaining({ placement: 'bottom' }),
+      );
+    });
+
+    it('creates tooltip content with Click and Drag lines for the row button', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      expect(mockCreateTooltipContent).toHaveBeenCalledWith([
+        'Click to add a new row',
+        'Drag to add or remove rows',
+      ]);
+    });
+
+    it('creates tooltip content with Click and Drag lines for the column button', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      expect(mockCreateTooltipContent).toHaveBeenCalledWith([
+        'Click to add a new column',
+        'Drag to add or remove columns',
+      ]);
+    });
+
+    it('hides the tooltip when a drag exceeds the threshold', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addRowBtn.setPointerCapture = vi.fn();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientY: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      mockHide.mockClear();
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientY: 10,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      expect(mockHide).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not set a native title attribute on either button', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.hasAttribute('title')).toBe(false);
+      expect(addColBtn.hasAttribute('title')).toBe(false);
     });
   });
 });

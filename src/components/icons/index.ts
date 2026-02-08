@@ -52,19 +52,19 @@ export const IconReplace = `
 // Menu icon (6-dot grip)
 export const IconMenu = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="7.5" cy="5.5" r="1.5" fill="currentColor"/>
-  <circle cx="12.5" cy="5.5" r="1.5" fill="currentColor"/>
-  <circle cx="7.5" cy="10" r="1.5" fill="currentColor"/>
-  <circle cx="12.5" cy="10" r="1.5" fill="currentColor"/>
-  <circle cx="7.5" cy="14.5" r="1.5" fill="currentColor"/>
-  <circle cx="12.5" cy="14.5" r="1.5" fill="currentColor"/>
+  <circle cx="7.5" cy="5.5" r="1" fill="currentColor"/>
+  <circle cx="12.5" cy="5.5" r="1" fill="currentColor"/>
+  <circle cx="7.5" cy="10" r="1" fill="currentColor"/>
+  <circle cx="12.5" cy="10" r="1" fill="currentColor"/>
+  <circle cx="7.5" cy="14.5" r="1" fill="currentColor"/>
+  <circle cx="12.5" cy="14.5" r="1" fill="currentColor"/>
 </svg>
 `;
 
 // Plus/Add icon
 export const IconPlus = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M5 10h10M10 5v10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 10h11M10 4.5v11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

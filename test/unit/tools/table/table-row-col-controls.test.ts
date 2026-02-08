@@ -315,6 +315,76 @@ describe('TableRowColControls', () => {
     });
   });
 
+  describe('grip dot pattern', () => {
+    it('each grip contains an SVG with 6 circles for the drag handle pattern', () => {
+      grid = createGrid(2, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+
+      // All column grips should have SVG with 6 circles
+      colGrips.forEach(grip => {
+        const svg = grip.querySelector('svg');
+
+        expect(svg).not.toBeNull();
+        expect(svg?.querySelectorAll('circle')).toHaveLength(6);
+      });
+
+      // All row grips should have SVG with 6 circles
+      rowGrips.forEach(grip => {
+        const svg = grip.querySelector('svg');
+
+        expect(svg).not.toBeNull();
+        expect(svg?.querySelectorAll('circle')).toHaveLength(6);
+      });
+    });
+
+    it('grip SVG has pointer-events-none so clicks pass through to grip', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const svg = colGrips[0].querySelector('svg');
+
+      expect(svg).not.toBeNull();
+      expect(svg?.getAttribute('fill')).toBe('currentColor');
+    });
+
+    it('grip SVG circles have correct attributes', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const circles = colGrips[0].querySelectorAll('circle');
+
+      circles.forEach(circle => {
+        expect(circle).toHaveAttribute('r', '1.5');
+      });
+    });
+  });
+
   describe('hideAllGrips', () => {
     it('immediately hides all visible grips without delay', () => {
       grid = createGrid(2, 2);

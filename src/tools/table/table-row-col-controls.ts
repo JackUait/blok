@@ -11,6 +11,7 @@ import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover'
 import { twMerge } from '../../components/utils/tw';
 
 import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
+import { collapseGrip, createGripDotsSvg, expandGrip } from './table-grip-visuals';
 import { createHeadingToggle } from './table-heading-toggle';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 
@@ -21,7 +22,7 @@ const GRIP_ATTR = 'data-blok-table-grip';
 const GRIP_COL_ATTR = 'data-blok-table-grip-col';
 const GRIP_ROW_ATTR = 'data-blok-table-grip-row';
 const HIDE_DELAY_MS = 150;
-const COL_PILL_WIDTH = 32;
+const COL_PILL_WIDTH = 24;
 const COL_PILL_HEIGHT = 4;
 const ROW_PILL_WIDTH = 4;
 const ROW_PILL_HEIGHT = 20;
@@ -57,8 +58,13 @@ const GRIP_CAPSULE_CLASSES = [
   'rounded-full',
   'cursor-grab',
   'select-none',
-  'transition-[opacity,background-color]',
+  'transition-[opacity,background-color,width,height,border-radius,transform]',
   'duration-150',
+  'group',
+  'flex',
+  'items-center',
+  'justify-center',
+  'overflow-hidden',
 ];
 
 const GRIP_IDLE_CLASSES = [
@@ -69,7 +75,6 @@ const GRIP_IDLE_CLASSES = [
 
 const GRIP_VISIBLE_CLASSES = [
   'bg-gray-300',
-  'hover:bg-gray-400',
   'opacity-100',
   'pointer-events-auto',
 ];
@@ -180,15 +185,21 @@ export class TableRowColControls {
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
 
-    if (type === 'col') {
-      grip.style.width = `${COL_PILL_WIDTH}px`;
-      grip.style.height = `${COL_PILL_HEIGHT}px`;
-    } else {
-      grip.style.width = `${ROW_PILL_WIDTH}px`;
-      grip.style.height = `${ROW_PILL_HEIGHT}px`;
-    }
+    const baseWidth = type === 'col' ? COL_PILL_WIDTH : ROW_PILL_WIDTH;
+    const baseHeight = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT;
+
+    grip.style.width = `${baseWidth}px`;
+    grip.style.height = `${baseHeight}px`;
+
+    grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 
     grip.addEventListener('pointerdown', this.boundPointerDown);
+    grip.addEventListener('mouseenter', () => {
+      expandGrip(grip, baseWidth, baseHeight);
+    });
+    grip.addEventListener('mouseleave', () => {
+      collapseGrip(grip, baseWidth, baseHeight);
+    });
 
     return grip;
   }
@@ -353,7 +364,9 @@ export class TableRowColControls {
 
   private applyIdleClasses(grip: HTMLElement): void {
     const el = grip;
+    const isCol = el.hasAttribute(GRIP_COL_ATTR);
 
+    collapseGrip(el, isCol ? COL_PILL_WIDTH : ROW_PILL_WIDTH, isCol ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT);
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
     el.removeAttribute('data-blok-table-grip-visible');
   }

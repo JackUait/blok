@@ -424,6 +424,10 @@ export class Table implements BlockTool {
         this.initResize(gridEl);
         this.addControls?.syncRowButtonWidth();
         this.rowColControls?.refresh();
+
+        if (this.element) {
+          this.element.scrollLeft = 0;
+        }
       },
     });
   }

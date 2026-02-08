@@ -215,7 +215,7 @@ export class TableAddControls {
       return;
     }
 
-    const { axis, addedCount, pointerId, didDrag } = this.dragState;
+    const { axis, pointerId, didDrag } = this.dragState;
 
     const target = axis === 'row' ? this.addRowBtn : this.addColBtn;
 
@@ -234,9 +234,7 @@ export class TableAddControls {
       return;
     }
 
-    if (addedCount !== 0) {
-      this.onDragEnd();
-    }
+    this.onDragEnd();
   }
 
   private measureUnitSize(axis: 'row' | 'col'): number {

@@ -1893,5 +1893,86 @@ test.describe('table tool', () => {
 
       await expect(firstRowCells).toHaveCount(2);
     });
+
+    test('resets wrapper scroll after adding then removing columns by drag', async ({ page }) => {
+      // Matches user report: add several columns by dragging right, then drag left to remove
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: true,
+                content: [
+                  ['Feature', 'Notes'],
+                  ['Supports any size', 'Yes'],
+                  ['Tab and Enter keys', 'Full support'],
+                  ['HTML tables supported', 'Via paste'],
+                  ['Toggle in settings', 'Menu option'],
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      const wrapper = page.locator(TABLE_SELECTOR);
+      const grid = wrapper.locator('> div').first();
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      await addColBtn.hover({ force: true });
+      await expect(addColBtn).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() for cell width
+      const firstCell = page.locator(CELL_SELECTOR).first();
+      const cellBox = await firstCell.boundingBox();
+
+      if (!cellBox) {
+        throw new Error('Cell not visible');
+      }
+
+      const btnBox = await addColBtn.boundingBox();
+
+      if (!btnBox) {
+        throw new Error('Add col button not visible');
+      }
+
+      const startX = btnBox.x + btnBox.width / 2;
+      const startY = btnBox.y + btnBox.height / 2;
+      const colWidth = cellBox.width;
+
+      // Phase 1: Drag right to add columns
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX + colWidth * 3, startY, { steps: 15 });
+
+      // Phase 2: Drag left past starting point — removes added empty columns
+      // and attempts to remove original columns (which have content → blocked)
+      await page.mouse.move(startX - colWidth * 2, startY, { steps: 25 });
+      await page.mouse.up();
+
+      // Should have 2 columns remaining (originals with content preserved)
+      // eslint-disable-next-line playwright/no-nth-methods -- first() for first row
+      const finalCells = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR);
+
+      await expect(finalCells).toHaveCount(2);
+
+      // The wrapper must not be scrolled — all content should be visible from the left edge
+      const scrollLeft = await wrapper.evaluate(el => el.scrollLeft);
+
+      expect(scrollLeft).toBe(0);
+
+      // Verify the first cell's left edge is fully visible within the wrapper
+      // eslint-disable-next-line playwright/no-nth-methods -- first() needed for first cell
+      const firstCellAfter = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR).first();
+      const firstCellBox = await firstCellAfter.boundingBox();
+      const wrapperBox = await wrapper.boundingBox();
+
+      if (firstCellBox && wrapperBox) {
+        // First cell's left edge must not be to the left of the wrapper's left edge
+        expect(firstCellBox.x).toBeGreaterThanOrEqual(wrapperBox.x);
+      }
+    });
   });
 });

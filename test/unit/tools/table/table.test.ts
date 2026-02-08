@@ -4,6 +4,31 @@ import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
+/**
+ * Simulate a click via pointer events (pointerdown + pointerup at same position).
+ * The add buttons use pointer events instead of click events.
+ */
+const pointerClick = (element: HTMLElement): void => {
+  // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+  element.setPointerCapture = vi.fn();
+  // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+  element.releasePointerCapture = vi.fn();
+
+  element.dispatchEvent(new PointerEvent('pointerdown', {
+    clientX: 0,
+    clientY: 0,
+    pointerId: 1,
+    bubbles: true,
+  }));
+
+  element.dispatchEvent(new PointerEvent('pointerup', {
+    clientX: 0,
+    clientY: 0,
+    pointerId: 1,
+    bubbles: true,
+  }));
+};
+
 const createMockAPI = (overrides: Partial<API> = {}): API => {
   const { blocks: blocksOverrides, events: eventsOverrides, ...restOverrides } = overrides as Record<string, unknown>;
 
@@ -649,7 +674,7 @@ describe('Table Tool', () => {
 
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
-      addRowBtn.click();
+      pointerClick(addRowBtn);
 
       const rows = element.querySelectorAll('[data-blok-table-row]');
 
@@ -670,7 +695,7 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      addColBtn.click();
+      pointerClick(addColBtn);
 
       const firstRowCells = element.querySelectorAll('[data-blok-table-row]')[0].querySelectorAll('[data-blok-table-cell]');
 
@@ -697,7 +722,7 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      addColBtn.click();
+      pointerClick(addColBtn);
 
       const gridAfter = element.firstElementChild as HTMLElement;
       const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
@@ -733,7 +758,7 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      addColBtn.click();
+      pointerClick(addColBtn);
 
       const gridAfter = element.firstElementChild as HTMLElement;
       const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
@@ -777,7 +802,7 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      addColBtn.click();
+      pointerClick(addColBtn);
 
       const grid = element.firstElementChild as HTMLElement;
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
@@ -930,7 +955,7 @@ describe('Table Tool', () => {
 
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
-      addRowBtn.click();
+      pointerClick(addRowBtn);
 
       // After adding a row: 2 columns + 3 rows = 5 grips
       expect(element.querySelectorAll('[data-blok-table-grip]')).toHaveLength(5);
@@ -953,7 +978,7 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      addColBtn.click();
+      pointerClick(addColBtn);
 
       // After adding a column: 3 columns + 2 rows = 5 grips
       expect(element.querySelectorAll('[data-blok-table-grip]')).toHaveLength(5);
@@ -1585,7 +1610,7 @@ describe('Table Tool', () => {
 
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
-      addRowBtn.click();
+      pointerClick(addRowBtn);
 
       // New row should have 2 cells, each needing a paragraph block
       const insertCallsAfter = mockInsert.mock.calls.length;
@@ -1644,7 +1669,7 @@ describe('Table Tool', () => {
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
-      addColBtn.click();
+      pointerClick(addColBtn);
 
       // New column adds one cell per row (2 rows), each needing a paragraph block
       const insertCallsAfter = mockInsert.mock.calls.length;
@@ -1703,7 +1728,7 @@ describe('Table Tool', () => {
       // Add a row — 2 new empty cells
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
-      addRowBtn.click();
+      pointerClick(addRowBtn);
 
       const insertCallsAfterFirstAdd = mockInsert.mock.calls.length;
 
@@ -1711,7 +1736,7 @@ describe('Table Tool', () => {
       expect(insertCallsAfterFirstAdd - insertCallsBefore).toBe(2);
 
       // Add another row — 2 more new empty cells, but existing cells should NOT trigger inserts
-      addRowBtn.click();
+      pointerClick(addRowBtn);
 
       const insertCallsAfterSecondAdd = mockInsert.mock.calls.length;
 

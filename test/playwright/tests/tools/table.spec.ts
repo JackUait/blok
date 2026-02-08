@@ -2089,4 +2089,120 @@ test.describe('table tool', () => {
       await expect(cells.filter({ hasText: 'Val1' })).toHaveCount(1);
     });
   });
+
+  test.describe('cell selection', () => {
+    test('dragging across cells highlights a rectangular selection', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A1', 'A2', 'A3'], ['B1', 'B2', 'B3'], ['C1', 'C2', 'C3']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await expect(table).toBeVisible();
+
+      const cells = page.locator(CELL_SELECTOR);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for first cell
+      const firstCell = cells.nth(0);
+      const firstBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(4) needed for cell at row 1, col 1
+      const targetCell = cells.nth(4);
+      const targetBox = assertBoundingBox(await targetCell.boundingBox(), 'target cell');
+
+      const startX = firstBox.x + firstBox.width / 2;
+      const startY = firstBox.y + firstBox.height / 2;
+      const endX = targetBox.x + targetBox.width / 2;
+      const endY = targetBox.y + targetBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(endX, endY, { steps: 5 });
+      await page.mouse.up();
+
+      const selected = page.locator('[data-blok-table-cell-selected]');
+
+      await expect(selected).toHaveCount(4);
+    });
+
+    test('selection clears when clicking outside', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A1', 'A2'], ['B1', 'B2']],
+              },
+            },
+          ],
+        },
+      });
+
+      const cells = page.locator(CELL_SELECTOR);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for first cell
+      const firstCell = cells.nth(0);
+      const firstBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(3) needed for last cell
+      const lastCell = cells.nth(3);
+      const lastBox = assertBoundingBox(await lastCell.boundingBox(), 'last cell');
+
+      await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(lastBox.x + lastBox.width / 2, lastBox.y + lastBox.height / 2, { steps: 5 });
+      await page.mouse.up();
+
+      const selected = page.locator('[data-blok-table-cell-selected]');
+
+      await expect(selected).toHaveCount(4);
+
+      await page.mouse.click(10, 10);
+
+      await expect(selected).toHaveCount(0);
+    });
+
+    test('clicking a single cell does not create a selection', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A1', 'A2'], ['B1', 'B2']],
+              },
+            },
+          ],
+        },
+      });
+
+      const cells = page.locator(CELL_SELECTOR);
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(0) needed for first cell
+      const firstCell = cells.nth(0);
+      const firstBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
+
+      await page.mouse.click(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2);
+
+      const selected = page.locator('[data-blok-table-cell-selected]');
+
+      await expect(selected).toHaveCount(0);
+    });
+  });
 });

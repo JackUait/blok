@@ -35,6 +35,7 @@ import {
   updateHeadingColumnStyles,
   updateHeadingStyles,
 } from './table-operations';
+import { TableCellSelection } from './table-cell-selection';
 import { TableResize } from './table-resize';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
@@ -66,6 +67,7 @@ export class Table implements BlockTool {
   private addControls: TableAddControls | null = null;
   private rowColControls: TableRowColControls | null = null;
   private cellBlocks: TableCellBlocks | null = null;
+  private cellSelection: TableCellSelection | null = null;
   private element: HTMLDivElement | null = null;
   private blockId: string | undefined;
 
@@ -177,6 +179,7 @@ export class Table implements BlockTool {
     this.initResize(gridEl);
     this.initAddControls(gridEl);
     this.initRowColControls(gridEl);
+    this.initCellSelection(gridEl);
   }
 
   public save(blockContent: HTMLElement): TableData {
@@ -272,6 +275,8 @@ export class Table implements BlockTool {
     this.rowColControls = null;
     this.cellBlocks?.destroy();
     this.cellBlocks = null;
+    this.cellSelection?.destroy();
+    this.cellSelection = null;
     this.element = null;
   }
 
@@ -496,5 +501,9 @@ export class Table implements BlockTool {
       gridElement: gridEl,
       tableBlockId: this.blockId ?? '',
     });
+  }
+
+  private initCellSelection(gridEl: HTMLElement): void {
+    this.cellSelection = new TableCellSelection(gridEl);
   }
 }

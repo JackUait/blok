@@ -11,7 +11,7 @@ import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover'
 import { twMerge } from '../../components/utils/tw';
 
 import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
-import { collapseGrip, createGripDotsSvg, expandGrip } from './table-grip-visuals';
+import { collapseGrip, createGripDotsSvg, expandGrip, getIdleScale, GRIP_HOVER_SIZE } from './table-grip-visuals';
 import { createHeadingToggle } from './table-heading-toggle';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 
@@ -55,10 +55,10 @@ export interface TableRowColControlsOptions {
 const GRIP_CAPSULE_CLASSES = [
   'absolute',
   'z-[3]',
-  'rounded-full',
+  'rounded',
   'cursor-grab',
   'select-none',
-  'transition-[opacity,background-color,width,height,border-radius,transform]',
+  'transition-[opacity,background-color,transform]',
   'duration-150',
   'group',
   'flex',
@@ -185,20 +185,22 @@ export class TableRowColControls {
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
 
-    const baseWidth = type === 'col' ? COL_PILL_WIDTH : ROW_PILL_WIDTH;
-    const baseHeight = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT;
+    const expandedWidth = type === 'col' ? COL_PILL_WIDTH : GRIP_HOVER_SIZE;
+    const expandedHeight = type === 'col' ? GRIP_HOVER_SIZE : ROW_PILL_HEIGHT;
+    const pillSize = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
 
-    grip.style.width = `${baseWidth}px`;
-    grip.style.height = `${baseHeight}px`;
+    grip.style.width = `${expandedWidth}px`;
+    grip.style.height = `${expandedHeight}px`;
+    grip.style.transform = getIdleScale(type, pillSize);
 
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 
     grip.addEventListener('pointerdown', this.boundPointerDown);
     grip.addEventListener('mouseenter', () => {
-      expandGrip(grip, baseWidth, baseHeight);
+      expandGrip(grip);
     });
     grip.addEventListener('mouseleave', () => {
-      collapseGrip(grip, baseWidth, baseHeight);
+      collapseGrip(grip, type, pillSize);
     });
 
     return grip;
@@ -226,7 +228,7 @@ export class TableRowColControls {
       const centerX = (edges[i] + edges[i + 1]) / 2;
       const style = grip.style;
 
-      style.top = `${-(COL_PILL_HEIGHT / 2) - BORDER_WIDTH / 2}px`;
+      style.top = `${-(GRIP_HOVER_SIZE / 2) - BORDER_WIDTH / 2}px`;
       style.left = `${centerX - COL_PILL_WIDTH / 2}px`;
     });
 
@@ -239,7 +241,7 @@ export class TableRowColControls {
       const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
       const style = grip.style;
 
-      style.left = `${-(ROW_PILL_WIDTH / 2) - BORDER_WIDTH / 2}px`;
+      style.left = `${-(GRIP_HOVER_SIZE / 2) - BORDER_WIDTH / 2}px`;
       style.top = `${centerY - ROW_PILL_HEIGHT / 2}px`;
     });
   }
@@ -365,8 +367,10 @@ export class TableRowColControls {
   private applyIdleClasses(grip: HTMLElement): void {
     const el = grip;
     const isCol = el.hasAttribute(GRIP_COL_ATTR);
+    const type: 'col' | 'row' = isCol ? 'col' : 'row';
+    const pillSize = isCol ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
 
-    collapseGrip(el, isCol ? COL_PILL_WIDTH : ROW_PILL_WIDTH, isCol ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT);
+    collapseGrip(el, type, pillSize);
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
     el.removeAttribute('data-blok-table-grip-visible');
   }

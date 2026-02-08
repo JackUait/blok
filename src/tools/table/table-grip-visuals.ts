@@ -1,4 +1,4 @@
-const GRIP_HOVER_SIZE = 16;
+export const GRIP_HOVER_SIZE = 16;
 
 /**
  * Dot positions for vertical layout (2 cols × 3 rows) — used by row grips.
@@ -52,24 +52,23 @@ export const createGripDotsSvg = (orientation: 'horizontal' | 'vertical'): SVGEl
 };
 
 /**
- * Expand a grip element to the hover state.
- * Only the narrow dimension grows to GRIP_HOVER_SIZE; the main axis keeps its original length.
+ * Returns the idle scale transform for a grip type.
+ * Column grips shrink vertically; row grips shrink horizontally.
  */
-export const expandGrip = (
-  grip: HTMLElement,
-  baseWidth: number,
-  baseHeight: number
-): void => {
-  const el = grip;
-  const expandedWidth = Math.max(baseWidth, GRIP_HOVER_SIZE);
-  const expandedHeight = Math.max(baseHeight, GRIP_HOVER_SIZE);
-  const dx = (expandedWidth - baseWidth) / 2;
-  const dy = (expandedHeight - baseHeight) / 2;
+export const getIdleScale = (type: 'col' | 'row', pillSize: number): string => {
+  const ratio = pillSize / GRIP_HOVER_SIZE;
 
-  el.style.width = `${expandedWidth}px`;
-  el.style.height = `${expandedHeight}px`;
-  el.style.transform = `translate(${-dx}px, ${-dy}px)`;
-  el.style.borderRadius = '4px';
+  return type === 'col' ? `scaleY(${ratio})` : `scaleX(${ratio})`;
+};
+
+/**
+ * Expand a grip element to the hover state.
+ * Uses transform: scale(1) — compositor-only, no layout thrashing.
+ */
+export const expandGrip = (grip: HTMLElement): void => {
+  const el = grip;
+
+  el.style.transform = 'scale(1)';
   el.classList.add('bg-gray-200');
   el.classList.remove('bg-gray-300');
 
@@ -82,19 +81,13 @@ export const expandGrip = (
 };
 
 /**
- * Collapse a grip element back to its pill state.
+ * Collapse a grip element back to its scaled-down pill state.
+ * Uses transform: scaleY/scaleX — compositor-only, no layout thrashing.
  */
-export const collapseGrip = (
-  grip: HTMLElement,
-  baseWidth: number,
-  baseHeight: number
-): void => {
+export const collapseGrip = (grip: HTMLElement, type: 'col' | 'row', pillSize: number): void => {
   const el = grip;
 
-  el.style.width = `${baseWidth}px`;
-  el.style.height = `${baseHeight}px`;
-  el.style.transform = '';
-  el.style.borderRadius = '';
+  el.style.transform = getIdleScale(type, pillSize);
   el.classList.remove('bg-gray-200');
 
   const svg = el.querySelector('svg');

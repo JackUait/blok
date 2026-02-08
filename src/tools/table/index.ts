@@ -26,11 +26,11 @@ const DEFAULT_COLS = 3;
 
 const WRAPPER_CLASSES = [
   'my-2',
+  'pr-5',
 ];
 
 const WRAPPER_EDIT_CLASSES = [
   'relative',
-  'pr-5',
 ];
 
 /**

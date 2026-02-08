@@ -2068,6 +2068,47 @@ test.describe('table tool', () => {
       });
     });
 
+    test('table grid width does not change when toggling to readonly mode', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: true,
+                content: [['Feature', 'Status', 'Notes'], ['Grid rendering', 'Complete', 'Supports any size']],
+              },
+            },
+          ],
+        },
+      });
+
+      // Measure grid width in edit mode
+      const editGridWidth = await page.evaluate(() => {
+        const table = document.querySelector('[data-blok-tool="table"]');
+        const grid = table?.firstElementChild as HTMLElement;
+
+        return grid?.getBoundingClientRect().width;
+      });
+
+      // Toggle to readonly mode
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.toggle();
+      });
+
+      // Measure grid width in readonly mode
+      const readonlyGridWidth = await page.evaluate(() => {
+        const table = document.querySelector('[data-blok-tool="table"]');
+        const grid = table?.firstElementChild as HTMLElement;
+
+        return grid?.getBoundingClientRect().width;
+      });
+
+      // Grid width must remain the same across mode transitions
+      expect(readonlyGridWidth).toBe(editGridWidth);
+    });
+
     test('table content survives readonly round-trip (edit -> readonly -> edit)', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,

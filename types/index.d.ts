@@ -139,6 +139,13 @@ export interface API {
   i18n: I18n;
   readOnly: ReadOnly;
   ui: Ui;
+  rectangleSelection: {
+    cancelActiveSelection: () => void;
+    isRectActivated: () => boolean;
+    clearSelection: () => void;
+    startSelection: (pageX: number, pageY: number, shiftKey?: boolean) => void;
+    endSelection: () => void;
+  };
 }
 
 import { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector } from './data-attributes';

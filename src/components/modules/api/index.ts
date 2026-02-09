@@ -33,6 +33,7 @@ export class API extends Module {
       i18n: this.Blok.I18nAPI.methods,
       readOnly: this.Blok.ReadOnlyAPI.methods,
       ui: this.Blok.UiAPI.methods,
+      rectangleSelection: this.Blok.RectangleSelection,
     };
   }
 }

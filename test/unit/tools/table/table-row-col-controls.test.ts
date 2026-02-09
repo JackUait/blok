@@ -779,4 +779,72 @@ describe('TableRowColControls', () => {
       expect(isGripVisible(rowGrips[0])).toBe(false);
     });
   });
+
+  describe('grip stays expanded while popover is open', () => {
+    it('column grip remains at expanded size (16px height) while popover is open', async () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const grip = colGrips[0];
+
+      // Click the grip to open popover (pointerdown → pointerup)
+      grip.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 50,
+        clientY: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Wait for popover to open (async .then() callback)
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      });
+
+      // Grip should be expanded (16px height) while popover is open
+      expect(grip.style.height).toBe('16px');
+      // Width stays constant
+      expect(grip.style.width).toBe('24px');
+    });
+
+    it('row grip remains at expanded size (16px width) while popover is open', async () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+      const grip = rowGrips[0];
+
+      // Click the grip to open popover
+      grip.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 20,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Wait for popover to open
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      });
+
+      // Grip should be expanded (16px width) while popover is open
+      expect(grip.style.width).toBe('16px');
+      // Height stays constant
+      expect(grip.style.height).toBe('20px');
+    });
+  });
 });

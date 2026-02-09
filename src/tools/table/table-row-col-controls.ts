@@ -584,6 +584,13 @@ export class TableRowColControls {
     this.hideAllGripsExcept(grip);
     this.applyActiveClasses(grip);
 
+    // Expand the grip to hover size so it remains visible while popover is open
+    if (type === 'col') {
+      grip.style.height = `${GRIP_HOVER_SIZE}px`;
+    } else {
+      grip.style.width = `${GRIP_HOVER_SIZE}px`;
+    }
+
     this.activePopover.show();
     this.onGripClick?.(type, index);
   }

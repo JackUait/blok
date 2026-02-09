@@ -1,8 +1,36 @@
+import { IconCross } from '../../components/icons';
+import { PopoverDesktop } from '../../components/utils/popover';
+import { twMerge } from '../../components/utils/tw';
+
 import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { createGripDotsSvg } from './table-grip-visuals';
+
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 
 const SELECTED_ATTR = 'data-blok-table-cell-selected';
 
 const SELECTION_BORDER = '2px solid #3b82f6';
+
+const PILL_ATTR = 'data-blok-table-selection-pill';
+const PILL_WIDTH = 16;
+const PILL_HEIGHT = 20;
+const PILL_IDLE_SIZE = 4;
+
+const PILL_CLASSES = [
+  'absolute',
+  'z-[3]',
+  'rounded',
+  'select-none',
+  'transition-[opacity,background-color,width]',
+  'duration-150',
+  'flex',
+  'items-center',
+  'justify-center',
+  'overflow-hidden',
+  'cursor-pointer',
+  'bg-blue-500',
+];
 
 interface CellCoord {
   row: number;
@@ -26,17 +54,21 @@ const isOtherInteractionActive = (grid: HTMLElement): boolean => {
 interface CellSelectionOptions {
   grid: HTMLElement;
   onSelectionActiveChange?: (hasSelection: boolean) => void;
+  onClearContent?: (cells: HTMLElement[]) => void;
 }
 
 export class TableCellSelection {
   private grid: HTMLElement;
   private onSelectionActiveChange: ((hasSelection: boolean) => void) | undefined;
+  private onClearContent: ((cells: HTMLElement[]) => void) | undefined;
   private anchorCell: CellCoord | null = null;
   private extentCell: CellCoord | null = null;
   private isSelecting = false;
   private hasSelection = false;
   private selectedCells: HTMLElement[] = [];
   private overlay: HTMLElement | null = null;
+  private pill: HTMLElement | null = null;
+  private pillPopover: PopoverDesktop | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -46,6 +78,7 @@ export class TableCellSelection {
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
     this.onSelectionActiveChange = options.onSelectionActiveChange;
+    this.onClearContent = options.onClearContent;
     this.grid.style.position = 'relative';
 
     this.boundPointerDown = this.handlePointerDown.bind(this);
@@ -57,6 +90,7 @@ export class TableCellSelection {
   }
 
   public destroy(): void {
+    this.destroyPillPopover();
     this.clearSelection();
     this.grid.removeEventListener('pointerdown', this.boundPointerDown);
     document.removeEventListener('pointermove', this.boundPointerMove);
@@ -113,7 +147,7 @@ export class TableCellSelection {
     // Don't start selection from grip elements
     const target = e.target as HTMLElement;
 
-    if (target.closest('[data-blok-table-grip]') || target.closest('[data-blok-table-resize]')) {
+    if (target.closest('[data-blok-table-grip]') || target.closest('[data-blok-table-resize]') || target.closest(`[${PILL_ATTR}]`)) {
       return;
     }
 
@@ -196,7 +230,19 @@ export class TableCellSelection {
     this.extentCell = null;
   }
 
-  private handleClearSelection(): void {
+  private handleClearSelection(e: PointerEvent): void {
+    const target = e.target;
+
+    if (target instanceof HTMLElement && target.closest(`[${PILL_ATTR}]`)) {
+      return;
+    }
+
+    // Don't clear while the pill popover is open — the user may be
+    // clicking a popover item whose pointerdown bubbles to the document.
+    if (this.pillPopover !== null) {
+      return;
+    }
+
     document.removeEventListener('pointerdown', this.boundClearSelection);
     this.clearSelection();
   }
@@ -213,9 +259,16 @@ export class TableCellSelection {
   }
 
   private restoreModifiedCells(): void {
+    this.destroyPillPopover();
+
     this.selectedCells.forEach(cell => {
       cell.removeAttribute(SELECTED_ATTR);
     });
+
+    if (this.pill) {
+      this.pill.remove();
+      this.pill = null;
+    }
 
     if (this.overlay) {
       this.overlay.remove();
@@ -333,6 +386,132 @@ export class TableCellSelection {
     this.overlay.style.left = `${left}px`;
     this.overlay.style.width = `${width}px`;
     this.overlay.style.height = `${height}px`;
+
+    // Create pill once, reuse on subsequent paints
+    if (!this.pill) {
+      this.pill = this.createPill();
+      this.grid.appendChild(this.pill);
+    }
+
+    // Position at center of the 2px right border; translate(-50%,-50%) handles centering
+    this.pill.style.left = `${left + width - 1}px`;
+    this.pill.style.top = `${top + height / 2}px`;
+  }
+
+  private createPill(): HTMLElement {
+    const pill = document.createElement('div');
+
+    pill.setAttribute(PILL_ATTR, '');
+    pill.setAttribute('contenteditable', 'false');
+    pill.className = twMerge(PILL_CLASSES);
+    pill.style.width = `${PILL_IDLE_SIZE}px`;
+    pill.style.height = `${PILL_HEIGHT}px`;
+    pill.style.pointerEvents = 'auto';
+    pill.style.transform = 'translate(-50%, -50%)';
+    pill.style.outline = '2px solid white';
+
+    const svg = createGripDotsSvg('vertical');
+
+    svg.classList.remove('text-gray-400');
+    svg.classList.add('text-white');
+    pill.appendChild(svg);
+
+    pill.addEventListener('mouseenter', () => {
+      if (this.pillPopover === null) {
+        this.expandPill();
+      }
+    });
+    pill.addEventListener('mouseleave', () => {
+      if (this.pillPopover === null) {
+        this.collapsePill();
+      }
+    });
+    pill.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.openPillPopover();
+    });
+
+    return pill;
+  }
+
+  private openPillPopover(): void {
+    this.destroyPillPopover();
+
+    if (!this.pill) {
+      return;
+    }
+
+    this.expandPill();
+
+    const items: PopoverItemParams[] = [
+      {
+        icon: IconCross,
+        title: 'Clear',
+        closeOnActivate: true,
+        onActivate: (): void => {
+          this.onClearContent?.([...this.selectedCells]);
+          this.clearSelection();
+        },
+      },
+    ];
+
+    this.pillPopover = new PopoverDesktop({
+      items,
+      trigger: this.pill,
+      flippable: true,
+    });
+
+    this.pillPopover.on(PopoverEvent.Closed, () => {
+      if (this.pillPopover === null) {
+        return;
+      }
+
+      this.destroyPillPopover();
+
+      this.collapsePill();
+    });
+
+    this.pillPopover.show();
+  }
+
+  private expandPill(): void {
+    if (!this.pill) {
+      return;
+    }
+
+    this.pill.style.width = `${PILL_WIDTH}px`;
+
+    const svg = this.pill.querySelector('svg');
+
+    if (svg) {
+      svg.classList.remove('opacity-0');
+      svg.classList.add('opacity-100');
+    }
+  }
+
+  private collapsePill(): void {
+    if (!this.pill) {
+      return;
+    }
+
+    this.pill.style.width = `${PILL_IDLE_SIZE}px`;
+
+    const svg = this.pill.querySelector('svg');
+
+    if (svg) {
+      svg.classList.add('opacity-0');
+      svg.classList.remove('opacity-100');
+    }
+  }
+
+  private destroyPillPopover(): void {
+    if (this.pillPopover !== null) {
+      const popover = this.pillPopover;
+
+      this.pillPopover = null;
+      popover.destroy();
+    }
   }
 
   private resolveCellCoord(target: HTMLElement): CellCoord | null {

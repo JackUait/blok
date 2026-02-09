@@ -11,7 +11,7 @@ import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover'
 import { twMerge } from '../../components/utils/tw';
 
 import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
-import { collapseGrip, createGripDotsSvg, expandGrip, getIdleScale, GRIP_HOVER_SIZE } from './table-grip-visuals';
+import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE } from './table-grip-visuals';
 import { createHeadingToggle } from './table-heading-toggle';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 
@@ -60,7 +60,7 @@ const GRIP_CAPSULE_CLASSES = [
   'rounded',
   'cursor-grab',
   'select-none',
-  'transition-[opacity,background-color,transform]',
+  'transition-[opacity,background-color,width,height]',
   'duration-150',
   'group',
   'flex',
@@ -170,7 +170,13 @@ export class TableRowColControls {
     this.unlockGrip();
     this.hideAllGripsExcept(grip);
     this.applyActiveClasses(grip);
-    grip.style.transform = 'scale(1)';
+
+    if (type === 'col') {
+      grip.style.height = `${GRIP_HOVER_SIZE}px`;
+    } else {
+      grip.style.width = `${GRIP_HOVER_SIZE}px`;
+    }
+
     this.lockedGrip = grip;
 
     requestAnimationFrame(() => {
@@ -240,20 +246,21 @@ export class TableRowColControls {
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
 
-    const expandedWidth = type === 'col' ? COL_PILL_WIDTH : GRIP_HOVER_SIZE;
-    const expandedHeight = type === 'col' ? GRIP_HOVER_SIZE : ROW_PILL_HEIGHT;
+    const idleWidth = type === 'col' ? COL_PILL_WIDTH : ROW_PILL_WIDTH;
+    const idleHeight = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT;
     const pillSize = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
 
-    grip.style.width = `${expandedWidth}px`;
-    grip.style.height = `${expandedHeight}px`;
-    grip.style.transform = getIdleScale(type, pillSize);
+    grip.style.width = `${idleWidth}px`;
+    grip.style.height = `${idleHeight}px`;
+    grip.style.transform = 'translate(-50%, -50%)';
+    grip.style.outline = '2px solid white';
 
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 
     grip.addEventListener('pointerdown', this.boundPointerDown);
     grip.addEventListener('mouseenter', () => {
       if (!this.isGripInteractionLocked()) {
-        expandGrip(grip);
+        expandGrip(grip, type);
       }
     });
     grip.addEventListener('mouseleave', () => {
@@ -287,8 +294,8 @@ export class TableRowColControls {
       const centerX = (edges[i] + edges[i + 1]) / 2;
       const style = grip.style;
 
-      style.top = `${-(GRIP_HOVER_SIZE / 2) - BORDER_WIDTH / 2}px`;
-      style.left = `${centerX - COL_PILL_WIDTH / 2}px`;
+      style.top = `${-BORDER_WIDTH / 2}px`;
+      style.left = `${centerX}px`;
     });
 
     this.rowGrips.forEach((grip, i) => {
@@ -300,8 +307,8 @@ export class TableRowColControls {
       const centerY = rowEl.offsetTop + rowEl.offsetHeight / 2;
       const style = grip.style;
 
-      style.left = `${-(GRIP_HOVER_SIZE / 2) - BORDER_WIDTH / 2}px`;
-      style.top = `${centerY - ROW_PILL_HEIGHT / 2}px`;
+      style.left = `${-BORDER_WIDTH / 2}px`;
+      style.top = `${centerY}px`;
     });
   }
 

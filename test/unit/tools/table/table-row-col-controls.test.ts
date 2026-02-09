@@ -248,10 +248,9 @@ describe('TableRowColControls', () => {
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
 
-      // The 1px border sits from y=-1 to y=0 (outside padding box).
-      // Border center is at y=-0.5px. Grip is 16px tall (expanded size),
-      // so top = -0.5 - 8 = -8.5px (visually centered via scaleY)
-      expect(colGrips[0].style.top).toBe('-8.5px');
+      // The 1px border center is at y=-0.5px.
+      // translate(-50%, -50%) handles offset from the center point.
+      expect(colGrips[0].style.top).toBe('-0.5px');
     });
 
     it('centers row grips on the left border line', () => {
@@ -267,10 +266,9 @@ describe('TableRowColControls', () => {
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
 
-      // The 1px border sits from x=-1 to x=0 (outside padding box).
-      // Border center is at x=-0.5px. Grip is 16px wide (expanded size),
-      // so left = -0.5 - 8 = -8.5px (visually centered via scaleX)
-      expect(rowGrips[0].style.left).toBe('-8.5px');
+      // The 1px border center is at x=-0.5px.
+      // translate(-50%, -50%) handles offset from the center point.
+      expect(rowGrips[0].style.left).toBe('-0.5px');
     });
   });
 
@@ -387,8 +385,8 @@ describe('TableRowColControls', () => {
     });
   });
 
-  describe('scale-based grip expand/collapse', () => {
-    it('column grips are created at expanded height and use scaleY for idle state', () => {
+  describe('dimension-based grip expand/collapse', () => {
+    it('column grips are created at idle height with translate centering', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
         grid,
@@ -402,14 +400,14 @@ describe('TableRowColControls', () => {
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const grip = colGrips[0];
 
-      // Element is at expanded size (24×16), not pill size (24×4)
+      // Width stays at full size; height starts at idle pill size
       expect(grip.style.width).toBe('24px');
-      expect(grip.style.height).toBe('16px');
-      // Idle state uses scaleY to visually shrink to pill height
-      expect(grip.style.transform).toBe('scaleY(0.25)');
+      expect(grip.style.height).toBe('4px');
+      // Uses translate for centering, not scale transforms
+      expect(grip.style.transform).toBe('translate(-50%, -50%)');
     });
 
-    it('row grips are created at expanded width and use scaleX for idle state', () => {
+    it('row grips are created at idle width with translate centering', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
         grid,
@@ -423,14 +421,13 @@ describe('TableRowColControls', () => {
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
       const grip = rowGrips[0];
 
-      // Element is at expanded size (16×20), not pill size (4×20)
-      expect(grip.style.width).toBe('16px');
+      // Height stays at full size; width starts at idle pill size
+      expect(grip.style.width).toBe('4px');
       expect(grip.style.height).toBe('20px');
-      // Idle state uses scaleX to visually shrink to pill width
-      expect(grip.style.transform).toBe('scaleX(0.25)');
+      expect(grip.style.transform).toBe('translate(-50%, -50%)');
     });
 
-    it('column grip expands to scale(1) on mouseenter', () => {
+    it('column grip expands height on mouseenter', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
         grid,
@@ -446,10 +443,14 @@ describe('TableRowColControls', () => {
 
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
 
-      expect(grip.style.transform).toBe('scale(1)');
+      expect(grip.style.height).toBe('16px');
+      // Width stays constant
+      expect(grip.style.width).toBe('24px');
+      // Transform stays as translate, no scale
+      expect(grip.style.transform).toBe('translate(-50%, -50%)');
     });
 
-    it('column grip collapses back to idle scaleY on mouseleave', () => {
+    it('column grip collapses height back to idle on mouseleave', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
         grid,
@@ -466,10 +467,10 @@ describe('TableRowColControls', () => {
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
       grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
 
-      expect(grip.style.transform).toBe('scaleY(0.25)');
+      expect(grip.style.height).toBe('4px');
     });
 
-    it('row grip expands to scale(1) on mouseenter', () => {
+    it('row grip expands width on mouseenter', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
         grid,
@@ -485,10 +486,13 @@ describe('TableRowColControls', () => {
 
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
 
-      expect(grip.style.transform).toBe('scale(1)');
+      expect(grip.style.width).toBe('16px');
+      // Height stays constant
+      expect(grip.style.height).toBe('20px');
+      expect(grip.style.transform).toBe('translate(-50%, -50%)');
     });
 
-    it('row grip collapses back to idle scaleX on mouseleave', () => {
+    it('row grip collapses width back to idle on mouseleave', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
         grid,
@@ -505,7 +509,7 @@ describe('TableRowColControls', () => {
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
       grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
 
-      expect(grip.style.transform).toBe('scaleX(0.25)');
+      expect(grip.style.width).toBe('4px');
     });
 
     it('grip retains bg-gray-300 after expand then collapse so pill stays visible', () => {
@@ -540,7 +544,7 @@ describe('TableRowColControls', () => {
       expect(grip.classList.contains('bg-gray-200')).toBe(false);
     });
 
-    it('grip width and height stay constant during expand/collapse (no layout animation)', () => {
+    it('column grip fixed dimension stays constant during expand/collapse', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({
         grid,
@@ -553,19 +557,39 @@ describe('TableRowColControls', () => {
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const grip = colGrips[0];
-      const widthBefore = grip.style.width;
-      const heightBefore = grip.style.height;
+
+      // Width is the fixed dimension for column grips
+      expect(grip.style.width).toBe('24px');
 
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
-
-      // Width and height must not change — only transform changes
-      expect(grip.style.width).toBe(widthBefore);
-      expect(grip.style.height).toBe(heightBefore);
+      expect(grip.style.width).toBe('24px');
 
       grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      expect(grip.style.width).toBe('24px');
+    });
 
-      expect(grip.style.width).toBe(widthBefore);
-      expect(grip.style.height).toBe(heightBefore);
+    it('row grip fixed dimension stays constant during expand/collapse', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+      const grip = rowGrips[0];
+
+      // Height is the fixed dimension for row grips
+      expect(grip.style.height).toBe('20px');
+
+      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+      expect(grip.style.height).toBe('20px');
+
+      grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      expect(grip.style.height).toBe('20px');
     });
   });
 

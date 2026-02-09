@@ -52,27 +52,20 @@ export const createGripDotsSvg = (orientation: 'horizontal' | 'vertical'): SVGEl
 };
 
 /**
- * Returns the idle scale transform for a grip type.
- * Column grips shrink vertically; row grips shrink horizontally.
- */
-export const getIdleScale = (type: 'col' | 'row', pillSize: number): string => {
-  const ratio = pillSize / GRIP_HOVER_SIZE;
-
-  return type === 'col' ? `scaleY(${ratio})` : `scaleX(${ratio})`;
-};
-
-/**
  * Expand a grip element to the hover state.
- * Uses transform: scale(1) — compositor-only, no layout thrashing.
+ * Column grips expand height; row grips expand width.
  */
-export const expandGrip = (grip: HTMLElement): void => {
-  const el = grip;
+export const expandGrip = (grip: HTMLElement, type: 'col' | 'row'): void => {
+  if (type === 'col') {
+    grip.style.height = `${GRIP_HOVER_SIZE}px`;
+  } else {
+    grip.style.width = `${GRIP_HOVER_SIZE}px`;
+  }
 
-  el.style.transform = 'scale(1)';
-  el.classList.add('bg-gray-200');
-  el.classList.remove('bg-gray-300');
+  grip.classList.add('bg-gray-200');
+  grip.classList.remove('bg-gray-300');
 
-  const svg = el.querySelector('svg');
+  const svg = grip.querySelector('svg');
 
   if (svg) {
     svg.classList.remove('opacity-0');
@@ -81,17 +74,20 @@ export const expandGrip = (grip: HTMLElement): void => {
 };
 
 /**
- * Collapse a grip element back to its scaled-down pill state.
- * Uses transform: scaleY/scaleX — compositor-only, no layout thrashing.
+ * Collapse a grip element back to its idle pill size.
+ * Column grips shrink height; row grips shrink width.
  */
 export const collapseGrip = (grip: HTMLElement, type: 'col' | 'row', pillSize: number): void => {
-  const el = grip;
+  if (type === 'col') {
+    grip.style.height = `${pillSize}px`;
+  } else {
+    grip.style.width = `${pillSize}px`;
+  }
 
-  el.style.transform = getIdleScale(type, pillSize);
-  el.classList.remove('bg-gray-200');
-  el.classList.add('bg-gray-300');
+  grip.classList.remove('bg-gray-200');
+  grip.classList.add('bg-gray-300');
 
-  const svg = el.querySelector('svg');
+  const svg = grip.querySelector('svg');
 
   if (svg) {
     svg.classList.add('opacity-0');

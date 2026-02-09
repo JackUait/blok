@@ -1,10 +1,47 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
 
 const ROW_ATTR = 'data-blok-table-row';
 const CELL_ATTR = 'data-blok-table-cell';
 const SELECTED_ATTR = 'data-blok-table-cell-selected';
 const OVERLAY_ATTR = 'data-blok-table-selection-overlay';
+const PILL_ATTR = 'data-blok-table-selection-pill';
+
+interface MockPopoverItem {
+  onActivate?: () => void;
+  icon?: string;
+  title?: string;
+}
+
+interface MockPopoverArgs {
+  items?: MockPopoverItem[];
+  trigger?: HTMLElement;
+  flippable?: boolean;
+}
+
+const mockPopoverShow = vi.fn();
+const mockPopoverDestroy = vi.fn();
+let lastPopoverArgs: MockPopoverArgs | null = null;
+
+vi.mock('../../../../src/components/utils/popover', () => ({
+  PopoverDesktop: class MockPopoverDesktop {
+    constructor(args: MockPopoverArgs) {
+      lastPopoverArgs = args;
+    }
+    show = mockPopoverShow;
+    destroy = mockPopoverDestroy;
+    on(_event: string, _handler: () => void): void {
+      // no-op for tests
+    }
+  },
+}));
+
+vi.mock('@/types/utils/popover/popover-event', () => ({
+  PopoverEvent: {
+    Closed: 'closed',
+  },
+}));
+
+import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
 
 /**
  * Creates a simple grid element with rows and columns for testing.
@@ -138,6 +175,7 @@ describe('TableCellSelection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     elementFromPointTarget = null;
+    lastPopoverArgs = null;
 
     // jsdom doesn't define elementFromPoint; provide a stub
     document.elementFromPoint = (_x: number, _y: number) => elementFromPointTarget;
@@ -427,6 +465,230 @@ describe('TableCellSelection', () => {
       selection.destroy();
 
       expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).toBeNull();
+    });
+  });
+
+  describe('selection pill', () => {
+    it('creates a pill element when drag selection is made', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`);
+
+      expect(pill).not.toBeNull();
+    });
+
+    it('creates a pill element for programmatic selectRow', () => {
+      selection.selectRow(1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`);
+
+      expect(pill).not.toBeNull();
+    });
+
+    it('creates a pill element for programmatic selectColumn', () => {
+      selection.selectColumn(0);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`);
+
+      expect(pill).not.toBeNull();
+    });
+
+    it('positions pill centered on the right edge of the overlay', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      // Overlay: top=-1, left=-1, width=201, height=81
+      // Pill is positioned at center point; translate(-50%,-50%) handles centering
+      // left = -1 + 201 - 1 = 199 (border midpoint)
+      // top = -1 + 81/2 = 39.5
+      expect(pill.style.left).toBe('199px');
+      expect(pill.style.top).toBe('39.5px');
+    });
+
+    it('pill starts with idle width', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      expect(pill.style.width).toBe('4px');
+      expect(pill.style.transform).toBe('translate(-50%, -50%)');
+    });
+
+    it('pill expands on mouseenter and collapses on mouseleave', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+      expect(pill.style.width).toBe('16px');
+
+      pill.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+      expect(pill.style.width).toBe('4px');
+    });
+
+    it('pill has pointer-events auto so it is clickable', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      expect(pill.style.pointerEvents).toBe('auto');
+    });
+
+    it('removes pill on click-away clear', () => {
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      expect(grid.querySelector(`[${PILL_ATTR}]`)).not.toBeNull();
+
+      vi.runAllTimers();
+
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      vi.useRealTimers();
+
+      expect(grid.querySelector(`[${PILL_ATTR}]`)).toBeNull();
+    });
+
+    it('removes pill on destroy', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      expect(grid.querySelector(`[${PILL_ATTR}]`)).not.toBeNull();
+
+      selection.destroy();
+
+      expect(grid.querySelector(`[${PILL_ATTR}]`)).toBeNull();
+    });
+
+    it('clicking pill does not clear the selection', () => {
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      vi.useRealTimers();
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`).length).toBeGreaterThan(0);
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
+    });
+
+    it('clicking pill opens PopoverDesktop with Clear item', () => {
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      vi.useRealTimers();
+
+      expect(lastPopoverArgs).not.toBeNull();
+      expect(lastPopoverArgs?.items).toHaveLength(1);
+      expect(lastPopoverArgs?.items?.[0]?.title).toBe('Clear');
+      expect(mockPopoverShow).toHaveBeenCalled();
+    });
+
+    it('fires onClearContent with selected cells when Clear action activates', () => {
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onClearContent,
+      });
+
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      const items = lastPopoverArgs?.items;
+
+      items?.[0]?.onActivate?.();
+
+      vi.useRealTimers();
+
+      expect(onClearContent).toHaveBeenCalledTimes(1);
+      expect(onClearContent.mock.calls[0][0]).toHaveLength(4);
+    });
+
+    it('does not clear selection when pointerdown fires on popover item before onActivate', () => {
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onClearContent,
+      });
+
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      // Simulate the real browser flow: clicking a popover item fires pointerdown
+      // on the document before the click/onActivate handler runs.
+      // The popover is rendered outside the pill, so this pointerdown would
+      // normally trigger handleClearSelection and empty selectedCells.
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      const items = lastPopoverArgs?.items;
+
+      items?.[0]?.onActivate?.();
+
+      vi.useRealTimers();
+
+      expect(onClearContent).toHaveBeenCalledTimes(1);
+      expect(onClearContent.mock.calls[0][0]).toHaveLength(4);
+    });
+
+    it('clears selection after Clear action fires', () => {
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onClearContent,
+      });
+
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      lastPopoverArgs?.items?.[0]?.onActivate?.();
+
+      vi.useRealTimers();
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).toBeNull();
+      expect(grid.querySelector(`[${PILL_ATTR}]`)).toBeNull();
     });
   });
 

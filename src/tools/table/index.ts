@@ -568,6 +568,15 @@ export class Table implements BlockTool {
         this.addControls?.setInteractive(!hasSelection);
         this.rowColControls?.setGripsDisplay(!hasSelection);
       },
+      onClearContent: (cells) => {
+        if (!this.cellBlocks) {
+          return;
+        }
+
+        const blockIds = this.cellBlocks.getBlockIdsFromCells(cells);
+
+        this.cellBlocks.deleteBlocks(blockIds);
+      },
     });
   }
 }

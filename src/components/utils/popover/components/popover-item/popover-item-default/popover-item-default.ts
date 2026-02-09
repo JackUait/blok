@@ -338,7 +338,7 @@ export class PopoverItemDefault extends PopoverItem {
       css.icon,
       isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
-      iconWithGap && 'mr-2',
+      iconWithGap && 'mr-3',
       iconWithGap && isInline && 'shadow-none bg-transparent !mr-0',
       iconWithGap && isNestedInline && '!mr-2',
       isWobbling && 'animate-wobble'

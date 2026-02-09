@@ -1048,6 +1048,60 @@ test.describe('table tool', () => {
       expect(gripBox.y).toBeGreaterThanOrEqual(wrapperBox.y);
     });
 
+    test('row grip is not clipped by wrapper overflow after inserting a column', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+                colWidths: [300, 300],
+              },
+            },
+          ],
+        },
+      });
+
+      // Click first cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(colGrip).toBeVisible();
+      await colGrip.click();
+      await page.getByText('Insert Column Left').click();
+
+      // Click outside the table to clear the column selection
+      await page.locator('body').click({ position: { x: 10, y: 10 } });
+
+      // After insertion, hover over a cell to show the row grip
+      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
+      const cellInSecondRow = page.locator('[data-blok-table-row]').nth(1).locator(CELL_SELECTOR).first();
+
+      await cellInSecondRow.hover();
+
+      // Wait for row grip to appear (with visible attribute)
+      const rowGrip = page.locator(`${ROW_GRIP_SELECTOR}[data-blok-table-grip-visible]`).first();
+
+      await expect(rowGrip).toBeVisible();
+
+      const wrapperBox = assertBoundingBox(
+        await page.locator(TABLE_SELECTOR).boundingBox(),
+        'Table wrapper'
+      );
+      const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
+
+      // The grip's left edge must be within or at the wrapper's left edge
+      expect(gripBox.x).toBeGreaterThanOrEqual(wrapperBox.x);
+    });
+
     test('grip pills are children of the grid element, not the wrapper', async ({ page }) => {
       await createTable2x2(page);
 

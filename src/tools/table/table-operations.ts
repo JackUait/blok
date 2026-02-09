@@ -385,7 +385,7 @@ export const setupKeyboardNavigation = (
   });
 };
 
-export const SCROLL_OVERFLOW_CLASSES = ['overflow-x-auto', 'pt-[9px]'];
+export const SCROLL_OVERFLOW_CLASSES = ['overflow-x-auto', 'pt-[9px]', 'pl-[9px]'];
 
 export const enableScrollOverflow = (element: HTMLDivElement | null): void => {
   element?.classList.add(...SCROLL_OVERFLOW_CLASSES);

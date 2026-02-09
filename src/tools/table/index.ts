@@ -31,6 +31,7 @@ import {
   normalizeTableData,
   populateNewCells,
   readPixelWidths,
+  SCROLL_OVERFLOW_CLASSES,
   setupKeyboardNavigation,
   syncColWidthsAfterMove,
   updateHeadingColumnStyles,
@@ -119,7 +120,7 @@ export class Table implements BlockTool {
   public render(): HTMLDivElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES, this.data.colWidths && 'overflow-x-auto');
+    wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES, this.data.colWidths && SCROLL_OVERFLOW_CLASSES);
     wrapper.setAttribute(DATA_ATTR.tool, 'table');
 
     if (this.readOnly) {

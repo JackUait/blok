@@ -931,6 +931,53 @@ test.describe('table tool', () => {
       await expect(cells).toHaveCount(3);
     });
 
+    test('column grip is not clipped by wrapper overflow after inserting a column', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+                colWidths: [300, 300],
+              },
+            },
+          ],
+        },
+      });
+
+      // Click first cell to show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(colGrip).toBeVisible();
+      await colGrip.click();
+      await page.getByText('Insert Column Left').click();
+
+      // After insertion, the new column's grip should be fully visible
+      // (not clipped by wrapper overflow-x-auto causing overflow-y: auto)
+      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the newly inserted column grip
+      const newGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(newGrip).toBeVisible();
+
+      const wrapperBox = assertBoundingBox(
+        await page.locator(TABLE_SELECTOR).boundingBox(),
+        'Table wrapper'
+      );
+      const gripBox = assertBoundingBox(await newGrip.boundingBox(), 'Column grip');
+
+      // The grip's top edge must be within or at the wrapper's top edge
+      expect(gripBox.y).toBeGreaterThanOrEqual(wrapperBox.y);
+    });
+
     test('grip pills are children of the grid element, not the wrapper', async ({ page }) => {
       await createTable2x2(page);
 

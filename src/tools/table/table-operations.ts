@@ -351,8 +351,10 @@ export const setupKeyboardNavigation = (
   });
 };
 
+export const SCROLL_OVERFLOW_CLASSES = ['overflow-x-auto', 'pt-[9px]'];
+
 export const enableScrollOverflow = (element: HTMLDivElement | null): void => {
-  element?.classList.add('overflow-x-auto');
+  element?.classList.add(...SCROLL_OVERFLOW_CLASSES);
 };
 
 // ─── Heading styles ─────────────────────────────────────────────────

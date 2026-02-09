@@ -584,8 +584,8 @@ export class TableRowColControls {
     this.hideAllGripsExcept(grip);
     this.applyActiveClasses(grip);
 
-    this.onGripClick?.(type, index);
     this.activePopover.show();
+    this.onGripClick?.(type, index);
   }
 
   private destroyPopover(): void {

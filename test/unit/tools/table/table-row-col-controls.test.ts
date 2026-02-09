@@ -705,6 +705,50 @@ describe('TableRowColControls', () => {
     });
   });
 
+  describe('grip click popover ordering', () => {
+    it('popover is in the DOM before onGripClick fires so grip hiding does not break positioning', async () => {
+      grid = createGrid(2, 2);
+
+      let popoverInDomAtCallbackTime = false;
+
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onGripClick: () => {
+          // In the real app, onGripClick triggers cell selection which hides
+          // all grips (display:none). The popover must already be positioned
+          // (i.e. show() must have already run) by this point, otherwise
+          // getBoundingClientRect on the hidden grip returns {0,0,0,0}.
+          popoverInDomAtCallbackTime = document.querySelector('[data-blok-popover-opened]') !== null;
+
+          // Simulate what the real app does: hide all grips
+          controls.setGripsDisplay(false);
+        },
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      // Simulate a click (pointerdown → pointerup with no drag).
+      // beginTracking returns a Promise that resolves on pointerup.
+      // The .then() callback (which calls openPopover) runs asynchronously.
+      colGrips[0].dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 50,
+        clientY: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Flush microtask queue so the .then() callback runs
+      await vi.waitFor(() => {
+        expect(popoverInDomAtCallbackTime).toBe(true);
+      });
+    });
+  });
+
   describe('hideAllGrips', () => {
     it('immediately hides all visible grips without delay', () => {
       grid = createGrid(2, 2);

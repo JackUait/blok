@@ -177,6 +177,11 @@ export class TableCellSelection {
       return;
     }
 
+    // Check if RectangleSelection is active
+    const rectangleOverlay = document.querySelector('[data-blok-overlay-rectangle]');
+    const rectangleActive = rectangleOverlay &&
+      window.getComputedStyle(rectangleOverlay).display !== 'none';
+
     const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
 
     if (!target) {
@@ -195,6 +200,11 @@ export class TableCellSelection {
     // Still in the same cell as anchor — don't start selection yet
     if (!this.isSelecting && cell.row === this.anchorCell.row && cell.col === this.anchorCell.col) {
       return;
+    }
+
+    // If RectangleSelection is active and we're entering a different cell, take over
+    if (rectangleActive && !this.isSelecting && this.rectangleSelection) {
+      this.rectangleSelection.cancelActiveSelection();
     }
 
     // Crossed into a different cell — start selection

@@ -864,5 +864,107 @@ describe('TableCellSelection', () => {
 
       expect(selectionWithoutRef).toBeDefined();
     });
+
+    it('cancels RectangleSelection when drag enters table cell from outside', () => {
+      const mockRectangleSelection = {
+        cancelActiveSelection: vi.fn(),
+      };
+
+      const selectionWithCapture = new TableCellSelection({
+        grid,
+        rectangleSelection: mockRectangleSelection,
+      });
+
+      // Create mock overlay element (simulates active RectangleSelection)
+      const overlay = document.createElement('div');
+
+      overlay.setAttribute('data-blok-overlay-rectangle', '');
+      overlay.style.display = 'block';
+      document.body.appendChild(overlay);
+
+      try {
+        // Get first cell
+        const cell = grid.querySelector('[data-blok-table-cell]') as HTMLElement;
+        const cellRect = cell.getBoundingClientRect();
+
+        // Simulate pointerdown in cell (sets anchor)
+        const downEvent = new PointerEvent('pointerdown', {
+          clientX: cellRect.left + 10,
+          clientY: cellRect.top + 10,
+          bubbles: true,
+          button: 0,
+        });
+
+        Object.defineProperty(downEvent, 'target', { value: cell, configurable: true });
+        grid.dispatchEvent(downEvent);
+
+        // Mock elementFromPoint to return a different cell
+        const cell2 = grid.querySelectorAll('[data-blok-table-cell]')[1] as HTMLElement;
+        const originalElementFromPoint = document.elementFromPoint;
+
+        document.elementFromPoint = vi.fn().mockReturnValue(cell2);
+
+        // Simulate pointermove to different cell (should trigger capture)
+        const moveEvent = new PointerEvent('pointermove', {
+          clientX: cellRect.left + 100,
+          clientY: cellRect.top + 10,
+          bubbles: true,
+        });
+
+        document.dispatchEvent(moveEvent);
+
+        // Verify cancelActiveSelection was called
+        expect(mockRectangleSelection.cancelActiveSelection).toHaveBeenCalled();
+
+        // Cleanup
+        document.elementFromPoint = originalElementFromPoint;
+        selectionWithCapture.destroy();
+      } finally {
+        overlay.remove();
+      }
+    });
+
+    it('does not cancel RectangleSelection if no overlay visible', () => {
+      const mockRectangleSelection = {
+        cancelActiveSelection: vi.fn(),
+      };
+
+      const selectionNoOverlay = new TableCellSelection({
+        grid,
+        rectangleSelection: mockRectangleSelection,
+      });
+
+      // No overlay element created
+
+      const cell = grid.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      const downEvent = new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 10,
+        clientY: cellRect.top + 10,
+        bubbles: true,
+        button: 0,
+      });
+
+      Object.defineProperty(downEvent, 'target', { value: cell, configurable: true });
+      grid.dispatchEvent(downEvent);
+
+      const cell2 = grid.querySelectorAll('[data-blok-table-cell]')[1] as HTMLElement;
+
+      document.elementFromPoint = vi.fn().mockReturnValue(cell2);
+
+      const moveEvent = new PointerEvent('pointermove', {
+        clientX: cellRect.left + 100,
+        clientY: cellRect.top + 10,
+        bubbles: true,
+      });
+
+      document.dispatchEvent(moveEvent);
+
+      // Should NOT cancel if no overlay
+      expect(mockRectangleSelection.cancelActiveSelection).not.toHaveBeenCalled();
+
+      selectionNoOverlay.destroy();
+    });
   });
 });

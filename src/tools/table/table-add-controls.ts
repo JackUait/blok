@@ -146,6 +146,17 @@ export class TableAddControls {
     this.addColBtn.style.display = display;
   }
 
+  /**
+   * Toggle interactivity of both add buttons without removing them from the DOM.
+   * Disables pointer events and hover effects during cell selection.
+   */
+  public setInteractive(interactive: boolean): void {
+    const pointerEvents = interactive ? '' : 'none';
+
+    this.addRowBtn.style.pointerEvents = pointerEvents;
+    this.addColBtn.style.pointerEvents = pointerEvents;
+  }
+
   public destroy(): void {
     this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);

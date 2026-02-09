@@ -505,6 +505,16 @@ export class Table implements BlockTool {
 
   private initCellSelection(gridEl: HTMLElement): void {
     this.cellSelection?.destroy();
-    this.cellSelection = new TableCellSelection(gridEl);
+    this.cellSelection = new TableCellSelection({
+      grid: gridEl,
+      onSelectingChange: (isSelecting) => {
+        if (this.resize) {
+          this.resize.enabled = !isSelecting;
+        }
+
+        this.addControls?.setInteractive(!isSelecting);
+        this.rowColControls?.setGripsDisplay(!isSelecting);
+      },
+    });
   }
 }

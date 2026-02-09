@@ -23,8 +23,14 @@ const isOtherInteractionActive = (grid: HTMLElement): boolean => {
  * Selected cells are highlighted with a blue outer border around the selection rectangle
  * using an absolutely-positioned overlay div.
  */
+interface CellSelectionOptions {
+  grid: HTMLElement;
+  onSelectingChange?: (isSelecting: boolean) => void;
+}
+
 export class TableCellSelection {
   private grid: HTMLElement;
+  private onSelectingChange: ((isSelecting: boolean) => void) | undefined;
   private anchorCell: CellCoord | null = null;
   private extentCell: CellCoord | null = null;
   private isSelecting = false;
@@ -37,8 +43,9 @@ export class TableCellSelection {
   private boundPointerUp: () => void;
   private boundClearSelection: (e: PointerEvent) => void;
 
-  constructor(grid: HTMLElement) {
-    this.grid = grid;
+  constructor(options: CellSelectionOptions) {
+    this.grid = options.grid;
+    this.onSelectingChange = options.onSelectingChange;
     this.grid.style.position = 'relative';
 
     this.boundPointerDown = this.handlePointerDown.bind(this);
@@ -121,6 +128,7 @@ export class TableCellSelection {
     // Crossed into a different cell — start selection
     if (!this.isSelecting) {
       this.isSelecting = true;
+      this.onSelectingChange?.(true);
 
       // Clear native text selection
       window.getSelection()?.removeAllRanges();
@@ -141,6 +149,7 @@ export class TableCellSelection {
     if (this.isSelecting) {
       this.grid.style.userSelect = '';
       this.hasSelection = true;
+      this.onSelectingChange?.(false);
 
       // Listen for next pointerdown anywhere to clear selection
       requestAnimationFrame(() => {
@@ -229,16 +238,29 @@ export class TableCellSelection {
     const firstRect = firstCell.getBoundingClientRect();
     const lastRect = lastCell.getBoundingClientRect();
 
-    // Subtract grid border widths: getBoundingClientRect() measures from
-    // the border-box edge, but position:absolute offsets from the padding-box edge.
+    // getBoundingClientRect() measures from the border-box edge, but
+    // position:absolute offsets from the padding-box edge. Subtract
+    // grid border widths to align with cell edges.
     const gridStyle = getComputedStyle(this.grid);
     const borderTop = parseFloat(gridStyle.borderTopWidth) || 0;
     const borderLeft = parseFloat(gridStyle.borderLeftWidth) || 0;
 
-    const top = firstRect.top - gridRect.top - borderTop;
-    const left = firstRect.left - gridRect.left - borderLeft;
-    const width = lastRect.right - firstRect.left;
-    const height = lastRect.bottom - firstRect.top;
+    let top = firstRect.top - gridRect.top - borderTop;
+    let left = firstRect.left - gridRect.left - borderLeft;
+    let width = lastRect.right - firstRect.left;
+    let height = lastRect.bottom - firstRect.top;
+
+    // When the selection touches the grid edge, extend the overlay outward
+    // with a negative offset so the blue border covers the gray grid border.
+    if (minRow === 0) {
+      top = -borderTop;
+      height += borderTop;
+    }
+
+    if (minCol === 0) {
+      left = -borderLeft;
+      width += borderLeft;
+    }
 
     // Create overlay once, reuse on subsequent paints
     if (!this.overlay) {
@@ -248,6 +270,7 @@ export class TableCellSelection {
       this.overlay.style.border = SELECTION_BORDER;
       this.overlay.style.pointerEvents = 'none';
       this.overlay.style.boxSizing = 'border-box';
+      this.overlay.style.borderRadius = '2px';
       this.grid.appendChild(this.overlay);
     }
 

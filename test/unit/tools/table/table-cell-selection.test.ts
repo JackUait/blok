@@ -144,7 +144,7 @@ describe('TableCellSelection', () => {
 
     grid = createGrid(3, 3);
     mockBoundingRects(grid);
-    selection = new TableCellSelection(grid);
+    selection = new TableCellSelection({ grid });
   });
 
   afterEach(() => {
@@ -340,10 +340,9 @@ describe('TableCellSelection', () => {
       expect(overlay.style.height).toBe('80px');
     });
 
-    it('compensates for grid border width so overlay aligns with cell edges', () => {
+    it('extends overlay to cover grid border when selection touches top-left edge', () => {
       // Simulate a real browser where grid has 1px borders and cells start
-      // 1px inside the grid's border-box. The overlay (position:absolute)
-      // positions from the padding-box, so we must subtract the border.
+      // 1px inside the grid's border-box.
       const gridLeft = 10;
       const gridTop = 10;
       const borderWidth = 1;
@@ -394,10 +393,66 @@ describe('TableCellSelection', () => {
 
       const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`) as HTMLElement;
 
-      // Without border compensation: top = (10+1) - 10 = 1px (wrong!)
-      // With border compensation: top = (10+1) - 10 - 1 = 0px (correct)
-      expect(overlay.style.top).toBe('0px');
-      expect(overlay.style.left).toBe('0px');
+      // Overlay extends outward with negative offset to cover the grid border:
+      // top = -1px, left = -1px, width = 200 + 1 = 201px, height = 80 + 1 = 81px
+      expect(overlay.style.top).toBe('-1px');
+      expect(overlay.style.left).toBe('-1px');
+      expect(overlay.style.width).toBe('201px');
+      expect(overlay.style.height).toBe('81px');
+    });
+
+    it('does not extend overlay when selection does not touch grid edge', () => {
+      const gridLeft = 10;
+      const gridTop = 10;
+      const borderWidth = 1;
+      const cellWidth = 100;
+      const cellHeight = 40;
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue({
+        top: gridTop,
+        left: gridLeft,
+        bottom: gridTop + 3 * cellHeight + borderWidth,
+        right: gridLeft + 3 * cellWidth + borderWidth,
+        width: 3 * cellWidth + borderWidth,
+        height: 3 * cellHeight + borderWidth,
+        x: gridLeft,
+        y: gridTop,
+        toJSON: () => ({}),
+      });
+
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+
+      rows.forEach((row, r) => {
+        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+        cells.forEach((cell, c) => {
+          vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+            top: gridTop + borderWidth + r * cellHeight,
+            left: gridLeft + borderWidth + c * cellWidth,
+            bottom: gridTop + borderWidth + (r + 1) * cellHeight,
+            right: gridLeft + borderWidth + (c + 1) * cellWidth,
+            width: cellWidth,
+            height: cellHeight,
+            x: gridLeft + borderWidth + c * cellWidth,
+            y: gridTop + borderWidth + r * cellHeight,
+            toJSON: () => ({}),
+          });
+        });
+      });
+
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        borderTopWidth: '1px',
+        borderLeftWidth: '1px',
+      } as CSSStyleDeclaration);
+
+      // Select cells (1,1) to (2,2) — not touching row 0 or col 0
+      simulateDrag(grid, 1, 1, 2, 2);
+
+      const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`) as HTMLElement;
+
+      // Normal positioning, no negative offset
+      expect(overlay.style.top).toBe('40px');
+      expect(overlay.style.left).toBe('100px');
       expect(overlay.style.width).toBe('200px');
       expect(overlay.style.height).toBe('80px');
     });

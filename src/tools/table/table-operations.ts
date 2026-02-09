@@ -310,6 +310,18 @@ export const mountCellBlocksReadOnly = (
       }
 
       if (!isCellWithBlocks(cellContent)) {
+        // Handle legacy string content by creating a paragraph block
+        const legacyText = typeof cellContent === 'string' ? cellContent : '';
+        const insertedBlock = api.blocks.insert(
+          'paragraph',
+          { text: legacyText },
+          {},
+          undefined,
+          true
+        );
+
+        insertedBlock?.holder && container.appendChild(insertedBlock.holder);
+
         return;
       }
 

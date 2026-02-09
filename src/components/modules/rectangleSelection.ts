@@ -225,6 +225,19 @@ export class RectangleSelection extends Module {
   }
 
   /**
+   * Cancel active rectangle selection.
+   * Used when another selection system (e.g., table cell selection) takes priority.
+   */
+  public cancelActiveSelection(): void {
+    if (!this.mousedown && !this.isRectSelectionActivated) {
+      return;
+    }
+
+    this.clearSelection();
+    this.endSelection();
+  }
+
+  /**
    * Sets Module necessary event handlers
    */
   private enableModuleBindings(): void {

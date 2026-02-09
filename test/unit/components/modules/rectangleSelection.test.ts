@@ -1110,4 +1110,37 @@ describe('RectangleSelection', () => {
     expect(blockSelection.allBlocksSelected).toBe(false);
     expect(internal.mousedown).toBe(true);
   });
+
+  describe('cancelActiveSelection', () => {
+    it('clears active selection state', () => {
+      const { rectangleSelection } = createRectangleSelection();
+
+      // Start a selection
+      rectangleSelection.startSelection(100, 100, false);
+
+      // Cancel it
+      rectangleSelection.cancelActiveSelection();
+
+      expect(rectangleSelection.isRectActivated()).toBe(false);
+    });
+
+    it('is safe to call when no selection active', () => {
+      const { rectangleSelection } = createRectangleSelection();
+
+      expect(() => {
+        rectangleSelection.cancelActiveSelection();
+      }).not.toThrow();
+    });
+
+    it('clears mousedown flag', () => {
+      const { rectangleSelection } = createRectangleSelection();
+
+      rectangleSelection.startSelection(100, 100, false);
+      rectangleSelection.cancelActiveSelection();
+
+      // Verify internal state is reset by trying to start a new selection
+      rectangleSelection.startSelection(200, 200, false);
+      expect(rectangleSelection.isRectActivated()).toBe(false);
+    });
+  });
 });

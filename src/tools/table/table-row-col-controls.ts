@@ -561,6 +561,12 @@ export class TableRowColControls {
     });
 
     this.activePopover.on(PopoverEvent.Closed, () => {
+      // Guard against re-entrant calls: destroyPopover() calls popover.destroy()
+      // which calls hide() and re-emits Closed. Skip the re-entrant invocation.
+      if (this.activePopover === null) {
+        return;
+      }
+
       this.destroyPopover();
       this.applyVisibleClasses(grip);
       this.scheduleHideAll();

@@ -931,6 +931,76 @@ test.describe('table tool', () => {
       await expect(cells).toHaveCount(3);
     });
 
+    test('grip remains functional after consecutive insertions from newly created column', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: true,
+                content: [
+                  ['Feature', 'Status', 'Notes'],
+                  ['Row 1', 'OK', 'Details'],
+                  ['Row 2', 'OK', 'Details'],
+                ],
+                colWidths: [200, 200, 200],
+              },
+            },
+          ],
+        },
+      });
+
+      // Click first cell to activate table and show grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      const firstCell = page.locator(CELL_SELECTOR).first();
+
+      await firstCell.click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
+      const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+
+      await expect(colGrip).toBeVisible();
+      await colGrip.click();
+
+      // First insertion
+      await page.getByText('Insert Column Right').click();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
+      const firstRow = page.locator('[data-blok-table-row]').first();
+
+      await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(4);
+
+      // The newly inserted column's grip should be locked active (blue).
+      // Click it to open its popover and insert again.
+      const activeGrip = page.locator(`${COL_GRIP_SELECTOR}[data-blok-table-grip-visible]`);
+
+      await expect(activeGrip).toHaveCount(1);
+      await activeGrip.click();
+
+      // Second insertion from the newly created column
+      await page.getByText('Insert Column Right').click();
+
+      await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(5);
+
+      // Dismiss any locked grip by clicking outside the table
+      await page.mouse.click(10, 10);
+
+      // Wait for timeouts/RAFs to settle
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- need to let scheduleHideAll timeouts complete
+      await page.waitForTimeout(300);
+
+      // After both insertions and dismissal, grips must still be functional.
+      // Hover a cell and verify a grip becomes visible.
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+      await page.locator(CELL_SELECTOR).first().hover();
+
+      const visibleGrip = page.locator(`${COL_GRIP_SELECTOR}[data-blok-table-grip-visible]`);
+
+      await expect(visibleGrip).toHaveCount(1);
+    });
+
     test('column grip is not clipped by wrapper overflow after inserting a column', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,

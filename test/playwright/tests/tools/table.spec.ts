@@ -2523,5 +2523,69 @@ test.describe('table tool', () => {
       expect(overlayBox.width).toBeLessThan(tableBox.width * 0.75);
       expect(overlayBox.height).toBeLessThan(tableBox.height * 0.75);
     });
+
+    test('cell selection cancels RectangleSelection when active', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: true,
+                content: [['Feature', 'Status', 'Notes'], ['A', 'B', 'C'], ['D', 'E', 'F']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+      const cells = page.locator(CELL_SELECTOR);
+
+      await expect(table).toBeVisible();
+
+      // Get cell bounding boxes
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(3) needed for first data cell (A)
+      const firstCellBox = assertBoundingBox(await cells.nth(3).boundingBox(), 'First data cell');
+      // eslint-disable-next-line playwright/no-nth-methods -- nth(5) needed for last cell in row (C)
+      const lastCellBox = assertBoundingBox(await cells.nth(5).boundingBox(), 'Last data cell');
+
+      // Start drag in first cell
+      const startX = firstCellBox.x + firstCellBox.width / 2;
+      const startY = firstCellBox.y + firstCellBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+
+      // Drag to last cell in row
+      const endX = lastCellBox.x + lastCellBox.width / 2;
+      const endY = lastCellBox.y + lastCellBox.height / 2;
+
+      await page.mouse.move(endX, endY, { steps: 5 });
+
+      // Verify CELL selection overlay appears
+      const cellSelectionOverlay = page.locator('[data-blok-table-selection-overlay]');
+
+      await expect(cellSelectionOverlay).toBeVisible();
+
+      // Verify block selection overlay does NOT appear (RectangleSelection was cancelled)
+      const blockSelectionRect = page.locator('[data-blok-overlay-rectangle]');
+      const blockOverlayCount = await blockSelectionRect.count();
+
+      if (blockOverlayCount > 0) {
+        await expect(blockSelectionRect).toBeHidden();
+      }
+
+      await page.mouse.up();
+
+      // Cell selection should persist after mouseup
+      await expect(cellSelectionOverlay).toBeVisible();
+
+      // Verify the correct cells are selected (3 cells in the row)
+      const selected = page.locator('[data-blok-table-cell-selected]');
+
+      await expect(selected).toHaveCount(3);
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
@@ -2473,6 +2473,264 @@ describe('Table Tool', () => {
       expect(cellBlockContainers).toHaveLength(2);
       expect(cellBlockContainers[0].querySelector(`[data-blok-id="${blockId1}"]`)).not.toBeNull();
       expect(cellBlockContainers[1].querySelector(`[data-blok-id="${blockId2}"]`)).not.toBeNull();
+
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('selection moves to neighbor after row/column deletion', () => {
+    const SELECTED_ATTR = 'data-blok-table-cell-selected';
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const createDeletionTable = (
+      content: string[][],
+      colWidths?: number[]
+    ): { table: Table; element: HTMLElement } => {
+      let insertCallCount = 0;
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: vi.fn().mockImplementation(() => {
+            insertCallCount++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', `mock-block-${insertCallCount}`);
+
+            return { id: `mock-block-${insertCallCount}`, holder };
+          }),
+          delete: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content, colWidths },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      return { table, element };
+    };
+
+    /**
+     * Simulate a grip click (pointerdown + pointerup without movement = no drag)
+     * to open the popover. The drag tracker resolves async so we need to flush
+     * microtasks.
+     */
+    const clickGrip = async (grip: HTMLElement): Promise<void> => {
+      grip.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      }));
+
+      // Pointerup without movement resolves beginTracking with false (= click, not drag)
+      document.dispatchEvent(new PointerEvent('pointerup', {
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      }));
+
+      // Flush the microtask queue so the promise chain in beginTracking resolves
+      await Promise.resolve();
+    };
+
+    /**
+     * Find and click the destructive (delete) popover item.
+     */
+    const clickDeleteItem = (el: HTMLElement): void => {
+      const deleteItem = el.ownerDocument.querySelector<HTMLElement>(
+        '[data-blok-popover-item-destructive]'
+      );
+
+      expect(deleteItem).not.toBeNull();
+      deleteItem?.click();
+    };
+
+    /**
+     * Get all cells that have the selected attribute.
+     */
+    const getSelectedCells = (element: HTMLElement): HTMLElement[] => {
+      return Array.from(element.querySelectorAll(`[${SELECTED_ATTR}]`));
+    };
+
+    /**
+     * Get the row/col coordinates of selected cells.
+     */
+    const getSelectedCoords = (element: HTMLElement): Array<{ row: number; col: number }> => {
+      const selectedCells = getSelectedCells(element);
+      const rows = Array.from(element.querySelectorAll('[data-blok-table-row]'));
+
+      return selectedCells.map(cell => {
+        const row = cell.closest('[data-blok-table-row]');
+        const rowIndex = rows.indexOf(row as Element);
+        const cells = Array.from(row?.querySelectorAll('[data-blok-table-cell]') ?? []);
+        const colIndex = cells.indexOf(cell);
+
+        return { row: rowIndex, col: colIndex };
+      });
+    };
+
+    it('selects the next column after deleting a middle column', async () => {
+      const { element } = createDeletionTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
+
+      // Find the column grip for column 1 (middle column)
+      const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
+
+      await clickGrip(colGrips[1]);
+      clickDeleteItem(element);
+
+      // Wait for requestAnimationFrame in onGripPopoverClose
+      await vi.advanceTimersByTimeAsync(16);
+
+      // After deleting col 1, selection should move to col 1 (which was formerly col 2)
+      const selected = getSelectedCoords(element);
+
+      expect(selected.length).toBeGreaterThan(0);
+      expect(selected.every(c => c.col === 1)).toBe(true);
+
+      document.body.removeChild(element);
+    });
+
+    it('selects the previous column after deleting the last column', async () => {
+      const { element } = createDeletionTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
+
+      // Find the column grip for column 2 (last column)
+      const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
+
+      await clickGrip(colGrips[2]);
+      clickDeleteItem(element);
+
+      await vi.advanceTimersByTimeAsync(16);
+
+      // After deleting col 2 (last), selection should move to col 1
+      const selected = getSelectedCoords(element);
+
+      expect(selected.length).toBeGreaterThan(0);
+      expect(selected.every(c => c.col === 1)).toBe(true);
+
+      document.body.removeChild(element);
+    });
+
+    it('selects the next row after deleting a middle row', async () => {
+      const { element } = createDeletionTable([['A', 'B'], ['C', 'D'], ['E', 'F']]);
+
+      // Find the row grip for row 1 (middle row)
+      const rowGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-row]');
+
+      await clickGrip(rowGrips[1]);
+      clickDeleteItem(element);
+
+      await vi.advanceTimersByTimeAsync(16);
+
+      // After deleting row 1, selection should move to row 1 (which was formerly row 2)
+      const selected = getSelectedCoords(element);
+
+      expect(selected.length).toBeGreaterThan(0);
+      expect(selected.every(c => c.row === 1)).toBe(true);
+
+      document.body.removeChild(element);
+    });
+
+    it('selects the previous row after deleting the last row', async () => {
+      const { element } = createDeletionTable([['A', 'B'], ['C', 'D'], ['E', 'F']]);
+
+      // Find the row grip for row 2 (last row)
+      const rowGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-row]');
+
+      await clickGrip(rowGrips[2]);
+      clickDeleteItem(element);
+
+      await vi.advanceTimersByTimeAsync(16);
+
+      // After deleting row 2 (last), selection should move to row 1
+      const selected = getSelectedCoords(element);
+
+      expect(selected.length).toBeGreaterThan(0);
+      expect(selected.every(c => c.row === 1)).toBe(true);
+
+      document.body.removeChild(element);
+    });
+
+    it('updates cell widths to fill the row after deleting a column in percent mode', async () => {
+      // No colWidths = percentage mode
+      const { element } = createDeletionTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+      const firstRow = gridEl.querySelector('[data-blok-table-row]');
+      const cellsBefore = firstRow?.querySelectorAll('[data-blok-table-cell]');
+
+      // 3 cells in percent mode, each at ~33.33%
+      expect(cellsBefore).toHaveLength(3);
+
+      // Delete the middle column (index 1)
+      const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
+
+      await clickGrip(colGrips[1]);
+      clickDeleteItem(element);
+
+      await vi.advanceTimersByTimeAsync(16);
+
+      // After deletion, the 2 remaining cells should have widths summing to 100%
+      const cellsAfter = firstRow?.querySelectorAll<HTMLElement>('[data-blok-table-cell]');
+
+      expect(cellsAfter).toHaveLength(2);
+
+      const totalWidth = Array.from(cellsAfter ?? []).reduce(
+        (sum, cell) => sum + parseFloat(cell.style.width),
+        0,
+      );
+
+      expect(totalWidth).toBeCloseTo(100, 0);
+
+      document.body.removeChild(element);
+    });
+
+    it('disables delete menu item when only one column remains', async () => {
+      const { element } = createDeletionTable([['A'], ['B']]);
+
+      const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
+
+      await clickGrip(colGrips[0]);
+
+      const deleteItem = element.ownerDocument.querySelector(
+        '[data-blok-popover-item-destructive]'
+      );
+
+      expect(deleteItem).not.toBeNull();
+      expect(deleteItem?.getAttribute('data-blok-disabled')).toBe('true');
+
+      document.body.removeChild(element);
+    });
+
+    it('disables delete menu item when only one row remains', async () => {
+      const { element } = createDeletionTable([['A', 'B']]);
+
+      const rowGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-row]');
+
+      await clickGrip(rowGrips[0]);
+
+      const deleteItem = element.ownerDocument.querySelector(
+        '[data-blok-popover-item-destructive]'
+      );
+
+      expect(deleteItem).not.toBeNull();
+      expect(deleteItem?.getAttribute('data-blok-disabled')).toBe('true');
 
       document.body.removeChild(element);
     });

@@ -627,12 +627,14 @@ export class TableRowColControls {
       },
     ];
 
+    const canDelete = this.getColumnCount() > 1;
     const deleteItems: PopoverItemParams[] = [
       { type: PopoverItemType.Separator },
       {
         icon: IconTrash,
         title: 'Delete',
         isDestructive: true,
+        isDisabled: !canDelete,
         closeOnActivate: true,
         onActivate: (): void => {
           this.onAction({ type: 'delete-col', index: colIndex });
@@ -680,12 +682,14 @@ export class TableRowColControls {
       },
     ];
 
+    const canDelete = this.getRowCount() > 1;
     const deleteItems: PopoverItemParams[] = [
       { type: PopoverItemType.Separator },
       {
         icon: IconTrash,
         title: 'Delete',
         isDestructive: true,
+        isDisabled: !canDelete,
         closeOnActivate: true,
         onActivate: (): void => {
           this.onAction({ type: 'delete-row', index: rowIndex });

@@ -99,6 +99,40 @@ export const isColumnEmpty = (gridEl: HTMLElement, colIndex: number): boolean =>
   });
 };
 
+// ─── Percent-mode width redistribution ──────────────────────────────
+
+export const redistributePercentWidths = (gridEl: HTMLElement): void => {
+  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+  const firstRow = rows[0];
+
+  if (!firstRow) {
+    return;
+  }
+
+  const firstRowCells = firstRow.querySelectorAll(`[${CELL_ATTR}]`);
+  const currentTotal = Array.from(firstRowCells).reduce(
+    (sum, cell) => sum + (parseFloat((cell as HTMLElement).style.width) || 0),
+    0,
+  );
+
+  if (currentTotal <= 0) {
+    return;
+  }
+
+  const scale = 100 / currentTotal;
+
+  rows.forEach(row => {
+    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+    cells.forEach(cell => {
+      const el = cell as HTMLElement;
+      const oldWidth = parseFloat(el.style.width) || 0;
+
+      el.style.width = `${Math.round(oldWidth * scale * 100) / 100}%`;
+    });
+  });
+};
+
 // ─── Column width bookkeeping ───────────────────────────────────────
 
 export const syncColWidthsAfterMove = (colWidths: number[] | undefined, fromIndex: number, toIndex: number): number[] | undefined => {

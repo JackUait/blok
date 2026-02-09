@@ -31,6 +31,7 @@ import {
   normalizeTableData,
   populateNewCells,
   readPixelWidths,
+  redistributePercentWidths,
   SCROLL_OVERFLOW_CLASSES,
   setupKeyboardNavigation,
   syncColWidthsAfterMove,
@@ -479,12 +480,29 @@ export class Table implements BlockTool {
         this.grid.moveColumn(gridEl, action.fromIndex, action.toIndex);
         this.data.colWidths = syncColWidthsAfterMove(this.data.colWidths, action.fromIndex, action.toIndex);
         break;
-      case 'delete-row':
+      case 'delete-row': {
         deleteRowWithBlockCleanup(gridEl, action.index, this.grid, this.cellBlocks);
+        const newRowCount = this.grid.getRowCount(gridEl);
+        const neighborRow = action.index < newRowCount ? action.index : action.index - 1;
+
+        this.pendingHighlight = { type: 'row', index: neighborRow };
         break;
-      case 'delete-col':
+      }
+      case 'delete-col': {
         this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, action.index, this.data.colWidths, this.grid, this.cellBlocks);
+
+        if (this.data.colWidths) {
+          applyPixelWidths(gridEl, this.data.colWidths);
+        } else {
+          redistributePercentWidths(gridEl);
+        }
+
+        const newColCount = this.grid.getColumnCount(gridEl);
+        const neighborCol = action.index < newColCount ? action.index : action.index - 1;
+
+        this.pendingHighlight = { type: 'col', index: neighborCol };
         break;
+      }
       case 'toggle-heading':
         this.data.withHeadings = !this.data.withHeadings;
         this.pendingHighlight = { type: 'row', index: 0 };

@@ -418,6 +418,16 @@ export class Table implements BlockTool {
           this.api.toolbar.close({ setExplicitlyClosed: false });
         }
       },
+      onGripClick: (type, index) => {
+        if (type === 'row') {
+          this.cellSelection?.selectRow(index);
+        } else {
+          this.cellSelection?.selectColumn(index);
+        }
+      },
+      onGripPopoverClose: () => {
+        this.cellSelection?.clearActiveSelection();
+      },
     });
   }
 

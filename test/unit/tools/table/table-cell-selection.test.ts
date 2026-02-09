@@ -317,11 +317,11 @@ describe('TableCellSelection', () => {
 
       // Grid starts at (10, 10). Cell (0,0) top-left is (10, 10).
       // Cell (1,1) bottom-right is (10 + 2*100, 10 + 2*40) = (210, 90).
-      // Overlay relative to grid: top = 0, left = 0, width = 200, height = 80.
-      expect(overlay.style.top).toBe('0px');
-      expect(overlay.style.left).toBe('0px');
-      expect(overlay.style.width).toBe('200px');
-      expect(overlay.style.height).toBe('80px');
+      // Overlay extends 1px outward on top and left to cover adjacent borders.
+      expect(overlay.style.top).toBe('-1px');
+      expect(overlay.style.left).toBe('-1px');
+      expect(overlay.style.width).toBe('201px');
+      expect(overlay.style.height).toBe('81px');
     });
 
     it('positions overlay correctly for non-origin selection', () => {
@@ -331,16 +331,15 @@ describe('TableCellSelection', () => {
 
       // Cell (1,1) top-left: (10 + 100, 10 + 40) = (110, 50) relative to page.
       // Grid top-left: (10, 10).
-      // Overlay top = 50 - 10 = 40, left = 110 - 10 = 100.
-      // Cell (2,2) bottom-right: (10 + 3*100, 10 + 3*40) = (310, 130).
-      // width = 310 - 110 = 200, height = 130 - 50 = 80.
-      expect(overlay.style.top).toBe('40px');
-      expect(overlay.style.left).toBe('100px');
-      expect(overlay.style.width).toBe('200px');
-      expect(overlay.style.height).toBe('80px');
+      // Base: top = 50 - 10 = 40, left = 110 - 10 = 100.
+      // Extends 1px outward: top = 39, left = 99, width = 201, height = 81.
+      expect(overlay.style.top).toBe('39px');
+      expect(overlay.style.left).toBe('99px');
+      expect(overlay.style.width).toBe('201px');
+      expect(overlay.style.height).toBe('81px');
     });
 
-    it('extends overlay to cover grid border when selection touches top-left edge', () => {
+    it('extends overlay to cover adjacent borders including grid border', () => {
       // Simulate a real browser where grid has 1px borders and cells start
       // 1px inside the grid's border-box.
       const gridLeft = 10;
@@ -393,15 +392,16 @@ describe('TableCellSelection', () => {
 
       const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`) as HTMLElement;
 
-      // Overlay extends outward with negative offset to cover the grid border:
-      // top = -1px, left = -1px, width = 200 + 1 = 201px, height = 80 + 1 = 81px
+      // Base: top = (10+1) - 10 - 1 = 0. Extended: 0 - 1 = -1.
+      // Base: left = (10+1) - 10 - 1 = 0. Extended: 0 - 1 = -1.
+      // width = 200 + 1 = 201, height = 80 + 1 = 81.
       expect(overlay.style.top).toBe('-1px');
       expect(overlay.style.left).toBe('-1px');
       expect(overlay.style.width).toBe('201px');
       expect(overlay.style.height).toBe('81px');
     });
 
-    it('does not extend overlay when selection does not touch grid edge', () => {
+    it('extends overlay for non-edge selection too', () => {
       const gridLeft = 10;
       const gridTop = 10;
       const borderWidth = 1;
@@ -450,11 +450,13 @@ describe('TableCellSelection', () => {
 
       const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`) as HTMLElement;
 
-      // Normal positioning, no negative offset
-      expect(overlay.style.top).toBe('40px');
-      expect(overlay.style.left).toBe('100px');
-      expect(overlay.style.width).toBe('200px');
-      expect(overlay.style.height).toBe('80px');
+      // Base: top = (10+1+40) - 10 - 1 = 40. Extended: 40 - 1 = 39.
+      // Base: left = (10+1+100) - 10 - 1 = 100. Extended: 100 - 1 = 99.
+      // width = 200 + 1 = 201, height = 80 + 1 = 81.
+      expect(overlay.style.top).toBe('39px');
+      expect(overlay.style.left).toBe('99px');
+      expect(overlay.style.width).toBe('201px');
+      expect(overlay.style.height).toBe('81px');
     });
   });
 });

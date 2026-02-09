@@ -50,6 +50,8 @@ export interface TableRowColControlsOptions {
   isHeadingColumn: () => boolean;
   onAction: (action: RowColAction) => void;
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
+  onGripClick?: (type: 'row' | 'col', index: number) => void;
+  onGripPopoverClose?: () => void;
 }
 
 const GRIP_CAPSULE_CLASSES = [
@@ -79,6 +81,13 @@ const GRIP_VISIBLE_CLASSES = [
   'pointer-events-auto',
 ];
 
+const GRIP_ACTIVE_CLASSES = [
+  'bg-blue-500',
+  'text-white',
+  'opacity-100',
+  'pointer-events-auto',
+];
+
 /**
  * Manages row and column grip handles with popover menus and drag-to-reorder.
  */
@@ -89,6 +98,8 @@ export class TableRowColControls {
   private isHeadingRow: () => boolean;
   private isHeadingColumn: () => boolean;
   private onAction: (action: RowColAction) => void;
+  private onGripClick: ((type: 'row' | 'col', index: number) => void) | undefined;
+  private onGripPopoverClose: (() => void) | undefined;
 
   private colGrips: HTMLElement[] = [];
   private rowGrips: HTMLElement[] = [];
@@ -110,6 +121,8 @@ export class TableRowColControls {
     this.isHeadingRow = options.isHeadingRow;
     this.isHeadingColumn = options.isHeadingColumn;
     this.onAction = options.onAction;
+    this.onGripClick = options.onGripClick;
+    this.onGripPopoverClose = options.onGripPopoverClose;
 
     this.drag = new TableRowColDrag({
       grid: this.grid,
@@ -197,10 +210,14 @@ export class TableRowColControls {
 
     grip.addEventListener('pointerdown', this.boundPointerDown);
     grip.addEventListener('mouseenter', () => {
-      expandGrip(grip);
+      if (this.activePopover === null) {
+        expandGrip(grip);
+      }
     });
     grip.addEventListener('mouseleave', () => {
-      collapseGrip(grip, type, pillSize);
+      if (this.activePopover === null) {
+        collapseGrip(grip, type, pillSize);
+      }
     });
 
     return grip;
@@ -247,6 +264,10 @@ export class TableRowColControls {
   }
 
   private handleMouseOver(e: MouseEvent): void {
+    if (this.activePopover !== null) {
+      return;
+    }
+
     const target = e.target as HTMLElement;
     const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
@@ -362,6 +383,33 @@ export class TableRowColControls {
 
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
     el.setAttribute('data-blok-table-grip-visible', '');
+
+    const svg = el.querySelector('svg');
+
+    if (svg) {
+      svg.classList.remove('text-white');
+      svg.classList.add('text-gray-400');
+    }
+  }
+
+  private applyActiveClasses(grip: HTMLElement): void {
+    grip.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_ACTIVE_CLASSES);
+    grip.setAttribute('data-blok-table-grip-visible', '');
+
+    const svg = grip.querySelector('svg');
+
+    if (svg) {
+      svg.classList.remove('text-gray-400', 'opacity-0');
+      svg.classList.add('text-white', 'opacity-100');
+    }
+  }
+
+  private hideAllGripsExcept(activeGrip: HTMLElement): void {
+    [...this.colGrips, ...this.rowGrips].forEach(grip => {
+      if (grip !== activeGrip) {
+        this.applyIdleClasses(grip);
+      }
+    });
   }
 
   private applyIdleClasses(grip: HTMLElement): void {
@@ -468,9 +516,16 @@ export class TableRowColControls {
 
     this.activePopover.on(PopoverEvent.Closed, () => {
       this.destroyPopover();
+      this.applyVisibleClasses(grip);
       this.scheduleHideAll();
+      this.onGripPopoverClose?.();
     });
 
+    // Hide all other grips and make the active one blue
+    this.hideAllGripsExcept(grip);
+    this.applyActiveClasses(grip);
+
+    this.onGripClick?.(type, index);
     this.activePopover.show();
   }
 

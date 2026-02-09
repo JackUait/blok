@@ -64,6 +64,41 @@ export class TableCellSelection {
     document.removeEventListener('pointerdown', this.boundClearSelection);
   }
 
+  /**
+   * Programmatically select an entire row.
+   */
+  public selectRow(rowIndex: number): void {
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const colCount = rows[0]?.querySelectorAll(`[${CELL_ATTR}]`).length ?? 0;
+
+    if (colCount === 0) {
+      return;
+    }
+
+    this.showProgrammaticSelection(rowIndex, 0, rowIndex, colCount - 1);
+  }
+
+  /**
+   * Programmatically select an entire column.
+   */
+  public selectColumn(colIndex: number): void {
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const rowCount = rows.length;
+
+    if (rowCount === 0) {
+      return;
+    }
+
+    this.showProgrammaticSelection(0, colIndex, rowCount - 1, colIndex);
+  }
+
+  /**
+   * Clear any active programmatic or drag selection.
+   */
+  public clearActiveSelection(): void {
+    this.clearSelection();
+  }
+
   private handlePointerDown(e: PointerEvent): void {
     // Don't interfere with grip drags, resize, or add-button drags
     if (isOtherInteractionActive(this.grid)) {
@@ -185,6 +220,21 @@ export class TableCellSelection {
     this.selectedCells = [];
   }
 
+  private showProgrammaticSelection(
+    fromRow: number,
+    fromCol: number,
+    toRow: number,
+    toCol: number,
+  ): void {
+    this.clearSelection();
+    this.anchorCell = { row: fromRow, col: fromCol };
+    this.extentCell = { row: toRow, col: toCol };
+    this.paintSelection();
+    this.hasSelection = true;
+    this.anchorCell = null;
+    this.extentCell = null;
+  }
+
   private paintSelection(): void {
     if (!this.anchorCell || !this.extentCell) {
       return;
@@ -247,20 +297,14 @@ export class TableCellSelection {
 
     let top = firstRect.top - gridRect.top - borderTop;
     let left = firstRect.left - gridRect.left - borderLeft;
-    let width = lastRect.right - firstRect.left;
-    let height = lastRect.bottom - firstRect.top;
+    const width = lastRect.right - firstRect.left + 1;
+    const height = lastRect.bottom - firstRect.top + 1;
 
-    // When the selection touches the grid edge, extend the overlay outward
-    // with a negative offset so the blue border covers the gray grid border.
-    if (minRow === 0) {
-      top = -borderTop;
-      height += borderTop;
-    }
-
-    if (minCol === 0) {
-      left = -borderLeft;
-      width += borderLeft;
-    }
+    // Extend overlay 1px outward to cover adjacent borders:
+    // grid border-top/border-left at row 0/col 0, or the previous
+    // row's border-bottom / previous column's border-right otherwise.
+    top -= 1;
+    left -= 1;
 
     // Create overlay once, reuse on subsequent paints
     if (!this.overlay) {

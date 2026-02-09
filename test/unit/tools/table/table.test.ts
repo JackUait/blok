@@ -2701,6 +2701,50 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('clears selection when clicking outside the table after column deletion', async () => {
+      const { element } = createDeletionTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
+
+      const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
+
+      await clickGrip(colGrips[1]);
+      clickDeleteItem(element);
+
+      await vi.advanceTimersByTimeAsync(16);
+
+      // Selection should exist after deletion
+      expect(getSelectedCells(element).length).toBeGreaterThan(0);
+
+      // Click outside the table to clear selection
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // Selection should be cleared
+      expect(getSelectedCells(element).length).toBe(0);
+
+      document.body.removeChild(element);
+    });
+
+    it('clears selection when clicking outside the table after row deletion', async () => {
+      const { element } = createDeletionTable([['A', 'B'], ['C', 'D'], ['E', 'F']]);
+
+      const rowGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-row]');
+
+      await clickGrip(rowGrips[1]);
+      clickDeleteItem(element);
+
+      await vi.advanceTimersByTimeAsync(16);
+
+      // Selection should exist after deletion
+      expect(getSelectedCells(element).length).toBeGreaterThan(0);
+
+      // Click outside the table to clear selection
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // Selection should be cleared
+      expect(getSelectedCells(element).length).toBe(0);
+
+      document.body.removeChild(element);
+    });
+
     it('disables delete menu item when only one column remains', async () => {
       const { element } = createDeletionTable([['A'], ['B']]);
 

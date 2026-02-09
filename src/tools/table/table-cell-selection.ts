@@ -233,6 +233,11 @@ export class TableCellSelection {
     this.hasSelection = true;
     this.anchorCell = null;
     this.extentCell = null;
+
+    // Listen for next pointerdown anywhere to clear the programmatic selection
+    requestAnimationFrame(() => {
+      document.addEventListener('pointerdown', this.boundClearSelection);
+    });
   }
 
   private paintSelection(): void {

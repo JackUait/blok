@@ -33,8 +33,7 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 [ ] 2. `/refactor` run
 [ ] 3. Final verification against master completed
 [ ] 4. `git push` succeeded
-[ ] 5. Issues updated/closed
-[ ] 6. `git status` shows "up to date with origin"
+[ ] 5. `git status` shows "up to date with origin"
 ```
 
 **Work is DEFINITELY NOT complete if:**
@@ -61,7 +60,6 @@ Run `/final-verification` for verification commands. Then:
 
 ```bash
 git pull --rebase
-bd sync
 git push
 git status  # MUST show "up to date with origin"
 ```
@@ -85,20 +83,6 @@ If you catch yourself thinking ANY of these, STOP and DO THE CHECKLIST:
 
 ---
 
-## Issue Tracking
-
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
-
-## Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
-```
-
 ## Landing the Plane (Session Completion)
 
 **⚠️ CRITICAL: The completion checklist at the TOP of this file MUST be followed.**
@@ -108,14 +92,12 @@ Scroll up to "IMMEDIATE COMPLETION CHECKLIST" and verify ALL items before declar
 **If you're reading this section instead of the checklist:** Go to the TOP of the file.
 
 **Summary (detail is at top):**
-1. File issues for remaining work
-2. Run quality gates (tests, lint, build)
-3. Final verification against master - run `/final-verification`
-4. Update issue status
-5. **PUSH TO REMOTE** (MANDATORY)
-6. Clean up
-7. Verify `git status` shows "up to date with origin"
-8. Hand off context
+1. Run quality gates (tests, lint, build)
+2. Final verification against master - run `/final-verification`
+3. **PUSH TO REMOTE** (MANDATORY)
+4. Clean up
+5. Verify `git status` shows "up to date with origin"
+6. Hand off context
 
 **Remember:** Every code change needs `/refactor` → `/final-verification` → push. No exceptions.
 

@@ -70,6 +70,7 @@ export class Table implements BlockTool {
   private cellSelection: TableCellSelection | null = null;
   private element: HTMLDivElement | null = null;
   private blockId: string | undefined;
+  private pendingHighlight: { type: 'row' | 'col'; index: number } | null = null;
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<TableData, TableConfig>) {
     this.api = api;
@@ -426,7 +427,24 @@ export class Table implements BlockTool {
         }
       },
       onGripPopoverClose: () => {
-        this.cellSelection?.clearActiveSelection();
+        if (this.pendingHighlight) {
+          const { type, index } = this.pendingHighlight;
+
+          this.pendingHighlight = null;
+
+          // Wait for layout so newly inserted cells have dimensions
+          requestAnimationFrame(() => {
+            if (type === 'row') {
+              this.cellSelection?.selectRow(index);
+            } else {
+              this.cellSelection?.selectColumn(index);
+            }
+
+            this.rowColControls?.setActiveGrip(type, index);
+          });
+        } else {
+          this.cellSelection?.clearActiveSelection();
+        }
       },
     });
   }
@@ -436,18 +454,22 @@ export class Table implements BlockTool {
       case 'insert-row-above':
         this.grid.addRow(gridEl, action.index);
         populateNewCells(gridEl, this.cellBlocks);
+        this.pendingHighlight = { type: 'row', index: action.index };
         break;
       case 'insert-row-below':
         this.grid.addRow(gridEl, action.index + 1);
         populateNewCells(gridEl, this.cellBlocks);
+        this.pendingHighlight = { type: 'row', index: action.index + 1 };
         break;
       case 'insert-col-left':
         this.data.colWidths = computeInsertColumnWidths(gridEl, action.index, this.data, this.grid);
         populateNewCells(gridEl, this.cellBlocks);
+        this.pendingHighlight = { type: 'col', index: action.index };
         break;
       case 'insert-col-right':
         this.data.colWidths = computeInsertColumnWidths(gridEl, action.index + 1, this.data, this.grid);
         populateNewCells(gridEl, this.cellBlocks);
+        this.pendingHighlight = { type: 'col', index: action.index + 1 };
         break;
       case 'move-row':
         this.grid.moveRow(gridEl, action.fromIndex, action.toIndex);
@@ -464,9 +486,11 @@ export class Table implements BlockTool {
         break;
       case 'toggle-heading':
         this.data.withHeadings = !this.data.withHeadings;
+        this.pendingHighlight = { type: 'row', index: 0 };
         break;
       case 'toggle-heading-column':
         this.data.withHeadingColumn = !this.data.withHeadingColumn;
+        this.pendingHighlight = { type: 'col', index: 0 };
         break;
     }
 

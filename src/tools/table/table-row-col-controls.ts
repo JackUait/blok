@@ -104,6 +104,8 @@ export class TableRowColControls {
   private colGrips: HTMLElement[] = [];
   private rowGrips: HTMLElement[] = [];
   private activePopover: PopoverDesktop | null = null;
+  private lockedGrip: HTMLElement | null = null;
+  private boundUnlockGrip: (e: PointerEvent) => void;
   private hideTimeout: ReturnType<typeof setTimeout> | null = null;
   private activeColGripIndex = -1;
   private activeRowGripIndex = -1;
@@ -136,6 +138,7 @@ export class TableRowColControls {
     this.boundMouseOver = this.handleMouseOver.bind(this);
     this.boundMouseLeave = this.handleMouseLeave.bind(this);
     this.boundPointerDown = this.handlePointerDown.bind(this);
+    this.boundUnlockGrip = this.handleUnlockGrip.bind(this);
 
     this.createGrips();
 
@@ -151,8 +154,47 @@ export class TableRowColControls {
     this.createGrips();
   }
 
+  /**
+   * Set a specific grip to active (blue) state without opening the popover.
+   * Hides all other grips.
+   */
+  public setActiveGrip(type: 'row' | 'col', index: number): void {
+    const grip = type === 'col'
+      ? this.colGrips[index]
+      : this.rowGrips[index];
+
+    if (!grip) {
+      return;
+    }
+
+    this.unlockGrip();
+    this.hideAllGripsExcept(grip);
+    this.applyActiveClasses(grip);
+    grip.style.transform = 'scale(1)';
+    this.lockedGrip = grip;
+
+    requestAnimationFrame(() => {
+      document.addEventListener('pointerdown', this.boundUnlockGrip);
+    });
+  }
+
+  private handleUnlockGrip(): void {
+    document.removeEventListener('pointerdown', this.boundUnlockGrip);
+
+    if (this.lockedGrip) {
+      this.applyIdleClasses(this.lockedGrip);
+      this.lockedGrip = null;
+    }
+  }
+
+  private unlockGrip(): void {
+    document.removeEventListener('pointerdown', this.boundUnlockGrip);
+    this.lockedGrip = null;
+  }
+
   public destroy(): void {
     this.destroyPopover();
+    this.unlockGrip();
     this.drag.cleanup();
     this.grid.removeEventListener('mouseover', this.boundMouseOver);
     this.grid.removeEventListener('mouseleave', this.boundMouseLeave);
@@ -210,12 +252,12 @@ export class TableRowColControls {
 
     grip.addEventListener('pointerdown', this.boundPointerDown);
     grip.addEventListener('mouseenter', () => {
-      if (this.activePopover === null) {
+      if (!this.isGripInteractionLocked()) {
         expandGrip(grip);
       }
     });
     grip.addEventListener('mouseleave', () => {
-      if (this.activePopover === null) {
+      if (!this.isGripInteractionLocked()) {
         collapseGrip(grip, type, pillSize);
       }
     });
@@ -263,8 +305,12 @@ export class TableRowColControls {
     });
   }
 
+  private isGripInteractionLocked(): boolean {
+    return this.activePopover !== null || this.lockedGrip !== null;
+  }
+
   private handleMouseOver(e: MouseEvent): void {
-    if (this.activePopover !== null) {
+    if (this.isGripInteractionLocked()) {
       return;
     }
 
@@ -288,7 +334,7 @@ export class TableRowColControls {
   }
 
   private handleMouseLeave(): void {
-    if (this.activePopover !== null) {
+    if (this.isGripInteractionLocked()) {
       return;
     }
 

@@ -255,5 +255,60 @@ describe('table-operations', () => {
       // Should mount the existing block
       expect(container.contains(existingBlockHolder)).toBe(true);
     });
+
+    it('should be idempotent when called multiple times with legacy string content', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Create DOM structure: grid > row > cell > container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // Mock API that creates a new block holder each time insert is called
+      let insertCallCount = 0;
+      const mockInsert = vi.fn().mockImplementation(() => {
+        insertCallCount++;
+        const holder = document.createElement('div');
+        holder.setAttribute('data-blok-id', `block-${insertCallCount}`);
+        holder.textContent = 'Test content';
+        return { id: `block-${insertCallCount}`, holder };
+      });
+
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlockIndex: vi.fn(),
+          getBlockByIndex: vi.fn(),
+        },
+      } as unknown as API;
+
+      const legacyContent = [['Test content']];
+
+      // Call mountCellBlocksReadOnly TWICE (simulating rendered() being called multiple times)
+      mountCellBlocksReadOnly(gridElement, legacyContent, api);
+      mountCellBlocksReadOnly(gridElement, legacyContent, api);
+
+      // CRITICAL: api.blocks.insert should only be called ONCE, not twice
+      expect(mockInsert).toHaveBeenCalledTimes(1);
+
+      // Verify only ONE block exists in the container
+      const blocksInContainer = container.querySelectorAll('[data-blok-id]');
+      expect(blocksInContainer.length).toBe(1);
+
+      // Verify the content is not duplicated
+      expect(container.textContent).toBe('Test content');
+    });
   });
 });

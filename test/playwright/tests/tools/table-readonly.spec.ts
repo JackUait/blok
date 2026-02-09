@@ -350,4 +350,72 @@ test.describe('table readonly mode', () => {
       await expect(blockWrapper).toHaveCount(1);
     }
   });
+
+  test('does not duplicate content when rendered multiple times in readonly mode', async ({ page }) => {
+    // Create Blok in readonly mode with legacy string content
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['Test Cell A', 'Test Cell B'],
+              ],
+            },
+          },
+        ],
+      },
+      readOnly: true,
+    });
+
+    // Get initial state
+    const cells = page.locator(CELL_SELECTOR);
+    await expect(cells).toHaveCount(2);
+
+    // Count blocks in first cell initially
+    const firstCellContainer = page.locator(CELL_BLOCKS_CONTAINER_SELECTOR).first();
+    const initialBlocks = firstCellContainer.locator('[data-blok-id]');
+    await expect(initialBlocks).toHaveCount(1);
+
+    // Manually trigger rendered() lifecycle again to simulate the bug scenario
+    await page.evaluate(async () => {
+      const blok = window.blokInstance;
+      if (!blok) throw new Error('Blok not found');
+
+      // Get the table block
+      const blockCount = blok.blocks.getBlocksCount();
+      for (let i = 0; i < blockCount; i++) {
+        const block = blok.blocks.getBlockByIndex(i);
+        if (block && block.name === 'table') {
+          // Manually call rendered() again (simulating lifecycle re-trigger)
+          if (typeof block.rendered === 'function') {
+            block.rendered();
+          }
+          break;
+        }
+      }
+    });
+
+    // Wait a bit for any DOM updates
+    await page.waitForTimeout(100);
+
+    // Verify blocks are still only 1 per cell (not duplicated)
+    const blocksAfterSecondRender = firstCellContainer.locator('[data-blok-id]');
+    await expect(blocksAfterSecondRender).toHaveCount(1);
+
+    // Verify content is not duplicated
+    const firstCellText = await firstCellContainer.textContent();
+    expect(firstCellText).toBe('Test Cell A');
+    expect(firstCellText).not.toContain('Test Cell ATest Cell A');
+
+    // Verify all cells still have exactly 1 block wrapper each
+    const allContainers = await page.locator(CELL_BLOCKS_CONTAINER_SELECTOR).all();
+    for (const container of allContainers) {
+      const blockWrappers = container.locator('[data-blok-testid="block-wrapper"]');
+      await expect(blockWrappers).toHaveCount(1);
+    }
+  });
 });

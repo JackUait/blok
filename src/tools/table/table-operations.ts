@@ -311,6 +311,13 @@ export const mountCellBlocksReadOnly = (
 
       if (!isCellWithBlocks(cellContent)) {
         // Handle legacy string content by creating a paragraph block
+        // Check if container already has blocks to ensure idempotency
+        const existingBlocks = container.querySelectorAll('[data-blok-id]');
+
+        if (existingBlocks.length > 0) {
+          return;
+        }
+
         const legacyText = typeof cellContent === 'string' ? cellContent : '';
         const insertedBlock = api.blocks.insert(
           'paragraph',

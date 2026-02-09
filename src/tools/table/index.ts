@@ -540,8 +540,13 @@ export class Table implements BlockTool {
 
   private initCellSelection(gridEl: HTMLElement): void {
     this.cellSelection?.destroy();
+
+    // Get RectangleSelection from API
+    const rectangleSelection = this.api.rectangleSelection;
+
     this.cellSelection = new TableCellSelection({
       grid: gridEl,
+      rectangleSelection, // Pass reference
       onSelectionActiveChange: (hasSelection) => {
         if (this.resize) {
           this.resize.enabled = !hasSelection;

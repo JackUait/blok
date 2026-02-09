@@ -219,18 +219,24 @@ export class TableCellSelection {
     }
   }
 
-  private handleCancelRectangle(e: MouseEvent): void {
+  private handleCancelRectangle(_e: MouseEvent): void {
     // Cancel RectangleSelection in capture phase, before it processes the event
-    if (this.rectangleSelection) {
-      this.rectangleSelection.cancelActiveSelection();
-
-      // Also directly hide the overlay since cancelActiveSelection() doesn't work when called repeatedly
-      const overlay = document.querySelector('[data-blok-overlay-rectangle]') as HTMLElement | null;
-
-      if (overlay) {
-        overlay.style.display = 'none';
-      }
+    if (!this.rectangleSelection) {
+      return;
     }
+
+    this.rectangleSelection.cancelActiveSelection();
+
+    // Also directly hide the overlay since cancelActiveSelection() doesn't work when called repeatedly
+    const overlay = document.querySelector('[data-blok-overlay-rectangle]');
+
+    if (!overlay) {
+      return;
+    }
+
+    const overlayElement = overlay as HTMLElement;
+
+    overlayElement.style.display = 'none';
   }
 
   private handlePointerUp(): void {

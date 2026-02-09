@@ -75,13 +75,7 @@ export interface BlokModules {
   ModificationsObserver: ModificationsObserver,
   Paste: Paste,
   ReadOnly: ReadOnly,
-  RectangleSelection: {
-    cancelActiveSelection: () => void;
-    isRectActivated: () => boolean;
-    clearSelection: () => void;
-    startSelection: (pageX: number, pageY: number, shiftKey?: boolean) => void;
-    endSelection: () => void;
-  },
+  RectangleSelection: RectangleSelection,
   Renderer: Renderer,
   Saver: Saver,
   Tools: Tools,

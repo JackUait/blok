@@ -52,6 +52,7 @@ const apiMethodsStub: ToolApiMethods = {
   i18n: {} as ToolApiMethods['i18n'],
   readOnly: {} as ToolApiMethods['readOnly'],
   ui: {} as ToolApiMethods['ui'],
+  rectangleSelection: {} as ToolApiMethods['rectangleSelection'],
 };
 
 const apiMock: Pick<ApiModule, 'methods'> = {

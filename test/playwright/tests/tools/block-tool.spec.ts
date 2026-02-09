@@ -160,6 +160,7 @@ const createApiStub = (): API => ({
   i18n: {} as API['i18n'],
   readOnly: {} as API['readOnly'],
   ui: {} as API['ui'],
+  rectangleSelection: {} as API['rectangleSelection'],
 });
 
 /**

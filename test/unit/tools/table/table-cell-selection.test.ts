@@ -904,14 +904,23 @@ describe('TableCellSelection', () => {
 
         document.elementFromPoint = vi.fn().mockReturnValue(cell2);
 
-        // Simulate pointermove to different cell (should trigger capture)
-        const moveEvent = new PointerEvent('pointermove', {
+        // Simulate mousemove to different cell (should trigger capture phase handler)
+        const mouseMoveEvent = new MouseEvent('mousemove', {
           clientX: cellRect.left + 100,
           clientY: cellRect.top + 10,
           bubbles: true,
         });
 
-        document.dispatchEvent(moveEvent);
+        document.dispatchEvent(mouseMoveEvent);
+
+        // Also dispatch pointermove for the actual cell selection logic
+        const pointerMoveEvent = new PointerEvent('pointermove', {
+          clientX: cellRect.left + 100,
+          clientY: cellRect.top + 10,
+          bubbles: true,
+        });
+
+        document.dispatchEvent(pointerMoveEvent);
 
         // Verify cancelActiveSelection was called
         expect(mockRectangleSelection.cancelActiveSelection).toHaveBeenCalled();

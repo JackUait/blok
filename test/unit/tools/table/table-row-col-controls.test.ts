@@ -846,5 +846,44 @@ describe('TableRowColControls', () => {
       // Height stays constant
       expect(grip.style.height).toBe('20px');
     });
+
+    it('grip with popover stays visible when setGripsDisplay(false) is called', async () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        onGripClick: () => {
+          // Simulate what the real app does: when a grip is clicked,
+          // cell selection happens and calls setGripsDisplay(false)
+          controls.setGripsDisplay(false);
+        },
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const activeGrip = colGrips[0];
+      const otherGrip = colGrips[1];
+
+      // Click the grip to open popover
+      activeGrip.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 50,
+        clientY: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Wait for popover to open
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      });
+
+      // The grip with the popover should still be visible (not display:none)
+      expect(activeGrip.style.display).not.toBe('none');
+      // Other grips should be hidden
+      expect(otherGrip.style.display).toBe('none');
+    });
   });
 });

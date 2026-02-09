@@ -104,6 +104,7 @@ export class TableRowColControls {
   private colGrips: HTMLElement[] = [];
   private rowGrips: HTMLElement[] = [];
   private activePopover: PopoverDesktop | null = null;
+  private activePopoverGrip: HTMLElement | null = null;
   private lockedGrip: HTMLElement | null = null;
   private boundUnlockGrip: (e: PointerEvent) => void;
   private hideTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -375,12 +376,18 @@ export class TableRowColControls {
   /**
    * Show or hide all grip elements by toggling display.
    * Used to hide grips during add-button drag operations.
+   * Preserves visibility of the grip with an active popover.
    */
   public setGripsDisplay(visible: boolean): void {
     const display = visible ? '' : 'none';
 
     [...this.colGrips, ...this.rowGrips].forEach(grip => {
       const el: HTMLElement = grip;
+
+      // Don't hide the grip that has an active popover
+      if (!visible && grip === this.activePopoverGrip) {
+        return;
+      }
 
       el.style.display = display;
     });
@@ -567,6 +574,9 @@ export class TableRowColControls {
       flippable: true,
     });
 
+    // Track which grip has the popover so setGripsDisplay won't hide it
+    this.activePopoverGrip = grip;
+
     this.activePopover.on(PopoverEvent.Closed, () => {
       // Guard against re-entrant calls: destroyPopover() calls popover.destroy()
       // which calls hide() and re-emits Closed. Skip the re-entrant invocation.
@@ -600,6 +610,7 @@ export class TableRowColControls {
       const popover = this.activePopover;
 
       this.activePopover = null;
+      this.activePopoverGrip = null;
       popover.destroy();
     }
   }

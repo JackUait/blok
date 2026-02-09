@@ -842,4 +842,27 @@ describe('TableCellSelection', () => {
       expect(overlay.style.height).toBe('81px');
     });
   });
+
+  describe('RectangleSelection integration', () => {
+    it('accepts rectangleSelection in constructor', () => {
+      const mockRectangleSelection = {
+        cancelActiveSelection: vi.fn(),
+      };
+
+      const selectionWithRef = new TableCellSelection({
+        grid,
+        rectangleSelection: mockRectangleSelection,
+      });
+
+      expect(selectionWithRef).toBeDefined();
+    });
+
+    it('works without rectangleSelection (backward compatibility)', () => {
+      const selectionWithoutRef = new TableCellSelection({
+        grid,
+      });
+
+      expect(selectionWithoutRef).toBeDefined();
+    });
+  });
 });

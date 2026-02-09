@@ -53,12 +53,14 @@ const isOtherInteractionActive = (grid: HTMLElement): boolean => {
  */
 interface CellSelectionOptions {
   grid: HTMLElement;
+  rectangleSelection?: { cancelActiveSelection: () => void };
   onSelectionActiveChange?: (hasSelection: boolean) => void;
   onClearContent?: (cells: HTMLElement[]) => void;
 }
 
 export class TableCellSelection {
   private grid: HTMLElement;
+  private rectangleSelection?: { cancelActiveSelection: () => void };
   private onSelectionActiveChange: ((hasSelection: boolean) => void) | undefined;
   private onClearContent: ((cells: HTMLElement[]) => void) | undefined;
   private anchorCell: CellCoord | null = null;
@@ -77,6 +79,7 @@ export class TableCellSelection {
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
+    this.rectangleSelection = options.rectangleSelection;
     this.onSelectionActiveChange = options.onSelectionActiveChange;
     this.onClearContent = options.onClearContent;
     this.grid.style.position = 'relative';

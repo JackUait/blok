@@ -76,6 +76,7 @@ export class TableCellSelection {
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerUp: () => void;
   private boundClearSelection: (e: PointerEvent) => void;
+  private boundCancelRectangle: (e: MouseEvent) => void;
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
@@ -88,6 +89,7 @@ export class TableCellSelection {
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
     this.boundClearSelection = this.handleClearSelection.bind(this);
+    this.boundCancelRectangle = this.handleCancelRectangle.bind(this);
 
     this.grid.addEventListener('pointerdown', this.boundPointerDown);
   }
@@ -99,6 +101,7 @@ export class TableCellSelection {
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointerdown', this.boundClearSelection);
+    document.removeEventListener('mousemove', this.boundCancelRectangle, true);
   }
 
   /**
@@ -168,6 +171,8 @@ export class TableCellSelection {
     this.anchorCell = cell;
     this.isSelecting = false;
 
+    // Listen to mousemove in capture phase to cancel RectangleSelection before it runs
+    document.addEventListener('mousemove', this.boundCancelRectangle, true);
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
   }
@@ -176,11 +181,6 @@ export class TableCellSelection {
     if (!this.anchorCell) {
       return;
     }
-
-    // Check if RectangleSelection is active
-    const rectangleOverlay = document.querySelector('[data-blok-overlay-rectangle]');
-    const rectangleActive = rectangleOverlay &&
-      window.getComputedStyle(rectangleOverlay).display !== 'none';
 
     const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
 
@@ -202,11 +202,6 @@ export class TableCellSelection {
       return;
     }
 
-    // If RectangleSelection is active and we're entering a different cell, take over
-    if (rectangleActive && !this.isSelecting && this.rectangleSelection) {
-      this.rectangleSelection.cancelActiveSelection();
-    }
-
     // Crossed into a different cell — start selection
     if (!this.isSelecting) {
       this.isSelecting = true;
@@ -224,7 +219,22 @@ export class TableCellSelection {
     }
   }
 
+  private handleCancelRectangle(e: MouseEvent): void {
+    // Cancel RectangleSelection in capture phase, before it processes the event
+    if (this.rectangleSelection) {
+      this.rectangleSelection.cancelActiveSelection();
+
+      // Also directly hide the overlay since cancelActiveSelection() doesn't work when called repeatedly
+      const overlay = document.querySelector('[data-blok-overlay-rectangle]') as HTMLElement | null;
+
+      if (overlay) {
+        overlay.style.display = 'none';
+      }
+    }
+  }
+
   private handlePointerUp(): void {
+    document.removeEventListener('mousemove', this.boundCancelRectangle, true);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
 

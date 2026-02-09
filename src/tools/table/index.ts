@@ -560,13 +560,13 @@ export class Table implements BlockTool {
     this.cellSelection?.destroy();
     this.cellSelection = new TableCellSelection({
       grid: gridEl,
-      onSelectingChange: (isSelecting) => {
+      onSelectionActiveChange: (hasSelection) => {
         if (this.resize) {
-          this.resize.enabled = !isSelecting;
+          this.resize.enabled = !hasSelection;
         }
 
-        this.addControls?.setInteractive(!isSelecting);
-        this.rowColControls?.setGripsDisplay(!isSelecting);
+        this.addControls?.setInteractive(!hasSelection);
+        this.rowColControls?.setGripsDisplay(!hasSelection);
       },
     });
   }

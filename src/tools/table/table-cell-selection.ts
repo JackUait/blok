@@ -25,12 +25,12 @@ const isOtherInteractionActive = (grid: HTMLElement): boolean => {
  */
 interface CellSelectionOptions {
   grid: HTMLElement;
-  onSelectingChange?: (isSelecting: boolean) => void;
+  onSelectionActiveChange?: (hasSelection: boolean) => void;
 }
 
 export class TableCellSelection {
   private grid: HTMLElement;
-  private onSelectingChange: ((isSelecting: boolean) => void) | undefined;
+  private onSelectionActiveChange: ((hasSelection: boolean) => void) | undefined;
   private anchorCell: CellCoord | null = null;
   private extentCell: CellCoord | null = null;
   private isSelecting = false;
@@ -45,7 +45,7 @@ export class TableCellSelection {
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
-    this.onSelectingChange = options.onSelectingChange;
+    this.onSelectionActiveChange = options.onSelectionActiveChange;
     this.grid.style.position = 'relative';
 
     this.boundPointerDown = this.handlePointerDown.bind(this);
@@ -163,7 +163,7 @@ export class TableCellSelection {
     // Crossed into a different cell — start selection
     if (!this.isSelecting) {
       this.isSelecting = true;
-      this.onSelectingChange?.(true);
+      this.onSelectionActiveChange?.(true);
 
       // Clear native text selection
       window.getSelection()?.removeAllRanges();
@@ -184,7 +184,6 @@ export class TableCellSelection {
     if (this.isSelecting) {
       this.grid.style.userSelect = '';
       this.hasSelection = true;
-      this.onSelectingChange?.(false);
 
       // Listen for next pointerdown anywhere to clear selection
       requestAnimationFrame(() => {
@@ -203,8 +202,14 @@ export class TableCellSelection {
   }
 
   private clearSelection(): void {
+    const hadSelection = this.hasSelection;
+
     this.restoreModifiedCells();
     this.hasSelection = false;
+
+    if (hadSelection) {
+      this.onSelectionActiveChange?.(false);
+    }
   }
 
   private restoreModifiedCells(): void {
@@ -231,6 +236,7 @@ export class TableCellSelection {
     this.extentCell = { row: toRow, col: toCol };
     this.paintSelection();
     this.hasSelection = true;
+    this.onSelectionActiveChange?.(true);
     this.anchorCell = null;
     this.extentCell = null;
 

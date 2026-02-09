@@ -297,6 +297,127 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('onSelectionActiveChange callback', () => {
+    it('fires true when drag selection starts', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onSelectionActiveChange: callback,
+      });
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      expect(callback).toHaveBeenCalledWith(true);
+    });
+
+    it('does not fire false when drag ends but selection persists', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onSelectionActiveChange: callback,
+      });
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      // Should have been called once with true, never with false
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(true);
+      expect(callback).not.toHaveBeenCalledWith(false);
+    });
+
+    it('fires false when selection is cleared by click-away', () => {
+      vi.useFakeTimers();
+
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onSelectionActiveChange: callback,
+      });
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      // Flush the rAF that registers the clear listener
+      vi.runAllTimers();
+
+      callback.mockClear();
+
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      document.dispatchEvent(clearEvent);
+
+      vi.useRealTimers();
+
+      expect(callback).toHaveBeenCalledWith(false);
+    });
+
+    it('fires true for programmatic selectRow', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onSelectionActiveChange: callback,
+      });
+
+      selection.selectRow(1);
+
+      expect(callback).toHaveBeenCalledWith(true);
+    });
+
+    it('fires true for programmatic selectColumn', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onSelectionActiveChange: callback,
+      });
+
+      selection.selectColumn(0);
+
+      expect(callback).toHaveBeenCalledWith(true);
+    });
+
+    it('fires false when programmatic selection is cleared by click-away', () => {
+      vi.useFakeTimers();
+
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onSelectionActiveChange: callback,
+      });
+
+      selection.selectRow(0);
+
+      // Flush the rAF that registers the clear listener
+      vi.runAllTimers();
+
+      callback.mockClear();
+
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      document.dispatchEvent(clearEvent);
+
+      vi.useRealTimers();
+
+      expect(callback).toHaveBeenCalledWith(false);
+    });
+  });
+
   describe('destroy', () => {
     it('removes overlay on destroy', () => {
       simulateDrag(grid, 0, 0, 1, 1);

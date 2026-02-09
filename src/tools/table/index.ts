@@ -7,7 +7,6 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import type { ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
-import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
@@ -203,23 +202,6 @@ export class Table implements BlockTool {
 
   public validate(savedData: TableData): boolean {
     return savedData.content.length > 0;
-  }
-
-  public renderSettings(): MenuConfig {
-    return [
-      {
-        icon: IconTable,
-        title: this.api.i18n.t(this.data.withHeadings
-          ? 'tools.table.withoutHeadings'
-          : 'tools.table.withHeadings'),
-        onActivate: (): void => {
-          this.data.withHeadings = !this.data.withHeadings;
-          updateHeadingStyles(this.element, this.data.withHeadings);
-        },
-        closeOnActivate: true,
-        isActive: this.data.withHeadings,
-      },
-    ];
   }
 
   public onPaste(event: HTMLPasteEvent): void {

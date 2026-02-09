@@ -1,5 +1,4 @@
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions, BlockToolData } from './block-tool';
-import { MenuConfig } from './menu-config';
 
 /**
  * Cell content always contains block IDs.
@@ -48,11 +47,6 @@ export interface Table extends BlockTool {
    * Return Tool's view
    */
   render(): HTMLElement;
-
-  /**
-   * Returns table block tunes config
-   */
-  renderSettings(): MenuConfig;
 
   /**
    * Validate Table block data

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
+import { updateHeadingStyles } from '../../../../src/tools/table/table-operations';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
@@ -346,11 +347,9 @@ describe('Table Tool', () => {
       // Simulate stale state: heading attr left on row 1 (as if a row was inserted above)
       rows[1].setAttribute('data-blok-table-heading', '');
 
-      // Toggle heading off then on via the public renderSettings API
-      const settings = table.renderSettings() as Array<{ onActivate: () => void }>;
-
-      settings[0].onActivate(); // toggle off
-      settings[0].onActivate(); // toggle on
+      // Toggle heading off then on via updateHeadingStyles
+      updateHeadingStyles(element, false); // toggle off
+      updateHeadingStyles(element, true); // toggle on
 
       // Only row 0 should have heading
       expect(rows[0]).toHaveAttribute('data-blok-table-heading');

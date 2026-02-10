@@ -468,6 +468,24 @@ describe('BlocksAPI', () => {
 
       logSpy.mockRestore();
     });
+
+    it('handles element without tagName property gracefully', () => {
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [] });
+      const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+      // Create an element-like object without tagName (simulates text node or malformed element)
+      const elementWithoutTagName = {} as HTMLElement;
+
+      blockManager.getBlock.mockReturnValueOnce(undefined);
+
+      expect(blocksApi.getBlockByElement(elementWithoutTagName)).toBeUndefined();
+      expect(logSpy).toHaveBeenCalledWith(
+        'There is no block corresponding to element <unknown>',
+        'warn'
+      );
+
+      logSpy.mockRestore();
+    });
   });
 
   describe('block ordering', () => {

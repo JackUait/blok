@@ -114,7 +114,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlock(element);
 
     if (block === undefined) {
-      logLabeled(`There is no block corresponding to element <${element.tagName.toLowerCase()}>`, 'warn');
+      logLabeled(`There is no block corresponding to element <${element.tagName?.toLowerCase() ?? 'unknown'}>`, 'warn');
 
       return;
     }

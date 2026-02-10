@@ -281,6 +281,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     if (this.isInsideTableCell) {
       this.popover?.toggleItemHiddenByName('table', true);
+      this.popover?.toggleItemHiddenByName('header', true);
     }
 
     this.popover?.show();
@@ -295,6 +296,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   public close(): void {
     if (this.isInsideTableCell) {
       this.popover?.toggleItemHiddenByName('table', false);
+      this.popover?.toggleItemHiddenByName('header', false);
       this.isInsideTableCell = false;
     }
 
@@ -365,6 +367,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private onPopoverClose = (): void => {
     if (this.isInsideTableCell) {
       this.popover?.toggleItemHiddenByName('table', false);
+      this.popover?.toggleItemHiddenByName('header', false);
       this.isInsideTableCell = false;
     }
 

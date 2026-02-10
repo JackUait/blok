@@ -115,7 +115,7 @@ iconWithGap && 'mr-3',
 item: '... px-2 py-[var(--item-padding)] ...',
 
 // After:
-item: '... pl-2 pr-4 py-[var(--item-padding)] ...',
+item: '... pl-2 pr-8 py-[var(--item-padding)] ...',
 ```
 
 **Affected contexts**: All popover items with `iconWithGap: true` (default):
@@ -173,12 +173,12 @@ item: '... pl-2 pr-4 py-[var(--item-padding)] ...',
 **After (iteration 2 - final)**:
 - Icon gap: 12px (`mr-3`)
 - Left padding: 8px (`pl-2`)
-- Right padding: 16px (`pr-4`)
+- Right padding: 32px (`pr-8`)
 - Left space before text: 46px (8px padding + 26px icon + 12px gap)
-- Right space after text: 16px
-- Balance ratio: 2.875:1 (significantly improved balance)
+- Right space after text: 32px
+- Balance ratio: 1.44:1 (near-optimal visual balance)
 
-**Note**: Perfect 1:1 balance isn't the goal - we want the text to be readable with clear icon association. The increased icon gap (4px) and doubled right padding (8px) together create much better visual balance and breathing room.
+**Note**: Perfect 1:1 balance isn't the goal - we want the text to be readable with clear icon association. The increased icon gap (4px) and quadrupled right padding (24px increase) together create excellent visual balance and breathing room.
 
 ## Rollout Plan
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isInsideTableCell, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
+import { isInsideTableCell, isRestrictedInTableCell, convertToParagraph } from '../../../../src/tools/table/table-restrictions';
 import type { Block } from '../../../../src/components/block';
+import type { API } from '../../../../types';
 
 describe('table-restrictions', () => {
   let container: HTMLElement;
@@ -78,6 +79,85 @@ describe('table-restrictions', () => {
 
     it('returns false for unknown tool', () => {
       expect(isRestrictedInTableCell('unknown-tool')).toBe(false);
+    });
+  });
+
+  describe('convertToParagraph', () => {
+    it('converts block to paragraph preserving text', () => {
+      const holder = document.createElement('div');
+      holder.textContent = 'Hello world';
+
+      const block = {
+        id: 'block-123',
+        holder,
+      } as Block;
+
+      const mockAPI = {
+        blocks: {
+          getBlockIndex: vi.fn().mockReturnValue(5),
+          insert: vi.fn().mockReturnValue({ id: 'new-block' }),
+        },
+      } as unknown as API;
+
+      convertToParagraph(block, mockAPI);
+
+      expect(mockAPI.blocks.getBlockIndex).toHaveBeenCalledWith('block-123');
+      expect(mockAPI.blocks.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Hello world' },
+        {},
+        5,
+        false,
+        true,
+        'block-123'
+      );
+    });
+
+    it('handles empty text content', () => {
+      const holder = document.createElement('div');
+      holder.textContent = '';
+
+      const block = {
+        id: 'block-456',
+        holder,
+      } as Block;
+
+      const mockAPI = {
+        blocks: {
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          insert: vi.fn().mockReturnValue({ id: 'new-block' }),
+        },
+      } as unknown as API;
+
+      convertToParagraph(block, mockAPI);
+
+      expect(mockAPI.blocks.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: '' },
+        {},
+        0,
+        false,
+        true,
+        'block-456'
+      );
+    });
+
+    it('throws error if block index not found', () => {
+      const holder = document.createElement('div');
+      const block = {
+        id: 'block-789',
+        holder,
+      } as Block;
+
+      const mockAPI = {
+        blocks: {
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+          insert: vi.fn(),
+        },
+      } as unknown as API;
+
+      expect(() => convertToParagraph(block, mockAPI)).toThrow('Block index not found');
+      expect(mockAPI.blocks.insert).not.toHaveBeenCalled();
     });
   });
 });

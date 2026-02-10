@@ -47,6 +47,10 @@ test-results/*.json
 
 # Playwright CLI snapshots
 .playwright-cli/
+.playwright-mcp/
+
+# Screenshots at root
+/*.png
 
 # Design plans (local only)
 docs/plans/

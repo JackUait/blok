@@ -264,6 +264,14 @@ export class TableRowColControls {
       grip.style.marginRight = '-6px';
     }
 
+    // Expand hit area for col grips (4px → 16px)
+    if (type === 'col') {
+      grip.style.paddingTop = '6px';
+      grip.style.paddingBottom = '6px';
+      grip.style.marginTop = '-6px';
+      grip.style.marginBottom = '-6px';
+    }
+
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 
     grip.addEventListener('pointerdown', this.boundPointerDown);

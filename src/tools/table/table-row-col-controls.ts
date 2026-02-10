@@ -456,6 +456,12 @@ export class TableRowColControls {
 
   private applyVisibleClasses(grip: HTMLElement): void {
     const el = grip;
+    const isCol = el.hasAttribute(GRIP_COL_ATTR);
+    const type: 'col' | 'row' = isCol ? 'col' : 'row';
+    const pillSize = isCol ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
+
+    // Reset to pill size before making visible
+    collapseGrip(el, type, pillSize);
 
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
     el.setAttribute('data-blok-table-grip-visible', '');

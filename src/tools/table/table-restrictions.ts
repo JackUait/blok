@@ -1,4 +1,5 @@
 import type { Block } from '../../components/block';
+import type { API } from '../../../types';
 
 /**
  * List of block tools that are restricted from being inserted into table cells.
@@ -31,4 +32,33 @@ export function isInsideTableCell(block: Block | HTMLElement | null | undefined)
  */
 export function isRestrictedInTableCell(toolName: string): boolean {
   return RESTRICTED_TOOLS.includes(toolName);
+}
+
+/**
+ * Convert a restricted block to a paragraph block, preserving text content.
+ * Replaces the original block in place.
+ *
+ * @param block - The block to convert
+ * @param api - Blok API instance
+ * @returns The newly created paragraph block
+ * @throws Error if block index cannot be found
+ */
+export function convertToParagraph(block: Block, api: API): Block {
+  const text = block.holder.textContent || '';
+  const blockIndex = api.blocks.getBlockIndex(block.id);
+
+  if (blockIndex === undefined) {
+    throw new Error('Block index not found');
+  }
+
+  // Replace with paragraph, preserving text
+  return api.blocks.insert(
+    'paragraph',
+    { text },
+    {},
+    blockIndex,
+    false, // don't focus
+    true,  // replace existing
+    block.id
+  ) as unknown as Block;
 }

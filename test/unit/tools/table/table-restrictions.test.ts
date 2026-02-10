@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isInsideTableCell } from '../../../../src/tools/table/table-restrictions';
+import { isInsideTableCell, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
 import type { Block } from '../../../../src/components/block';
 
 describe('table-restrictions', () => {
@@ -56,6 +56,28 @@ describe('table-restrictions', () => {
       container.appendChild(cellBlocks);
 
       expect(isInsideTableCell(element)).toBe(true);
+    });
+  });
+
+  describe('isRestrictedInTableCell', () => {
+    it('returns true for header tool', () => {
+      expect(isRestrictedInTableCell('header')).toBe(true);
+    });
+
+    it('returns true for table tool', () => {
+      expect(isRestrictedInTableCell('table')).toBe(true);
+    });
+
+    it('returns false for paragraph tool', () => {
+      expect(isRestrictedInTableCell('paragraph')).toBe(false);
+    });
+
+    it('returns false for list tool', () => {
+      expect(isRestrictedInTableCell('list')).toBe(false);
+    });
+
+    it('returns false for unknown tool', () => {
+      expect(isRestrictedInTableCell('unknown-tool')).toBe(false);
     });
   });
 });

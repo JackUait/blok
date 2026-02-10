@@ -255,6 +255,7 @@ export class TableRowColControls {
     grip.style.height = `${idleHeight}px`;
     grip.style.transform = 'translate(-50%, -50%)';
     grip.style.outline = '2px solid white';
+    grip.style.boxSizing = 'border-box';
 
     // Expand hit area for row grips (4px → 16px)
     if (type === 'row') {

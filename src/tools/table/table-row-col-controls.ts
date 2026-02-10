@@ -247,18 +247,18 @@ export class TableRowColControls {
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
 
-    // With border-box, the size includes padding. Since we add 12px padding (6px each side)
-    // to the thin dimension, we need to add that to the base size.
+    // Padding expands hit area but background-clip keeps visual size at 4px
     const HIT_AREA_PADDING = 12;
-    const idleWidth = type === 'col' ? COL_PILL_WIDTH : (ROW_PILL_WIDTH + HIT_AREA_PADDING);
-    const idleHeight = type === 'col' ? (COL_PILL_HEIGHT + HIT_AREA_PADDING) : ROW_PILL_HEIGHT;
-    const pillSize = type === 'col' ? (COL_PILL_HEIGHT + HIT_AREA_PADDING) : (ROW_PILL_WIDTH + HIT_AREA_PADDING);
+    const pillSize = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
+    const idleWidth = type === 'col' ? COL_PILL_WIDTH : ROW_PILL_WIDTH;
+    const idleHeight = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT;
 
     grip.style.width = `${idleWidth}px`;
     grip.style.height = `${idleHeight}px`;
     grip.style.transform = 'translate(-50%, -50%)';
     grip.style.outline = '2px solid white';
-    grip.style.boxSizing = 'border-box';
+    grip.style.boxSizing = 'content-box';
+    grip.style.backgroundClip = 'content-box';
 
     // Expand hit area for row grips (4px → 16px)
     if (type === 'row') {
@@ -462,9 +462,7 @@ export class TableRowColControls {
     const el = grip;
     const isCol = el.hasAttribute(GRIP_COL_ATTR);
     const type: 'col' | 'row' = isCol ? 'col' : 'row';
-    // With border-box, pillSize must account for the 12px padding (6px each side)
-    const HIT_AREA_PADDING = 12;
-    const pillSize = isCol ? (COL_PILL_HEIGHT + HIT_AREA_PADDING) : (ROW_PILL_WIDTH + HIT_AREA_PADDING);
+    const pillSize = isCol ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
 
     // Reset to pill size before making visible
     collapseGrip(el, type, pillSize);

@@ -96,7 +96,7 @@ Increase the icon-to-text gap from `mr-2` (8px) to `mr-3` (12px) for better visu
 
 ### Implementation
 
-**File**: `src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.ts`
+**File 1**: `src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.ts`
 
 **Change** (line 341):
 ```typescript
@@ -105,6 +105,17 @@ iconWithGap && 'mr-2',
 
 // After:
 iconWithGap && 'mr-3',
+```
+
+**File 2**: `src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const.ts`
+
+**Change** (line 13):
+```typescript
+// Before:
+item: '... px-2 py-[var(--item-padding)] ...',
+
+// After:
+item: '... pl-2 pr-4 py-[var(--item-padding)] ...',
 ```
 
 **Affected contexts**: All popover items with `iconWithGap: true` (default):
@@ -143,19 +154,31 @@ iconWithGap && 'mr-3',
 
 ## Metrics
 
-**Before**:
+**Before (original)**:
 - Icon gap: 8px (`mr-2`)
-- Left space before text: 42px
+- Left padding: 8px (`px-2`)
+- Right padding: 8px (`px-2`)
+- Left space before text: 42px (8px padding + 26px icon + 8px gap)
 - Right space after text: 8px
 - Balance ratio: 5.25:1 (left-heavy)
 
-**After**:
+**After (iteration 1 - insufficient)**:
 - Icon gap: 12px (`mr-3`)
-- Left space before text: 46px
+- Left padding: 8px
+- Right padding: 8px
+- Left space before text: 46px (8px padding + 26px icon + 12px gap)
 - Right space after text: 8px
-- Balance ratio: 5.75:1 (still left-oriented but visually improved)
+- Balance ratio: 5.75:1 (still too left-heavy)
 
-**Note**: Perfect 1:1 balance isn't the goal - we want the text to be readable with clear icon association. The increased gap improves visual breathing room and reduces the cramped left-heavy feeling.
+**After (iteration 2 - final)**:
+- Icon gap: 12px (`mr-3`)
+- Left padding: 8px (`pl-2`)
+- Right padding: 16px (`pr-4`)
+- Left space before text: 46px (8px padding + 26px icon + 12px gap)
+- Right space after text: 16px
+- Balance ratio: 2.875:1 (significantly improved balance)
+
+**Note**: Perfect 1:1 balance isn't the goal - we want the text to be readable with clear icon association. The increased icon gap (4px) and doubled right padding (8px) together create much better visual balance and breathing room.
 
 ## Rollout Plan
 

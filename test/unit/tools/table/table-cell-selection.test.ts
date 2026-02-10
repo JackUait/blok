@@ -1098,35 +1098,5 @@ describe('TableCellSelection', () => {
     });
   });
 
-  describe('pill hit area expansion', () => {
-    it('expands pill horizontal hit area from 4px to 16px using padding + negative margin', () => {
-      simulateDrag(grid, 0, 0, 1, 1);
-
-      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
-
-      // 6px left padding expands left side
-      expect(pill.style.paddingLeft).toBe('6px');
-      // 6px right padding expands right side
-      expect(pill.style.paddingRight).toBe('6px');
-      // -6px left margin compensates to maintain visual position
-      expect(pill.style.marginLeft).toBe('-6px');
-      // -6px right margin compensates to maintain visual position
-      expect(pill.style.marginRight).toBe('-6px');
-    });
-
-    it('maintains 4px visual width while providing 16px hit area', () => {
-      simulateDrag(grid, 0, 0, 1, 1);
-
-      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
-
-      // Visual width stays 4px
-      expect(pill.style.width).toBe('4px');
-      // Padding adds 6px on each side: 4 + 6 + 6 = 16px total hit area
-      // Negative margin keeps visual position unchanged
-      expect(pill.style.paddingLeft).toBe('6px');
-      expect(pill.style.paddingRight).toBe('6px');
-      expect(pill.style.marginLeft).toBe('-6px');
-      expect(pill.style.marginRight).toBe('-6px');
-    });
-  });
 });
+

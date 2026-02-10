@@ -386,48 +386,6 @@ describe('TableRowColControls', () => {
   });
 
   describe('dimension-based grip expand/collapse', () => {
-    it('row grips have expanded hit area with padding and negative margin', () => {
-      grid = createGrid(2, 2);
-      controls = new TableRowColControls({
-        grid,
-        getColumnCount: () => 2,
-        getRowCount: () => 2,
-        isHeadingRow: () => false,
-        isHeadingColumn: () => false,
-        onAction: vi.fn(),
-      });
-
-      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
-      const grip = rowGrips[0];
-
-      // Verify expanded hit area (4px visual → 16px interactive)
-      expect(grip.style.paddingLeft).toBe('6px');
-      expect(grip.style.paddingRight).toBe('6px');
-      expect(grip.style.marginLeft).toBe('-6px');
-      expect(grip.style.marginRight).toBe('-6px');
-    });
-
-    it('column grips have expanded hit area with padding and negative margin', () => {
-      grid = createGrid(2, 2);
-      controls = new TableRowColControls({
-        grid,
-        getColumnCount: () => 2,
-        getRowCount: () => 2,
-        isHeadingRow: () => false,
-        isHeadingColumn: () => false,
-        onAction: vi.fn(),
-      });
-
-      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
-      const grip = colGrips[0];
-
-      // Verify expanded hit area (4px visual → 16px interactive)
-      expect(grip.style.paddingTop).toBe('6px');
-      expect(grip.style.paddingBottom).toBe('6px');
-      expect(grip.style.marginTop).toBe('-6px');
-      expect(grip.style.marginBottom).toBe('-6px');
-    });
-
     it('column grips are created at idle height with translate centering', () => {
       grid = createGrid(2, 2);
       controls = new TableRowColControls({

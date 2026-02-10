@@ -247,34 +247,26 @@ export class TableRowColControls {
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
 
-    // Padding expands hit area but background-clip keeps visual size at 4px
-    const HIT_AREA_PADDING = 12;
-    const pillSize = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
     const idleWidth = type === 'col' ? COL_PILL_WIDTH : ROW_PILL_WIDTH;
     const idleHeight = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT;
+    const pillSize = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
 
     grip.style.width = `${idleWidth}px`;
     grip.style.height = `${idleHeight}px`;
     grip.style.transform = 'translate(-50%, -50%)';
-    grip.style.boxShadow = 'inset 0 0 0 2px white';
-    grip.style.boxSizing = 'content-box';
-    grip.style.backgroundClip = 'content-box';
+    grip.style.outline = '2px solid white';
+    grip.style.position = 'relative';
 
-    // Expand hit area for row grips (4px → 16px)
-    if (type === 'row') {
-      grip.style.paddingLeft = '6px';
-      grip.style.paddingRight = '6px';
-      grip.style.marginLeft = '-6px';
-      grip.style.marginRight = '-6px';
-    }
+    // Use ::before pseudo-element to expand hit area without affecting outline
+    // Row grips: expand width from 4px to 16px
+    // Col grips: expand height from 4px to 16px
+    const style = document.createElement('style');
+    const pseudoStyles = type === 'row'
+      ? `content: ""; position: absolute; top: 0; bottom: 0; left: -6px; right: -6px;`
+      : `content: ""; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px;`;
 
-    // Expand hit area for col grips (4px → 16px)
-    if (type === 'col') {
-      grip.style.paddingTop = '6px';
-      grip.style.paddingBottom = '6px';
-      grip.style.marginTop = '-6px';
-      grip.style.marginBottom = '-6px';
-    }
+    style.textContent = `[${type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR}="${index}"]::before { ${pseudoStyles} }`;
+    document.head.appendChild(style);
 
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 

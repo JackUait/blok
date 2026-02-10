@@ -460,14 +460,14 @@ export class TableCellSelection {
     pill.style.height = `${PILL_HEIGHT}px`;
     pill.style.pointerEvents = 'auto';
     pill.style.transform = 'translate(-50%, -50%)';
-    pill.style.boxShadow = 'inset 0 0 0 2px white';
-    pill.style.boxSizing = 'content-box';
-    pill.style.backgroundClip = 'content-box';
-    // Expand hit area (4px → 16px width)
-    pill.style.paddingLeft = '6px';
-    pill.style.paddingRight = '6px';
-    pill.style.marginLeft = '-6px';
-    pill.style.marginRight = '-6px';
+    pill.style.outline = '2px solid white';
+    pill.style.position = 'relative';
+
+    // Use ::before pseudo-element to expand hit area from 4px to 16px width
+    const style = document.createElement('style');
+
+    style.textContent = `[${PILL_ATTR}]::before { content: ""; position: absolute; top: 0; bottom: 0; left: -6px; right: -6px; }`;
+    document.head.appendChild(style);
 
     const svg = createGripDotsSvg('vertical');
 

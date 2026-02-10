@@ -976,4 +976,125 @@ describe('TableCellSelection', () => {
       selectionNoOverlay.destroy();
     });
   });
+
+  describe('keyboard handling', () => {
+    it('clears selected cells on Delete key', () => {
+      const onClearContent = vi.fn();
+      const onSelectionActiveChange = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onClearContent,
+        onSelectionActiveChange,
+      });
+
+      // Programmatically select row 0 (3 cells)
+      selection.selectRow(0);
+
+      // Dispatch Delete key to document
+      const deleteEvent = new KeyboardEvent('keydown', {
+        key: 'Delete',
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = vi.spyOn(deleteEvent, 'preventDefault');
+
+      document.dispatchEvent(deleteEvent);
+
+      // Verify onClearContent called with array of 3 cells
+      expect(onClearContent).toHaveBeenCalledTimes(1);
+      expect(onClearContent.mock.calls[0][0]).toHaveLength(3);
+
+      // Verify onSelectionActiveChange called with false (selection dismissed)
+      expect(onSelectionActiveChange).toHaveBeenCalledWith(false);
+
+      // Verify preventDefault called
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('clears selected cells on Backspace key', () => {
+      const onClearContent = vi.fn();
+      const onSelectionActiveChange = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onClearContent,
+        onSelectionActiveChange,
+      });
+
+      // Programmatically select row 0 (3 cells)
+      selection.selectRow(0);
+
+      // Dispatch Backspace key to document
+      const backspaceEvent = new KeyboardEvent('keydown', {
+        key: 'Backspace',
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = vi.spyOn(backspaceEvent, 'preventDefault');
+
+      document.dispatchEvent(backspaceEvent);
+
+      // Verify onClearContent called with array of 3 cells
+      expect(onClearContent).toHaveBeenCalledTimes(1);
+      expect(onClearContent.mock.calls[0][0]).toHaveLength(3);
+
+      // Verify onSelectionActiveChange called with false (selection dismissed)
+      expect(onSelectionActiveChange).toHaveBeenCalledWith(false);
+
+      // Verify preventDefault called
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('does not clear when no selection is active', () => {
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onClearContent,
+      });
+
+      // Do NOT select any cells
+
+      // Dispatch Delete key
+      const deleteEvent = new KeyboardEvent('keydown', {
+        key: 'Delete',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      document.dispatchEvent(deleteEvent);
+
+      // Verify onClearContent NOT called
+      expect(onClearContent).not.toHaveBeenCalled();
+    });
+
+    it('does not clear for other keys', () => {
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        onClearContent,
+      });
+
+      // Select cells
+      selection.selectRow(0);
+
+      // Dispatch Enter key
+      const enterEvent = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      document.dispatchEvent(enterEvent);
+
+      // Verify onClearContent NOT called
+      expect(onClearContent).not.toHaveBeenCalled();
+    });
+  });
 });

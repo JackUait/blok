@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { isInsideTableCell } from '../../../../src/tools/table/table-restrictions';
 import type { Block } from '../../../../src/components/block';
 
@@ -6,12 +6,14 @@ describe('table-restrictions', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     container = document.createElement('div');
     document.body.appendChild(container);
   });
 
   afterEach(() => {
     container.remove();
+    vi.restoreAllMocks();
   });
 
   describe('isInsideTableCell', () => {

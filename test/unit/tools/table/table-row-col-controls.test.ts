@@ -886,4 +886,42 @@ describe('TableRowColControls', () => {
       expect(otherGrip.style.display).toBe('none');
     });
   });
+
+  describe('grip styling (original behavior)', () => {
+    it('row grips do not have position: relative (no pseudo-element hit area expansion)', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
+      const grip = rowGrips[0];
+
+      // Original behavior: no position: relative (pseudo-element approach removed)
+      expect(grip.style.position).not.toBe('relative');
+    });
+
+    it('column grips do not have position: relative (no pseudo-element hit area expansion)', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const grip = colGrips[0];
+
+      // Original behavior: no position: relative (pseudo-element approach removed)
+      expect(grip.style.position).not.toBe('relative');
+    });
+  });
 });

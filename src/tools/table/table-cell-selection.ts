@@ -59,8 +59,6 @@ interface CellSelectionOptions {
 }
 
 export class TableCellSelection {
-  private static stylesInjected = false;
-
   private grid: HTMLElement;
   private rectangleSelection?: { cancelActiveSelection: () => void };
   private onSelectionActiveChange: ((hasSelection: boolean) => void) | undefined;
@@ -82,23 +80,6 @@ export class TableCellSelection {
   private boundKeyDown: (e: KeyboardEvent) => void;
 
   constructor(options: CellSelectionOptions) {
-    // Inject global pseudo-element style for pill hit area expansion (once)
-    if (!TableCellSelection.stylesInjected) {
-      const style = document.createElement('style');
-
-      style.textContent = `
-        [${PILL_ATTR}]::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          left: -6px;
-          right: -6px;
-        }
-      `;
-      document.head.appendChild(style);
-      TableCellSelection.stylesInjected = true;
-    }
     this.grid = options.grid;
     this.rectangleSelection = options.rectangleSelection;
     this.onSelectionActiveChange = options.onSelectionActiveChange;
@@ -480,7 +461,6 @@ export class TableCellSelection {
     pill.style.pointerEvents = 'auto';
     pill.style.transform = 'translate(-50%, -50%)';
     pill.style.outline = '2px solid white';
-    pill.style.position = 'relative';
 
     const svg = createGripDotsSvg('vertical');
 

@@ -1098,5 +1098,16 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('pill styling (original behavior)', () => {
+    it('pill does not have position: relative (no pseudo-element hit area expansion)', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      // Original behavior: no position: relative (pseudo-element approach removed)
+      expect(pill.style.position).not.toBe('relative');
+    });
+  });
+
 });
 

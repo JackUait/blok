@@ -92,8 +92,6 @@ const GRIP_ACTIVE_CLASSES = [
  * Manages row and column grip handles with popover menus and drag-to-reorder.
  */
 export class TableRowColControls {
-  private static stylesInjected = false;
-
   private grid: HTMLElement;
   private getColumnCount: () => number;
   private getRowCount: () => number;
@@ -120,31 +118,6 @@ export class TableRowColControls {
   private boundPointerDown: (e: PointerEvent) => void;
 
   constructor(options: TableRowColControlsOptions) {
-    // Inject global pseudo-element styles for hit area expansion (once)
-    if (!TableRowColControls.stylesInjected) {
-      const style = document.createElement('style');
-
-      style.textContent = `
-        [${GRIP_ROW_ATTR}]::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          left: -6px;
-          right: -6px;
-        }
-        [${GRIP_COL_ATTR}]::before {
-          content: "";
-          position: absolute;
-          left: 0;
-          right: 0;
-          top: -6px;
-          bottom: -6px;
-        }
-      `;
-      document.head.appendChild(style);
-      TableRowColControls.stylesInjected = true;
-    }
     this.grid = options.grid;
     this.getColumnCount = options.getColumnCount;
     this.getRowCount = options.getRowCount;
@@ -282,7 +255,6 @@ export class TableRowColControls {
     grip.style.height = `${idleHeight}px`;
     grip.style.transform = 'translate(-50%, -50%)';
     grip.style.outline = '2px solid white';
-    grip.style.position = 'relative';
 
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 

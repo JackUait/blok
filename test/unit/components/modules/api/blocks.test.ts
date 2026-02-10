@@ -824,6 +824,115 @@ describe('BlocksAPI', () => {
       }).toThrow('Block with id "missing" not found');
     });
   });
+
+  describe('insert with table cell restrictions', () => {
+    it('converts header to paragraph when inserting in table cell', () => {
+      const cellBlocks = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const mockBlock = {
+        id: 'block-1',
+        holder,
+      };
+
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock as BlockStub);
+      blockManager.currentBlockIndex = 0;
+
+      const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
+        id: 'new-block',
+      } as BlockStub);
+
+      blocksApi.insert('header', { text: 'Hello' }, {}, 0);
+
+      expect(insertSpy).toHaveBeenCalledWith({
+        id: undefined,
+        tool: 'paragraph',
+        data: { text: 'Hello' },
+        index: 0,
+        needToFocus: undefined,
+        replace: undefined,
+      });
+
+      cellBlocks.remove();
+    });
+
+    it('converts table to paragraph when inserting in table cell', () => {
+      const cellBlocks = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const mockBlock = {
+        id: 'block-1',
+        holder,
+      };
+
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock as BlockStub);
+      blockManager.currentBlockIndex = 0;
+
+      const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
+        id: 'new-block',
+      } as BlockStub);
+
+      blocksApi.insert('table', { content: [] }, {}, 0);
+
+      expect(insertSpy).toHaveBeenCalledWith({
+        id: undefined,
+        tool: 'paragraph',
+        data: { content: [] },
+        index: 0,
+        needToFocus: undefined,
+        replace: undefined,
+      });
+
+      cellBlocks.remove();
+    });
+
+    it('allows header insertion outside table cell', () => {
+      const holder = document.createElement('div');
+
+      document.body.appendChild(holder);
+
+      const mockBlock = {
+        id: 'block-1',
+        holder,
+      };
+
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock as BlockStub);
+      blockManager.currentBlockIndex = 0;
+
+      const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
+        id: 'new-block',
+      } as BlockStub);
+
+      blocksApi.insert('header', { text: 'Hello' }, {}, 0);
+
+      expect(insertSpy).toHaveBeenCalledWith({
+        id: undefined,
+        tool: 'header',
+        data: { text: 'Hello' },
+        index: 0,
+        needToFocus: undefined,
+        replace: undefined,
+      });
+
+      holder.remove();
+    });
+  });
 });
 
 

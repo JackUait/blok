@@ -256,6 +256,14 @@ export class TableRowColControls {
     grip.style.transform = 'translate(-50%, -50%)';
     grip.style.outline = '2px solid white';
 
+    // Expand hit area for row grips (4px → 16px)
+    if (type === 'row') {
+      grip.style.paddingLeft = '6px';
+      grip.style.paddingRight = '6px';
+      grip.style.marginLeft = '-6px';
+      grip.style.marginRight = '-6px';
+    }
+
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 
     grip.addEventListener('pointerdown', this.boundPointerDown);

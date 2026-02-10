@@ -442,9 +442,9 @@ describe('TableRowColControls', () => {
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const grip = colGrips[0];
 
-      // Width stays at full size; height starts at idle pill size
+      // Width stays at full size; height starts at idle pill size (16px with border-box + padding)
       expect(grip.style.width).toBe('24px');
-      expect(grip.style.height).toBe('4px');
+      expect(grip.style.height).toBe('16px');
       // Uses translate for centering, not scale transforms
       expect(grip.style.transform).toBe('translate(-50%, -50%)');
     });
@@ -463,8 +463,8 @@ describe('TableRowColControls', () => {
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
       const grip = rowGrips[0];
 
-      // Height stays at full size; width starts at idle pill size
-      expect(grip.style.width).toBe('4px');
+      // Height stays at full size; width starts at idle pill size (16px with border-box + padding)
+      expect(grip.style.width).toBe('16px');
       expect(grip.style.height).toBe('20px');
       expect(grip.style.transform).toBe('translate(-50%, -50%)');
     });
@@ -509,7 +509,7 @@ describe('TableRowColControls', () => {
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
       grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
 
-      expect(grip.style.height).toBe('4px');
+      expect(grip.style.height).toBe('16px');
     });
 
     it('row grip expands width on mouseenter', () => {
@@ -551,7 +551,7 @@ describe('TableRowColControls', () => {
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
       grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
 
-      expect(grip.style.width).toBe('4px');
+      expect(grip.style.width).toBe('16px');
     });
 
     it('grip retains bg-gray-300 after expand then collapse so pill stays visible', () => {

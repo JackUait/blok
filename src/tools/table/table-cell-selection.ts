@@ -77,6 +77,7 @@ export class TableCellSelection {
   private boundPointerUp: () => void;
   private boundClearSelection: (e: PointerEvent) => void;
   private boundCancelRectangle: (e: MouseEvent) => void;
+  private boundKeyDown: (e: KeyboardEvent) => void;
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
@@ -90,8 +91,10 @@ export class TableCellSelection {
     this.boundPointerUp = this.handlePointerUp.bind(this);
     this.boundClearSelection = this.handleClearSelection.bind(this);
     this.boundCancelRectangle = this.handleCancelRectangle.bind(this);
+    this.boundKeyDown = this.handleKeyDown.bind(this);
 
     this.grid.addEventListener('pointerdown', this.boundPointerDown);
+    document.addEventListener('keydown', this.boundKeyDown);
   }
 
   public destroy(): void {
@@ -102,6 +105,7 @@ export class TableCellSelection {
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointerdown', this.boundClearSelection);
     document.removeEventListener('mousemove', this.boundCancelRectangle, true);
+    document.removeEventListener('keydown', this.boundKeyDown);
   }
 
   /**
@@ -273,6 +277,25 @@ export class TableCellSelection {
     }
 
     document.removeEventListener('pointerdown', this.boundClearSelection);
+    this.clearSelection();
+  }
+
+  private handleKeyDown(e: KeyboardEvent): void {
+    // Only trigger when selection is active
+    if (!this.hasSelection) {
+      return;
+    }
+
+    // Check for Delete or Backspace
+    if (e.key !== 'Delete' && e.key !== 'Backspace') {
+      return;
+    }
+
+    // Prevent default behavior
+    e.preventDefault();
+
+    // Clear content and dismiss selection
+    this.onClearContent?.([...this.selectedCells]);
     this.clearSelection();
   }
 

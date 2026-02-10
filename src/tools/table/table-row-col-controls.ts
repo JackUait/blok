@@ -256,7 +256,7 @@ export class TableRowColControls {
     grip.style.width = `${idleWidth}px`;
     grip.style.height = `${idleHeight}px`;
     grip.style.transform = 'translate(-50%, -50%)';
-    grip.style.outline = '2px solid white';
+    grip.style.boxShadow = 'inset 0 0 0 2px white';
     grip.style.boxSizing = 'content-box';
     grip.style.backgroundClip = 'content-box';
 

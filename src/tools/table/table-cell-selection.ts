@@ -460,7 +460,7 @@ export class TableCellSelection {
     pill.style.height = `${PILL_HEIGHT}px`;
     pill.style.pointerEvents = 'auto';
     pill.style.transform = 'translate(-50%, -50%)';
-    pill.style.outline = '2px solid white';
+    pill.style.boxShadow = 'inset 0 0 0 2px white';
     pill.style.boxSizing = 'content-box';
     pill.style.backgroundClip = 'content-box';
     // Expand hit area (4px → 16px width)

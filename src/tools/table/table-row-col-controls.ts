@@ -110,6 +110,7 @@ export class TableRowColControls {
   private hideTimeout: ReturnType<typeof setTimeout> | null = null;
   private activeColGripIndex = -1;
   private activeRowGripIndex = -1;
+  private rowResizeObserver: ResizeObserver | null = null;
 
   private drag: TableRowColDrag;
 
@@ -228,9 +229,12 @@ export class TableRowColControls {
     });
 
     this.positionGrips();
+    this.observeRowHeights();
   }
 
   private destroyGrips(): void {
+    this.rowResizeObserver?.disconnect();
+    this.rowResizeObserver = null;
     this.colGrips.forEach(g => g.remove());
     this.rowGrips.forEach(g => g.remove());
     this.colGrips = [];
@@ -310,6 +314,23 @@ export class TableRowColControls {
 
       style.left = `${-BORDER_WIDTH / 2}px`;
       style.top = `${centerY}px`;
+    });
+  }
+
+  /**
+   * Set up ResizeObserver to watch for row height changes and reposition grips.
+   */
+  private observeRowHeights(): void {
+    this.rowResizeObserver?.disconnect();
+
+    this.rowResizeObserver = new ResizeObserver(() => {
+      this.positionGrips();
+    });
+
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+
+    rows.forEach(row => {
+      this.rowResizeObserver?.observe(row as HTMLElement);
     });
   }
 

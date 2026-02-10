@@ -23,3 +23,12 @@ if (!window.cancelIdleCallback) {
     window.clearTimeout(id);
   }) as unknown as typeof window.cancelIdleCallback;
 }
+
+// Polyfill ResizeObserver for jsdom environment
+if (!window.ResizeObserver) {
+  window.ResizeObserver = class ResizeObserver {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  } as unknown as typeof window.ResizeObserver;
+}

@@ -5,6 +5,7 @@ import { Module } from '../../__module';
 import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { capitalize } from '../../utils';
+import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 
 import { logLabeled } from './../../utils';
 
@@ -242,7 +243,14 @@ export class BlocksAPI extends Module {
     replace?: boolean,
     id?: string
   ): BlockAPIInterface => {
-    const tool = type ?? (this.config.defaultBlock);
+    let tool = type ?? (this.config.defaultBlock);
+
+    const targetIndex = index ?? this.Blok.BlockManager.currentBlockIndex;
+    const targetBlock = this.Blok.BlockManager.getBlockByIndex(targetIndex);
+
+    if (targetBlock !== undefined && isInsideTableCell(targetBlock) && isRestrictedInTableCell(tool)) {
+      tool = 'paragraph';
+    }
 
     const insertedBlock = this.Blok.BlockManager.insert({
       id,

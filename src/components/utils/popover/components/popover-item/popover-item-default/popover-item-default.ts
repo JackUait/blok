@@ -324,6 +324,8 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
+      // Asymmetric padding for vertical popovers (better visual balance)
+      !isInline && !isNestedInline && 'pl-2 pr-8',
       isInline && cssInline.item,
       isNestedInline && cssNestedInline.item,
       this.params.isDisabled && css.itemDisabled

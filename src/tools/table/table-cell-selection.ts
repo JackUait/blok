@@ -461,6 +461,11 @@ export class TableCellSelection {
     pill.style.pointerEvents = 'auto';
     pill.style.transform = 'translate(-50%, -50%)';
     pill.style.outline = '2px solid white';
+    // Expand hit area (4px → 16px width)
+    pill.style.paddingLeft = '6px';
+    pill.style.paddingRight = '6px';
+    pill.style.marginLeft = '-6px';
+    pill.style.marginRight = '-6px';
 
     const svg = createGripDotsSvg('vertical');
 

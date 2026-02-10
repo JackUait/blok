@@ -777,6 +777,79 @@ describe('MarkdownShortcuts', () => {
     });
   });
 
+  describe('header shortcuts in table cells', () => {
+    it('does not convert "# " to header inside table cell', () => {
+      const cellBlocks = document.createElement('div');
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+      const input = document.createElement('div');
+      input.setAttribute('contenteditable', 'true');
+      input.textContent = '# ';
+      holder.appendChild(input);
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const mockBlock = createBlock({
+        holder,
+        currentInput: input,
+      });
+
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+
+      cellBlocks.remove();
+    });
+
+    it('converts "# " to header outside table cell', () => {
+      const holder = document.createElement('div');
+      const input = document.createElement('div');
+      input.setAttribute('contenteditable', 'true');
+      input.textContent = '# ';
+      holder.appendChild(input);
+      document.body.appendChild(holder);
+
+      const mockBlock = createBlock({
+        holder,
+        currentInput: input,
+      });
+
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalled();
+
+      holder.remove();
+    });
+  });
+
   describe('header tool availability', () => {
     it('returns false when header tool is not available', () => {
       const mockBlock = createBlock();

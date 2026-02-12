@@ -41,5 +41,15 @@
   "a11y.movedUp": "ব্লক উপরে সরানো হয়েছে, {total}টির মধ্যে {position}",
   "a11y.movedDown": "ব্লক নিচে সরানো হয়েছে, {total}টির মধ্যে {position}",
   "a11y.atTop": "ব্লক সবার উপরে আছে, আর উপরে সরানো যাবে না",
-  "a11y.atBottom": "ব্লক সবার নিচে আছে, আর নিচে সরানো যাবে না"
+  "a11y.atBottom": "ব্লক সবার নিচে আছে, আর নিচে সরানো যাবে না",
+  "tools.table.title": "টেবিল",
+  "tools.table.clearSelection": "সাফ করুন",
+  "tools.table.headerColumn": "হেডার কলাম",
+  "tools.table.insertColumnLeft": "বামে কলাম যোগ করুন",
+  "tools.table.insertColumnRight": "ডানে কলাম যোগ করুন",
+  "tools.table.deleteColumn": "মুছুন",
+  "tools.table.headerRow": "হেডার সারি",
+  "tools.table.insertRowAbove": "উপরে সারি যোগ করুন",
+  "tools.table.insertRowBelow": "নিচে সারি যোগ করুন",
+  "tools.table.deleteRow": "মুছুন"
 }

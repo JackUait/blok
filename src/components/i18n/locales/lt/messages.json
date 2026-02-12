@@ -41,5 +41,15 @@
   "a11y.movedDown": "Blokas perkeltas žemyn į poziciją {position} iš {total}",
   "a11y.atTop": "Blokas yra viršuje, negalima perkelti aukštyn",
   "a11y.atBottom": "Blokas yra apačioje, negalima perkelti žemyn",
-  "tools.paragraph.placeholder": "Rašykite ką nors arba spauskite / pasirinkimui"
+  "tools.paragraph.placeholder": "Rašykite ką nors arba spauskite / pasirinkimui",
+  "tools.table.title": "Lentelė",
+  "tools.table.clearSelection": "Išvalyti",
+  "tools.table.headerColumn": "Antraštės stulpelis",
+  "tools.table.insertColumnLeft": "Įterpti stulpelį kairėje",
+  "tools.table.insertColumnRight": "Įterpti stulpelį dešinėje",
+  "tools.table.deleteColumn": "Ištrinti",
+  "tools.table.headerRow": "Antraštės eilutė",
+  "tools.table.insertRowAbove": "Įterpti eilutę viršuje",
+  "tools.table.insertRowBelow": "Įterpti eilutę apačioje",
+  "tools.table.deleteRow": "Ištrinti"
 }

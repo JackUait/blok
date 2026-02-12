@@ -41,5 +41,15 @@
   "a11y.movedDown": "தொகுதி {total} இல் {position} நிலைக்கு கீழே நகர்த்தப்பட்டது",
   "a11y.atTop": "தொகுதி மேலே உள்ளது, மேலே நகர்த்த முடியாது",
   "a11y.atBottom": "தொகுதி கீழே உள்ளது, கீழே நகர்த்த முடியாது",
-  "tools.paragraph.placeholder": "ஏதாவது எழுdelay அல்லது தேர்ந்தெdelays / அdelaysங்கள்"
+  "tools.paragraph.placeholder": "ஏதாவது எழுதவும் அல்லது தேர்வு செய்ய / அழுத்தவும்",
+  "tools.table.title": "அட்டவணை",
+  "tools.table.clearSelection": "அழி",
+  "tools.table.headerColumn": "தலைப்பு நெடுவரிசை",
+  "tools.table.insertColumnLeft": "இடதில் நெடுவரிசை சேர்",
+  "tools.table.insertColumnRight": "வலதில் நெடுவரிசை சேர்",
+  "tools.table.deleteColumn": "நீக்கு",
+  "tools.table.headerRow": "தலைப்பு வரிசை",
+  "tools.table.insertRowAbove": "மேலே வரிசை சேர்",
+  "tools.table.insertRowBelow": "கீழே வரிசை சேர்",
+  "tools.table.deleteRow": "நீக்கு"
 }

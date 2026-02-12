@@ -41,5 +41,15 @@
   "a11y.movedDown": "Khối đã di chuyển xuống, vị trí {position} trên {total}",
   "a11y.atTop": "Khối đang ở trên cùng, không thể di chuyển lên",
   "a11y.atBottom": "Khối đang ở dưới cùng, không thể di chuyển xuống",
-  "tools.paragraph.placeholder": "Viết gì đó hoặc nhấn / để chọn"
+  "tools.paragraph.placeholder": "Viết gì đó hoặc nhấn / để chọn",
+  "tools.table.title": "Bảng",
+  "tools.table.clearSelection": "Xóa",
+  "tools.table.headerColumn": "Cột tiêu đề",
+  "tools.table.insertColumnLeft": "Chèn cột bên trái",
+  "tools.table.insertColumnRight": "Chèn cột bên phải",
+  "tools.table.deleteColumn": "Xóa",
+  "tools.table.headerRow": "Hàng tiêu đề",
+  "tools.table.insertRowAbove": "Chèn hàng phía trên",
+  "tools.table.insertRowBelow": "Chèn hàng phía dưới",
+  "tools.table.deleteRow": "Xóa"
 }

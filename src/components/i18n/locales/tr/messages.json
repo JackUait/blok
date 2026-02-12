@@ -41,5 +41,15 @@
   "a11y.movedDown": "Blok aşağı taşındı ({total} içinden {position}.)",
   "a11y.atTop": "Blok en üstte, yukarı taşınamaz",
   "a11y.atBottom": "Blok en altta, aşağı taşınamaz",
-  "tools.paragraph.placeholder": "Bir şeyler yazın veya seçmek için / tuşuna basın"
+  "tools.paragraph.placeholder": "Bir şeyler yazın veya seçmek için / tuşuna basın",
+  "tools.table.title": "Tablo",
+  "tools.table.clearSelection": "Temizle",
+  "tools.table.headerColumn": "Başlık sütunu",
+  "tools.table.insertColumnLeft": "Sola sütun ekle",
+  "tools.table.insertColumnRight": "Sağa sütun ekle",
+  "tools.table.deleteColumn": "Sil",
+  "tools.table.headerRow": "Başlık satırı",
+  "tools.table.insertRowAbove": "Yukarı satır ekle",
+  "tools.table.insertRowBelow": "Aşağı satır ekle",
+  "tools.table.deleteRow": "Sil"
 }

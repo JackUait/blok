@@ -41,5 +41,15 @@
   "a11y.movedDown": "ಬ್ಲಾಕ್ {total} ರಲ್ಲಿ {position} ಸ್ಥಾನಕ್ಕೆ ಕೆಳಗೆ ಸರಿಸಲಾಗಿದೆ",
   "a11y.atTop": "ಬ್ಲಾಕ್ ಮೇಲ್ಭಾಗದಲ್ಲಿದೆ, ಮೇಲೆ ಸರಿಸಲಾಗುವುದಿಲ್ಲ",
   "a11y.atBottom": "ಬ್ಲಾಕ್ ಕೆಳಭಾಗದಲ್ಲಿದೆ, ಕೆಳಗೆ ಸರಿಸಲಾಗುವುದಿಲ್ಲ",
-  "tools.paragraph.placeholder": "ಏನಾದರೂ ಬರೆಯಿರಿ ಅಥವಾ ಆಯ್ಕೆ ಮಾಡಲು / ಒತ್ತಿ"
+  "tools.paragraph.placeholder": "ಏನಾದರೂ ಬರೆಯಿರಿ ಅಥವಾ ಆಯ್ಕೆ ಮಾಡಲು / ಒತ್ತಿ",
+  "tools.table.title": "ಕೋಷ್ಟಕ",
+  "tools.table.clearSelection": "ತೆರವುಗೊಳಿಸಿ",
+  "tools.table.headerColumn": "ಹೆಡರ್ ಕಾಲಂ",
+  "tools.table.insertColumnLeft": "ಎಡಕ್ಕೆ ಕಾಲಂ ಸೇರಿಸಿ",
+  "tools.table.insertColumnRight": "ಬಲಕ್ಕೆ ಕಾಲಂ ಸೇರಿಸಿ",
+  "tools.table.deleteColumn": "ಅಳಿಸಿ",
+  "tools.table.headerRow": "ಹೆಡರ್ ಸಾಲು",
+  "tools.table.insertRowAbove": "ಮೇಲೆ ಸಾಲು ಸೇರಿಸಿ",
+  "tools.table.insertRowBelow": "ಕೆಳಗೆ ಸಾಲು ಸೇರಿಸಿ",
+  "tools.table.deleteRow": "ಅಳಿಸಿ"
 }

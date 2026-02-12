@@ -41,5 +41,15 @@
   "a11y.movedUp": "Bloco movido para cima, posição {position} de {total}",
   "a11y.movedDown": "Bloco movido para baixo, posição {position} de {total}",
   "a11y.atTop": "Não é possível subir mais",
-  "a11y.atBottom": "Não é possível descer mais"
+  "a11y.atBottom": "Não é possível descer mais",
+  "tools.table.title": "Tabela",
+  "tools.table.clearSelection": "Limpar",
+  "tools.table.headerColumn": "Coluna de cabeçalho",
+  "tools.table.insertColumnLeft": "Inserir coluna à esquerda",
+  "tools.table.insertColumnRight": "Inserir coluna à direita",
+  "tools.table.deleteColumn": "Excluir",
+  "tools.table.headerRow": "Linha de cabeçalho",
+  "tools.table.insertRowAbove": "Inserir linha acima",
+  "tools.table.insertRowBelow": "Inserir linha abaixo",
+  "tools.table.deleteRow": "Excluir"
 }

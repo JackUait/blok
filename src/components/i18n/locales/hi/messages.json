@@ -41,5 +41,15 @@
   "a11y.movedUp": "ब्लॉक ऊपर ले जाया गया, {total} में से {position}",
   "a11y.movedDown": "ब्लॉक नीचे ले जाया गया, {total} में से {position}",
   "a11y.atTop": "ब्लॉक सबसे ऊपर है, और ऊपर नहीं जा सकता",
-  "a11y.atBottom": "ब्लॉक सबसे नीचे है, और नीचे नहीं जा सकता"
+  "a11y.atBottom": "ब्लॉक सबसे नीचे है, और नीचे नहीं जा सकता",
+  "tools.table.title": "तालिका",
+  "tools.table.clearSelection": "साफ़ करें",
+  "tools.table.headerColumn": "हेडर कॉलम",
+  "tools.table.insertColumnLeft": "बाईं ओर कॉलम जोड़ें",
+  "tools.table.insertColumnRight": "दाईं ओर कॉलम जोड़ें",
+  "tools.table.deleteColumn": "हटाएं",
+  "tools.table.headerRow": "हेडर पंक्ति",
+  "tools.table.insertRowAbove": "ऊपर पंक्ति जोड़ें",
+  "tools.table.insertRowBelow": "नीचे पंक्ति जोड़ें",
+  "tools.table.deleteRow": "हटाएं"
 }

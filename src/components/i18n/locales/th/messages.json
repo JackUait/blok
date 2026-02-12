@@ -41,5 +41,15 @@
   "a11y.movedDown": "ย้ายบล็อกลง ตำแหน่ง {position} จาก {total}",
   "a11y.atTop": "บล็อกอยู่บนสุดแล้ว ไม่สามารถย้ายขึ้นได้",
   "a11y.atBottom": "บล็อกอยู่ล่างสุดแล้ว ไม่สามารถย้ายลงได้",
-  "tools.paragraph.placeholder": "เขียนอะไรสักอย่าง หรือกด / เพื่อเลือก"
+  "tools.paragraph.placeholder": "เขียนอะไรสักอย่าง หรือกด / เพื่อเลือก",
+  "tools.table.title": "ตาราง",
+  "tools.table.clearSelection": "ล้าง",
+  "tools.table.headerColumn": "คอลัมน์หัวข้อ",
+  "tools.table.insertColumnLeft": "แทรกคอลัมน์ทางซ้าย",
+  "tools.table.insertColumnRight": "แทรกคอลัมน์ทางขวา",
+  "tools.table.deleteColumn": "ลบ",
+  "tools.table.headerRow": "แถวหัวข้อ",
+  "tools.table.insertRowAbove": "แทรกแถวด้านบน",
+  "tools.table.insertRowBelow": "แทรกแถวด้านล่าง",
+  "tools.table.deleteRow": "ลบ"
 }

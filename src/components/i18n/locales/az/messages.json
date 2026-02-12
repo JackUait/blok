@@ -41,5 +41,15 @@
   "a11y.movedUp": "Blok yuxarı köçürüldü ({total} içindən {position}-ci)",
   "a11y.movedDown": "Blok aşağı köçürüldü ({total} içindən {position}-ci)",
   "a11y.atTop": "Blok ən yuxarıdadır, yuxarı köçürülə bilməz",
-  "a11y.atBottom": "Blok ən aşağıdadır, aşağı köçürülə bilməz"
+  "a11y.atBottom": "Blok ən aşağıdadır, aşağı köçürülə bilməz",
+  "tools.table.title": "Cədvəl",
+  "tools.table.clearSelection": "Təmizlə",
+  "tools.table.headerColumn": "Başlıq sütunu",
+  "tools.table.insertColumnLeft": "Soldan sütun əlavə et",
+  "tools.table.insertColumnRight": "Sağdan sütun əlavə et",
+  "tools.table.deleteColumn": "Sil",
+  "tools.table.headerRow": "Başlıq sətri",
+  "tools.table.insertRowAbove": "Yuxarıya sətir əlavə et",
+  "tools.table.insertRowBelow": "Aşağıya sətir əlavə et",
+  "tools.table.deleteRow": "Sil"
 }

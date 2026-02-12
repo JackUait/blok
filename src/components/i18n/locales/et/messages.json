@@ -41,5 +41,15 @@
   "a11y.movedUp": "Plokk teisaldatud üles positsioonile {position}/{total}",
   "a11y.movedDown": "Plokk teisaldatud alla positsioonile {position}/{total}",
   "a11y.atTop": "Plokk on üleval, ei saa üles liigutada",
-  "a11y.atBottom": "Plokk on all, ei saa alla liigutada"
+  "a11y.atBottom": "Plokk on all, ei saa alla liigutada",
+  "tools.table.title": "Tabel",
+  "tools.table.clearSelection": "Tühista",
+  "tools.table.headerColumn": "Päiseveerg",
+  "tools.table.insertColumnLeft": "Lisa veerg vasakule",
+  "tools.table.insertColumnRight": "Lisa veerg paremale",
+  "tools.table.deleteColumn": "Kustuta",
+  "tools.table.headerRow": "Päiserida",
+  "tools.table.insertRowAbove": "Lisa rida üles",
+  "tools.table.insertRowBelow": "Lisa rida alla",
+  "tools.table.deleteRow": "Kustuta"
 }

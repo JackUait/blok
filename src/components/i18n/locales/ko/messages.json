@@ -41,5 +41,15 @@
   "a11y.movedUp": "블록을 위로 이동함 ({total}개 중 {position}번째)",
   "a11y.movedDown": "블록을 아래로 이동함 ({total}개 중 {position}번째)",
   "a11y.atTop": "맨 위에 있어 위로 이동할 수 없음",
-  "a11y.atBottom": "맨 아래에 있어 아래로 이동할 수 없음"
+  "a11y.atBottom": "맨 아래에 있어 아래로 이동할 수 없음",
+  "tools.table.title": "표",
+  "tools.table.clearSelection": "지우기",
+  "tools.table.headerColumn": "머리글 열",
+  "tools.table.insertColumnLeft": "왼쪽에 열 삽입",
+  "tools.table.insertColumnRight": "오른쪽에 열 삽입",
+  "tools.table.deleteColumn": "삭제",
+  "tools.table.headerRow": "머리글 행",
+  "tools.table.insertRowAbove": "위에 행 삽입",
+  "tools.table.insertRowBelow": "아래에 행 삽입",
+  "tools.table.deleteRow": "삭제"
 }

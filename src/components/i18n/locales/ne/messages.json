@@ -41,5 +41,15 @@
   "a11y.movedDown": "ब्लक {total} मध्ये स्थान {position} मा तल सारियो",
   "a11y.atTop": "ब्लक शीर्षमा छ, माथि सार्न सकिँदैन",
   "a11y.atBottom": "ब्लक तलमा छ, तल सार्न सकिँदैन",
-  "tools.paragraph.placeholder": "केही लेख्नुहोस् वा छान्न / थिच्नुहोस्"
+  "tools.paragraph.placeholder": "केही लेख्नुहोस् वा छान्न / थिच्नुहोस्",
+  "tools.table.title": "तालिका",
+  "tools.table.clearSelection": "खाली गर्नुहोस्",
+  "tools.table.headerColumn": "हेडर स्तम्भ",
+  "tools.table.insertColumnLeft": "बायाँ स्तम्भ थप्नुहोस्",
+  "tools.table.insertColumnRight": "दायाँ स्तम्भ थप्नुहोस्",
+  "tools.table.deleteColumn": "मेटाउनुहोस्",
+  "tools.table.headerRow": "हेडर पङ्क्ति",
+  "tools.table.insertRowAbove": "माथि पङ्क्ति थप्नुहोस्",
+  "tools.table.insertRowBelow": "तल पङ्क्ति थप्नुहोस्",
+  "tools.table.deleteRow": "मेटाउनुहोस्"
 }

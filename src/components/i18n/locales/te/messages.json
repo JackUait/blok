@@ -41,5 +41,15 @@
   "a11y.movedDown": "బ్లాక్ {total} లో {position} స్థానానికి క్రిందికి తరలించబడింది",
   "a11y.atTop": "బ్లాక్ పైన ఉంది, పైకి తరలించలేము",
   "a11y.atBottom": "బ్లాక్ క్రింద ఉంది, క్రిందికి తరలించలేము",
-  "tools.paragraph.placeholder": "ఏదైనా delaysాయండి లేదా ఎంచdelay / నొక్కండి"
+  "tools.paragraph.placeholder": "ఏదైనా రాయండి లేదా ఎంచుకోడానికి / నొక్కండి",
+  "tools.table.title": "పట్టిక",
+  "tools.table.clearSelection": "క్లియర్ చేయండి",
+  "tools.table.headerColumn": "హెడర్ కాలమ్",
+  "tools.table.insertColumnLeft": "ఎడమవైపు కాలమ్ చొప్పించు",
+  "tools.table.insertColumnRight": "కుడివైపు కాలమ్ చొప్పించు",
+  "tools.table.deleteColumn": "తొలగించు",
+  "tools.table.headerRow": "హెడర్ వరుస",
+  "tools.table.insertRowAbove": "పైన వరుస చొప్పించు",
+  "tools.table.insertRowBelow": "క్రింద వరుస చొప్పించు",
+  "tools.table.deleteRow": "తొలగించు"
 }

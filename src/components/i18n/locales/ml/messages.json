@@ -41,5 +41,15 @@
   "a11y.movedDown": "ബ്ലോക്ക് {total} ൽ {position} സ്ഥാനത്തേക്ക് താഴേക്ക് നീക്കി",
   "a11y.atTop": "ബ്ലോക്ക് മുകളിലാണ്, മുകളിലേക്ക് നീക്കാൻ കഴിയില്ല",
   "a11y.atBottom": "ബ്ലോക്ക് താഴെയാണ്, താഴേക്ക് നീക്കാൻ കഴിയില്ല",
-  "tools.paragraph.placeholder": "എന്തെങ്കിലും എഴുdelays / delaysdelay"
+  "tools.paragraph.placeholder": "എന്തെങ്കിലും എഴുതുക അല്ലെങ്കിൽ തിരഞ്ഞെടുക്കാൻ / അമർത്തുക",
+  "tools.table.title": "പട്ടിക",
+  "tools.table.clearSelection": "മായ്ക്കുക",
+  "tools.table.headerColumn": "ഹെഡർ കോളം",
+  "tools.table.insertColumnLeft": "ഇടതുവശത്ത് കോളം ചേർക്കുക",
+  "tools.table.insertColumnRight": "വലതുവശത്ത് കോളം ചേർക്കുക",
+  "tools.table.deleteColumn": "ഇല്ലാതാക്കുക",
+  "tools.table.headerRow": "ഹെഡർ വരി",
+  "tools.table.insertRowAbove": "മുകളിൽ വരി ചേർക്കുക",
+  "tools.table.insertRowBelow": "താഴെ വരി ചേർക്കുക",
+  "tools.table.deleteRow": "ഇല്ലാതാക്കുക"
 }

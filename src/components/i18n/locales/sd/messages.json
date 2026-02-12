@@ -41,5 +41,15 @@
   "a11y.movedDown": "بلاڪ ھيٺ پوزيشن {position} مان {total} تي ويو",
   "a11y.atTop": "بلاڪ مٿي آھي، مٿي نٿو وڃي سگھي",
   "a11y.atBottom": "بلاڪ ھيٺ آھي، ھيٺ نٿو وڃي سگھي",
-  "tools.paragraph.placeholder": "ڪجھ لdelaysو يا چdelay / دٻاdelay"
+  "tools.paragraph.placeholder": "ڪجھ لdelaysو يا چdelay / دٻاdelay",
+  "tools.table.title": "ٽيبل",
+  "tools.table.clearSelection": "صاف ڪريو",
+  "tools.table.headerColumn": "هيڊر ڪالم",
+  "tools.table.insertColumnLeft": "کاٻي ڪالم شامل ڪريو",
+  "tools.table.insertColumnRight": "ساڄي ڪالم شامل ڪريو",
+  "tools.table.deleteColumn": "ختم ڪريو",
+  "tools.table.headerRow": "هيڊر قطار",
+  "tools.table.insertRowAbove": "مٿي قطار شامل ڪريو",
+  "tools.table.insertRowBelow": "هيٺ قطار شامل ڪريو",
+  "tools.table.deleteRow": "ختم ڪريو"
 }

@@ -41,5 +41,15 @@
   "a11y.movedUp": "Blok přesunut nahoru na pozici {position} z {total}",
   "a11y.movedDown": "Blok přesunut dolů na pozici {position} z {total}",
   "a11y.atTop": "Blok je na začátku, nelze přesunout výše",
-  "a11y.atBottom": "Blok je na konci, nelze přesunout níže"
+  "a11y.atBottom": "Blok je na konci, nelze přesunout níže",
+  "tools.table.title": "Tabulka",
+  "tools.table.clearSelection": "Vymazat",
+  "tools.table.headerColumn": "Sloupec záhlaví",
+  "tools.table.insertColumnLeft": "Vložit sloupec vlevo",
+  "tools.table.insertColumnRight": "Vložit sloupec vpravo",
+  "tools.table.deleteColumn": "Smazat",
+  "tools.table.headerRow": "Řádek záhlaví",
+  "tools.table.insertRowAbove": "Vložit řádek nad",
+  "tools.table.insertRowBelow": "Vložit řádek pod",
+  "tools.table.deleteRow": "Smazat"
 }

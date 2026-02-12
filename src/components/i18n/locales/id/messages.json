@@ -41,5 +41,15 @@
   "a11y.movedDown": "Blok dipindahkan ke bawah, posisi {position} dari {total}",
   "a11y.atTop": "Blok sudah di paling atas, tidak bisa dipindahkan ke atas",
   "a11y.atBottom": "Blok sudah di paling bawah, tidak bisa dipindahkan ke bawah",
-  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih"
+  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih",
+  "tools.table.title": "Tabel",
+  "tools.table.clearSelection": "Hapus",
+  "tools.table.headerColumn": "Kolom header",
+  "tools.table.insertColumnLeft": "Sisipkan kolom kiri",
+  "tools.table.insertColumnRight": "Sisipkan kolom kanan",
+  "tools.table.deleteColumn": "Hapus",
+  "tools.table.headerRow": "Baris header",
+  "tools.table.insertRowAbove": "Sisipkan baris atas",
+  "tools.table.insertRowBelow": "Sisipkan baris bawah",
+  "tools.table.deleteRow": "Hapus"
 }

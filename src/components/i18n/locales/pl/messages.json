@@ -41,5 +41,15 @@
   "a11y.movedUp": "Blok przeniesiony w górę na pozycję {position} z {total}",
   "a11y.movedDown": "Blok przeniesiony w dół na pozycję {position} z {total}",
   "a11y.atTop": "Blok jest na górze, nie można przenieść wyżej",
-  "a11y.atBottom": "Blok jest na dole, nie można przenieść niżej"
+  "a11y.atBottom": "Blok jest na dole, nie można przenieść niżej",
+  "tools.table.title": "Tabela",
+  "tools.table.clearSelection": "Wyczyść",
+  "tools.table.headerColumn": "Kolumna nagłówka",
+  "tools.table.insertColumnLeft": "Wstaw kolumnę z lewej",
+  "tools.table.insertColumnRight": "Wstaw kolumnę z prawej",
+  "tools.table.deleteColumn": "Usuń",
+  "tools.table.headerRow": "Wiersz nagłówka",
+  "tools.table.insertRowAbove": "Wstaw wiersz powyżej",
+  "tools.table.insertRowBelow": "Wstaw wiersz poniżej",
+  "tools.table.deleteRow": "Usuń"
 }

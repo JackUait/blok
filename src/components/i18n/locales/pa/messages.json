@@ -41,5 +41,15 @@
   "a11y.movedDown": "ਬਲਾਕ {total} ਵਿੱਚੋਂ {position} ਸਥਾਨ 'ਤੇ ਹੇਠਾਂ ਹਿਲਾਇਆ ਗਿਆ",
   "a11y.atTop": "ਬਲਾਕ ਸਿਖਰ 'ਤੇ ਹੈ, ਉੱਪਰ ਹਿਲਾਇਆ ਨਹੀਂ ਜਾ ਸਕਦਾ",
   "a11y.atBottom": "ਬਲਾਕ ਹੇਠਾਂ ਹੈ, ਹੇਠਾਂ ਹਿਲਾਇਆ ਨਹੀਂ ਜਾ ਸਕਦਾ",
-  "tools.paragraph.placeholder": "ਕੁdelay ਲਿਖੋ ਜਾਂ ਚੁdelay / ਦబਾਓ"
+  "tools.paragraph.placeholder": "ਕੁਝ ਲਿਖੋ ਜਾਂ ਚੁਣਨ ਲਈ / ਦਬਾਓ",
+  "tools.table.title": "ਟੇਬਲ",
+  "tools.table.clearSelection": "ਸਾਫ਼ ਕਰੋ",
+  "tools.table.headerColumn": "ਹੈਡਰ ਕਾਲਮ",
+  "tools.table.insertColumnLeft": "ਖੱਬੇ ਕਾਲਮ ਜੋੜੋ",
+  "tools.table.insertColumnRight": "ਸੱਜੇ ਕਾਲਮ ਜੋੜੋ",
+  "tools.table.deleteColumn": "ਮਿਟਾਓ",
+  "tools.table.headerRow": "ਹੈਡਰ ਕਤਾਰ",
+  "tools.table.insertRowAbove": "ਉੱਪਰ ਕਤਾਰ ਜੋੜੋ",
+  "tools.table.insertRowBelow": "ਹੇਠਾਂ ਕਤਾਰ ਜੋੜੋ",
+  "tools.table.deleteRow": "ਮਿਟਾਓ"
 }

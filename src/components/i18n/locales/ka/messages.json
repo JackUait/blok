@@ -41,5 +41,15 @@
   "a11y.movedDown": "ბლოკი გადატანილია ქვემოთ პოზიციაზე {position} {total}-დან",
   "a11y.atTop": "ბლოკი ზედა პოზიციაზეა, ზემოთ გადატანა შეუძლებელია",
   "a11y.atBottom": "ბლოკი ქვედა პოზიციაზეა, ქვემოთ გადატანა შეუძლებელია",
-  "tools.paragraph.placeholder": "დაწერეთ რამე ან დააჭირეთ / ასარჩევად"
+  "tools.paragraph.placeholder": "დაწერეთ რამე ან დააჭირეთ / ასარჩევად",
+  "tools.table.title": "ცხრილი",
+  "tools.table.clearSelection": "გასუფთავება",
+  "tools.table.headerColumn": "სათაურის სვეტი",
+  "tools.table.insertColumnLeft": "სვეტის დამატება მარცხნივ",
+  "tools.table.insertColumnRight": "სვეტის დამატება მარჯვნივ",
+  "tools.table.deleteColumn": "წაშლა",
+  "tools.table.headerRow": "სათაურის სტრიქონი",
+  "tools.table.insertRowAbove": "სტრიქონის დამატება ზემოდან",
+  "tools.table.insertRowBelow": "სტრიქონის დამატება ქვემოდან",
+  "tools.table.deleteRow": "წაშლა"
 }

@@ -41,5 +41,15 @@
   "a11y.movedUp": "Lohko siirretty ylös kohtaan {position}/{total}",
   "a11y.movedDown": "Lohko siirretty alas kohtaan {position}/{total}",
   "a11y.atTop": "Lohko on ylimpänä, ei voi siirtää ylös",
-  "a11y.atBottom": "Lohko on alimpana, ei voi siirtää alas"
+  "a11y.atBottom": "Lohko on alimpana, ei voi siirtää alas",
+  "tools.table.title": "Taulukko",
+  "tools.table.clearSelection": "Tyhjennä",
+  "tools.table.headerColumn": "Otsikkosarake",
+  "tools.table.insertColumnLeft": "Lisää sarake vasemmalle",
+  "tools.table.insertColumnRight": "Lisää sarake oikealle",
+  "tools.table.deleteColumn": "Poista",
+  "tools.table.headerRow": "Otsikkorivi",
+  "tools.table.insertRowAbove": "Lisää rivi yläpuolelle",
+  "tools.table.insertRowBelow": "Lisää rivi alapuolelle",
+  "tools.table.deleteRow": "Poista"
 }

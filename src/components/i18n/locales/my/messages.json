@@ -41,5 +41,15 @@
   "a11y.movedDown": "ဘလောက်ကို {total} တွင် အနေအထား {position} သို့ အောက်ရွှေ့ပြီး",
   "a11y.atTop": "ဘလောက်သည် ထိပ်ဆုံးတွင်ရှိပြီး အပေါ်သို့ ရွှေ့၍မရပါ",
   "a11y.atBottom": "ဘလောက်သည် အောက်ဆုံးတွင်ရှိပြီး အောက်သို့ ရွှေ့၍မရပါ",
-  "tools.paragraph.placeholder": "တစ်ခုခုရေးပါ သို့မဟုတ် ရွေးရန် / ကိုနှdelaysပါ"
+  "tools.paragraph.placeholder": "တစ်ခုခုရေးပါ သို့မဟုတ် ရွေးရန် / ကိုနှdelaysပါ",
+  "tools.table.title": "ဇယား",
+  "tools.table.clearSelection": "ရှင်းလင်းရန်",
+  "tools.table.headerColumn": "ခေါင်းစဉ်ကော်လံ",
+  "tools.table.insertColumnLeft": "ဘယ်ဘက်တွင် ကော်လံထည့်ရန်",
+  "tools.table.insertColumnRight": "ညာဘက်တွင် ကော်လံထည့်ရန်",
+  "tools.table.deleteColumn": "ဖျက်ရန်",
+  "tools.table.headerRow": "ခေါင်းစဉ်တန်း",
+  "tools.table.insertRowAbove": "အပေါ်တွင် တန်းထည့်ရန်",
+  "tools.table.insertRowBelow": "အောက်တွင် တန်းထည့်ရန်",
+  "tools.table.deleteRow": "ဖျက်ရန်"
 }

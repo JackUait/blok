@@ -41,5 +41,15 @@
   "a11y.movedDown": "Blokk flyttet ned til posisjon {position} av {total}",
   "a11y.atTop": "Blokken er øverst, kan ikke flyttes opp",
   "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned",
-  "tools.paragraph.placeholder": "Skriv noe eller trykk / for å velge"
+  "tools.paragraph.placeholder": "Skriv noe eller trykk / for å velge",
+  "tools.table.title": "Tabell",
+  "tools.table.clearSelection": "Tøm",
+  "tools.table.headerColumn": "Overskriftskolonne",
+  "tools.table.insertColumnLeft": "Sett inn kolonne til venstre",
+  "tools.table.insertColumnRight": "Sett inn kolonne til høyre",
+  "tools.table.deleteColumn": "Slett",
+  "tools.table.headerRow": "Overskriftsrad",
+  "tools.table.insertRowAbove": "Sett inn rad ovenfor",
+  "tools.table.insertRowBelow": "Sett inn rad nedenfor",
+  "tools.table.deleteRow": "Slett"
 }

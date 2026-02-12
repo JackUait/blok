@@ -41,5 +41,15 @@
   "a11y.movedUp": "Bloc déplacé vers le haut, position {position} sur {total}",
   "a11y.movedDown": "Bloc déplacé vers le bas, position {position} sur {total}",
   "a11y.atTop": "Impossible de monter davantage",
-  "a11y.atBottom": "Impossible de descendre davantage"
+  "a11y.atBottom": "Impossible de descendre davantage",
+  "tools.table.title": "Tableau",
+  "tools.table.clearSelection": "Effacer",
+  "tools.table.headerColumn": "Colonne d'en-tête",
+  "tools.table.insertColumnLeft": "Insérer colonne à gauche",
+  "tools.table.insertColumnRight": "Insérer colonne à droite",
+  "tools.table.deleteColumn": "Supprimer",
+  "tools.table.headerRow": "Ligne d'en-tête",
+  "tools.table.insertRowAbove": "Insérer ligne au-dessus",
+  "tools.table.insertRowBelow": "Insérer ligne en dessous",
+  "tools.table.deleteRow": "Supprimer"
 }

@@ -41,5 +41,15 @@
   "a11y.movedUp": "تم نقل الكتلة للأعلى، الموضع {position} من {total}",
   "a11y.movedDown": "تم نقل الكتلة للأسفل، الموضع {position} من {total}",
   "a11y.atTop": "الكتلة في الأعلى، لا يمكن التحريك للأعلى",
-  "a11y.atBottom": "الكتلة في الأسفل، لا يمكن التحريك للأسفل"
+  "a11y.atBottom": "الكتلة في الأسفل، لا يمكن التحريك للأسفل",
+  "tools.table.title": "جدول",
+  "tools.table.clearSelection": "مسح",
+  "tools.table.headerColumn": "عمود رأس",
+  "tools.table.insertColumnLeft": "إدراج عمود يساراً",
+  "tools.table.insertColumnRight": "إدراج عمود يميناً",
+  "tools.table.deleteColumn": "حذف",
+  "tools.table.headerRow": "صف رأس",
+  "tools.table.insertRowAbove": "إدراج صف أعلى",
+  "tools.table.insertRowBelow": "إدراج صف أسفل",
+  "tools.table.deleteRow": "حذف"
 }

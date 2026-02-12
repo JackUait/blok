@@ -41,5 +41,15 @@
   "a11y.movedDown": "Kizuizi kimesogezwa chini hadi nafasi {position} ya {total}",
   "a11y.atTop": "Kizuizi kiko juu, hakiwezi kusogezwa juu",
   "a11y.atBottom": "Kizuizi kiko chini, hakiwezi kusogezwa chini",
-  "tools.paragraph.placeholder": "Andika kitu au bonyeza / kuchagua"
+  "tools.paragraph.placeholder": "Andika kitu au bonyeza / kuchagua",
+  "tools.table.title": "Jedwali",
+  "tools.table.clearSelection": "Futa",
+  "tools.table.headerColumn": "Safu wima ya kichwa",
+  "tools.table.insertColumnLeft": "Ingiza safu wima kushoto",
+  "tools.table.insertColumnRight": "Ingiza safu wima kulia",
+  "tools.table.deleteColumn": "Futa",
+  "tools.table.headerRow": "Safu mlalo ya kichwa",
+  "tools.table.insertRowAbove": "Ingiza safu mlalo juu",
+  "tools.table.insertRowBelow": "Ingiza safu mlalo chini",
+  "tools.table.deleteRow": "Futa"
 }

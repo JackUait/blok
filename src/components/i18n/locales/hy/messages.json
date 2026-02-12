@@ -41,5 +41,15 @@
   "a11y.movedUp": "Բլոկը տեղափոխվեց վերև, դիրք {position} {total}-ից",
   "a11y.movedDown": "Բլոկը տեղափոխվեց ներքև, դիրք {position} {total}-ից",
   "a11y.atTop": "Բլոկը արդեն վերևում է",
-  "a11y.atBottom": "Բլոկը արդեն ներքևում է"
+  "a11y.atBottom": "Բլոկը արդեն ներքևում է",
+  "tools.table.title": "Աղյուսակ",
+  "tools.table.clearSelection": "Մաքրել",
+  "tools.table.headerColumn": "Վերնագրի սյունակ",
+  "tools.table.insertColumnLeft": "Ավելացնել սյունակ ձախից",
+  "tools.table.insertColumnRight": "Ավելացնել սյունակ աջից",
+  "tools.table.deleteColumn": "Ջնջել",
+  "tools.table.headerRow": "Վերնագրի տող",
+  "tools.table.insertRowAbove": "Ավելացնել տող վերևից",
+  "tools.table.insertRowBelow": "Ավելացնել տող ներքևից",
+  "tools.table.deleteRow": "Ջնջել"
 }

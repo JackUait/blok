@@ -41,5 +41,15 @@
   "a11y.movedDown": "بۆلەك ئاستىغا ئورۇن {position} دىن {total} غا يۆتكەلدى",
   "a11y.atTop": "بۆلەك ئەڭ ئۈستىدە، ئۈستىگە يۆتكىگىلى بولمايدۇ",
   "a11y.atBottom": "بۆلەك ئەڭ ئاستىدا، ئاستىغا يۆتكىگىلى بولمايدۇ",
-  "tools.paragraph.placeholder": "نdelays يdelays ياكى / delaysdelaysdelay تال delaysش"
+  "tools.paragraph.placeholder": "نdelays يdelays ياكى / delaysdelaysdelay تال delaysش",
+  "tools.table.title": "جەدۋەل",
+  "tools.table.clearSelection": "تازىلاش",
+  "tools.table.headerColumn": "ماۋزۇ ئىستونى",
+  "tools.table.insertColumnLeft": "سولغا ئىستون قىستۇرۇش",
+  "tools.table.insertColumnRight": "ئوڭغا ئىستون قىستۇرۇش",
+  "tools.table.deleteColumn": "ئۆچۈرۈش",
+  "tools.table.headerRow": "ماۋزۇ قۇرى",
+  "tools.table.insertRowAbove": "ئۈستىگە قۇر قىستۇرۇش",
+  "tools.table.insertRowBelow": "ئاستىغا قۇر قىستۇرۇش",
+  "tools.table.deleteRow": "ئۆچۈرۈش"
 }

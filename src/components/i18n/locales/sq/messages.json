@@ -41,5 +41,15 @@
   "a11y.movedDown": "Blloku u lëviz poshtë në pozicionin {position} nga {total}",
   "a11y.atTop": "Blloku është në krye, nuk mund të lëvizet lart",
   "a11y.atBottom": "Blloku është në fund, nuk mund të lëvizet poshtë",
-  "tools.paragraph.placeholder": "Shkruaj diçka ose shtyp / për të zgjedhur"
+  "tools.paragraph.placeholder": "Shkruaj diçka ose shtyp / për të zgjedhur",
+  "tools.table.title": "Tabelë",
+  "tools.table.clearSelection": "Pastro",
+  "tools.table.headerColumn": "Kolonë titull",
+  "tools.table.insertColumnLeft": "Shto kolonë majtas",
+  "tools.table.insertColumnRight": "Shto kolonë djathtas",
+  "tools.table.deleteColumn": "Fshi",
+  "tools.table.headerRow": "Rresht titull",
+  "tools.table.insertRowAbove": "Shto rresht sipër",
+  "tools.table.insertRowBelow": "Shto rresht poshtë",
+  "tools.table.deleteRow": "Fshi"
 }

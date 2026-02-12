@@ -41,5 +41,15 @@
   "a11y.movedUp": "Blok flyttet op til position {position} af {total}",
   "a11y.movedDown": "Blok flyttet ned til position {position} af {total}",
   "a11y.atTop": "Blokken er øverst, kan ikke flyttes op",
-  "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned"
+  "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned",
+  "tools.table.title": "Tabel",
+  "tools.table.clearSelection": "Ryd",
+  "tools.table.headerColumn": "Overskriftskolonne",
+  "tools.table.insertColumnLeft": "Indsæt kolonne til venstre",
+  "tools.table.insertColumnRight": "Indsæt kolonne til højre",
+  "tools.table.deleteColumn": "Slet",
+  "tools.table.headerRow": "Overskriftsrække",
+  "tools.table.insertRowAbove": "Indsæt række ovenfor",
+  "tools.table.insertRowBelow": "Indsæt række nedenfor",
+  "tools.table.deleteRow": "Slet"
 }

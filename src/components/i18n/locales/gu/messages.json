@@ -41,5 +41,15 @@
   "a11y.movedUp": "બ્લોક {total} માંથી {position} સ્થાને ઉપર ખસેડાયો",
   "a11y.movedDown": "બ્લોક {total} માંથી {position} સ્થાને નીચે ખસેડાયો",
   "a11y.atTop": "બ્લોક ટોચ પર છે, ઉપર ખસેડી શકાતો નથી",
-  "a11y.atBottom": "બ્લોક તળિયે છે, નીચે ખસેડી શકાતો નથી"
+  "a11y.atBottom": "બ્લોક તળિયે છે, નીચે ખસેડી શકાતો નથી",
+  "tools.table.title": "કોષ્ટક",
+  "tools.table.clearSelection": "સાફ કરો",
+  "tools.table.headerColumn": "હેડર કૉલમ",
+  "tools.table.insertColumnLeft": "ડાબી બાજુએ કૉલમ ઉમેરો",
+  "tools.table.insertColumnRight": "જમણી બાજુએ કૉલમ ઉમેરો",
+  "tools.table.deleteColumn": "કાઢી નાખો",
+  "tools.table.headerRow": "હેડર હરોળ",
+  "tools.table.insertRowAbove": "ઉપર હરોળ ઉમેરો",
+  "tools.table.insertRowBelow": "નીચે હરોળ ઉમેરો",
+  "tools.table.deleteRow": "કાઢી નાખો"
 }

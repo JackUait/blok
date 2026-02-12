@@ -41,5 +41,15 @@
   "a11y.movedDown": "بلاک نیچے پوزیشن {position} از {total} پر گیا",
   "a11y.atTop": "بلاک سب سے اوپر ہے، اوپر نہیں جا سکتا",
   "a11y.atBottom": "بلاک سب سے نیچے ہے، نیچے نہیں جا سکتا",
-  "tools.paragraph.placeholder": "کچھ لکھیں یا منتخب کرنے کیلئے / دبائیں"
+  "tools.paragraph.placeholder": "کچھ لکھیں یا منتخب کرنے کیلئے / دبائیں",
+  "tools.table.title": "ٹیبل",
+  "tools.table.clearSelection": "صاف کریں",
+  "tools.table.headerColumn": "ہیڈر کالم",
+  "tools.table.insertColumnLeft": "بائیں کالم شامل کریں",
+  "tools.table.insertColumnRight": "دائیں کالم شامل کریں",
+  "tools.table.deleteColumn": "حذف کریں",
+  "tools.table.headerRow": "ہیڈر قطار",
+  "tools.table.insertRowAbove": "اوپر قطار شامل کریں",
+  "tools.table.insertRowBelow": "نیچے قطار شامل کریں",
+  "tools.table.deleteRow": "حذف کریں"
 }

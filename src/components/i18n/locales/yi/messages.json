@@ -41,5 +41,15 @@
   "a11y.movedDown": "בלאָק באַוועגט אַראָפּ צו פּאָזיציע {position} פֿון {total}",
   "a11y.atTop": "בלאָק איז אויבן, קען נישט אַרויפֿגיין",
   "a11y.atBottom": "בלאָק איז אונטן, קען נישט אַראָפּגיין",
-  "tools.paragraph.placeholder": "שreibn עפעס אdelayער דרdelay / צו delaysיבdelays"
+  "tools.paragraph.placeholder": "שreibn עפעס אdelayער דרdelay / צו delaysיבdelays",
+  "tools.table.title": "טאַבעלע",
+  "tools.table.clearSelection": "אויסמעקן",
+  "tools.table.headerColumn": "קעפּל שפּאַלט",
+  "tools.table.insertColumnLeft": "אַרײַנשטעלן שפּאַלט לינקס",
+  "tools.table.insertColumnRight": "אַרײַנשטעלן שפּאַלט רעכטס",
+  "tools.table.deleteColumn": "אויסמעקן",
+  "tools.table.headerRow": "קעפּל רײ",
+  "tools.table.insertRowAbove": "אַרײַנשטעלן רײ אויבן",
+  "tools.table.insertRowBelow": "אַרײַנשטעלן רײ אונטן",
+  "tools.table.deleteRow": "אויסמעקן"
 }

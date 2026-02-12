@@ -41,5 +41,15 @@
   "a11y.movedUp": "Блокът е преместен нагоре на позиция {position} от {total}",
   "a11y.movedDown": "Блокът е преместен надолу на позиция {position} от {total}",
   "a11y.atTop": "Блокът е най-отгоре, не може да се премести нагоре",
-  "a11y.atBottom": "Блокът е най-отдолу, не може да се премести надолу"
+  "a11y.atBottom": "Блокът е най-отдолу, не може да се премести надолу",
+  "tools.table.title": "Таблица",
+  "tools.table.clearSelection": "Изчисти",
+  "tools.table.headerColumn": "Колона със заглавие",
+  "tools.table.insertColumnLeft": "Вмъкни колона вляво",
+  "tools.table.insertColumnRight": "Вмъкни колона вдясно",
+  "tools.table.deleteColumn": "Изтрий",
+  "tools.table.headerRow": "Ред със заглавие",
+  "tools.table.insertRowAbove": "Вмъкни ред отгоре",
+  "tools.table.insertRowBelow": "Вмъкни ред отдолу",
+  "tools.table.deleteRow": "Изтрий"
 }

@@ -41,5 +41,15 @@
   "a11y.movedDown": "Block flyttat nedåt till position {position} av {total}",
   "a11y.atTop": "Blocket är högst upp, kan inte flyttas uppåt",
   "a11y.atBottom": "Blocket är längst ner, kan inte flyttas nedåt",
-  "tools.paragraph.placeholder": "Skriv något eller tryck / för att välja"
+  "tools.paragraph.placeholder": "Skriv något eller tryck / för att välja",
+  "tools.table.title": "Tabell",
+  "tools.table.clearSelection": "Rensa",
+  "tools.table.headerColumn": "Rubrikkolumn",
+  "tools.table.insertColumnLeft": "Infoga kolumn till vänster",
+  "tools.table.insertColumnRight": "Infoga kolumn till höger",
+  "tools.table.deleteColumn": "Ta bort",
+  "tools.table.headerRow": "Rubrikrad",
+  "tools.table.insertRowAbove": "Infoga rad ovanför",
+  "tools.table.insertRowBelow": "Infoga rad nedanför",
+  "tools.table.deleteRow": "Ta bort"
 }

@@ -41,5 +41,15 @@
   "a11y.movedDown": "Bloc mutat în jos la poziția {position} din {total}",
   "a11y.atTop": "Blocul este la început, nu poate fi mutat mai sus",
   "a11y.atBottom": "Blocul este la sfârșit, nu poate fi mutat mai jos",
-  "tools.paragraph.placeholder": "Scrie ceva sau apasă / pentru a selecta"
+  "tools.paragraph.placeholder": "Scrie ceva sau apasă / pentru a selecta",
+  "tools.table.title": "Tabel",
+  "tools.table.clearSelection": "Șterge",
+  "tools.table.headerColumn": "Coloană antet",
+  "tools.table.insertColumnLeft": "Inserează coloană la stânga",
+  "tools.table.insertColumnRight": "Inserează coloană la dreapta",
+  "tools.table.deleteColumn": "Șterge",
+  "tools.table.headerRow": "Rând antet",
+  "tools.table.insertRowAbove": "Inserează rând deasupra",
+  "tools.table.insertRowBelow": "Inserează rând dedesubt",
+  "tools.table.deleteRow": "Șterge"
 }

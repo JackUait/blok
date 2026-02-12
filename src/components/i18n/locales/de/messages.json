@@ -41,5 +41,15 @@
   "a11y.movedUp": "Block nach oben verschoben, Position {position} von {total}",
   "a11y.movedDown": "Block nach unten verschoben, Position {position} von {total}",
   "a11y.atTop": "Block ist ganz oben",
-  "a11y.atBottom": "Block ist ganz unten"
+  "a11y.atBottom": "Block ist ganz unten",
+  "tools.table.title": "Tabelle",
+  "tools.table.clearSelection": "Löschen",
+  "tools.table.headerColumn": "Kopfspalte",
+  "tools.table.insertColumnLeft": "Spalte links einfügen",
+  "tools.table.insertColumnRight": "Spalte rechts einfügen",
+  "tools.table.deleteColumn": "Löschen",
+  "tools.table.headerRow": "Kopfzeile",
+  "tools.table.insertRowAbove": "Zeile darüber einfügen",
+  "tools.table.insertRowBelow": "Zeile darunter einfügen",
+  "tools.table.deleteRow": "Löschen"
 }

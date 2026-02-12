@@ -41,5 +41,15 @@
   "a11y.movedDown": "ब्लॉक {total} पैकी {position} स्थानावर खाली हलवला",
   "a11y.atTop": "ब्लॉक वर आहे, वर हलवता येत नाही",
   "a11y.atBottom": "ब्लॉक खाली आहे, खाली हलवता येत नाही",
-  "tools.paragraph.placeholder": "काहीतरी लिहा किंवा निवडण्यासाठी / दबा"
+  "tools.paragraph.placeholder": "काहीतरी लिहा किंवा निवडण्यासाठी / दबा",
+  "tools.table.title": "तक्ता",
+  "tools.table.clearSelection": "साफ करा",
+  "tools.table.headerColumn": "हेडर स्तंभ",
+  "tools.table.insertColumnLeft": "डावीकडे स्तंभ घाला",
+  "tools.table.insertColumnRight": "उजवीकडे स्तंभ घाला",
+  "tools.table.deleteColumn": "हटवा",
+  "tools.table.headerRow": "हेडर पंक्ती",
+  "tools.table.insertRowAbove": "वर पंक्ती घाला",
+  "tools.table.insertRowBelow": "खाली पंक्ती घाला",
+  "tools.table.deleteRow": "हटवा"
 }

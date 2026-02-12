@@ -41,5 +41,15 @@
   "a11y.movedUp": "הבלוק הועבר למעלה למיקום {position} מתוך {total}",
   "a11y.movedDown": "הבלוק הועבר למטה למיקום {position} מתוך {total}",
   "a11y.atTop": "הבלוק בראש הרשימה, לא ניתן להעלות",
-  "a11y.atBottom": "הבלוק בתחתית הרשימה, לא ניתן להוריד"
+  "a11y.atBottom": "הבלוק בתחתית הרשימה, לא ניתן להוריד",
+  "tools.table.title": "טבלה",
+  "tools.table.clearSelection": "נקה",
+  "tools.table.headerColumn": "עמודת כותרת",
+  "tools.table.insertColumnLeft": "הוסף עמודה משמאל",
+  "tools.table.insertColumnRight": "הוסף עמודה מימין",
+  "tools.table.deleteColumn": "מחק",
+  "tools.table.headerRow": "שורת כותרת",
+  "tools.table.insertRowAbove": "הוסף שורה מעל",
+  "tools.table.insertRowBelow": "הוסף שורה מתחת",
+  "tools.table.deleteRow": "מחק"
 }

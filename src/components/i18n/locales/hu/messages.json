@@ -41,5 +41,15 @@
   "a11y.movedUp": "Blokk feljebb mozgatva, {position}. pozíció, összesen {total}",
   "a11y.movedDown": "Blokk lejjebb mozgatva, {position}. pozíció, összesen {total}",
   "a11y.atTop": "A blokk a lista elején van, nem mozgatható feljebb",
-  "a11y.atBottom": "A blokk a lista végén van, nem mozgatható lejjebb"
+  "a11y.atBottom": "A blokk a lista végén van, nem mozgatható lejjebb",
+  "tools.table.title": "Táblázat",
+  "tools.table.clearSelection": "Törlés",
+  "tools.table.headerColumn": "Fejléc oszlop",
+  "tools.table.insertColumnLeft": "Oszlop beszúrása balra",
+  "tools.table.insertColumnRight": "Oszlop beszúrása jobbra",
+  "tools.table.deleteColumn": "Törlés",
+  "tools.table.headerRow": "Fejléc sor",
+  "tools.table.insertRowAbove": "Sor beszúrása fölé",
+  "tools.table.insertRowBelow": "Sor beszúrása alá",
+  "tools.table.deleteRow": "Törlés"
 }

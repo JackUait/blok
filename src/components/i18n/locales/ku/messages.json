@@ -41,5 +41,15 @@
   "a11y.movedDown": "بلۆک چووە خوارەوە بۆ شوێن {position} لە {total}",
   "a11y.atTop": "بلۆک لە سەرەوەیە، ناتوانێت بچێتە سەرەوە",
   "a11y.atBottom": "بلۆک لە خوارەوەیە، ناتوانێت بچێتە خوارەوە",
-  "tools.paragraph.placeholder": "شتیک بنووسه یان / داگرے بو هەلبژاردن"
+  "tools.paragraph.placeholder": "شتیک بنووسه یان / داگرے بو هەلبژاردن",
+  "tools.table.title": "خشتە",
+  "tools.table.clearSelection": "پاککردنەوە",
+  "tools.table.headerColumn": "ستوونی سەرپەڕە",
+  "tools.table.insertColumnLeft": "زیادکردنی ستوون لە چەپ",
+  "tools.table.insertColumnRight": "زیادکردنی ستوون لە ڕاست",
+  "tools.table.deleteColumn": "سڕینەوە",
+  "tools.table.headerRow": "ڕیزی سەرپەڕە",
+  "tools.table.insertRowAbove": "زیادکردنی ڕیز لە سەرەوە",
+  "tools.table.insertRowBelow": "زیادکردنی ڕیز لە خوارەوە",
+  "tools.table.deleteRow": "سڕینەوە"
 }

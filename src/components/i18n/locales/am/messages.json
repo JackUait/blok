@@ -41,5 +41,15 @@
   "a11y.movedUp": "ብሎክ ወደ ላይ ወደ ቦታ {position} ከ{total} ተዛወረ",
   "a11y.movedDown": "ብሎክ ወደ ታች ወደ ቦታ {position} ከ{total} ተዛወረ",
   "a11y.atTop": "ብሎክ ከላይ ነው፣ ወደ ላይ መሄድ አይችልም",
-  "a11y.atBottom": "ብሎክ ከታች ነው፣ ወደ ታች መሄድ አይችልም"
+  "a11y.atBottom": "ብሎክ ከታች ነው፣ ወደ ታች መሄድ አይችልም",
+  "tools.table.title": "ሰንጠረዥ",
+  "tools.table.clearSelection": "አጽዳ",
+  "tools.table.headerColumn": "የራስጌ አምድ",
+  "tools.table.insertColumnLeft": "ከግራ አምድ አስገባ",
+  "tools.table.insertColumnRight": "ከቀኝ አምድ አስገባ",
+  "tools.table.deleteColumn": "ሰርዝ",
+  "tools.table.headerRow": "የራስጌ ረድፍ",
+  "tools.table.insertRowAbove": "ከላይ ረድፍ አስገባ",
+  "tools.table.insertRowBelow": "ከታች ረድፍ አስገባ",
+  "tools.table.deleteRow": "ሰርዝ"
 }

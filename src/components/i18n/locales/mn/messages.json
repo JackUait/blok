@@ -41,5 +41,15 @@
   "a11y.movedDown": "Блок {total}-ын {position} байрлал руу доош зөөгдлөө",
   "a11y.atTop": "Блок хамгийн дээд талд байна, дээш зөөх боломжгүй",
   "a11y.atBottom": "Блок хамгийн доод талд байна, доош зөөх боломжгүй",
-  "tools.paragraph.placeholder": "Ямар нэгэн зdelays бичих эсвэл / дарж сонго"
+  "tools.paragraph.placeholder": "Ямар нэгэн зdelays бичих эсвэл / дарж сонго",
+  "tools.table.title": "Хүснэгт",
+  "tools.table.clearSelection": "Цэвэрлэх",
+  "tools.table.headerColumn": "Толгой багана",
+  "tools.table.insertColumnLeft": "Зүүн тийш багана нэмэх",
+  "tools.table.insertColumnRight": "Баруун тийш багана нэмэх",
+  "tools.table.deleteColumn": "Устгах",
+  "tools.table.headerRow": "Толгой мөр",
+  "tools.table.insertRowAbove": "Дээш мөр нэмэх",
+  "tools.table.insertRowBelow": "Доош мөр нэмэх",
+  "tools.table.deleteRow": "Устгах"
 }

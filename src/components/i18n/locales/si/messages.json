@@ -41,5 +41,15 @@
   "a11y.movedDown": "කොටස {total}න් {position} ස්ථානයට පහළට ගෙන යන ලදී",
   "a11y.atTop": "කොටස ඉහළමයි, ඉහළට ගෙනයා නොහැක",
   "a11y.atBottom": "කොටස පහළමයි, පහළට ගෙනයා නොහැක",
-  "tools.paragraph.placeholder": "යdelays ලdelays / delaysdelays delaysණdelays"
+  "tools.paragraph.placeholder": "යමක් ලියන්න හෝ තෝරා ගැනීමට / ඔබන්න",
+  "tools.table.title": "වගුව",
+  "tools.table.clearSelection": "හිස් කරන්න",
+  "tools.table.headerColumn": "ශීර්ෂ තීරුව",
+  "tools.table.insertColumnLeft": "වමට තීරුව එක් කරන්න",
+  "tools.table.insertColumnRight": "දකුණට තීරුව එක් කරන්න",
+  "tools.table.deleteColumn": "මකන්න",
+  "tools.table.headerRow": "ශීර්ෂ පේළිය",
+  "tools.table.insertRowAbove": "ඉහළින් පේළිය එක් කරන්න",
+  "tools.table.insertRowBelow": "පහළින් පේළිය එක් කරන්න",
+  "tools.table.deleteRow": "මකන්න"
 }

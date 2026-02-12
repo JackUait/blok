@@ -41,5 +41,15 @@
   "a11y.movedDown": "Blok dialih ke bawah ke kedudukan {position} daripada {total}",
   "a11y.atTop": "Blok di atas sekali, tidak boleh dialih ke atas",
   "a11y.atBottom": "Blok di bawah sekali, tidak boleh dialih ke bawah",
-  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih"
+  "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih",
+  "tools.table.title": "Jadual",
+  "tools.table.clearSelection": "Kosongkan",
+  "tools.table.headerColumn": "Lajur pengepala",
+  "tools.table.insertColumnLeft": "Sisip lajur kiri",
+  "tools.table.insertColumnRight": "Sisip lajur kanan",
+  "tools.table.deleteColumn": "Padam",
+  "tools.table.headerRow": "Baris pengepala",
+  "tools.table.insertRowAbove": "Sisip baris atas",
+  "tools.table.insertRowBelow": "Sisip baris bawah",
+  "tools.table.deleteRow": "Padam"
 }

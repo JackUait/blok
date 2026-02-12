@@ -41,5 +41,15 @@
   "a11y.movedDown": "Блок премештен доле на позицију {position} од {total}",
   "a11y.atTop": "Блок је на врху, не може се померити горе",
   "a11y.atBottom": "Блок је на дну, не може се померити доле",
-  "tools.paragraph.placeholder": "Напишите нешто или притисните / за избор"
+  "tools.paragraph.placeholder": "Напишите нешто или притисните / за избор",
+  "tools.table.title": "Табела",
+  "tools.table.clearSelection": "Очисти",
+  "tools.table.headerColumn": "Колона заглавља",
+  "tools.table.insertColumnLeft": "Уметни колону лево",
+  "tools.table.insertColumnRight": "Уметни колону десно",
+  "tools.table.deleteColumn": "Обриши",
+  "tools.table.headerRow": "Ред заглавља",
+  "tools.table.insertRowAbove": "Уметни ред изнад",
+  "tools.table.insertRowBelow": "Уметни ред испод",
+  "tools.table.deleteRow": "Обриши"
 }

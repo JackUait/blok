@@ -41,5 +41,15 @@
   "a11y.movedUp": "Blocco spostato in alto, posizione {position} di {total}",
   "a11y.movedDown": "Blocco spostato in basso, posizione {position} di {total}",
   "a11y.atTop": "Non è possibile salire oltre",
-  "a11y.atBottom": "Non è possibile scendere oltre"
+  "a11y.atBottom": "Non è possibile scendere oltre",
+  "tools.table.title": "Tabella",
+  "tools.table.clearSelection": "Cancella",
+  "tools.table.headerColumn": "Colonna intestazione",
+  "tools.table.insertColumnLeft": "Inserisci colonna a sinistra",
+  "tools.table.insertColumnRight": "Inserisci colonna a destra",
+  "tools.table.deleteColumn": "Elimina",
+  "tools.table.headerRow": "Riga intestazione",
+  "tools.table.insertRowAbove": "Inserisci riga sopra",
+  "tools.table.insertRowBelow": "Inserisci riga sotto",
+  "tools.table.deleteRow": "Elimina"
 }

@@ -41,5 +41,15 @@
   "a11y.movedUp": "ބްލޮކް މައްޗަށް ޕޮޒިޝަން {position} އިން {total} އަށް ގޮސްފި",
   "a11y.movedDown": "ބްލޮކް ތިރިއަށް ޕޮޒިޝަން {position} އިން {total} އަށް ގޮސްފި",
   "a11y.atTop": "ބްލޮކް އެންމެ މަތީގައި، މައްޗަށް ނުދެވޭނެ",
-  "a11y.atBottom": "ބްލޮކް އެންމެ ތިރީގައި، ތިރިއަށް ނުދެވޭނެ"
+  "a11y.atBottom": "ބްލޮކް އެންމެ ތިރީގައި، ތިރިއަށް ނުދެވޭނެ",
+  "tools.table.title": "ޓޭބަލް",
+  "tools.table.clearSelection": "ސާފުކުރޭ",
+  "tools.table.headerColumn": "ހެޑަރ ކޮލަމް",
+  "tools.table.insertColumnLeft": "ކަނާތުން ކޮލަމް އިތުރުކުރޭ",
+  "tools.table.insertColumnRight": "ވާތުން ކޮލަމް އިތުރުކުރޭ",
+  "tools.table.deleteColumn": "ފޮހެލާ",
+  "tools.table.headerRow": "ހެޑަރ ރޯ",
+  "tools.table.insertRowAbove": "މަތީން ރޯ އިތުރުކުރޭ",
+  "tools.table.insertRowBelow": "ތިރީން ރޯ އިތުރުކުރޭ",
+  "tools.table.deleteRow": "ފޮހެލާ"
 }

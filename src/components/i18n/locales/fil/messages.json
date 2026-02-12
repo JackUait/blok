@@ -41,5 +41,15 @@
   "a11y.movedUp": "Inilipat ang block pataas sa posisyon {position} ng {total}",
   "a11y.movedDown": "Inilipat ang block pababa sa posisyon {position} ng {total}",
   "a11y.atTop": "Ang block ay nasa itaas na, hindi mailipat pataas",
-  "a11y.atBottom": "Ang block ay nasa ibaba na, hindi mailipat pababa"
+  "a11y.atBottom": "Ang block ay nasa ibaba na, hindi mailipat pababa",
+  "tools.table.title": "Talahanayan",
+  "tools.table.clearSelection": "Alisin",
+  "tools.table.headerColumn": "Header na kolum",
+  "tools.table.insertColumnLeft": "Magsingit ng kolum sa kaliwa",
+  "tools.table.insertColumnRight": "Magsingit ng kolum sa kanan",
+  "tools.table.deleteColumn": "Burahin",
+  "tools.table.headerRow": "Header na hanay",
+  "tools.table.insertRowAbove": "Magsingit ng hanay sa itaas",
+  "tools.table.insertRowBelow": "Magsingit ng hanay sa ibaba",
+  "tools.table.deleteRow": "Burahin"
 }

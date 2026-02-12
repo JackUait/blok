@@ -23,6 +23,13 @@ export interface PopoverParams {
   trigger?: HTMLElement;
 
   /**
+   * Optional position (DOMRect) to use for positioning instead of trigger element.
+   * When provided, this takes precedence over trigger's getBoundingClientRect().
+   * Useful for positioning at caret location or other dynamic positions.
+   */
+  position?: DOMRect;
+
+  /**
    * True if popover should contain search field
    */
   searchable?: boolean;

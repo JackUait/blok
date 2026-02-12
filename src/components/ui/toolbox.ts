@@ -1,5 +1,6 @@
 import { Dom } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
+import { SelectionUtils } from '../selection';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
 import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
@@ -281,10 +282,21 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     if (this.isInsideTableCell) {
       this.popover?.toggleItemHiddenByName('table', true);
-      this.popover?.toggleItemHiddenByName('header', true);
     }
 
     this.popover?.show();
+
+    /**
+     * When opening toolbox inside a table cell, position it at the caret
+     * instead of at the trigger element (which is outside the table).
+     * Must be called after show() so the popover is in the DOM.
+     */
+    if (this.isInsideTableCell && this.popover instanceof PopoverDesktop) {
+      const caretRect = SelectionUtils.rect;
+
+      this.popover.updatePosition(caretRect);
+    }
+
     this.opened = true;
     this.emit(ToolboxEvent.Opened);
     this.startListeningToBlockInput();
@@ -296,7 +308,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   public close(): void {
     if (this.isInsideTableCell) {
       this.popover?.toggleItemHiddenByName('table', false);
-      this.popover?.toggleItemHiddenByName('header', false);
       this.isInsideTableCell = false;
     }
 
@@ -367,7 +378,6 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private onPopoverClose = (): void => {
     if (this.isInsideTableCell) {
       this.popover?.toggleItemHiddenByName('table', false);
-      this.popover?.toggleItemHiddenByName('header', false);
       this.isInsideTableCell = false;
     }
 

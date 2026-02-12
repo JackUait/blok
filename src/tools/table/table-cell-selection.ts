@@ -1,3 +1,4 @@
+import type { I18n } from '../../../types/api';
 import { IconCross } from '../../components/icons';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
@@ -56,6 +57,7 @@ interface CellSelectionOptions {
   rectangleSelection?: { cancelActiveSelection: () => void };
   onSelectionActiveChange?: (hasSelection: boolean) => void;
   onClearContent?: (cells: HTMLElement[]) => void;
+  i18n: I18n;
 }
 
 export class TableCellSelection {
@@ -63,6 +65,7 @@ export class TableCellSelection {
   private rectangleSelection?: { cancelActiveSelection: () => void };
   private onSelectionActiveChange: ((hasSelection: boolean) => void) | undefined;
   private onClearContent: ((cells: HTMLElement[]) => void) | undefined;
+  private i18n: I18n;
   private anchorCell: CellCoord | null = null;
   private extentCell: CellCoord | null = null;
   private isSelecting = false;
@@ -84,6 +87,7 @@ export class TableCellSelection {
     this.rectangleSelection = options.rectangleSelection;
     this.onSelectionActiveChange = options.onSelectionActiveChange;
     this.onClearContent = options.onClearContent;
+    this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
     this.boundPointerDown = this.handlePointerDown.bind(this);
@@ -499,7 +503,7 @@ export class TableCellSelection {
     const items: PopoverItemParams[] = [
       {
         icon: IconCross,
-        title: 'Clear',
+        title: this.i18n.t('tools.table.clearSelection'),
         closeOnActivate: true,
         onActivate: (): void => {
           this.onClearContent?.([...this.selectedCells]);

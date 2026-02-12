@@ -71,6 +71,7 @@
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
     "lint:types": "tsc --noEmit",
+    "i18n:audit": "node scripts/i18n-audit.js",
     "i18n:check": "node scripts/i18n/check-translations.mjs",
     "e2e": "yarn build:test && playwright test",
     "e2e:smoke": "yarn build:test && playwright test --project=chromium --grep=\"@smoke\"",

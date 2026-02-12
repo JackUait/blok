@@ -1,3 +1,5 @@
+import type { I18n } from '../../../types/api';
+
 import {
   IconInsertAbove,
   IconInsertBelow,
@@ -52,6 +54,7 @@ export interface TableRowColControlsOptions {
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
   onGripClick?: (type: 'row' | 'col', index: number) => void;
   onGripPopoverClose?: () => void;
+  i18n: I18n;
 }
 
 const GRIP_CAPSULE_CLASSES = [
@@ -100,6 +103,7 @@ export class TableRowColControls {
   private onAction: (action: RowColAction) => void;
   private onGripClick: ((type: 'row' | 'col', index: number) => void) | undefined;
   private onGripPopoverClose: (() => void) | undefined;
+  private i18n: I18n;
 
   private colGrips: HTMLElement[] = [];
   private rowGrips: HTMLElement[] = [];
@@ -127,6 +131,7 @@ export class TableRowColControls {
     this.onAction = options.onAction;
     this.onGripClick = options.onGripClick;
     this.onGripPopoverClose = options.onGripPopoverClose;
+    this.i18n = options.i18n;
 
     this.drag = new TableRowColDrag({
       grid: this.grid,
@@ -651,7 +656,7 @@ export class TableRowColControls {
           type: PopoverItemType.Html,
           element: createHeadingToggle({
             icon: IconHeaderColumn,
-            label: 'Header column',
+            label: this.i18n.t('tools.table.headerColumn'),
             isActive: this.isHeadingColumn(),
             onToggle: () => {
               this.onAction({ type: 'toggle-heading-column' });
@@ -665,7 +670,7 @@ export class TableRowColControls {
     const baseItems: PopoverItemParams[] = [
       {
         icon: IconInsertLeft,
-        title: 'Insert Column Left',
+        title: this.i18n.t('tools.table.insertColumnLeft'),
         closeOnActivate: true,
         onActivate: (): void => {
           this.onAction({ type: 'insert-col-left', index: colIndex });
@@ -673,7 +678,7 @@ export class TableRowColControls {
       },
       {
         icon: IconInsertRight,
-        title: 'Insert Column Right',
+        title: this.i18n.t('tools.table.insertColumnRight'),
         closeOnActivate: true,
         onActivate: (): void => {
           this.onAction({ type: 'insert-col-right', index: colIndex });
@@ -686,7 +691,7 @@ export class TableRowColControls {
       { type: PopoverItemType.Separator },
       {
         icon: IconTrash,
-        title: 'Delete',
+        title: this.i18n.t('tools.table.deleteColumn'),
         isDestructive: true,
         isDisabled: !canDelete,
         closeOnActivate: true,
@@ -706,7 +711,7 @@ export class TableRowColControls {
           type: PopoverItemType.Html,
           element: createHeadingToggle({
             icon: IconHeaderRow,
-            label: 'Header row',
+            label: this.i18n.t('tools.table.headerRow'),
             isActive: this.isHeadingRow(),
             onToggle: () => {
               this.onAction({ type: 'toggle-heading' });
@@ -720,7 +725,7 @@ export class TableRowColControls {
     const baseItems: PopoverItemParams[] = [
       {
         icon: IconInsertAbove,
-        title: 'Insert Row Above',
+        title: this.i18n.t('tools.table.insertRowAbove'),
         closeOnActivate: true,
         onActivate: (): void => {
           this.onAction({ type: 'insert-row-above', index: rowIndex });
@@ -728,7 +733,7 @@ export class TableRowColControls {
       },
       {
         icon: IconInsertBelow,
-        title: 'Insert Row Below',
+        title: this.i18n.t('tools.table.insertRowBelow'),
         closeOnActivate: true,
         onActivate: (): void => {
           this.onAction({ type: 'insert-row-below', index: rowIndex });
@@ -741,7 +746,7 @@ export class TableRowColControls {
       { type: PopoverItemType.Separator },
       {
         icon: IconTrash,
-        title: 'Delete',
+        title: this.i18n.t('tools.table.deleteRow'),
         isDestructive: true,
         isDisabled: !canDelete,
         closeOnActivate: true,

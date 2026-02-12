@@ -391,6 +391,7 @@ export class Table implements BlockTool {
       getRowCount: () => this.grid.getRowCount(gridEl),
       isHeadingRow: () => this.data.withHeadings,
       isHeadingColumn: () => this.data.withHeadingColumn,
+      i18n: this.api.i18n,
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
       onDragStateChange: (isDragging: boolean) => {
         if (this.resize) {
@@ -547,6 +548,7 @@ export class Table implements BlockTool {
     this.cellSelection = new TableCellSelection({
       grid: gridEl,
       rectangleSelection, // Pass reference
+      i18n: this.api.i18n,
       onSelectionActiveChange: (hasSelection) => {
         if (this.resize) {
           this.resize.enabled = !hasSelection;

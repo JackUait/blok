@@ -172,6 +172,18 @@ describe('TableCellSelection', () => {
   let grid: HTMLElement;
   let selection: TableCellSelection;
 
+  const mockI18n = {
+    t: vi.fn((key: string) => {
+      const translations: Record<string, string> = {
+        'tools.table.clearSelection': 'Clear',
+      };
+
+      return translations[key] || key;
+    }),
+    has: vi.fn(() => false),
+    getEnglishTranslation: vi.fn((key: string) => key),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     elementFromPointTarget = null;
@@ -182,7 +194,7 @@ describe('TableCellSelection', () => {
 
     grid = createGrid(3, 3);
     mockBoundingRects(grid);
-    selection = new TableCellSelection({ grid });
+    selection = new TableCellSelection({ grid, i18n: mockI18n });
   });
 
   afterEach(() => {
@@ -342,6 +354,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onSelectionActiveChange: callback,
       });
 
@@ -356,6 +369,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onSelectionActiveChange: callback,
       });
 
@@ -375,6 +389,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onSelectionActiveChange: callback,
       });
 
@@ -403,6 +418,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onSelectionActiveChange: callback,
       });
 
@@ -417,6 +433,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onSelectionActiveChange: callback,
       });
 
@@ -433,6 +450,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onSelectionActiveChange: callback,
       });
 
@@ -605,6 +623,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onClearContent,
       });
 
@@ -634,6 +653,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onClearContent,
       });
 
@@ -669,6 +689,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onClearContent,
       });
 
@@ -851,6 +872,7 @@ describe('TableCellSelection', () => {
 
       const selectionWithRef = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         rectangleSelection: mockRectangleSelection,
       });
 
@@ -860,6 +882,7 @@ describe('TableCellSelection', () => {
     it('works without rectangleSelection (backward compatibility)', () => {
       const selectionWithoutRef = new TableCellSelection({
         grid,
+        i18n: mockI18n,
       });
 
       expect(selectionWithoutRef).toBeDefined();
@@ -872,6 +895,7 @@ describe('TableCellSelection', () => {
 
       const selectionWithCapture = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         rectangleSelection: mockRectangleSelection,
       });
 
@@ -940,6 +964,7 @@ describe('TableCellSelection', () => {
 
       const selectionNoOverlay = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         rectangleSelection: mockRectangleSelection,
       });
 
@@ -985,6 +1010,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onClearContent,
         onSelectionActiveChange,
       });
@@ -1020,6 +1046,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onClearContent,
         onSelectionActiveChange,
       });
@@ -1054,6 +1081,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onClearContent,
       });
 
@@ -1078,6 +1106,7 @@ describe('TableCellSelection', () => {
       selection.destroy();
       selection = new TableCellSelection({
         grid,
+        i18n: mockI18n,
         onClearContent,
       });
 

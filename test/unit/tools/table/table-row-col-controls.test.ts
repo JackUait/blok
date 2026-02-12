@@ -56,6 +56,12 @@ describe('TableRowColControls', () => {
   let grid: HTMLElement;
   let controls: TableRowColControls;
 
+  const mockI18n = {
+    t: vi.fn((key: string) => key),
+    has: vi.fn(() => false),
+    getEnglishTranslation: vi.fn((key: string) => key),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -77,6 +83,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const cell = getCell(grid, 0, 1);
@@ -103,6 +110,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const cell = getCell(grid, 1, 2);
@@ -132,6 +140,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const cell = getCell(grid, 0, 0);
@@ -166,6 +175,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       // Hover cell (0,0)
@@ -202,6 +212,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const cell = getCell(grid, 0, 0);
@@ -227,6 +238,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       // Should not throw when called externally
@@ -244,6 +256,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -262,6 +275,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -282,6 +296,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       controls.setGripsDisplay(false);
@@ -302,6 +317,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       controls.setGripsDisplay(false);
@@ -325,6 +341,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -356,6 +373,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -374,6 +392,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -395,6 +414,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -416,6 +436,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -436,6 +457,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -459,6 +481,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -479,6 +502,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -501,6 +525,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -521,6 +546,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -531,17 +557,16 @@ describe('TableRowColControls', () => {
 
       cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
       expect(isGripVisible(grip)).toBe(true);
-      expect(grip.classList.contains('bg-gray-300')).toBe(true);
+      // Column grip starts at idle height (4px)
+      expect(grip.style.height).toBe('4px');
 
-      // Hover the grip (expand) — swaps bg-gray-300 for bg-gray-200
+      // Hover the grip (expand) — height expands to 16px
       grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
-      expect(grip.classList.contains('bg-gray-200')).toBe(true);
-      expect(grip.classList.contains('bg-gray-300')).toBe(false);
+      expect(grip.style.height).toBe('16px');
 
-      // Leave the grip (collapse) — bg-gray-300 must be restored
+      // Leave the grip (collapse) — height returns to idle (4px)
       grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
-      expect(grip.classList.contains('bg-gray-300')).toBe(true);
-      expect(grip.classList.contains('bg-gray-200')).toBe(false);
+      expect(grip.style.height).toBe('4px');
     });
 
     it('column grip fixed dimension stays constant during expand/collapse', () => {
@@ -553,6 +578,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -577,6 +603,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -603,6 +630,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -641,6 +669,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -679,6 +708,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -718,6 +748,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
         onGripClick: () => {
           // In the real app, onGripClick triggers cell selection which hides
           // all grips (display:none). The popover must already be positioned
@@ -759,6 +790,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       // Show grips by hovering
@@ -790,6 +822,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -823,6 +856,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -856,6 +890,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
         onGripClick: () => {
           // Simulate what the real app does: when a grip is clicked,
           // cell selection happens and calls setGripsDisplay(false)
@@ -897,6 +932,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -915,6 +951,7 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        i18n: mockI18n,
       });
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);

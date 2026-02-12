@@ -835,14 +835,17 @@ describe('BlocksAPI', () => {
       cellBlocks.appendChild(holder);
       document.body.appendChild(cellBlocks);
 
-      const mockBlock = {
+      const mockBlock: BlockStub = {
         id: 'block-1',
         holder,
+        name: 'paragraph',
+        stretched: false,
+        data: {},
       };
 
       const { blocksApi, blockManager } = createBlocksApi();
 
-      blockManager.getBlockByIndex.mockReturnValue(mockBlock as BlockStub);
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock);
       blockManager.currentBlockIndex = 0;
 
       const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
@@ -872,14 +875,17 @@ describe('BlocksAPI', () => {
       cellBlocks.appendChild(holder);
       document.body.appendChild(cellBlocks);
 
-      const mockBlock = {
+      const mockBlock: BlockStub = {
         id: 'block-1',
         holder,
+        name: 'paragraph',
+        stretched: false,
+        data: {},
       };
 
       const { blocksApi, blockManager } = createBlocksApi();
 
-      blockManager.getBlockByIndex.mockReturnValue(mockBlock as BlockStub);
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock);
       blockManager.currentBlockIndex = 0;
 
       const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
@@ -905,14 +911,17 @@ describe('BlocksAPI', () => {
 
       document.body.appendChild(holder);
 
-      const mockBlock = {
+      const mockBlock: BlockStub = {
         id: 'block-1',
         holder,
+        name: 'paragraph',
+        stretched: false,
+        data: {},
       };
 
       const { blocksApi, blockManager } = createBlocksApi();
 
-      blockManager.getBlockByIndex.mockReturnValue(mockBlock as BlockStub);
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock);
       blockManager.currentBlockIndex = 0;
 
       const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({

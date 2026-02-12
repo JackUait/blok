@@ -1,11 +1,11 @@
 import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
+import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { Module } from '../../__module';
 import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { capitalize } from '../../utils';
-import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 
 import { logLabeled } from './../../utils';
 
@@ -243,14 +243,21 @@ export class BlocksAPI extends Module {
     replace?: boolean,
     id?: string
   ): BlockAPIInterface => {
-    let tool = type ?? (this.config.defaultBlock);
+    const defaultTool = type ?? (this.config.defaultBlock);
+    const tool = (() => {
+      if (!defaultTool) {
+        return defaultTool;
+      }
 
-    const targetIndex = index ?? this.Blok.BlockManager.currentBlockIndex;
-    const targetBlock = this.Blok.BlockManager.getBlockByIndex(targetIndex);
+      const targetIndex = index ?? this.Blok.BlockManager.currentBlockIndex;
+      const targetBlock = this.Blok.BlockManager.getBlockByIndex(targetIndex);
 
-    if (targetBlock !== undefined && isInsideTableCell(targetBlock) && isRestrictedInTableCell(tool)) {
-      tool = 'paragraph';
-    }
+      if (targetBlock !== undefined && isInsideTableCell(targetBlock) && isRestrictedInTableCell(defaultTool)) {
+        return 'paragraph';
+      }
+
+      return defaultTool;
+    })();
 
     const insertedBlock = this.Blok.BlockManager.insert({
       id,

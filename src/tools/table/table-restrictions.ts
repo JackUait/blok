@@ -1,5 +1,5 @@
-import type { Block } from '../../components/block';
 import type { API } from '../../../types';
+import type { Block } from '../../components/block';
 
 /**
  * List of block tools that are restricted from being inserted into table cells.
@@ -14,7 +14,7 @@ const RESTRICTED_TOOLS = ['header', 'table'];
  * @param block - Block instance or HTMLElement to check
  * @returns true if inside a table cell, false otherwise
  */
-export function isInsideTableCell(block: Block | HTMLElement | null | undefined): boolean {
+export const isInsideTableCell = (block: Block | HTMLElement | null | undefined): boolean => {
   if (!block) {
     return false;
   }
@@ -22,7 +22,7 @@ export function isInsideTableCell(block: Block | HTMLElement | null | undefined)
   const element = block instanceof HTMLElement ? block : block.holder;
 
   return element.closest('[data-blok-table-cell-blocks]') !== null;
-}
+};
 
 /**
  * Check if a tool name is restricted inside table cells.
@@ -30,9 +30,9 @@ export function isInsideTableCell(block: Block | HTMLElement | null | undefined)
  * @param toolName - Name of the block tool to check
  * @returns true if the tool is restricted in table cells, false otherwise
  */
-export function isRestrictedInTableCell(toolName: string): boolean {
+export const isRestrictedInTableCell = (toolName: string): boolean => {
   return RESTRICTED_TOOLS.includes(toolName);
-}
+};
 
 /**
  * Convert a restricted block to a paragraph block, preserving text content.
@@ -43,7 +43,7 @@ export function isRestrictedInTableCell(toolName: string): boolean {
  * @returns The newly created paragraph block
  * @throws Error if block index cannot be found
  */
-export function convertToParagraph(block: Block, api: API): Block {
+export const convertToParagraph = (block: Block, api: API): Block => {
   const text = block.holder.textContent || '';
   const blockIndex = api.blocks.getBlockIndex(block.id);
 
@@ -61,4 +61,4 @@ export function convertToParagraph(block: Block, api: API): Block {
     true,  // replace existing
     block.id
   ) as unknown as Block;
-}
+};

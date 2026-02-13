@@ -990,7 +990,9 @@ describe('TableAddControls', () => {
       startPos: number,
       endPos: number,
     ): void => {
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       element.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
       element.releasePointerCapture = vi.fn();
 
       const clientKey = axis === 'row' ? 'clientY' : 'clientX';
@@ -1017,12 +1019,14 @@ describe('TableAddControls', () => {
     it('triggers hapticTick when a row is added by dragging', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
+      const callbacks = defaultDragCallbacks();
+
       new TableAddControls({
         wrapper,
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
-        ...defaultDragCallbacks(),
+        ...callbacks,
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
@@ -1032,17 +1036,20 @@ describe('TableAddControls', () => {
       simulateDrag(addRowBtn, 'row', 0, 30);
 
       expect(mockHapticTick).toHaveBeenCalled();
+      expect(callbacks.onDragAddRow).toHaveBeenCalled();
     });
 
     it('triggers hapticTick when a column is added by dragging', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const callbacks = defaultDragCallbacks();
 
       new TableAddControls({
         wrapper,
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
-        ...defaultDragCallbacks(),
+        ...callbacks,
       });
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
@@ -1051,17 +1058,20 @@ describe('TableAddControls', () => {
       simulateDrag(addColBtn, 'col', 0, 100);
 
       expect(mockHapticTick).toHaveBeenCalled();
+      expect(callbacks.onDragAddCol).toHaveBeenCalled();
     });
 
     it('triggers hapticTick when a row is removed by dragging', () => {
       ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
 
       new TableAddControls({
         wrapper,
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
-        ...defaultDragCallbacks(),
+        ...callbacks,
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
@@ -1070,17 +1080,20 @@ describe('TableAddControls', () => {
       simulateDrag(addRowBtn, 'row', 200, 100);
 
       expect(mockHapticTick).toHaveBeenCalled();
+      expect(callbacks.onDragRemoveRow).toHaveBeenCalled();
     });
 
     it('triggers hapticTick when a column is removed by dragging', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      const callbacks = defaultDragCallbacks();
 
       new TableAddControls({
         wrapper,
         grid,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
-        ...defaultDragCallbacks(),
+        ...callbacks,
       });
 
       const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
@@ -1089,6 +1102,7 @@ describe('TableAddControls', () => {
       simulateDrag(addColBtn, 'col', 300, 100);
 
       expect(mockHapticTick).toHaveBeenCalled();
+      expect(callbacks.onDragRemoveCol).toHaveBeenCalled();
     });
 
     it('does not trigger hapticTick on click (no drag)', () => {

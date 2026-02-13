@@ -2,6 +2,7 @@ import { IconPlus } from '../../components/icons';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { hide as hideTooltip, onHover } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
+
 import { hapticTick } from './table-haptics';
 
 const ADD_ROW_ATTR = 'data-blok-table-add-row';

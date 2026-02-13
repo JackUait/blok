@@ -65,26 +65,28 @@ describe('TableRowColDrag haptic feedback', () => {
     vi.restoreAllMocks();
   });
 
-  it('triggers hapticSnap when drag starts (threshold crossed)', () => {
+  it('triggers hapticSnap when drag starts (threshold crossed)', async () => {
     grid = createGrid(3, 3);
     const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
 
-    drag.beginTracking('row', 0, 50, 10);
+    const trackingPromise = drag.beginTracking('row', 0, 50, 10);
 
     // Move past threshold (10px)
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 25 }));
 
     expect(mockHapticSnap).toHaveBeenCalledTimes(1);
+    expect(document.body.style.cursor).toBe('grabbing');
 
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 25 }));
+    await trackingPromise;
   });
 
-  it('triggers hapticSnap when row is dropped at a new position', () => {
+  it('triggers hapticSnap when row is dropped at a new position', async () => {
     grid = createGrid(3, 3);
     const onAction = vi.fn();
     const drag = new TableRowColDrag({ grid, onAction });
 
-    drag.beginTracking('row', 0, 50, 10);
+    const trackingPromise = drag.beginTracking('row', 0, 50, 10);
 
     // Move past threshold to start drag
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 25 }));
@@ -94,14 +96,17 @@ describe('TableRowColDrag haptic feedback', () => {
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 120 }));
 
     expect(mockHapticSnap).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ type: 'move-row' }));
+
+    await trackingPromise;
   });
 
-  it('does not trigger hapticSnap on drop if row did not move', () => {
+  it('does not trigger hapticSnap on drop if row did not move', async () => {
     grid = createGrid(3, 3);
     const onAction = vi.fn();
     const drag = new TableRowColDrag({ grid, onAction });
 
-    drag.beginTracking('row', 0, 50, 10);
+    const trackingPromise = drag.beginTracking('row', 0, 50, 10);
 
     // Move past threshold
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 25 }));
@@ -111,13 +116,16 @@ describe('TableRowColDrag haptic feedback', () => {
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 10 }));
 
     expect(mockHapticSnap).not.toHaveBeenCalled();
+    expect(onAction).not.toHaveBeenCalled();
+
+    await trackingPromise;
   });
 
-  it('triggers hapticTick when drop indicator crosses row boundaries', () => {
+  it('triggers hapticTick when drop indicator crosses row boundaries', async () => {
     grid = createGrid(3, 3);
     const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
 
-    drag.beginTracking('row', 0, 50, 10);
+    const trackingPromise = drag.beginTracking('row', 0, 50, 10);
 
     // Move past threshold to start drag (enters row 0 zone)
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 25 }));
@@ -134,13 +142,14 @@ describe('TableRowColDrag haptic feedback', () => {
     expect(mockHapticTick).toHaveBeenCalledTimes(2);
 
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 125 }));
+    await trackingPromise;
   });
 
-  it('does not trigger hapticTick when staying in same drop zone', () => {
+  it('does not trigger hapticTick when staying in same drop zone', async () => {
     grid = createGrid(3, 3);
     const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
 
-    drag.beginTracking('row', 0, 50, 10);
+    const trackingPromise = drag.beginTracking('row', 0, 50, 10);
 
     // Move past threshold
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 25 }));
@@ -153,6 +162,7 @@ describe('TableRowColDrag haptic feedback', () => {
     expect(mockHapticTick).not.toHaveBeenCalled();
 
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 20 }));
+    await trackingPromise;
   });
 
   it('does not trigger haptics on click (no drag)', async () => {

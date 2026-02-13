@@ -1,4 +1,5 @@
 import { BORDER_WIDTH } from './table-core';
+import { hapticTick } from './table-haptics';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
 const CELL_ATTR = 'data-blok-table-cell';
@@ -24,6 +25,7 @@ export class TableResize {
   private dragColIndex = -1;
   private startColWidth = 0;
   private handles: HTMLElement[] = [];
+  private atMinWidth = false;
   private needsInitialApply: boolean;
 
   private boundPointerDown: (e: PointerEvent) => void;
@@ -190,6 +192,13 @@ export class TableResize {
     const deltaPx = e.clientX - this.dragStartX;
     const rawWidth = this.startColWidth + deltaPx;
     const newWidth = Math.max(MIN_COL_WIDTH, rawWidth);
+    const hitMin = rawWidth <= MIN_COL_WIDTH;
+
+    if (hitMin && !this.atMinWidth) {
+      hapticTick();
+    }
+
+    this.atMinWidth = hitMin;
 
     this.colWidths[this.dragColIndex] = newWidth;
     this.applyWidths();
@@ -203,6 +212,7 @@ export class TableResize {
     }
 
     this.isDragging = false;
+    this.atMinWidth = false;
     this.gridEl.style.userSelect = '';
 
     const activeHandle = this.handles[this.dragColIndex];

@@ -191,12 +191,11 @@ export class UI extends Module<UINodes> {
     this.selectionController.setWrapperElement(this.nodes.wrapper);
 
     /**
-     * Block hover controller needs content rect getter
+     * Block hover controller detects hover over blocks and finds nearest block
      */
     this.blockHoverController = new BlockHoverController({
       config: this.config,
       eventsDispatcher: this.eventsDispatcher,
-      contentRectGetter: () => this.contentRect,
     });
     this.blockHoverController.state = this.Blok;
 

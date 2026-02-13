@@ -37,7 +37,6 @@ export class BlockHoverController extends Controller {
   constructor(options: {
     config: Controller['config'];
     eventsDispatcher: Controller['eventsDispatcher'];
-    contentRectGetter: () => DOMRect;
   }) {
     super(options);
   }

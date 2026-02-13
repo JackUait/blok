@@ -21,24 +21,11 @@ describe('BlockHoverController', () => {
   const createBlockHoverController = (options?: {
     blokOverrides?: Partial<BlokModules>;
     configOverrides?: Partial<BlokConfig>;
-    contentRect?: DOMRect;
   }): {
     controller: BlockHoverController;
     blok: BlokModules;
     eventsDispatcher: ModuleConfig['eventsDispatcher'];
   } => {
-    const contentRect = options?.contentRect ?? {
-      left: 100,
-      right: 700,
-      top: 0,
-      bottom: 800,
-      width: 600,
-      height: 800,
-      x: 100,
-      y: 0,
-      toJSON: () => ({}),
-    };
-
     const eventsDispatcher = {
       on: vi.fn(),
       off: vi.fn(),
@@ -58,7 +45,6 @@ describe('BlockHoverController', () => {
         ...options?.configOverrides,
       } as BlokConfig,
       eventsDispatcher: eventsDispatcher,
-      contentRectGetter: () => contentRect,
     });
 
     controller.state = blok;
@@ -278,20 +264,8 @@ describe('BlockHoverController', () => {
   });
 
   describe('nearest block detection (LTR)', () => {
-    it('detects block in hover zone to the left of content', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+    it('finds nearest block when cursor is to the left of content area', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -302,9 +276,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is in hover zone (left of content by 50px, within 100px)
+      // Cursor is to the left of content, nearest block detection finds block by Y
       const event = new MouseEvent('mousemove', {
-        clientX: 50, // 100 - 50 = 50, which is in the hover zone
+        clientX: 50, // Left of content area
         clientY: 200,
         bubbles: true,
       });
@@ -320,19 +294,7 @@ describe('BlockHoverController', () => {
     });
 
     it('finds nearest block when cursor is inside content area but not on a block element', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -343,7 +305,7 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is inside the content area (between left and right), NOT in hover zone
+      // Cursor is inside the content area but not on a block element
       const event = new MouseEvent('mousemove', {
         clientX: 400, // Inside content area (100 < 400 < 700)
         clientY: 200,
@@ -360,20 +322,8 @@ describe('BlockHoverController', () => {
       });
     });
 
-    it('finds correct block by Y position in hover zone', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+    it('finds correct block by Y position when cursor is outside content area', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block1 = createMockBlock('block-1', 100, 200);
       const block2 = createMockBlock('block-2', 200, 300);
@@ -385,9 +335,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
 
-      // Cursor is in hover zone and at Y position of block2
+      // Cursor is outside content area and at Y position of block2
       const event = new MouseEvent('mousemove', {
-        clientX: 50, // In hover zone
+        clientX: 50, // Outside content area
         clientY: 250, // Within block2's vertical range
         bubbles: true,
       });
@@ -404,20 +354,8 @@ describe('BlockHoverController', () => {
   });
 
   describe('nearest block detection (RTL)', () => {
-    it('detects block in hover zone to the right of content for RTL', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+    it('finds nearest block when cursor is to the right of content area (RTL)', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -428,9 +366,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is in hover zone (right of content by 50px, within 100px)
+      // Cursor is to the right of content area, nearest block detection finds block by Y
       const event = new MouseEvent('mousemove', {
-        clientX: 750, // 700 + 50 = 750, which is in the hover zone
+        clientX: 750, // Right of content area
         clientY: 200,
         bubbles: true,
       });
@@ -446,19 +384,7 @@ describe('BlockHoverController', () => {
     });
 
     it('finds nearest block when cursor is inside content area but not on a block element (RTL)', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -469,7 +395,7 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is inside the content area (between left and right), NOT in hover zone
+      // Cursor is inside the content area but not on a block element
       const event = new MouseEvent('mousemove', {
         clientX: 400, // Inside content area (100 < 400 < 700)
         clientY: 200,
@@ -605,19 +531,7 @@ describe('BlockHoverController', () => {
     });
 
     it('handles empty blocks array', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       (controller as unknown as { enable: () => void }).enable();
 
@@ -642,19 +556,7 @@ describe('BlockHoverController', () => {
 
   describe('nearest block detection (always-visible toolbar)', () => {
     it('finds nearest block when cursor is between two blocks vertically', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block1 = createMockBlock('block-1', 100, 200);
       const block2 = createMockBlock('block-2', 250, 350);
@@ -684,19 +586,7 @@ describe('BlockHoverController', () => {
     });
 
     it('finds first block when cursor is above all blocks', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block1 = createMockBlock('block-1', 200, 300);
       const block2 = createMockBlock('block-2', 300, 400);
@@ -726,19 +616,7 @@ describe('BlockHoverController', () => {
     });
 
     it('finds last block when cursor is below all blocks', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block1 = createMockBlock('block-1', 100, 200);
       const block2 = createMockBlock('block-2', 200, 300);
@@ -768,19 +646,7 @@ describe('BlockHoverController', () => {
     });
 
     it('finds nearest block when cursor is inside content area but not on a block element', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -791,7 +657,7 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor inside content area (clientX=400 is between 100 and 700) but not on a block element
+      // Cursor inside content area but not on a block element
       const event = new MouseEvent('mousemove', {
         clientX: 400,
         clientY: 200,
@@ -809,19 +675,7 @@ describe('BlockHoverController', () => {
     });
 
     it('returns single block regardless of cursor position', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 100, 200);
       const nonBlockElement = document.createElement('div');
@@ -850,19 +704,7 @@ describe('BlockHoverController', () => {
     });
 
     it('deduplicates events for nearest block same as direct hover', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 100, 200);
       const nonBlockElement = document.createElement('div');

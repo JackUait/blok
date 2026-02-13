@@ -49,10 +49,11 @@ const createBlokWithTable = async (page: Page): Promise<void> => {
 
   await page.evaluate(
     async ({ holder, data: initialData }) => {
+      const tableClass = (window.Blok as unknown as Record<string, unknown>).Table;
       const blok = new window.Blok({
         holder,
         tools: {
-          table: { class: window.Blok.Table },
+          table: { class: tableClass },
         },
         data: initialData,
       });

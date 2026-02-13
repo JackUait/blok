@@ -635,4 +635,266 @@ describe('BlockHoverController', () => {
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
   });
+
+  describe('nearest block detection (always-visible toolbar)', () => {
+    it('finds nearest block when cursor is between two blocks vertically', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController({
+        contentRect: {
+          left: 100,
+          right: 700,
+          top: 0,
+          bottom: 800,
+          width: 600,
+          height: 800,
+          x: 100,
+          y: 0,
+          toJSON: () => ({}),
+        },
+      });
+
+      const block1 = createMockBlock('block-1', 100, 200);
+      const block2 = createMockBlock('block-2', 250, 350);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
+
+      // Cursor at Y=230: block1 center=150, block2 center=300. Closer to block2.
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 230,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: block2,
+        target: block2.holder,
+      });
+    });
+
+    it('finds first block when cursor is above all blocks', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController({
+        contentRect: {
+          left: 100,
+          right: 700,
+          top: 0,
+          bottom: 800,
+          width: 600,
+          height: 800,
+          x: 100,
+          y: 0,
+          toJSON: () => ({}),
+        },
+      });
+
+      const block1 = createMockBlock('block-1', 200, 300);
+      const block2 = createMockBlock('block-2', 300, 400);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
+
+      // Cursor at Y=50, above all blocks
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 50,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: block1,
+        target: block1.holder,
+      });
+    });
+
+    it('finds last block when cursor is below all blocks', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController({
+        contentRect: {
+          left: 100,
+          right: 700,
+          top: 0,
+          bottom: 800,
+          width: 600,
+          height: 800,
+          x: 100,
+          y: 0,
+          toJSON: () => ({}),
+        },
+      });
+
+      const block1 = createMockBlock('block-1', 100, 200);
+      const block2 = createMockBlock('block-2', 200, 300);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
+
+      // Cursor at Y=500, below all blocks
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 500,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: block2,
+        target: block2.holder,
+      });
+    });
+
+    it('finds nearest block when cursor is inside content area but not on a block element', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController({
+        contentRect: {
+          left: 100,
+          right: 700,
+          top: 0,
+          bottom: 800,
+          width: 600,
+          height: 800,
+          x: 100,
+          y: 0,
+          toJSON: () => ({}),
+        },
+      });
+
+      const block = createMockBlock('block-1', 150, 250);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      // Cursor inside content area (clientX=400 is between 100 and 700) but not on a block element
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 200,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+
+    it('returns single block regardless of cursor position', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController({
+        contentRect: {
+          left: 100,
+          right: 700,
+          top: 0,
+          bottom: 800,
+          width: 600,
+          height: 800,
+          x: 100,
+          y: 0,
+          toJSON: () => ({}),
+        },
+      });
+
+      const block = createMockBlock('block-1', 100, 200);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      // Cursor far below the only block
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 900,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+
+    it('deduplicates events for nearest block same as direct hover', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController({
+        contentRect: {
+          left: 100,
+          right: 700,
+          top: 0,
+          bottom: 800,
+          width: 600,
+          height: 800,
+          x: 100,
+          y: 0,
+          toJSON: () => ({}),
+        },
+      });
+
+      const block = createMockBlock('block-1', 100, 200);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      // Two mousemove events at different Y positions, both resolve to the same nearest block
+      const event1 = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 50,
+        bubbles: true,
+      });
+      Object.defineProperty(event1, 'target', { value: nonBlockElement });
+
+      const event2 = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 60,
+        bubbles: true,
+      });
+      Object.defineProperty(event2, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event1);
+      vi.runAllTimers();
+
+      document.dispatchEvent(event2);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledTimes(1);
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+  });
 });

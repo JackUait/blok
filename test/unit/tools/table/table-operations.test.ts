@@ -344,4 +344,58 @@ describe('table-operations', () => {
       expect(result.initialColWidth).toBeUndefined();
     });
   });
+
+  describe('computeInsertColumnWidths', () => {
+    it('should use initialColWidth/2 for inserted column width when initialColWidth is set', async () => {
+      const { computeInsertColumnWidths } = await import('../../../../src/tools/table/table-operations');
+      const { TableGrid, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+
+      const grid = new TableGrid({ readOnly: false });
+      const gridEl = grid.createGrid(1, 3, [200, 300, 100]);
+
+      // Apply pixel widths to cells so the grid is in px mode
+      const cells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
+      (cells[0] as HTMLElement).style.width = '200px';
+      (cells[1] as HTMLElement).style.width = '300px';
+      (cells[2] as HTMLElement).style.width = '100px';
+
+      const data = {
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [['a', 'b', 'c']],
+        colWidths: [200, 300, 100],
+        initialColWidth: 250,
+      };
+
+      const result = computeInsertColumnWidths(gridEl, 1, data, grid);
+
+      // New column should be initialColWidth / 2 = 125
+      expect(result).toEqual([200, 125, 300, 100]);
+    });
+
+    it('should fall back to half-average when initialColWidth is not set', async () => {
+      const { computeInsertColumnWidths } = await import('../../../../src/tools/table/table-operations');
+      const { TableGrid, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+
+      const grid = new TableGrid({ readOnly: false });
+      const gridEl = grid.createGrid(1, 3, [200, 300, 100]);
+
+      const cells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
+      (cells[0] as HTMLElement).style.width = '200px';
+      (cells[1] as HTMLElement).style.width = '300px';
+      (cells[2] as HTMLElement).style.width = '100px';
+
+      const data = {
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [['a', 'b', 'c']],
+        colWidths: [200, 300, 100],
+      };
+
+      const result = computeInsertColumnWidths(gridEl, 1, data, grid);
+
+      // Half average of [200, 300, 100] = 100
+      expect(result).toEqual([200, 100, 300, 100]);
+    });
+  });
 });

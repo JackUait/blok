@@ -168,14 +168,15 @@ export const computeInsertColumnWidths = (
 ): number[] => {
   const colWidths = data.colWidths ?? readPixelWidths(gridEl);
 
-  grid.addColumn(gridEl, index, colWidths);
+  const halfWidth = data.initialColWidth !== undefined
+    ? Math.round((data.initialColWidth / 2) * 100) / 100
+    : computeHalfAvgWidth(colWidths);
 
-  const halfAvgWidth = Math.round(
-    (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
-  ) / 100;
+  grid.addColumn(gridEl, index, colWidths, halfWidth);
+
   const newWidths = [...colWidths];
 
-  newWidths.splice(index, 0, halfAvgWidth);
+  newWidths.splice(index, 0, halfWidth);
 
   return newWidths;
 };

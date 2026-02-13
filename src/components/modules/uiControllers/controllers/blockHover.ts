@@ -79,16 +79,7 @@ export class BlockHoverController extends Controller {
        * If no block element found directly, find the nearest block by Y distance
        */
       if (!hoveredBlockElement) {
-        const nearestBlock = this.findNearestBlock(event.clientY);
-
-        if (nearestBlock !== null && this.blockHoveredState.lastHoveredBlockId !== nearestBlock.id) {
-          this.blockHoveredState.lastHoveredBlockId = nearestBlock.id;
-
-          this.eventsDispatcher.emit(BlockHovered, {
-            block: nearestBlock,
-            target: nearestBlock.holder,
-          });
-        }
+        this.emitNearestBlockHovered(event.clientY);
 
         return;
       }
@@ -121,14 +112,33 @@ export class BlockHoverController extends Controller {
     );
 
     /**
-     * Listen on document to detect hover in the extended zone
-     * which is outside the wrapper's bounds.
-     * We filter events to only process those over the editor or in the hover zone.
+     * Listen on document to detect hover anywhere on the page.
+     * When cursor is not directly on a block, finds the nearest block by Y distance.
      */
     this.readOnlyMutableListeners.on(document, 'mousemove', (event: Event) => {
       throttledHandleBlockHovered(event);
     }, {
       passive: true,
+    });
+  }
+
+  /**
+   * Finds and emits a BlockHovered event for the nearest block by Y distance.
+   * Deduplicates by lastHoveredBlockId to avoid redundant events.
+   * @param clientY - Cursor Y position
+   */
+  private emitNearestBlockHovered(clientY: number): void {
+    const nearestBlock = this.findNearestBlock(clientY);
+
+    if (nearestBlock === null || this.blockHoveredState.lastHoveredBlockId === nearestBlock.id) {
+      return;
+    }
+
+    this.blockHoveredState.lastHoveredBlockId = nearestBlock.id;
+
+    this.eventsDispatcher.emit(BlockHovered, {
+      block: nearestBlock,
+      target: nearestBlock.holder,
     });
   }
 
@@ -147,21 +157,15 @@ export class BlockHoverController extends Controller {
       return null;
     }
 
-    let nearestBlock: Block | null = null;
-    let minDistance = Infinity;
-
-    for (const block of blocks) {
+    const result = blocks.reduce<{ block: Block; distance: number }>((nearest, block) => {
       const rect = block.holder.getBoundingClientRect();
       const centerY = (rect.top + rect.bottom) / 2;
       const distance = Math.abs(clientY - centerY);
 
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestBlock = block;
-      }
-    }
+      return distance < nearest.distance ? { block, distance } : nearest;
+    }, { block: blocks[0], distance: Infinity });
 
-    return nearestBlock;
+    return result.block;
   }
 
   /**

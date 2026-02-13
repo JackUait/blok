@@ -119,6 +119,27 @@ yarn storybook      # Storybook
 
 Single test: `yarn test [file]` or `yarn e2e [file] -g "pattern"`
 
+## Releasing
+
+Releases are triggered by pushing a git tag. The version in `package.json` is managed manually.
+
+```bash
+# 1. Bump version in package.json
+# 2. Commit and tag
+git add package.json
+git commit -m "chore(release): v1.2.3"
+git tag v1.2.3
+git push && git push --tags
+```
+
+For beta releases, use a beta tag:
+```bash
+git tag v1.2.3-beta.1
+git push --tags
+```
+
+The GitHub Actions release workflow (`.github/workflows/release.yml`) runs automatically on `v*` tag push: lint → test → build → E2E → npm publish → GitHub release. Beta tags publish to npm with `--tag beta` and create a prerelease GitHub release.
+
 ## Architecture
 
 Entry: `src/blok.ts` → `Core` (`src/components/core.ts`) → modules

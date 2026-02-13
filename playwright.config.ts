@@ -70,6 +70,7 @@ const CROSS_BROWSER_TESTS = [
   '**/ui/mobile-and-readonly-coordination.spec.ts',
   '**/ui/toolbar-nested-list-positioning.spec.ts',
   '**/ui/toolbar-rubber-band-hover.spec.ts',
+  '**/ui/toolbar-always-visible.spec.ts',
   '**/ui/settings-toggler-after-drag.spec.ts',
 ] as const;
 

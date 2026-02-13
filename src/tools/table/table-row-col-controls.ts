@@ -114,6 +114,7 @@ export class TableRowColControls {
   private hideTimeout: ReturnType<typeof setTimeout> | null = null;
   private activeColGripIndex = -1;
   private activeRowGripIndex = -1;
+  private isInsideTable = false;
   private rowResizeObserver: ResizeObserver | null = null;
 
   private drag: TableRowColDrag;
@@ -246,6 +247,7 @@ export class TableRowColControls {
     this.rowGrips = [];
     this.activeColGripIndex = -1;
     this.activeRowGripIndex = -1;
+    this.isInsideTable = false;
   }
 
   private createGripElement(type: 'row' | 'col', index: number): HTMLElement {
@@ -365,6 +367,7 @@ export class TableRowColControls {
 
     this.showColGrip(position.col);
     this.showRowGrip(position.row);
+    this.isInsideTable = true;
   }
 
   private handleMouseLeave(): void {
@@ -426,6 +429,7 @@ export class TableRowColControls {
     this.clearHideTimeout();
     this.hideColGrip();
     this.hideRowGrip();
+    this.isInsideTable = false;
   }
 
   private showColGrip(index: number): void {
@@ -473,8 +477,17 @@ export class TableRowColControls {
     // Reset to pill size before making visible
     collapseGrip(el, type, pillSize);
 
+    if (this.isInsideTable) {
+      el.style.transition = 'none';
+    }
+
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_VISIBLE_CLASSES);
     el.setAttribute('data-blok-table-grip-visible', '');
+
+    if (this.isInsideTable) {
+      void el.offsetHeight;
+      el.style.transition = '';
+    }
 
     const svg = el.querySelector('svg');
 
@@ -512,9 +525,18 @@ export class TableRowColControls {
     const HIT_AREA_PADDING = 12;
     const pillSize = isCol ? (COL_PILL_HEIGHT + HIT_AREA_PADDING) : (ROW_PILL_WIDTH + HIT_AREA_PADDING);
 
+    if (this.isInsideTable) {
+      el.style.transition = 'none';
+    }
+
     collapseGrip(el, type, pillSize);
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
     el.removeAttribute('data-blok-table-grip-visible');
+
+    if (this.isInsideTable) {
+      void el.offsetHeight;
+      el.style.transition = '';
+    }
   }
 
   private handleDragStateChange(isDragging: boolean, _dragType: 'row' | 'col' | null): void {
@@ -529,6 +551,7 @@ export class TableRowColControls {
     this.hideTimeout = setTimeout(() => {
       this.hideColGrip();
       this.hideRowGrip();
+      this.isInsideTable = false;
       this.hideTimeout = null;
     }, HIDE_DELAY_MS);
   }

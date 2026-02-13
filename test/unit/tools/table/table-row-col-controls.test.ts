@@ -922,6 +922,123 @@ describe('TableRowColControls', () => {
     });
   });
 
+  describe('grip entry animation', () => {
+    it('skips opacity transition when switching grips while already inside table', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      // First hover: mouse enters table — grips appear (with transition)
+      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      // Set up spy: when the code reads offsetHeight for reflow,
+      // capture the transition value at that moment
+      let transitionDuringReflow = '';
+
+      Object.defineProperty(colGrips[1], 'offsetHeight', {
+        get: () => {
+          transitionDuringReflow = colGrips[1].style.transition;
+
+          return 0;
+        },
+        configurable: true,
+      });
+
+      // Second hover: move to different column (still inside table)
+      getCell(grid, 0, 1).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      // During the reflow, transition should have been 'none' (animation bypassed)
+      expect(transitionDuringReflow).toBe('none');
+      // After operation, transition should be restored
+      expect(colGrips[1].style.transition).toBe('');
+    });
+
+    it('skips opacity transition on the old grip when switching cells', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      // First hover: mouse enters table
+      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      // Spy on old grip: capture transition value during reflow
+      let transitionDuringReflow = '';
+
+      Object.defineProperty(colGrips[0], 'offsetHeight', {
+        get: () => {
+          transitionDuringReflow = colGrips[0].style.transition;
+
+          return 0;
+        },
+        configurable: true,
+      });
+
+      // Move to different column — old grip (col 0) should hide without animation
+      getCell(grid, 0, 1).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      expect(transitionDuringReflow).toBe('none');
+      expect(colGrips[0].style.transition).toBe('');
+    });
+
+    it('restores transition after mouse leaves and re-enters the table', () => {
+      grid = createGrid(2, 2);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 2,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      // Enter table
+      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      // Leave table and wait for hide delay
+      grid.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      // Set up spy: on re-entry, offsetHeight should NOT be read
+      // (because we're entering fresh, transition should play normally)
+      let offsetHeightRead = false;
+
+      Object.defineProperty(colGrips[0], 'offsetHeight', {
+        get: () => {
+          offsetHeightRead = true;
+
+          return 0;
+        },
+        configurable: true,
+      });
+
+      // Re-enter table — should animate (not bypass transition)
+      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+      expect(offsetHeightRead).toBe(false);
+    });
+  });
+
   describe('grip styling (original behavior)', () => {
     it('row grips do not have position: relative (no pseudo-element hit area expansion)', () => {
       grid = createGrid(2, 2);

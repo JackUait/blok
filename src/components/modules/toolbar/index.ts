@@ -569,13 +569,13 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @returns the parent table block if inside a cell, the original block otherwise, or null if resolution fails
    */
   private resolveTableCellBlock(block: Block): Block | null {
-    if (!block.holder.closest('[data-blok-table-cell-blocks]')) {
+    const cellBlocksContainer = block.holder.closest('[data-blok-table-cell-blocks]');
+
+    if (!cellBlocksContainer) {
       return block;
     }
 
-    const tableBlockHolder = block.holder
-      .closest('[data-blok-table-cell-blocks]')
-      ?.closest('[data-blok-testid="block-wrapper"]');
+    const tableBlockHolder = cellBlocksContainer.closest('[data-blok-testid="block-wrapper"]');
 
     if (!tableBlockHolder) {
       return null;

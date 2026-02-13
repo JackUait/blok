@@ -1,0 +1,14 @@
+changelog:
+  categories:
+    - title: Features
+      labels:
+        - feat
+    - title: Bug Fixes
+      labels:
+        - fix
+    - title: Performance
+      labels:
+        - perf
+    - title: Other Changes
+      labels:
+        - "*"

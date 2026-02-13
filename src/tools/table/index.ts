@@ -19,7 +19,6 @@ import {
   applyPixelWidths,
   computeHalfAvgWidth,
   computeInitialColWidth,
-  computeInsertColumnWidths,
   deleteColumnWithBlockCleanup,
   deleteRowWithBlockCleanup,
   enableScrollOverflow,
@@ -31,14 +30,14 @@ import {
   normalizeTableData,
   populateNewCells,
   readPixelWidths,
-  redistributePercentWidths,
   SCROLL_OVERFLOW_CLASSES,
   setupKeyboardNavigation,
-  syncColWidthsAfterMove,
   updateHeadingColumnStyles,
   updateHeadingStyles,
 } from './table-operations';
 import { TableResize } from './table-resize';
+import { executeRowColAction } from './table-row-col-action-handler';
+import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import type { TableData, TableConfig } from './types';
@@ -72,7 +71,7 @@ export class Table implements BlockTool {
   private cellSelection: TableCellSelection | null = null;
   private element: HTMLDivElement | null = null;
   private blockId: string | undefined;
-  private pendingHighlight: { type: 'row' | 'col'; index: number } | null = null;
+  private pendingHighlight: PendingHighlight | null = null;
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<TableData, TableConfig>) {
     this.api = api;
@@ -464,66 +463,16 @@ export class Table implements BlockTool {
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
-    switch (action.type) {
-      case 'insert-row-above':
-        this.grid.addRow(gridEl, action.index);
-        populateNewCells(gridEl, this.cellBlocks);
-        this.pendingHighlight = { type: 'row', index: action.index };
-        break;
-      case 'insert-row-below':
-        this.grid.addRow(gridEl, action.index + 1);
-        populateNewCells(gridEl, this.cellBlocks);
-        this.pendingHighlight = { type: 'row', index: action.index + 1 };
-        break;
-      case 'insert-col-left':
-        this.data.colWidths = computeInsertColumnWidths(gridEl, action.index, this.data, this.grid);
-        populateNewCells(gridEl, this.cellBlocks);
-        this.pendingHighlight = { type: 'col', index: action.index };
-        break;
-      case 'insert-col-right':
-        this.data.colWidths = computeInsertColumnWidths(gridEl, action.index + 1, this.data, this.grid);
-        populateNewCells(gridEl, this.cellBlocks);
-        this.pendingHighlight = { type: 'col', index: action.index + 1 };
-        break;
-      case 'move-row':
-        this.grid.moveRow(gridEl, action.fromIndex, action.toIndex);
-        break;
-      case 'move-col':
-        this.grid.moveColumn(gridEl, action.fromIndex, action.toIndex);
-        this.data.colWidths = syncColWidthsAfterMove(this.data.colWidths, action.fromIndex, action.toIndex);
-        break;
-      case 'delete-row': {
-        deleteRowWithBlockCleanup(gridEl, action.index, this.grid, this.cellBlocks);
-        const newRowCount = this.grid.getRowCount(gridEl);
-        const neighborRow = action.index < newRowCount ? action.index : action.index - 1;
+    const result = executeRowColAction(
+      gridEl,
+      action,
+      { grid: this.grid, data: this.data, cellBlocks: this.cellBlocks },
+    );
 
-        this.pendingHighlight = { type: 'row', index: neighborRow };
-        break;
-      }
-      case 'delete-col': {
-        this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, action.index, this.data.colWidths, this.grid, this.cellBlocks);
-
-        if (this.data.colWidths) {
-          applyPixelWidths(gridEl, this.data.colWidths);
-        } else {
-          redistributePercentWidths(gridEl);
-        }
-
-        const newColCount = this.grid.getColumnCount(gridEl);
-        const neighborCol = action.index < newColCount ? action.index : action.index - 1;
-
-        this.pendingHighlight = { type: 'col', index: neighborCol };
-        break;
-      }
-      case 'toggle-heading':
-        this.data.withHeadings = !this.data.withHeadings;
-        this.pendingHighlight = { type: 'row', index: 0 };
-        break;
-      case 'toggle-heading-column':
-        this.data.withHeadingColumn = !this.data.withHeadingColumn;
-        this.pendingHighlight = { type: 'col', index: 0 };
-        break;
-    }
+    this.data.colWidths = result.colWidths;
+    this.data.withHeadings = result.withHeadings;
+    this.data.withHeadingColumn = result.withHeadingColumn;
+    this.pendingHighlight = result.pendingHighlight;
 
     updateHeadingStyles(this.element, this.data.withHeadings);
     updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
@@ -531,18 +480,20 @@ export class Table implements BlockTool {
     this.addControls?.syncRowButtonWidth();
     this.rowColControls?.refresh();
 
-    // After move operations, select the moved row/column to show where it landed
-    if (action.type === 'move-row') {
-      this.cellSelection?.selectRow(action.toIndex);
-      this.rowColControls?.setActiveGrip('row', action.toIndex);
-
+    if (!result.moveSelection) {
       return;
     }
 
-    if (action.type === 'move-col') {
-      this.cellSelection?.selectColumn(action.toIndex);
-      this.rowColControls?.setActiveGrip('col', action.toIndex);
+    // After move operations, select the moved row/column to show where it landed
+    const { type: moveType, index: moveIndex } = result.moveSelection;
+
+    if (moveType === 'row') {
+      this.cellSelection?.selectRow(moveIndex);
+    } else {
+      this.cellSelection?.selectColumn(moveIndex);
     }
+
+    this.rowColControls?.setActiveGrip(moveType, moveIndex);
   }
 
   private initResize(gridEl: HTMLElement): void {

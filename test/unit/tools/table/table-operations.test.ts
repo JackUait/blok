@@ -345,6 +345,27 @@ describe('table-operations', () => {
     });
   });
 
+  describe('computeInitialColWidth', () => {
+    it('should return the average of column widths', async () => {
+      const { computeInitialColWidth } = await import('../../../../src/tools/table/table-operations');
+
+      expect(computeInitialColWidth([200, 300, 100])).toBe(200);
+    });
+
+    it('should return 0 for empty array', async () => {
+      const { computeInitialColWidth } = await import('../../../../src/tools/table/table-operations');
+
+      expect(computeInitialColWidth([])).toBe(0);
+    });
+
+    it('should round to 2 decimal places', async () => {
+      const { computeInitialColWidth } = await import('../../../../src/tools/table/table-operations');
+
+      expect(computeInitialColWidth([100, 100, 100])).toBe(100);
+      expect(computeInitialColWidth([150, 250])).toBe(200);
+    });
+  });
+
   describe('computeInsertColumnWidths', () => {
     it('should use initialColWidth/2 for inserted column width when initialColWidth is set', async () => {
       const { computeInsertColumnWidths } = await import('../../../../src/tools/table/table-operations');

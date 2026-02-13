@@ -18,6 +18,7 @@ import { TableGrid } from './table-core';
 import {
   applyPixelWidths,
   computeHalfAvgWidth,
+  computeInitialColWidth,
   computeInsertColumnWidths,
   deleteColumnWithBlockCleanup,
   deleteRowWithBlockCleanup,
@@ -178,6 +179,14 @@ export class Table implements BlockTool {
 
     this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
 
+    if (this.data.initialColWidth === undefined) {
+      const widths = this.data.colWidths ?? readPixelWidths(gridEl);
+
+      if (widths.length > 0) {
+        this.data.initialColWidth = computeInitialColWidth(widths);
+      }
+    }
+
     this.initResize(gridEl);
     this.initAddControls(gridEl);
     this.initRowColControls(gridEl);
@@ -197,6 +206,7 @@ export class Table implements BlockTool {
       stretched: this.data.stretched,
       content,
       ...(colWidths ? { colWidths } : {}),
+      ...(this.data.initialColWidth !== undefined ? { initialColWidth: this.data.initialColWidth } : {}),
     };
   }
 
@@ -315,10 +325,12 @@ export class Table implements BlockTool {
       },
       onAddColumn: () => {
         const colWidths = this.data.colWidths ?? readPixelWidths(gridEl);
-        const halfAvgWidth = computeHalfAvgWidth(colWidths);
+        const halfWidth = this.data.initialColWidth !== undefined
+          ? Math.round((this.data.initialColWidth / 2) * 100) / 100
+          : computeHalfAvgWidth(colWidths);
 
-        this.grid.addColumn(gridEl, undefined, colWidths);
-        this.data.colWidths = [...colWidths, halfAvgWidth];
+        this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+        this.data.colWidths = [...colWidths, halfWidth];
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
         this.initResize(gridEl);
@@ -347,10 +359,12 @@ export class Table implements BlockTool {
       },
       onDragAddCol: () => {
         const colWidths = this.data.colWidths ?? readPixelWidths(gridEl);
-        const halfAvgWidth = computeHalfAvgWidth(colWidths);
+        const halfWidth = this.data.initialColWidth !== undefined
+          ? Math.round((this.data.initialColWidth / 2) * 100) / 100
+          : computeHalfAvgWidth(colWidths);
 
-        this.grid.addColumn(gridEl, undefined, colWidths);
-        this.data.colWidths = [...colWidths, halfAvgWidth];
+        this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+        this.data.colWidths = [...colWidths, halfWidth];
         applyPixelWidths(gridEl, this.data.colWidths);
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);

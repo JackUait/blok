@@ -186,6 +186,14 @@ export const computeHalfAvgWidth = (colWidths: number[]): number =>
     (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
   ) / 100;
 
+export const computeInitialColWidth = (colWidths: number[]): number => {
+  if (colWidths.length === 0) {
+    return 0;
+  }
+
+  return Math.round((colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length) * 100) / 100;
+};
+
 // ─── Block IDs from cells ───────────────────────────────────────────
 
 export const getBlockIdsInRow = (element: HTMLElement | null, cellBlocks: TableCellBlocks | null, rowIndex: number): string[] => {

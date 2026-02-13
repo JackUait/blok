@@ -1,4 +1,5 @@
 import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
+import { hapticSnap, hapticTick } from './table-haptics';
 import type { RowColAction } from './table-row-col-controls';
 
 const DRAG_THRESHOLD = 10;
@@ -46,6 +47,7 @@ export class TableRowColDrag {
   private isDragging = false;
   private dragType: 'row' | 'col' | null = null;
   private dragFromIndex = -1;
+  private lastDropIndex = -1;
   private dragStartX = 0;
   private dragStartY = 0;
   private dropIndicator: HTMLElement | null = null;
@@ -118,6 +120,7 @@ export class TableRowColDrag {
     this.isDragging = false;
     this.dragType = null;
     this.dragFromIndex = -1;
+    this.lastDropIndex = -1;
     this.resolveTracking = null;
   }
 
@@ -151,6 +154,7 @@ export class TableRowColDrag {
   }
 
   private startDrag(): void {
+    hapticSnap();
     this.grid.style.userSelect = 'none';
     document.body.style.cursor = 'grabbing';
     this.onDragStateChange?.(true, this.dragType);
@@ -264,6 +268,12 @@ export class TableRowColDrag {
 
     const relativeY = e.clientY - gridRect.top;
     const dropIndex = this.getRowDropIndex(relativeY);
+
+    if (dropIndex !== this.lastDropIndex) {
+      this.lastDropIndex = dropIndex;
+      hapticTick();
+    }
+
     const topPx = this.getRowDropTopPx(dropIndex);
 
     this.dropIndicator.style.top = `${topPx - 1.5}px`;
@@ -276,6 +286,12 @@ export class TableRowColDrag {
 
     const relativeX = e.clientX - gridRect.left;
     const dropIndex = this.getColDropIndex(relativeX);
+
+    if (dropIndex !== this.lastDropIndex) {
+      this.lastDropIndex = dropIndex;
+      hapticTick();
+    }
+
     const edges = getCumulativeColEdges(this.grid);
 
     this.dropIndicator.style.left = `${(edges[dropIndex] ?? 0) - 1.5}px`;
@@ -301,6 +317,7 @@ export class TableRowColDrag {
     const dropIndex = rawDropIndex > this.dragFromIndex ? rawDropIndex - 1 : rawDropIndex;
 
     if (dropIndex !== this.dragFromIndex) {
+      hapticSnap();
       this.onAction({ type: 'move-row', fromIndex: this.dragFromIndex, toIndex: dropIndex });
     }
   }
@@ -311,6 +328,7 @@ export class TableRowColDrag {
     const dropIndex = rawDropIndex > this.dragFromIndex ? rawDropIndex - 1 : rawDropIndex;
 
     if (dropIndex !== this.dragFromIndex) {
+      hapticSnap();
       this.onAction({ type: 'move-col', fromIndex: this.dragFromIndex, toIndex: dropIndex });
     }
   }

@@ -298,6 +298,8 @@ export class Table implements BlockTool {
       return;
     }
 
+    const dragState = { addedCols: 0 };
+
     this.addControls = new TableAddControls({
       wrapper: this.element,
       grid: gridEl,
@@ -353,6 +355,12 @@ export class Table implements BlockTool {
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
         this.initResize(gridEl);
+
+        dragState.addedCols++;
+
+        if (this.element) {
+          this.element.scrollLeft = this.element.scrollWidth;
+        }
       },
       onDragRemoveCol: () => {
         const colCount = this.grid.getColumnCount(gridEl);
@@ -368,6 +376,8 @@ export class Table implements BlockTool {
         }
 
         this.initResize(gridEl);
+
+        dragState.addedCols--;
       },
       onDragEnd: () => {
         this.initResize(gridEl);
@@ -375,8 +385,10 @@ export class Table implements BlockTool {
         this.rowColControls?.refresh();
 
         if (this.element) {
-          this.element.scrollLeft = 0;
+          this.element.scrollLeft = dragState.addedCols > 0 ? this.element.scrollWidth : 0;
         }
+
+        dragState.addedCols = 0;
       },
     });
   }

@@ -2383,6 +2383,63 @@ describe('Table Tool', () => {
       document.dispatchEvent(new PointerEvent('pointerup', {}));
       document.body.removeChild(element);
     });
+
+    it('scrolls wrapper to the right when drag-adding a column', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      // Mock scrollWidth since jsdom doesn't compute layout
+      Object.defineProperty(element, 'scrollWidth', { value: 600, configurable: true });
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // Drag right by enough to add one column (unitSize defaults to 100px in jsdom)
+      simulateDragStart(addColBtn, 'col', 0, 110);
+
+      expect(element.scrollLeft).toBeGreaterThan(0);
+
+      document.body.removeChild(element);
+    });
+
+    it('preserves scroll position on drag end when columns were added', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      Object.defineProperty(element, 'scrollWidth', { value: 600, configurable: true });
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+
+      // Full drag (down + move + up) to add a column
+      addColBtn.setPointerCapture = vi.fn();
+      addColBtn.releasePointerCapture = vi.fn();
+
+      addColBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addColBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: 110,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addColBtn.dispatchEvent(new PointerEvent('pointerup', {
+        clientX: 110,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      // scrollLeft should NOT be reset to 0 since columns were added
+      expect(element.scrollLeft).toBeGreaterThan(0);
+
+      document.body.removeChild(element);
+    });
   });
 
   describe('readonly mode preserves content', () => {

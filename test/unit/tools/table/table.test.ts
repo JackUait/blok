@@ -59,6 +59,7 @@ const createMockAPI = (overrides: Partial<API> = {}): API => {
       },
       getCurrentBlockIndex: () => 0,
       getBlocksCount: () => 0,
+      getBlockIndex: () => undefined,
       ...(blocksOverrides as Record<string, unknown>),
     },
     events: {
@@ -829,6 +830,58 @@ describe('Table Tool', () => {
 
       expect(element.querySelector('[data-blok-table-add-row]')).toBeNull();
       expect(element.querySelector('[data-blok-table-add-col]')).toBeNull();
+
+      document.body.removeChild(element);
+    });
+
+    it('deletes all cell blocks from BlockManager on destroy', () => {
+      const mockDelete = vi.fn();
+      let insertCounter = 0;
+      const blockIndexMap = new Map<string, number>();
+      const mockGetBlockIndex = vi.fn().mockImplementation((id: string) => {
+        return blockIndexMap.get(id);
+      });
+
+      const mockApi = createMockAPI({
+        blocks: {
+          delete: mockDelete,
+          insert: vi.fn().mockImplementation(() => {
+            insertCounter++;
+            const blockId = `cell-block-${insertCounter}`;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', blockId);
+            blockIndexMap.set(blockId, insertCounter - 1);
+
+            return { id: blockId, holder };
+          }),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+          getBlockIndex: mockGetBlockIndex,
+        },
+      } as never);
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // 2x2 table = 4 cells, each should have a block
+      expect(insertCounter).toBe(4);
+
+      table.destroy();
+
+      // All 4 cell blocks should be deleted
+      expect(mockDelete).toHaveBeenCalledTimes(4);
 
       document.body.removeChild(element);
     });

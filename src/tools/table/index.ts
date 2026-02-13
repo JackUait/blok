@@ -252,6 +252,8 @@ export class Table implements BlockTool {
   }
 
   public destroy(): void {
+    this.cellBlocks?.deleteAllBlocks();
+
     this.resize?.destroy();
     this.resize = null;
     this.addControls?.destroy();

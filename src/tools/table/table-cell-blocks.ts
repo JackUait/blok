@@ -576,6 +576,17 @@ export class TableCellBlocks {
   }
 
   /**
+   * Delete all blocks managed by this table from the BlockManager.
+   * Called before the table block itself is removed to prevent orphaned cell blocks.
+   */
+  public deleteAllBlocks(): void {
+    const allCells = this.gridElement.querySelectorAll(`[${CELL_ATTR}]`);
+    const blockIds = this.getBlockIdsFromCells(allCells);
+
+    this.deleteBlocks(blockIds);
+  }
+
+  /**
    * Clean up event listeners
    */
   destroy(): void {

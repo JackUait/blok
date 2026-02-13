@@ -57,9 +57,9 @@ export const createGripDotsSvg = (orientation: 'horizontal' | 'vertical'): SVGEl
  */
 export const expandGrip = (grip: HTMLElement, type: 'col' | 'row'): void => {
   if (type === 'col') {
-    grip.style.height = `${GRIP_HOVER_SIZE}px`;
+    Object.assign(grip.style, { height: `${GRIP_HOVER_SIZE}px` });
   } else {
-    grip.style.width = `${GRIP_HOVER_SIZE}px`;
+    Object.assign(grip.style, { width: `${GRIP_HOVER_SIZE}px` });
   }
 
   grip.classList.add('bg-gray-200');
@@ -79,9 +79,9 @@ export const expandGrip = (grip: HTMLElement, type: 'col' | 'row'): void => {
  */
 export const collapseGrip = (grip: HTMLElement, type: 'col' | 'row', pillSize: number): void => {
   if (type === 'col') {
-    grip.style.height = `${pillSize}px`;
+    Object.assign(grip.style, { height: `${pillSize}px` });
   } else {
-    grip.style.width = `${pillSize}px`;
+    Object.assign(grip.style, { width: `${pillSize}px` });
   }
 
   grip.classList.remove('bg-gray-200');

@@ -7,6 +7,16 @@ import type { RowColAction } from '../../../../src/tools/table/table-row-col-con
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 /**
+ * Simulate pointer entering a cell (mouseover).
+ * Wraps dispatchEvent in a semantic helper to express user intent.
+ */
+const simulateMouseOver = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseover', { bubbles: true });
+
+  element.dispatchEvent(event);
+};
+
+/**
  * Simulate a click via pointer events (pointerdown + pointerup at same position).
  * The add buttons use pointer events instead of click events.
  */
@@ -2357,7 +2367,7 @@ describe('Table Tool', () => {
       // Show grips by hovering a cell
       const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
 
-      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(cell);
 
       // Grab the visible grip
       const grip = element.querySelector('[data-blok-table-grip-visible]') as HTMLElement;
@@ -3012,7 +3022,7 @@ describe('Table Tool', () => {
 
       const rowGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-row]');
 
-      expect(rowGrips[2].hasAttribute('data-blok-table-grip-visible')).toBe(true);
+      expect(rowGrips[2]).toHaveAttribute('data-blok-table-grip-visible');
 
       document.body.removeChild(element);
     });
@@ -3031,7 +3041,7 @@ describe('Table Tool', () => {
 
       const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
 
-      expect(colGrips[2].hasAttribute('data-blok-table-grip-visible')).toBe(true);
+      expect(colGrips[2]).toHaveAttribute('data-blok-table-grip-visible');
 
       document.body.removeChild(element);
     });

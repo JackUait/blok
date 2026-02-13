@@ -118,6 +118,40 @@ const mockBoundingRects = (grid: HTMLElement): void => {
   });
 };
 
+/**
+ * Simulate pointer entering an element (hover).
+ * Wraps dispatchEvent in a semantic helper to express user intent.
+ */
+const simulateHover = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseenter', { bubbles: true });
+
+  element.dispatchEvent(event);
+};
+
+/**
+ * Simulate pointer leaving an element (unhover).
+ * Wraps dispatchEvent in a semantic helper to express user intent.
+ */
+const simulateUnhover = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseleave', { bubbles: true });
+
+  element.dispatchEvent(event);
+};
+
+/**
+ * Simulate a mousemove event on the document.
+ * Wraps dispatchEvent in a semantic helper to express user intent.
+ */
+const simulateDocumentMouseMove = (options: { clientX: number; clientY: number }): void => {
+  const event = new MouseEvent('mousemove', {
+    clientX: options.clientX,
+    clientY: options.clientY,
+    bubbles: true,
+  });
+
+  document.dispatchEvent(event);
+};
+
 /** Stub for elementFromPoint that returns the target cell */
 let elementFromPointTarget: Element | null = null;
 
@@ -538,11 +572,11 @@ describe('TableCellSelection', () => {
 
       const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
 
-      pill.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      simulateHover(pill);
 
       expect(pill.style.width).toBe('16px');
 
-      pill.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      simulateUnhover(pill);
 
       expect(pill.style.width).toBe('4px');
     });
@@ -929,13 +963,7 @@ describe('TableCellSelection', () => {
         document.elementFromPoint = vi.fn().mockReturnValue(cell2);
 
         // Simulate mousemove to different cell (should trigger capture phase handler)
-        const mouseMoveEvent = new MouseEvent('mousemove', {
-          clientX: cellRect.left + 100,
-          clientY: cellRect.top + 10,
-          bubbles: true,
-        });
-
-        document.dispatchEvent(mouseMoveEvent);
+        simulateDocumentMouseMove({ clientX: cellRect.left + 100, clientY: cellRect.top + 10 });
 
         // Also dispatch pointermove for the actual cell selection logic
         const pointerMoveEvent = new PointerEvent('pointermove', {
@@ -948,6 +976,9 @@ describe('TableCellSelection', () => {
 
         // Verify cancelActiveSelection was called
         expect(mockRectangleSelection.cancelActiveSelection).toHaveBeenCalled();
+
+        // Verify the rectangle overlay was hidden (observable DOM state change)
+        expect(overlay.style.display).toBe('none');
 
         // Cleanup
         document.elementFromPoint = originalElementFromPoint;

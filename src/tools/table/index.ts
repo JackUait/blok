@@ -535,7 +535,11 @@ export class Table implements BlockTool {
     if (action.type === 'move-row') {
       this.cellSelection?.selectRow(action.toIndex);
       this.rowColControls?.setActiveGrip('row', action.toIndex);
-    } else if (action.type === 'move-col') {
+
+      return;
+    }
+
+    if (action.type === 'move-col') {
       this.cellSelection?.selectColumn(action.toIndex);
       this.rowColControls?.setActiveGrip('col', action.toIndex);
     }

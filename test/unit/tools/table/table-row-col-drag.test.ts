@@ -49,7 +49,7 @@ const startDrag = (
   startX: number,
   startY: number
 ): void => {
-  drag.beginTracking(type, index, startX, startY);
+  void drag.beginTracking(type, index, startX, startY);
 
   // Move past the drag threshold to trigger startDrag
   document.dispatchEvent(new PointerEvent('pointermove', {
@@ -69,7 +69,7 @@ const getCellsInRow = (grid: HTMLElement, rowIndex: number): HTMLElement[] => {
     return [];
   }
 
-  return Array.from(row.querySelectorAll('[data-blok-table-cell]')) as HTMLElement[];
+  return Array.from(row.querySelectorAll('[data-blok-table-cell]'));
 };
 
 /**

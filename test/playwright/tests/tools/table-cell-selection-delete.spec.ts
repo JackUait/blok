@@ -189,15 +189,6 @@ const selectCells = async (page: Page, startRow: number, startCol: number, endRo
   await page.mouse.up();
 };
 
-/**
- * Helper to get text content from a specific cell
- */
-const getCellText = async (page: Page, row: number, col: number): Promise<string> => {
-  const cellEditable = getCellEditable(page, row, col);
-
-  return (await cellEditable.textContent()) ?? '';
-};
-
 test.describe('table cell selection — delete key', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -268,7 +259,7 @@ test.describe('table cell selection — delete key', () => {
     await expect(getCellEditable(page, 2, 0)).toHaveText('A3');
   });
 
-  test('Delete key does not interfere with normal text editing in single cell', async ({ page }) => {
+  test('delete key does not interfere with normal text editing in single cell', async ({ page }) => {
     await create3x3TableWithContent(page);
 
     // Click into a single cell (no selection)

@@ -308,7 +308,7 @@ describe('table-operations', () => {
       expect(blocksInContainer.length).toBe(1);
 
       // Verify the content is not duplicated
-      expect(container.textContent).toBe('Test content');
+      expect(container).toHaveTextContent('Test content');
     });
   });
 

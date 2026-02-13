@@ -52,6 +52,24 @@ const isGripVisible = (grip: HTMLElement): boolean => {
   return grip.hasAttribute(GRIP_VISIBLE_ATTR);
 };
 
+const simulateMouseEnter = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseenter', { bubbles: false });
+
+  element.dispatchEvent(event);
+};
+
+const simulateMouseLeave = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseleave', { bubbles: false });
+
+  element.dispatchEvent(event);
+};
+
+const simulateMouseOver = (element: HTMLElement): void => {
+  const event = new MouseEvent('mouseover', { bubbles: true });
+
+  element.dispatchEvent(event);
+};
+
 describe('TableRowColControls', () => {
   let grid: HTMLElement;
   let controls: TableRowColControls;
@@ -88,9 +106,7 @@ describe('TableRowColControls', () => {
 
       const cell = getCell(grid, 0, 1);
 
-      const event = new MouseEvent('mouseover', { bubbles: true });
-
-      cell.dispatchEvent(event);
+      simulateMouseOver(cell);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -114,9 +130,8 @@ describe('TableRowColControls', () => {
       });
 
       const cell = getCell(grid, 1, 2);
-      const event = new MouseEvent('mouseover', { bubbles: true });
 
-      cell.dispatchEvent(event);
+      simulateMouseOver(cell);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -145,9 +160,7 @@ describe('TableRowColControls', () => {
 
       const cell = getCell(grid, 0, 0);
 
-      const hoverEvent = new MouseEvent('mouseover', { bubbles: true });
-
-      cell.dispatchEvent(hoverEvent);
+      simulateMouseOver(cell);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -156,9 +169,7 @@ describe('TableRowColControls', () => {
       expect(isGripVisible(rowGrips[0])).toBe(true);
 
       // Mouse leaves grid
-      const leaveEvent = new MouseEvent('mouseleave', { bubbles: false });
-
-      grid.dispatchEvent(leaveEvent);
+      simulateMouseLeave(grid);
       vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
 
       // Grips should be hidden
@@ -179,9 +190,7 @@ describe('TableRowColControls', () => {
       });
 
       // Hover cell (0,0)
-      const hoverFirst = new MouseEvent('mouseover', { bubbles: true });
-
-      getCell(grid, 0, 0).dispatchEvent(hoverFirst);
+      simulateMouseOver(getCell(grid, 0, 0));
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -190,9 +199,7 @@ describe('TableRowColControls', () => {
       expect(isGripVisible(rowGrips[0])).toBe(true);
 
       // Hover cell (1,1) — different row AND column
-      const hoverSecond = new MouseEvent('mouseover', { bubbles: true });
-
-      getCell(grid, 1, 1).dispatchEvent(hoverSecond);
+      simulateMouseOver(getCell(grid, 1, 1));
 
       // Previous grips should be hidden
       expect(isGripVisible(colGrips[0])).toBe(false);
@@ -463,7 +470,7 @@ describe('TableRowColControls', () => {
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const grip = colGrips[0];
 
-      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+      simulateMouseEnter(grip);
 
       expect(grip.style.height).toBe('16px');
       // Width stays constant
@@ -487,8 +494,8 @@ describe('TableRowColControls', () => {
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const grip = colGrips[0];
 
-      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
-      grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      simulateMouseEnter(grip);
+      simulateMouseLeave(grip);
 
       expect(grip.style.height).toBe('4px');
     });
@@ -508,7 +515,7 @@ describe('TableRowColControls', () => {
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
       const grip = rowGrips[0];
 
-      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+      simulateMouseEnter(grip);
 
       expect(grip.style.width).toBe('16px');
       // Height stays constant
@@ -531,8 +538,8 @@ describe('TableRowColControls', () => {
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
       const grip = rowGrips[0];
 
-      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
-      grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      simulateMouseEnter(grip);
+      simulateMouseLeave(grip);
 
       expect(grip.style.width).toBe('4px');
     });
@@ -555,17 +562,17 @@ describe('TableRowColControls', () => {
       // Make grip visible by hovering a cell
       const cell = getCell(grid, 0, 0);
 
-      cell.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(cell);
       expect(isGripVisible(grip)).toBe(true);
       // Column grip starts at idle height (4px)
       expect(grip.style.height).toBe('4px');
 
       // Hover the grip (expand) — height expands to 16px
-      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+      simulateMouseEnter(grip);
       expect(grip.style.height).toBe('16px');
 
       // Leave the grip (collapse) — height returns to idle (4px)
-      grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      simulateMouseLeave(grip);
       expect(grip.style.height).toBe('4px');
     });
 
@@ -587,10 +594,10 @@ describe('TableRowColControls', () => {
       // Width is the fixed dimension for column grips
       expect(grip.style.width).toBe('24px');
 
-      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+      simulateMouseEnter(grip);
       expect(grip.style.width).toBe('24px');
 
-      grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      simulateMouseLeave(grip);
       expect(grip.style.width).toBe('24px');
     });
 
@@ -612,10 +619,10 @@ describe('TableRowColControls', () => {
       // Height is the fixed dimension for row grips
       expect(grip.style.height).toBe('20px');
 
-      grip.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+      simulateMouseEnter(grip);
       expect(grip.style.height).toBe('20px');
 
-      grip.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      simulateMouseLeave(grip);
       expect(grip.style.height).toBe('20px');
     });
   });
@@ -794,9 +801,7 @@ describe('TableRowColControls', () => {
       });
 
       // Show grips by hovering
-      const event = new MouseEvent('mouseover', { bubbles: true });
-
-      getCell(grid, 0, 0).dispatchEvent(event);
+      simulateMouseOver(getCell(grid, 0, 0));
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const rowGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_ROW_ATTR}]`);
@@ -936,7 +941,7 @@ describe('TableRowColControls', () => {
       });
 
       // First hover: mouse enters table — grips appear (with transition)
-      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(getCell(grid, 0, 0));
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
 
@@ -954,7 +959,7 @@ describe('TableRowColControls', () => {
       });
 
       // Second hover: move to different column (still inside table)
-      getCell(grid, 0, 1).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(getCell(grid, 0, 1));
 
       // During the reflow, transition should have been 'none' (animation bypassed)
       expect(transitionDuringReflow).toBe('none');
@@ -975,7 +980,7 @@ describe('TableRowColControls', () => {
       });
 
       // First hover: mouse enters table
-      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(getCell(grid, 0, 0));
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
 
@@ -992,7 +997,7 @@ describe('TableRowColControls', () => {
       });
 
       // Move to different column — old grip (col 0) should hide without animation
-      getCell(grid, 0, 1).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(getCell(grid, 0, 1));
 
       expect(transitionDuringReflow).toBe('none');
       expect(colGrips[0].style.transition).toBe('');
@@ -1011,10 +1016,10 @@ describe('TableRowColControls', () => {
       });
 
       // Enter table
-      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(getCell(grid, 0, 0));
 
       // Leave table and wait for hide delay
-      grid.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));
+      simulateMouseLeave(grid);
       vi.advanceTimersByTime(HIDE_DELAY_MS + 10);
 
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
@@ -1033,7 +1038,7 @@ describe('TableRowColControls', () => {
       });
 
       // Re-enter table — should animate (not bypass transition)
-      getCell(grid, 0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      simulateMouseOver(getCell(grid, 0, 0));
 
       expect(offsetHeightRead).toBe(false);
     });

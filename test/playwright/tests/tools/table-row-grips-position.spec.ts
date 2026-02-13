@@ -115,8 +115,8 @@ const defaultTools: Record<string, SerializableToolConfig> = {
 /**
  * Get the vertical center position of a row grip
  */
-async function getRowGripCenterY(page: Page, rowIndex: number): Promise<number> {
-  const grip = await page.locator(`[data-blok-table-grip-row="${rowIndex}"]`);
+const getRowGripCenterY = async (page: Page, rowIndex: number): Promise<number> => {
+  const grip = page.locator(`[data-blok-table-grip-row="${rowIndex}"]`);
   const box = await grip.boundingBox();
 
   if (!box) {
@@ -124,19 +124,13 @@ async function getRowGripCenterY(page: Page, rowIndex: number): Promise<number> 
   }
 
   return box.y + box.height / 2;
-}
+};
 
 /**
  * Get the vertical center position of a row
  */
-async function getRowCenterY(page: Page, rowIndex: number): Promise<number> {
-  const rows = await page.locator('[data-blok-table-row]').all();
-
-  if (rowIndex >= rows.length) {
-    throw new Error(`Row ${rowIndex} does not exist`);
-  }
-
-  const row = rows[rowIndex];
+const getRowCenterY = async (page: Page, rowIndex: number): Promise<number> => {
+  const row = page.locator(`[data-blok-table-row] >> nth=${rowIndex}`);
   const box = await row.boundingBox();
 
   if (!box) {
@@ -144,9 +138,9 @@ async function getRowCenterY(page: Page, rowIndex: number): Promise<number> {
   }
 
   return box.y + box.height / 2;
-}
+};
 
-test.describe('Table row grip positioning', () => {
+test.describe('table row grip positioning', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -177,14 +171,14 @@ test.describe('Table row grip positioning', () => {
 
   test('vertical pills reposition when cell content grows', async ({ page }) => {
     // Hover over first cell to show row grip
-    const firstCell = page.locator('[data-blok-table-cell]').first();
+    const firstCell = page.locator('[data-blok-table-cell] >> nth=0');
 
     await firstCell.hover();
 
     // Wait for grip to become visible
-    await page.waitForSelector('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]', {
-      state: 'visible',
-    });
+    const row0Grip = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
+
+    await expect(row0Grip).toBeVisible();
 
     // Get initial position of row 0 grip
     const initialGripY = await getRowGripCenterY(page, 0);
@@ -201,8 +195,10 @@ test.describe('Table row grip positioning', () => {
 
     await page.keyboard.type(multiLineContent);
 
-    // Wait a frame for the ResizeObserver to fire and reposition
-    await page.waitForTimeout(100);
+    // Wait for the row to grow after content is typed (ResizeObserver fires)
+    await expect.poll(async () => {
+      return await getRowCenterY(page, 0);
+    }).toBeGreaterThan(initialRowY);
 
     // Hover again to ensure grip is visible
     await firstCell.hover();
@@ -222,7 +218,7 @@ test.describe('Table row grip positioning', () => {
   });
 
   test('vertical pills reposition when cell content shrinks', async ({ page }) => {
-    const firstCell = page.locator('[data-blok-table-cell]').first();
+    const firstCell = page.locator('[data-blok-table-cell] >> nth=0');
 
     // Click into first cell
     await firstCell.click();
@@ -232,14 +228,19 @@ test.describe('Table row grip positioning', () => {
 
     await page.keyboard.type(multiLineContent);
 
-    // Wait for content to render
-    await page.waitForTimeout(100);
+    // Wait for the row to grow after multi-line content is typed
+    await expect.poll(async () => {
+      const box = await firstCell.boundingBox();
+
+      return box?.height ?? 0;
+    }).toBeGreaterThan(30);
 
     // Hover to show grip
     await firstCell.hover();
-    await page.waitForSelector('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]', {
-      state: 'visible',
-    });
+
+    const row0Grip = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
+
+    await expect(row0Grip).toBeVisible();
 
     // Get position with multi-line content
     const initialGripY = await getRowGripCenterY(page, 0);
@@ -252,8 +253,10 @@ test.describe('Table row grip positioning', () => {
     // Type single line
     await page.keyboard.type('Single line');
 
-    // Wait for resize
-    await page.waitForTimeout(100);
+    // Wait for the row to shrink after content is reduced
+    await expect.poll(async () => {
+      return await getRowCenterY(page, 0);
+    }).toBeLessThan(initialRowY);
 
     // Hover again
     await firstCell.hover();
@@ -274,7 +277,7 @@ test.describe('Table row grip positioning', () => {
 
   test('vertical pills reposition for multiple rows simultaneously', async ({ page }) => {
     // Click into first cell of row 0
-    const firstCell = page.locator('[data-blok-table-cell]').first();
+    const firstCell = page.locator('[data-blok-table-cell] >> nth=0');
 
     await firstCell.click();
     await page.keyboard.type('Row 0 content\nLine 2\nLine 3');
@@ -286,14 +289,19 @@ test.describe('Table row grip positioning', () => {
 
     await page.keyboard.type('Row 1 content\nLine 2\nLine 3\nLine 4');
 
-    // Wait for resize
-    await page.waitForTimeout(100);
+    // Wait for row 1 to grow after content is typed
+    await expect.poll(async () => {
+      const box = await page.locator('[data-blok-table-row] >> nth=1').boundingBox();
+
+      return box?.height ?? 0;
+    }).toBeGreaterThan(30);
 
     // Hover over row 0 cell to show its grip
     await firstCell.hover();
-    await page.waitForSelector('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]', {
-      state: 'visible',
-    });
+
+    const row0Grip = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
+
+    await expect(row0Grip).toBeVisible();
 
     const row0GripY = await getRowGripCenterY(page, 0);
     const row0CenterY = await getRowCenterY(page, 0);
@@ -302,12 +310,13 @@ test.describe('Table row grip positioning', () => {
     expect(Math.abs(row0GripY - row0CenterY)).toBeLessThan(2);
 
     // Hover over row 1 cell to show its grip
-    const row1FirstCell = page.locator('[data-blok-table-row]').nth(1).locator('[data-blok-table-cell]').first();
+    const row1FirstCell = page.locator('[data-blok-table-row] >> nth=1').locator('[data-blok-table-cell] >> nth=0');
 
     await row1FirstCell.hover();
-    await page.waitForSelector('[data-blok-table-grip-row="1"][data-blok-table-grip-visible]', {
-      state: 'visible',
-    });
+
+    const row1Grip = page.locator('[data-blok-table-grip-row="1"][data-blok-table-grip-visible]');
+
+    await expect(row1Grip).toBeVisible();
 
     const row1GripY = await getRowGripCenterY(page, 1);
     const row1CenterY = await getRowCenterY(page, 1);

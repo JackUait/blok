@@ -375,26 +375,10 @@ export class TableCellSelection {
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
 
     // Mark selected cells
-    for (let r = minRow; r <= maxRow; r++) {
-      const row = rows[r];
-
-      if (!row) {
-        continue;
-      }
-
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      for (let c = minCol; c <= maxCol; c++) {
-        const cell = cells[c] as HTMLElement | undefined;
-
-        if (!cell) {
-          continue;
-        }
-
-        cell.setAttribute(SELECTED_ATTR, '');
-        this.selectedCells.push(cell);
-      }
-    }
+    this.selectedCells = this.collectCellsInRange(rows, minRow, maxRow, minCol, maxCol);
+    this.selectedCells.forEach(cell => {
+      cell.setAttribute(SELECTED_ATTR, '');
+    });
 
     // Calculate overlay position from bounding rects of corner cells
     const firstCell = rows[minRow]?.querySelectorAll(`[${CELL_ATTR}]`)[minCol] as HTMLElement | undefined;
@@ -415,16 +399,14 @@ export class TableCellSelection {
     const borderTop = parseFloat(gridStyle.borderTopWidth) || 0;
     const borderLeft = parseFloat(gridStyle.borderLeftWidth) || 0;
 
-    let top = firstRect.top - gridRect.top - borderTop;
-    let left = firstRect.left - gridRect.left - borderLeft;
     const width = lastRect.right - firstRect.left + 1;
     const height = lastRect.bottom - firstRect.top + 1;
 
     // Extend overlay 1px outward to cover adjacent borders:
     // grid border-top/border-left at row 0/col 0, or the previous
     // row's border-bottom / previous column's border-right otherwise.
-    top -= 1;
-    left -= 1;
+    const top = firstRect.top - gridRect.top - borderTop - 1;
+    const left = firstRect.left - gridRect.left - borderLeft - 1;
 
     // Create overlay once, reuse on subsequent paints
     if (!this.overlay) {
@@ -619,27 +601,8 @@ export class TableCellSelection {
       return;
     }
 
-    // Clamp row
-    let row: number;
-
-    if (e.clientY < gridRect.top) {
-      row = 0;
-    } else if (e.clientY > gridRect.bottom) {
-      row = rowCount - 1;
-    } else {
-      row = this.extentCell?.row ?? this.anchorCell.row;
-    }
-
-    // Clamp col
-    let col: number;
-
-    if (e.clientX < gridRect.left) {
-      col = 0;
-    } else if (e.clientX > gridRect.right) {
-      col = colCount - 1;
-    } else {
-      col = this.extentCell?.col ?? this.anchorCell.col;
-    }
+    const row = this.clampAxis(e.clientY, gridRect.top, gridRect.bottom, rowCount, this.extentCell?.row ?? this.anchorCell.row);
+    const col = this.clampAxis(e.clientX, gridRect.left, gridRect.right, colCount, this.extentCell?.col ?? this.anchorCell.col);
 
     const clamped = { row, col };
 
@@ -647,5 +610,39 @@ export class TableCellSelection {
       this.extentCell = clamped;
       this.paintSelection();
     }
+  }
+
+  private collectCellsInRange(
+    rows: NodeListOf<Element>,
+    minRow: number,
+    maxRow: number,
+    minCol: number,
+    maxCol: number,
+  ): HTMLElement[] {
+    return Array.from(rows)
+      .slice(minRow, maxRow + 1)
+      .flatMap(row => {
+        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+        return Array.from(cells)
+          .slice(minCol, maxCol + 1)
+          .filter((cell): cell is HTMLElement => cell instanceof HTMLElement);
+      });
+  }
+
+  /**
+   * Clamp a pointer coordinate to an axis range, returning the edge index
+   * when outside or the fallback when inside.
+   */
+  private clampAxis(pointer: number, min: number, max: number, count: number, fallback: number): number {
+    if (pointer < min) {
+      return 0;
+    }
+
+    if (pointer > max) {
+      return count - 1;
+    }
+
+    return fallback;
   }
 }

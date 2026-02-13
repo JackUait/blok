@@ -77,7 +77,7 @@ test.describe('toolbar visibility in table cells', () => {
   test('shows toolbar when clicking inside a table cell', async ({ page }) => {
     await createBlokWithTable(page);
 
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(CELL_SELECTOR).filter({ hasText: 'Cell A' });
 
     await firstCell.click();
 

@@ -1,5 +1,4 @@
 import type { I18n } from '../../../types/api';
-
 import {
   IconInsertAbove,
   IconInsertBelow,
@@ -498,7 +497,7 @@ export class TableRowColControls {
   }
 
   private applyActiveClasses(grip: HTMLElement): void {
-    grip.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_ACTIVE_CLASSES);
+    Object.assign(grip, { className: twMerge(GRIP_CAPSULE_CLASSES, GRIP_ACTIVE_CLASSES) });
     grip.setAttribute('data-blok-table-grip-visible', '');
 
     const svg = grip.querySelector('svg');

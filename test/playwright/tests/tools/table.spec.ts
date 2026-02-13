@@ -1140,7 +1140,7 @@ test.describe('table tool', () => {
       await page.getByText('Insert Column Left').click();
 
       // Click outside the table to clear the column selection
-      await page.locator('body').click({ position: { x: 10, y: 10 } });
+      await page.mouse.click(10, 10);
 
       // After insertion, hover over a cell to show the row grip
       // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
@@ -1148,8 +1148,8 @@ test.describe('table tool', () => {
 
       await cellInSecondRow.hover();
 
-      // Wait for row grip to appear (with visible attribute)
-      const rowGrip = page.locator(`${ROW_GRIP_SELECTOR}[data-blok-table-grip-visible]`).first();
+      // Wait for row grip to appear (with visible attribute) — target 2nd row (index 1)
+      const rowGrip = page.locator('[data-blok-table-grip-row="1"][data-blok-table-grip-visible]');
 
       await expect(rowGrip).toBeVisible();
 
@@ -2632,11 +2632,8 @@ test.describe('table tool', () => {
 
       // Verify block selection overlay does NOT appear (RectangleSelection was cancelled)
       const blockSelectionRect = page.locator('[data-blok-overlay-rectangle]');
-      const blockOverlayCount = await blockSelectionRect.count();
 
-      if (blockOverlayCount > 0) {
-        await expect(blockSelectionRect).toBeHidden();
-      }
+      await expect(blockSelectionRect).toBeHidden();
 
       await page.mouse.up();
 

@@ -318,15 +318,15 @@ export const mountCellBlocksReadOnly = (
         return;
       }
 
+      // Skip legacy cells that already have blocks (idempotency guard)
+      const hasExistingBlocks = container.querySelectorAll('[data-blok-id]').length > 0;
+
+      if (!isCellWithBlocks(cellContent) && hasExistingBlocks) {
+        return;
+      }
+
       if (!isCellWithBlocks(cellContent)) {
         // Handle legacy string content by creating a paragraph block
-        // Check if container already has blocks to ensure idempotency
-        const existingBlocks = container.querySelectorAll('[data-blok-id]');
-
-        if (existingBlocks.length > 0) {
-          return;
-        }
-
         const legacyText = typeof cellContent === 'string' ? cellContent : '';
         const insertedBlock = api.blocks.insert(
           'paragraph',

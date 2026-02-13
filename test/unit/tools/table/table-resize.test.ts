@@ -1,12 +1,5 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TableResize } from '../../../../src/tools/table/table-resize';
-
-const mockHapticTick = vi.fn();
-
-vi.mock('../../../../src/tools/table/table-haptics', () => ({
-  hapticTick: (): void => { mockHapticTick(); },
-  hapticSnap: vi.fn(),
-}));
 
 const MIN_COL_WIDTH = 50;
 
@@ -107,10 +100,6 @@ const createMultiRowGrid = (rows: number, colWidthsPx: number[]): HTMLDivElement
 
 describe('TableResize', () => {
   let grid: HTMLDivElement;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   afterEach(() => {
     grid?.parentElement?.remove();
@@ -578,89 +567,4 @@ describe('TableResize', () => {
     });
   });
 
-  describe('haptic feedback', () => {
-    it('triggers hapticTick when column hits minimum width', () => {
-      grid = createGrid([100, 500]);
-
-      new TableResize(grid, [100, 500], vi.fn());
-
-      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
-
-      // Start drag at column edge
-      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
-
-      // Drag left past minimum (100 - 60 = 40, clamped to 50)
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40 }));
-
-      const firstCell = grid.querySelector('[data-blok-table-cell]') as HTMLElement;
-
-      expect(mockHapticTick).toHaveBeenCalledTimes(1);
-      expect(firstCell.style.width).toBe('50px');
-
-      document.dispatchEvent(new PointerEvent('pointerup', {}));
-    });
-
-    it('does not trigger hapticTick repeatedly while staying at minimum width', () => {
-      grid = createGrid([100, 500]);
-
-      new TableResize(grid, [100, 500], vi.fn());
-
-      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
-
-      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
-
-      // First move past minimum
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40 }));
-      // Second move still at minimum
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 30 }));
-
-      const firstCell = grid.querySelector('[data-blok-table-cell]') as HTMLElement;
-
-      expect(mockHapticTick).toHaveBeenCalledTimes(1);
-      expect(firstCell.style.width).toBe('50px');
-
-      document.dispatchEvent(new PointerEvent('pointerup', {}));
-    });
-
-    it('triggers hapticTick again after moving away and back to minimum', () => {
-      grid = createGrid([100, 500]);
-
-      const onChange = vi.fn();
-
-      new TableResize(grid, [100, 500], onChange);
-
-      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
-
-      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
-
-      // Hit minimum
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40 }));
-      // Move back above minimum
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 100 }));
-      // Hit minimum again
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 40 }));
-
-      expect(mockHapticTick).toHaveBeenCalledTimes(2);
-
-      document.dispatchEvent(new PointerEvent('pointerup', {}));
-
-      expect(onChange).toHaveBeenCalled();
-    });
-
-    it('does not trigger hapticTick during normal resize above minimum', () => {
-      grid = createGrid([300, 300]);
-
-      new TableResize(grid, [300, 300], vi.fn());
-
-      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
-
-      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
-      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 350 }));
-
-      expect(mockHapticTick).not.toHaveBeenCalled();
-
-      document.dispatchEvent(new PointerEvent('pointerup', {}));
-    });
-  });
 });

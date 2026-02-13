@@ -3,8 +3,6 @@ import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { hide as hideTooltip, onHover } from '../../components/utils/tooltip';
 import { twMerge } from '../../components/utils/tw';
 
-import { hapticTick } from './table-haptics';
-
 const ADD_ROW_ATTR = 'data-blok-table-add-row';
 const ADD_COL_ATTR = 'data-blok-table-add-col';
 const HIDE_DELAY_MS = 150;
@@ -214,8 +212,6 @@ export class TableAddControls {
     const targetCount = Math.floor(delta / unitSize);
 
     while (this.dragState.addedCount < targetCount) {
-      hapticTick();
-
       if (axis === 'row') {
         this.onDragAddRow();
       } else {
@@ -226,8 +222,6 @@ export class TableAddControls {
     }
 
     while (this.dragState.addedCount > targetCount) {
-      hapticTick();
-
       if (axis === 'row') {
         this.onDragRemoveRow();
       } else {

@@ -1,31 +1,20 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run (preview without publishing)'
-        required: false
-        type: boolean
-        default: false
+  push:
+    tags: ['v*']
 
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
-  id-token: write
 
 jobs:
-  pre-checks:
-    name: Pre-Release Checks
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -33,23 +22,8 @@ jobs:
       - name: Lint
         run: yarn lint
 
-      - name: Run unit tests
+      - name: Unit Tests
         run: yarn test
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [pre-checks]
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
 
       - name: Build
         run: yarn build
@@ -61,24 +35,21 @@ jobs:
           path: dist/
           retention-days: 1
 
-  e2e-tests:
+  e2e:
     name: E2E Tests
-    needs: [build]
+    needs: [ci]
     uses: ./.github/workflows/e2e.yml
     with:
       artifact-name: dist
 
-  release:
-    name: Release
+  publish:
+    name: Publish
     runs-on: ubuntu-latest
-    needs: [pre-checks, build, e2e-tests]
-    timeout-minutes: 30
+    needs: [ci, e2e]
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -86,104 +57,30 @@ jobs:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
-      - name: Pre-release verification (staging)
+      - name: Publish to npm
         run: |
-          echo "📦 Creating package tarball for pre-release verification..."
-          npm pack
-          echo "✓ Package tarball created"
-          echo ""
-          echo "🔍 Running pre-release verification against local build..."
-          node scripts/verify-published-package.mjs --local --verbose
-        env:
-          NODE_ENV: production
-
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            echo "Running in dry-run mode (no publish)"
-            npx semantic-release --dry-run
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG_NAME" == *"-beta"* ]]; then
+            npm publish --tag beta
           else
-            npx semantic-release
-          fi
-
-      - name: Verify published package
-        id: verify
-        if: github.event.inputs.dry_run != 'true'
-        run: |
-          PUBLISHED_VERSION=$(node -p "require('./package.json').version")
-          echo "version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
-          echo "Verifying published package version: $PUBLISHED_VERSION"
-          node scripts/wait-for-registry.mjs --version $PUBLISHED_VERSION --timeout 300000 --verbose
-          node scripts/verify-published-package.mjs --version $PUBLISHED_VERSION --timeout 300000
-        env:
-          NODE_ENV: production
-        continue-on-error: true
-
-      - name: Rollback on verification failure
-        if: github.event.inputs.dry_run != 'true' && steps.verify.outcome == 'failure'
-        run: |
-          VERSION="${{ steps.verify.outputs.version }}"
-          PACKAGE_NAME="@jackuait/blok"
-
-          echo "❌ Post-publish verification failed!"
-          echo "🔄 Initiating automatic rollback..."
-          echo ""
-          echo "Package: $PACKAGE_NAME@$VERSION"
-          echo "Action: Unpublishing from npm registry"
-          echo ""
-
-          # Attempt to unpublish the broken package
-          if npm unpublish "$PACKAGE_NAME@$VERSION" --force; then
-            echo "✅ Successfully unpublished $PACKAGE_NAME@$VERSION"
-            echo ""
-            echo "⚠️  The broken package has been removed from npm registry."
-            echo "Please investigate the verification failures and trigger a new release."
-          else
-            echo "❌ Failed to unpublish $PACKAGE_NAME@$VERSION"
-            echo ""
-            echo "⚠️  MANUAL INTERVENTION REQUIRED:"
-            echo "Run: npm unpublish $PACKAGE_NAME@$VERSION"
-            echo ""
-            echo "This package is currently published but failed verification."
-            echo "It should be removed from the registry as soon as possible."
-            exit 1
+            npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Upload verification report
-        if: always() && github.event.inputs.dry_run != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-verification-report
-          path: verification-report.json
-          retention-days: 30
-
-      - name: Fail workflow on verification failure
-        if: github.event.inputs.dry_run != 'true' && steps.verify.outcome == 'failure'
+      - name: Create GitHub Release
         run: |
-          echo "❌ Workflow failed due to post-publish verification failure"
-          echo "Check the verification report artifact for details"
-          exit 1
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG_NAME" == *"-beta"* ]]; then
+            gh release create "$TAG_NAME" --generate-notes --prerelease
+          else
+            gh release create "$TAG_NAME" --generate-notes
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

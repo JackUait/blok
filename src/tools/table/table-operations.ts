@@ -379,6 +379,7 @@ export const normalizeTableData = (
     stretched: tableData.stretched ?? config.stretched ?? false,
     content: tableData.content ?? [],
     colWidths: validWidths,
+    initialColWidth: tableData.initialColWidth,
   };
 };
 

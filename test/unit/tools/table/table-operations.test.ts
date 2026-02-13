@@ -311,4 +311,37 @@ describe('table-operations', () => {
       expect(container.textContent).toBe('Test content');
     });
   });
+
+  describe('normalizeTableData', () => {
+    it('should preserve initialColWidth when present in data', async () => {
+      const { normalizeTableData } = await import('../../../../src/tools/table/table-operations');
+
+      const data = {
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [['a', 'b']],
+        colWidths: [200, 300],
+        initialColWidth: 250,
+      };
+
+      const result = normalizeTableData(data, {});
+
+      expect(result.initialColWidth).toBe(250);
+    });
+
+    it('should return undefined initialColWidth when not in data', async () => {
+      const { normalizeTableData } = await import('../../../../src/tools/table/table-operations');
+
+      const data = {
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [['a', 'b']],
+        colWidths: [200, 300],
+      };
+
+      const result = normalizeTableData(data, {});
+
+      expect(result.initialColWidth).toBeUndefined();
+    });
+  });
 });

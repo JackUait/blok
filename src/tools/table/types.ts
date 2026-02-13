@@ -37,6 +37,8 @@ export interface TableData extends BlockToolData {
   content: LegacyCellContent[][];
   /** Column widths in pixels (e.g., [200, 300, 250]). Omit for equal widths. */
   colWidths?: number[];
+  /** Original per-column width in pixels, set once at creation. New columns = initialColWidth / 2. */
+  initialColWidth?: number;
 }
 
 /**

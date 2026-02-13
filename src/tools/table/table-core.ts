@@ -131,7 +131,7 @@ export class TableGrid {
    * those widths and the new column is added in px mode. This prevents
    * existing columns from shrinking when the table is in percent mode.
    */
-  public addColumn(table: HTMLElement, index?: number, colWidths?: number[]): boolean {
+  public addColumn(table: HTMLElement, index?: number, colWidths?: number[], newColWidth?: number): boolean {
     const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
     const oldColCount = this.getColumnCount(table);
     const hasValidColWidths = colWidths !== undefined && colWidths.length === oldColCount;
@@ -142,7 +142,7 @@ export class TableGrid {
     }
 
     if (usePx) {
-      this.addColumnPx(rows, oldColCount, index);
+      this.addColumnPx(rows, oldColCount, index, newColWidth);
 
       return true;
     }
@@ -172,22 +172,28 @@ export class TableGrid {
   /**
    * Add column in px mode: keep existing widths, add new column at half the average width
    */
-  private addColumnPx(rows: NodeListOf<Element>, oldColCount: number, index?: number): void {
-    const firstRow = rows[0];
-    const firstRowCells = firstRow?.querySelectorAll(`[${CELL_ATTR}]`);
-    const totalWidth = Array.from(firstRowCells ?? []).reduce(
-      (sum, node) => sum + (parseFloat((node as HTMLElement).style.width) || 0),
-      0
-    );
+  private addColumnPx(rows: NodeListOf<Element>, oldColCount: number, index?: number, newColWidth?: number): void {
+    let computedWidth: number;
 
-    const newColWidth = oldColCount > 0
-      ? Math.round((totalWidth / oldColCount / 2) * 100) / 100
-      : 0;
+    if (newColWidth !== undefined) {
+      computedWidth = newColWidth;
+    } else {
+      const firstRow = rows[0];
+      const firstRowCells = firstRow?.querySelectorAll(`[${CELL_ATTR}]`);
+      const totalWidth = Array.from(firstRowCells ?? []).reduce(
+        (sum, node) => sum + (parseFloat((node as HTMLElement).style.width) || 0),
+        0
+      );
+
+      computedWidth = oldColCount > 0
+        ? Math.round((totalWidth / oldColCount / 2) * 100) / 100
+        : 0;
+    }
 
     rows.forEach(row => {
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
       const isAppend = index === undefined || index >= cells.length;
-      const cell = this.createCell(`${newColWidth}px`);
+      const cell = this.createCell(`${computedWidth}px`);
 
       if (!isAppend) {
         row.insertBefore(cell, cells[index]);

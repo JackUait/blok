@@ -410,6 +410,33 @@ describe('TableGrid', () => {
         expect((cells[2] as HTMLElement).style.width).toBe('150px');
       });
     });
+
+    it('uses explicit newColWidth when provided instead of computing from existing widths', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 3);
+
+      // colWidths [200, 300, 100] → avg=200, half=100
+      // But we pass explicit newColWidth=75
+      grid.addColumn(element, undefined, [200, 300, 100], 75);
+
+      const cells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      expect((cells[3] as HTMLElement).style.width).toBe('75px');
+    });
+
+    it('falls back to half-average when newColWidth is not provided', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 3);
+
+      // colWidths [200, 300, 100] → avg=200, half=100 (existing behavior)
+      grid.addColumn(element, undefined, [200, 300, 100]);
+
+      const cells = element.querySelectorAll('[data-blok-table-row]')[0]
+        .querySelectorAll('[data-blok-table-cell]');
+
+      expect((cells[3] as HTMLElement).style.width).toBe('100px');
+    });
   });
 
   describe('deleteColumn', () => {

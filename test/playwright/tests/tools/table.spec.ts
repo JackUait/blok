@@ -661,6 +661,67 @@ test.describe('table tool', () => {
       await expect(cells).toHaveCount(3);
     });
 
+    test('new columns have consistent width regardless of how many are added', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await table.hover();
+
+      // Read the initial column width (all 3 should be equal)
+      // eslint-disable-next-line playwright/no-nth-methods -- nth is the clearest way to get specific cell
+      const initialCell = page.locator('[data-blok-table-row]').first().locator(CELL_SELECTOR).nth(0);
+      const initialBox = assertBoundingBox(await initialCell.boundingBox(), 'Initial cell');
+      const initialWidth = initialBox.width;
+
+      // Add 3 columns by clicking the add-col button
+      const addColBtn = page.locator('[data-blok-table-add-col]');
+
+      for (let i = 0; i < 3; i++) {
+        await table.hover();
+        await expect(addColBtn).toBeVisible();
+        await addColBtn.click();
+      }
+
+      // eslint-disable-next-line playwright/no-nth-methods -- nth is the clearest way to get specific cells
+      const firstRow = page.locator('[data-blok-table-row]').first();
+      const cells = firstRow.locator(CELL_SELECTOR);
+
+      await expect(cells).toHaveCount(6);
+
+      // Get widths of the 3 new columns (indices 3, 4, 5)
+      const newWidths: number[] = [];
+
+      for (let i = 3; i < 6; i++) {
+        // eslint-disable-next-line playwright/no-nth-methods -- iterating by index
+        const cellBox = assertBoundingBox(await cells.nth(i).boundingBox(), `New cell ${i}`);
+
+        newWidths.push(cellBox.width);
+      }
+
+      // All new columns should have the same width
+      expect(newWidths[1]).toBeCloseTo(newWidths[0], 0);
+      expect(newWidths[2]).toBeCloseTo(newWidths[0], 0);
+
+      // Each new column should be approximately half the initial column width
+      const expectedWidth = initialWidth / 2;
+
+      expect(newWidths[0]).toBeCloseTo(expectedWidth, 0);
+    });
+
     test('new row data is saved correctly', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,

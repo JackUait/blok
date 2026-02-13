@@ -1,3 +1,4 @@
+import { RESTRICTED_TOOLS } from '../../tools/table/table-restrictions';
 import { Dom } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
 import { SelectionUtils } from '../selection';
@@ -156,7 +157,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Whether the toolbox was opened inside a table cell.
-   * Used to restore the table item visibility on close.
+   * Used to restore restricted tool visibility on close.
    */
   private isInsideTableCell = false;
 
@@ -274,14 +275,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
 
     /**
-     * Hide the table tool when the caret is inside a table cell
-     * to prevent nested tables.
+     * Hide restricted tools (headers, tables) when the caret is inside a table cell.
      */
     this.isInsideTableCell = currentBlock !== undefined
       && currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
 
     if (this.isInsideTableCell) {
-      this.popover?.toggleItemHiddenByName('table', true);
+      this.toggleRestrictedToolsHidden(true);
     }
 
     this.popover?.show();
@@ -307,7 +307,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    */
   public close(): void {
     if (this.isInsideTableCell) {
-      this.popover?.toggleItemHiddenByName('table', false);
+      this.toggleRestrictedToolsHidden(false);
       this.isInsideTableCell = false;
     }
 
@@ -377,7 +377,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    */
   private onPopoverClose = (): void => {
     if (this.isInsideTableCell) {
-      this.popover?.toggleItemHiddenByName('table', false);
+      this.toggleRestrictedToolsHidden(false);
       this.isInsideTableCell = false;
     }
 
@@ -385,6 +385,28 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
   };
+
+  /**
+   * Toggles hidden state for all popover items belonging to restricted tools.
+   * Handles tools like header that have multiple entries with custom names (header-1, header-2, etc.)
+   * by matching item names that equal or start with a restricted tool name.
+   */
+  private toggleRestrictedToolsHidden(isHidden: boolean): void {
+    for (const item of this.toolboxItemsToBeDisplayed) {
+      if (!('name' in item) || item.name === undefined) {
+        continue;
+      }
+
+      const { name } = item;
+      const isRestricted = RESTRICTED_TOOLS.some(
+        restricted => name === restricted || name.startsWith(`${restricted}-`)
+      );
+
+      if (isRestricted) {
+        this.popover?.toggleItemHiddenByName(name, isHidden);
+      }
+    }
+  }
 
   /**
    * Returns list of tools that enables the Toolbox (by specifying the 'toolbox' getter)

@@ -47,6 +47,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   hasFocus: vi.fn(() => false),
   filterItems: vi.fn(),
   toggleItemHiddenByName: vi.fn(),
+  updatePosition: vi.fn(),
 }));
 
 vi.mock('../../../src/components/dom', () => ({
@@ -73,6 +74,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public hasFocus = mockPopoverInstance.hasFocus;
       public filterItems = mockPopoverInstance.filterItems;
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
+      public updatePosition = mockPopoverInstance.updatePosition;
     },
     PopoverMobile: class MockPopoverMobile {
       public show = mockPopoverInstance.show;
@@ -84,6 +86,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public hasFocus = mockPopoverInstance.hasFocus;
       public filterItems = mockPopoverInstance.filterItems;
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
+      public updatePosition = mockPopoverInstance.updatePosition;
     },
   };
 });
@@ -995,13 +998,14 @@ describe('Toolbox', () => {
       expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('table', false);
     });
 
-    it('hides header tool when opened inside table cell', () => {
+    it('hides all header entries when opened inside table cell', () => {
       const headerToolAdapter = {
         name: 'header',
-        toolbox: {
-          title: 'Header',
-          icon: '<svg>header</svg>',
-        },
+        toolbox: [
+          { title: 'Heading 1', icon: '<svg>h1</svg>', name: 'header-1', data: { level: 1 } },
+          { title: 'Heading 2', icon: '<svg>h2</svg>', name: 'header-2', data: { level: 2 } },
+          { title: 'Heading 3', icon: '<svg>h3</svg>', name: 'header-3', data: { level: 3 } },
+        ],
       } as unknown as BlockToolAdapter;
 
       const tools = createToolsCollection([
@@ -1024,18 +1028,20 @@ describe('Toolbox', () => {
 
       toolbox.open();
 
-      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('header', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('header-1', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('header-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('header-3', true);
 
       cellBlocksContainer.remove();
     });
 
-    it('shows header tool when opened outside table cell', () => {
+    it('does not hide header entries when opened outside table cell', () => {
       const headerToolAdapter = {
         name: 'header',
-        toolbox: {
-          title: 'Header',
-          icon: '<svg>header</svg>',
-        },
+        toolbox: [
+          { title: 'Heading 1', icon: '<svg>h1</svg>', name: 'header-1', data: { level: 1 } },
+          { title: 'Heading 2', icon: '<svg>h2</svg>', name: 'header-2', data: { level: 2 } },
+        ],
       } as unknown as BlockToolAdapter;
 
       const tools = createToolsCollection([
@@ -1052,7 +1058,8 @@ describe('Toolbox', () => {
 
       toolbox.open();
 
-      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('header', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('header-1', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('header-2', true);
     });
   });
 

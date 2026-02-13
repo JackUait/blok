@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Antraštės eilutė",
   "tools.table.insertRowAbove": "Įterpti eilutę viršuje",
   "tools.table.insertRowBelow": "Įterpti eilutę apačioje",
-  "tools.table.deleteRow": "Ištrinti"
+  "tools.table.deleteRow": "Ištrinti",
+  "tools.table.clickToAddRow": "Spustelėkite norėdami pridėti naują eilutę",
+  "tools.table.dragToAddRemoveRows": "Vilkite norėdami pridėti arba pašalinti eilutes",
+  "tools.table.clickToAddColumn": "Spustelėkite norėdami pridėti naują stulpelį",
+  "tools.table.dragToAddRemoveColumns": "Vilkite norėdami pridėti arba pašalinti stulpelius"
 }

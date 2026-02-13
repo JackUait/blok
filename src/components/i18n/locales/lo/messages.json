@@ -51,5 +51,9 @@
   "tools.table.headerRow": "ແຖວຫົວຂໍ້",
   "tools.table.insertRowAbove": "ແຊກແຖວເທິງ",
   "tools.table.insertRowBelow": "ແຊກແຖວລຸ່ມ",
-  "tools.table.deleteRow": "ລຶບ"
+  "tools.table.deleteRow": "ລຶບ",
+  "tools.table.clickToAddRow": "ຄລິກເພື່ອເພີ່ມແຖວໃໝ່",
+  "tools.table.dragToAddRemoveRows": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບແຖວ",
+  "tools.table.clickToAddColumn": "ຄລິກເພື່ອເພີ່ມຖັນໃໝ່",
+  "tools.table.dragToAddRemoveColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບຖັນ"
 }

@@ -51,5 +51,9 @@
   "tools.table.headerRow": "ހެޑަރ ރޯ",
   "tools.table.insertRowAbove": "މަތީން ރޯ އިތުރުކުރޭ",
   "tools.table.insertRowBelow": "ތިރީން ރޯ އިތުރުކުރޭ",
-  "tools.table.deleteRow": "ފޮހެލާ"
+  "tools.table.deleteRow": "ފޮހެލާ",
+  "tools.table.clickToAddRow": "އާ ރޯއެއް އިތުރުކުރަން ކްލިކް ކުރޭ",
+  "tools.table.dragToAddRemoveRows": "ރޯ އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
+  "tools.table.clickToAddColumn": "އާ ކޮލަމެއް އިތުރުކުރަން ކްލިކް ކުރޭ",
+  "tools.table.dragToAddRemoveColumns": "ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ"
 }

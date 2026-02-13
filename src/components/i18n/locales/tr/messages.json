@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Başlık satırı",
   "tools.table.insertRowAbove": "Yukarı satır ekle",
   "tools.table.insertRowBelow": "Aşağı satır ekle",
-  "tools.table.deleteRow": "Sil"
+  "tools.table.deleteRow": "Sil",
+  "tools.table.clickToAddRow": "Yeni satır eklemek için tıkla",
+  "tools.table.dragToAddRemoveRows": "Satır eklemek veya kaldırmak için sürükle",
+  "tools.table.clickToAddColumn": "Yeni sütun eklemek için tıkla",
+  "tools.table.dragToAddRemoveColumns": "Sütun eklemek veya kaldırmak için sürükle"
 }

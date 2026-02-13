@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Riadok hlavičky",
   "tools.table.insertRowAbove": "Vložiť riadok nad",
   "tools.table.insertRowBelow": "Vložiť riadok pod",
-  "tools.table.deleteRow": "Odstrániť"
+  "tools.table.deleteRow": "Odstrániť",
+  "tools.table.clickToAddRow": "Kliknutím pridáte nový riadok",
+  "tools.table.dragToAddRemoveRows": "Potiahnutím pridáte alebo odoberiete riadky",
+  "tools.table.clickToAddColumn": "Kliknutím pridáte nový stĺpec",
+  "tools.table.dragToAddRemoveColumns": "Potiahnutím pridáte alebo odoberiete stĺpce"
 }

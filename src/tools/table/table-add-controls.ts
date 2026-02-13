@@ -1,3 +1,4 @@
+import type { I18n } from '../../../types/api';
 import { IconPlus } from '../../components/icons';
 import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { hide as hideTooltip, onHover } from '../../components/utils/tooltip';
@@ -46,6 +47,7 @@ interface DragState {
 interface TableAddControlsOptions {
   wrapper: HTMLElement;
   grid: HTMLElement;
+  i18n: I18n;
   onAddRow: () => void;
   onAddColumn: () => void;
   onDragStart: () => void;
@@ -64,6 +66,7 @@ interface TableAddControlsOptions {
 export class TableAddControls {
   private wrapper: HTMLElement;
   private grid: HTMLElement;
+  private i18n: I18n;
   private addRowBtn: HTMLElement;
   private addColBtn: HTMLElement;
   private rowHideTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -90,6 +93,7 @@ export class TableAddControls {
   constructor(options: TableAddControlsOptions) {
     this.wrapper = options.wrapper;
     this.grid = options.grid;
+    this.i18n = options.i18n;
 
     this.boundAddRowClick = options.onAddRow;
     this.boundAddColClick = options.onAddColumn;
@@ -388,8 +392,8 @@ export class TableAddControls {
     btn.appendChild(visual);
 
     onHover(btn, createTooltipContent([
-      'Click to add a new row',
-      'Drag to add or remove rows',
+      this.i18n.t('tools.table.clickToAddRow'),
+      this.i18n.t('tools.table.dragToAddRemoveRows'),
     ]), { placement: 'bottom', marginTop: -16 });
 
     return btn;
@@ -418,8 +422,8 @@ export class TableAddControls {
     btn.appendChild(visual);
 
     onHover(btn, createTooltipContent([
-      'Click to add a new column',
-      'Drag to add or remove columns',
+      this.i18n.t('tools.table.clickToAddColumn'),
+      this.i18n.t('tools.table.dragToAddRemoveColumns'),
     ]), { placement: 'bottom' });
 
     return btn;

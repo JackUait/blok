@@ -51,5 +51,9 @@
   "tools.table.headerRow": "हेडर पंक्ती",
   "tools.table.insertRowAbove": "वर पंक्ती घाला",
   "tools.table.insertRowBelow": "खाली पंक्ती घाला",
-  "tools.table.deleteRow": "हटवा"
+  "tools.table.deleteRow": "हटवा",
+  "tools.table.clickToAddRow": "नवीन पंक्ती जोडण्यासाठी क्लिक करा",
+  "tools.table.dragToAddRemoveRows": "पंक्ती जोडण्यासाठी किंवा काढण्यासाठी ड्रॅग करा",
+  "tools.table.clickToAddColumn": "नवीन स्तंभ जोडण्यासाठी क्लिक करा",
+  "tools.table.dragToAddRemoveColumns": "स्तंभ जोडण्यासाठी किंवा काढण्यासाठी ड्रॅग करा"
 }

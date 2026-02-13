@@ -51,5 +51,9 @@
   "tools.table.headerRow": "სათაურის სტრიქონი",
   "tools.table.insertRowAbove": "სტრიქონის დამატება ზემოდან",
   "tools.table.insertRowBelow": "სტრიქონის დამატება ქვემოდან",
-  "tools.table.deleteRow": "წაშლა"
+  "tools.table.deleteRow": "წაშლა",
+  "tools.table.clickToAddRow": "დააწკაპუნეთ ახალი სტრიქონის დასამატებლად",
+  "tools.table.dragToAddRemoveRows": "გადაიტანეთ სტრიქონების დასამატებლად ან წასაშლელად",
+  "tools.table.clickToAddColumn": "დააწკაპუნეთ ახალი სვეტის დასამატებლად",
+  "tools.table.dragToAddRemoveColumns": "გადაიტანეთ სვეტების დასამატებლად ან წასაშლელად"
 }

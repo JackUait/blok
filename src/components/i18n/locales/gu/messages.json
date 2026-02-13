@@ -51,5 +51,9 @@
   "tools.table.headerRow": "હેડર હરોળ",
   "tools.table.insertRowAbove": "ઉપર હરોળ ઉમેરો",
   "tools.table.insertRowBelow": "નીચે હરોળ ઉમેરો",
-  "tools.table.deleteRow": "કાઢી નાખો"
+  "tools.table.deleteRow": "કાઢી નાખો",
+  "tools.table.clickToAddRow": "નવી હરોળ ઉમેરવા ક્લિક કરો",
+  "tools.table.dragToAddRemoveRows": "હરોળ ઉમેરવા અથવા દૂર કરવા ખેંચો",
+  "tools.table.clickToAddColumn": "નવી કૉલમ ઉમેરવા ક્લિક કરો",
+  "tools.table.dragToAddRemoveColumns": "કૉલમ ઉમેરવા અથવા દૂર કરવા ખેંચો"
 }

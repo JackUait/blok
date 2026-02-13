@@ -51,5 +51,9 @@
   "tools.table.headerRow": "سطر سرآیند",
   "tools.table.insertRowAbove": "درج سطر بالا",
   "tools.table.insertRowBelow": "درج سطر پایین",
-  "tools.table.deleteRow": "حذف"
+  "tools.table.deleteRow": "حذف",
+  "tools.table.clickToAddRow": "برای افزودن سطر جدید کلیک کنید",
+  "tools.table.dragToAddRemoveRows": "برای افزودن یا حذف سطرها بکشید",
+  "tools.table.clickToAddColumn": "برای افزودن ستون جدید کلیک کنید",
+  "tools.table.dragToAddRemoveColumns": "برای افزودن یا حذف ستون‌ها بکشید"
 }

@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Rijkop",
   "tools.table.insertRowAbove": "Rij erboven invoegen",
   "tools.table.insertRowBelow": "Rij eronder invoegen",
-  "tools.table.deleteRow": "Verwijderen"
+  "tools.table.deleteRow": "Verwijderen",
+  "tools.table.clickToAddRow": "Klik om een nieuwe rij toe te voegen",
+  "tools.table.dragToAddRemoveRows": "Sleep om rijen toe te voegen of te verwijderen",
+  "tools.table.clickToAddColumn": "Klik om een nieuwe kolom toe te voegen",
+  "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen"
 }

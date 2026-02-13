@@ -1,5 +1,8 @@
+import type { I18n } from '../../../../types/api';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { TableAddControls } from '../../../../src/tools/table/table-add-controls';
+
+const mockI18n: I18n = { t: (key: string) => key } as I18n;
 
 const mockOnHover = vi.fn();
 const mockHide = vi.fn();
@@ -105,6 +108,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -121,6 +125,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -137,6 +142,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -153,6 +159,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -169,6 +176,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -206,6 +214,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -224,6 +233,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -246,6 +256,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -267,6 +278,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -290,6 +302,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -319,6 +332,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -350,6 +364,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow,
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -371,6 +386,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn,
         ...defaultDragCallbacks(),
@@ -392,6 +408,7 @@ describe('TableAddControls', () => {
       const controls = new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -409,6 +426,7 @@ describe('TableAddControls', () => {
       const controls = new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -440,6 +458,7 @@ describe('TableAddControls', () => {
       const controls = new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow,
         onAddColumn,
         ...defaultDragCallbacks(),
@@ -475,6 +494,7 @@ describe('TableAddControls', () => {
       const controls = new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -495,6 +515,7 @@ describe('TableAddControls', () => {
       const controls = new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -518,6 +539,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -536,6 +558,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -552,6 +575,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -572,6 +596,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -589,6 +614,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -646,6 +672,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...callbacks,
@@ -668,6 +695,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...callbacks,
@@ -690,6 +718,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...callbacks,
@@ -741,6 +770,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...callbacks,
@@ -763,6 +793,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...callbacks,
@@ -785,6 +816,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...callbacks,
@@ -806,6 +838,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...callbacks,
@@ -852,6 +885,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -872,6 +906,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -892,14 +927,15 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
       });
 
       expect(mockCreateTooltipContent).toHaveBeenCalledWith([
-        'Click to add a new row',
-        'Drag to add or remove rows',
+        'tools.table.clickToAddRow',
+        'tools.table.dragToAddRemoveRows',
       ]);
     });
 
@@ -909,14 +945,15 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
       });
 
       expect(mockCreateTooltipContent).toHaveBeenCalledWith([
-        'Click to add a new column',
-        'Drag to add or remove columns',
+        'tools.table.clickToAddColumn',
+        'tools.table.dragToAddRemoveColumns',
       ]);
     });
 
@@ -926,6 +963,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),
@@ -959,6 +997,7 @@ describe('TableAddControls', () => {
       new TableAddControls({
         wrapper,
         grid,
+        i18n: mockI18n,
         onAddRow: vi.fn(),
         onAddColumn: vi.fn(),
         ...defaultDragCallbacks(),

@@ -51,5 +51,9 @@
   "tools.table.headerRow": "हेडर पंक्ति",
   "tools.table.insertRowAbove": "ऊपर पंक्ति जोड़ें",
   "tools.table.insertRowBelow": "नीचे पंक्ति जोड़ें",
-  "tools.table.deleteRow": "हटाएं"
+  "tools.table.deleteRow": "हटाएं",
+  "tools.table.clickToAddRow": "नई पंक्ति जोड़ने के लिए क्लिक करें",
+  "tools.table.dragToAddRemoveRows": "पंक्तियाँ जोड़ने या हटाने के लिए खींचें",
+  "tools.table.clickToAddColumn": "नया कॉलम जोड़ने के लिए क्लिक करें",
+  "tools.table.dragToAddRemoveColumns": "कॉलम जोड़ने या हटाने के लिए खींचें"
 }

@@ -51,5 +51,9 @@
   "tools.table.headerRow": "ਹੈਡਰ ਕਤਾਰ",
   "tools.table.insertRowAbove": "ਉੱਪਰ ਕਤਾਰ ਜੋੜੋ",
   "tools.table.insertRowBelow": "ਹੇਠਾਂ ਕਤਾਰ ਜੋੜੋ",
-  "tools.table.deleteRow": "ਮਿਟਾਓ"
+  "tools.table.deleteRow": "ਮਿਟਾਓ",
+  "tools.table.clickToAddRow": "ਨਵੀਂ ਕਤਾਰ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ",
+  "tools.table.dragToAddRemoveRows": "ਕਤਾਰਾਂ ਜੋੜਨ ਜਾਂ ਹਟਾਉਣ ਲਈ ਖਿੱਚੋ",
+  "tools.table.clickToAddColumn": "ਨਵਾਂ ਕਾਲਮ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ",
+  "tools.table.dragToAddRemoveColumns": "ਕਾਲਮ ਜੋੜਨ ਜਾਂ ਹਟਾਉਣ ਲਈ ਖਿੱਚੋ"
 }

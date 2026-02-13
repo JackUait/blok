@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Red zaglavlja",
   "tools.table.insertRowAbove": "Umetni red iznad",
   "tools.table.insertRowBelow": "Umetni red ispod",
-  "tools.table.deleteRow": "Obriši"
+  "tools.table.deleteRow": "Obriši",
+  "tools.table.clickToAddRow": "Kliknite za dodavanje novog reda",
+  "tools.table.dragToAddRemoveRows": "Prevucite za dodavanje ili uklanjanje redova",
+  "tools.table.clickToAddColumn": "Kliknite za dodavanje nove kolone",
+  "tools.table.dragToAddRemoveColumns": "Prevucite za dodavanje ili uklanjanje kolona"
 }

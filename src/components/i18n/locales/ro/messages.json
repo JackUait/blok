@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Rând antet",
   "tools.table.insertRowAbove": "Inserează rând deasupra",
   "tools.table.insertRowBelow": "Inserează rând dedesubt",
-  "tools.table.deleteRow": "Șterge"
+  "tools.table.deleteRow": "Șterge",
+  "tools.table.clickToAddRow": "Clic pentru a adăuga un rând nou",
+  "tools.table.dragToAddRemoveRows": "Trageți pentru a adăuga sau elimina rânduri",
+  "tools.table.clickToAddColumn": "Clic pentru a adăuga o coloană nouă",
+  "tools.table.dragToAddRemoveColumns": "Trageți pentru a adăuga sau elimina coloane"
 }

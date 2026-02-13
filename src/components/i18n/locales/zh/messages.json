@@ -51,5 +51,9 @@
   "tools.table.headerRow": "标题行",
   "tools.table.insertRowAbove": "在上方插入行",
   "tools.table.insertRowBelow": "在下方插入行",
-  "tools.table.deleteRow": "删除"
+  "tools.table.deleteRow": "删除",
+  "tools.table.clickToAddRow": "点击添加新行",
+  "tools.table.dragToAddRemoveRows": "拖动以添加或删除行",
+  "tools.table.clickToAddColumn": "点击添加新列",
+  "tools.table.dragToAddRemoveColumns": "拖动以添加或删除列"
 }

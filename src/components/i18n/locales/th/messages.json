@@ -51,5 +51,9 @@
   "tools.table.headerRow": "แถวหัวข้อ",
   "tools.table.insertRowAbove": "แทรกแถวด้านบน",
   "tools.table.insertRowBelow": "แทรกแถวด้านล่าง",
-  "tools.table.deleteRow": "ลบ"
+  "tools.table.deleteRow": "ลบ",
+  "tools.table.clickToAddRow": "คลิกเพื่อเพิ่มแถวใหม่",
+  "tools.table.dragToAddRemoveRows": "ลากเพื่อเพิ่มหรือลบแถว",
+  "tools.table.clickToAddColumn": "คลิกเพื่อเพิ่มคอลัมน์ใหม่",
+  "tools.table.dragToAddRemoveColumns": "ลากเพื่อเพิ่มหรือลบคอลัมน์"
 }

@@ -51,5 +51,9 @@
   "tools.table.headerRow": "হেডার সারি",
   "tools.table.insertRowAbove": "উপরে সারি যোগ করুন",
   "tools.table.insertRowBelow": "নিচে সারি যোগ করুন",
-  "tools.table.deleteRow": "মুছুন"
+  "tools.table.deleteRow": "মুছুন",
+  "tools.table.clickToAddRow": "নতুন সারি যোগ করতে ক্লিক করুন",
+  "tools.table.dragToAddRemoveRows": "সারি যোগ বা সরাতে টানুন",
+  "tools.table.clickToAddColumn": "নতুন কলাম যোগ করতে ক্লিক করুন",
+  "tools.table.dragToAddRemoveColumns": "কলাম যোগ বা সরাতে টানুন"
 }

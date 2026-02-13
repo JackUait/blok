@@ -51,5 +51,9 @@
   "tools.table.headerRow": "హెడర్ వరుస",
   "tools.table.insertRowAbove": "పైన వరుస చొప్పించు",
   "tools.table.insertRowBelow": "క్రింద వరుస చొప్పించు",
-  "tools.table.deleteRow": "తొలగించు"
+  "tools.table.deleteRow": "తొలగించు",
+  "tools.table.clickToAddRow": "కొత్త వరుస జోడించడానికి క్లిక్ చేయండి",
+  "tools.table.dragToAddRemoveRows": "వరుసలు జోడించడానికి లేదా తొలగించడానికి డ్రాగ్ చేయండి",
+  "tools.table.clickToAddColumn": "కొత్త కాలమ్ జోడించడానికి క్లిక్ చేయండి",
+  "tools.table.dragToAddRemoveColumns": "కాలమ్‌లు జోడించడానికి లేదా తొలగించడానికి డ్రాగ్ చేయండి"
 }

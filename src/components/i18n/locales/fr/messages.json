@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Ligne d'en-tête",
   "tools.table.insertRowAbove": "Insérer ligne au-dessus",
   "tools.table.insertRowBelow": "Insérer ligne en dessous",
-  "tools.table.deleteRow": "Supprimer"
+  "tools.table.deleteRow": "Supprimer",
+  "tools.table.clickToAddRow": "Cliquer pour ajouter une ligne",
+  "tools.table.dragToAddRemoveRows": "Glisser pour ajouter ou supprimer des lignes",
+  "tools.table.clickToAddColumn": "Cliquer pour ajouter une colonne",
+  "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes"
 }

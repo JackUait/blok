@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Վերնագրի տող",
   "tools.table.insertRowAbove": "Ավելացնել տող վերևից",
   "tools.table.insertRowBelow": "Ավելացնել տող ներքևից",
-  "tools.table.deleteRow": "Ջնջել"
+  "tools.table.deleteRow": "Ջնջել",
+  "tools.table.clickToAddRow": "Սեղմեք նոր տող ավելացնելու",
+  "tools.table.dragToAddRemoveRows": "Քաշեք տողեր ավելացնելու կամ հեռացնելու",
+  "tools.table.clickToAddColumn": "Սեղմեք նոր սյունակ ավելացնելու",
+  "tools.table.dragToAddRemoveColumns": "Քաշեք սյունակներ ավելացնելու կամ հեռացնելու"
 }

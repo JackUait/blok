@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Рядок-заголовок",
   "tools.table.insertRowAbove": "Вставити рядок вище",
   "tools.table.insertRowBelow": "Вставити рядок нижче",
-  "tools.table.deleteRow": "Видалити"
+  "tools.table.deleteRow": "Видалити",
+  "tools.table.clickToAddRow": "Натисніть, щоб додати новий рядок",
+  "tools.table.dragToAddRemoveRows": "Перетягніть, щоб додати або видалити рядки",
+  "tools.table.clickToAddColumn": "Натисніть, щоб додати нову колонку",
+  "tools.table.dragToAddRemoveColumns": "Перетягніть, щоб додати або видалити колонки"
 }

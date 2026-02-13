@@ -51,5 +51,9 @@
   "tools.table.headerRow": "ہیڈر قطار",
   "tools.table.insertRowAbove": "اوپر قطار شامل کریں",
   "tools.table.insertRowBelow": "نیچے قطار شامل کریں",
-  "tools.table.deleteRow": "حذف کریں"
+  "tools.table.deleteRow": "حذف کریں",
+  "tools.table.clickToAddRow": "نئی قطار شامل کرنے کے لیے کلک کریں",
+  "tools.table.dragToAddRemoveRows": "قطاریں شامل یا حذف کرنے کے لیے گھسیٹیں",
+  "tools.table.clickToAddColumn": "نیا کالم شامل کرنے کے لیے کلک کریں",
+  "tools.table.dragToAddRemoveColumns": "کالم شامل یا حذف کرنے کے لیے گھسیٹیں"
 }

@@ -51,5 +51,9 @@
   "tools.table.headerRow": "Otsikkorivi",
   "tools.table.insertRowAbove": "Lisää rivi yläpuolelle",
   "tools.table.insertRowBelow": "Lisää rivi alapuolelle",
-  "tools.table.deleteRow": "Poista"
+  "tools.table.deleteRow": "Poista",
+  "tools.table.clickToAddRow": "Napsauta lisätäksesi rivin",
+  "tools.table.dragToAddRemoveRows": "Vedä lisätäksesi tai poistaaksesi rivejä",
+  "tools.table.clickToAddColumn": "Napsauta lisätäksesi sarakkeen",
+  "tools.table.dragToAddRemoveColumns": "Vedä lisätäksesi tai poistaaksesi sarakkeita"
 }

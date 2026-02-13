@@ -51,5 +51,9 @@
   "tools.table.headerRow": "የራስጌ ረድፍ",
   "tools.table.insertRowAbove": "ከላይ ረድፍ አስገባ",
   "tools.table.insertRowBelow": "ከታች ረድፍ አስገባ",
-  "tools.table.deleteRow": "ሰርዝ"
+  "tools.table.deleteRow": "ሰርዝ",
+  "tools.table.clickToAddRow": "አዲስ ረድፍ ለመጨመር ጠቅ ያድርጉ",
+  "tools.table.dragToAddRemoveRows": "ረድፎችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
+  "tools.table.clickToAddColumn": "አዲስ አምድ ለመጨመር ጠቅ ያድርጉ",
+  "tools.table.dragToAddRemoveColumns": "አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ"
 }

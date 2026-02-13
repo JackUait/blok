@@ -301,6 +301,7 @@ export class Table implements BlockTool {
     this.addControls = new TableAddControls({
       wrapper: this.element,
       grid: gridEl,
+      i18n: this.api.i18n,
       onAddRow: () => {
         this.grid.addRow(gridEl);
         populateNewCells(gridEl, this.cellBlocks);
@@ -503,6 +504,15 @@ export class Table implements BlockTool {
     this.initResize(gridEl);
     this.addControls?.syncRowButtonWidth();
     this.rowColControls?.refresh();
+
+    // After move operations, select the moved row/column to show where it landed
+    if (action.type === 'move-row') {
+      this.cellSelection?.selectRow(action.toIndex);
+      this.rowColControls?.setActiveGrip('row', action.toIndex);
+    } else if (action.type === 'move-col') {
+      this.cellSelection?.selectColumn(action.toIndex);
+      this.rowColControls?.setActiveGrip('col', action.toIndex);
+    }
   }
 
   private initResize(gridEl: HTMLElement): void {

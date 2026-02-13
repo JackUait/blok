@@ -1,23 +1,11 @@
 import type { I18n } from '../../../types/api';
-import {
-  IconInsertAbove,
-  IconInsertBelow,
-  IconInsertLeft,
-  IconInsertRight,
-  IconTrash,
-  IconHeaderRow,
-  IconHeaderColumn,
-} from '../../components/icons';
-import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
 import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
 import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE } from './table-grip-visuals';
-import { createHeadingToggle } from './table-heading-toggle';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
-
-import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
+import { createGripPopover } from './table-row-col-popover';
+import type { PopoverState } from './table-row-col-popover';
 
 const GRIP_ATTR = 'data-blok-table-grip';
 const GRIP_COL_ATTR = 'data-blok-table-grip-col';
@@ -106,8 +94,7 @@ export class TableRowColControls {
 
   private colGrips: HTMLElement[] = [];
   private rowGrips: HTMLElement[] = [];
-  private activePopover: PopoverDesktop | null = null;
-  private activePopoverGrip: HTMLElement | null = null;
+  private popoverState: PopoverState = { popover: null, grip: null };
   private lockedGrip: HTMLElement | null = null;
   private boundUnlockGrip: (e: PointerEvent) => void;
   private hideTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -341,7 +328,7 @@ export class TableRowColControls {
   }
 
   private isGripInteractionLocked(): boolean {
-    return this.activePopover !== null || this.lockedGrip !== null;
+    return this.popoverState.popover !== null || this.lockedGrip !== null;
   }
 
   private handleMouseOver(e: MouseEvent): void {
@@ -413,7 +400,7 @@ export class TableRowColControls {
       const el: HTMLElement = grip;
 
       // Don't hide the grip that has an active popover
-      if (!visible && grip === this.activePopoverGrip) {
+      if (!visible && grip === this.popoverState.grip) {
         return;
       }
 
@@ -609,175 +596,41 @@ export class TableRowColControls {
   // ── Popover menus ────────────────────────────────────────────
 
   private openPopover(type: 'row' | 'col', index: number): void {
-    this.destroyPopover();
-    this.clearHideTimeout();
-
-    const grip = type === 'col'
-      ? this.colGrips[index]
-      : this.rowGrips[index];
-
-    if (!grip) {
-      return;
-    }
-
-    const items = type === 'col'
-      ? this.buildColumnMenu(index)
-      : this.buildRowMenu(index);
-
-    this.activePopover = new PopoverDesktop({
-      items,
-      trigger: grip,
-      flippable: true,
-    });
-
-    // Track which grip has the popover so setGripsDisplay won't hide it
-    this.activePopoverGrip = grip;
-
-    this.activePopover.on(PopoverEvent.Closed, () => {
-      // Guard against re-entrant calls: destroyPopover() calls popover.destroy()
-      // which calls hide() and re-emits Closed. Skip the re-entrant invocation.
-      if (this.activePopover === null) {
-        return;
+    this.popoverState = createGripPopover(
+      type,
+      index,
+      { col: this.colGrips, row: this.rowGrips },
+      {
+        getColumnCount: this.getColumnCount,
+        getRowCount: this.getRowCount,
+        isHeadingRow: this.isHeadingRow,
+        isHeadingColumn: this.isHeadingColumn,
+        onAction: this.onAction,
+        i18n: this.i18n,
+      },
+      {
+        clearHideTimeout: () => this.clearHideTimeout(),
+        hideAllGripsExcept: (grip) => this.hideAllGripsExcept(grip),
+        applyActiveClasses: (grip) => this.applyActiveClasses(grip),
+        applyVisibleClasses: (grip) => this.applyVisibleClasses(grip),
+        scheduleHideAll: () => this.scheduleHideAll(),
+        destroyPopover: () => this.destroyPopover(),
+        onGripPopoverClose: this.onGripPopoverClose,
       }
+    );
 
-      this.destroyPopover();
-      this.applyVisibleClasses(grip);
-      this.scheduleHideAll();
-      this.onGripPopoverClose?.();
-    });
-
-    // Hide all other grips and make the active one blue
-    this.hideAllGripsExcept(grip);
-    this.applyActiveClasses(grip);
-
-    // Expand the grip to hover size so it remains visible while popover is open
-    if (type === 'col') {
-      grip.style.height = `${GRIP_HOVER_SIZE}px`;
-    } else {
-      grip.style.width = `${GRIP_HOVER_SIZE}px`;
-    }
-
-    this.activePopover.show();
+    // Show after storing state so callbacks (e.g. onGripClick → setGripsDisplay)
+    // see the updated popoverState.grip reference
+    this.popoverState.popover?.show();
     this.onGripClick?.(type, index);
   }
 
   private destroyPopover(): void {
-    if (this.activePopover !== null) {
-      const popover = this.activePopover;
+    if (this.popoverState.popover !== null) {
+      const popoverRef = this.popoverState.popover;
 
-      this.activePopover = null;
-      this.activePopoverGrip = null;
-      popover.destroy();
+      this.popoverState = { popover: null, grip: null };
+      popoverRef.destroy();
     }
-  }
-
-  private buildColumnMenu(colIndex: number): PopoverItemParams[] {
-    const headingItems: PopoverItemParams[] = colIndex === 0
-      ? [
-        {
-          type: PopoverItemType.Html,
-          element: createHeadingToggle({
-            icon: IconHeaderColumn,
-            label: this.i18n.t('tools.table.headerColumn'),
-            isActive: this.isHeadingColumn(),
-            onToggle: () => {
-              this.onAction({ type: 'toggle-heading-column' });
-            },
-          }),
-        },
-        { type: PopoverItemType.Separator },
-      ]
-      : [];
-
-    const baseItems: PopoverItemParams[] = [
-      {
-        icon: IconInsertLeft,
-        title: this.i18n.t('tools.table.insertColumnLeft'),
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'insert-col-left', index: colIndex });
-        },
-      },
-      {
-        icon: IconInsertRight,
-        title: this.i18n.t('tools.table.insertColumnRight'),
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'insert-col-right', index: colIndex });
-        },
-      },
-    ];
-
-    const canDelete = this.getColumnCount() > 1;
-    const deleteItems: PopoverItemParams[] = [
-      { type: PopoverItemType.Separator },
-      {
-        icon: IconTrash,
-        title: this.i18n.t('tools.table.deleteColumn'),
-        isDestructive: true,
-        isDisabled: !canDelete,
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'delete-col', index: colIndex });
-        },
-      },
-    ];
-
-    return [...headingItems, ...baseItems, ...deleteItems];
-  }
-
-  private buildRowMenu(rowIndex: number): PopoverItemParams[] {
-    const headingItems: PopoverItemParams[] = rowIndex === 0
-      ? [
-        {
-          type: PopoverItemType.Html,
-          element: createHeadingToggle({
-            icon: IconHeaderRow,
-            label: this.i18n.t('tools.table.headerRow'),
-            isActive: this.isHeadingRow(),
-            onToggle: () => {
-              this.onAction({ type: 'toggle-heading' });
-            },
-          }),
-        },
-        { type: PopoverItemType.Separator },
-      ]
-      : [];
-
-    const baseItems: PopoverItemParams[] = [
-      {
-        icon: IconInsertAbove,
-        title: this.i18n.t('tools.table.insertRowAbove'),
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'insert-row-above', index: rowIndex });
-        },
-      },
-      {
-        icon: IconInsertBelow,
-        title: this.i18n.t('tools.table.insertRowBelow'),
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'insert-row-below', index: rowIndex });
-        },
-      },
-    ];
-
-    const canDelete = this.getRowCount() > 1;
-    const deleteItems: PopoverItemParams[] = [
-      { type: PopoverItemType.Separator },
-      {
-        icon: IconTrash,
-        title: this.i18n.t('tools.table.deleteRow'),
-        isDestructive: true,
-        isDisabled: !canDelete,
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.onAction({ type: 'delete-row', index: rowIndex });
-        },
-      },
-    ];
-
-    return [...headingItems, ...baseItems, ...deleteItems];
   }
 }

@@ -186,8 +186,8 @@ export class TableRowColDrag {
     cells.forEach(node => {
       const cellEl = node as HTMLElement;
 
-      cellEl.style.backgroundColor = '#dbeafe';
-      cellEl.style.opacity = '0.6';
+      cellEl.style.backgroundColor = '#f3f4f6';
+      cellEl.style.opacity = '0.7';
       this.dragOverlayCells.push(cellEl);
     });
   }
@@ -202,8 +202,8 @@ export class TableRowColDrag {
 
       const cellEl = cells[this.dragFromIndex] as HTMLElement;
 
-      cellEl.style.backgroundColor = '#dbeafe';
-      cellEl.style.opacity = '0.6';
+      cellEl.style.backgroundColor = '#f3f4f6';
+      cellEl.style.opacity = '0.7';
       this.dragOverlayCells.push(cellEl);
     });
   }

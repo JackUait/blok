@@ -182,9 +182,9 @@ export class Table implements BlockTool {
     if (this.data.initialColWidth === undefined) {
       const widths = this.data.colWidths ?? readPixelWidths(gridEl);
 
-      if (widths.length > 0) {
-        this.data.initialColWidth = computeInitialColWidth(widths);
-      }
+      this.data.initialColWidth = widths.length > 0
+        ? computeInitialColWidth(widths)
+        : undefined;
     }
 
     this.initResize(gridEl);

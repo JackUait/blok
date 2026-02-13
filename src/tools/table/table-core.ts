@@ -170,25 +170,10 @@ export class TableGrid {
   }
 
   /**
-   * Add column in px mode: keep existing widths, add new column at half the average width
+   * Add column in px mode: keep existing widths, add new column at given width or half the average
    */
   private addColumnPx(rows: NodeListOf<Element>, oldColCount: number, index?: number, newColWidth?: number): void {
-    let computedWidth: number;
-
-    if (newColWidth !== undefined) {
-      computedWidth = newColWidth;
-    } else {
-      const firstRow = rows[0];
-      const firstRowCells = firstRow?.querySelectorAll(`[${CELL_ATTR}]`);
-      const totalWidth = Array.from(firstRowCells ?? []).reduce(
-        (sum, node) => sum + (parseFloat((node as HTMLElement).style.width) || 0),
-        0
-      );
-
-      computedWidth = oldColCount > 0
-        ? Math.round((totalWidth / oldColCount / 2) * 100) / 100
-        : 0;
-    }
+    const computedWidth = newColWidth ?? this.computeHalfAvgPxWidth(rows, oldColCount);
 
     rows.forEach(row => {
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
@@ -203,6 +188,19 @@ export class TableGrid {
 
       row.appendChild(cell);
     });
+  }
+
+  private computeHalfAvgPxWidth(rows: NodeListOf<Element>, oldColCount: number): number {
+    const firstRow = rows[0];
+    const firstRowCells = firstRow?.querySelectorAll(`[${CELL_ATTR}]`);
+    const totalWidth = Array.from(firstRowCells ?? []).reduce(
+      (sum, node) => sum + (parseFloat((node as HTMLElement).style.width) || 0),
+      0
+    );
+
+    return oldColCount > 0
+      ? Math.round((totalWidth / oldColCount / 2) * 100) / 100
+      : 0;
   }
 
   /**

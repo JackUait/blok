@@ -2955,7 +2955,7 @@ describe('Table Tool', () => {
 
       const rowGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-row]');
 
-      expect(rowGrips[2].classList.contains('bg-blue-500')).toBe(true);
+      expect(rowGrips[2].hasAttribute('data-blok-table-grip-visible')).toBe(true);
 
       document.body.removeChild(element);
     });
@@ -2974,7 +2974,7 @@ describe('Table Tool', () => {
 
       const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
 
-      expect(colGrips[2].classList.contains('bg-blue-500')).toBe(true);
+      expect(colGrips[2].hasAttribute('data-blok-table-grip-visible')).toBe(true);
 
       document.body.removeChild(element);
     });

@@ -2959,5 +2959,24 @@ describe('Table Tool', () => {
 
       document.body.removeChild(element);
     });
+
+    it('shows active grip on the moved column after drag-and-drop', async () => {
+      // 2 rows x 3 cols
+      const { table, element } = createMoveTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      const action: RowColAction = { type: 'move-col', fromIndex: 0, toIndex: 2 };
+
+      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+        .handleRowColAction(gridEl, action);
+
+      await vi.advanceTimersByTimeAsync(16);
+
+      const colGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-col]');
+
+      expect(colGrips[2].classList.contains('bg-blue-500')).toBe(true);
+
+      document.body.removeChild(element);
+    });
   });
 });

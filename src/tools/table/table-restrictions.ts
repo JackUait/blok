@@ -5,7 +5,7 @@ import type { Block } from '../../components/block';
  * List of block tools that are restricted from being inserted into table cells.
  * These tools create semantic or structural issues when nested in table cells.
  */
-const RESTRICTED_TOOLS = ['header', 'table'];
+export const RESTRICTED_TOOLS = ['header', 'table'];
 
 /**
  * Check if a block or element is inside a table cell.

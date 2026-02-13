@@ -3,6 +3,7 @@ import { Table } from '../../../../src/tools/table';
 import { updateHeadingStyles } from '../../../../src/tools/table/table-operations';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
+import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 /**
@@ -2827,6 +2828,134 @@ describe('Table Tool', () => {
 
       expect(deleteItem).not.toBeNull();
       expect(deleteItem?.getAttribute('data-blok-disabled')).toBe('true');
+
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('selection after row/column drag-and-drop', () => {
+    const SELECTED_ATTR = 'data-blok-table-cell-selected';
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const createMoveTable = (
+      content: string[][]
+    ): { table: Table; element: HTMLElement } => {
+      let insertCallCount = 0;
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: vi.fn().mockImplementation(() => {
+            insertCallCount++;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', `mock-block-${insertCallCount}`);
+
+            return { id: `mock-block-${insertCallCount}`, holder };
+          }),
+          delete: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+        },
+      } as never);
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      return { table, element };
+    };
+
+    /**
+     * Get the row/col coordinates of selected cells.
+     */
+    const getSelectedCoords = (element: HTMLElement): Array<{ row: number; col: number }> => {
+      const selectedCells = Array.from(element.querySelectorAll<HTMLElement>(`[${SELECTED_ATTR}]`));
+      const rows = Array.from(element.querySelectorAll('[data-blok-table-row]'));
+
+      return selectedCells.map(cell => {
+        const row = cell.closest('[data-blok-table-row]');
+        const rowIndex = rows.indexOf(row as Element);
+        const cells = Array.from(row?.querySelectorAll('[data-blok-table-cell]') ?? []);
+        const colIndex = cells.indexOf(cell);
+
+        return { row: rowIndex, col: colIndex };
+      });
+    };
+
+    it('selects the moved row after drag-and-drop reorder', async () => {
+      // 3 rows x 2 cols
+      const { table, element } = createMoveTable([['A', 'B'], ['C', 'D'], ['E', 'F']]);
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      const action: RowColAction = { type: 'move-row', fromIndex: 0, toIndex: 2 };
+
+      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+        .handleRowColAction(gridEl, action);
+
+      // Wait for requestAnimationFrame in selection highlight
+      await vi.advanceTimersByTimeAsync(16);
+
+      const selected = getSelectedCoords(element);
+
+      expect(selected.length).toBeGreaterThan(0);
+      expect(selected.every(c => c.row === 2)).toBe(true);
+
+      document.body.removeChild(element);
+    });
+
+    it('selects the moved column after drag-and-drop reorder', async () => {
+      // 2 rows x 3 cols
+      const { table, element } = createMoveTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      const action: RowColAction = { type: 'move-col', fromIndex: 0, toIndex: 2 };
+
+      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+        .handleRowColAction(gridEl, action);
+
+      // Wait for requestAnimationFrame in selection highlight
+      await vi.advanceTimersByTimeAsync(16);
+
+      const selected = getSelectedCoords(element);
+
+      expect(selected.length).toBeGreaterThan(0);
+      expect(selected.every(c => c.col === 2)).toBe(true);
+
+      document.body.removeChild(element);
+    });
+
+    it('shows active grip on the moved row after drag-and-drop', async () => {
+      // 3 rows x 2 cols
+      const { table, element } = createMoveTable([['A', 'B'], ['C', 'D'], ['E', 'F']]);
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      const action: RowColAction = { type: 'move-row', fromIndex: 0, toIndex: 2 };
+
+      (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+        .handleRowColAction(gridEl, action);
+
+      // Wait for requestAnimationFrame in setActiveGrip
+      await vi.advanceTimersByTimeAsync(16);
+
+      const rowGrips = element.querySelectorAll<HTMLElement>('[data-blok-table-grip-row]');
+
+      expect(rowGrips[2].classList.contains('bg-blue-500')).toBe(true);
 
       document.body.removeChild(element);
     });

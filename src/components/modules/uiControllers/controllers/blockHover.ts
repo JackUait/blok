@@ -5,20 +5,15 @@ import { throttle } from '../../../utils';
 import { Controller } from './_base';
 
 /**
- * BlockHoverController detects when user hovers over blocks, including extended hover zone.
+ * BlockHoverController detects when user hovers over blocks or finds nearest block.
  *
  * Responsibilities:
  * - Listen to mousemove events (throttled)
- * - Find block by element hit or extended zone
+ * - Find block by element hit or nearest by Y distance
  * - Emit BlockHovered events
  * - Track last hovered block to avoid duplicate events
  */
 export class BlockHoverController extends Controller {
-  /**
-   * Getter function for content rect
-   */
-  private contentRectGetter: () => DOMRect;
-
   /**
    * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove.
    * Stores block ID to ensure consistent comparison regardless of how the block was detected.
@@ -45,7 +40,6 @@ export class BlockHoverController extends Controller {
     contentRectGetter: () => DOMRect;
   }) {
     super(options);
-    this.contentRectGetter = options.contentRectGetter;
   }
 
   /**
@@ -83,35 +77,20 @@ export class BlockHoverController extends Controller {
         : closestBlockWrapper;
 
       /**
-       * If no block element found directly, try the extended hover zone
+       * If no block element found directly, find the nearest block by Y distance
        */
-      const zoneBlock = !hoveredBlockElement
-        ? this.findBlockInHoverZone(event.clientX, event.clientY)
-        : null;
-
-      if (zoneBlock !== null && this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
-        /**
-         * Emit the event but DON'T set lastHoveredBlockId for hover zone events.
-         * This allows the event to be emitted again when the mouse enters the actual block element,
-         * which is important for proper toolbar positioning after cross-block selection.
-         */
-        this.eventsDispatcher.emit(BlockHovered, {
-          block: zoneBlock,
-          target: zoneBlock.holder,
-        });
-      }
-
-      if (zoneBlock !== null) {
-        return;
-      }
-
       if (!hoveredBlockElement) {
-        /**
-         * When no block is found (mouse left the editor area), reset the hover state.
-         * This allows hover events to be emitted again when re-entering a block,
-         * which is important after cross-block selection completes.
-         */
-        this.blockHoveredState.lastHoveredBlockId = null;
+        const nearestBlock = this.findNearestBlock(event.clientY);
+
+        if (nearestBlock !== null && this.blockHoveredState.lastHoveredBlockId !== nearestBlock.id) {
+          this.blockHoveredState.lastHoveredBlockId = nearestBlock.id;
+
+          this.eventsDispatcher.emit(BlockHovered, {
+            block: nearestBlock,
+            target: nearestBlock.holder,
+          });
+        }
+
         return;
       }
 
@@ -155,38 +134,35 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Finds a block by vertical position when cursor is in the hover zone.
-   * The hover zone extends indefinitely on both sides of the content (left and right),
-   * allowing the toolbar to follow hover anywhere outside the content area horizontally.
-   * @param clientX - Cursor X position
+   * Finds the nearest block by vertical distance to cursor position.
+   * Returns the block whose vertical center is closest to the cursor Y position.
+   * If cursor is above all blocks, returns the first block.
+   * If cursor is below all blocks, returns the last block.
    * @param clientY - Cursor Y position
-   * @returns Block at the vertical position, or null if not in hover zone or no block found
+   * @returns Nearest block, or null if no blocks exist
    */
-  private findBlockInHoverZone(clientX: number, clientY: number): Block | null {
-    const contentRect = this.contentRectGetter();
+  private findNearestBlock(clientY: number): Block | null {
+    const blocks = this.Blok.BlockManager.blocks;
 
-    /**
-     * Check if cursor is outside the content area horizontally (either left OR right side).
-     * The zone extends indefinitely on both sides, not limited to HOVER_ZONE_SIZE.
-     */
-    const isInHoverZone = clientX < contentRect.left || clientX > contentRect.right;
-
-    if (!isInHoverZone) {
+    if (blocks.length === 0) {
       return null;
     }
 
-    /**
-     * Find block by Y position
-     */
-    for (const block of this.Blok.BlockManager.blocks) {
-      const rect = block.holder.getBoundingClientRect();
+    let nearestBlock: Block | null = null;
+    let minDistance = Infinity;
 
-      if (clientY >= rect.top && clientY <= rect.bottom) {
-        return block;
+    for (const block of blocks) {
+      const rect = block.holder.getBoundingClientRect();
+      const centerY = (rect.top + rect.bottom) / 2;
+      const distance = Math.abs(clientY - centerY);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestBlock = block;
       }
     }
 
-    return null;
+    return nearestBlock;
   }
 
   /**

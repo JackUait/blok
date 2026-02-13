@@ -277,7 +277,7 @@ describe('BlockHoverController', () => {
     });
   });
 
-  describe('extended hover zone detection (LTR)', () => {
+  describe('nearest block detection (LTR)', () => {
     it('detects block in hover zone to the left of content', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController({
         contentRect: {
@@ -315,11 +315,11 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block,
-        target: nonBlockElement,
+        target: block.holder,
       });
     });
 
-    it('does not detect block via hover zone when cursor is inside content area', () => {
+    it('finds nearest block when cursor is inside content area but not on a block element', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController({
         contentRect: {
           left: 100,
@@ -354,8 +354,10 @@ describe('BlockHoverController', () => {
       document.dispatchEvent(event);
       vi.runAllTimers();
 
-      // Should NOT emit via hover zone (not on a block element, inside content area)
-      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
     });
 
     it('finds correct block by Y position in hover zone', () => {
@@ -396,12 +398,12 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block: block2,
-        target: nonBlockElement,
+        target: block2.holder,
       });
     });
   });
 
-  describe('extended hover zone detection (RTL)', () => {
+  describe('nearest block detection (RTL)', () => {
     it('detects block in hover zone to the right of content for RTL', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController({
         contentRect: {
@@ -439,11 +441,11 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block,
-        target: nonBlockElement,
+        target: block.holder,
       });
     });
 
-    it('does not detect block via hover zone when cursor is inside content area (RTL)', () => {
+    it('finds nearest block when cursor is inside content area but not on a block element (RTL)', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController({
         contentRect: {
           left: 100,
@@ -478,8 +480,10 @@ describe('BlockHoverController', () => {
       document.dispatchEvent(event);
       vi.runAllTimers();
 
-      // Should NOT emit via hover zone (not on a block element, inside content area)
-      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
     });
   });
 

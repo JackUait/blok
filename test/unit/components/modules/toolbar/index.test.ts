@@ -241,6 +241,58 @@ describe('Toolbar module interactions', () => {
     // Restore original BlockSelection
     (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = originalBlockSelection;
   });
+
+  it('resolves a cell block to its parent table block in moveAndOpen', () => {
+    // Create a DOM structure simulating a table with a cell block inside
+    const tableBlockHolder = document.createElement('div');
+    tableBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+
+    const cellBlocksContainer = document.createElement('div');
+    cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+    tableBlockHolder.appendChild(cellBlocksContainer);
+
+    const cellBlockHolder = document.createElement('div');
+    cellBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+    cellBlocksContainer.appendChild(cellBlockHolder);
+
+    // Create mock blocks
+    const pluginsContent = document.createElement('div');
+    tableBlockHolder.appendChild(pluginsContent);
+    const tableBlock = {
+      id: 'table-block-1',
+      name: 'table',
+      holder: tableBlockHolder,
+      pluginsContent,
+      isEmpty: false,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+    };
+    const cellBlock = {
+      id: 'cell-block-1',
+      name: 'paragraph',
+      holder: cellBlockHolder,
+      isEmpty: false,
+    };
+
+    // Set up BlockManager to return tableBlock when asked for block by child node
+    const blok = getBlok();
+    blok.BlockManager.currentBlock = cellBlock as unknown as typeof blok.BlockManager.currentBlock;
+    (blok.BlockManager as unknown as { getBlockByChildNode: (node: Node) => unknown }).getBlockByChildNode = vi.fn(() => tableBlock);
+
+    // Set up toolbox instance
+    (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+    };
+
+    // Call moveAndOpen (with no block arg, so it uses currentBlock = cellBlock)
+    toolbar.moveAndOpen();
+
+    // The toolbar should have opened for the table block, not closed
+    const hoveredBlock = (toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock;
+    expect(hoveredBlock).toBe(tableBlock);
+  });
 });
 
 

@@ -320,17 +320,15 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * If no one Block selected as a Current
      */
-    const targetBlock = block ?? this.Blok.BlockManager.currentBlock;
+    const unresolvedBlock = block ?? this.Blok.BlockManager.currentBlock;
 
-    if (!targetBlock) {
+    if (!unresolvedBlock) {
       return;
     }
 
-    /**
-     * Don't show toolbar for blocks inside table cells.
-     * Uses the DOM attribute directly to avoid cross-module dependency on the table tool.
-     */
-    if (targetBlock.holder.closest('[data-blok-table-cell-blocks]')) {
+    const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
+
+    if (!targetBlock) {
       this.close();
 
       return;
@@ -560,6 +558,30 @@ export class Toolbar extends Module<ToolbarNodes> {
    */
   public resetExplicitlyClosed(): void {
     this.explicitlyClosed = false;
+  }
+
+  /**
+   * If the block is inside a table cell, resolve to the parent table block.
+   * This ensures the toolbar shows for the table when clicking/focusing inside cells.
+   * Uses the DOM attribute directly to avoid cross-module dependency on the table tool.
+   *
+   * @param block - the block to resolve
+   * @returns the parent table block if inside a cell, the original block otherwise, or null if resolution fails
+   */
+  private resolveTableCellBlock(block: Block): Block | null {
+    if (!block.holder.closest('[data-blok-table-cell-blocks]')) {
+      return block;
+    }
+
+    const tableBlockHolder = block.holder
+      .closest('[data-blok-table-cell-blocks]')
+      ?.closest('[data-blok-testid="block-wrapper"]');
+
+    if (!tableBlockHolder) {
+      return null;
+    }
+
+    return this.Blok.BlockManager.getBlockByChildNode(tableBlockHolder) ?? null;
   }
 
   /**

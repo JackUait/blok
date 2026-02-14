@@ -144,6 +144,7 @@
     "husky": "9.1.7",
     "jscpd": "4.0.5",
     "jsdom": "27.2.0",
+    "np": "^11.0.2",
     "playwright": "1.57.0",
     "postcss": "8.5.6",
     "rollup-plugin-license": "3.6.0",

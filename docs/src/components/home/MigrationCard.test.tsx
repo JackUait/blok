@@ -43,17 +43,17 @@ describe('MigrationCard', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Migrating from EditorJS?')).toBeInTheDocument();
+    expect(screen.getByText('Migrate from EditorJS')).toBeInTheDocument();
   });
 
-  it('should render the description with drop-in replacement highlight', () => {
+  it('should render the description', () => {
     render(
       <MemoryRouter>
         <MigrationCard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText('drop-in replacement')).toBeInTheDocument();
+    expect(screen.getByText(/Our automated codemod handles most of the transition/)).toBeInTheDocument();
   });
 
   it('should render the migration badge', () => {

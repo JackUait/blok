@@ -161,10 +161,14 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
   ui.state = blok;
 
   if (options.attachNodes !== false) {
+    const bottomZone = document.createElement("div");
+
+    redactor.appendChild(bottomZone);
     (ui as { nodes: UI["nodes"] }).nodes = {
       holder,
       wrapper,
       redactor,
+      bottomZone,
     };
   }
 
@@ -253,12 +257,34 @@ describe("UI module", () => {
 
       expect(nodes.redactor).toBeInstanceOf(HTMLElement);
       expect(nodes.redactor?.getAttribute("data-blok-testid")).toBe("redactor");
-      expect(nodes.redactor?.style.paddingBottom).toBe(
-        `${ui["config"].minHeight}px`,
-      );
+      // paddingBottom removed — bottom zone uses dedicated element
+      expect(nodes.redactor?.style.paddingBottom).toBe("");
+      const bottomZone = nodes.redactor?.querySelector("[data-blok-bottom-zone]");
+      expect(bottomZone).toBeInstanceOf(HTMLElement);
 
       expect(holder.contains(nodes.wrapper)).toBe(true);
       expect(bindSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("creates bottomZone element inside redactor instead of paddingBottom", () => {
+      const { ui } = createUI({ attachNodes: false });
+
+      (ui as unknown as { make: () => void }).make();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+
+      // bottomZone should exist as a child of redactor
+      const bottomZone = nodes.redactor.querySelector("[data-blok-bottom-zone]");
+      expect(bottomZone).toBeInstanceOf(HTMLElement);
+      expect(bottomZone?.getAttribute("data-blok-testid")).toBe("bottom-zone");
+
+      // redactor should NOT have paddingBottom anymore
+      expect(nodes.redactor.style.paddingBottom).toBe("");
+
+      // bottomZone should have min-height from config
+      expect((bottomZone as HTMLElement).style.minHeight).toBe(
+        `${ui["config"].minHeight}px`,
+      );
     });
 
     it("appends styles with nonce only once", () => {

@@ -30,6 +30,7 @@ interface UINodes extends Record<string, unknown> {
   holder: HTMLElement;
   wrapper: HTMLElement;
   redactor: HTMLElement;
+  bottomZone: HTMLElement;
 }
 
 /**
@@ -451,9 +452,13 @@ export class UI extends Module<UINodes> {
     }
 
     /**
-     * Set customizable bottom zone height
+     * Create dedicated bottom zone element
      */
-    this.nodes.redactor.style.paddingBottom = this.config.minHeight + 'px';
+    this.nodes.bottomZone = $.make('div', ['cursor-text']);
+    this.nodes.bottomZone.setAttribute('data-blok-bottom-zone', '');
+    this.nodes.bottomZone.setAttribute('data-blok-testid', 'bottom-zone');
+    this.nodes.bottomZone.style.minHeight = this.config.minHeight + 'px';
+    this.nodes.redactor.appendChild(this.nodes.bottomZone);
 
     this.nodes.wrapper.appendChild(this.nodes.redactor);
     this.nodes.holder.appendChild(this.nodes.wrapper);

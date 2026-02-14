@@ -86,6 +86,7 @@ const createBlokStub = (): UI["Blok"] => {
     },
     Caret: {
       setToBlock: vi.fn(),
+      setToTheLastBlock: vi.fn(),
       positions: {
         START: "start",
         END: "end",
@@ -797,6 +798,87 @@ describe("UI module", () => {
       // Verify observable behavior: listeners were cleaned up
       expect(listenersRemoved.keyboard).toBe(true);
       expect(listenersRemoved.blockHover).toBe(true);
+    });
+  });
+
+  describe("bottom zone click handler", () => {
+    it("inserts a new block and opens toolbar when last block is non-empty", () => {
+      const { ui, blok, redactor } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      redactor.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      // Make last block non-empty and default
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+
+      // Bind the listeners (which attaches click handler to bottomZone)
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      // Simulate click
+      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not insert when last block is empty default block", () => {
+      const { ui, blok, redactor } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      redactor.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: true,
+          holder: document.createElement("div"),
+        },
+      });
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not fire when block selection is active", () => {
+      const { ui, blok, redactor } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      redactor.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+      blok.BlockSelection.anyBlockSelected = true;
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
     });
   });
 });

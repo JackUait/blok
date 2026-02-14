@@ -54,6 +54,24 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 **Write code before test?** Delete it. Start over.
 
+### Failure Recovery Protocol
+
+**When pre-commit hook, tests, lint, build, or any verification fails:**
+
+1. **Determine session blame FIRST** — Run `git diff --name-only` to get files changed in this session. Check if the failing files overlap with your changed files.
+   - **Failures in files you changed** → Your responsibility. Proceed to step 2.
+   - **Failures ONLY in files you did NOT change** → Pre-existing. You MAY skip with `--no-verify` for this commit only. Log which failures were skipped and why in the commit message.
+
+2. **Deploy parallel subagents** — For failures you own, launch one `Task` tool agent per failure category (e.g., one for lint fixes, one for test fixes). Do NOT fix failures sequentially in the main context — subagents are faster and preserve context.
+
+3. **Re-run full verification** — After all subagents complete, re-run the failing checks. If new failures appear, repeat from step 1.
+
+**No rationalizations:**
+- "I'll fix it manually instead of using subagents" → INVALID. Subagents are faster and preserve main context.
+- "All failures are pre-existing" → VERIFY with `git diff`. Don't assume.
+- "Subagents are overkill for one error" → Use them anyway. Consistency matters.
+- "I'll just use --no-verify" → ONLY allowed after git diff proves failures are pre-existing.
+
 ### Session End Commands
 
 Run `/final-verification` for verification commands. Then:

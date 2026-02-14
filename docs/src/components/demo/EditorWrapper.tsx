@@ -37,10 +37,9 @@ export const EditorWrapper: React.FC<{
       if (!containerRef.current || !editorState.isMounted) return;
 
       try {
-        // Import the full bundle which includes all tools
-        // @ts-ignore - Dynamic import of external Blok module
-        const module =
-          (await import("/dist/full.mjs")) as unknown as BlokModule;
+        // Import the full bundle which includes all tools (resolved by Vite at runtime)
+        // @ts-expect-error - /dist/full.mjs is served by Vite, not resolvable at compile time
+        const module = (await import("/dist/full.mjs")) as BlokModule;
 
         if (!editorState.isMounted || !containerRef.current) return;
 
@@ -140,7 +139,9 @@ export const EditorWrapper: React.FC<{
 
         editorRef.current = editor;
         setLoading(false);
-        onEditorReadyRef.current?.(editor);
+        if (editor) {
+          onEditorReadyRef.current?.(editor);
+        }
       } catch (err) {
         if (editorState.isMounted) {
           const errorMessage =

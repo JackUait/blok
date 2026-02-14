@@ -88,6 +88,7 @@
     "jscpd": "jscpd src/ test/",
     "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report",
     "prepublishOnly": "yarn build",
+    "postpublish": "TAG_NAME=\"v$(node -p \"require('./package.json').version\")\"; if echo \"$TAG_NAME\" | grep -q beta; then gh release create \"$TAG_NAME\" --generate-notes --prerelease; else gh release create \"$TAG_NAME\" --generate-notes; fi",
     "prepare": "husky",
     "storybook": "storybook dev -p 6006 --no-open",
     "storybook:build": "storybook build --stats-json",
@@ -98,7 +99,9 @@
     "perf:dashboard": "node scripts/generate-performance-dashboard.mjs",
     "e2e:validate-categories": "node scripts/validate-test-categories.mjs",
     "size": "size-limit",
-    "size:why": "size-limit --why"
+    "size:why": "size-limit --why",
+    "release": "np",
+    "release:preflight": "yarn lint && yarn test"
   },
   "author": "JackUait",
   "contributors": [
@@ -180,5 +183,9 @@
       "path": "src/variants/blok-maximum.ts",
       "limit": "300 KB"
     }
-  ]
+  ],
+  "np": {
+    "testScript": "release:preflight",
+    "releaseDraft": false
+  }
 }

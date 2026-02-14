@@ -165,7 +165,7 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
   if (options.attachNodes !== false) {
     const bottomZone = document.createElement("div");
 
-    redactor.appendChild(bottomZone);
+    wrapper.appendChild(bottomZone);
     (ui as { nodes: UI["nodes"] }).nodes = {
       holder,
       wrapper,
@@ -261,24 +261,30 @@ describe("UI module", () => {
       expect(nodes.redactor?.getAttribute("data-blok-testid")).toBe("redactor");
       // paddingBottom removed — bottom zone uses dedicated element
       expect(nodes.redactor?.style.paddingBottom).toBe("");
-      const bottomZone = nodes.redactor?.querySelector("[data-blok-bottom-zone]");
+      const bottomZone = nodes.wrapper?.querySelector("[data-blok-bottom-zone]");
       expect(bottomZone).toBeInstanceOf(HTMLElement);
 
       expect(holder.contains(nodes.wrapper)).toBe(true);
       expect(bindSpy).toHaveBeenCalledTimes(1);
     });
 
-    it("creates bottomZone element inside redactor instead of paddingBottom", () => {
+    it("creates bottomZone element as sibling of redactor in wrapper", () => {
       const { ui } = createUI({ attachNodes: false });
 
       (ui as unknown as { make: () => void }).make();
 
       const nodes = (ui as { nodes: UI["nodes"] }).nodes;
 
-      // bottomZone should exist as a child of redactor
-      const bottomZone = nodes.redactor.querySelector("[data-blok-bottom-zone]");
+      // bottomZone should exist as a child of wrapper (after redactor)
+      const bottomZone = nodes.wrapper.querySelector("[data-blok-bottom-zone]");
       expect(bottomZone).toBeInstanceOf(HTMLElement);
       expect(bottomZone?.getAttribute("data-blok-testid")).toBe("bottom-zone");
+
+      // bottomZone should be after redactor in DOM order
+      const children = Array.from(nodes.wrapper.children);
+      const redactorIndex = children.indexOf(nodes.redactor);
+      const bottomZoneIndex = children.indexOf(bottomZone as HTMLElement);
+      expect(bottomZoneIndex).toBeGreaterThan(redactorIndex);
 
       // redactor should NOT have paddingBottom anymore
       expect(nodes.redactor.style.paddingBottom).toBe("");
@@ -804,10 +810,10 @@ describe("UI module", () => {
 
   describe("bottom zone click handler", () => {
     it("inserts a new block and opens toolbar when last block is non-empty", () => {
-      const { ui, blok, redactor } = createUI();
+      const { ui, blok, wrapper } = createUI();
       const bottomZone = document.createElement("div");
       bottomZone.setAttribute("data-blok-bottom-zone", "");
-      redactor.appendChild(bottomZone);
+      wrapper.appendChild(bottomZone);
       (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
 
       // Make last block non-empty and default
@@ -833,10 +839,10 @@ describe("UI module", () => {
     });
 
     it("does not insert when last block is empty default block", () => {
-      const { ui, blok, redactor } = createUI();
+      const { ui, blok, wrapper } = createUI();
       const bottomZone = document.createElement("div");
       bottomZone.setAttribute("data-blok-bottom-zone", "");
-      redactor.appendChild(bottomZone);
+      wrapper.appendChild(bottomZone);
       (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
 
       Object.assign(blok.BlockManager, {
@@ -859,10 +865,10 @@ describe("UI module", () => {
     });
 
     it("does not fire when block selection is active", () => {
-      const { ui, blok, redactor } = createUI();
+      const { ui, blok, wrapper } = createUI();
       const bottomZone = document.createElement("div");
       bottomZone.setAttribute("data-blok-bottom-zone", "");
-      redactor.appendChild(bottomZone);
+      wrapper.appendChild(bottomZone);
       (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
 
       Object.assign(blok.BlockManager, {
@@ -888,10 +894,10 @@ describe("UI module", () => {
     it("does not fire when selection is not collapsed", () => {
       vi.spyOn(SelectionUtils, "isCollapsed", "get").mockReturnValue(false);
 
-      const { ui, blok, redactor } = createUI();
+      const { ui, blok, wrapper } = createUI();
       const bottomZone = document.createElement("div");
       bottomZone.setAttribute("data-blok-bottom-zone", "");
-      redactor.appendChild(bottomZone);
+      wrapper.appendChild(bottomZone);
       (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
 
       Object.assign(blok.BlockManager, {

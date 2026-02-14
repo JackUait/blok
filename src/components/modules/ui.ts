@@ -458,9 +458,9 @@ export class UI extends Module<UINodes> {
     this.nodes.bottomZone.setAttribute('data-blok-bottom-zone', '');
     this.nodes.bottomZone.setAttribute('data-blok-testid', 'bottom-zone');
     this.nodes.bottomZone.style.minHeight = this.config.minHeight + 'px';
-    this.nodes.redactor.appendChild(this.nodes.bottomZone);
 
     this.nodes.wrapper.appendChild(this.nodes.redactor);
+    this.nodes.wrapper.appendChild(this.nodes.bottomZone);
     this.nodes.holder.appendChild(this.nodes.wrapper);
 
     this.bindReadOnlyInsensitiveListeners();

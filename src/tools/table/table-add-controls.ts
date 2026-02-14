@@ -155,10 +155,15 @@ export class TableAddControls {
    * Disables pointer events and hover effects during cell selection.
    */
   public setInteractive(interactive: boolean): void {
-    const pointerEvents = interactive ? '' : 'none';
+    if (!interactive) {
+      this.addRowBtn.style.pointerEvents = 'none';
+      this.addColBtn.style.pointerEvents = 'none';
 
-    this.addRowBtn.style.pointerEvents = pointerEvents;
-    this.addColBtn.style.pointerEvents = pointerEvents;
+      return;
+    }
+
+    this.addRowBtn.style.pointerEvents = this.rowVisible ? '' : 'none';
+    this.addColBtn.style.pointerEvents = this.colVisible ? '' : 'none';
   }
 
   public destroy(): void {
@@ -318,6 +323,7 @@ export class TableAddControls {
 
     if (!this.rowVisible) {
       this.addRowBtn.style.opacity = '1';
+      this.addRowBtn.style.pointerEvents = '';
       this.rowVisible = true;
     }
   }
@@ -327,6 +333,7 @@ export class TableAddControls {
 
     if (!this.colVisible) {
       this.addColBtn.style.opacity = '1';
+      this.addColBtn.style.pointerEvents = '';
       this.colVisible = true;
     }
   }
@@ -338,6 +345,7 @@ export class TableAddControls {
 
     this.rowHideTimeout = setTimeout(() => {
       this.addRowBtn.style.opacity = '0';
+      this.addRowBtn.style.pointerEvents = 'none';
       this.rowVisible = false;
       this.rowHideTimeout = null;
     }, HIDE_DELAY_MS);
@@ -350,6 +358,7 @@ export class TableAddControls {
 
     this.colHideTimeout = setTimeout(() => {
       this.addColBtn.style.opacity = '0';
+      this.addColBtn.style.pointerEvents = 'none';
       this.colVisible = false;
       this.colHideTimeout = null;
     }, HIDE_DELAY_MS);
@@ -376,6 +385,10 @@ export class TableAddControls {
     btn.setAttribute(ADD_ROW_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
     btn.style.opacity = '0';
+    btn.style.pointerEvents = 'none';
+    btn.style.position = 'absolute';
+    btn.style.left = '0';
+    btn.style.bottom = '-36px';
     btn.style.boxSizing = 'content-box';
     btn.style.width = '100%';
     btn.style.height = '32px';
@@ -406,6 +419,7 @@ export class TableAddControls {
     btn.setAttribute(ADD_COL_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
     btn.style.opacity = '0';
+    btn.style.pointerEvents = 'none';
     btn.style.position = 'absolute';
     btn.style.right = '-36px';
     btn.style.top = '0px';

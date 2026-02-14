@@ -71,6 +71,7 @@ export class TableCellBlocks {
     this.onNavigateToCell = options.onNavigateToCell;
 
     this.api.events.on('block changed', this.handleBlockMutation);
+    this.gridElement.addEventListener('click', this.handleCellBlankSpaceClick);
   }
 
   /**
@@ -587,9 +588,59 @@ export class TableCellBlocks {
   }
 
   /**
+   * Handle clicks on blank cell space.
+   * When a click lands on the cell or blocks container (not on block content),
+   * set the caret to the end of the last block in that cell.
+   */
+  private handleCellBlankSpaceClick = (event: Event): void => {
+    const target = event.target as HTMLElement | null;
+
+    if (!target) {
+      return;
+    }
+
+    const isCell = target.hasAttribute(CELL_ATTR);
+    const isBlocksContainer = target.hasAttribute(CELL_BLOCKS_ATTR);
+
+    if (!isCell && !isBlocksContainer) {
+      return;
+    }
+
+    const cell = isCell ? target : target.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+    if (!cell) {
+      return;
+    }
+
+    const container = isCell
+      ? cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`)
+      : target;
+
+    if (!container) {
+      return;
+    }
+
+    const blockHolders = container.querySelectorAll('[data-blok-id]');
+    const lastHolder = blockHolders[blockHolders.length - 1];
+
+    if (!lastHolder) {
+      return;
+    }
+
+    const blockId = lastHolder.getAttribute('data-blok-id');
+
+    if (!blockId) {
+      return;
+    }
+
+    this.api.caret.setToBlock(blockId, 'end');
+  };
+
+  /**
    * Clean up event listeners
    */
   destroy(): void {
+    this.gridElement.removeEventListener('click', this.handleCellBlankSpaceClick);
     this.api.events.off('block changed', this.handleBlockMutation);
     this._activeCellWithBlocks = null;
     this.cellsPendingCheck.clear();

@@ -87,6 +87,9 @@ describe('TableCellBlocks', () => {
         on: ReturnType<typeof vi.fn>;
         off: ReturnType<typeof vi.fn>;
       };
+      caret: {
+        setToBlock: ReturnType<typeof vi.fn>;
+      };
     };
     let gridEl: HTMLElement;
 
@@ -105,6 +108,9 @@ describe('TableCellBlocks', () => {
         events: {
           on: vi.fn(),
           off: vi.fn(),
+        },
+        caret: {
+          setToBlock: vi.fn().mockReturnValue(true),
         },
       };
 
@@ -139,6 +145,147 @@ describe('TableCellBlocks', () => {
 
       cellBlocks.clearActiveCellWithBlocks();
       expect(cellBlocks.activeCellWithBlocks).toBeNull();
+    });
+
+    describe('click on blank cell space', () => {
+      /**
+       * Build a grid with one row and one cell containing a block holder
+       */
+      const buildGridWithBlock = (
+        gridElement: HTMLElement,
+        blockId: string
+      ): { cell: HTMLElement; container: HTMLElement; blockHolder: HTMLElement } => {
+        const row = document.createElement('div');
+        row.setAttribute('data-blok-table-row', '');
+        gridElement.appendChild(row);
+
+        const cell = document.createElement('div');
+        cell.setAttribute('data-blok-table-cell', '');
+        row.appendChild(cell);
+
+        const container = document.createElement('div');
+        container.setAttribute('data-blok-table-cell-blocks', '');
+        cell.appendChild(container);
+
+        const blockHolder = document.createElement('div');
+        blockHolder.setAttribute('data-blok-id', blockId);
+        container.appendChild(blockHolder);
+
+        const editable = document.createElement('div');
+        editable.setAttribute('contenteditable', 'true');
+        editable.textContent = 'hello';
+        blockHolder.appendChild(editable);
+
+        return { cell, container, blockHolder };
+      };
+
+      it('should set caret to end of last block when clicking blank cell space', async () => {
+        const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+        const cellBlocks = new TableCellBlocks({
+          api: mockApi as never,
+          gridElement: gridEl,
+          tableBlockId: 'table-1',
+        });
+
+        const { cell } = buildGridWithBlock(gridEl, 'block-1');
+
+        cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(mockApi.caret.setToBlock).toHaveBeenCalledWith('block-1', 'end');
+
+        cellBlocks.destroy();
+      });
+
+      it('should set caret to end of last block when clicking blocks container', async () => {
+        const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+        const cellBlocks = new TableCellBlocks({
+          api: mockApi as never,
+          gridElement: gridEl,
+          tableBlockId: 'table-1',
+        });
+
+        const { container } = buildGridWithBlock(gridEl, 'block-2');
+
+        container.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(mockApi.caret.setToBlock).toHaveBeenCalledWith('block-2', 'end');
+
+        cellBlocks.destroy();
+      });
+
+      it('should NOT set caret when clicking on block content', async () => {
+        const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+        const cellBlocks = new TableCellBlocks({
+          api: mockApi as never,
+          gridElement: gridEl,
+          tableBlockId: 'table-1',
+        });
+
+        const { blockHolder } = buildGridWithBlock(gridEl, 'block-3');
+
+        blockHolder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(mockApi.caret.setToBlock).not.toHaveBeenCalled();
+
+        cellBlocks.destroy();
+      });
+
+      it('should use the LAST block ID when cell has multiple blocks', async () => {
+        const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+        const cellBlocks = new TableCellBlocks({
+          api: mockApi as never,
+          gridElement: gridEl,
+          tableBlockId: 'table-1',
+        });
+
+        const row = document.createElement('div');
+        row.setAttribute('data-blok-table-row', '');
+        gridEl.appendChild(row);
+
+        const cell = document.createElement('div');
+        cell.setAttribute('data-blok-table-cell', '');
+        row.appendChild(cell);
+
+        const container = document.createElement('div');
+        container.setAttribute('data-blok-table-cell-blocks', '');
+        cell.appendChild(container);
+
+        const block1 = document.createElement('div');
+        block1.setAttribute('data-blok-id', 'first-block');
+        container.appendChild(block1);
+
+        const block2 = document.createElement('div');
+        block2.setAttribute('data-blok-id', 'second-block');
+        container.appendChild(block2);
+
+        cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(mockApi.caret.setToBlock).toHaveBeenCalledWith('second-block', 'end');
+
+        cellBlocks.destroy();
+      });
+
+      it('should remove click listener on destroy', async () => {
+        const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+        const cellBlocks = new TableCellBlocks({
+          api: mockApi as never,
+          gridElement: gridEl,
+          tableBlockId: 'table-1',
+        });
+
+        const { cell } = buildGridWithBlock(gridEl, 'block-4');
+
+        cellBlocks.destroy();
+
+        cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(mockApi.caret.setToBlock).not.toHaveBeenCalled();
+      });
     });
   });
 

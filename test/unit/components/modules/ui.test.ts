@@ -872,7 +872,7 @@ describe("UI module", () => {
           holder: document.createElement("div"),
         },
       });
-      blok.BlockSelection.anyBlockSelected = true;
+      Object.assign(blok.BlockSelection, { anyBlockSelected: true });
 
       (
         ui as unknown as { bindReadOnlySensitiveListeners: () => void }

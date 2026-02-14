@@ -1578,6 +1578,8 @@ export default defineConfig(
       'public/assets/**',
       '**/public/assets/**',
       'storybook-static/**',
+      'docs/**',
+      '.worktrees/**',
     ],
   },
   // TypeScript ESLint base config

@@ -25,3 +25,10 @@ runs:
     - name: Install dependencies
       shell: bash
       run: yarn install --immutable
+
+    - name: Install docs dependencies
+      shell: bash
+      run: |
+        if [ -f docs/package.json ]; then
+          cd docs && yarn install --immutable
+        fi

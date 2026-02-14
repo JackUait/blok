@@ -1571,6 +1571,7 @@ export default defineConfig(
   {
     ignores: [
       'node_modules/**',
+      '.worktrees/**',
       'eslint.config.mjs',
       '**/*.d.ts',
       'src/components/tools/paragraph/**',

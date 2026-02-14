@@ -2646,4 +2646,61 @@ test.describe('table tool', () => {
       await expect(selected).toHaveCount(3);
     });
   });
+
+  test.describe('cell blank space click', () => {
+    test('clicking below block content in a cell focuses caret at end of last block', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: {
+                withHeadings: false,
+                withHeadingColumn: false,
+                content: [
+                  [{ blocks: [] }, { blocks: [] }],
+                  [{ blocks: [] }, { blocks: [] }],
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      const table = page.locator(TABLE_SELECTOR);
+
+      await expect(table).toBeVisible();
+
+      // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first cell
+      const firstCell = table.locator(CELL_SELECTOR).first();
+
+      await expect(firstCell).toBeVisible();
+
+      const cellBox = assertBoundingBox(await firstCell.boundingBox(), 'first cell');
+
+      // Click near the bottom of the cell (blank space below block content)
+      await page.mouse.click(cellBox.x + cellBox.width / 2, cellBox.y + cellBox.height - 2);
+
+      // Verify the selection/caret is now inside the first cell.
+      // The click handler calls api.caret.setToBlock which places a Range
+      // inside the contenteditable, so we check the Selection API.
+      const selectionInCell = await page.evaluate(() => {
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+          return false;
+        }
+
+        const range = selection.getRangeAt(0);
+        const container = range.startContainer instanceof HTMLElement
+          ? range.startContainer
+          : range.startContainer.parentElement;
+
+        return container?.closest('[data-blok-table-cell]') !== null;
+      });
+
+      expect(selectionInCell).toBe(true);
+    });
+  });
 });

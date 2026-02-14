@@ -8,6 +8,7 @@ import {
 import { BlokMobileLayoutToggled } from "../../../../src/components/events";
 import * as Dom from "../../../../src/components/dom";
 import { mobileScreenBreakpoint } from "../../../../src/components/utils";
+import { SelectionUtils } from "../../../../src/components/selection/index";
 import type { BlokConfig } from "../../../../types";
 
 const fakeCssContent = ".mock-style{}";
@@ -828,6 +829,7 @@ describe("UI module", () => {
 
       expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
       expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
     });
 
     it("does not insert when last block is empty default block", () => {
@@ -853,6 +855,7 @@ describe("UI module", () => {
 
       expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
       expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
     });
 
     it("does not fire when block selection is active", () => {
@@ -879,6 +882,35 @@ describe("UI module", () => {
 
       expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
       expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("does not fire when selection is not collapsed", () => {
+      vi.spyOn(SelectionUtils, "isCollapsed", "get").mockReturnValue(false);
+
+      const { ui, blok, redactor } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      redactor.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
     });
   });
 });

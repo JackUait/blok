@@ -87,19 +87,6 @@ describe('search', () => {
       expect(keyboardRecipe?.title).toBe('Keyboard Shortcuts');
     });
 
-    it('should return recipe results when searching for "quick tips"', () => {
-      const index = getSearchIndex();
-      const results = search('quick tips', index);
-
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      const quickTipsRecipe = recipeResults.find(r =>
-        r.title.toLowerCase().includes('quick tips')
-      );
-      expect(quickTipsRecipe).toBeDefined();
-      expect(quickTipsRecipe?.title).toBe('Quick Tips');
-    });
 
     it('should include all code recipes in search index', () => {
       const index = getSearchIndex();
@@ -147,18 +134,17 @@ describe('search', () => {
       expect(autosaveRecipe).toBeDefined();
     });
 
-    it('should search recipe content like "nested" or "nesting"', () => {
+    it('should search recipe content like "events" or "event handling"', () => {
       const index = getSearchIndex();
-      const results = search('nested', index);
+      const results = search('events', index);
 
       const recipeResults = results.filter(r => r.category === 'recipe');
       expect(recipeResults.length).toBeGreaterThan(0);
 
-      // Quick tips should include nesting tip
-      const quickTipsRecipe = recipeResults.find(r =>
-        r.title === 'Quick Tips'
+      const eventsRecipe = recipeResults.find(r =>
+        r.title === 'Working with Events'
       );
-      expect(quickTipsRecipe).toBeDefined();
+      expect(eventsRecipe).toBeDefined();
     });
   });
 });

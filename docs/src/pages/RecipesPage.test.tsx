@@ -2,12 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { RecipesPage } from './RecipesPage';
+import { I18nProvider } from '../contexts/I18nContext';
 
 describe('RecipesPage', () => {
   it('should render the Nav component', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -18,7 +21,9 @@ describe('RecipesPage', () => {
   it('should render the hero title', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -28,7 +33,9 @@ describe('RecipesPage', () => {
   it('should render the hero description', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -37,31 +44,38 @@ describe('RecipesPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render the cookbook badge', () => {
+  it('should render the community badge', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Cookbook')).toBeInTheDocument();
+    const badges = screen.getAllByText('Community');
+    expect(badges.length).toBeGreaterThan(0);
   });
 
   it('should render the Keyboard Shortcuts section', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Keyboard Shortcuts' })).toBeInTheDocument();
     expect(screen.getByTestId('keyboard-shortcuts')).toBeInTheDocument();
   });
 
   it('should render the Code Recipes section', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -71,22 +85,27 @@ describe('RecipesPage', () => {
   it('should render recipe cards with titles', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Autosave with Debouncing')).toBeInTheDocument();
-    expect(screen.getByText('Working with Events')).toBeInTheDocument();
-    expect(screen.getByText('Creating a Custom Tool')).toBeInTheDocument();
-    expect(screen.getByText('Styling with Data Attributes')).toBeInTheDocument();
-    expect(screen.getByText('Read-Only Mode')).toBeInTheDocument();
-    expect(screen.getByText('Localization with Preloading')).toBeInTheDocument();
+    const main = screen.getByRole('main');
+    expect(main).toHaveTextContent('Autosave with Debouncing');
+    expect(main).toHaveTextContent('Working with Events');
+    expect(main).toHaveTextContent('Creating a Custom Tool');
+    expect(main).toHaveTextContent('Styling with Data Attributes');
+    expect(main).toHaveTextContent('Read-Only Mode');
+    expect(main).toHaveTextContent('Localization with Preloading');
   });
 
   it('should render the main element', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -97,7 +116,9 @@ describe('RecipesPage', () => {
   it('should render the hero section with heading', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -108,18 +129,22 @@ describe('RecipesPage', () => {
   it('should render the CTA section', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
     expect(screen.getByText('Have a recipe to share?')).toBeInTheDocument();
-    expect(screen.getByText('Share on GitHub')).toBeInTheDocument();
+    expect(screen.getByText('Contribute a Recipe')).toBeInTheDocument();
   });
 
   it('should render navigation links', () => {
     render(
       <MemoryRouter>
-        <RecipesPage />
+        <I18nProvider>
+          <RecipesPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 

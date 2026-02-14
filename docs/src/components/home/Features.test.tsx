@@ -89,7 +89,7 @@ describe('Features', () => {
 
     expect(screen.getByText('Undo & Redo')).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes('Full history support'))
+      screen.getByText((content) => content.includes('Conflict-free state tracking'))
     ).toBeInTheDocument();
   });
 

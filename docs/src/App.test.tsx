@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
+import { I18nProvider } from './contexts/I18nContext';
 
 describe('App', () => {
   let scrollIntoViewMock: ReturnType<typeof vi.fn>;
@@ -27,7 +28,9 @@ describe('App', () => {
   it('should render HomePage for root path', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
-        <App />
+        <I18nProvider>
+          <App />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -39,7 +42,9 @@ describe('App', () => {
   it('should render ApiPage for /docs path', () => {
     render(
       <MemoryRouter initialEntries={['/docs']}>
-        <App />
+        <I18nProvider>
+          <App />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -51,7 +56,9 @@ describe('App', () => {
   it('should render without crashing', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
-        <App />
+        <I18nProvider>
+          <App />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -76,7 +83,9 @@ describe('App', () => {
 
     render(
       <MemoryRouter initialEntries={['/']}>
-        <App />
+        <I18nProvider>
+          <App />
+        </I18nProvider>
       </MemoryRouter>
     );
 

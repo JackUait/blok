@@ -2,12 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
+import { I18nProvider } from '../contexts/I18nContext';
 
 describe('HomePage', () => {
   it('should render the Nav component', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -18,7 +21,9 @@ describe('HomePage', () => {
   it('should render the Footer component', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -29,7 +34,9 @@ describe('HomePage', () => {
   it('should render the Hero section', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -40,7 +47,9 @@ describe('HomePage', () => {
   it('should render the Features section', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -52,7 +61,9 @@ describe('HomePage', () => {
   it('should render the QuickStart section', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -64,7 +75,9 @@ describe('HomePage', () => {
   it('should render the ApiPreview section', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -75,7 +88,9 @@ describe('HomePage', () => {
   it('should render the MigrationCard section', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -86,7 +101,9 @@ describe('HomePage', () => {
   it('should render a main element', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -97,7 +114,9 @@ describe('HomePage', () => {
   it('should have navigation links', () => {
     render(
       <MemoryRouter>
-        <HomePage />
+        <I18nProvider>
+          <HomePage />
+        </I18nProvider>
       </MemoryRouter>
     );
 

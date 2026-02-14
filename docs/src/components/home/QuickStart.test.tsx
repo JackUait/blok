@@ -111,9 +111,9 @@ describe('QuickStart', () => {
     const step2 = screen.getByTestId('install-step-2');
     const step3 = screen.getByTestId('install-step-3');
 
-    expect(step1).toHaveStyle({ animationDelay: '0s' });
-    expect(step2).toHaveStyle({ animationDelay: '0.1s' });
-    expect(step3).toHaveStyle({ animationDelay: '0.2s' });
+    expect(step1.getAttribute('style')).toContain('--step-delay: 0s');
+    expect(step2.getAttribute('style')).toContain('--step-delay: 0.15s');
+    expect(step3.getAttribute('style')).toContain('--step-delay: 0.3s');
   });
 
   it('should have quick-start-bg div', () => {

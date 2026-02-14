@@ -21,10 +21,10 @@ describe('LanguageSelector', () => {
 
   it('should render language selector trigger', () => {
     render(<LanguageSelector />, { wrapper });
-    
+
     const trigger = screen.getByRole('button', { expanded: false });
     expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveTextContent('EN');
+    expect(trigger).toHaveAttribute('aria-label', 'Language: English');
   });
 
   it('should open dropdown when trigger is clicked', () => {

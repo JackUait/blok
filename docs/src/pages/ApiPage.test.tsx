@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiPage } from './ApiPage';
+import { I18nProvider } from '../contexts/I18nContext';
 
 describe('ApiPage', () => {
   beforeEach(() => {
@@ -14,7 +15,9 @@ describe('ApiPage', () => {
   it('should render the Nav component', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -24,7 +27,9 @@ describe('ApiPage', () => {
   it('should render the ApiSidebar component', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -34,7 +39,9 @@ describe('ApiPage', () => {
   it('should render the main api content area', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -44,7 +51,9 @@ describe('ApiPage', () => {
   it('should render all API sections', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -57,7 +66,9 @@ describe('ApiPage', () => {
   it('should render API section badges', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -68,7 +79,9 @@ describe('ApiPage', () => {
   it('should render Blocks API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -78,7 +91,9 @@ describe('ApiPage', () => {
   it('should render Caret API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -88,7 +103,9 @@ describe('ApiPage', () => {
   it('should render Events API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -98,7 +115,9 @@ describe('ApiPage', () => {
   it('should render Saver API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -108,7 +127,9 @@ describe('ApiPage', () => {
   it('should render Selection API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -118,7 +139,9 @@ describe('ApiPage', () => {
   it('should render Styles API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -128,7 +151,9 @@ describe('ApiPage', () => {
   it('should render Toolbar API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -138,7 +163,9 @@ describe('ApiPage', () => {
   it('should render Tools API section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -148,7 +175,9 @@ describe('ApiPage', () => {
   it('should render OutputData section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -160,7 +189,9 @@ describe('ApiPage', () => {
   it('should render BlockData section', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -172,7 +203,9 @@ describe('ApiPage', () => {
   it('should have api-docs container', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -182,7 +215,9 @@ describe('ApiPage', () => {
   it('should render navigation links', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -193,7 +228,9 @@ describe('ApiPage', () => {
   it('should have api-section elements', () => {
     render(
       <MemoryRouter>
-        <ApiPage />
+        <I18nProvider>
+          <ApiPage />
+        </I18nProvider>
       </MemoryRouter>
     );
 
@@ -212,7 +249,9 @@ describe('ApiPage', () => {
 
       render(
         <MemoryRouter>
-          <ApiPage />
+          <I18nProvider>
+            <ApiPage />
+          </I18nProvider>
         </MemoryRouter>
       );
 
@@ -230,7 +269,9 @@ describe('ApiPage', () => {
 
       render(
         <MemoryRouter>
-          <ApiPage />
+          <I18nProvider>
+            <ApiPage />
+          </I18nProvider>
         </MemoryRouter>
       );
 
@@ -248,7 +289,9 @@ describe('ApiPage', () => {
 
       render(
         <MemoryRouter>
-          <ApiPage />
+          <I18nProvider>
+            <ApiPage />
+          </I18nProvider>
         </MemoryRouter>
       );
 
@@ -261,28 +304,32 @@ describe('ApiPage', () => {
   describe('anchor link navigation', () => {
     it('should update URL hash when clicking anchor links', async () => {
       const pushStateSpy = vi.spyOn(window.history, 'pushState');
-      
+
       render(
         <MemoryRouter>
-          <ApiPage />
+          <I18nProvider>
+            <ApiPage />
+          </I18nProvider>
         </MemoryRouter>
       );
 
       // Find an anchor link (section title anchor)
       const anchorLink = screen.getByRole('link', { name: /Link to Blok Class/ });
       fireEvent.click(anchorLink);
-      
+
       await vi.runAllTimersAsync();
-      
+
       expect(pushStateSpy).toHaveBeenCalledWith(null, '', '#core');
-      
+
       pushStateSpy.mockRestore();
     });
 
     it('should render anchor links for API methods', () => {
       render(
         <MemoryRouter>
-          <ApiPage />
+          <I18nProvider>
+            <ApiPage />
+          </I18nProvider>
         </MemoryRouter>
       );
 
@@ -295,7 +342,9 @@ describe('ApiPage', () => {
     it('should render anchor links for properties in tables', () => {
       render(
         <MemoryRouter>
-          <ApiPage />
+          <I18nProvider>
+            <ApiPage />
+          </I18nProvider>
         </MemoryRouter>
       );
 
@@ -308,7 +357,9 @@ describe('ApiPage', () => {
     it('should render anchor links for config options', () => {
       render(
         <MemoryRouter>
-          <ApiPage />
+          <I18nProvider>
+            <ApiPage />
+          </I18nProvider>
         </MemoryRouter>
       );
 

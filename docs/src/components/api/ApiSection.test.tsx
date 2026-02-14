@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ApiSection } from './ApiSection';
 import type { ApiSection as ApiSectionType } from './api-data';
+import { I18nProvider } from '../../contexts/I18nContext';
 
 const mockSection: ApiSectionType = {
   id: 'test-section',
@@ -63,7 +64,7 @@ const mockQuickStartSection: ApiSectionType = {
 
 describe('ApiSection', () => {
   it('should render the title', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     // Title includes anchor link, check the heading contains the section title text
     const title = screen.getByRole('heading', { level: 1 });
@@ -71,19 +72,19 @@ describe('ApiSection', () => {
   });
 
   it('should render the badge when provided', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     expect(screen.getByText('Test')).toBeInTheDocument();
   });
 
   it('should render the description', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     expect(screen.getByText('This is a test section')).toBeInTheDocument();
   });
 
   it('should render methods when provided', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     expect(screen.getByText('Methods')).toBeInTheDocument();
     expect(screen.getByText('testMethod()')).toBeInTheDocument();
@@ -92,7 +93,7 @@ describe('ApiSection', () => {
   });
 
   it('should render method example when provided', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     // CodeBlock renders with a copy button that can be queried by testid
     const copyButton = screen.getByTestId('code-copy-button');
@@ -101,7 +102,7 @@ describe('ApiSection', () => {
   });
 
   it('should render properties when provided', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     expect(screen.getByText('Properties')).toBeInTheDocument();
     expect(screen.getByText('testProperty')).toBeInTheDocument();
@@ -110,14 +111,14 @@ describe('ApiSection', () => {
   });
 
   it('should render table for config sections', () => {
-    render(<ApiSection section={mockConfigSection} />);
+    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
 
     expect(screen.getByText('holder')).toBeInTheDocument();
     expect(screen.getByText('tools')).toBeInTheDocument();
   });
 
   it('should render table with Option column for config sections', () => {
-    render(<ApiSection section={mockConfigSection} />);
+    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
 
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
@@ -141,7 +142,7 @@ describe('ApiSection', () => {
       ],
     };
 
-    render(<ApiSection section={nonConfigSection} />);
+    render(<I18nProvider><ApiSection section={nonConfigSection} /></I18nProvider>);
 
     // Check that Option header does not exist for non-config sections
     const optionHeader = screen.queryByRole('columnheader', { name: 'Option' });
@@ -153,7 +154,7 @@ describe('ApiSection', () => {
   });
 
   it('should render quick-start content for customType quick-start', () => {
-    render(<ApiSection section={mockQuickStartSection} />);
+    render(<I18nProvider><ApiSection section={mockQuickStartSection} /></I18nProvider>);
 
     expect(screen.getByText('Install Blok')).toBeInTheDocument();
     expect(screen.getByText('Import and configure')).toBeInTheDocument();
@@ -161,7 +162,7 @@ describe('ApiSection', () => {
   });
 
   it('should render 3 steps for quick-start section', () => {
-    render(<ApiSection section={mockQuickStartSection} />);
+    render(<I18nProvider><ApiSection section={mockQuickStartSection} /></I18nProvider>);
 
     // Quick start has 3 h3 headings for the steps
     const headings = screen.getAllByRole('heading', { level: 3 });
@@ -172,21 +173,21 @@ describe('ApiSection', () => {
   });
 
   it('should render section with heading level 1 for title', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const title = screen.getByRole('heading', { level: 1 });
     expect(title).toHaveTextContent('Test Section');
   });
 
   it('should render section heading with badge', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const badge = screen.getByText('Test');
     expect(badge).toBeInTheDocument();
   });
 
   it('should render methods block with heading level 3', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const methodsHeading = screen.getByRole('heading', { level: 3, name: 'Methods' });
     expect(methodsHeading).toBeInTheDocument();
@@ -199,27 +200,27 @@ describe('ApiSection', () => {
       properties: mockSection.properties,
     };
 
-    render(<ApiSection section={propsOnlySection} />);
+    render(<I18nProvider><ApiSection section={propsOnlySection} /></I18nProvider>);
 
     const propertiesHeading = screen.getByRole('heading', { level: 3, name: 'Properties' });
     expect(propertiesHeading).toBeInTheDocument();
   });
 
   it('should render method name and return type together', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     expect(screen.getByText('testMethod()')).toBeInTheDocument();
     expect(screen.getByText('string')).toBeInTheDocument();
   });
 
   it('should render method description', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     expect(screen.getByText('A test method')).toBeInTheDocument();
   });
 
   it('should render property table with proper columns', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
@@ -230,7 +231,7 @@ describe('ApiSection', () => {
   });
 
   it('should render config table with proper columns', () => {
-    render(<ApiSection section={mockConfigSection} />);
+    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
 
     expect(screen.getByRole('columnheader', { name: 'Option' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
@@ -239,7 +240,7 @@ describe('ApiSection', () => {
   });
 
   it('should render code block for method examples', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     // Check for the CodeBlock wrapper using testid
     const codeBlock = screen.getByTestId('code-block');
@@ -247,7 +248,7 @@ describe('ApiSection', () => {
   });
 
   it('should render anchor link for the section title', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const anchorLink = screen.getByRole('link', { name: /Link to Test Section/ });
     expect(anchorLink).toBeInTheDocument();
@@ -256,7 +257,7 @@ describe('ApiSection', () => {
   });
 
   it('should render anchor link for methods', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const methodAnchor = screen.getByRole('link', { name: /Link to testMethod/ });
     expect(methodAnchor).toBeInTheDocument();
@@ -264,7 +265,7 @@ describe('ApiSection', () => {
   });
 
   it('should render anchor links for properties', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const propAnchor = screen.getByRole('link', { name: /Link to testProperty/ });
     expect(propAnchor).toBeInTheDocument();
@@ -273,7 +274,7 @@ describe('ApiSection', () => {
   });
 
   it('should render property rows with id for anchor navigation', () => {
-    render(<ApiSection section={mockSection} />);
+    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const propRow = screen.getByTestId('test-section-prop-testproperty');
     expect(propRow).toBeInTheDocument();
@@ -281,7 +282,7 @@ describe('ApiSection', () => {
   });
 
   it('should render anchor links for config options', () => {
-    render(<ApiSection section={mockConfigSection} />);
+    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
 
     const holderAnchor = screen.getByRole('link', { name: /Link to holder/ });
     expect(holderAnchor).toBeInTheDocument();
@@ -293,7 +294,7 @@ describe('ApiSection', () => {
   });
 
   it('should render config option rows with id for anchor navigation', () => {
-    render(<ApiSection section={mockConfigSection} />);
+    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
 
     const holderRow = screen.getByTestId('config-holder');
     expect(holderRow).toBeInTheDocument();
@@ -306,7 +307,7 @@ describe('ApiSection', () => {
   describe('Configuration section clarity', () => {
     it('should display an example showing the BlokConfig interface', () => {
       // Use mockConfigSection which now has an example
-      render(<ApiSection section={mockConfigSection} />);
+      render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
 
       // Should show a code example demonstrating that these properties
       // are passed to the Blok constructor
@@ -324,7 +325,7 @@ describe('ApiSection', () => {
 
     it('should show the TypeScript interface for configuration', () => {
       // Use mockConfigSection which has BlokConfig in the example
-      render(<ApiSection section={mockConfigSection} />);
+      render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
 
       // Should show BlokConfig interface to clarify what object
       // these properties belong to

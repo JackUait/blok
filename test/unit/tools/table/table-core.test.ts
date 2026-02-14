@@ -86,6 +86,14 @@ describe('TableGrid', () => {
       });
     });
 
+    it('cells have a text cursor so the entire cell surface feels clickable', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 1);
+      const cell = element.querySelector('[data-blok-table-cell]');
+
+      expect(cell).toHaveClass('cursor-text');
+    });
+
     it('creates cells with flex-shrink 0 so they do not compress when table overflows', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 3);

@@ -20,6 +20,7 @@ const CELL_CLASSES = [
   'outline-none',
   'leading-normal',
   'text-sm',
+  'cursor-text',
 ];
 
 /**

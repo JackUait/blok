@@ -52,3 +52,6 @@ test-results/*.json
 
 # Design plans (local only)
 docs/plans/
+
+# Git worktrees
+.worktrees/

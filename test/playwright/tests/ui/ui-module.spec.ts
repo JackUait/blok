@@ -8,7 +8,6 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const REDACTOR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
 
 const getRequiredBoundingBox = async (locator: Locator): Promise<{
   x: number;
@@ -88,37 +87,12 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
   );
 };
 
-const ensureBottomPadding = async (page: Page): Promise<void> => {
-  await page.evaluate(({ selector }) => {
-    const redactor = document.querySelector(selector);
-
-    if (!redactor) {
-      throw new Error('Redactor element not found');
-    }
-
-    (redactor as HTMLElement).style.paddingBottom = '200px';
-  }, { selector: REDACTOR_SELECTOR });
-};
+const BOTTOM_ZONE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-bottom-zone]`;
 
 const clickBottomZone = async (page: Page): Promise<void> => {
-  const clickPoint = await page.evaluate(({ selector }) => {
-    const redactor = document.querySelector(selector);
+  const bottomZone = page.locator(BOTTOM_ZONE_SELECTOR);
 
-    if (!redactor) {
-      throw new Error('Redactor element not found');
-    }
-
-    const rect = redactor.getBoundingClientRect();
-    const clientX = rect.left + rect.width / 2;
-    const clientY = Math.min(rect.bottom - 4, rect.top + rect.height - 4);
-
-    return {
-      x: clientX,
-      y: clientY,
-    };
-  }, { selector: REDACTOR_SELECTOR });
-
-  await page.mouse.click(clickPoint.x, clickPoint.y);
+  await bottomZone.click();
 };
 
 /**
@@ -332,7 +306,6 @@ test.describe('ui module', () => {
   test.describe('bottom zone interactions', () => {
     test('keeps single empty default block when clicking bottom zone', async ({ page }) => {
       await createBlok(page);
-      await ensureBottomPadding(page);
 
       await clickBottomZone(page);
 
@@ -366,8 +339,6 @@ test.describe('ui module', () => {
           ],
         },
       });
-      await ensureBottomPadding(page);
-
       await clickBottomZone(page);
       await page.waitForFunction(() => {
         const blok = window.blokInstance;

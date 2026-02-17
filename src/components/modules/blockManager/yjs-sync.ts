@@ -277,8 +277,6 @@ export class BlockYjsSync {
         bindEventsImmediately: true,
       });
 
-      // Insert into blocks store at correct position - caller must handle this
-      // This is a limitation - we need the blocksStore.insert method
       this.blocksStore.insert(targetIndex, block);
 
       // Emit block-added event so listeners (e.g., TableCellBlocks) can

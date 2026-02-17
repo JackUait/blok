@@ -7,6 +7,7 @@
 import type { BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
+import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { Module } from '../../__module';
@@ -307,11 +308,11 @@ export class BlockManager extends Module {
         replaceBlock: (index, newBlock) => {
           this.blocksStore.replace(index, newBlock);
         },
-        onBlockRemoved: () => {
-          // Will be wired to emit block-changed events for table cell tracking
+        onBlockRemoved: (block, index) => {
+          this.blockDidMutated(BlockRemovedMutationType, block, { index });
         },
-        onBlockAdded: () => {
-          // Will be wired to emit block-changed events for table cell tracking
+        onBlockAdded: (block, index) => {
+          this.blockDidMutated(BlockAddedMutationType, block, { index });
         },
       },
       this.blocksStore

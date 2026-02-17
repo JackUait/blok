@@ -1834,6 +1834,191 @@ describe('TableCellBlocks', () => {
     });
   });
 
+  describe('initializeCells recovery for missing blocks', () => {
+    it('should create a fallback paragraph when all referenced blocks are missing from BlockManager', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const fallbackHolder = document.createElement('div');
+      fallbackHolder.setAttribute('data-blok-id', 'fallback-p');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'fallback-p',
+        holder: fallbackHolder,
+      });
+
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlockIndex: vi.fn().mockReturnValue(undefined),
+          getBlockByIndex: vi.fn().mockReturnValue(undefined),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['nonexistent-block-id'] }]]);
+
+      // A fallback paragraph should have been inserted
+      expect(mockInsert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: '' },
+        expect.anything(),
+        0,
+        false
+      );
+      // The container should contain the fallback block
+      expect(container.contains(fallbackHolder)).toBe(true);
+      // The normalized result should reference the fallback block, not the missing one
+      expect(result[0][0]).toEqual({ blocks: ['fallback-p'] });
+    });
+
+    it('should keep successfully mounted blocks and only add fallback for missing ones in a mixed cell', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const existingHolder = document.createElement('div');
+      existingHolder.setAttribute('data-blok-id', 'existing-1');
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'existing-1') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'existing-1', holder: existingHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['existing-1', 'missing-1'] }]]);
+
+      // The existing block should be mounted
+      expect(container.contains(existingHolder)).toBe(true);
+      // No fallback needed — cell has at least one block
+      expect(api.blocks.insert).not.toHaveBeenCalled();
+      // Normalized content should only include the existing block
+      expect(result[0][0]).toEqual({ blocks: ['existing-1'] });
+    });
+
+    it('should handle a 3x3 table where body cells reference missing blocks', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Header row blocks exist, body row blocks are missing (the real-world bug scenario)
+      const headerHolders = ['h1', 'h2', 'h3'].map(id => {
+        const holder = document.createElement('div');
+        holder.setAttribute('data-blok-id', id);
+
+        return holder;
+      });
+
+      let insertCallCount = 0;
+      const fallbackHolders: HTMLElement[] = [];
+      const mockInsert = vi.fn().mockImplementation(() => {
+        const holder = document.createElement('div');
+        const id = `fallback-${insertCallCount++}`;
+        holder.setAttribute('data-blok-id', id);
+        fallbackHolders.push(holder);
+
+        return { id, holder };
+      });
+
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlockIndex: vi.fn((id: string) => {
+            const headerIndex = ['h1', 'h2', 'h3'].indexOf(id);
+            if (headerIndex !== -1) return headerIndex;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index < 3) return { id: ['h1', 'h2', 'h3'][index], holder: headerHolders[index] };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(3),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      // Build 3x3 grid
+      const gridElement = document.createElement('div');
+
+      for (let r = 0; r < 3; r++) {
+        const row = document.createElement('div');
+        row.setAttribute('data-blok-table-row', '');
+
+        for (let c = 0; c < 3; c++) {
+          const cell = document.createElement('div');
+          cell.setAttribute('data-blok-table-cell', '');
+          const container = document.createElement('div');
+          container.setAttribute(CELL_BLOCKS_ATTR, '');
+          cell.appendChild(container);
+          row.appendChild(cell);
+        }
+        gridElement.appendChild(row);
+      }
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const content = [
+        [{ blocks: ['h1'] }, { blocks: ['h2'] }, { blocks: ['h3'] }],
+        [{ blocks: ['missing-1'] }, { blocks: ['missing-2'] }, { blocks: ['missing-3'] }],
+        [{ blocks: ['missing-4'] }, { blocks: ['missing-5'] }, { blocks: ['missing-6'] }],
+      ];
+
+      const result = cellBlocks.initializeCells(content);
+
+      // Header row: blocks exist, should be mounted, no insert calls
+      expect(result[0][0]).toEqual({ blocks: ['h1'] });
+      expect(result[0][1]).toEqual({ blocks: ['h2'] });
+      expect(result[0][2]).toEqual({ blocks: ['h3'] });
+
+      // Body rows: blocks are missing, fallback paragraphs should be created
+      expect(mockInsert).toHaveBeenCalledTimes(6);
+
+      // Each body cell should have a fallback block reference
+      for (let r = 1; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const cellResult = result[r][c];
+          expect(cellResult.blocks).toHaveLength(1);
+          expect(cellResult.blocks[0]).toMatch(/^fallback-/);
+        }
+      }
+    });
+  });
+
   describe('initializeCells with multiple blocks per cell', () => {
     it('should mount all block references when cell has multiple blocks', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');

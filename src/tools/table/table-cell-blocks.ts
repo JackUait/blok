@@ -229,6 +229,7 @@ export class TableCellBlocks {
    * Initialize all cells with blocks.
    * - Empty cells or legacy string cells get a new paragraph block.
    * - Cells that already have block references get those blocks mounted.
+   * - If referenced blocks are missing from BlockManager, a fallback paragraph is created.
    */
   public initializeCells(content: LegacyCellContent[][]): CellContent[][] {
     const rowElements = this.gridElement.querySelectorAll(`[${ROW_ATTR}]`);
@@ -257,9 +258,12 @@ export class TableCellBlocks {
           return;
         }
 
-        if (isCellWithBlocks(cellContent)) {
-          this.mountBlocksInCell(container, cellContent.blocks);
-          normalizedRow.push(cellContent);
+        const mountedIds = isCellWithBlocks(cellContent)
+          ? this.mountBlocksInCell(container, cellContent.blocks)
+          : [];
+
+        if (mountedIds.length > 0) {
+          normalizedRow.push({ blocks: mountedIds });
         } else {
           const text = typeof cellContent === 'string' ? cellContent : '';
           const block = this.api.blocks.insert('paragraph', { text }, {}, this.api.blocks.getBlocksCount(), false);
@@ -291,9 +295,12 @@ export class TableCellBlocks {
   }
 
   /**
-   * Mount existing blocks into a cell container by their IDs
+   * Mount existing blocks into a cell container by their IDs.
+   * Returns the IDs of blocks that were successfully mounted.
    */
-  private mountBlocksInCell(container: HTMLElement, blockIds: string[]): void {
+  private mountBlocksInCell(container: HTMLElement, blockIds: string[]): string[] {
+    const mountedIds: string[] = [];
+
     for (const blockId of blockIds) {
       const index = this.api.blocks.getBlockIndex(blockId);
 
@@ -308,7 +315,10 @@ export class TableCellBlocks {
       }
 
       container.appendChild(block.holder);
+      mountedIds.push(blockId);
     }
+
+    return mountedIds;
   }
 
   /**

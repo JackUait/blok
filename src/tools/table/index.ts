@@ -72,6 +72,7 @@ export class Table implements BlockTool {
   private element: HTMLDivElement | null = null;
   private blockId: string | undefined;
   private pendingHighlight: PendingHighlight | null = null;
+  private isNewTable = false;
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<TableData, TableConfig>) {
     this.api = api;
@@ -127,6 +128,8 @@ export class Table implements BlockTool {
       wrapper.setAttribute('data-blok-table-readonly', '');
     }
 
+    this.isNewTable = this.data.content.length === 0;
+
     const rows = this.data.content.length || this.config.rows || DEFAULT_ROWS;
     const cols = this.data.content[0]?.length || this.config.cols || DEFAULT_COLS;
 
@@ -178,6 +181,10 @@ export class Table implements BlockTool {
 
     this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
 
+    if (this.isNewTable) {
+      populateNewCells(gridEl, this.cellBlocks);
+    }
+
     if (this.data.initialColWidth === undefined) {
       const widths = this.data.colWidths ?? readPixelWidths(gridEl);
 
@@ -190,6 +197,12 @@ export class Table implements BlockTool {
     this.initAddControls(gridEl);
     this.initRowColControls(gridEl);
     this.initCellSelection(gridEl);
+
+    if (this.isNewTable) {
+      const firstEditable = gridEl.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      firstEditable?.focus();
+    }
   }
 
   public save(blockContent: HTMLElement): TableData {

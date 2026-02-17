@@ -3046,4 +3046,71 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
   });
+
+  describe('caret placement on new table', () => {
+    const createMockApiWithEditableBlocks = (): API => {
+      return createMockAPI({
+        blocks: {
+          insert: () => {
+            const holder = document.createElement('div');
+            const editable = document.createElement('div');
+
+            editable.setAttribute('contenteditable', 'true');
+            holder.appendChild(editable);
+            holder.setAttribute('data-blok-id', `mock-${Math.random().toString(36).slice(2, 8)}`);
+
+            return { id: holder.getAttribute('data-blok-id'), holder };
+          },
+          getBlocksCount: vi.fn().mockReturnValue(0),
+          getBlockIndex: () => undefined,
+        },
+      } as never);
+    };
+
+    it('focuses the first cell contenteditable after rendered() for a new table', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [] },
+        config: {},
+        api: createMockApiWithEditableBlocks(),
+        readOnly: false,
+        block: { id: 'table-new' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const firstCell = element.querySelector('[data-blok-table-cell]');
+      const firstEditable = firstCell?.querySelector('[contenteditable="true"]');
+
+      expect(firstEditable).not.toBeNull();
+      expect(firstEditable).toHaveFocus();
+
+      document.body.removeChild(element);
+    });
+
+    it('does not focus cell when table has existing content', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
+        config: {},
+        api: createMockApiWithEditableBlocks(),
+        readOnly: false,
+        block: { id: 'table-existing' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const firstEditable = element.querySelector('[contenteditable="true"]');
+
+      expect(firstEditable).not.toHaveFocus();
+
+      document.body.removeChild(element);
+    });
+  });
 });

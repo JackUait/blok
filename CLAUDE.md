@@ -139,14 +139,21 @@ Single test: `yarn test [file]` or `yarn e2e [file] -g "pattern"`
 
 ## Releasing
 
-Run `yarn release` for an interactive terminal-based release flow (powered by `np`):
-
 ```bash
-yarn release                            # Stable release (interactive version prompt)
-yarn release 1.0.0-beta.1 --tag=beta    # Beta release
+yarn release 1.0.0                # stable release
+yarn release 1.0.0-beta.1         # beta release (auto-detected from version)
 ```
 
-This runs lint + unit tests, bumps `package.json`, builds, publishes to npm, creates a git tag, pushes, and creates a GitHub release automatically.
+The release script (`scripts/release.mjs`) runs these steps in order:
+
+1. Validates version arg, clean working tree, npm auth
+2. Runs `yarn release:preflight` (lint + tests)
+3. Bumps `package.json` version
+4. Publishes to npm (triggers `prepublishOnly` → build)
+5. Commits version bump, creates git tag, pushes
+6. Creates GitHub release (`--prerelease` for beta)
+
+Publish happens **before** git push — if publish fails, nothing is pushed.
 
 **Fallback:** Pushing a `v*` tag manually also triggers the CI release workflow (`.github/workflows/release.yml`): lint → test → build → E2E → npm publish → GitHub release. Beta tags publish to npm with `--tag beta`.
 

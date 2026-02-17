@@ -526,6 +526,27 @@ describe('BlockYjsSync', () => {
         );
       });
 
+      it('calls onBlockAdded handler after inserting block', () => {
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'Hello' }),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'new-block', type: 'paragraph' },
+        ]);
+
+        const newBlock = createMockBlock({ id: 'new-block' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+
+        mockHandlers.onBlockAdded = vi.fn();
+
+        callback({ blockId: 'new-block', type: 'add', origin: 'undo' });
+
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(newBlock, 0);
+      });
+
       it('does not create block if it already exists', () => {
         const existingBlock = createMockBlock({ id: 'existing' });
         repository = new BlockRepository();

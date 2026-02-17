@@ -1011,4 +1011,49 @@ describe('TableAddControls', () => {
     });
   });
 
+  describe('column drag unit size', () => {
+    it('uses getNewColumnWidth as drag unit size instead of existing cell width', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      const callbacks = defaultDragCallbacks();
+      const NEW_COL_WIDTH = 80;
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getNewColumnWidth: () => NEW_COL_WIDTH,
+        ...callbacks,
+      });
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      addColBtn.setPointerCapture = vi.fn();
+      addColBtn.releasePointerCapture = vi.fn();
+
+      addColBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      // Drag exactly NEW_COL_WIDTH pixels — should add exactly one column
+      addColBtn.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: NEW_COL_WIDTH,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addColBtn.dispatchEvent(new PointerEvent('pointerup', {
+        clientX: NEW_COL_WIDTH,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      expect(callbacks.onDragAddCol).toHaveBeenCalledTimes(1);
+    });
+  });
+
 });

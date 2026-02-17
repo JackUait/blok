@@ -313,6 +313,13 @@ export class Table implements BlockTool {
       wrapper: this.element,
       grid: gridEl,
       i18n: this.api.i18n,
+      getNewColumnWidth: () => {
+        const colWidths = this.data.colWidths ?? readPixelWidths(gridEl);
+
+        return this.data.initialColWidth !== undefined
+          ? Math.round((this.data.initialColWidth / 2) * 100) / 100
+          : computeHalfAvgWidth(colWidths);
+      },
       onAddRow: () => {
         this.grid.addRow(gridEl);
         populateNewCells(gridEl, this.cellBlocks);

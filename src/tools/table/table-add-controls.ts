@@ -56,6 +56,8 @@ interface TableAddControlsOptions {
   onDragAddCol: () => void;
   onDragRemoveCol: () => void;
   onDragEnd: () => void;
+  /** Returns the pixel width of a newly added column, used as the drag unit size. */
+  getNewColumnWidth?: () => number;
 }
 
 /**
@@ -89,6 +91,7 @@ export class TableAddControls {
   private boundPointerUp: (e: PointerEvent) => void;
   private boundRowPointerDown: (e: PointerEvent) => void;
   private boundColPointerDown: (e: PointerEvent) => void;
+  private getNewColumnWidth: (() => number) | undefined;
 
   constructor(options: TableAddControlsOptions) {
     this.wrapper = options.wrapper;
@@ -103,6 +106,7 @@ export class TableAddControls {
     this.onDragAddCol = options.onDragAddCol;
     this.onDragRemoveCol = options.onDragRemoveCol;
     this.onDragEnd = options.onDragEnd;
+    this.getNewColumnWidth = options.getNewColumnWidth;
     this.boundMouseMove = this.handleMouseMove.bind(this);
     this.boundMouseLeave = this.handleMouseLeave.bind(this);
     this.boundPointerMove = this.handlePointerMove.bind(this);
@@ -281,6 +285,10 @@ export class TableAddControls {
       const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
 
       return lastRow?.offsetHeight || 30;
+    }
+
+    if (this.getNewColumnWidth) {
+      return this.getNewColumnWidth();
     }
 
     const firstRow = this.grid.querySelector('[data-blok-table-row]');

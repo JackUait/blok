@@ -186,6 +186,7 @@
   ],
   "np": {
     "testScript": "release:preflight",
-    "releaseDraft": false
+    "releaseDraft": false,
+    "yarn": false
   }
 }

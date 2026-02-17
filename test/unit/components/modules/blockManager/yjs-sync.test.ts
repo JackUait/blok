@@ -190,6 +190,8 @@ const createMockSyncHandlers = (): SyncHandlers => ({
   insertDefaultBlock: vi.fn(() => createMockBlock()),
   updateIndentation: vi.fn(),
   replaceBlock: vi.fn(),
+  onBlockRemoved: vi.fn(),
+  onBlockAdded: vi.fn(),
 });
 
 describe('BlockYjsSync', () => {
@@ -572,6 +574,35 @@ describe('BlockYjsSync', () => {
         callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
 
         expect(testBlocksStore.length).toBe(0);
+      });
+
+      it('calls onBlockRemoved handler before removing block from store', () => {
+        const blockToRemove = createMockBlock({ id: 'to-remove' });
+        const testBlocksStore = createBlocksStore([blockToRemove]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.onBlockRemoved = vi.fn();
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+
+        expect(mockHandlers.onBlockRemoved).toHaveBeenCalledWith(blockToRemove, 0);
       });
 
       it('inserts default block when all blocks removed', () => {

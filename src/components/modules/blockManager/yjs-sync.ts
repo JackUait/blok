@@ -43,6 +43,10 @@ export interface SyncHandlers {
   updateIndentation: (block: Block) => void;
   /** Called to replace a block at a specific index with a new block instance */
   replaceBlock: (index: number, newBlock: Block) => void;
+  /** Called when a block is removed during undo/redo (before DOM removal) */
+  onBlockRemoved: (block: Block, index: number) => void;
+  /** Called when a block is added during undo/redo (after insertion) */
+  onBlockAdded: (block: Block, index: number) => void;
 }
 
 /**
@@ -299,6 +303,10 @@ export class BlockYjsSync {
     if (index === -1) {
       return;
     }
+
+    // Emit block-removed event BEFORE removal so listeners can inspect
+    // the block's DOM position (e.g., which table cell it's in)
+    this.handlers.onBlockRemoved(block, index);
 
     // Remove from DOM
     this.blocksStore.remove(index);

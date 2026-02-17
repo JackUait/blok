@@ -307,6 +307,12 @@ export class BlockManager extends Module {
         replaceBlock: (index, newBlock) => {
           this.blocksStore.replace(index, newBlock);
         },
+        onBlockRemoved: () => {
+          // Will be wired to emit block-changed events for table cell tracking
+        },
+        onBlockAdded: () => {
+          // Will be wired to emit block-changed events for table cell tracking
+        },
       },
       this.blocksStore
     );

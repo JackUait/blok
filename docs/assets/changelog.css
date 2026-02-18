@@ -1,0 +1,10 @@
+/* ============================================
+   Changelog Page - Clean Editorial Design
+   Typography-first with restrained accents
+   ============================================ */
+
+/* Modular CSS imports */
+@import './changelog-hero.css';
+@import './changelog-timeline.css';
+@import './changelog-card.css';
+@import './changelog-changes.css';

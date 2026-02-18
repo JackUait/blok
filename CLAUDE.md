@@ -126,6 +126,7 @@ Blok is a headless, block-based rich text editor (similar to Notion). Content is
 ## Commands
 
 ```bash
+# Core
 yarn serve          # Dev server
 yarn build          # Production build
 yarn build:test     # Test build for E2E
@@ -133,6 +134,10 @@ yarn lint           # ESLint + TypeScript
 yarn test           # Unit tests (Vitest)
 yarn e2e            # E2E tests (Playwright)
 yarn storybook      # Storybook
+
+# Docs (React documentation site)
+yarn serve:docs     # Docs dev server
+yarn serve:docs:prod # Serve production docs build
 ```
 
 Single test: `yarn test [file]` or `yarn e2e [file] -g "pattern"`
@@ -379,6 +384,54 @@ If you catch yourself thinking ANY of these, STOP:
 - Keyboard-accessible interactive elements
 - `aria-*` attributes for dynamic content
 - Accessibility checks via `@axe-core/playwright`
+
+## Documentation
+
+The documentation is a React application in the `docs/` directory with its own `package.json`.
+
+### Docs Commands
+
+```bash
+# From project root
+yarn serve:docs         # Dev server with proxy to blok demo
+
+# From docs/ directory
+yarn test
+```
+
+### Docs Architecture
+
+**Tech Stack**: React 18, TypeScript, React Router, Vite
+
+**Routes**:
+- `/` - HomePage (hero, features, quick start, API preview)
+- `/demo` - Interactive editor demo
+- `/docs` - API documentation with sidebar navigation
+- `/migration` - Migration guide from Editor.js
+
+**Component Structure**:
+- `pages/` - Route components (HomePage, DemoPage, ApiPage, MigrationPage)
+- `components/common/` - Shared components (Logo, Toast, Search, CodeBlock)
+- `components/home/` - Homepage sections (Hero, Features, QuickStart, ApiPreview)
+- `components/api/` - API docs (ApiSidebar, ApiSection)
+- `components/demo/` - Demo page (Toolbar, OutputPanel, EditorWrapper)
+- `components/layout/` - Layout (Nav, Footer)
+- `components/migration/` - Migration guide (CodemodCard, MigrationSteps)
+
+**Styling**: Plain CSS with modular styles (`.module.css`), Tailwind for some components
+
+### Docs Testing
+
+Uses Vitest with React Testing Library. Tests are co-located with components.
+
+```bash
+# Run all docs tests
+cd docs && yarn test
+```
+
+### Plans Directory
+
+`docs/plans/` contains design documents for refactoring work. These are architectural plans, not implementation tasks.
 
 ## Configuration
 

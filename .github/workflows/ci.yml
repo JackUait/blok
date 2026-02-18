@@ -45,6 +45,20 @@ jobs:
       - name: Lint
         run: yarn lint
 
+  docs-lint:
+    name: Docs Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Lint docs
+        run: cd docs && npm run lint
+
   validate-test-categories:
     name: Validate Test Categories
     runs-on: ubuntu-latest
@@ -72,6 +86,20 @@ jobs:
 
       - name: Run Unit Tests
         run: yarn test
+
+  docs-tests:
+    name: Docs Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Run docs tests
+        run: cd docs && npm test
 
   build:
     name: Build

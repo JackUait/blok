@@ -1,6 +1,7 @@
 import { BlocksAPI } from './api/blocks';
 import { CaretAPI } from './api/caret';
 import { EventsAPI } from './api/events';
+import { HistoryAPI } from './api/history';
 import { I18nAPI } from './api/i18n';
 import { API } from './api/index';
 import { InlineToolbarAPI } from './api/inlineToolbar';
@@ -44,6 +45,7 @@ export {
   BlocksAPI,
   CaretAPI,
   EventsAPI,
+  HistoryAPI,
   I18nAPI,
   API,
   InlineToolbarAPI,
@@ -91,6 +93,7 @@ export const Modules = {
   BlocksAPI,
   CaretAPI,
   EventsAPI,
+  HistoryAPI,
   I18nAPI,
   API,
   InlineToolbarAPI,

@@ -1,0 +1,311 @@
+{
+  "nav": {
+    "search": "Search",
+    "demo": "Demo",
+    "docs": "Docs",
+    "recipes": "Recipes",
+    "migration": "Migration",
+    "changelog": "Changelog",
+    "github": "GitHub"
+  },
+  "common": {
+    "filter": "Filter...",
+    "clearSearch": "Clear search",
+    "noResults": "No results"
+  },
+  "api": {
+    "filterLabel": "Filter API sections",
+    "methods": "Methods",
+    "properties": "Properties",
+    "property": "Property",
+    "type": "Type",
+    "description": "Description",
+    "option": "Option",
+    "default": "Default",
+    "quickStartSteps": {
+      "install": {
+        "title": "Install Blok",
+        "description": "Add Blok to your project using your favorite package manager."
+      },
+      "configure": {
+        "title": "Import and configure",
+        "description": "Import the editor and tools, then configure your block types."
+      },
+      "save": {
+        "title": "Save content",
+        "description": "Extract clean JSON data ready to save anywhere."
+      }
+    },
+    "sections": {
+      "guide": "Guide",
+      "core": "Core",
+      "apiModules": "API Modules",
+      "data": "Data"
+    },
+    "links": {
+      "quickStart": "Quick Start",
+      "blokClass": "Blok Class",
+      "configuration": "Configuration",
+      "blocks": "Blocks",
+      "blockApi": "BlockAPI",
+      "caret": "Caret",
+      "events": "Events",
+      "history": "History",
+      "saver": "Saver",
+      "selection": "Selection",
+      "styles": "Styles",
+      "toolbar": "Toolbar",
+      "inlineToolbar": "InlineToolbar",
+      "notifier": "Notifier",
+      "sanitizer": "Sanitizer",
+      "tooltip": "Tooltip",
+      "readOnly": "ReadOnly",
+      "i18n": "I18n",
+      "ui": "UI",
+      "listeners": "Listeners",
+      "tools": "Tools",
+      "outputData": "OutputData",
+      "blockData": "BlockData"
+    },
+    "quickStart": {
+      "title": "Quick Start",
+      "badge": "Guide",
+      "description": "Get up and running with Blok in just a few simple steps."
+    },
+    "blokClass": {
+      "title": "Blok Class",
+      "badge": "Core",
+      "description": "The main editor class that initializes and manages the Blok editor instance.",
+      "methods": {
+        "save": {
+          "name": "save()",
+          "returnType": "Promise<OutputData>",
+          "description": "Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content."
+        },
+        "render": {
+          "name": "render(data)",
+          "returnType": "Promise<void>",
+          "description": "Renders editor content from previously saved JSON data."
+        },
+        "focus": {
+          "name": "focus(atEnd?)",
+          "returnType": "boolean",
+          "description": "Sets focus to the editor. Optionally positions cursor at the end of content."
+        },
+        "clear": {
+          "name": "clear()",
+          "returnType": "void",
+          "description": "Removes all blocks from the editor."
+        },
+        "destroy": {
+          "name": "destroy()",
+          "returnType": "void",
+          "description": "Destroys the editor instance and removes all DOM elements and event listeners."
+        }
+      },
+      "properties": {
+        "isReady": {
+          "name": "isReady",
+          "type": "Promise<void>",
+          "description": "Promise that resolves when editor is ready"
+        },
+        "blocks": {
+          "name": "blocks",
+          "type": "BlocksAPI",
+          "description": "Blocks API module"
+        },
+        "caret": {
+          "name": "caret",
+          "type": "CaretAPI",
+          "description": "Caret API module"
+        },
+        "history": {
+          "name": "history",
+          "type": "HistoryAPI",
+          "description": "History API module"
+        },
+        "saver": {
+          "name": "saver",
+          "type": "SaverAPI",
+          "description": "Saver API module"
+        },
+        "toolbar": {
+          "name": "toolbar",
+          "type": "ToolbarAPI",
+          "description": "Toolbar API module"
+        },
+        "inlineToolbar": {
+          "name": "inlineToolbar",
+          "type": "InlineToolbarAPI",
+          "description": "Inline toolbar API module"
+        },
+        "events": {
+          "name": "events",
+          "type": "EventsAPI",
+          "description": "Events API module"
+        }
+      }
+    },
+    "configuration": {
+      "title": "Configuration",
+      "description": "The configuration object passed to the Blok constructor.",
+      "table": {
+        "holder": {
+          "option": "holder",
+          "type": "string | HTMLElement",
+          "default": "'blok'",
+          "description": "Container element ID or reference"
+        },
+        "tools": {
+          "option": "tools",
+          "type": "Record<string, ToolConfig>",
+          "default": "{}",
+          "description": "Available block and inline tools"
+        },
+        "placeholder": {
+          "option": "placeholder",
+          "type": "string",
+          "default": "''",
+          "description": "Placeholder text for empty blocks"
+        },
+        "minHeight": {
+          "option": "minHeight",
+          "type": "string | number",
+          "default": "'300px'",
+          "description": "Minimum height of the editor"
+        },
+        "defaultBlock": {
+          "option": "defaultBlock",
+          "type": "string",
+          "default": "'paragraph'",
+          "description": "Default block type"
+        },
+        "data": {
+          "option": "data",
+          "type": "OutputData",
+          "default": "undefined",
+          "description": "Initial data to render"
+        },
+        "readOnly": {
+          "option": "readOnly",
+          "type": "boolean",
+          "default": "false",
+          "description": "Enable read-only mode"
+        },
+        "onChange": {
+          "option": "onChange",
+          "type": "(api: API) => void",
+          "default": "undefined",
+          "description": "Change callback function"
+        }
+      }
+    },
+    "blocksApi": {
+      "title": "Blocks API",
+      "badge": "Blocks",
+      "description": "Manage blocks in the editor — create, delete, update, and reorder content."
+    },
+    "blockApi": {
+      "title": "BlockAPI",
+      "badge": "Block",
+      "description": "Interface for working with individual blocks. Returned by blocks.getById(), blocks.getBlockByIndex(), and blocks.insert()."
+    },
+    "caretApi": {
+      "title": "Caret API",
+      "badge": "Caret",
+      "description": "Control cursor position and selection within the editor."
+    },
+    "eventsApi": {
+      "title": "Events API",
+      "badge": "Events",
+      "description": "Subscribe to and manage editor lifecycle events."
+    },
+    "historyApi": {
+      "title": "History API",
+      "badge": "History",
+      "description": "Control undo/redo functionality for editor operations."
+    },
+    "saverApi": {
+      "title": "Saver API",
+      "badge": "Saver",
+      "description": "Save and export editor content."
+    },
+    "selectionApi": {
+      "title": "Selection API",
+      "badge": "Selection",
+      "description": "Work with text selection within the editor."
+    },
+    "stylesApi": {
+      "title": "Styles API",
+      "badge": "Styles",
+      "description": "Access CSS class names for styling custom tools and UI elements."
+    },
+    "toolbarApi": {
+      "title": "Toolbar API",
+      "badge": "Toolbar",
+      "description": "Control the block toolbar and its state."
+    },
+    "inlineToolbarApi": {
+      "title": "InlineToolbar API",
+      "badge": "Inline",
+      "description": "Control the inline formatting toolbar (bold, italic, etc.)."
+    },
+    "notifierApi": {
+      "title": "Notifier API",
+      "badge": "Notifier",
+      "description": "Display notification messages to users."
+    },
+    "sanitizerApi": {
+      "title": "Sanitizer API",
+      "badge": "Sanitizer",
+      "description": "Clean and sanitize HTML content to prevent XSS attacks."
+    },
+    "tooltipApi": {
+      "title": "Tooltip API",
+      "badge": "Tooltip",
+      "description": "Display tooltip hints on UI elements."
+    },
+    "readOnlyApi": {
+      "title": "ReadOnly API",
+      "badge": "ReadOnly",
+      "description": "Control the read-only state of the editor."
+    },
+    "i18nApi": {
+      "title": "I18n API",
+      "badge": "I18n",
+      "description": "Internationalization support for translating UI strings."
+    },
+    "uiApi": {
+      "title": "UI API",
+      "badge": "UI",
+      "description": "Access to Blok UI elements and state."
+    },
+    "listenersApi": {
+      "title": "Listeners API",
+      "badge": "Listeners",
+      "description": "Manage custom DOM event listeners with automatic cleanup."
+    },
+    "toolsApi": {
+      "title": "Tools API",
+      "badge": "Tools",
+      "description": "Access and manage editor tools."
+    },
+    "outputData": {
+      "title": "OutputData",
+      "badge": "Data",
+      "description": "The data structure returned by the save() method."
+    },
+    "blockData": {
+      "title": "BlockData",
+      "badge": "Data",
+      "description": "The structure of each block in the blocks array."
+    }
+  },
+  "footer": {
+    "madeWith": "Made with",
+    "copyright": "© 2024 Blok. Open source under MIT license."
+  },
+  "languageSelector": {
+    "label": "Language"
+  }
+}

@@ -1,0 +1,134 @@
+/* Ensure waves blend seamlessly with sections */
+.wave-divider svg {
+  display: block;
+}
+
+/* Dark mode wave adjustments */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wave-divider--soft .wave-path--layer2,
+  :root:not([data-theme="light"]) .wave-divider--layered .wave-path--layer2 {
+    opacity: 0.3;
+  }
+}
+
+:root[data-theme="dark"] .wave-divider--soft .wave-path--layer2,
+:root[data-theme="dark"] .wave-divider--layered .wave-path--layer2 {
+  opacity: 0.3;
+}
+
+/* ============================================
+   Package Manager Toggle
+   ============================================ */
+
+/* Toggle sits inside the code block header, blending with Mac chrome */
+.code-block-package-toggle {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 6px;
+}
+
+.package-manager-toggle {
+  display: flex;
+  align-items: center;
+  background: rgba(240, 123, 75, 0.06);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.package-manager-option {
+  position: relative;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-family);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.package-manager-option:hover:not(.active) {
+  color: var(--color-text-secondary);
+  background: rgba(240, 123, 75, 0.06);
+}
+
+.package-manager-option.active {
+  color: var(--color-coral);
+  background: rgba(240, 123, 75, 0.12);
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.package-manager-option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+.package-manager-option.active:focus-visible {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06), 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Package manager toggle dark mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .package-manager-toggle {
+    background: rgba(255, 255, 255, 0.06);
+  }
+  
+  :root:not([data-theme="light"]) .package-manager-option {
+    color: rgba(255, 255, 255, 0.45);
+  }
+  
+  :root:not([data-theme="light"]) .package-manager-option:hover:not(.active) {
+    color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  
+  :root:not([data-theme="light"]) .package-manager-option.active {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+  
+  :root:not([data-theme="light"]) .package-manager-option:focus-visible {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  }
+  
+  :root:not([data-theme="light"]) .package-manager-option.active:focus-visible {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15), 0 0 0 2px rgba(255, 255, 255, 0.15);
+  }
+}
+
+:root[data-theme="dark"] .package-manager-toggle {
+  background: rgba(245, 147, 103, 0.08);
+}
+
+:root[data-theme="dark"] .package-manager-option {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+:root[data-theme="dark"] .package-manager-option:hover:not(.active) {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(245, 147, 103, 0.08);
+}
+
+:root[data-theme="dark"] .package-manager-option.active {
+  color: var(--color-coral);
+  background: rgba(245, 147, 103, 0.15);
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .package-manager-option:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme="dark"] .package-manager-option.active:focus-visible {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15), 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+

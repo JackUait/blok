@@ -1579,6 +1579,8 @@ export default defineConfig(
       'public/assets/**',
       '**/public/assets/**',
       'storybook-static/**',
+      'docs/**',
+      '.worktrees/**',
     ],
   },
   // TypeScript ESLint base config
@@ -1759,31 +1761,21 @@ export default defineConfig(
       'import/no-cycle': 'warn',
       'import/no-extraneous-dependencies': 'error',
       'import/no-self-import': 'error',
-      'import/order': ['error', {
-        groups: [
-          'builtin',
-          'external',
-          'internal',
-          'parent',
-          'sibling',
-          'index',
-        ],
-        'newlines-between': 'always',
-        alphabetize: { order: 'asc', caseInsensitive: true },
-      }],
-      'import/first': 'error',
-      'import/newline-after-import': 'error',
-      // Tailwind CSS rules - best practices
-      'tailwindcss/classnames-order': 'error', // Enforce consistent class ordering for readability
-      'tailwindcss/enforces-negative-arbitrary-values': 'error', // Use -mt-[5px] instead of mt-[-5px]
-      'tailwindcss/enforces-shorthand': 'error', // Use px-2 instead of pl-2 pr-2
+      // Style-only rules - disabled
+      'import/order': 'off',
+      'import/first': 'off',
+      'import/newline-after-import': 'off',
+      // Tailwind CSS rules - keep only error-catching rules, disable style-only
+      'tailwindcss/classnames-order': 'off', // Style-only: class ordering
+      'tailwindcss/enforces-negative-arbitrary-values': 'off', // Style-only: prefer -mt-[5px] over mt-[-5px]
+      'tailwindcss/enforces-shorthand': 'off', // Style-only: prefer px-2 over pl-2 pr-2
       'tailwindcss/no-arbitrary-value': 'off', // Allow arbitrary values when needed
       'tailwindcss/no-custom-classname': ['warn', {
         // Allow custom classes that follow project conventions
         whitelist: ['blok-.*'],
       }],
-      'tailwindcss/no-contradicting-classname': 'error', // Prevent conflicting classes like flex block
-      'tailwindcss/no-unnecessary-arbitrary-value': 'error', // Use p-4 instead of p-[16px] when equivalent exists
+      'tailwindcss/no-contradicting-classname': 'error', // Keep: catches bugs (conflicting classes)
+      'tailwindcss/no-unnecessary-arbitrary-value': 'error', // Prefer p-4 over p-[16px]
     },
   },
 
@@ -1821,6 +1813,13 @@ export default defineConfig(
     rules: {
       ...jest.configs.recommended.rules,
       ...vitest.configs.recommended.rules,
+      // Disable strict unsafe-* rules for test files - vitest's vi.fn() and mock utilities
+      // cause TypeScript type inference issues that are false positives
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      // Allow non-null assertions in test files for type narrowing
+      '@typescript-eslint/no-non-null-assertion': 'off',
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       // Prevent class selectors in unit tests
@@ -1862,7 +1861,7 @@ export default defineConfig(
       'jest/valid-expect': 'error',
       'jest/valid-expect-in-promise': 'error',
       'jest/valid-title': 'error',
-      'jest/prefer-lowercase-title': ['warn', { ignore: ['describe'] }],
+      'jest/prefer-lowercase-title': 'off', // Style-only
       // Prevent skipped/focused tests in production
       'jest/no-focused-tests': 'error',
       'jest/no-disabled-tests': 'warn',
@@ -1971,7 +1970,7 @@ export default defineConfig(
       'playwright/no-duplicate-hooks': 'error',
       'playwright/valid-describe-callback': 'error',
       'playwright/valid-title': 'error',
-      'playwright/prefer-lowercase-title': 'warn',
+      'playwright/prefer-lowercase-title': 'off', // Style-only
       // Prevent skipped/focused tests in production
       'playwright/no-focused-test': 'error',
       'playwright/no-skipped-test': 'warn',
@@ -2009,6 +2008,78 @@ export default defineConfig(
     },
   },
   {
+    files: ['docs/src/**/*.test.{ts,tsx}', 'docs/src/**/*.spec.{ts,tsx}'],
+    plugins: {
+      jest,
+      vitest,
+      'jest-dom': jestDom,
+      'testing-library': testingLibrary,
+      'internal-unit-test': internalUnitTestPlugin,
+    },
+    settings: {
+      'testing-library/utils-module': 'off',
+      'testing-library/custom-renders': 'off',
+      'testing-library/custom-queries': 'off',
+    },
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        vi: 'readonly',
+        vitest: 'readonly',
+      },
+    },
+    rules: {
+      ...vitest.configs.recommended.rules,
+      'internal-unit-test/no-class-selectors': 'error',
+      'internal-unit-test/require-behavior-verification': 'warn',
+      'no-restricted-syntax': 'off',
+      '@typescript-eslint/no-magic-numbers': 'off',
+      '@typescript-eslint/no-deprecated': 'off',
+      // Disable strict unsafe-* rules for test files - vitest's expect.extend() with jest-dom
+      // matchers causes TypeScript type inference issues that are false positives
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      // Allow non-null assertions in test files for type narrowing
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      'vitest/expect-expect': 'off',
+      'vitest/no-conditional-tests': 'warn',
+      'vitest/no-disabled-tests': 'warn',
+      'vitest/no-focused-tests': 'error',
+      'vitest/no-identical-title': 'error',
+      'vitest/no-interpolation-in-snapshots': 'error',
+      'vitest/no-mocks-import': 'error',
+      'vitest/valid-describe-callback': 'error',
+      'vitest/valid-expect': 'error',
+      'vitest/valid-title': 'error',
+      'jest/consistent-test-it': ['error', { fn: 'it' }],
+      'jest/valid-describe-callback': 'error',
+      'jest/valid-expect': 'error',
+      'jest/valid-title': 'error',
+      'jest/no-focused-tests': 'error',
+      'jest/no-disabled-tests': 'warn',
+      'jest/expect-expect': 'error',
+      'jest/no-standalone-expect': 'error',
+      'testing-library/no-await-sync-events': 'warn',
+      'testing-library/no-await-sync-queries': 'warn',
+      'testing-library/no-container': 'warn',
+      'testing-library/no-debugging-utils': 'warn',
+      'testing-library/no-manual-cleanup': 'warn',
+      'testing-library/no-node-access': 'warn',
+      'testing-library/no-wait-for-multiple-assertions': 'warn',
+      'testing-library/no-wait-for-side-effects': 'warn',
+      'testing-library/prefer-find-by': 'warn',
+      'testing-library/prefer-presence-queries': 'warn',
+    },
+  },
+  {
     files: [
       '**/*.test.{ts,tsx,js,jsx}',
       '**/*.spec.{ts,tsx,js,jsx}',
@@ -2031,9 +2102,9 @@ export default defineConfig(
       'storybook/await-interactions': 'error',
       'storybook/context-in-play-function': 'error',
       'storybook/default-exports': 'error',
-      'storybook/hierarchy-separator': 'error',
-      'storybook/no-redundant-story-name': 'warn',
-      'storybook/prefer-pascal-case': 'error',
+      'storybook/hierarchy-separator': 'off', // Style-only
+      'storybook/no-redundant-story-name': 'off', // Style-only
+      'storybook/prefer-pascal-case': 'off', // Style-only
       'storybook/story-exports': 'error',
       'storybook/use-storybook-expect': 'error',
       'storybook/use-storybook-testing-library': 'error',

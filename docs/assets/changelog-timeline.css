@@ -1,0 +1,163 @@
+/* Changelog Timeline - Clean Editorial Design */
+.changelog-timeline {
+  position: relative;
+  z-index: 1;
+}
+
+/* Timeline Line - Subtle and refined */
+.changelog-timeline::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+
+@media (max-width: 640px) {
+  .changelog-timeline::before {
+    display: none;
+  }
+}
+
+/* Release Entry */
+.changelog-release {
+  position: relative;
+  padding: var(--spacing-lg) 0;
+  padding-left: 40px;
+  animation: releaseSlideIn 0.4s var(--transition-smooth) backwards;
+}
+
+@keyframes releaseSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .changelog-release {
+    padding-left: 0;
+    padding-bottom: var(--spacing-xl);
+  }
+}
+
+/* Timeline Dot - Simple and clean */
+.changelog-release::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: calc(var(--spacing-lg) + 8px);
+  width: 9px;
+  height: 9px;
+  background: var(--color-text-tertiary);
+  border-radius: var(--radius-full);
+  z-index: 3;
+  transition: background var(--transition-smooth);
+}
+
+@media (max-width: 640px) {
+  .changelog-release::before {
+    display: none;
+  }
+}
+
+/* First release dot - accent color */
+.changelog-release:first-child::before {
+  background: var(--color-coral);
+}
+
+/* Release type colors - subtle differentiation */
+.changelog-release.major::before {
+  background: var(--color-text-primary);
+}
+
+.changelog-release.minor::before {
+  background: var(--color-text-secondary);
+}
+
+.changelog-release.patch::before {
+  background: var(--color-text-tertiary);
+}
+
+/* Version Badge - Editorial style */
+.changelog-version {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.changelog-version-number {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  transition: color var(--transition-smooth);
+}
+
+.changelog-version-number:hover {
+  color: var(--color-coral);
+}
+
+.changelog-version-number:visited {
+  color: var(--color-text-primary);
+}
+
+.changelog-version-number:visited:hover {
+  color: var(--color-coral);
+}
+
+.changelog-version-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family);
+  font-weight: 500;
+}
+
+/* Version type badge - minimal */
+.changelog-version-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--font-family);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  background: var(--color-divider);
+}
+
+.changelog-release.major .changelog-version-type {
+  color: var(--color-text-primary);
+  background: rgba(45, 42, 38, 0.08);
+}
+
+.changelog-release.minor .changelog-version-type {
+  color: var(--color-text-secondary);
+}
+
+.changelog-release.patch .changelog-version-type {
+  color: var(--color-text-tertiary);
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .changelog-release.major .changelog-version-type {
+    background: rgba(254, 243, 232, 0.08);
+  }
+}
+
+:root[data-theme="dark"] .changelog-release.major .changelog-version-type {
+  background: rgba(254, 243, 232, 0.08);
+}
+

@@ -15,10 +15,12 @@
     // allows to omit export default in .json files
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
+    "jsx": "react-jsx",
     "baseUrl": "./",
     "paths": {
-      "@/types": [ "./types/" ],
-      "@/types/*": [ "./types/*" ],
+      "@/types": [ "./types/", "./docs/src/types" ],
+      "@/types/*": [ "./types/*", "./docs/src/types/*" ],
+      "@/*": [ "./docs/src/*" ],
       "@editorjs/editorjs": [ "./types" ],
       "@editorjs/editorjs/*": [ "./types/*" ]
     },
@@ -32,7 +34,9 @@
     "**/*.js",
     "**/*.json",
     "vite.config*.mjs",
-    ".storybook/**/*.ts"
+    ".storybook/**/*.ts",
+    "docs/src/**/*.ts",
+    "docs/src/**/*.tsx"
   ],
   "exclude": [
     "dist",

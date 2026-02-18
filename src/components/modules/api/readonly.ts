@@ -12,9 +12,10 @@ export class ReadOnlyAPI extends Module {
   public get methods(): ReadOnly {
     const getIsEnabled = (): boolean => this.isEnabled;
 
-     
+
     return {
       toggle: (state): Promise<boolean> => this.toggle(state),
+      set: (state): Promise<boolean> => this.set(state),
       get isEnabled(): boolean {
         return getIsEnabled();
       },
@@ -28,6 +29,15 @@ export class ReadOnlyAPI extends Module {
    */
   public toggle(state?: boolean): Promise<boolean> {
     return this.Blok.ReadOnly.toggle(state);
+  }
+
+  /**
+   * Set read-only mode to the specified boolean state
+   * @param {boolean} state - read-only state to set
+   * @returns {Promise<boolean>} the new read-only state
+   */
+  public set(state: boolean): Promise<boolean> {
+    return this.Blok.ReadOnly.set(state);
   }
 
   /**

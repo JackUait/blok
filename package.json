@@ -65,6 +65,7 @@
   ],
   "scripts": {
     "serve": "vite --no-open",
+    "serve:docs": "cd docs && vite --port 8080",
     "build": "vite build --mode production && node scripts/build-locales.mjs",
     "build:test": "vite build --mode test && node scripts/build-locales.mjs test",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
@@ -73,6 +74,7 @@
     "lint:types": "tsc --noEmit",
     "i18n:audit": "node scripts/i18n-audit.js",
     "i18n:check": "node scripts/i18n/check-translations.mjs",
+    "typography:check": "node scripts/typography-finder/cli.mjs",
     "e2e": "yarn build:test && playwright test",
     "e2e:smoke": "yarn build:test && playwright test --project=chromium --grep=\"@smoke\"",
     "e2e:chrome": "yarn build:test && playwright test --project=chromium",
@@ -100,7 +102,8 @@
     "size": "size-limit",
     "size:why": "size-limit --why",
     "release": "node scripts/release.mjs",
-    "release:preflight": "yarn lint && yarn test"
+    "release:preflight": "yarn lint && yarn test",
+    "unused-css": "node scripts/unused-css-finder/cli.mjs"
   },
   "author": "JackUait",
   "contributors": [
@@ -114,7 +117,6 @@
   "devDependencies": {
     "@axe-core/playwright": "4.11.0",
     "@babel/register": "7.28.3",
-    "@chromatic-com/storybook": "4.1.3",
     "@commitlint/cli": "20.1.0",
     "@commitlint/config-conventional": "20.0.0",
     "@playwright/test": "1.57.0",
@@ -122,7 +124,6 @@
     "@size-limit/preset-small-lib": "12.0.0",
     "@storybook/addon-a11y": "10.1.11",
     "@storybook/addon-vitest": "10.1.11",
-    "@storybook/global": "5.0.0",
     "@storybook/html-vite": "10.1.11",
     "@types/eslint-plugin-tailwindcss": "3",
     "@types/node": "22.19.0",
@@ -149,16 +150,17 @@
     "playwright": "1.57.0",
     "postcss": "8.5.6",
     "rollup-plugin-license": "3.6.0",
+    "semantic-release": "25.0.2",
+    "shiki": "^3.21.0",
     "size-limit": "12.0.0",
     "storybook": "10.1.11",
     "tailwindcss": "3",
-    "tslint": "6.1.3",
     "typescript": "5.9.3",
     "typescript-eslint": "8.48.0",
     "vite": "7.2.4",
     "vite-plugin-css-injected-by-js": "3.1.0",
     "vitest": "4.0.14",
-    "yaml": "2.8.1"
+    "yaml": "^2.8.2"
   },
   "dependencies": {
     "i18next": "25.7.3",

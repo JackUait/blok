@@ -130,7 +130,15 @@ const createMockAPIMethods = (): APIInterface => ({
   },
   readOnly: {
     toggle: vi.fn().mockResolvedValue(false),
+    set: vi.fn().mockResolvedValue(false),
     isEnabled: false,
+  },
+  history: {
+    undo: vi.fn(),
+    redo: vi.fn(),
+    canUndo: vi.fn(() => false),
+    canRedo: vi.fn(() => false),
+    clear: vi.fn(),
   },
   ui: {
     isMobile: false,

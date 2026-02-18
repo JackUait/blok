@@ -36,13 +36,15 @@
     }
   },
   "bin": {
+    "blok": "./bin/blok.js",
     "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js"
   },
   "files": [
     "dist",
     "types",
     "src",
-    "codemod"
+    "codemod",
+    "bin"
   ],
   "publishConfig": {
     "access": "public"
@@ -66,7 +68,8 @@
   "scripts": {
     "serve": "vite --no-open",
     "serve:docs": "cd docs && vite --port 8080",
-    "build": "vite build --mode production && node scripts/build-locales.mjs",
+    "build": "vite build --mode production && node scripts/build-locales.mjs && node scripts/build-cli.mjs",
+    "build:cli": "node scripts/build-cli.mjs",
     "build:test": "vite build --mode test && node scripts/build-locales.mjs test",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
     "lint:fix": "eslint . --fix",

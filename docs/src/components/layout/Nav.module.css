@@ -1,0 +1,403 @@
+/* ============================================
+   Nav Component - Enhanced Animations
+   ============================================ */
+
+/* ============================================
+   Navigation Layout Structure
+   ============================================ */
+
+/* Primary navigation links group */
+.navPrimary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* Utility controls group (search, language, theme) */
+.navUtilities {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: var(--spacing-md);
+  margin-left: var(--spacing-md);
+  position: relative;
+}
+
+/* Subtle divider between nav and utilities */
+.navUtilities::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--color-border) 30%,
+    var(--color-border) 70%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+/* Compact search button - icon-focused */
+.searchButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.searchButton:hover {
+  color: var(--color-text-primary);
+  background: rgba(240, 123, 75, 0.06);
+}
+
+.searchButton svg {
+  transition: transform 0.2s ease;
+}
+
+.searchButton:hover svg {
+  transform: scale(1.1);
+}
+
+.searchShortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  transition: all 0.2s ease;
+}
+
+.searchButton:hover .searchShortcut {
+  color: var(--color-coral);
+  border-color: var(--color-coral);
+  background: rgba(240, 123, 75, 0.08);
+}
+
+/* ============================================
+   Mobile responsive - flatten groups
+   ============================================ */
+
+@media (max-width: 968px) {
+  .navPrimary {
+    flex-direction: column;
+    width: 100%;
+    gap: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .navUtilities {
+    gap: 2px;
+    padding-left: 0;
+    margin-left: 0;
+  }
+
+  .navUtilities::before {
+    display: none;
+  }
+
+  .searchShortcut {
+    display: none;
+  }
+}
+
+/* ============================================
+   Springy transition for the nav element
+   ============================================ */
+
+/* Springy transition for the nav element */
+:global(.nav) {
+  transition:
+    transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    background-color 0.3s ease,
+    backdrop-filter 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+
+/* Scrolled state with enhanced depth */
+:global(.nav.scrolled) {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"]) .nav.scrolled) {
+    background: rgba(0, 0, 0, 0.85);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.2),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+:global(:root[data-theme="dark"] .nav.scrolled) {
+  background: rgba(0, 0, 0, 0.85);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Subtle top highlight/glow on nav */
+:global(.nav::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 122, 255, 0.15) 20%,
+    rgba(88, 86, 214, 0.15) 50%,
+    rgba(0, 122, 255, 0.15) 80%,
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+:global(.nav.scrolled::before) {
+  opacity: 1;
+}
+
+/* Container fade animation */
+:global(.nav-container) {
+  transition: opacity 0.3s ease;
+}
+
+
+/* ============================================
+   Logo Enhancements
+   ============================================ */
+
+:global(.nav-logo) {
+  position: relative;
+}
+
+/* Animated glow ring on hover */
+:global(.nav-logo::after) {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 25px;
+  transform: translate(-50%, -50%) scale(0.8);
+  width: 56px;
+  height: 56px;
+  background: radial-gradient(circle, rgba(240, 123, 75, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+:global(.nav-logo:hover::after) {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* ============================================
+   Nav Links Enhancements
+   ============================================ */
+
+:global(.nav-link) {
+  position: relative;
+}
+
+/* Active links have background highlight, no dot needed */
+:global(.nav-link-active)::after {
+  display: none;
+}
+
+/* Staggered animation on load */
+:global(.nav-links > *:nth-child(1)) { animation-delay: 0.05s; }
+:global(.nav-links > *:nth-child(2)) { animation-delay: 0.08s; }
+:global(.nav-links > *:nth-child(3)) { animation-delay: 0.11s; }
+:global(.nav-links > *:nth-child(4)) { animation-delay: 0.14s; }
+:global(.nav-links > *:nth-child(5)) { animation-delay: 0.17s; }
+:global(.nav-links > *:nth-child(6)) { animation-delay: 0.20s; }
+:global(.nav-links > *:nth-child(7)) { animation-delay: 0.23s; }
+:global(.nav-links > *:nth-child(8)) { animation-delay: 0.26s; }
+
+/* ============================================
+   GitHub Link - No indicator dot
+   ============================================ */
+
+:global(.nav-link-github)::after {
+  display: none;
+}
+
+/* Search button enhancements are in Search.module.css */
+
+/* ============================================
+   Mobile Menu Toggle Enhancement
+   ============================================ */
+
+/* Hamburger line transform origin */
+:global(.nav-toggle span) {
+  transform-origin: center;
+}
+
+/* ============================================
+   Mobile Menu Overlay
+   ============================================ */
+
+:global(.nav-links.open) {
+  display: flex !important;
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(100vh - 56px);
+  height: calc(100dvh - 56px);
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  background: var(--color-background);
+  gap: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  z-index: var(--z-nav, 100);
+  animation: menuSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Decorative gradient orb behind menu */
+:global(.nav-links.open)::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(
+    circle,
+    rgba(240, 123, 75, 0.08) 0%,
+    rgba(212, 164, 184, 0.04) 40%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  animation: orbPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes orbPulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(1.15); opacity: 1; }
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:global(.nav-links.open > *) {
+  width: 100%;
+  animation: menuItemSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+:global(.nav-links.open > *:nth-child(1)) { animation-delay: 0.06s; }
+:global(.nav-links.open > *:nth-child(2)) { animation-delay: 0.1s; }
+:global(.nav-links.open > *:nth-child(3)) { animation-delay: 0.14s; }
+:global(.nav-links.open > *:nth-child(4)) { animation-delay: 0.18s; }
+:global(.nav-links.open > *:nth-child(5)) { animation-delay: 0.22s; }
+
+@keyframes menuItemSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+:global(.nav-links.open .nav-link) {
+  justify-content: flex-start;
+  padding: var(--spacing-lg) var(--spacing-md);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  border-radius: var(--radius-lg);
+  border-bottom: 1px solid rgba(240, 123, 75, 0.06);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+:global(.nav-links.open .nav-link)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--color-coral), var(--color-pink));
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:global(.nav-links.open .nav-link:hover)::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+:global(.nav-links.open .nav-link:hover) {
+  background: rgba(240, 123, 75, 0.06);
+  padding-left: var(--spacing-lg);
+  color: var(--color-text-primary);
+}
+
+:global(.nav-links.open .nav-link:last-child) {
+  border-bottom: none;
+}
+
+:global(.nav-links.open .nav-link-active) {
+  color: var(--color-coral) !important;
+}
+
+:global(.nav-links.open .nav-link-active)::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+:global(.nav-links.open .nav-link-github) {
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  justify-content: center;
+  border-bottom: none;
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+:global(.nav-links.open .nav-link-github)::before {
+  display: none;
+}
+

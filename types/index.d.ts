@@ -16,6 +16,7 @@ import {
   Blocks,
   Caret,
   Events,
+  History,
   InlineToolbar,
   Listeners,
   Notifier,
@@ -90,6 +91,7 @@ export {
   Blocks,
   Caret,
   Events,
+  History,
   InlineToolbar,
   Listeners,
   Notifier,
@@ -127,6 +129,7 @@ export interface API {
   caret: Caret;
   tools: Tools;
   events: Events;
+  history: History;
   listeners: Listeners;
   notifier: Notifier;
   sanitizer: Sanitizer;

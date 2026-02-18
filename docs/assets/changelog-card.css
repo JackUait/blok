@@ -1,0 +1,28 @@
+/* Release Card - Clean and minimal */
+.changelog-release-card {
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  overflow: hidden;
+  position: relative;
+}
+
+/* No accent bar */
+.changelog-release-card::before {
+  display: none;
+}
+
+.changelog-release-card:hover {
+  /* No hover effects */
+}
+
+/* No special highlight state */
+.changelog-release.highlight .changelog-release-card {
+  /* Clean */
+}
+
+.changelog-release:first-child .changelog-release-card {
+  /* No special treatment */
+}
+
+

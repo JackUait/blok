@@ -1,0 +1,143 @@
+/* ============================================
+   Blok Documentation - Playful & Friendly Styles
+   Inspired by the Blok mascot's warm, fun aesthetic
+   ============================================ */
+
+/* Import fonts - Quicksand for display (playful geometric), Nunito for body */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap');
+
+/* CSS Custom Properties */
+:root {
+  /* Colors - Warm, playful palette matching mascot */
+  --color-background: #FFF9F5;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-wave-fill: #fff2ec;
+  --color-text-primary: #2D2A26;
+  --color-text-secondary: #6B6560;
+  --color-text-tertiary: #9A938C;
+  --color-border: rgba(45, 42, 38, 0.08);
+  --color-divider: rgba(45, 42, 38, 0.06);
+
+  /* Accent Colors - Mascot-inspired */
+  --color-coral: #F07B4B;
+  --color-orange: #F89042;
+  --color-pink: #D4A4B8;
+  --color-mauve: #C593A8;
+  --color-warm-white: #FFF9F5;
+  --color-cream: #FEF3E8;
+  
+  /* Legacy compatibility */
+  --color-blue: #F07B4B;
+  --color-purple: #C593A8;
+  --color-red: #E85A4F;
+  --color-yellow: #F59E0B;
+  --color-green: #7BC47F;
+  --color-cyan: #6BBFC7;
+
+  /* Gradients - Warm, playful gradients */
+  --gradient-primary: linear-gradient(135deg, #F07B4B 0%, #F89042 50%, #D4A4B8 100%);
+  --gradient-coral-pink: linear-gradient(135deg, #F07B4B 0%, #D4A4B8 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(248, 144, 66, 0.06) 0%, rgba(212, 164, 184, 0.03) 50%, transparent 100%);
+  --gradient-warm: linear-gradient(135deg, #FEF3E8 0%, #FFF9F5 100%);
+  --gradient-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+
+  /* Shadows - Softer, warmer with more depth layers */
+  --shadow-sm: 0 1px 3px rgba(240, 123, 75, 0.08);
+  --shadow-md: 0 4px 16px rgba(240, 123, 75, 0.10);
+  --shadow-lg: 0 12px 32px rgba(240, 123, 75, 0.12);
+  --shadow-xl: 0 24px 48px rgba(240, 123, 75, 0.15);
+  --shadow-glow: 0 0 40px rgba(240, 123, 75, 0.15);
+  --shadow-inner: inset 0 2px 4px rgba(45, 42, 38, 0.04);
+  --shadow-lifted: 
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 8px rgba(240, 123, 75, 0.06),
+    0 12px 24px rgba(240, 123, 75, 0.08);
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --spacing-4xl: 6rem;
+
+  /* Border Radius - More rounded for playfulness */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-2xl: 36px;
+  --radius-full: 9999px;
+
+  /* Typography - Two-tier system: Quicksand (display), Nunito (body) */
+  --font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-display: 'Quicksand', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+  --font-size-5xl: 3rem;
+  --font-size-6xl: 3.75rem;
+  --font-size-7xl: 4.5rem;
+
+  /* Letter Spacing */
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-tighter: -0.02em;
+  --letter-spacing-display: -0.03em;
+
+  /* Transitions - Bouncy, playful */
+  --transition-fast: 150ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-base: 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-slow: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Z-index */
+  --z-nav: 100;
+  --z-dropdown: 200;
+  --z-modal: 300;
+
+  /* Noise/Grain texture - base64 SVG for performance */
+  --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Dark Mode - Warm dark theme */
+/* Apply when system prefers dark AND no explicit theme is set */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-background: #1A1816;
+    --color-surface: #252220;
+    --color-surface-elevated: #302D2A;
+    --color-wave-fill: var(--color-background);
+    --color-text-primary: #FEF3E8;
+    --color-text-secondary: #A89E95;
+    --color-text-tertiary: #6B6560;
+    --color-border: rgba(254, 243, 232, 0.1);
+    --color-divider: rgba(254, 243, 232, 0.06);
+    --color-coral: #F59367;
+    --color-pink: #E0B8C8;
+  }
+}
+
+/* Explicit dark mode via data attribute - always apply */
+:root[data-theme="dark"] {
+  --color-background: #1A1816;
+  --color-surface: #252220;
+  --color-surface-elevated: #302D2A;
+  --color-wave-fill: var(--color-background);
+  --color-text-primary: #FEF3E8;
+  --color-text-secondary: #A89E95;
+  --color-text-tertiary: #6B6560;
+  --color-border: rgba(254, 243, 232, 0.1);
+  --color-divider: rgba(254, 243, 232, 0.06);
+  --color-coral: #F59367;
+  --color-pink: #E0B8C8;
+}
+

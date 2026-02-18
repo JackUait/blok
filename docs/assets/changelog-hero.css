@@ -1,0 +1,71 @@
+/* ============================================
+   Changelog Styles - Clean Editorial Design
+   Typography-first approach with restrained accents
+   ============================================ */
+
+/* Changelog Main */
+.changelog-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 100px var(--spacing-xl) var(--spacing-4xl);
+  position: relative;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .changelog-main {
+    padding: 90px var(--spacing-lg) var(--spacing-3xl);
+  }
+}
+
+@media (max-width: 640px) {
+  .changelog-main {
+    padding: 80px var(--spacing-md) var(--spacing-3xl);
+  }
+}
+
+/* Background orbs - hidden for cleaner look */
+.changelog-gradient-1,
+.changelog-gradient-2 {
+  display: none;
+}
+
+/* Changelog Hero - Minimal, editorial */
+.changelog-hero {
+  text-align: left;
+  position: relative;
+  z-index: 1;
+  margin-bottom: var(--spacing-3xl);
+  padding: var(--spacing-xl) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.changelog-hero-badge {
+  display: none;
+}
+
+.changelog-hero-title {
+  font-family: var(--font-family-display);
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-display);
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.changelog-hero-description {
+  font-size: var(--font-size-base);
+  color: var(--color-text-tertiary);
+  max-width: 400px;
+  margin: 0;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .changelog-hero-description {
+    font-size: var(--font-size-sm);
+  }
+}
+

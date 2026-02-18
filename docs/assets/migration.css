@@ -1,0 +1,9 @@
+/* ============================================
+   Migration Page - Playful & Friendly Styles
+   Inspired by the Blok mascot's warm, fun aesthetic
+   ============================================ */
+
+/* Modular CSS imports */
+@import './migration-main.css';
+@import './migration-codemod.css';
+@import './migration-diff.css';

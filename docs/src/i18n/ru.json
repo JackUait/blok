@@ -1,0 +1,311 @@
+{
+  "nav": {
+    "search": "Поиск",
+    "demo": "Демо",
+    "docs": "Документация",
+    "recipes": "Рецепты",
+    "migration": "Миграция",
+    "changelog": "История изменений",
+    "github": "GitHub"
+  },
+  "common": {
+    "filter": "Фильтр...",
+    "clearSearch": "Очистить поиск",
+    "noResults": "Нет результатов"
+  },
+  "api": {
+    "filterLabel": "Фильтр разделов API",
+    "methods": "Методы",
+    "properties": "Свойства",
+    "property": "Свойство",
+    "type": "Тип",
+    "description": "Описание",
+    "option": "Параметр",
+    "default": "По умолчанию",
+    "quickStartSteps": {
+      "install": {
+        "title": "Установка Blok",
+        "description": "Добавьте Blok в свой проект с помощью любимого менеджера пакетов."
+      },
+      "configure": {
+        "title": "Импорт и настройка",
+        "description": "Импортируйте редактор и инструменты, затем настройте типы блоков."
+      },
+      "save": {
+        "title": "Сохранение контента",
+        "description": "Получайте JSON-данные для сохранения."
+      }
+    },
+    "sections": {
+      "guide": "Руководство",
+      "core": "Ядро",
+      "apiModules": "Модули API",
+      "data": "Данные"
+    },
+    "links": {
+      "quickStart": "Быстрый старт",
+      "blokClass": "Класс Blok",
+      "configuration": "Конфигурация",
+      "blocks": "Блоки",
+      "blockApi": "BlockAPI",
+      "caret": "Каретка",
+      "events": "События",
+      "history": "История",
+      "saver": "Сохранение",
+      "selection": "Выделение",
+      "styles": "Стили",
+      "toolbar": "Панель инструментов",
+      "inlineToolbar": "Встроенная панель",
+      "notifier": "Уведомления",
+      "sanitizer": "Очистка",
+      "tooltip": "Всплывающие подсказки",
+      "readOnly": "Только чтение",
+      "i18n": "Локализация",
+      "ui": "Интерфейс",
+      "listeners": "Слушатели",
+      "tools": "Инструменты",
+      "outputData": "Выходные данные",
+      "blockData": "Данные блока"
+    },
+    "quickStart": {
+      "title": "Быстрый старт",
+      "badge": "Руководство",
+      "description": "Начните работу с Blok за несколько простых шагов."
+    },
+    "blokClass": {
+      "title": "Класс Blok",
+      "badge": "Ядро",
+      "description": "Основной класс редактора, который инициализирует и управляет экземпляром редактора Blok.",
+      "methods": {
+        "save": {
+          "name": "save()",
+          "returnType": "Promise<OutputData>",
+          "description": "Получает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента."
+        },
+        "render": {
+          "name": "render(data)",
+          "returnType": "Promise<void>",
+          "description": "Отображает содержимое редактора из ранее сохранённых JSON-данных."
+        },
+        "focus": {
+          "name": "focus(atEnd?)",
+          "returnType": "boolean",
+          "description": "Устанавливает фокус на редактор. Опционально позиционирует курсор в конце содержимого."
+        },
+        "clear": {
+          "name": "clear()",
+          "returnType": "void",
+          "description": "Удаляет все блоки из редактора."
+        },
+        "destroy": {
+          "name": "destroy()",
+          "returnType": "void",
+          "description": "Уничтожает экземпляр редактора и удаляет все DOM-элементы и обработчики событий."
+        }
+      },
+      "properties": {
+        "isReady": {
+          "name": "isReady",
+          "type": "Promise<void>",
+          "description": "Promise, который разрешается когда редактор готов"
+        },
+        "blocks": {
+          "name": "blocks",
+          "type": "BlocksAPI",
+          "description": "Модуль API для работы с блоками"
+        },
+        "caret": {
+          "name": "caret",
+          "type": "CaretAPI",
+          "description": "Модуль API для управления кареткой"
+        },
+        "history": {
+          "name": "history",
+          "type": "HistoryAPI",
+          "description": "Модуль API истории"
+        },
+        "saver": {
+          "name": "saver",
+          "type": "SaverAPI",
+          "description": "Модуль API сохранения"
+        },
+        "toolbar": {
+          "name": "toolbar",
+          "type": "ToolbarAPI",
+          "description": "Модуль API панели инструментов"
+        },
+        "inlineToolbar": {
+          "name": "inlineToolbar",
+          "type": "InlineToolbarAPI",
+          "description": "Модуль API строчной панели"
+        },
+        "events": {
+          "name": "events",
+          "type": "EventsAPI",
+          "description": "Модуль API событий"
+        }
+      }
+    },
+    "configuration": {
+      "title": "Конфигурация",
+      "description": "Объект конфигурации, передаваемый конструктору Blok.",
+      "table": {
+        "holder": {
+          "option": "holder",
+          "type": "string | HTMLElement",
+          "default": "'blok'",
+          "description": "Контейнер (ID или элемент DOM)"
+        },
+        "tools": {
+          "option": "tools",
+          "type": "Record<string, ToolConfig>",
+          "default": "{}",
+          "description": "Доступные блочные и строчные инструменты"
+        },
+        "placeholder": {
+          "option": "placeholder",
+          "type": "string",
+          "default": "''",
+          "description": "Текст-заполнитель для пустых блоков"
+        },
+        "minHeight": {
+          "option": "minHeight",
+          "type": "string | number",
+          "default": "'300px'",
+          "description": "Минимальная высота редактора"
+        },
+        "defaultBlock": {
+          "option": "defaultBlock",
+          "type": "string",
+          "default": "'paragraph'",
+          "description": "Тип блока по умолчанию"
+        },
+        "data": {
+          "option": "data",
+          "type": "OutputData",
+          "default": "undefined",
+          "description": "Начальные данные для отображения"
+        },
+        "readOnly": {
+          "option": "readOnly",
+          "type": "boolean",
+          "default": "false",
+          "description": "Включить режим только для чтения"
+        },
+        "onChange": {
+          "option": "onChange",
+          "type": "(api: API) => void",
+          "default": "undefined",
+          "description": "Функция обратного вызова при изменении"
+        }
+      }
+    },
+    "blocksApi": {
+      "title": "Blocks API",
+      "badge": "Блоки",
+      "description": "Управление блоками в редакторе — создание, удаление, обновление и переупорядочивание контента."
+    },
+    "blockApi": {
+      "title": "BlockAPI",
+      "badge": "Блок",
+      "description": "Интерфейс для работы с отдельными блоками. Возвращается методами blocks.getById(), blocks.getBlockByIndex() и blocks.insert()."
+    },
+    "caretApi": {
+      "title": "Caret API",
+      "badge": "Каретка",
+      "description": "Управление позицией курсора и выделением внутри редактора."
+    },
+    "eventsApi": {
+      "title": "Events API",
+      "badge": "События",
+      "description": "Подписка и управление событиями жизненного цикла редактора."
+    },
+    "historyApi": {
+      "title": "History API",
+      "badge": "История",
+      "description": "Управление функциональностью отмены/повтора для операций редактора."
+    },
+    "saverApi": {
+      "title": "Saver API",
+      "badge": "Сохранение",
+      "description": "Сохранение и экспорт содержимого редактора."
+    },
+    "selectionApi": {
+      "title": "Selection API",
+      "badge": "Выделение",
+      "description": "Работа с выделением текста внутри редактора."
+    },
+    "stylesApi": {
+      "title": "Styles API",
+      "badge": "Стили",
+      "description": "Доступ к CSS-классам для стилизации пользовательских инструментов и элементов интерфейса."
+    },
+    "toolbarApi": {
+      "title": "Toolbar API",
+      "badge": "Панель",
+      "description": "Управление панелью инструментов блока и её состоянием."
+    },
+    "inlineToolbarApi": {
+      "title": "InlineToolbar API",
+      "badge": "Встроенная",
+      "description": "Управление строчной панелью форматирования (жирный, курсив и т.д.)."
+    },
+    "notifierApi": {
+      "title": "Notifier API",
+      "badge": "Уведомления",
+      "description": "Отображение уведомлений для пользователей."
+    },
+    "sanitizerApi": {
+      "title": "Sanitizer API",
+      "badge": "Очистка",
+      "description": "Очистка HTML-контента для защиты от XSS-атак."
+    },
+    "tooltipApi": {
+      "title": "Tooltip API",
+      "badge": "Всплывающие подсказки",
+      "description": "Отображение всплывающих подсказок на элементах интерфейса."
+    },
+    "readOnlyApi": {
+      "title": "ReadOnly API",
+      "badge": "Только чтение",
+      "description": "Управление режимом только для чтения редактора."
+    },
+    "i18nApi": {
+      "title": "I18n API",
+      "badge": "Локализация",
+      "description": "Поддержка интернационализации для перевода строк интерфейса."
+    },
+    "uiApi": {
+      "title": "UI API",
+      "badge": "Интерфейс",
+      "description": "Доступ к UI-элементам и состоянию Blok."
+    },
+    "listenersApi": {
+      "title": "Listeners API",
+      "badge": "Слушатели",
+      "description": "Управление пользовательскими обработчиками DOM-событий с автоматической очисткой."
+    },
+    "toolsApi": {
+      "title": "Tools API",
+      "badge": "Инструменты",
+      "description": "Доступ и управление инструментами редактора."
+    },
+    "outputData": {
+      "title": "OutputData",
+      "badge": "Данные",
+      "description": "Структура данных, возвращаемая методом save()."
+    },
+    "blockData": {
+      "title": "BlockData",
+      "badge": "Данные",
+      "description": "Структура каждого блока в массиве blocks."
+    }
+  },
+  "footer": {
+    "madeWith": "Сделано с",
+    "copyright": "© 2024 Blok. Открытый исходный код под лицензией MIT."
+  },
+  "languageSelector": {
+    "label": "Язык"
+  }
+}

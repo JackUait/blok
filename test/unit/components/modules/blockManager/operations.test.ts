@@ -435,7 +435,7 @@ describe('BlockOperations', () => {
     it('dispatches block-added event', () => {
       operations.insert({ tool: 'paragraph' }, blocksStore);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest matchers return 'any', this is expected
+       
       const expectedDetail = expect.objectContaining({ index: expect.any(Number) });
 
       expect(blockDidMutatedSpy).toHaveBeenCalledWith(

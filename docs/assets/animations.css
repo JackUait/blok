@@ -1,0 +1,138 @@
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInBlock {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: var(--font-size-3xl);
+  }
+  .hero-description {
+    font-size: var(--font-size-base);
+  }
+  .section-title {
+    font-size: var(--font-size-2xl);
+  }
+  .migration-title {
+    font-size: var(--font-size-2xl);
+  }
+}
+
+/* ============================================
+   Section Wrappers with Wave Dividers
+   ============================================ */
+
+.section-wrapper {
+  position: relative;
+  overflow: visible;
+}
+
+/* Features section wrapper */
+.section-wrapper--features {
+  margin-top: -1px;
+}
+
+.section-wrapper--features .features {
+  padding-top: var(--spacing-4xl);
+  padding-bottom: calc(var(--spacing-4xl) + 60px);
+}
+
+/* QuickStart section wrapper */
+.section-wrapper--quickstart {
+  position: relative;
+}
+
+.section-wrapper--quickstart .quick-start {
+  padding-bottom: calc(var(--spacing-4xl) + 50px);
+}
+
+/* API section wrapper */
+.section-wrapper--api {
+  position: relative;
+}
+
+.section-wrapper--api .api {
+  padding-bottom: calc(var(--spacing-4xl) + 40px);
+}
+
+/* ============================================
+   Wave Divider Component Styles
+   ============================================ */
+
+.wave-divider {
+  user-select: none;
+}
+
+/* Subtle animation on the wave paths */
+.wave-path--main {
+  transition: d 0.6s ease;
+}
+
+.wave-path--layer2 {
+  transition: d 0.8s ease;
+}
+
+/* Gentle continuous wave animation for hero */
+@keyframes waveGentleDrift {
+  0%, 100% {
+    transform: scaleX(1.02) scaleY(1);
+  }
+  50% {
+    transform: scaleX(1.02) scaleY(0.88);
+  }
+}
+
+@keyframes waveGentleDriftOffset {
+  0%, 100% {
+    transform: scaleX(1.02) scaleY(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleX(1.02) scaleY(1.15);
+    opacity: 0.65;
+  }
+}
+
+/* Hero section wave animation - continuous and subtle */
+.hero .wave-divider--soft .wave-path--main {
+  animation: waveGentleDrift 5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.hero .wave-divider--soft .wave-path--layer2 {
+  animation: waveGentleDriftOffset 7s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* Add subtle movement on scroll (via CSS only, optional enhancement) */
+@keyframes waveFloat {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-2%);
+  }
+}
+
+/* Optional: animate layered waves on hover */
+.section-wrapper:hover .wave-divider--layered .wave-path--layer2 {
+  animation: waveFloat 4s ease-in-out infinite;
+}

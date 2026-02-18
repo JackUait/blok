@@ -2,6 +2,7 @@
 import { BlocksAPI } from '../components/modules/api/blocks';
 import { CaretAPI } from '../components/modules/api/caret';
 import { EventsAPI } from '../components/modules/api/events';
+import { HistoryAPI } from '../components/modules/api/history';
 import { I18nAPI } from '../components/modules/api/i18n';
 import { API } from '../components/modules/api/index';
 import { InlineToolbarAPI } from '../components/modules/api/inlineToolbar';
@@ -45,6 +46,7 @@ export interface BlokModules {
   CaretAPI: CaretAPI,
   ToolsAPI: ToolsAPI,
   EventsAPI: EventsAPI,
+  HistoryAPI: HistoryAPI,
   I18nAPI: I18nAPI,
   API: API,
   InlineToolbarAPI: InlineToolbarAPI,

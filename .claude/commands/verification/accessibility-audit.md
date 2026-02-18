@@ -57,7 +57,7 @@ npx eslint src/components --quiet 2>&1 | grep -i "a11y\|aria\|alt\|role" | head 
 
 **If axe-core available:**
 ```bash
-npm run test -- --grep "accessibility"
+yarn test -- --grep "accessibility"
 ```
 
 ### 3. Categorize by Severity

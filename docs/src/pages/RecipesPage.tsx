@@ -1,0 +1,436 @@
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Nav } from '../components/layout/Nav';
+import { Footer } from '../components/layout/Footer';
+import { CodeBlock } from '../components/common/CodeBlock';
+import { Sidebar } from '../components/common/Sidebar';
+import { RecipeCard } from '../components/recipes/RecipeCard';
+import { KeyboardShortcuts } from '../components/recipes/KeyboardShortcuts';
+import { MobileSectionNav } from '../components/common/MobileSectionNav';
+import { SIDEBAR_SECTIONS } from '../components/recipes/recipes-data';
+import { NAV_LINKS } from '../utils/constants';
+import '../../assets/recipes.css';
+
+// Flatten sidebar sections to get all section IDs
+const ALL_SECTION_IDS = SIDEBAR_SECTIONS.flatMap((section) =>
+  section.links.map((link) => link.id)
+);
+
+const SaveIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    <polyline points="17 21 17 13 7 13 7 21" />
+    <polyline points="7 3 7 8 15 8" />
+  </svg>
+);
+
+const EventIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+  </svg>
+);
+
+const ToolIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+
+const StyleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="13.5" cy="6.5" r=".5" />
+    <circle cx="17.5" cy="10.5" r=".5" />
+    <circle cx="8.5" cy="7.5" r=".5" />
+    <circle cx="6.5" cy="12.5" r=".5" />
+    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
+  </svg>
+);
+
+const ReadOnlyIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const AUTOSAVE_CODE = `const editor = new Blok({
+  holder: 'editor',
+  tools: { /* your tools */ },
+  onChange: async (api) => {
+    const data = await api.saver.save();
+    
+    // Debounce saves to avoid too many requests
+    clearTimeout(window.saveTimeout);
+    window.saveTimeout = setTimeout(() => {
+      saveToServer(data);
+    }, 1000);
+  },
+});`;
+
+const EVENTS_CODE = `const editor = new Blok({
+  holder: 'editor',
+  tools: { /* your tools */ },
+  onReady: () => {
+    console.log('Editor is ready!');
+  },
+  onChange: (api, event) => {
+    console.log('Content changed:', event);
+  },
+});
+
+// Or listen after initialization
+editor.isReady.then(() => {
+  // Access the blocks API
+  const blocks = editor.blocks;
+  console.log('Block count:', blocks.getBlocksCount());
+});`;
+
+const CUSTOM_TOOL_CODE = `class AlertTool {
+  static get toolbox() {
+    return {
+      title: 'Alert',
+      icon: '<svg>...</svg>',
+    };
+  }
+
+  constructor({ data }) {
+    this.data = data;
+  }
+
+  render() {
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('alert-block');
+    wrapper.contentEditable = 'true';
+    wrapper.innerHTML = this.data.text || '';
+    this.wrapper = wrapper;
+    return wrapper;
+  }
+
+  save(blockContent) {
+    return {
+      text: blockContent.innerHTML,
+    };
+  }
+}
+
+// Use it in your config
+const editor = new Blok({
+  tools: {
+    alert: AlertTool,
+  },
+});`;
+
+const STYLING_CODE = `/* Target Blok elements with data attributes */
+[data-blok-holder] {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Style specific block types */
+[data-blok-block="header"] {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+/* Customize the toolbar */
+[data-blok-toolbox] {
+  background: #1a1a1a;
+  border-radius: 8px;
+}
+
+/* Style the inline toolbar */
+[data-blok-inline-toolbar] {
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}`;
+
+const READONLY_CODE = `// Initialize in read-only mode
+const editor = new Blok({
+  holder: 'editor',
+  tools: { /* your tools */ },
+  readOnly: true,
+  data: savedContent, // Load your saved content
+});
+
+// Toggle read-only mode dynamically
+await editor.readOnly.toggle();
+
+// Check current state
+const isReadOnly = editor.readOnly.isEnabled;`;
+
+const LocaleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
+const LOCALE_CODE = `import { Blok } from '@jackuait/blok';
+import { preloadLocales, buildRegistry } from '@jackuait/blok/locales';
+
+// Preload during app startup (for offline support or to eliminate loading delay)
+await preloadLocales(['en', 'fr', 'de']);
+
+// Build registry from preloaded locales (instant, no network request)
+const locales = await buildRegistry(['en', 'fr', 'de']);
+
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locales,
+    locale: 'auto', // Auto-detect browser language
+  }
+});
+
+// Or set a specific locale
+new Blok({
+  holder: 'editor',
+  i18n: {
+    locale: 'fr',         // Use French
+    defaultLocale: 'en',  // Fallback if 'fr' unavailable
+  }
+});`;
+
+export const RecipesPage: React.FC = () => {
+  // Initialize active section from URL hash
+  const [activeSection, setActiveSection] = useState<string>(() => {
+    const hash = window.location.hash.slice(1);
+    return hash || 'keyboard-shortcuts';
+  });
+  const scrollTargetRef = useRef<string | null>(null);
+
+  // Handle initial URL hash on page load and hash changes
+  const scrollToHash = useCallback(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+
+    requestAnimationFrame(() => {
+      const targetElement = document.getElementById(hash);
+      if (targetElement) {
+        scrollTargetRef.current = hash;
+        setActiveSection(hash);
+        targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }
+    });
+  }, []);
+
+  // Handle initial hash on mount
+  useEffect(() => {
+    scrollToHash();
+
+    const handleHashChange = (): void => {
+      scrollToHash();
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [scrollToHash]);
+
+  useEffect(() => {
+    // Intersection Observer for active section tracking
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -100px 0px',
+      threshold: 0.1,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.filter((entry) => entry.isIntersecting).forEach((entry) => {
+        if (scrollTargetRef.current && entry.target.id === scrollTargetRef.current) {
+          scrollTargetRef.current = null;
+          return;
+        }
+        if (scrollTargetRef.current) {
+          return;
+        }
+        setActiveSection(entry.target.id);
+      });
+    }, observerOptions);
+
+    // Observe all sections
+    ALL_SECTION_IDS.forEach((sectionId) => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    // Handle anchor link clicks
+    const handleAnchorClick = (e: Event) => {
+      const target = e.target as HTMLAnchorElement;
+      const href = target.getAttribute('href');
+      if (!href || !href.startsWith('#')) return;
+
+      const sectionId = href.slice(1);
+      const targetElement = document.querySelector(href);
+      if (targetElement) {
+        e.preventDefault();
+        window.history.pushState(null, '', href);
+        scrollTargetRef.current = sectionId;
+        setActiveSection(sectionId);
+        targetElement.scrollIntoView({
+          behavior: 'auto',
+          block: 'start',
+        });
+      }
+    };
+
+    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener('click', handleAnchorClick);
+    });
+
+    return () => {
+      observer.disconnect();
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.removeEventListener('click', handleAnchorClick);
+      });
+    };
+  }, []);
+
+  return (
+    <>
+      <Nav links={NAV_LINKS} />
+      <div className="recipes-docs" data-blok-testid="recipes-docs">
+        <Sidebar
+          sections={SIDEBAR_SECTIONS}
+          activeSection={activeSection}
+          variant="recipes"
+          filterLabel="Filter recipes"
+        />
+        <div className="recipes-content-wrapper">
+          <MobileSectionNav
+            sections={SIDEBAR_SECTIONS}
+            activeSection={activeSection}
+          />
+          <main className="recipes-main" data-blok-testid="recipes-main">
+          <section className="recipes-hero">
+            <h1 className="recipes-hero-title">Recipes</h1>
+            <p className="recipes-hero-description">
+              Practical tips, patterns, and code snippets to help you get the most out of Blok.
+              From basic setup to advanced customization.
+            </p>
+          </section>
+
+          <section id="keyboard-shortcuts" className="recipes-section">
+            <h2 className="recipes-section-title">
+              <span className="recipes-section-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="6" width="20" height="12" rx="2" />
+                  <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
+                </svg>
+              </span>
+              Keyboard Shortcuts
+            </h2>
+            <KeyboardShortcuts />
+          </section>
+
+          <section id="autosave" className="recipes-section">
+            <RecipeCard
+              icon={<SaveIcon />}
+              title="Autosave with Debouncing"
+              description="Automatically save content as users type, with debouncing to prevent excessive server requests."
+              tip="A 1-second debounce is usually a good balance between responsiveness and server load."
+            >
+              <CodeBlock code={AUTOSAVE_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="events" className="recipes-section">
+            <RecipeCard
+              icon={<EventIcon />}
+              title="Working with Events"
+              description="Listen to editor events to integrate with your application's state management or analytics."
+            >
+              <CodeBlock code={EVENTS_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="custom-tool" className="recipes-section">
+            <RecipeCard
+              icon={<ToolIcon />}
+              title="Creating a Custom Tool"
+              description="Build your own block type to extend Blok's functionality. This example creates a simple alert/callout block."
+              tip="Keep tools focused on a single purpose. For complex needs, compose multiple simple tools."
+            >
+              <CodeBlock code={CUSTOM_TOOL_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="styling" className="recipes-section">
+            <RecipeCard
+              icon={<StyleIcon />}
+              title="Styling with Data Attributes"
+              description="Customize Blok's appearance using CSS and data attributes. No need to fight with specificity."
+            >
+              <CodeBlock code={STYLING_CODE} language="css" />
+            </RecipeCard>
+          </section>
+
+          <section id="read-only" className="recipes-section">
+            <RecipeCard
+              icon={<ReadOnlyIcon />}
+              title="Read-Only Mode"
+              description="Display saved content without editing capabilities, or toggle between edit and preview modes."
+              tip="Read-only mode is perfect for previewing content before publishing or displaying user-generated content."
+            >
+              <CodeBlock code={READONLY_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section id="localization" className="recipes-section">
+            <RecipeCard
+              icon={<LocaleIcon />}
+              title="Localization with Preloading"
+              description="Configure Blok for multiple languages with optional preloading for offline support or instant initialization."
+              tip="Most apps can use on-demand loading with buildRegistry() directly—the ~50-100ms delay is usually imperceptible."
+            >
+              <CodeBlock code={LOCALE_CODE} language="typescript" />
+            </RecipeCard>
+          </section>
+
+          <section className="recipes-cta">
+            <div className="recipes-cta-card">
+              <div className="recipes-cta-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                <span>Community</span>
+              </div>
+              <h2>Have a recipe to share?</h2>
+              <p>
+                Your patterns and techniques could help thousands of developers build better editors.
+              </p>
+              <div className="recipes-cta-actions">
+                <a
+                  href="https://github.com/JackUait/blok/discussions"
+                  className="recipes-cta-btn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="recipes-cta-btn-text">Contribute a Recipe</span>
+                  <span className="recipes-cta-btn-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </span>
+                </a>
+              </div>
+              <div className="recipes-cta-decoration" aria-hidden="true">
+                <svg viewBox="0 0 80 80" fill="none">
+                  <circle cx="40" cy="40" r="38" strokeWidth="1" />
+                  <circle cx="40" cy="40" r="28" strokeWidth="1" />
+                  <circle cx="40" cy="40" r="18" strokeWidth="1" />
+                  <circle cx="40" cy="40" r="8" strokeWidth="1" />
+                </svg>
+              </div>
+            </div>
+          </section>
+        </main>
+        </div>
+      </div>
+      <Footer />
+    </>
+  );
+};

@@ -190,6 +190,29 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Check if undo is available.
+   * @returns true if undo is available
+   */
+  public canUndo(): boolean {
+    return this.undoHistory.canUndo();
+  }
+
+  /**
+   * Check if redo is available.
+   * @returns true if redo is available
+   */
+  public canRedo(): boolean {
+    return this.undoHistory.canRedo();
+  }
+
+  /**
+   * Clear all history.
+   */
+  public clear(): void {
+    this.undoHistory.clear();
+  }
+
+  /**
    * Stop capturing changes into current undo group.
    * Call this to force next change into a new undo entry.
    */

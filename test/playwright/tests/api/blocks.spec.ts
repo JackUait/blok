@@ -1234,7 +1234,10 @@ test.describe('api.blocks', () => {
       const convertToItem = page.locator(CONVERT_TO_SELECTOR);
 
       await expect(convertToItem).toBeVisible();
-      await convertToItem.hover();
+
+      // force: true because hovering opens the nested popover, which then
+      // overlaps the trigger item and fails Playwright's intercept check
+      await convertToItem.hover({ force: true });
 
       const nestedMenu = page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"]`);
 

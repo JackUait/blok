@@ -601,10 +601,17 @@ test.describe('blok i18n', () => {
       const convertToButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="convert-to"]`);
 
       await expect(convertToButton).toBeVisible();
-      await convertToButton.click();
+
+      // force: true because hovering opens the nested popover, which then
+      // overlaps the trigger item and fails Playwright's intercept check
+      await convertToButton.hover({ force: true });
+
+      const nestedMenu = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-nested="true"]`);
+
+      await nestedMenu.waitFor({ state: 'attached' });
 
       // Check item in convert to menu is internationalized
-      const headerItem = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-nested="true"] [data-blok-item-name="header"]`);
+      const headerItem = nestedMenu.locator('[data-blok-item-name="header"]');
 
       await expect(headerItem).toBeVisible();
       await expect(headerItem).toContainText(translatedHeading);

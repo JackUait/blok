@@ -40,9 +40,7 @@ export const run = (argv: string[], version: string): void => {
       break;
     }
     case 'help':
-      process.stdout.write(HELP_TEXT);
-      break;
-    default:
+    case null:
       process.stdout.write(HELP_TEXT);
       break;
   }

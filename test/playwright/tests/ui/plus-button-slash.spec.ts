@@ -761,4 +761,63 @@ test.describe('plus button inserts slash paragraph', () => {
 
     await expect(slashParagraph).toHaveCount(1);
   });
+
+  test('clicking bottom zone below table creates new block below the table, not inside last cell', async ({ page }) => {
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Click the bottom zone below all blocks
+    const bottomZone = page.locator('[data-blok-testid="bottom-zone"]');
+
+    await bottomZone.click();
+
+    // A new paragraph block should be created outside the table
+    const allBlocks = page.locator(BLOCK_SELECTOR);
+
+    // Table (1) + 4 cell paragraphs + 1 new paragraph = 6 blocks
+    await expect(allBlocks).toHaveCount(6);
+
+    // The new paragraph should NOT be inside a table cell
+    const paragraphsInsideTable = page.locator('[data-blok-table-cell] [data-blok-component="paragraph"]');
+
+    // Only the 4 original cell paragraphs should be inside the table
+    await expect(paragraphsInsideTable).toHaveCount(4);
+
+    // Verify output data: new paragraph should be a separate top-level block after the table
+    const blockTypes = await page.evaluate(() =>
+      window.blokInstance?.save().then(data => data.blocks.map(b => b.type))
+    );
+
+    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'paragraph']);
+  });
 });

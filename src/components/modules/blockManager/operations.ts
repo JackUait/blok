@@ -191,6 +191,7 @@ export class BlockOperations {
       replace = false,
       tunes,
       skipYjsSync = false,
+      appendToWorkingArea = false,
     } = options;
 
     const targetIndex = index ?? this.currentBlockIndex + (replace ? 0 : 1);
@@ -235,7 +236,7 @@ export class BlockOperations {
       });
     }
 
-    blocksStore.insert(targetIndex, block, replace);
+    blocksStore.insert(targetIndex, block, replace, appendToWorkingArea);
 
     /**
      * Force call of didMutated event on Block insertion
@@ -298,7 +299,7 @@ export class BlockOperations {
   public insertAtEnd(blocksStore: BlocksStore): Block {
     this.currentBlockIndexValue = this.repository.length - 1;
 
-    return this.insert({}, blocksStore);
+    return this.insert({ appendToWorkingArea: true }, blocksStore);
   }
 
   /**

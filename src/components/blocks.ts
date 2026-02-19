@@ -151,7 +151,7 @@ export class Blocks {
    * @param {Block} block — Block to insert
    * @param {boolean} replace — it true, replace block on given index
    */
-  public insert(index: number, block: Block, replace = false): void {
+  public insert(index: number, block: Block, replace = false, appendToWorkingArea = false): void {
     if (!this.length) {
       this.push(block);
 
@@ -181,6 +181,18 @@ export class Blocks {
     }
 
     this.blocks.splice(insertIndex, 0, block);
+
+    /**
+     * When appendToWorkingArea is true, always append to the working area
+     * as a direct child. This prevents blocks from being placed inside
+     * nested containers (e.g., table cells) when the previous block in
+     * the flat array happens to be nested.
+     */
+    if (appendToWorkingArea) {
+      this.insertToDOM(block);
+
+      return;
+    }
 
     if (insertIndex > 0) {
       const previousBlock = this.blocks[insertIndex - 1];

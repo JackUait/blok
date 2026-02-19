@@ -998,6 +998,37 @@ describe('Blocks', () => {
       expect(blocks.blocks[0]).toBe(block1);
     });
 
+    it('should append to workingArea when appendToWorkingArea is true, even when previous block is nested', () => {
+      const blocks = createBlocks();
+
+      // Set up a table-like structure: table block in workingArea, cell block nested inside it
+      const tableBlock = createMockBlock('table-1', 'table');
+      const cellBlock = createMockBlock('cell-1', 'paragraph');
+
+      blocks.push(tableBlock);
+
+      // Nest the cell block's holder inside the table (simulating a table cell)
+      tableBlock.holder.appendChild(cellBlock.holder);
+      blocks.blocks.push(cellBlock);
+
+      // Insert a new block at the end with appendToWorkingArea=true
+      const newBlock = createMockBlock('new-1', 'paragraph');
+
+      blocks.insert(2, newBlock, false, true);
+
+      // The new block should be in the array at index 2
+      expect(blocks.blocks[2]).toBe(newBlock);
+      expect(blocks.length).toBe(3);
+
+      // CRITICAL: The new block's holder should be a direct child of workingArea,
+      // not inside the table block's holder
+      expect(newBlock.holder.parentElement).toBe(workingArea);
+      expect(tableBlock.holder.contains(newBlock.holder)).toBe(false);
+
+      // The cell block should still be nested inside the table
+      expect(tableBlock.holder.contains(cellBlock.holder)).toBe(true);
+    });
+
     it('should handle replace followed by remove', () => {
       const blocks = createBlocks();
       const block1 = createMockBlock('block-1');

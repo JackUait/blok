@@ -79,6 +79,14 @@ export interface Blocks {
   getChildren(parentId: string): BlockAPI[];
 
   /**
+   * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
+   *
+   * @param blockId - id of the block to reparent
+   * @param parentId - id of the new parent block, or null for root level
+   */
+  setBlockParent(blockId: string, parentId: string | null): void;
+
+  /**
    * Returns Blocks count
    * @return {number}
    */

@@ -343,6 +343,60 @@ describe('Saver module', () => {
     expect(logSpy).toHaveBeenCalledWith('Block «paragraph» skipped because saved data is invalid');
   });
 
+  it('preserves image blocks inside table cells when they have parentId', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const tableBlock = createBlockMock({
+      id: 'table-1',
+      tool: 'table',
+      data: { content: [[{ blocks: ['image-1', 'cell-1-1'] }]] },
+      contentIds: ['image-1', 'cell-1-1'],
+    });
+
+    const imageBlock = createBlockMock({
+      id: 'image-1',
+      tool: 'image',
+      data: { url: 'https://example.com/photo.jpg' },
+      parentId: 'table-1',
+    });
+
+    const paragraphBlock = createBlockMock({
+      id: 'cell-1-1',
+      tool: 'paragraph',
+      data: { text: 'Caption text' },
+      parentId: 'table-1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [tableBlock.block, imageBlock.block, paragraphBlock.block],
+      toolSanitizeConfigs: {
+        table: {},
+        image: {},
+        paragraph: {},
+      },
+    });
+
+    const result = await saver.save();
+
+    const blockIds = result?.blocks.map(b => b.id);
+
+    // Image block must be preserved — it has parentId pointing to the table
+    expect(blockIds).toContain('image-1');
+    expect(blockIds).toContain('cell-1-1');
+    expect(blockIds).toContain('table-1');
+
+    expect(result?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'image-1',
+          type: 'image',
+          data: { url: 'https://example.com/photo.jpg' },
+          parent: 'table-1',
+        }),
+      ])
+    );
+  });
+
   it('logs a labeled error when saving fails', async () => {
     const error = new Error('save failed');
     const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);

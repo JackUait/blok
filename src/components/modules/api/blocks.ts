@@ -38,6 +38,7 @@ export class BlocksAPI extends Module {
       update: this.update,
       composeBlockData: this.composeBlockData,
       convert: this.convert,
+      setBlockParent: (blockId: string, parentId: string | null): void => this.setBlockParent(blockId, parentId),
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
       splitBlock: this.splitBlock,
     };
@@ -375,6 +376,23 @@ export class BlocksAPI extends Module {
 
     return blocksToInsert.map((block) => new BlockAPI(block));
   };
+
+  /**
+   * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
+   * @param blockId - id of the block to reparent
+   * @param parentId - id of the new parent block, or null for root level
+   */
+  private setBlockParent(blockId: string, parentId: string | null): void {
+    const block = this.Blok.BlockManager.getBlockById(blockId);
+
+    if (block === undefined) {
+      logLabeled('There is no block with id `' + blockId + '`', 'warn');
+
+      return;
+    }
+
+    this.Blok.BlockManager.setBlockParent(block, parentId);
+  }
 
   /**
    * Stops mutation watching on a block at the specified index.

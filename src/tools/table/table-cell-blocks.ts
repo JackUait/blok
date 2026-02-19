@@ -45,6 +45,7 @@ interface TableCellBlocksOptions {
 export class TableCellBlocks {
   private api: API;
   private gridElement: HTMLElement;
+  private tableBlockId: string;
   private _activeCellWithBlocks: CellPosition | null = null;
   private onNavigateToCell?: CellNavigationCallback;
 
@@ -68,6 +69,7 @@ export class TableCellBlocks {
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
+    this.tableBlockId = options.tableBlockId;
     this.onNavigateToCell = options.onNavigateToCell;
 
     this.api.events.on('block changed', this.handleBlockMutation);
@@ -269,6 +271,7 @@ export class TableCellBlocks {
           const block = this.api.blocks.insert('paragraph', { text }, {}, this.api.blocks.getBlocksCount(), false);
 
           container.appendChild(block.holder);
+          this.api.blocks.setBlockParent(block.id, this.tableBlockId);
           normalizedRow.push({ blocks: [block.id] });
         }
 
@@ -315,6 +318,7 @@ export class TableCellBlocks {
       }
 
       container.appendChild(block.holder);
+      this.api.blocks.setBlockParent(blockId, this.tableBlockId);
       mountedIds.push(blockId);
     }
 
@@ -344,6 +348,7 @@ export class TableCellBlocks {
     }
 
     container.appendChild(block.holder);
+    this.api.blocks.setBlockParent(blockId, this.tableBlockId);
     this.stripPlaceholders(container);
   }
 
@@ -402,6 +407,7 @@ export class TableCellBlocks {
     const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
 
     container.appendChild(block.holder);
+    this.api.blocks.setBlockParent(block.id, this.tableBlockId);
     this.stripPlaceholders(container);
   }
 

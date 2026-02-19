@@ -590,6 +590,61 @@ describe('sanitizer', () => {
     });
   });
 
+  describe('img tag preservation in paragraph sanitize config', () => {
+    it('should preserve img tags with src when paragraph config includes img', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<img src="https://media.dodostatic.net/image/photo.jpg" style="width: 100%;"><br>',
+          },
+        },
+      ];
+
+      /**
+       * Simulates the effective paragraph sanitize config after BlockToolAdapter merges
+       * the paragraph's own rules with inline tool rules.
+       * The paragraph tool must include img in its sanitize config for this to work.
+       */
+      const paragraphSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+        } as unknown as SanitizerRule,
+      };
+
+      const result = sanitizeBlocks(blocksData, paragraphSanitizeConfig, {});
+
+      expect(result[0].data.text).toContain('<img');
+      expect(result[0].data.text).toContain('src="https://media.dodostatic.net/image/photo.jpg"');
+    });
+
+    it('should strip img tags when paragraph config does NOT include img', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<img src="https://example.com/photo.jpg"><br>',
+          },
+        },
+      ];
+
+      const paragraphSanitizeConfigWithoutImg: SanitizerConfig = {
+        text: {
+          br: true,
+        } as unknown as SanitizerRule,
+      };
+
+      const result = sanitizeBlocks(blocksData, paragraphSanitizeConfigWithoutImg, {});
+
+      expect(result[0].data.text).not.toContain('<img');
+      expect(result[0].data.text).toContain('<br>');
+    });
+  });
+
   describe('stripUnsafeUrls edge cases', () => {
     it('should strip javascript: URLs with single quotes', () => {
       const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [

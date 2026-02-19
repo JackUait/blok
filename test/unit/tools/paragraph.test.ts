@@ -336,7 +336,15 @@ describe('Paragraph Tool - Custom Configurations', () => {
     });
 
     it('has correct sanitize config', () => {
-      expect(Paragraph.sanitize).toEqual({ text: { br: true } });
+      expect(Paragraph.sanitize).toEqual({
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+        },
+      });
     });
   });
 });

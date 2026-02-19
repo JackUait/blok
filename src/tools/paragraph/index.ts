@@ -373,6 +373,10 @@ export class Paragraph implements BlockTool {
     return {
       text: {
         br: true,
+        img: {
+          src: true,
+          style: true,
+        },
       },
     };
   }

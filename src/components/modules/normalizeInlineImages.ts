@@ -91,17 +91,7 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
       continue;
     }
 
-    const imgSrcs: string[] = [];
-    let match: RegExpExecArray | null;
-
-    /**
-     * Reset regex lastIndex before iterating since it's a global regex.
-     */
-    IMG_TAG_REGEX.lastIndex = 0;
-
-    while ((match = IMG_TAG_REGEX.exec(text)) !== null) {
-      imgSrcs.push(match[1]);
-    }
+    const imgSrcs = Array.from(text.matchAll(IMG_TAG_REGEX), (m) => m[1]);
 
     if (imgSrcs.length === 0) {
       continue;
@@ -216,15 +206,13 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
     /**
      * Find the cell containing this paragraph and insert image IDs before the paragraph.
      */
-    for (const row of tableData.content) {
-      for (const cell of row) {
-        const paragraphIndex = cell.blocks.indexOf(paragraphId);
+    tableData.content.flat().forEach((cell) => {
+      const paragraphIndex = cell.blocks.indexOf(paragraphId);
 
-        if (paragraphIndex !== -1) {
-          cell.blocks.splice(paragraphIndex, 0, ...imageBlockIds);
-        }
+      if (paragraphIndex !== -1) {
+        cell.blocks.splice(paragraphIndex, 0, ...imageBlockIds);
       }
-    }
+    });
 
     /**
      * Add image block IDs to the table's contentIds.
@@ -256,13 +244,7 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
      * and update its text.
      */
     if (block.id !== undefined && extractionMap.has(block.id)) {
-      const imageBlocks = newImageBlocksPerParagraph.get(block.id);
-
-      if (imageBlocks !== undefined) {
-        for (const imgBlock of imageBlocks) {
-          result.push(imgBlock);
-        }
-      }
+      result.push(...(newImageBlocksPerParagraph.get(block.id) ?? []));
 
       const info = extractionMap.get(block.id);
       const updatedParagraph = {

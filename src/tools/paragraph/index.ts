@@ -13,7 +13,7 @@ import type {
   PasteEvent,
   ToolboxConfig,
   ConversionConfig,
-  SanitizerConfig,
+  ToolSanitizerConfig,
   PasteConfig,
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants';
@@ -369,7 +369,7 @@ export class Paragraph implements BlockTool {
    *
    * @returns SanitizerConfig
    */
-  public static get sanitize(): SanitizerConfig {
+  public static get sanitize(): ToolSanitizerConfig {
     return {
       text: {
         br: true,

@@ -668,60 +668,12 @@ test.describe('plus button inserts slash paragraph', () => {
 
     await expect(plusButton).toBeVisible();
 
-    // Debug: capture block structure and hovered block info before clicking
-    const debugInfo = await page.evaluate(() => {
-      const blok = window.blokInstance;
-
-      if (!blok) {
-        return { error: 'no blok instance' };
-      }
-
-      // Access internal modules via save() trick — get block list
-      const editorEl = document.querySelector('[data-blok-testid="blok-editor"]');
-      const blockWrappers = editorEl?.querySelectorAll('[data-blok-testid="block-wrapper"]') ?? [];
-
-      const blocks = Array.from(blockWrappers).map((wrapper, i) => {
-        const component = wrapper.getAttribute('data-blok-component');
-        const isInCell = wrapper.closest('[data-blok-table-cell]') !== null;
-        const text = wrapper.querySelector('[contenteditable]')?.textContent ?? '';
-
-        return { index: i, component, isInCell, text: text.substring(0, 20) };
-      });
-
-      return { blockCount: blocks.length, blocks };
-    });
-
-    console.log('DEBUG block structure:', JSON.stringify(debugInfo, null, 2));
-
     await plusButton.click();
 
-    // Debug: capture what happened after click
-    const afterClick = await page.evaluate(() => {
-      const editorEl = document.querySelector('[data-blok-testid="blok-editor"]');
-      const blockWrappers = editorEl?.querySelectorAll('[data-blok-testid="block-wrapper"]') ?? [];
+    // Read debug info captured inside handleClick
+    const debugInfo = await page.evaluate(() => (window as Record<string, unknown>).__plusButtonDebug);
 
-      const blocks = Array.from(blockWrappers).map((wrapper, i) => {
-        const component = wrapper.getAttribute('data-blok-component');
-        const isInCell = wrapper.closest('[data-blok-table-cell]') !== null;
-        const text = wrapper.querySelector('[contenteditable]')?.textContent ?? '';
-
-        return { index: i, component, isInCell, text: text.substring(0, 20) };
-      });
-
-      // Check which element has the slash
-      const slashElements = Array.from(document.querySelectorAll('[contenteditable]'))
-        .filter(el => el.textContent?.includes('/'))
-        .map(el => ({
-          inCell: el.closest('[data-blok-table-cell]') !== null,
-          inTable: el.closest('[data-blok-component="table"]') !== null,
-          component: el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-component'),
-          text: el.textContent?.substring(0, 20),
-        }));
-
-      return { blockCount: blocks.length, blocks, slashElements };
-    });
-
-    console.log('DEBUG after click:', JSON.stringify(afterClick, null, 2));
+    console.log('DEBUG handleClick state:', JSON.stringify(debugInfo, null, 2));
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();

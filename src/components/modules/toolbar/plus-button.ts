@@ -163,6 +163,19 @@ export class PlusButtonHandler {
       return;
     }
 
+    // DEBUG: capture state for testing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- temporary debug
+    (window as any).__plusButtonDebug = {
+      hoveredBlockName: this.hoveredBlockInternal?.name,
+      hoveredBlockId: this.hoveredBlockInternal?.id,
+      hoveredBlockIndex: this.hoveredBlockInternal !== null
+        ? BlockManager.getBlockIndex(this.hoveredBlockInternal)
+        : null,
+      hoveredBlockInCell: this.hoveredBlockInternal?.holder.closest('[data-blok-table-cell]') !== null,
+      totalBlocks: BlockManager.blocks.length,
+      blockList: BlockManager.blocks.map((b, i) => ({ i, name: b.name, inCell: b.holder.closest('[data-blok-table-cell]') !== null })),
+    };
+
     // Determine target block: reuse empty/slash paragraph, or create new one
     const hoveredBlock = this.hoveredBlockInternal;
     const isParagraph = hoveredBlock?.name === 'paragraph';

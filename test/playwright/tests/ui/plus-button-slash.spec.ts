@@ -659,21 +659,15 @@ test.describe('plus button inserts slash paragraph', () => {
       { holder: HOLDER_ID }
     );
 
-    // Hover over the LAST table block to show the plus button
-    const tableBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`);
+    // Hover over the second table block (contains "E") to show the plus button
+    const secondTable = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`, { hasText: 'E' });
 
-    await tableBlocks.last().hover();
+    await secondTable.hover();
 
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
     await expect(plusButton).toBeVisible();
-
     await plusButton.click();
-
-    // Read debug info captured inside handleClick
-    const debugInfo = await page.evaluate(() => (window as Record<string, unknown>).__plusButtonDebug);
-
-    console.log('DEBUG handleClick state:', JSON.stringify(debugInfo, null, 2));
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();

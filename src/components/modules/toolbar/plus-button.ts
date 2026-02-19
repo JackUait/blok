@@ -163,19 +163,6 @@ export class PlusButtonHandler {
       return;
     }
 
-    // DEBUG: capture state for testing
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- temporary debug
-    (window as any).__plusButtonDebug = {
-      hoveredBlockName: this.hoveredBlockInternal?.name,
-      hoveredBlockId: this.hoveredBlockInternal?.id,
-      hoveredBlockIndex: this.hoveredBlockInternal !== null
-        ? BlockManager.getBlockIndex(this.hoveredBlockInternal)
-        : null,
-      hoveredBlockInCell: this.hoveredBlockInternal?.holder.closest('[data-blok-table-cell]') !== null,
-      totalBlocks: BlockManager.blocks.length,
-      blockList: BlockManager.blocks.map((b, i) => ({ i, name: b.name, inCell: b.holder.closest('[data-blok-table-cell]') !== null })),
-    };
-
     // Determine target block: reuse empty/slash paragraph, or create new one
     const hoveredBlock = this.hoveredBlockInternal;
     const isParagraph = hoveredBlock?.name === 'paragraph';
@@ -188,12 +175,16 @@ export class PlusButtonHandler {
       : BlockManager.currentBlockIndex;
     const baseInsertIndex = insertAbove ? hoveredBlockIndex : hoveredBlockIndex + 1;
 
-    // When inserting below, skip past any blocks nested inside the hovered block's
-    // DOM (e.g. paragraph blocks inside table cells) so the new block's array position
-    // is after all nested blocks and won't be claimed by adjacency logic.
+    // When inserting below, skip past any blocks nested inside another block's
+    // DOM (e.g. paragraph blocks inside table cells). The block array may
+    // interleave nested blocks from multiple parents, so check whether each
+    // block's holder lives inside any block-wrapper ancestor rather than only
+    // the hovered block's holder.
     const blocksAfterInsert = BlockManager.blocks.slice(baseInsertIndex);
+    const isNested = (block: Block): boolean =>
+      block.holder.parentElement?.closest('[data-blok-testid="block-wrapper"]') !== null;
     const firstNonNestedOffset = !insertAbove && hoveredBlock && blocksAfterInsert.length > 0
-      ? blocksAfterInsert.findIndex((block) => !hoveredBlock.holder.contains(block.holder))
+      ? blocksAfterInsert.findIndex((block) => !isNested(block))
       : 0;
     const insertIndex = baseInsertIndex + (firstNonNestedOffset === -1 ? blocksAfterInsert.length : firstNonNestedOffset);
 
@@ -201,11 +192,12 @@ export class PlusButtonHandler {
       ? hoveredBlock
       : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
 
-    // The DOM insertion may place the new block's holder inside a nested container
-    // (e.g. a table cell) because the previous block in the array is inside the
-    // hovered block's DOM. Move the holder to be a sibling after the hovered block.
-    if (targetBlock !== hoveredBlock && hoveredBlock?.holder.contains(targetBlock.holder)) {
-      hoveredBlock.holder.after(targetBlock.holder);
+    // The DOM insertion may place the new block's holder inside a nested
+    // container (e.g. a table cell) because the previous block in the array
+    // is inside another block's DOM. Move the holder to be a sibling after
+    // the hovered block so it becomes a top-level block.
+    if (targetBlock !== hoveredBlock && isNested(targetBlock)) {
+      hoveredBlock?.holder.after(targetBlock.holder);
     }
 
     // Insert "/" or position caret after existing one

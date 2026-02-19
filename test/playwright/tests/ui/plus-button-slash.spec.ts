@@ -558,4 +558,63 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should still have only 1 block (paragraph was replaced, not a new block added)
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
   });
+
+  test('clicking plus button on table block creates new paragraph below the table, not inside a cell', async ({ page }) => {
+    // Need to create Blok with table tool registered
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Hover over the table block to show the plus button
+    const tableBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`);
+
+    await tableBlock.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+
+    // The "/" should be in a NEW paragraph block OUTSIDE the table, not inside a cell.
+    const cellsWithSlash = page.locator('[data-blok-table-cell] [contenteditable]', { hasText: '/' });
+
+    await expect(cellsWithSlash).toHaveCount(0);
+
+    // There should be a paragraph block (outside the table) containing "/"
+    const slashParagraph = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+
+    await expect(slashParagraph).toHaveCount(1);
+  });
 });

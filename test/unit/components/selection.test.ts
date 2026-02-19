@@ -367,7 +367,6 @@ describe('SelectionUtils', () => {
 
     expect(wrappers.length).toBeGreaterThan(0);
     wrappers.forEach((wrapper) => {
-      // eslint-disable-next-line jest-dom/prefer-to-have-attribute
       expect((wrapper as HTMLElement).getAttribute('data-blok-fake-background')).toBe('true');
     });
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(true);
@@ -376,7 +375,6 @@ describe('SelectionUtils', () => {
 
     expect(utilsInstance.isFakeBackgroundEnabled).toBe(false);
     expect(paragraph.querySelector('[data-blok-fake-background]')).toBeNull();
-    // eslint-disable-next-line jest-dom/prefer-to-have-text-content
     expect(paragraph.textContent).toBe('Highlighted text');
   });
 
@@ -561,7 +559,6 @@ describe('SelectionUtils', () => {
 
     // Verify orphaned element is removed and content is preserved
     expect(document.querySelector('[data-blok-fake-background="true"]')).toBeNull();
-    // eslint-disable-next-line jest-dom/prefer-to-have-text-content
     expect(paragraph.textContent).toContain('orphaned');
   });
 });

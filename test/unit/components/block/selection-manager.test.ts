@@ -68,7 +68,6 @@ describe('SelectionManager', () => {
     it('sets data-blok-selected attribute when state is true', () => {
       selectionManager.selected = true;
 
-      // eslint-disable-next-line jest-dom/prefer-to-have-attribute -- Vitest doesn't have jest-dom matchers, using getAttribute is correct
       expect(holder.getAttribute(DATA_ATTR.selected)).toBe('true');
     });
 
@@ -76,7 +75,6 @@ describe('SelectionManager', () => {
       holder.setAttribute(DATA_ATTR.selected, 'true');
       selectionManager.selected = false;
 
-      // eslint-disable-next-line jest-dom/prefer-to-have-attribute -- Vitest doesn't have jest-dom matchers, using getAttribute is correct
       expect(holder.getAttribute(DATA_ATTR.selected)).toBeNull();
     });
 
@@ -118,7 +116,6 @@ describe('SelectionManager', () => {
 
       // Verify actual observable behavior: DOM state change
       expect(selectionManager.selected).toBe(true);
-      // eslint-disable-next-line jest-dom/prefer-to-have-attribute -- Vitest doesn't have jest-dom matchers, using getAttribute is correct
       expect(holder.getAttribute(DATA_ATTR.selected)).toBe('true');
 
       // Verify content styling was updated via StyleManager

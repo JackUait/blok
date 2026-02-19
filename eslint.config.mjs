@@ -1659,16 +1659,16 @@ export default defineConfig(
       '@typescript-eslint/naming-convention': 'off',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/consistent-type-exports': 'error',
-      'prefer-arrow-callback': 'error',
+      'prefer-arrow-callback': 'off', // Style-only: syntax preference (arrow vs function in callbacks)
       'prefer-const': 'error',
       '@typescript-eslint/no-deprecated': 'error',
       'no-param-reassign': ['error', { props: true }],
       'no-global-assign': 'error',
       'no-implicit-globals': 'error',
-      'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+      'func-style': 'off', // Style-only: function declaration vs expression preference
       'no-nested-ternary': 'error',
       'max-depth': ['error', { max: 2 }],
-      'one-var': ['error', 'never'],
+      'one-var': 'off', // Style-only: declaration grouping preference
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -1745,8 +1745,7 @@ export default defineConfig(
       'internal-dom': internalDomPlugin,
     },
     rules: {
-      // Limit file length to 500 lines
-      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-lines': 'off', // Style-only: file length is organizational preference
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       'sonarjs/no-identical-functions': 'error',
@@ -1856,7 +1855,7 @@ export default defineConfig(
       'vitest/valid-expect': 'off', // Already handled by jest/valid-expect
       'vitest/valid-title': 'off', // Already handled by jest/valid-title
       // Enforce test structure best practices
-      'jest/consistent-test-it': ['error', { fn: 'it' }],
+      'jest/consistent-test-it': 'off', // Style-only: it() vs test() naming convention
       'jest/valid-describe-callback': 'error',
       'jest/valid-expect': 'error',
       'jest/valid-expect-in-promise': 'error',
@@ -1870,19 +1869,19 @@ export default defineConfig(
       'jest/expect-expect': 'error',
       'jest/no-conditional-expect': 'error',
       'jest/no-standalone-expect': 'error',
-      'jest/prefer-to-be': 'warn',
-      'jest/prefer-to-contain': 'warn',
-      'jest/prefer-to-have-length': 'warn',
+      'jest/prefer-to-be': 'off', // Style-only: matcher idiom preference
+      'jest/prefer-to-contain': 'off', // Style-only: matcher idiom preference
+      'jest/prefer-to-have-length': 'off', // Style-only: matcher idiom preference
       'jest/prefer-strict-equal': 'warn',
-      'jest/prefer-equality-matcher': 'warn',
-      'jest/prefer-comparison-matcher': 'warn',
+      'jest/prefer-equality-matcher': 'off', // Style-only: matcher idiom preference
+      'jest/prefer-comparison-matcher': 'off', // Style-only: matcher idiom preference
       'jest/prefer-expect-assertions': 'off', // Can be too strict
-      'jest/prefer-expect-resolves': 'warn',
+      'jest/prefer-expect-resolves': 'off', // Style-only: await syntax preference
       'jest/prefer-called-with': 'warn',
       'jest/prefer-spy-on': 'warn',
-      'jest/prefer-todo': 'warn',
+      'jest/prefer-todo': 'off', // Style-only: it.todo() convention
       // Prevent anti-patterns
-      'jest/no-alias-methods': 'error',
+      'jest/no-alias-methods': 'off', // Style-only: toBeCalled vs toHaveBeenCalled are literal aliases
       'jest/no-duplicate-hooks': 'error',
       'jest/no-export': 'error',
       'jest/no-identical-title': 'error',
@@ -1890,23 +1889,23 @@ export default defineConfig(
       'jest/no-mocks-import': 'error',
       'jest/no-test-return-statement': 'error',
       'jest/prefer-hooks-on-top': 'error',
-      'jest/prefer-hooks-in-order': 'warn',
-      'jest/require-top-level-describe': 'error',
+      'jest/prefer-hooks-in-order': 'off', // Style-only: hook declaration ordering convention
+      'jest/require-top-level-describe': 'off', // Style-only: organizational convention
       // Enforce test organization
       'jest/max-nested-describe': ['warn', { max: 3 }],
       'jest/max-expects': ['warn', { max: 20 }],
       // Code quality
       // Note: no-deprecated-functions requires Jest to be installed, skipped for Vitest compatibility
       'jest/no-untyped-mock-factory': 'warn',
-      'jest/prefer-mock-promise-shorthand': 'warn',
+      'jest/prefer-mock-promise-shorthand': 'off', // Style-only: mockResolvedValue vs mockImplementation syntax
       // require-hook is disabled above (vi.mock() must be top-level in Vitest)
       // jest-dom rules for DOM testing best practices
       'jest-dom/prefer-checked': 'error',
       'jest-dom/prefer-enabled-disabled': 'error',
       'jest-dom/prefer-focus': 'error',
       'jest-dom/prefer-required': 'error',
-      'jest-dom/prefer-to-have-attribute': 'warn',
-      'jest-dom/prefer-to-have-text-content': 'warn',
+      'jest-dom/prefer-to-have-attribute': 'off', // Style-only: matcher idiom preference
+      'jest-dom/prefer-to-have-text-content': 'off', // Style-only: matcher idiom preference
       'jest-dom/prefer-to-have-value': 'error',
       // testing-library rules for behavior-driven testing
       // Note: These rules apply when using DOM Testing Library utilities
@@ -1964,9 +1963,9 @@ export default defineConfig(
       'playwright/no-useless-await': 'error',
       'playwright/no-unsafe-references': 'error',
       // Enforce test structure best practices
-      'playwright/require-top-level-describe': 'error',
-      'playwright/prefer-hooks-on-top': 'error',
-      'playwright/prefer-hooks-in-order': 'warn',
+      'playwright/require-top-level-describe': 'off', // Style-only: organizational convention
+      'playwright/prefer-hooks-on-top': 'off', // Style-only: hook declaration ordering
+      'playwright/prefer-hooks-in-order': 'off', // Style-only: hook declaration ordering
       'playwright/no-duplicate-hooks': 'error',
       'playwright/valid-describe-callback': 'error',
       'playwright/valid-title': 'error',
@@ -1984,22 +1983,22 @@ export default defineConfig(
       'playwright/no-conditional-in-test': 'warn',
       'playwright/valid-expect': 'error',
       'playwright/valid-expect-in-promise': 'error',
-      'playwright/prefer-to-be': 'warn',
-      'playwright/prefer-to-contain': 'warn',
+      'playwright/prefer-to-be': 'off', // Style-only: matcher idiom preference
+      'playwright/prefer-to-contain': 'off', // Style-only: matcher idiom preference
       'playwright/prefer-to-have-count': 'warn',
-      'playwright/prefer-to-have-length': 'warn',
+      'playwright/prefer-to-have-length': 'off', // Style-only: matcher idiom preference
       'playwright/prefer-strict-equal': 'warn',
-      'playwright/prefer-comparison-matcher': 'warn',
-      'playwright/prefer-equality-matcher': 'warn',
-      'playwright/no-useless-not': 'warn',
+      'playwright/prefer-comparison-matcher': 'off', // Style-only: matcher idiom preference
+      'playwright/prefer-equality-matcher': 'off', // Style-only: matcher idiom preference
+      'playwright/no-useless-not': 'off', // Style-only: double negation simplification
       'playwright/require-to-throw-message': 'warn',
       // Prevent deprecated methods
       'playwright/no-nth-methods': 'warn',
       'playwright/no-get-by-title': 'warn',
       // Enforce test organization
-      'playwright/max-nested-describe': ['warn', { max: 3 }],
+      'playwright/max-nested-describe': 'off', // Style-only: nesting depth convention
       'playwright/max-expects': ['warn', { max: 20 }],
-      'playwright/no-nested-step': 'warn',
+      'playwright/no-nested-step': 'off', // Style-only: organizational convention
       // Code quality
       'playwright/no-unused-locators': 'warn',
       'playwright/expect-expect': ['error', {
@@ -2059,7 +2058,7 @@ export default defineConfig(
       'vitest/valid-describe-callback': 'error',
       'vitest/valid-expect': 'error',
       'vitest/valid-title': 'error',
-      'jest/consistent-test-it': ['error', { fn: 'it' }],
+      'jest/consistent-test-it': 'off', // Style-only: it() vs test() naming convention
       'jest/valid-describe-callback': 'error',
       'jest/valid-expect': 'error',
       'jest/valid-title': 'error',

@@ -76,7 +76,6 @@ describe('BoldNormalizationPass', () => {
 
       expect(container).toHaveTextContent('Text with nbsp');
       // Note: toHaveTextContent matcher from jest-dom always replaces nbsp, so we use textContent directly
-      // eslint-disable-next-line jest-dom/prefer-to-have-text-content
       expect(container.textContent).not.toContain(nbsp);
     });
 
@@ -90,7 +89,6 @@ describe('BoldNormalizationPass', () => {
       pass.run(container);
 
       // Note: toHaveTextContent matcher from jest-dom always replaces nbsp, so we use textContent directly
-      // eslint-disable-next-line jest-dom/prefer-to-have-text-content
       expect(container.textContent).not.toContain(nbsp);
     });
 
@@ -105,7 +103,6 @@ describe('BoldNormalizationPass', () => {
 
       // Note: toHaveTextContent matcher from jest-dom always replaces nbsp with regular spaces
       // so we need to use a different assertion
-      // eslint-disable-next-line jest-dom/prefer-to-have-text-content
       expect(container.textContent).toContain(nbsp);
     });
   });

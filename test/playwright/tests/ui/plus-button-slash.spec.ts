@@ -618,6 +618,85 @@ test.describe('plus button inserts slash paragraph', () => {
     await expect(slashParagraph).toHaveCount(1);
   });
 
+  test('selecting a block type from toolbox after clicking plus on table creates block below the table', async ({ page }) => {
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Hover over the table block to show the plus button
+    const tableBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`);
+
+    await tableBlock.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+
+    // Type "head" to filter to heading items
+    await page.keyboard.type('head');
+
+    // Wait for filter to show heading items
+    const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
+
+    await expect(visibleItems).toHaveCount(6);
+
+    // Click on Heading 1
+    const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])', { hasText: 'Heading 1' });
+
+    await headingItem.click();
+
+    // The header block should exist and be OUTSIDE the table
+    const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`);
+
+    await expect(headerBlock).toBeVisible();
+
+    // The header should NOT be inside a table cell
+    const headerInsideTable = page.locator('[data-blok-table-cell] [data-blok-component="header"]');
+
+    await expect(headerInsideTable).toHaveCount(0);
+
+    // Verify output data: header should be a separate top-level block after the table.
+    // The table's 2x2 grid produces 4 cell paragraph blocks in the flat save output.
+    const blockTypes = await page.evaluate(() =>
+      window.blokInstance?.save().then(data => data.blocks.map(b => b.type))
+    );
+
+    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'header']);
+  });
+
   test('clicking plus button on table block works when multiple tables exist in the article', async ({ page }) => {
     await resetBlok(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');

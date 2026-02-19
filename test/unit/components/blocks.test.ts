@@ -468,14 +468,15 @@ describe('Blocks', () => {
 
       blocks.push(block1);
 
-      const removeSpy = vi.spyOn(block1.holder, 'remove');
+      const replaceWithSpy = vi.spyOn(block1.holder, 'replaceWith');
 
       blocks.insert(0, block2, true);
 
       expect(blocks.blocks[0]).toBe(block2);
       expect(blocks.length).toBe(1);
-      expect(removeSpy).toHaveBeenCalled();
+      expect(replaceWithSpy).toHaveBeenCalledWith(block2.holder);
       expect(block1.call).toHaveBeenCalledWith(BlockToolAPI.REMOVED);
+      expect(block2.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
     });
 
     it('should insert block after previous block when index > 0', () => {
@@ -526,6 +527,55 @@ describe('Blocks', () => {
       blocks.insert(0, block);
 
       expect(block.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
+    });
+
+    it('should preserve DOM position when replacing a block whose previous sibling is nested inside another element', () => {
+      const blocks = createBlocks();
+
+      // Set up a container that nests some block holders (simulating a table)
+      const tableBlock = createMockBlock('table-1', 'table');
+      const cellBlock = createMockBlock('cell-1', 'paragraph');
+      const slashBlock = createMockBlock('slash-1', 'paragraph');
+
+      // Push table block first (goes into workingArea)
+      blocks.push(tableBlock);
+
+      // Nest the cell block's holder INSIDE the table block's holder
+      tableBlock.holder.appendChild(cellBlock.holder);
+      blocks.blocks.push(cellBlock);
+
+      // Push the slash block - manually place it AFTER the table in workingArea
+      // (simulating what PlusButtonHandler does when it relocates the "/" paragraph)
+      blocks.blocks.push(slashBlock);
+      workingArea.appendChild(slashBlock.holder);
+      slashBlock.call(BlockToolAPI.RENDERED);
+
+      // Verify initial DOM: workingArea has [tableHolder, slashHolder]
+      // and cellHolder is inside tableHolder
+      expect(workingArea.children.length).toBe(2);
+      expect(workingArea.children[0]).toBe(tableBlock.holder);
+      expect(workingArea.children[1]).toBe(slashBlock.holder);
+      expect(tableBlock.holder.contains(cellBlock.holder)).toBe(true);
+
+      // Now replace slashBlock (index 2) with a new block
+      const newBlock = createMockBlock('new-1', 'header');
+
+      blocks.insert(2, newBlock, true);
+
+      // The new block should be in the array at index 2
+      expect(blocks.blocks[2]).toBe(newBlock);
+      expect(blocks.length).toBe(3);
+
+      // CRITICAL: The new block's holder should be in workingArea (not inside the table)
+      expect(workingArea.children.length).toBe(2);
+      expect(workingArea.children[0]).toBe(tableBlock.holder);
+      expect(workingArea.children[1]).toBe(newBlock.holder);
+
+      // The cell block should still be inside the table
+      expect(tableBlock.holder.contains(cellBlock.holder)).toBe(true);
+
+      // The new block should NOT be inside the table
+      expect(tableBlock.holder.contains(newBlock.holder)).toBe(false);
     });
   });
 

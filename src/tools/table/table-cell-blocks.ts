@@ -481,6 +481,13 @@ export class TableCellBlocks {
       return;
     }
 
+    // Only claim blocks whose holder is inside this table's grid.
+    // Blocks placed outside the grid (e.g., via replaceWith during toolbox
+    // insertion) should not be pulled into a cell by adjacency.
+    if (!this.gridElement.contains(holder)) {
+      return;
+    }
+
     // Check if this block should be in a cell based on adjacency
     const cell = this.findCellForNewBlock(blockIndex);
 

@@ -165,17 +165,22 @@ export class Blocks {
 
       /**
        * Call REMOVED lifecycle hook first, then destroy to unsubscribe from
-       * mutation events, then remove DOM element. This prevents spurious
-       * 'block-changed' events from being fired when the DOM element is removed.
+       * mutation events. Use replaceWith() to swap DOM elements in-place,
+       * preserving the replaced block's exact DOM position. This prevents
+       * the new block from being misplaced when the previous block in the
+       * array is nested inside another element (e.g., a table cell).
        */
       blockToReplace.call(BlockToolAPI.REMOVED);
       blockToReplace.destroy();
-      blockToReplace.holder.remove();
+      blockToReplace.holder.replaceWith(block.holder);
+
+      this.blocks.splice(insertIndex, 1, block);
+      block.call(BlockToolAPI.RENDERED);
+
+      return;
     }
 
-    const deleteCount = replace ? 1 : 0;
-
-    this.blocks.splice(insertIndex, deleteCount, block);
+    this.blocks.splice(insertIndex, 0, block);
 
     if (insertIndex > 0) {
       const previousBlock = this.blocks[insertIndex - 1];

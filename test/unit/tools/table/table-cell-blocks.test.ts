@@ -797,6 +797,10 @@ describe('TableCellBlocks', () => {
 
       newBlockHolder.setAttribute('data-blok-id', 'new-1');
 
+      // In real code, insertToDOM places the holder inside the grid (as a sibling
+      // of the previous block) before the block-added event fires.
+      gridElement.appendChild(newBlockHolder);
+
       const api = {
         blocks: {
           getBlockIndex: vi.fn((id: string) => {
@@ -843,6 +847,80 @@ describe('TableCellBlocks', () => {
       });
 
       expect(container.contains(newBlockHolder)).toBe(true);
+    });
+
+    it('should not claim block when its holder is outside the grid', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      const existingBlock = document.createElement('div');
+
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
+      container.appendChild(existingBlock);
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // New block holder is outside the grid (e.g., placed by replaceWith outside the table)
+      const newBlockHolder = document.createElement('div');
+
+      newBlockHolder.setAttribute('data-blok-id', 'new-1');
+      document.body.appendChild(newBlockHolder);
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'existing-1') return 0;
+            if (id === 'new-1') return 1;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'existing-1', holder: existingBlock };
+            if (index === 1) return { id: 'new-1', holder: newBlockHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(2),
+          setBlockParent: vi.fn(),
+        },
+        events: {
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as unknown as API;
+
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+
+      const onCall = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(
+        (call: unknown[]) => call[0] === 'block changed'
+      );
+      const handler = onCall?.[1] as (data: unknown) => void;
+
+      handler({
+        event: {
+          type: 'block-added',
+          detail: {
+            target: { id: 'new-1', holder: newBlockHolder },
+            index: 1,
+          },
+        },
+      });
+
+      // Block should NOT have been claimed into the cell since it's outside the grid
+      expect(container.contains(newBlockHolder)).toBe(false);
+
+      newBlockHolder.remove();
     });
 
     it('should not claim block if it is already inside a cell', async () => {
@@ -1195,9 +1273,12 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      // The replacement block (e.g. a list) that will be added at index 0
+      // The replacement block (e.g. a list) that will be added at index 0.
+      // In real code, replaceWith() places it where the original was (inside the
+      // cell container), so it is already inside the grid when block-added fires.
       const replacementHolder = document.createElement('div');
       replacementHolder.setAttribute('data-blok-id', 'list-1');
+      container.appendChild(replacementHolder);
 
       // After replace: flat list is [list-1 (index 0), sibling-1 (index 1)]
       const api = {

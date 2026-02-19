@@ -400,6 +400,25 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     merged[tag] = cloneTagConfig(globalValue);
   }
 
+  /**
+   * Include tags from field rules that are not present in global rules.
+   * Tool-specific sanitize configs should be able to allow tags
+   * beyond what the global config defines.
+   */
+  if (fieldRules) {
+    for (const tag in fieldRules) {
+      if (!Object.prototype.hasOwnProperty.call(fieldRules, tag)) {
+        continue;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(merged, tag)) {
+        continue;
+      }
+
+      merged[tag] = cloneTagConfig(fieldRules[tag]);
+    }
+  }
+
   return merged;
 };
 

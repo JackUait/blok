@@ -680,6 +680,86 @@ describe('sanitizer', () => {
     });
   });
 
+  describe('tool-specific tags with non-empty global sanitizer', () => {
+    it('should preserve tool-specific tags not present in global sanitizer config', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<p><img src="https://example.com/photo.jpg" style="width: 100%;"><br></p>',
+          },
+        },
+      ];
+
+      /**
+       * Tool config includes img and p tags.
+       */
+      const toolSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+          p: true,
+        } as unknown as SanitizerRule,
+      };
+
+      /**
+       * Global sanitizer only includes br and strong — does NOT include img or p.
+       * Tool-specific tags should still be preserved.
+       */
+      const globalSanitizer: SanitizerConfig = {
+        br: true,
+        strong: {},
+      };
+
+      const result = sanitizeBlocks(blocksData, toolSanitizeConfig, globalSanitizer);
+
+      expect(result[0].data.text).toContain('<img');
+      expect(result[0].data.text).toContain('src="https://example.com/photo.jpg"');
+      expect(result[0].data.text).toContain('<p>');
+      expect(result[0].data.text).toContain('<br>');
+    });
+
+    it('should preserve ul, li, span from tool config when global config lacks them', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<p>Utiliza:</p><ul><li>separadores <span style="font-size: 1rem;">gastronorm</span></li></ul>',
+          },
+        },
+      ];
+
+      const toolSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          p: true,
+          ul: true,
+          li: true,
+          span: {
+            style: true,
+          },
+        } as unknown as SanitizerRule,
+      };
+
+      const globalSanitizer: SanitizerConfig = {
+        br: true,
+        b: {},
+        i: {},
+      };
+
+      const result = sanitizeBlocks(blocksData, toolSanitizeConfig, globalSanitizer);
+
+      expect(result[0].data.text).toContain('<p>');
+      expect(result[0].data.text).toContain('<ul>');
+      expect(result[0].data.text).toContain('<li>');
+      expect(result[0].data.text).toContain('<span');
+      expect(result[0].data.text).toContain('style="font-size: 1rem;"');
+    });
+  });
+
   describe('stripUnsafeUrls edge cases', () => {
     it('should strip javascript: URLs with single quotes', () => {
       const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [

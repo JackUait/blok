@@ -459,12 +459,17 @@ test.describe('multi-block conversion', () => {
       await selectBlocksWithShift(page, 0, 2);
       await openBlockTunesForSelectedBlocks(page);
 
+      // Clicking the settings button positions the mouse over the "Convert to"
+      // item. Since it has children, the popover's mouseover handler auto-opens
+      // the nested popover with conversion targets. Use force:hover on convert-to
+      // to ensure the nested popover is open, then click the target directly.
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      await convertToOption.click();
+      await convertToOption.hover({ force: true });
 
       const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
+      await expect(headerOption).toBeVisible();
       await headerOption.click();
 
       // First two should be headers, last two should remain paragraphs

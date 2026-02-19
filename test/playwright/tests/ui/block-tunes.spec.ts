@@ -412,9 +412,9 @@ test.describe('ui.block-tunes', () => {
 
       await expect(convertToOption).toBeVisible();
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      // dispatchEvent instead of hover() because the nested popover that opens
+      // overlaps the trigger item and fails Playwright's actionability check
+      await convertToOption.dispatchEvent('mouseover');
 
       await expect(
         page.locator(`[data-blok-nested="true"] [data-blok-item-name="header-2"]`)
@@ -495,9 +495,9 @@ test.describe('ui.block-tunes', () => {
         .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      // dispatchEvent instead of hover() because the nested popover that opens
+      // overlaps the trigger item and fails Playwright's actionability check
+      await convertToOption.dispatchEvent('mouseover');
 
       await expect(
         page
@@ -537,9 +537,9 @@ test.describe('ui.block-tunes', () => {
         .getByTestId('popover-item')
         .filter({ hasText: 'Convert to' });
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      // dispatchEvent instead of hover() because the nested popover that opens
+      // overlaps the trigger item and fails Playwright's actionability check
+      await convertToOption.dispatchEvent('mouseover');
 
       const header2Option = page.locator(`[data-blok-nested="true"] [data-blok-item-name="header-2"]`);
 

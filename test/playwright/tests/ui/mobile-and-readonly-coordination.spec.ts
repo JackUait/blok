@@ -504,8 +504,8 @@ test.describe('read-only toggle coordination with controllers', () => {
     // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(100);
 
-    // Click in the bottom zone again
-    await bottomZone.click({ force: true });
+    // Click in the bottom zone again (use dispatchEvent since read-only mode may disable pointer events)
+    await bottomZone.dispatchEvent('click');
 
     // In read-only mode, no new block should be created
     const blocksCountReadOnly = await page.evaluate(() => {

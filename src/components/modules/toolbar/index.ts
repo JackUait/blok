@@ -366,18 +366,12 @@ export class Toolbar extends Module<ToolbarNodes> {
      * The toolbar still positions itself for toolbox/slash-search purposes,
      * but plus button and settings toggler remain hidden.
      */
-    if (this.hoveredBlockIsFromTableCell) {
-      plusButton.style.display = 'none';
+    const displayValue = this.hoveredBlockIsFromTableCell ? 'none' : '';
 
-      if (settingsToggler) {
-        settingsToggler.style.display = 'none';
-      }
-    } else {
-      plusButton.style.display = '';
+    plusButton.style.display = displayValue;
 
-      if (settingsToggler) {
-        settingsToggler.style.display = '';
-      }
+    if (settingsToggler) {
+      settingsToggler.style.display = displayValue;
     }
 
     const targetBlockHolder = targetBlock.holder;

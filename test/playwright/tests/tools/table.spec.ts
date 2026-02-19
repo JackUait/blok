@@ -1130,7 +1130,7 @@ test.describe('table tool', () => {
       // After insertion, scroll wrapper to left edge so the new column's grip is visible
       const wrapper = page.locator(TABLE_SELECTOR);
 
-      await wrapper.evaluate(el => { el.scrollLeft = 0; });
+      await wrapper.evaluate(el => { el.scrollTo(0, el.scrollTop); });
 
       // Click the first cell in the newly inserted column to re-trigger grips
       // eslint-disable-next-line playwright/no-nth-methods -- first() targets the newly inserted column's cell
@@ -1191,7 +1191,7 @@ test.describe('table tool', () => {
       // Scroll wrapper to left edge so grips are not clipped
       const wrapper = page.locator(TABLE_SELECTOR);
 
-      await wrapper.evaluate(el => { el.scrollLeft = 0; });
+      await wrapper.evaluate(el => { el.scrollTo(0, el.scrollTop); });
 
       // After insertion, hover over a cell in the second row to trigger mouseover and show grips,
       // then click it to ensure the focus lands in the cell
@@ -1362,8 +1362,9 @@ test.describe('table tool', () => {
       const rowGripAfter = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGripAfter).toBeVisible();
-      // Force click because the small grip pill may be overlapped by the adjacent cell
-      await rowGripAfter.click({ force: true });
+      // Scroll grip into view so it is not overlapped by the adjacent cell
+      await rowGripAfter.scrollIntoViewIfNeeded();
+      await rowGripAfter.click();
 
       // Popover should reopen with row menu items
       await expect(page.getByText('Insert Row Above')).toBeVisible();

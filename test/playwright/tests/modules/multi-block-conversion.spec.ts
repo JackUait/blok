@@ -385,9 +385,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
@@ -422,13 +420,9 @@ test.describe('multi-block conversion', () => {
       await selectBlocksWithShift(page, 0, 2);
       await openBlockTunesForSelectedBlocks(page);
 
-      // Clicking the settings button positions the mouse over the "Convert to"
-      // item. Since it has children, the popover's mouseover handler auto-opens
-      // the nested popover with conversion targets. Use force:hover on convert-to
-      // to ensure the nested popover is open, then click the target directly.
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
 
@@ -461,13 +455,9 @@ test.describe('multi-block conversion', () => {
       await selectBlocksWithShift(page, 0, 2);
       await openBlockTunesForSelectedBlocks(page);
 
-      // Clicking the settings button positions the mouse over the "Convert to"
-      // item. Since it has children, the popover's mouseover handler auto-opens
-      // the nested popover with conversion targets. Use force:hover on convert-to
-      // to ensure the nested popover is open, then click the target directly.
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
@@ -501,13 +491,9 @@ test.describe('multi-block conversion', () => {
       await selectAllBlocksViaShift(page, 3);
       await openBlockTunesForSelectedBlocks(page);
 
-      // Clicking the settings button positions the mouse over the "Convert to"
-      // item. Since it has children, the popover's mouseover handler auto-opens
-      // the nested popover with conversion targets. Use force:hover on convert-to
-      // to ensure the nested popover is open, then click the target directly.
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
@@ -534,9 +520,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
 
@@ -728,9 +712,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       // Paragraph should not be in the conversion options since all blocks are already paragraphs
       const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
@@ -800,9 +782,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       // Select bulleted list option
       const listOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="bulleted-list"]`);
@@ -846,9 +826,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       // Select numbered list option
       const listOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="numbered-list"]`);
@@ -888,9 +866,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       const listOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="bulleted-list"]`);
 
@@ -930,9 +906,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       // Select paragraph option
       const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
@@ -969,9 +943,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       // Select header option
       const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
@@ -1009,9 +981,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.dispatchEvent('mouseover');
 
       // Select paragraph option
       const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);

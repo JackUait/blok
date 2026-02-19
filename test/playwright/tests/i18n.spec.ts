@@ -602,9 +602,9 @@ test.describe('blok i18n', () => {
 
       await expect(convertToButton).toBeVisible();
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToButton.hover({ force: true });
+      // Dispatch mouseover directly: hovering opens the nested popover, which
+      // then overlaps the trigger item and fails Playwright's actionability check
+      await convertToButton.dispatchEvent('mouseover');
 
       const nestedMenu = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-nested="true"]`);
 

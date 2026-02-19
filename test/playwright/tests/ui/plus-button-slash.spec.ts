@@ -617,4 +617,123 @@ test.describe('plus button inserts slash paragraph', () => {
 
     await expect(slashParagraph).toHaveCount(1);
   });
+
+  test('clicking plus button on table block works when multiple tables exist in the article', async ({ page }) => {
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['E', 'F'], ['G', 'H']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Hover over the LAST table block to show the plus button
+    const tableBlocks = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`);
+
+    await tableBlocks.last().hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+
+    // Debug: capture block structure and hovered block info before clicking
+    const debugInfo = await page.evaluate(() => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        return { error: 'no blok instance' };
+      }
+
+      // Access internal modules via save() trick — get block list
+      const editorEl = document.querySelector('[data-blok-testid="blok-editor"]');
+      const blockWrappers = editorEl?.querySelectorAll('[data-blok-testid="block-wrapper"]') ?? [];
+
+      const blocks = Array.from(blockWrappers).map((wrapper, i) => {
+        const component = wrapper.getAttribute('data-blok-component');
+        const isInCell = wrapper.closest('[data-blok-table-cell]') !== null;
+        const text = wrapper.querySelector('[contenteditable]')?.textContent ?? '';
+
+        return { index: i, component, isInCell, text: text.substring(0, 20) };
+      });
+
+      return { blockCount: blocks.length, blocks };
+    });
+
+    console.log('DEBUG block structure:', JSON.stringify(debugInfo, null, 2));
+
+    await plusButton.click();
+
+    // Debug: capture what happened after click
+    const afterClick = await page.evaluate(() => {
+      const editorEl = document.querySelector('[data-blok-testid="blok-editor"]');
+      const blockWrappers = editorEl?.querySelectorAll('[data-blok-testid="block-wrapper"]') ?? [];
+
+      const blocks = Array.from(blockWrappers).map((wrapper, i) => {
+        const component = wrapper.getAttribute('data-blok-component');
+        const isInCell = wrapper.closest('[data-blok-table-cell]') !== null;
+        const text = wrapper.querySelector('[contenteditable]')?.textContent ?? '';
+
+        return { index: i, component, isInCell, text: text.substring(0, 20) };
+      });
+
+      // Check which element has the slash
+      const slashElements = Array.from(document.querySelectorAll('[contenteditable]'))
+        .filter(el => el.textContent?.includes('/'))
+        .map(el => ({
+          inCell: el.closest('[data-blok-table-cell]') !== null,
+          inTable: el.closest('[data-blok-component="table"]') !== null,
+          component: el.closest('[data-blok-testid="block-wrapper"]')?.getAttribute('data-blok-component'),
+          text: el.textContent?.substring(0, 20),
+        }));
+
+      return { blockCount: blocks.length, blocks, slashElements };
+    });
+
+    console.log('DEBUG after click:', JSON.stringify(afterClick, null, 2));
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+
+    // The "/" should be in a NEW paragraph block OUTSIDE any table, not inside a cell.
+    const cellsWithSlash = page.locator('[data-blok-table-cell] [contenteditable]', { hasText: '/' });
+
+    await expect(cellsWithSlash).toHaveCount(0);
+
+    // There should be a paragraph block (outside the table) containing "/"
+    const slashParagraph = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+
+    await expect(slashParagraph).toHaveCount(1);
+  });
 });

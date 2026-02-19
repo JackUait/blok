@@ -23,6 +23,15 @@ interface TableCell {
 }
 
 /**
+ * Tracking info for a paragraph whose inline images need extraction.
+ */
+interface ExtractionInfo {
+  parentTableId: string;
+  imgSrcs: string[];
+  cleanedText: string;
+}
+
+/**
  * Regex to match <img> tags and capture their src attribute.
  * Handles both single and double quotes around src value.
  */
@@ -61,16 +70,6 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
 
   if (!hasTable) {
     return blocks;
-  }
-
-  /**
-   * Track which paragraphs need image extraction.
-   * Maps paragraph id → { parentTableId, imgSrcs[] }
-   */
-  interface ExtractionInfo {
-    parentTableId: string;
-    imgSrcs: string[];
-    cleanedText: string;
   }
 
   const extractionMap = new Map<string, ExtractionInfo>();
@@ -212,11 +211,7 @@ export const normalizeInlineImages = <T extends NormalizableBlock>(blocks: T[]):
       continue;
     }
 
-    const imageBlockIds = imageBlocks.map((b) => {
-      const block = b as unknown as NormalizableBlock;
-
-      return block.id ?? '';
-    });
+    const imageBlockIds = imageBlocks.map((b) => b.id ?? '');
 
     /**
      * Find the cell containing this paragraph and insert image IDs before the paragraph.

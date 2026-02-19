@@ -86,6 +86,13 @@ export class Toolbar extends Module<ToolbarNodes> {
   private explicitlyClosed: boolean = false;
 
   /**
+   * Flag to track if the current hovered block was resolved from a table cell block.
+   * When true, the toolbar suppresses plus button, settings toggler, and
+   * prevents overriding the current block when the toolbox opens.
+   */
+  private hoveredBlockIsFromTableCell: boolean = false;
+
+  /**
    * Toolbox class instance
    * It will be created in requestIdleCallback so it can be null in some period of time
    */
@@ -215,8 +222,10 @@ export class Toolbar extends Module<ToolbarNodes> {
 
         /**
          * Set current block to cover the case when the Toolbar showed near hovered Block but caret is set to another Block.
+         * Skip this when the hovered block was resolved from a table cell, so the toolbox
+         * can detect the original cell block and hide restricted tools (e.g., table, header).
          */
-        if (this.hoveredBlock) {
+        if (this.hoveredBlock && !this.hoveredBlockIsFromTableCell) {
           this.Blok.BlockManager.currentBlock = this.hoveredBlock;
         }
 
@@ -328,11 +337,12 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 
-    if (!targetBlock) {
-      this.close();
-
-      return;
-    }
+    /**
+     * Track whether the original block was inside a table cell.
+     * When true, the toolbar suppresses plus button and settings toggler,
+     * and the toolbox uses the original current block for cell detection.
+     */
+    this.hoveredBlockIsFromTableCell = targetBlock !== unresolvedBlock;
 
     /** Clean up draggable on previous block if any */
     if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
@@ -349,6 +359,25 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (!wrapper || !plusButton) {
       return;
+    }
+
+    /**
+     * Suppress toolbar buttons when the block is inside a table cell.
+     * The toolbar still positions itself for toolbox/slash-search purposes,
+     * but plus button and settings toggler remain hidden.
+     */
+    if (this.hoveredBlockIsFromTableCell) {
+      plusButton.style.display = 'none';
+
+      if (settingsToggler) {
+        settingsToggler.style.display = 'none';
+      }
+    } else {
+      plusButton.style.display = '';
+
+      if (settingsToggler) {
+        settingsToggler.style.display = '';
+      }
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -521,16 +550,22 @@ export class Toolbar extends Module<ToolbarNodes> {
      * to prevent toolbar from reopening on subsequent block-hovered events
      */
     this.hoveredBlock = null;
+    this.hoveredBlockIsFromTableCell = false;
     // Only set explicitlyClosed if not explicitly disabled (e.g., when called from toolbox after block insertion)
     if (options?.setExplicitlyClosed !== false) {
       this.explicitlyClosed = true;
     }
 
     /**
-     * Restore plus button visibility in case it was hidden by other interactions
+     * Restore plus button and settings toggler visibility
+     * in case they were hidden for table cell blocks
      */
     if (this.nodes.plusButton) {
       this.nodes.plusButton.style.display = '';
+    }
+
+    if (this.nodes.settingsToggler) {
+      this.nodes.settingsToggler.style.display = '';
     }
 
     /**
@@ -566,9 +601,9 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Uses the DOM attribute directly to avoid cross-module dependency on the table tool.
    *
    * @param block - the block to resolve
-   * @returns the parent table block if inside a cell, the original block otherwise, or null if resolution fails
+   * @returns the parent table block if inside a cell, the original block otherwise
    */
-  private resolveTableCellBlock(block: Block): Block | null {
+  private resolveTableCellBlock(block: Block): Block {
     const cellBlocksContainer = block.holder.closest('[data-blok-table-cell-blocks]');
 
     if (!cellBlocksContainer) {
@@ -578,10 +613,10 @@ export class Toolbar extends Module<ToolbarNodes> {
     const tableBlockHolder = cellBlocksContainer.closest('[data-blok-testid="block-wrapper"]');
 
     if (!tableBlockHolder) {
-      return null;
+      return block;
     }
 
-    return this.Blok.BlockManager.getBlockByChildNode(tableBlockHolder) ?? null;
+    return this.Blok.BlockManager.getBlockByChildNode(tableBlockHolder) ?? block;
   }
 
   /**

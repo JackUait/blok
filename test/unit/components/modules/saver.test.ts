@@ -23,6 +23,8 @@ interface BlockMockOptions {
   data: SavedData['data'];
   tunes?: Record<string, unknown>;
   isValid?: boolean;
+  parentId?: string | null;
+  contentIds?: string[];
 }
 
 interface CreateSaverOptions {
@@ -47,6 +49,8 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
   const block = {
     save: saveMock,
     validate: validateMock,
+    parentId: options.parentId ?? null,
+    contentIds: options.contentIds ?? [],
   } as unknown as Block;
 
   return {
@@ -249,6 +253,94 @@ describe('Saver module', () => {
 
     expect(sanitizeBlocksSpy).toHaveBeenCalledTimes(1);
     expect(logSpy).toHaveBeenCalledWith('Block «quote» skipped because saved data is invalid');
+  });
+
+  it('preserves invalid child blocks that have a parentId', async () => {
+    const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const tableBlock = createBlockMock({
+      id: 'table-1',
+      tool: 'table',
+      data: { content: [[{ blocks: ['cell-text', 'cell-empty'] }]] },
+      contentIds: ['cell-text', 'cell-empty'],
+    });
+
+    const cellTextBlock = createBlockMock({
+      id: 'cell-text',
+      tool: 'paragraph',
+      data: { text: 'Hello' },
+      parentId: 'table-1',
+    });
+
+    const cellEmptyBlock = createBlockMock({
+      id: 'cell-empty',
+      tool: 'paragraph',
+      data: { text: '' },
+      isValid: false,
+      parentId: 'table-1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [tableBlock.block, cellTextBlock.block, cellEmptyBlock.block],
+      toolSanitizeConfigs: {
+        table: {},
+        paragraph: {},
+      },
+    });
+
+    const result = await saver.save();
+
+    // The empty paragraph with parentId should be preserved, not dropped
+    const blockIds = result?.blocks.map(b => b.id);
+
+    expect(blockIds).toContain('cell-empty');
+    expect(result?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'cell-empty',
+          type: 'paragraph',
+          data: { text: '' },
+          parent: 'table-1',
+        }),
+      ])
+    );
+
+    // Invalid blocks WITHOUT a parent should still be skipped
+    expect(logSpy).not.toHaveBeenCalledWith('Block «paragraph» skipped because saved data is invalid');
+  });
+
+  it('still skips invalid blocks that have no parentId', async () => {
+    const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const invalidOrphanBlock = createBlockMock({
+      id: 'orphan',
+      tool: 'paragraph',
+      data: { text: '' },
+      isValid: false,
+    });
+
+    const validBlock = createBlockMock({
+      id: 'valid',
+      tool: 'paragraph',
+      data: { text: 'Keep me' },
+    });
+
+    const { saver } = createSaver({
+      blocks: [invalidOrphanBlock.block, validBlock.block],
+      toolSanitizeConfigs: {
+        paragraph: {},
+      },
+    });
+
+    const result = await saver.save();
+
+    const blockIds = result?.blocks.map(b => b.id);
+
+    expect(blockIds).not.toContain('orphan');
+    expect(blockIds).toContain('valid');
+    expect(logSpy).toHaveBeenCalledWith('Block «paragraph» skipped because saved data is invalid');
   });
 
   it('logs a labeled error when saving fails', async () => {

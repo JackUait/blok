@@ -140,16 +140,23 @@ test.describe('ui.toolbar-rubber-band-hover', () => {
     // Using a position well below the fourth block to ensure hover zone doesn't find any block
     await page.mouse.move(fourthBox.x + fourthBox.width / 2, fourthBox.y + fourthBox.height + 100);
 
+    // Wait for hover cooldown (50ms) to expire after cross-block selection
+    // eslint-disable-next-line playwright/no-wait-for-timeout
+    await page.waitForTimeout(100);
+
     // Now hover over the fourth (last) block
     await fourthBlock.hover();
 
-    // Wait for toolbar to settle after hover
-    await page.waitForFunction(() => {
+    // Wait for toolbar to settle near the fourth block after hover
+    const fourthBlockBoxForWait = await getRequiredBoundingBox(fourthBlock);
+    await page.waitForFunction(({ fourthBlockY, firstBlockY }) => {
       const toolbar = document.querySelector('[data-blok-testid="toolbar"]');
       if (!toolbar) return false;
       const rect = toolbar.getBoundingClientRect();
-      return rect.top > 0 && rect.top < 1000; // Toolbar has a valid position
-    }, { timeout: 2000 });
+      if (rect.top <= 0 || rect.top >= 1000) return false;
+      // Wait until toolbar is closer to fourth block than first block
+      return Math.abs(rect.top - fourthBlockY) < Math.abs(rect.top - firstBlockY);
+    }, { fourthBlockY: fourthBlockBoxForWait.y, firstBlockY: firstBox.y }, { timeout: 2000 });
 
     // Get the toolbar position after hovering fourth block
     const toolbarAfterFourthHover = await getRequiredBoundingBox(toolbar);

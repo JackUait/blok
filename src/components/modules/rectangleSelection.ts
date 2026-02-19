@@ -140,11 +140,15 @@ export class RectangleSelection extends Module {
     const pointerX = pageX - scrollLeft;
 
     /**
-     * Check if pointer is within editor's horizontal bounds.
+     * Check if pointer is within the content area's horizontal bounds.
      * This determines whether we should close the toolbar when starting selection.
-     * Clicks outside the horizontal bounds (to the left or right) should NOT close the toolbar.
+     * Clicks outside the content area (to the left or right, in the margin/toolbar zone)
+     * should NOT close the toolbar. Use the first block's content element for bounds,
+     * falling back to the redactor bounds if no content element exists.
      */
-    const withinEditorHorizontally = pointerX >= editorRect.left && pointerX <= editorRect.right;
+    const contentElement = redactor.querySelector('[data-blok-testid="block-content"]');
+    const contentRect = contentElement ? contentElement.getBoundingClientRect() : editorRect;
+    const withinEditorHorizontally = pointerX >= contentRect.left && pointerX <= contentRect.right;
 
     const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pointerY);
 

@@ -7,7 +7,7 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const REDACTOR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
+const BOTTOM_ZONE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-bottom-zone]`;
 
 declare global {
   interface Window {
@@ -477,20 +477,10 @@ test.describe('read-only toggle coordination with controllers', () => {
 
     expect(blocksCountBefore).toBe(1);
 
-    // Click in the bottom zone - get bounds directly from the element
-    const redactor = page.locator(REDACTOR_SELECTOR);
-    await expect(redactor).toBeVisible();
-
-    const { x, y, width, height } = await redactor.evaluate((el) => {
-      const rect = el.getBoundingClientRect();
-      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-    });
-
-    // Click near the bottom of the redactor
-    await page.mouse.click(
-      x + width / 2,
-      y + height - 10
-    );
+    // Click in the bottom zone element (dedicated element below the redactor)
+    const bottomZone = page.locator(BOTTOM_ZONE_SELECTOR);
+    await expect(bottomZone).toBeVisible();
+    await bottomZone.click();
 
     // In read-write mode, a new block should be created
     const blocksCountAfter = await page.evaluate(() => {
@@ -514,18 +504,8 @@ test.describe('read-only toggle coordination with controllers', () => {
     // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(100);
 
-    // Click in the bottom zone again - get bounds directly from the element
-    const redactor2 = page.locator(REDACTOR_SELECTOR);
-
-    const { x: x2, y: y2, width: width2, height: height2 } = await redactor2.evaluate((el) => {
-      const rect = el.getBoundingClientRect();
-      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-    });
-
-    await page.mouse.click(
-      x2 + width2 / 2,
-      y2 + height2 - 10
-    );
+    // Click in the bottom zone again
+    await bottomZone.click({ force: true });
 
     // In read-only mode, no new block should be created
     const blocksCountReadOnly = await page.evaluate(() => {

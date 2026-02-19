@@ -1111,6 +1111,113 @@ describe('RectangleSelection', () => {
     expect(internal.mousedown).toBe(true);
   });
 
+  describe('toolbar close on horizontal bounds', () => {
+    it('does not close toolbar when click is outside content area but inside redactor', () => {
+      const {
+        rectangleSelection,
+        toolbar,
+        blokWrapper,
+        blockContent,
+        modules,
+      } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+      }
+
+      // Redactor is full-width (0-800), but content is narrower (200-600)
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 500,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      // Add block-content element inside the redactor for the querySelector
+      blokWrapper.appendChild(blockContent);
+      vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        left: 200,
+        right: 600,
+        width: 400,
+        height: 500,
+        x: 200,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      const startTarget = document.createElement('div');
+      blokWrapper.appendChild(startTarget);
+      vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+      // Click at x=50, which is inside redactor (0-800) but outside content (200-600)
+      rectangleSelection.startSelection(50, 250);
+
+      expect(toolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('closes toolbar when click is within content area horizontal bounds', () => {
+      const {
+        rectangleSelection,
+        toolbar,
+        blokWrapper,
+        blockContent,
+        modules,
+      } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+      }
+
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 500,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      blokWrapper.appendChild(blockContent);
+      vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        left: 200,
+        right: 600,
+        width: 400,
+        height: 500,
+        x: 200,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      const startTarget = document.createElement('div');
+      blokWrapper.appendChild(startTarget);
+      vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+      const internal = rectangleSelection as unknown as { mousedown: boolean };
+
+      // Click at x=300, which is inside content (200-600)
+      rectangleSelection.startSelection(300, 250);
+
+      expect(toolbar.close).toHaveBeenCalled();
+      expect(internal.mousedown).toBe(true);
+    });
+  });
+
   describe('cancelActiveSelection', () => {
     it('clears active selection state', () => {
       const { rectangleSelection } = createRectangleSelection();

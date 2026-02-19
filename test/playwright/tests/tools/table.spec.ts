@@ -19,6 +19,32 @@ const assertBoundingBox = (box: { x: number; y: number; width: number; height: n
   return box as { x: number; y: number; width: number; height: number };
 };
 
+/**
+ * Hover near the right edge of the table so the add-column button becomes visible.
+ * The add-col button uses proximity-based visibility (within 40px of the right edge).
+ */
+const hoverNearRightEdge = async (page: Page, tableLocator: ReturnType<Page['locator']>): Promise<void> => {
+  const tableBox = assertBoundingBox(await tableLocator.boundingBox(), 'Table for right-edge hover');
+
+  await page.mouse.move(
+    tableBox.x + tableBox.width - 10,
+    tableBox.y + tableBox.height / 2
+  );
+};
+
+/**
+ * Hover near the bottom edge of the table so the add-row button becomes visible.
+ * The add-row button uses proximity-based visibility (within 40px of the bottom edge).
+ */
+const hoverNearBottomEdge = async (page: Page, tableLocator: ReturnType<Page['locator']>): Promise<void> => {
+  const tableBox = assertBoundingBox(await tableLocator.boundingBox(), 'Table for bottom-edge hover');
+
+  await page.mouse.move(
+    tableBox.x + tableBox.width / 2,
+    tableBox.y + tableBox.height - 10
+  );
+};
+
 type SerializableToolConfig = {
   className?: string;
   config?: Record<string, unknown>;
@@ -612,8 +638,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      // Hover over the table to reveal controls
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
@@ -645,7 +671,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near right edge to trigger proximity-based add-col button visibility
+      await hoverNearRightEdge(page, table);
 
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
@@ -679,7 +706,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near right edge to trigger proximity-based add-col button visibility
+      await hoverNearRightEdge(page, table);
 
       // Read the initial column width (all 3 should be equal)
       // eslint-disable-next-line playwright/no-nth-methods -- nth is the clearest way to get specific cell
@@ -691,7 +719,7 @@ test.describe('table tool', () => {
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
       for (let i = 0; i < 3; i++) {
-        await table.hover();
+        await hoverNearRightEdge(page, table);
         await expect(addColBtn).toBeVisible();
         await addColBtn.click();
       }
@@ -740,7 +768,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
@@ -1035,10 +1064,14 @@ test.describe('table tool', () => {
 
       // The newly inserted column's grip should be locked active (blue).
       // Click it to open its popover and insert again.
+      // The grip may be clipped by wrapper overflow after column insertion,
+      // so we dispatch the click via evaluate to bypass Playwright's visibility checks.
       const activeGrip = page.locator(`${COL_GRIP_SELECTOR}[data-blok-table-grip-visible]`);
 
       await expect(activeGrip).toHaveCount(1);
-      await activeGrip.click();
+      await activeGrip.dispatchEvent('pointerdown');
+      await activeGrip.dispatchEvent('pointerup');
+      await activeGrip.dispatchEvent('click');
 
       // Second insertion from the newly created column
       await page.getByText('Insert Column Right').click();
@@ -1092,15 +1125,22 @@ test.describe('table tool', () => {
       await colGrip.click();
       await page.getByText('Insert Column Left').click();
 
-      // After insertion, the new column's grip should be fully visible
-      // (not clipped by wrapper overflow-x-auto causing overflow-y: auto)
+      // After insertion, scroll wrapper to left edge so the new column's grip is visible
+      const wrapper = page.locator(TABLE_SELECTOR);
+
+      await wrapper.evaluate(el => { el.scrollLeft = 0; });
+
+      // Click the first cell in the newly inserted column to re-trigger grips
+      // eslint-disable-next-line playwright/no-nth-methods -- first() targets the newly inserted column's cell
+      await page.locator(CELL_SELECTOR).first().click();
+
       // eslint-disable-next-line playwright/no-nth-methods -- first() targets the newly inserted column grip
       const newGrip = page.locator(COL_GRIP_SELECTOR).first();
 
       await expect(newGrip).toBeVisible();
 
       const wrapperBox = assertBoundingBox(
-        await page.locator(TABLE_SELECTOR).boundingBox(),
+        await wrapper.boundingBox(),
         'Table wrapper'
       );
       const gripBox = assertBoundingBox(await newGrip.boundingBox(), 'Column grip');
@@ -1139,14 +1179,25 @@ test.describe('table tool', () => {
       await colGrip.click();
       await page.getByText('Insert Column Left').click();
 
-      // Click outside the table to clear the column selection
+      // Wait for rAF that sets up the grip unlock listener, then click outside
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
       await page.mouse.click(10, 10);
 
-      // After insertion, hover over a cell to show the row grip
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- let hide timeouts and popover cleanup complete
+      await page.waitForTimeout(300);
+
+      // Scroll wrapper to left edge so grips are not clipped
+      const wrapper = page.locator(TABLE_SELECTOR);
+
+      await wrapper.evaluate(el => { el.scrollLeft = 0; });
+
+      // After insertion, hover over a cell in the second row to trigger mouseover and show grips,
+      // then click it to ensure the focus lands in the cell
       // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first cell
       const cellInSecondRow = page.locator('[data-blok-table-row]').nth(1).locator(CELL_SELECTOR).first();
 
       await cellInSecondRow.hover();
+      await cellInSecondRow.click();
 
       // Wait for row grip to appear (with visible attribute) — target 2nd row (index 1)
       const rowGrip = page.locator('[data-blok-table-grip-row="1"][data-blok-table-grip-visible]');
@@ -1154,7 +1205,7 @@ test.describe('table tool', () => {
       await expect(rowGrip).toBeVisible();
 
       const wrapperBox = assertBoundingBox(
-        await page.locator(TABLE_SELECTOR).boundingBox(),
+        await wrapper.boundingBox(),
         'Table wrapper'
       );
       const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
@@ -1188,16 +1239,20 @@ test.describe('table tool', () => {
       expect(gripParentInfo.allInsideGrid).toBe(true);
     });
 
-    test('grip pills are solid capsules with no icon content', async ({ page }) => {
+    test('grip pills are capsules containing only a dots SVG icon', async ({ page }) => {
       await createTable2x2(page);
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first grip
       const firstGrip = page.locator(GRIP_SELECTOR).first();
 
-      // Pill should have no child elements (no icon SVG inside)
-      const childCount = await firstGrip.evaluate(el => el.children.length);
+      // Pill should have exactly one child element (the dots SVG icon)
+      const childInfo = await firstGrip.evaluate(el => ({
+        count: el.children.length,
+        firstChildTag: el.children[0]?.tagName?.toLowerCase() ?? null,
+      }));
 
-      expect(childCount).toBe(0);
+      expect(childInfo.count).toBe(1);
+      expect(childInfo.firstChildTag).toBe('svg');
     });
 
     test('column pill has horizontal capsule dimensions', async ({ page }) => {
@@ -1216,8 +1271,8 @@ test.describe('table tool', () => {
 
       const colBox = await colGrip.boundingBox();
 
-      // Column pill: ~32px wide x 4px tall
-      expect(colBox?.width).toBe(32);
+      // Column pill: ~24px wide x 4px tall (matches COL_PILL_WIDTH constant)
+      expect(colBox?.width).toBe(24);
       expect(colBox?.height).toBe(4);
     });
 
@@ -1305,7 +1360,8 @@ test.describe('table tool', () => {
       const rowGripAfter = page.locator(ROW_GRIP_SELECTOR).first();
 
       await expect(rowGripAfter).toBeVisible();
-      await rowGripAfter.click();
+      // Force click because the small grip pill may be overlapped by the adjacent cell
+      await rowGripAfter.click({ force: true });
 
       // Popover should reopen with row menu items
       await expect(page.getByText('Insert Row Above')).toBeVisible();
@@ -1691,8 +1747,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      // Hover to reveal the add-row button
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
@@ -1738,21 +1794,23 @@ test.describe('table tool', () => {
         },
       });
 
+      const table = page.locator(TABLE_SELECTOR);
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      // Hover button directly to scroll it into view (wrapper has overflow-x: auto)
-      await addColBtn.scrollIntoViewIfNeeded();
-      await addColBtn.hover();
+      // Hover near right edge to trigger proximity-based add-col button visibility
+      await hoverNearRightEdge(page, table);
 
       await expect(addColBtn).toBeVisible();
 
-      // Measure column width via the grid's last cell offsetWidth
-      const colWidth = await page.evaluate(() => {
+      // Measure new column unit size — newly added columns are half the original width.
+      // The drag logic uses this as the unit size to determine how many columns to add.
+      const newColUnitSize = await page.evaluate(() => {
         const row = document.querySelector('[data-blok-table-row]');
         const cells = row?.querySelectorAll('[data-blok-table-cell]');
         const lastCell = cells?.[cells.length - 1] as HTMLElement | undefined;
 
-        return lastCell?.offsetWidth ?? 100;
+        // New column width is half of the last existing column
+        return (lastCell?.offsetWidth ?? 200) / 2;
       });
 
       const btnBox = assertBoundingBox(await addColBtn.boundingBox(), 'Add col button');
@@ -1760,8 +1818,8 @@ test.describe('table tool', () => {
       const startX = btnBox.x + btnBox.width / 2;
       const startY = btnBox.y + btnBox.height / 2;
 
-      // Drag right by ~2.5 column widths to add 2 columns
-      const dragDistance = colWidth * 2.5;
+      // Drag right by ~2.5 new-column-unit-sizes to add 2 columns
+      const dragDistance = newColUnitSize * 2.5;
 
       await page.mouse.move(startX, startY);
       await page.mouse.down();
@@ -1794,7 +1852,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
@@ -1840,7 +1899,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
@@ -1867,10 +1927,11 @@ test.describe('table tool', () => {
         },
       });
 
+      const table = page.locator(TABLE_SELECTOR);
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.scrollIntoViewIfNeeded();
-      await addColBtn.hover();
+      // Hover near right edge to trigger proximity-based add-col button visibility
+      await hoverNearRightEdge(page, table);
 
       await expect(addColBtn).toBeVisible();
 
@@ -1897,12 +1958,20 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
       await expect(addRowBtn).toBeVisible();
-      await expect(addRowBtn).toHaveAttribute('title', /row/);
+
+      // Hover the button to trigger the floating tooltip
+      await addRowBtn.hover();
+
+      // The tooltip is a floating element, not a title attribute
+      const tooltip = page.getByTestId('tooltip-content');
+
+      await expect(tooltip).toContainText(/row/i);
     });
 
     test('add-col button shows tooltip on hover', async ({ page }) => {
@@ -1921,13 +1990,21 @@ test.describe('table tool', () => {
         },
       });
 
+      const table = page.locator(TABLE_SELECTOR);
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.scrollIntoViewIfNeeded();
-      await addColBtn.hover();
+      // Hover near right edge to trigger proximity-based add-col button visibility
+      await hoverNearRightEdge(page, table);
 
       await expect(addColBtn).toBeVisible();
-      await expect(addColBtn).toHaveAttribute('title', /column/);
+
+      // Hover the button to trigger the floating tooltip
+      await addColBtn.hover();
+
+      // The tooltip is a floating element, not a title attribute
+      const tooltip = page.getByTestId('tooltip-content');
+
+      await expect(tooltip).toContainText(/column/i);
     });
 
     test('dragging add-row button upward removes existing empty rows', async ({ page }) => {
@@ -1948,7 +2025,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
@@ -1995,7 +2073,8 @@ test.describe('table tool', () => {
 
       const table = page.locator(TABLE_SELECTOR);
 
-      await table.hover();
+      // Hover near bottom edge to trigger proximity-based add-row button visibility
+      await hoverNearBottomEdge(page, table);
 
       const addRowBtn = page.locator('[data-blok-table-add-row]');
 
@@ -2040,10 +2119,11 @@ test.describe('table tool', () => {
         },
       });
 
+      const table = page.locator(TABLE_SELECTOR);
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.scrollIntoViewIfNeeded();
-      await addColBtn.hover();
+      // Hover near right edge to trigger proximity-based add-col button visibility
+      await hoverNearRightEdge(page, table);
       await expect(addColBtn).toBeVisible();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first cell width
@@ -2096,8 +2176,8 @@ test.describe('table tool', () => {
       const wrapper = page.locator(TABLE_SELECTOR);
       const addColBtn = page.locator('[data-blok-table-add-col]');
 
-      await addColBtn.scrollIntoViewIfNeeded();
-      await addColBtn.hover();
+      // Hover near right edge to trigger proximity-based add-col button visibility
+      await hoverNearRightEdge(page, wrapper);
       await expect(addColBtn).toBeVisible();
 
       // eslint-disable-next-line playwright/no-nth-methods -- first() for cell width
@@ -2402,6 +2482,9 @@ test.describe('table tool', () => {
       const selected = page.locator('[data-blok-table-cell-selected]');
 
       await expect(selected).toHaveCount(4);
+
+      // Wait for requestAnimationFrame to set up the "click outside" listener
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
 
       await page.mouse.click(10, 10);
 

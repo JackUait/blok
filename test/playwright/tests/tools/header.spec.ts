@@ -387,10 +387,13 @@ test.describe('header Tool', () => {
 
       const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Convert to' });
 
-      await convertToOption.click();
+      // force: true because hovering opens the nested popover, which then
+      // overlaps the trigger item and fails Playwright's intercept check
+      await convertToOption.hover({ force: true });
 
       const textOption = page.locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`).filter({ hasText: 'Text' });
 
+      await expect(textOption).toBeVisible();
       await textOption.click();
 
       const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`);

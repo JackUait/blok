@@ -882,8 +882,8 @@ test.describe('popover', () => {
     // Check item with children has arrow icon
     await expect(page.locator('[data-blok-item-name="test-item"] [data-blok-testid="popover-item-chevron-right"]')).toBeVisible();
 
-    // Click the item
-    await page.locator('[data-blok-item-name="test-item"]').click();
+    // Hover the item to open the nested popover (force: true bypasses nested popover intercept)
+    await page.locator('[data-blok-item-name="test-item"]').hover({ force: true });
 
     // Check nested popover opened
     await expect(page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`)).toBeVisible();

@@ -125,7 +125,9 @@ export class Saver extends Module {
     const extractedBlocks: OutputData['blocks'] = [];
 
     allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds }) => {
-      if (!isValid) {
+      const hasParent = parentId !== undefined && parentId !== null;
+
+      if (!isValid && !hasParent) {
         log(`Block «${tool}» skipped because saved data is invalid`);
 
         return;
@@ -151,7 +153,6 @@ export class Saver extends Module {
       }
 
       const isTunesEmpty = tunes === undefined || isEmpty(tunes);
-      const hasParent = parentId !== undefined && parentId !== null;
       const hasContent = contentIds !== undefined && contentIds.length > 0;
 
       const output: OutputData['blocks'][number] = {

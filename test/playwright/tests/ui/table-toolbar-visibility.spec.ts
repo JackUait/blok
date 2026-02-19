@@ -74,17 +74,20 @@ test.describe('toolbar visibility in table cells', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('shows toolbar when clicking inside a table cell', async ({ page }) => {
+  test('hides plus button and settings toggler when clicking inside a table cell', async ({ page }) => {
     await createBlokWithTable(page);
 
     const firstCell = page.locator(CELL_SELECTOR).filter({ hasText: 'Cell A' });
 
     await firstCell.click();
 
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- checking non-appearance requires a brief wait
+    await page.waitForTimeout(300);
+
     const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
-    await expect(settingsButton).toBeVisible();
-    await expect(plusButton).toBeVisible();
+    await expect(settingsButton).toBeHidden();
+    await expect(plusButton).toBeHidden();
   });
 });

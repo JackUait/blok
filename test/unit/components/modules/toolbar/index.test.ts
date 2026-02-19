@@ -293,6 +293,55 @@ describe('Toolbar module interactions', () => {
     const hoveredBlock = (toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock;
     expect(hoveredBlock).toBe(tableBlock);
   });
+
+  it('falls back to original block when table cell resolution fails in moveAndOpen', () => {
+    // Create a DOM structure simulating a table cell where parent block can't be found
+    const tableBlockHolder = document.createElement('div');
+    tableBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+
+    const cellBlocksContainer = document.createElement('div');
+    cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+    tableBlockHolder.appendChild(cellBlocksContainer);
+
+    const cellBlockHolder = document.createElement('div');
+    cellBlocksContainer.appendChild(cellBlockHolder);
+
+    // Create mock cell block inside the table cell container
+    const pluginsContent = document.createElement('div');
+    cellBlockHolder.appendChild(pluginsContent);
+    const cellBlock = {
+      id: 'cell-block-1',
+      name: 'paragraph',
+      holder: cellBlockHolder,
+      pluginsContent,
+      isEmpty: false,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+    };
+
+    // Set up BlockManager to return null when asked for block by child node (resolution fails)
+    const blok = getBlok();
+    blok.BlockManager.currentBlock = cellBlock as unknown as typeof blok.BlockManager.currentBlock;
+    (blok.BlockManager as unknown as { getBlockByChildNode: (node: Node) => unknown }).getBlockByChildNode = vi.fn(() => null);
+
+    // Set up toolbox instance
+    (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+    };
+
+    // Spy on close to verify it's NOT called
+    const closeSpy = vi.spyOn(toolbar, 'close');
+
+    // Call moveAndOpen
+    toolbar.moveAndOpen();
+
+    // The toolbar should fall back to the cellBlock, not close
+    expect(closeSpy).not.toHaveBeenCalled();
+    const hoveredBlock = (toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock;
+    expect(hoveredBlock).toBe(cellBlock);
+  });
 });
 
 
@@ -345,6 +394,7 @@ describe('Plus button interactions', () => {
           name: 'paragraph',
           isEmpty: true,
           pluginsContent: { textContent: '' },
+          holder: document.createElement('div'),
         })),
       },
       BlockSelection: {

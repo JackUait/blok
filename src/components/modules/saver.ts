@@ -12,6 +12,7 @@ import type { Block } from '../block';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
 import { sanitizeBlocks } from '../utils/sanitizer';
+import { normalizeInlineImages } from './normalizeInlineImages';
 
 type SaverValidatedData = ValidatedData & {
   tunes?: Record<string, BlockTuneData>;
@@ -75,7 +76,9 @@ export class Saver extends Module {
         this.config.sanitizer as SanitizerConfig
       );
 
-      return this.makeOutput(sanitizedData);
+      const normalizedData = normalizeInlineImages(sanitizedData);
+
+      return this.makeOutput(normalizedData);
     } catch (error: unknown) {
       this.lastSaveError = error;
 

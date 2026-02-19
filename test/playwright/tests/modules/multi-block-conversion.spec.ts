@@ -422,9 +422,7 @@ test.describe('multi-block conversion', () => {
 
       const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToOption.hover({ force: true });
+      await convertToOption.click();
 
       const paragraphOption = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="paragraph"]`);
 

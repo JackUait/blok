@@ -831,10 +831,12 @@ describe("UI module", () => {
       ).bindReadOnlySensitiveListeners();
 
       // Simulate click
-      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      bottomZone.click();
 
       expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
-      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(
+        blok.BlockManager.lastBlock
+      );
       expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
     });
 
@@ -857,10 +859,12 @@ describe("UI module", () => {
         ui as unknown as { bindReadOnlySensitiveListeners: () => void }
       ).bindReadOnlySensitiveListeners();
 
-      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      bottomZone.click();
 
       expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
-      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(
+        blok.BlockManager.lastBlock
+      );
       expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
     });
 
@@ -884,7 +888,7 @@ describe("UI module", () => {
         ui as unknown as { bindReadOnlySensitiveListeners: () => void }
       ).bindReadOnlySensitiveListeners();
 
-      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      bottomZone.click();
 
       expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
       expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
@@ -912,7 +916,7 @@ describe("UI module", () => {
         ui as unknown as { bindReadOnlySensitiveListeners: () => void }
       ).bindReadOnlySensitiveListeners();
 
-      bottomZone.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      bottomZone.click();
 
       expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
       expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();

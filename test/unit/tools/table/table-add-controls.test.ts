@@ -1053,6 +1053,11 @@ describe('TableAddControls', () => {
       }));
 
       expect(callbacks.onDragAddCol).toHaveBeenCalledTimes(1);
+      expect(callbacks.onDragRemoveCol).not.toHaveBeenCalled();
+
+      // Verify the drag completed: cursor is reset and pointer capture was released
+      expect(document.body.style.cursor).toBe('');
+      expect(addColBtn.releasePointerCapture).toHaveBeenCalledWith(1);
     });
   });
 

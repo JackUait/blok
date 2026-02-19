@@ -1235,9 +1235,18 @@ test.describe('api.blocks', () => {
 
       await expect(convertToItem).toBeVisible();
 
-      // force: true because hovering opens the nested popover, which then
-      // overlaps the trigger item and fails Playwright's intercept check
-      await convertToItem.hover({ force: true });
+      // Use page.mouse.move to hover over the convert-to item. The standard
+      // locator.hover() retries on intercept, but hovering opens a nested
+      // popover that covers the trigger item, causing an infinite retry loop.
+      // Moving the mouse directly fires the native mouseover without
+      // actionability retries.
+      const box = await convertToItem.boundingBox();
+
+      if (box === null) {
+        throw new Error('Convert-to item bounding box is null');
+      }
+
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 
       const nestedMenu = page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-nested="true"]`);
 

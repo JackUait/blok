@@ -356,9 +356,6 @@ describe('Paragraph Tool - Custom Configurations', () => {
           p: true,
           ul: true,
           li: true,
-          span: {
-            style: true,
-          },
         },
       });
     });
@@ -385,7 +382,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(text).toContain('style="width: 100%;"');
     });
 
-    it('preserves block-level HTML (p, ul, li, span) through render → save → sanitize pipeline', () => {
+    it('preserves block-level HTML (p, ul, li) and strips span through render → save → sanitize pipeline', () => {
       const richHtml = '<p>Utiliza:</p><ul><li>separadores <span style="font-size: 1rem;">gastronorm</span></li><li>recipientes</li></ul>';
       const options = createParagraphOptions({ text: richHtml });
       const paragraph = new Paragraph(options);
@@ -403,8 +400,8 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(text).toContain('<p>');
       expect(text).toContain('<ul>');
       expect(text).toContain('<li>');
-      expect(text).toContain('<span');
-      expect(text).toContain('style="font-size: 1rem;"');
+      expect(text).not.toContain('<span');
+      expect(text).toContain('gastronorm');
     });
 
     it('strips disallowed tags (script, div, iframe) through render → save → sanitize pipeline', () => {

@@ -381,9 +381,6 @@ export class Paragraph implements BlockTool {
         p: true,
         ul: true,
         li: true,
-        span: {
-          style: true,
-        },
       },
     };
   }

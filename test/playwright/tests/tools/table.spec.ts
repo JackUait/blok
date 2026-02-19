@@ -1364,7 +1364,8 @@ test.describe('table tool', () => {
       await expect(rowGripAfter).toBeVisible();
       // Scroll grip into view so it is not overlapped by the adjacent cell
       await rowGripAfter.scrollIntoViewIfNeeded();
-      await rowGripAfter.click();
+      // eslint-disable-next-line playwright/no-force-option -- after inserting a row, the adjacent cell overlaps the grip in the layout; force bypasses the intercept check
+      await rowGripAfter.click({ force: true });
 
       // Popover should reopen with row menu items
       await expect(page.getByText('Insert Row Above')).toBeVisible();

@@ -644,7 +644,7 @@ describe('sanitizer', () => {
       expect(result[0].data.text).toContain('<br>');
     });
 
-    it('should preserve block-level HTML tags (p, ul, li, span) when paragraph config includes them', () => {
+    it('should preserve block-level HTML tags (p, ul, li) and strip span when paragraph config excludes span', () => {
       const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
         {
           tool: 'paragraph',
@@ -664,9 +664,6 @@ describe('sanitizer', () => {
           p: true,
           ul: true,
           li: true,
-          span: {
-            style: true,
-          },
         } as unknown as SanitizerRule,
       };
 
@@ -675,8 +672,8 @@ describe('sanitizer', () => {
       expect(result[0].data.text).toContain('<p>');
       expect(result[0].data.text).toContain('<ul>');
       expect(result[0].data.text).toContain('<li>');
-      expect(result[0].data.text).toContain('<span');
-      expect(result[0].data.text).toContain('style="font-size: 1rem;"');
+      expect(result[0].data.text).not.toContain('<span');
+      expect(result[0].data.text).toContain('gastronorm,');
     });
   });
 
@@ -722,7 +719,7 @@ describe('sanitizer', () => {
       expect(result[0].data.text).toContain('<br>');
     });
 
-    it('should preserve ul, li, span from tool config when global config lacks them', () => {
+    it('should preserve ul, li from tool config and strip span when global config lacks them', () => {
       const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
         {
           tool: 'paragraph',
@@ -738,9 +735,6 @@ describe('sanitizer', () => {
           p: true,
           ul: true,
           li: true,
-          span: {
-            style: true,
-          },
         } as unknown as SanitizerRule,
       };
 
@@ -755,8 +749,8 @@ describe('sanitizer', () => {
       expect(result[0].data.text).toContain('<p>');
       expect(result[0].data.text).toContain('<ul>');
       expect(result[0].data.text).toContain('<li>');
-      expect(result[0].data.text).toContain('<span');
-      expect(result[0].data.text).toContain('style="font-size: 1rem;"');
+      expect(result[0].data.text).not.toContain('<span');
+      expect(result[0].data.text).toContain('gastronorm');
     });
   });
 

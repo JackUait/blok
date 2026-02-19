@@ -5,6 +5,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 
 const HOLDER_ID = 'blok';
+const SELECT_ALL_SHORTCUT = process.platform === 'darwin' ? 'Meta+a' : 'Control+a';
 
 type SerializableToolConfig = {
   className?: string;
@@ -223,10 +224,17 @@ test.describe('table row grip positioning', () => {
     // Click into first cell
     await firstCell.click();
 
-    // Add multi-line content first
-    const multiLineContent = 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5';
-
-    await page.keyboard.type(multiLineContent);
+    // Add multi-line content using Shift+Enter for soft line breaks (stays in one block)
+    // Using Enter (\n) would create separate paragraph blocks, making select-all unreliable
+    await page.keyboard.type('Line 1');
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('Line 2');
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('Line 3');
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('Line 4');
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('Line 5');
 
     // Wait for the row to grow after multi-line content is typed
     await expect.poll(async () => {
@@ -246,8 +254,8 @@ test.describe('table row grip positioning', () => {
     const initialGripY = await getRowGripCenterY(page, 0);
     const initialRowY = await getRowCenterY(page, 0);
 
-    // Select all and delete
-    await page.keyboard.press('Control+a');
+    // Select all text in the block and delete
+    await page.keyboard.press(SELECT_ALL_SHORTCUT);
     await page.keyboard.press('Backspace');
 
     // Type single line

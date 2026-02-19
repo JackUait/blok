@@ -335,14 +335,14 @@ export class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
-    const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
-
     /**
-     * Track whether the original block was inside a table cell.
-     * When true, the toolbar suppresses plus button and settings toggler,
-     * and the toolbox uses the original current block for cell detection.
+     * Track whether the original block is inside a table cell.
+     * Check the DOM directly rather than relying on resolution success,
+     * so that the flag is correct even when resolution falls back to the original block.
      */
-    this.hoveredBlockIsFromTableCell = targetBlock !== unresolvedBlock;
+    this.hoveredBlockIsFromTableCell = unresolvedBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 
     /** Clean up draggable on previous block if any */
     if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
@@ -485,10 +485,20 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.positioner.setHoveredTarget(null); // No target for multi-block selection
     this.positioner.resetCachedPosition(); // Reset cached position when moving to a new block
 
-    const { wrapper, plusButton } = this.nodes;
+    const { wrapper, plusButton, settingsToggler } = this.nodes;
 
     if (!wrapper || !plusButton) {
       return;
+    }
+
+    /**
+     * Restore plus button and settings toggler visibility for multi-block selection,
+     * in case they were hidden for table cell blocks.
+     */
+    plusButton.style.display = '';
+
+    if (settingsToggler) {
+      settingsToggler.style.display = '';
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -504,9 +514,6 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     this.positioner.moveToY(this.nodes, toolbarY);
     targetBlockHolder.appendChild(wrapper);
-
-    /** Set up draggable on the target block using the settings toggler as drag handle */
-    const { settingsToggler } = this.nodes;
 
     if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
       targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);

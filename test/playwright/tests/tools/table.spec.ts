@@ -1064,8 +1064,10 @@ test.describe('table tool', () => {
 
       // The newly inserted column's grip should be locked active (blue).
       // Click it to open its popover and insert again.
-      // The grip may be clipped by wrapper overflow after column insertion,
-      // so we dispatch the click via evaluate to bypass Playwright's visibility checks.
+      // After column insertion, the wrapper's overflow may clip the grip visually
+      // even though it has the correct state (opacity-100, pointer-events-auto).
+      // Use dispatchEvent to bypass Playwright's visibility checks since the grip
+      // is in the correct interactive state but clipped by parent overflow.
       const activeGrip = page.locator(`${COL_GRIP_SELECTOR}[data-blok-table-grip-visible]`);
 
       await expect(activeGrip).toHaveCount(1);

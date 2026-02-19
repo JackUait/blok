@@ -105,6 +105,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
       CSS: {
         blokWrapper: '',
       },
+      contentRect: blockContent.getBoundingClientRect(),
     } as unknown as BlokModules['UI'],
     Toolbar: toolbarMock as unknown as BlokModules['Toolbar'],
     InlineToolbar: inlineToolbarMock as unknown as BlokModules['InlineToolbar'],
@@ -1117,7 +1118,6 @@ describe('RectangleSelection', () => {
         rectangleSelection,
         toolbar,
         blokWrapper,
-        blockContent,
         modules,
       } = createRectangleSelection();
 
@@ -1125,9 +1125,22 @@ describe('RectangleSelection', () => {
 
       if (modules.UI) {
         modules.UI.nodes.redactor = blokWrapper;
+
+        // Content area is narrower (200-600) than redactor (0-800)
+        (modules.UI as unknown as Record<string, unknown>).contentRect = {
+          top: 0,
+          bottom: 500,
+          left: 200,
+          right: 600,
+          width: 400,
+          height: 500,
+          x: 200,
+          y: 0,
+          toJSON: () => ({}),
+        };
       }
 
-      // Redactor is full-width (0-800), but content is narrower (200-600)
+      // Redactor is full-width (0-800)
       vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
         top: 0,
         bottom: 500,
@@ -1136,20 +1149,6 @@ describe('RectangleSelection', () => {
         width: 800,
         height: 500,
         x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      });
-
-      // Add block-content element inside the redactor for the querySelector
-      blokWrapper.appendChild(blockContent);
-      vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
-        top: 0,
-        bottom: 500,
-        left: 200,
-        right: 600,
-        width: 400,
-        height: 500,
-        x: 200,
         y: 0,
         toJSON: () => ({}),
       });
@@ -1169,7 +1168,6 @@ describe('RectangleSelection', () => {
         rectangleSelection,
         toolbar,
         blokWrapper,
-        blockContent,
         modules,
       } = createRectangleSelection();
 
@@ -1177,6 +1175,19 @@ describe('RectangleSelection', () => {
 
       if (modules.UI) {
         modules.UI.nodes.redactor = blokWrapper;
+
+        // Content area is 200-600
+        (modules.UI as unknown as Record<string, unknown>).contentRect = {
+          top: 0,
+          bottom: 500,
+          left: 200,
+          right: 600,
+          width: 400,
+          height: 500,
+          x: 200,
+          y: 0,
+          toJSON: () => ({}),
+        };
       }
 
       vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
@@ -1187,19 +1198,6 @@ describe('RectangleSelection', () => {
         width: 800,
         height: 500,
         x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      });
-
-      blokWrapper.appendChild(blockContent);
-      vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
-        top: 0,
-        bottom: 500,
-        left: 200,
-        right: 600,
-        width: 400,
-        height: 500,
-        x: 200,
         y: 0,
         toJSON: () => ({}),
       });

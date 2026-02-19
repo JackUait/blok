@@ -377,6 +377,12 @@ export class Paragraph implements BlockTool {
           src: true,
           style: true,
         },
+        p: true,
+        ul: true,
+        li: true,
+        span: {
+          style: true,
+        },
       },
     };
   }

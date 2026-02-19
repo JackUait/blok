@@ -643,6 +643,41 @@ describe('sanitizer', () => {
       expect(result[0].data.text).not.toContain('<img');
       expect(result[0].data.text).toContain('<br>');
     });
+
+    it('should preserve block-level HTML tags (p, ul, li, span) when paragraph config includes them', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<p>Utiliza:</p><ul><li>separadores <span style="font-size: 1rem;">gastronorm,</span></li><li>recipientes gastronorm</li></ul><p>Los ingredientes deben estar cubiertos.</p>',
+          },
+        },
+      ];
+
+      const paragraphSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+          p: true,
+          ul: true,
+          li: true,
+          span: {
+            style: true,
+          },
+        } as unknown as SanitizerRule,
+      };
+
+      const result = sanitizeBlocks(blocksData, paragraphSanitizeConfig, {});
+
+      expect(result[0].data.text).toContain('<p>');
+      expect(result[0].data.text).toContain('<ul>');
+      expect(result[0].data.text).toContain('<li>');
+      expect(result[0].data.text).toContain('<span');
+      expect(result[0].data.text).toContain('style="font-size: 1rem;"');
+    });
   });
 
   describe('stripUnsafeUrls edge cases', () => {

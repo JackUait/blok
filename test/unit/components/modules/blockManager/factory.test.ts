@@ -55,6 +55,7 @@ const createMockAPIMethods = (): APIInterface => ({
     convert: vi.fn().mockResolvedValue(createMockBlockAPI()),
     stopBlockMutationWatching: vi.fn(),
     splitBlock: vi.fn().mockReturnValue(createMockBlockAPI()),
+    setBlockParent: vi.fn(),
   },
   caret: {
     setToFirstBlock: vi.fn(() => false),

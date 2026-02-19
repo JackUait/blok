@@ -59,8 +59,8 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      // The element className should contain the ancestor-based empty-editor placeholder class
-      expect(element.className).toContain('data-blok-empty');
+      // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for empty-editor placeholder
+      expect(element.getAttribute('class')).toContain('data-blok-empty');
     });
   });
 

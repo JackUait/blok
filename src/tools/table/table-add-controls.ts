@@ -288,7 +288,7 @@ export class TableAddControls {
     }
 
     if (this.getNewColumnWidth) {
-      return this.getNewColumnWidth();
+      return this.getNewColumnWidth() || 100;
     }
 
     const firstRow = this.grid.querySelector('[data-blok-table-row]');

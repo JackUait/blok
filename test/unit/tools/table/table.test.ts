@@ -2599,15 +2599,16 @@ describe('Table Tool', () => {
   });
 
   describe('selection moves to neighbor after row/column deletion', () => {
-    const SELECTED_ATTR = 'data-blok-table-cell-selected';
-
     beforeEach(() => {
       vi.useFakeTimers();
     });
 
     afterEach(() => {
+      vi.useRealTimers();
       vi.restoreAllMocks();
     });
+
+    const SELECTED_ATTR = 'data-blok-table-cell-selected';
 
     const createDeletionTable = (
       content: string[][],
@@ -2901,15 +2902,16 @@ describe('Table Tool', () => {
   });
 
   describe('selection after row/column drag-and-drop', () => {
-    const SELECTED_ATTR = 'data-blok-table-cell-selected';
-
     beforeEach(() => {
       vi.useFakeTimers();
     });
 
     afterEach(() => {
+      vi.useRealTimers();
       vi.restoreAllMocks();
     });
+
+    const SELECTED_ATTR = 'data-blok-table-cell-selected';
 
     const createMoveTable = (
       content: string[][]

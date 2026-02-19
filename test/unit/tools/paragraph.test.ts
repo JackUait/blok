@@ -53,6 +53,15 @@ describe('Paragraph Tool - Custom Configurations', () => {
     it('uses DEFAULT_PLACEHOLDER static value when config is undefined', () => {
       expect(Paragraph.DEFAULT_PLACEHOLDER).toBe('tools.paragraph.placeholder');
     });
+
+    it('includes empty-editor placeholder classes on rendered element', () => {
+      const options = createParagraphOptions({}, {});
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      // The element className should contain the ancestor-based empty-editor placeholder class
+      expect(element.className).toContain('data-blok-empty');
+    });
   });
 
   describe('preserveBlank configuration', () => {

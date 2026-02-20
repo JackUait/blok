@@ -118,7 +118,9 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
  */
 const CELL_SANITIZE_CONFIG = {
   b: true,
+  strong: true,
   i: true,
+  em: true,
   br: true,
   a: { href: true },
 } as const;

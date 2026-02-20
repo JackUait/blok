@@ -186,6 +186,7 @@ export class Table implements BlockTool {
 
     if (this.readOnly) {
       mountCellBlocksReadOnly(gridEl, this.data.content, this.api);
+      this.initReadOnlyCellSelection(gridEl);
 
       return;
     }
@@ -674,6 +675,21 @@ export class Table implements BlockTool {
         this.handleCellCopy(cells, clipboardData);
       },
       onCut: (cells, clipboardData) => {
+        this.handleCellCopy(cells, clipboardData);
+      },
+    });
+  }
+
+  private initReadOnlyCellSelection(gridEl: HTMLElement): void {
+    this.cellSelection?.destroy();
+
+    const rectangleSelection = this.api.rectangleSelection;
+
+    this.cellSelection = new TableCellSelection({
+      grid: gridEl,
+      rectangleSelection,
+      i18n: this.api.i18n,
+      onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);
       },
     });

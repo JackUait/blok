@@ -401,5 +401,79 @@ describe('table-cell-clipboard', () => {
 
       expect(result?.cells[0][0].blocks[0].tool).toBe('paragraph');
     });
+
+    it('should preserve bold formatting from Google Docs style spans', () => {
+      const html = '<table><tr><td><span style="font-weight:700">bold text</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b>bold text</b>');
+    });
+
+    it('should preserve italic formatting from Google Docs style spans', () => {
+      const html = '<table><tr><td><span style="font-style:italic">italic text</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<i>italic text</i>');
+    });
+
+    it('should convert paragraph boundaries to line breaks', () => {
+      const html = '<table><tr><td><p>line one</p><p>line two</p></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('line one<br>line two');
+    });
+
+    it('should preserve links with href', () => {
+      const html = '<table><tr><td><a href="https://example.com">click here</a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<a href="https://example.com">click here</a>');
+    });
+
+    it('should handle nested bold and italic in same span', () => {
+      const html = '<table><tr><td><span style="font-weight:700;font-style:italic">bold italic</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b><i>bold italic</i></b>');
+    });
+
+    it('should handle Google Docs table with mixed formatting', () => {
+      const html = `<table><tr>
+        <td><p><span style="font-weight:700">Name</span></p></td>
+        <td><p><span>plain</span></p></td>
+      </tr></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b>Name</b>');
+      expect(result?.cells[0][1].blocks[0].data.text).toBe('plain');
+    });
+
+    it('should not leave trailing br tags', () => {
+      const html = '<table><tr><td><p>only line</p></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).not.toMatch(/<br>$/);
+    });
+
+    it('should handle font-weight bold keyword', () => {
+      const html = '<table><tr><td><span style="font-weight:bold">bold text</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b>bold text</b>');
+    });
+
+    it('should strip disallowed tags but keep their text', () => {
+      const html = '<table><tr><td><div><u>underlined</u></div></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('underlined');
+    });
+
+    it('should still return plain text for cells without formatting', () => {
+      const html = '<table><tr><td>plain text</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('plain text');
+    });
   });
 });

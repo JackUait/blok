@@ -333,4 +333,83 @@ test.describe('Paste HTML Table into Editor', () => {
     await expect(cells.filter({ hasText: 'Alice' })).toHaveCount(1);
     await expect(cells.filter({ hasText: '30' })).toHaveCount(1);
   });
+
+  test('Pasting a Google Docs table does not leave orphaned cell blocks after read-only toggle', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+    });
+
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first contenteditable
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+
+    await paragraph.click();
+
+    // Google Docs wraps clipboard HTML in <b id="docs-internal-guid-..."><div>...</div></b>
+    const googleDocsHTML = [
+      '<meta charset="utf-8">',
+      '<b style="font-weight:normal;" id="docs-internal-guid-abc12345">',
+      '<div dir="ltr" style="margin-left:0pt;" align="left">',
+      '<table style="border:none;border-collapse:collapse;">',
+      '<tbody>',
+      '<tr>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>A</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>B</span></p>',
+      '</td>',
+      '</tr>',
+      '<tr>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>C</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>D</span></p>',
+      '</td>',
+      '</tr>',
+      '</tbody>',
+      '</table>',
+      '</div>',
+      '</b>',
+    ].join('');
+
+    await paste(paragraph, { 'text/html': googleDocsHTML });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // After paste, there should be exactly 1 table + 4 cell paragraphs = 5 blocks.
+    // No orphaned cell blocks from the initial default 3x3 grid should remain.
+    const beforeToggle = await page.evaluate(async () => {
+      return window.blokInstance?.save();
+    });
+
+    const tableBlock = beforeToggle?.blocks.find(
+      (b: { type: string }) => b.type === 'table'
+    );
+
+    expect(tableBlock).toBeDefined();
+
+    expect(beforeToggle?.blocks.length).toBe(5);
+
+    // Toggle to read-only and back to edit mode
+    await page.evaluate(async () => {
+      await window.blokInstance?.readOnly.toggle(true);
+      await window.blokInstance?.readOnly.toggle(false);
+    });
+
+    // Save after read-only toggle — the editor may add one default trailing paragraph,
+    // but there must not be 9+ orphaned cell blocks from the old default grid.
+    const afterToggle = await page.evaluate(async () => {
+      return window.blokInstance?.save();
+    });
+
+    const topLevelBlocksAfter = afterToggle?.blocks.filter(
+      (b: { parent?: string }) => b.parent === undefined
+    ) ?? [];
+
+    // At most 2 top-level blocks: the table + one trailing default paragraph
+    expect(topLevelBlocksAfter.length).toBeLessThanOrEqual(2);
+  });
 });

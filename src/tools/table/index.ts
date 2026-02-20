@@ -260,6 +260,9 @@ export class Table implements BlockTool {
       content: tableContent,
     };
 
+    this.cellBlocks?.deleteAllBlocks();
+    this.cellBlocks?.destroy();
+
     const oldElement = this.element;
 
     if (!oldElement?.parentNode) {

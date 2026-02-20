@@ -19,11 +19,10 @@ import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import type { EventsDispatcher } from '../../utils/events';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
+import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { Caret } from '../caret';
 import type { I18n } from '../i18n';
 import type { YjsManager } from '../yjs';
-
-import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';

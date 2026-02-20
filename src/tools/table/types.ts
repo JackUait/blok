@@ -56,3 +56,22 @@ export interface TableConfig {
   /** Additional tool names to restrict from being inserted into table cells */
   restrictedTools?: string[];
 }
+
+/**
+ * Block data within a clipboard cell (no IDs — those are assigned on paste).
+ */
+export interface ClipboardBlockData {
+  tool: string;
+  data: Record<string, unknown>;
+  tunes?: Record<string, unknown>;
+}
+
+/**
+ * Clipboard payload for copied table cells.
+ * Stored as JSON in a data attribute on the HTML table element.
+ */
+export interface TableCellsClipboard {
+  rows: number;
+  cols: number;
+  cells: Array<Array<{ blocks: ClipboardBlockData[] }>>;
+}

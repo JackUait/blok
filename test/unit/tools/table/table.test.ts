@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
+import { buildClipboardHtml } from '../../../../src/tools/table/table-cell-clipboard';
 import { updateHeadingStyles } from '../../../../src/tools/table/table-operations';
 import { clearAdditionalRestrictedTools, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
-import type { TableData, TableConfig } from '../../../../src/tools/table/types';
+import type { TableData, TableConfig, TableCellsClipboard } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
@@ -3136,6 +3137,386 @@ describe('Table Tool', () => {
       const firstEditable = element.querySelector('[contenteditable="true"]');
 
       expect(firstEditable).not.toHaveFocus();
+
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('grid paste handler', () => {
+    /**
+     * Create a ClipboardEvent with the given HTML in the clipboard data.
+     * jsdom does not support DataTransfer on ClipboardEvent, so we define
+     * clipboardData manually.
+     */
+    const createPasteEvent = (html: string): ClipboardEvent => {
+      const dataMap: Record<string, string> = { 'text/html': html };
+      const clipboardData = {
+        getData: (type: string) => dataMap[type] ?? '',
+        setData: (type: string, value: string) => { dataMap[type] = value; },
+      } as unknown as DataTransfer;
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData, writable: false });
+
+      return event;
+    };
+
+    /**
+     * Focus a cell by making it focusable. In jsdom, block holders from mock
+     * insert don't have contenteditable, so we add a temporary focusable child.
+     */
+    const focusCellAt = (gridEl: HTMLElement, rowIndex: number, colIndex: number): void => {
+      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+      const row = rows[rowIndex];
+      const cells = row.querySelectorAll('[data-blok-table-cell]');
+      const cell = cells[colIndex] as HTMLElement;
+
+      let editable = cell.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      if (!editable) {
+        editable = document.createElement('div');
+        editable.setAttribute('contenteditable', 'true');
+        cell.appendChild(editable);
+      }
+
+      editable.focus();
+    };
+
+    /**
+     * Build a table + API suitable for paste tests, exposing mock tracking.
+     */
+    const createPasteTable = (
+      content: string[][],
+      options?: { colWidths?: number[]; readOnly?: boolean },
+    ): {
+      table: Table;
+      element: HTMLElement;
+      mockInsert: ReturnType<typeof vi.fn>;
+      mockDelete: ReturnType<typeof vi.fn>;
+      mockSetBlockParent: ReturnType<typeof vi.fn>;
+    } => {
+      let insertCallCount = 0;
+      const blockIndexMap = new Map<string, number>();
+      const mockInsert = vi.fn().mockImplementation((_type?: string, _data?: unknown) => {
+        insertCallCount++;
+        const blockId = `paste-block-${insertCallCount}`;
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-id', blockId);
+        blockIndexMap.set(blockId, insertCallCount - 1);
+
+        return { id: blockId, holder };
+      });
+      const mockDelete = vi.fn();
+      const mockSetBlockParent = vi.fn();
+      const mockApi = createMockAPI({
+        blocks: {
+          insert: mockInsert,
+          delete: mockDelete,
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockImplementation((id: string) => blockIndexMap.get(id)),
+          setBlockParent: mockSetBlockParent,
+        },
+      } as never);
+
+      const tableOptions: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content,
+          ...(options?.colWidths ? { colWidths: options.colWidths } : {}),
+        },
+        config: {},
+        api: mockApi,
+        readOnly: options?.readOnly ?? false,
+        block: { id: 'table-paste' } as never,
+      };
+
+      const table = new Table(tableOptions);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      return { table, element, mockInsert, mockDelete, mockSetBlockParent };
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('ignores paste events with non-table-cell clipboard data', () => {
+      const { element } = createPasteTable([['A', 'B'], ['C', 'D']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      const pasteEvent = createPasteEvent('<p>plain text</p>');
+      const preventSpy = vi.spyOn(pasteEvent, 'preventDefault');
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Should NOT prevent default — let normal paste handling proceed
+      expect(preventSpy).not.toHaveBeenCalled();
+
+      document.body.removeChild(element);
+    });
+
+    it('intercepts paste events containing table cell clipboard data', () => {
+      const { element } = createPasteTable([['A', 'B'], ['C', 'D']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'pasted' } }] }]],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+      const preventSpy = vi.spyOn(pasteEvent, 'preventDefault');
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Should prevent default to handle paste ourselves
+      expect(preventSpy).toHaveBeenCalled();
+
+      document.body.removeChild(element);
+    });
+
+    it('inserts blocks from clipboard payload into the target cell', () => {
+      const { element, mockInsert, mockSetBlockParent } = createPasteTable([['A', 'B'], ['C', 'D']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      const insertsBefore = mockInsert.mock.calls.length;
+
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'pasted text' } }] }]],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // One new block should have been inserted
+      const insertsAfter = mockInsert.mock.calls.length;
+
+      expect(insertsAfter - insertsBefore).toBe(1);
+
+      // The inserted block should have the correct tool and data
+      const lastCall = mockInsert.mock.calls[mockInsert.mock.calls.length - 1];
+
+      expect(lastCall[0]).toBe('paragraph');
+      expect(lastCall[1]).toEqual({ text: 'pasted text' });
+
+      // Block should be parented to the table
+      expect(mockSetBlockParent).toHaveBeenCalled();
+
+      document.body.removeChild(element);
+    });
+
+    it('pastes a 2x2 payload into a 2x2 table starting from (0,0)', () => {
+      const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      const insertsBefore = mockInsert.mock.calls.length;
+
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'R0C0' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'R0C1' } }] },
+          ],
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'R1C0' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'R1C1' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // 4 new blocks should have been inserted (one per cell)
+      const insertsAfter = mockInsert.mock.calls.length;
+
+      expect(insertsAfter - insertsBefore).toBe(4);
+
+      document.body.removeChild(element);
+    });
+
+    it('auto-expands rows when payload exceeds current row count', () => {
+      const { element } = createPasteTable([['A', 'B']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      // Paste a 2-row payload into a 1-row table
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'R0C0' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'R0C1' } }] },
+          ],
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'R1C0' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'R1C1' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Table should now have 2 rows
+      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(2);
+
+      document.body.removeChild(element);
+    });
+
+    it('auto-expands columns when payload exceeds current column count', () => {
+      const { element } = createPasteTable([['A'], ['B']], { colWidths: [200] });
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      // Paste a 2-column payload into a 1-column table
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'R0C0' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'R0C1' } }] },
+          ],
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'R1C0' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'R1C1' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Each row should now have 2 cells
+      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+
+        expect(cells).toHaveLength(2);
+      });
+
+      document.body.removeChild(element);
+    });
+
+    it('ignores paste events in read-only mode', () => {
+      const { element, mockInsert } = createPasteTable([['A', 'B']], { readOnly: true });
+
+      const gridEl = element.firstElementChild as HTMLElement;
+      const insertsBefore = mockInsert.mock.calls.length;
+
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'should not paste' } }] }]],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+      const preventSpy = vi.spyOn(pasteEvent, 'preventDefault');
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Should NOT prevent default in read-only mode
+      expect(preventSpy).not.toHaveBeenCalled();
+
+      // No new blocks should be inserted
+      expect(mockInsert.mock.calls.length).toBe(insertsBefore);
+
+      document.body.removeChild(element);
+    });
+
+    it('ignores paste when active element is not inside the grid', () => {
+      const { element, mockInsert } = createPasteTable([['A', 'B']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+      const insertsBefore = mockInsert.mock.calls.length;
+
+      // Focus something outside the grid
+      const outsideEl = document.createElement('input');
+
+      document.body.appendChild(outsideEl);
+      outsideEl.focus();
+
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'should not paste' } }] }]],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+      const preventSpy = vi.spyOn(pasteEvent, 'preventDefault');
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Should NOT prevent default when active element is outside grid
+      expect(preventSpy).not.toHaveBeenCalled();
+
+      // No new blocks should be inserted
+      expect(mockInsert.mock.calls.length).toBe(insertsBefore);
+
+      document.body.removeChild(outsideEl);
+      document.body.removeChild(element);
+    });
+
+    it('handles empty clipboard payload cells gracefully', () => {
+      const { element } = createPasteTable([['A', 'B'], ['C', 'D']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      // Paste payload where one cell has no blocks
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 2,
+        cells: [[
+          { blocks: [{ tool: 'paragraph', data: { text: 'has content' } }] },
+          { blocks: [] },
+        ]],
+      };
+      const html = buildClipboardHtml(payload);
+      const pasteEvent = createPasteEvent(html);
+
+      // Should not throw
+      expect(() => {
+        gridEl.dispatchEvent(pasteEvent);
+      }).not.toThrow();
 
       document.body.removeChild(element);
     });

@@ -17,6 +17,7 @@ import {
   serializeCellsToClipboard,
   buildClipboardHtml,
   buildClipboardPlainText,
+  parseClipboardHtml,
 } from './table-cell-clipboard';
 import { TableCellSelection } from './table-cell-selection';
 import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
@@ -46,7 +47,7 @@ import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
-import type { ClipboardBlockData, TableData, TableConfig } from './types';
+import type { ClipboardBlockData, TableCellsClipboard, TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -207,6 +208,7 @@ export class Table implements BlockTool {
     this.initAddControls(gridEl);
     this.initRowColControls(gridEl);
     this.initCellSelection(gridEl);
+    this.initGridPasteListener(gridEl);
 
     if (this.isNewTable) {
       const firstEditable = gridEl.querySelector<HTMLElement>('[contenteditable="true"]');
@@ -675,6 +677,157 @@ export class Table implements BlockTool {
         this.handleCellCopy(cells, clipboardData);
       },
     });
+  }
+
+  private initGridPasteListener(gridEl: HTMLElement): void {
+    gridEl.addEventListener('paste', (e: ClipboardEvent) => {
+      this.handleGridPaste(e, gridEl);
+    });
+  }
+
+  private handleGridPaste(e: ClipboardEvent, gridEl: HTMLElement): void {
+    if (this.readOnly || !e.clipboardData) {
+      return;
+    }
+
+    const html = e.clipboardData.getData('text/html');
+    const payload = parseClipboardHtml(html);
+
+    if (!payload) {
+      return;
+    }
+
+    const activeElement = document.activeElement as HTMLElement | null;
+
+    if (!activeElement) {
+      return;
+    }
+
+    const targetCell = activeElement.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+    if (!targetCell || !gridEl.contains(targetCell)) {
+      return;
+    }
+
+    const targetRow = targetCell.closest<HTMLElement>(`[${ROW_ATTR}]`);
+
+    if (!targetRow) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`));
+    const targetRowIndex = rows.indexOf(targetRow);
+    const cellsInRow = Array.from(targetRow.querySelectorAll(`[${CELL_ATTR}]`));
+    const targetColIndex = cellsInRow.indexOf(targetCell);
+
+    this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
+  }
+
+  private pastePayloadIntoCells(
+    gridEl: HTMLElement,
+    payload: TableCellsClipboard,
+    startRow: number,
+    startCol: number,
+  ): void {
+    this.expandGridForPaste(gridEl, startRow + payload.rows, startCol + payload.cols);
+
+    // Paste block data into target cells
+    const updatedRows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+
+    Array.from({ length: payload.rows }, (_, r) => r).forEach((r) => {
+      const row = updatedRows[startRow + r];
+
+      if (!row) {
+        return;
+      }
+
+      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+      Array.from({ length: payload.cols }, (_, c) => c).forEach((c) => {
+        const cell = cells[startCol + c] as HTMLElement | undefined;
+
+        if (cell) {
+          this.pasteCellPayload(cell, payload.cells[r][c]);
+        }
+      });
+    });
+
+    // Update table state after paste
+    this.initResize(gridEl);
+    this.addControls?.syncRowButtonWidth();
+    this.rowColControls?.refresh();
+  }
+
+  /**
+   * Expand the grid to have at least the required number of rows and columns.
+   */
+  private expandGridForPaste(gridEl: HTMLElement, neededRows: number, neededCols: number): void {
+    const currentRowCount = this.grid.getRowCount(gridEl);
+    const currentColCount = this.grid.getColumnCount(gridEl);
+
+    // Auto-expand rows
+    Array.from({ length: Math.max(0, neededRows - currentRowCount) }).forEach(() => {
+      this.grid.addRow(gridEl);
+      populateNewCells(gridEl, this.cellBlocks);
+      updateHeadingStyles(this.element, this.data.withHeadings);
+      updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
+    });
+
+    // Auto-expand columns
+    Array.from({ length: Math.max(0, neededCols - currentColCount) }).forEach(() => {
+      const colWidths = this.data.colWidths ?? readPixelWidths(gridEl);
+      const halfWidth = this.data.initialColWidth !== undefined
+        ? Math.round((this.data.initialColWidth / 2) * 100) / 100
+        : computeHalfAvgWidth(colWidths);
+
+      this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+      this.data.colWidths = [...colWidths, halfWidth];
+      populateNewCells(gridEl, this.cellBlocks);
+      updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
+    });
+  }
+
+  /**
+   * Replace the contents of a single cell with data from the clipboard payload.
+   */
+  private pasteCellPayload(
+    cell: HTMLElement,
+    payloadCell: { blocks: ClipboardBlockData[] },
+  ): void {
+    // Clear existing blocks in this cell
+    if (this.cellBlocks) {
+      const existingIds = this.cellBlocks.getBlockIdsFromCells([cell]);
+
+      this.cellBlocks.deleteBlocks(existingIds);
+    }
+
+    const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!container) {
+      return;
+    }
+
+    if (payloadCell.blocks.length === 0) {
+      this.cellBlocks?.ensureCellHasBlock(cell);
+
+      return;
+    }
+
+    for (const blockData of payloadCell.blocks) {
+      const block = this.api.blocks.insert(
+        blockData.tool,
+        blockData.data,
+        {},
+        this.api.blocks.getBlocksCount(),
+        false,
+      );
+
+      container.appendChild(block.holder);
+      this.api.blocks.setBlockParent(block.id, this.blockId ?? '');
+    }
   }
 }
 

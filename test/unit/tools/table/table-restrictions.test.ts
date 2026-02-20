@@ -5,6 +5,7 @@ import {
   convertToParagraph,
   registerAdditionalRestrictedTools,
   clearAdditionalRestrictedTools,
+  getRestrictedTools,
 } from '../../../../src/tools/table/table-restrictions';
 import type { Block } from '../../../../src/components/block';
 import type { API } from '../../../../types';
@@ -145,6 +146,28 @@ describe('table-restrictions', () => {
 
       expect(isRestrictedInTableCell('header')).toBe(true);
       expect(isRestrictedInTableCell('table')).toBe(true);
+    });
+  });
+
+  describe('getRestrictedTools', () => {
+    it('returns default restricted tools when none registered', () => {
+      const tools = getRestrictedTools();
+
+      expect(tools).toContain('header');
+      expect(tools).toContain('table');
+      expect(tools).toHaveLength(2);
+    });
+
+    it('includes additional registered tools', () => {
+      registerAdditionalRestrictedTools(['list', 'checklist']);
+
+      const tools = getRestrictedTools();
+
+      expect(tools).toContain('header');
+      expect(tools).toContain('table');
+      expect(tools).toContain('list');
+      expect(tools).toContain('checklist');
+      expect(tools).toHaveLength(4);
     });
   });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import { updateHeadingStyles } from '../../../../src/tools/table/table-operations';
+import { clearAdditionalRestrictedTools, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
@@ -119,6 +120,29 @@ describe('Table Tool', () => {
       if (config !== false) {
         expect(config.tags).toContain('TABLE');
       }
+    });
+  });
+
+  describe('restrictedTools config', () => {
+    afterEach(() => {
+      clearAdditionalRestrictedTools();
+    });
+
+    it('registers additional restricted tools from config', () => {
+      const options = createTableOptions({}, { restrictedTools: ['list', 'checklist'] });
+
+      new Table(options);
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+      expect(isRestrictedInTableCell('checklist')).toBe(true);
+    });
+
+    it('does not register when restrictedTools is not set', () => {
+      const options = createTableOptions({}, {});
+
+      new Table(options);
+
+      expect(isRestrictedInTableCell('list')).toBe(false);
     });
   });
 

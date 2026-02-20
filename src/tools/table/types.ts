@@ -53,4 +53,6 @@ export interface TableConfig {
   withHeadings?: boolean;
   /** Whether to start stretched */
   stretched?: boolean;
+  /** Additional tool names to restrict from being inserted into table cells */
+  restrictedTools?: string[];
 }

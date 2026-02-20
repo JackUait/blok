@@ -2,10 +2,46 @@ import type { API } from '../../../types';
 import type { Block } from '../../components/block';
 
 /**
- * List of block tools that are restricted from being inserted into table cells.
+ * Default block tools that are always restricted from being inserted into table cells.
  * These tools create semantic or structural issues when nested in table cells.
  */
-export const RESTRICTED_TOOLS = ['header', 'table'];
+const DEFAULT_RESTRICTED_TOOLS = ['header', 'table'];
+
+/**
+ * Additional restricted tools registered via table tool config.
+ * Users can extend the default list by setting `restrictedTools` in the table tool config.
+ */
+const additionalRestrictedTools = new Set<string>();
+
+/**
+ * Register additional tools as restricted in table cells.
+ * Called by the Table tool constructor when `restrictedTools` is set in the config.
+ *
+ * @param tools - Tool names to add to the restricted list
+ */
+export const registerAdditionalRestrictedTools = (tools: string[]): void => {
+  for (const tool of tools) {
+    additionalRestrictedTools.add(tool);
+  }
+};
+
+/**
+ * Clear all additional restricted tools.
+ * Useful for cleanup when the editor is destroyed or in tests.
+ */
+export const clearAdditionalRestrictedTools = (): void => {
+  additionalRestrictedTools.clear();
+};
+
+/**
+ * Returns all restricted tool names (default + additional registered via config).
+ * Used by the toolbox to hide restricted tools when inside table cells.
+ *
+ * @returns Array of all restricted tool names
+ */
+export const getRestrictedTools = (): string[] => {
+  return [...DEFAULT_RESTRICTED_TOOLS, ...additionalRestrictedTools];
+};
 
 /**
  * Check if a block or element is inside a table cell.
@@ -26,12 +62,13 @@ export const isInsideTableCell = (block: Block | HTMLElement | null | undefined)
 
 /**
  * Check if a tool name is restricted inside table cells.
+ * Checks both the default restricted list and any additional tools registered via config.
  *
  * @param toolName - Name of the block tool to check
  * @returns true if the tool is restricted in table cells, false otherwise
  */
 export const isRestrictedInTableCell = (toolName: string): boolean => {
-  return RESTRICTED_TOOLS.includes(toolName);
+  return DEFAULT_RESTRICTED_TOOLS.includes(toolName) || additionalRestrictedTools.has(toolName);
 };
 
 /**

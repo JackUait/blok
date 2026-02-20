@@ -40,6 +40,7 @@ import { executeRowColAction } from './table-row-col-action-handler';
 import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
+import { registerAdditionalRestrictedTools } from './table-restrictions';
 import type { TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -81,6 +82,10 @@ export class Table implements BlockTool {
     this.data = normalizeTableData(data, config ?? {});
     this.grid = new TableGrid({ readOnly });
     this.blockId = block?.id;
+
+    if (this.config.restrictedTools !== undefined) {
+      registerAdditionalRestrictedTools(this.config.restrictedTools);
+    }
   }
 
   public static get toolbox(): ToolboxConfig {

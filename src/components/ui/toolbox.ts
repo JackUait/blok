@@ -1,4 +1,4 @@
-import { RESTRICTED_TOOLS } from '../../tools/table/table-restrictions';
+import { getRestrictedTools } from '../../tools/table/table-restrictions';
 import { Dom } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
 import { SelectionUtils } from '../selection';
@@ -392,13 +392,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * by matching item names that equal or start with a restricted tool name.
    */
   private toggleRestrictedToolsHidden(isHidden: boolean): void {
+    const restrictedTools = getRestrictedTools();
+
     for (const item of this.toolboxItemsToBeDisplayed) {
       if (!('name' in item) || item.name === undefined) {
         continue;
       }
 
       const { name } = item;
-      const isRestricted = RESTRICTED_TOOLS.some(
+      const isRestricted = restrictedTools.some(
         restricted => name === restricted || name.startsWith(`${restricted}-`)
       );
 

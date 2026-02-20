@@ -163,19 +163,7 @@ export class ToolRenderer {
     this.addToolDataAttributes(pluginsContent, wrapper);
     contentNode.appendChild(pluginsContent);
 
-    // Call the tool's rendered lifecycle method if it exists
-    // Defer to next frame to ensure all blocks are registered
-    const rendered = this.toolInstance.rendered;
-    if (typeof rendered === 'function') {
-      const resolver = this.readyResolver;
-      const toolInstance = this.toolInstance;
-      requestAnimationFrame(() => {
-        rendered.call(toolInstance);
-        resolver?.();
-      });
-    } else {
-      this.readyResolver?.();
-    }
+    this.invokeRenderedLifecycle();
   }
 
   /**
@@ -192,24 +180,39 @@ export class ToolRenderer {
         this.addToolDataAttributes(resolvedElement, wrapper);
         contentNode.appendChild(resolvedElement);
 
-        // Call the tool's rendered lifecycle method if it exists
-        // Defer to next frame to ensure all blocks are registered
-        const rendered = this.toolInstance.rendered;
-        if (typeof rendered === 'function') {
-          const resolver = this.readyResolver;
-          const toolInstance = this.toolInstance;
-          requestAnimationFrame(() => {
-            rendered.call(toolInstance);
-            resolver?.();
-          });
-        } else {
-          this.readyResolver?.();
-        }
+        this.invokeRenderedLifecycle();
       })
       .catch((error) => {
         log(`Tool render promise rejected: %o`, 'error', error);
         this.readyResolver?.();
       });
+  }
+
+  /**
+   * Call the tool's rendered lifecycle method if it exists.
+   * Defers to next frame to ensure all blocks are registered.
+   * Always resolves readyResolver, even if rendered() throws.
+   */
+  private invokeRenderedLifecycle(): void {
+    const rendered = this.toolInstance.rendered;
+
+    if (typeof rendered === 'function') {
+      const resolver = this.readyResolver;
+      const toolInstance = this.toolInstance;
+      const name = this.name;
+
+      requestAnimationFrame(() => {
+        try {
+          rendered.call(toolInstance);
+        } catch (e) {
+          log(`${name}: rendered() threw: ${e instanceof Error ? e.message : String(e)}`, 'warn');
+        } finally {
+          resolver?.();
+        }
+      });
+    } else {
+      this.readyResolver?.();
+    }
   }
 
   /**

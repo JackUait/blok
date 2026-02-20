@@ -258,9 +258,11 @@ export class BlockOperations {
     });
 
     /**
-     * Sync to Yjs data layer (unless caller is handling sync separately)
+     * Sync to Yjs data layer (unless caller is handling sync separately,
+     * or we're inside an atomic operation like paste where all Yjs sync
+     * is deferred until the operation completes)
      */
-    if (!skipYjsSync) {
+    if (!skipYjsSync && !this.yjsSync.isSyncingFromYjs) {
       this.dependencies.YjsManager.addBlock({
         id: block.id,
         type: block.name,
@@ -787,33 +789,27 @@ export class BlockOperations {
     replace = false,
     blocksStore: BlocksStore
   ): Promise<Block> {
-    // Insert block without syncing to Yjs yet (we'll sync final state after onPaste)
-    const block = this.insert({
-      tool: toolName,
-      replace,
-      skipYjsSync: true,
-    }, blocksStore);
+    // Insert block without syncing to Yjs yet.
+    // Wrap in atomic operation so that child blocks created during rendered()
+    // (e.g., table cell paragraph blocks) also skip Yjs sync.
+    const block = this.yjsSync.withAtomicOperation(() => {
+      return this.insert({
+        tool: toolName,
+        replace,
+        skipYjsSync: true,
+      }, blocksStore);
+    });
 
-    // Suppress auto-sync during paste processing
+    // Wait for the block to be fully rendered before calling onPaste,
+    // because onPaste may change the tool's root element and needs
+    // mutation watchers to be bound first.
+    await block.ready;
+
+    // Call onPaste within atomic operation so child blocks created
+    // during cell initialization also skip Yjs sync.
     this.yjsSync.withAtomicOperation(() => {
-      /**
-       * We need to call onPaste after Block will be ready
-       * because onPaste could change tool's root element, and we need to do that after block.watchBlockMutations() bound
-       * to detect tool root element change
-       * @todo make this.insert() awaitable and remove requestIdleCallback
-       */
-      return void block.ready.then(() => {
-        block.call(BlockToolAPI.ON_PASTE, pasteEvent as unknown as Record<string, unknown>);
-
-        /**
-         * onPaste might cause the tool to replace its root element (e.g., Header changing level).
-         * Since mutation observers are set up asynchronously via requestIdleCallback,
-         * we need to manually refresh the tool element reference here.
-         */
-        block.refreshToolRootElement();
-      }).catch((e) => {
-        log(`${toolName}: onPaste callback call is failed`, 'error', e);
-      });
+      block.call(BlockToolAPI.ON_PASTE, pasteEvent as unknown as Record<string, unknown>);
+      block.refreshToolRootElement();
     });
 
     // Sync final state to Yjs as single operation

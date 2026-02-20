@@ -425,6 +425,39 @@ describe('ToolRenderer', () => {
       expect(readyResolved).toBe(true);
     });
 
+    it('resolves ready promise even when rendered() throws', async () => {
+      const toolWithThrowingRendered = {
+        render: vi.fn(() => mockRenderedElement),
+        save: vi.fn(() => ({ text: 'content' })),
+        rendered: vi.fn(() => {
+          throw new Error('rendered error');
+        }),
+      } as unknown as BlockTool;
+
+      const renderer = new ToolRenderer(
+        toolWithThrowingRendered,
+        'paragraph',
+        'test-block-id',
+        tunesManager,
+        {}
+      );
+
+      renderer.compose();
+
+      let readyResolved = false;
+
+      void renderer.ready.then(() => {
+        readyResolved = true;
+      });
+
+      // Wait for requestAnimationFrame
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      // Wait for microtask to process the .then()
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(readyResolved).toBe(true);
+    });
+
     it('does not call rendered() when tool does not implement it', async () => {
       const toolWithoutRendered = {
         render: vi.fn(() => mockRenderedElement),

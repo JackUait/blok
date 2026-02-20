@@ -1009,6 +1009,81 @@ describe('BlockOperations', () => {
       expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
+
+    it('awaits block.ready before calling onPaste', async () => {
+      const callOrder: string[] = [];
+      let resolveReady: () => void;
+      const readyPromise = new Promise<void>((resolve) => {
+        resolveReady = resolve;
+      });
+
+      const mockBlock = createMockBlock();
+
+      // Override ready to be a delayed promise
+      Object.defineProperty(mockBlock, 'ready', {
+        get: () => readyPromise,
+      });
+
+      // Track when onPaste is called
+      (mockBlock.call as Mock).mockImplementation((methodName: string) => {
+        callOrder.push(methodName);
+      });
+
+      // Override factory to return our mock block
+      const originalInsert = operations.insert.bind(operations);
+
+      vi.spyOn(operations, 'insert').mockImplementation((opts, store) => {
+        originalInsert(opts, store);
+
+        return mockBlock;
+      });
+
+      const pasteEvent: PasteEvent = {
+        detail: { data: { text: 'test' } },
+      } as unknown as PasteEvent;
+
+      // Start paste (don't await yet)
+      const pastePromise = operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      // onPaste should not have been called yet (block.ready hasn't resolved)
+      expect(mockBlock.call).not.toHaveBeenCalled();
+
+      // Now resolve block.ready
+      resolveReady!();
+      await pastePromise;
+
+      // onPaste should have been called after ready resolved
+      expect(callOrder).toContain('onPaste');
+    });
+
+    it('suppresses Yjs sync for child blocks created during onPaste', async () => {
+      // Track whether isSyncingFromYjs was true during atomic operation
+      let syncingDuringAtomic = false;
+
+      (yjsSync.withAtomicOperation as Mock).mockImplementation(<T>(fn: () => T): T => {
+        // Simulate setting isSyncingFromYjs during atomic operation
+        const origValue = yjsSync.isSyncingFromYjs;
+
+        Object.defineProperty(yjsSync, 'isSyncingFromYjs', { value: true, configurable: true });
+        syncingDuringAtomic = true;
+
+        try {
+          return fn();
+        } finally {
+          Object.defineProperty(yjsSync, 'isSyncingFromYjs', { value: origValue, configurable: true });
+        }
+      });
+
+      const pasteEvent: PasteEvent = {
+        detail: { data: { text: 'test' } },
+      } as unknown as PasteEvent;
+
+      await operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      // withAtomicOperation should have been called (wrapping both insert and onPaste)
+      expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
+      expect(syncingDuringAtomic).toBe(true);
+    });
   });
 
   describe('moveCurrentBlockUp', () => {

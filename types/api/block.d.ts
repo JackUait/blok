@@ -1,4 +1,5 @@
 import {BlockToolData, ToolConfig, ToolboxConfigEntry} from '../tools';
+import {BlockTuneData} from '../block-tunes/block-tune-data';
 import {SavedData} from '../data-formats';
 
 /**
@@ -34,6 +35,18 @@ export interface BlockAPI {
    * True if Block is selected with Cross-Block selection
    */
   readonly selected: boolean;
+
+  /**
+   * Last successfully extracted block tool data (synchronous).
+   * Useful when async save() is not feasible, e.g. during clipboard operations.
+   */
+  readonly preservedData: BlockToolData;
+
+  /**
+   * Last successfully extracted tune data (synchronous).
+   * Useful when async save() is not feasible, e.g. during clipboard operations.
+   */
+  readonly preservedTunes: { [name: string]: BlockTuneData };
 
   /**
    * True if Block has inputs to be focused

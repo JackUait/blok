@@ -4,6 +4,7 @@ import { BlockAPI as BlockAPIConstructor } from '../../../../src/components/bloc
 import type { Block } from '../../../../src/components/block';
 import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../../types/tools';
 import type { SavedData } from '../../../../types/data-formats';
+import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockAPI as BlockAPIInterface } from '../../../../types/api';
 
 type MockBlockShape = {
@@ -15,6 +16,8 @@ type MockBlockShape = {
   selected: boolean;
   stretched: boolean;
   focusable: boolean;
+  preservedData: BlockToolData;
+  preservedTunes: { [name: string]: BlockTuneData };
   setStretchState: (state: boolean) => void;
   call: (methodName: string, param?: Record<string, unknown>) => unknown;
   save: () => Promise<void | SavedData>;
@@ -38,6 +41,8 @@ const createMockBlock = (): {
   holder: HTMLElement;
   savedData: SavedData;
   toolboxEntry: ToolboxConfigEntry;
+  preservedData: BlockToolData;
+  preservedTunes: { [name: string]: BlockTuneData };
 } => {
   const holder = document.createElement('div');
   const config: ToolConfig = { placeholder: 'Test placeholder' };
@@ -64,6 +69,9 @@ const createMockBlock = (): {
     .mockResolvedValue(toolboxEntry);
   const setStretchStateMock = vi.fn<MockBlockShape['setStretchState']>();
 
+  const preservedData: BlockToolData = { text: 'preserved text' } as BlockToolData;
+  const preservedTunes: { [name: string]: BlockTuneData } = { alignment: { align: 'center' } };
+
   const shape: MockBlockShape = {
     id: 'block-id',
     name: 'paragraph',
@@ -73,6 +81,8 @@ const createMockBlock = (): {
     selected: false,
     stretched: false,
     focusable: true,
+    preservedData,
+    preservedTunes,
     setStretchState: (state: boolean) => {
       shape.stretched = state;
     },
@@ -102,6 +112,8 @@ const createMockBlock = (): {
     holder,
     savedData,
     toolboxEntry,
+    preservedData,
+    preservedTunes,
   };
 };
 
@@ -162,6 +174,20 @@ describe('BlockAPI', () => {
 
     expect(mocks.getActiveToolboxEntry).toHaveBeenCalledTimes(1);
     expect(activeToolboxEntry).toBe(toolboxEntry);
+  });
+
+  it('returns the block preservedData for synchronous access to cached tool data', () => {
+    const { block, preservedData } = createMockBlock();
+    const blockAPI = new BlockAPIConstructor(block);
+
+    expect(blockAPI.preservedData).toBe(preservedData);
+  });
+
+  it('returns the block preservedTunes for synchronous access to cached tune data', () => {
+    const { block, preservedTunes } = createMockBlock();
+    const blockAPI = new BlockAPIConstructor(block);
+
+    expect(blockAPI.preservedTunes).toBe(preservedTunes);
   });
 
   it('creates BlockAPI instances compatible with BlockAPIInterface', () => {

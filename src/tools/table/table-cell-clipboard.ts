@@ -1,4 +1,5 @@
 import type { ClipboardBlockData, TableCellsClipboard } from './types';
+import { clean } from '../../components/utils/sanitizer';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
 const DATA_ATTR = 'data-blok-table-cells';
@@ -113,6 +114,60 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
 }
 
 /**
+ * Sanitizer config for cell content: allows bold, italic, line breaks, and links.
+ */
+const CELL_SANITIZE_CONFIG = {
+  b: true,
+  i: true,
+  br: true,
+  a: { href: true },
+} as const;
+
+/**
+ * Extract HTML content from a `<td>`/`<th>` element, converting Google Docs
+ * style-based spans to semantic tags and sanitizing to allowed formatting only.
+ *
+ * - `<span style="font-weight:700">` or `font-weight:bold` → `<b>`
+ * - `<span style="font-style:italic">` → `<i>`
+ * - `<p>` boundaries → `<br>` line breaks
+ * - Everything else stripped except `<b>`, `<i>`, `<br>`, `<a href>`
+ */
+function sanitizeCellHtml(td: Element): string {
+  const clone = td.cloneNode(true) as HTMLElement;
+
+  // Convert style-based spans to semantic tags
+  clone.querySelectorAll('span').forEach((span) => {
+    const style = span.getAttribute('style') ?? '';
+    const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
+    const isItalic = /font-style\s*:\s*italic/i.test(style);
+
+    if (isBold || isItalic) {
+      let wrapped = span.innerHTML;
+
+      if (isItalic) {
+        wrapped = `<i>${wrapped}</i>`;
+      }
+      if (isBold) {
+        wrapped = `<b>${wrapped}</b>`;
+      }
+      span.outerHTML = wrapped;
+    }
+  });
+
+  // Convert <p> boundaries to <br> line breaks
+  clone.querySelectorAll('p').forEach((p) => {
+    p.outerHTML = p.innerHTML + '<br>';
+  });
+
+  let html = clean(clone.innerHTML, CELL_SANITIZE_CONFIG);
+
+  // Trim trailing <br> tags and whitespace
+  html = html.replace(/(<br\s*\/?>|\s)+$/i, '');
+
+  return html.trim();
+}
+
+/**
  * Parse a generic HTML table (e.g. from Google Docs, Word, Excel) into a
  * {@link TableCellsClipboard} payload.
  *
@@ -152,7 +207,7 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     const rowCells: Array<{ blocks: ClipboardBlockData[] }> = [];
 
     tds.forEach((td) => {
-      const text = td.textContent?.trim() ?? '';
+      const text = sanitizeCellHtml(td);
 
       rowCells.push({
         blocks: [{ tool: 'paragraph', data: { text } }],

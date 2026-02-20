@@ -703,7 +703,7 @@ export class Table implements BlockTool {
   }
 
   private handleGridPaste(e: ClipboardEvent, gridEl: HTMLElement): void {
-    if (this.readOnly || !e.clipboardData) {
+    if (this.readOnly || !e.clipboardData || e.defaultPrevented) {
       return;
     }
 

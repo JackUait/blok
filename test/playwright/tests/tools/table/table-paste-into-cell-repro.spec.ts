@@ -412,6 +412,136 @@ test.describe('Paste into existing table cell — content integrity', () => {
     expect(allTexts.filter(t => t === 'CopiedY').length).toBe(1);
   });
 
+  test('Pasting a single Google Docs row into the first cell does not duplicate content in the last row', async ({ page, context }) => {
+    // Regression test: copying one row (4 cells) from Google Docs and pasting into
+    // cell (0,0) of a default 3×3 empty table should insert content only in the
+    // first row — not also in the last row — and should expand to 4 cols, not 8.
+
+    // Grant clipboard permissions for real paste simulation
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                ['', '', ''],
+                ['', '', ''],
+                ['', '', ''],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    // 3 rows × 3 cols = 9 cells
+    await expect(cells).toHaveCount(9);
+
+    // Click on cell (0,0) to focus it
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first cell
+    const firstCell = cells.first();
+
+    await firstCell.click();
+
+    const firstCellEditable = firstCell.locator('[contenteditable="true"]');
+
+    await expect(firstCellEditable).toBeFocused({ timeout: 2000 });
+
+    // Paste a single Google Docs row with 4 cells (more than the 3 table cols)
+    const googleDocsHTML = [
+      '<meta charset="utf-8">',
+      '<b style="font-weight:normal;" id="docs-internal-guid-single-row">',
+      '<div dir="ltr" style="margin-left:0pt;" align="left">',
+      '<table style="border:none;border-collapse:collapse;">',
+      '<tbody>',
+      '<tr>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>test</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>test</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>peach test</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>new column</span></p>',
+      '</td>',
+      '</tr>',
+      '</tbody>',
+      '</table>',
+      '</div>',
+      '</b>',
+    ].join('');
+
+    // Write HTML content to clipboard and trigger real paste via keyboard
+    await page.evaluate(async (html: string) => {
+      const blob = new Blob([html], { type: 'text/html' });
+      const plainBlob = new Blob(['test\ttest\tpeach test\tnew column'], { type: 'text/plain' });
+
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': blob,
+          'text/plain': plainBlob,
+        }),
+      ]);
+    }, googleDocsHTML);
+
+    // Trigger real paste via keyboard shortcut
+    await page.keyboard.press('Meta+v');
+
+    // Wait for pasted content to appear in the DOM
+    await waitForPasteComplete(page, 'new column');
+
+    // Save and check results
+    const savedData = await page.evaluate(async () => {
+      return window.blokInstance?.save();
+    });
+
+    const allBlocks = (savedData?.blocks ?? []) as SavedBlock[];
+
+    // Should have exactly one table block (no new table block created)
+    const tableBlocks = allBlocks.filter(b => b.type === 'table');
+
+    expect(tableBlocks.length).toBe(1);
+
+    const tableBlock = tableBlocks[0];
+    const cellGrid = tableBlock.data.content as Array<Array<{ blocks: string[] }>>;
+
+    // Grid expanded from 3→4 cols, rows stay at 3
+    expect(cellGrid.length).toBe(3);
+    expect(cellGrid[0].length).toBe(4);
+
+    // Row 0 should have the pasted content
+    const row0Texts = cellGrid[0].map(cell => resolveBlockText(allBlocks, cell.blocks[0]));
+
+    expect(row0Texts).toEqual(['test', 'test', 'peach test', 'new column']);
+
+    // Row 2 (last row) should NOT contain any pasted text — all cells should be empty
+    const row2Texts = cellGrid[2].map(cell => resolveBlockText(allBlocks, cell.blocks[0]));
+
+    expect(row2Texts.every(t => t === '')).toBe(true);
+
+    // "new column" should appear exactly once across all paragraph blocks
+    const allTexts = allBlocks
+      .filter(b => b.type === 'paragraph')
+      .map(b => b.data.text as string);
+
+    expect(allTexts.filter(t => t === 'new column').length).toBe(1);
+  });
+
   test('No orphaned contentIds after paste + read-only toggle', async ({ page }) => {
     await createBlok(page, {
       tools: defaultTools,

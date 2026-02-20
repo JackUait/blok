@@ -11,7 +11,6 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
 const CELL_SELECTOR = '[data-blok-table-cell]';
-const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
 
 type SerializableToolConfig = {
   className?: string;
@@ -329,7 +328,11 @@ test.describe('Table Rendering and Initial State', () => {
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    expect((tableBlock as Record<string, unknown>).data).toHaveProperty('content');
+
+    if (tableBlock === undefined) {
+      return;
+    }
+
+    expect(tableBlock.data).toHaveProperty('content');
   });
 });

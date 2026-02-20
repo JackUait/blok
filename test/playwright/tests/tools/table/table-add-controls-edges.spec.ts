@@ -208,11 +208,10 @@ test.describe('Add Controls Edge Cases', () => {
     // Check that both add buttons have pointer-events disabled right after selection,
     // before any hover interaction that could trigger the show/hide proximity logic.
     const addRowBtn = page.locator('[data-blok-table-add-row]');
-    const addColBtn = page.locator('[data-blok-table-add-col]');
 
     const pointerEventsAfterSelection = await page.evaluate(() => {
-      const row = document.querySelector('[data-blok-table-add-row]') as HTMLElement | null;
-      const col = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
+      const row = document.querySelector('[data-blok-table-add-row]');
+      const col = document.querySelector('[data-blok-table-add-col]');
 
       return {
         row: row ? getComputedStyle(row).pointerEvents : null,
@@ -226,15 +225,8 @@ test.describe('Add Controls Edge Cases', () => {
     // Hover bottom edge — this triggers showRow() which must NOT override pointer-events
     await hoverNearBottomEdge(page, table);
 
-    // Allow time for the proximity mousemove handler to fire
-    await page.waitForTimeout(100);
-
     // After hovering, pointer-events must still be 'none' (regression: showRow() used to reset it)
-    const pointerEventsAfterHover = await addRowBtn.evaluate(
-      (el) => getComputedStyle(el).pointerEvents
-    );
-
-    expect(pointerEventsAfterHover).toBe('none');
+    await expect(addRowBtn).toHaveCSS('pointer-events', 'none');
 
     // Verify table still has 3 rows — no row was accidentally added
     const rows = page.locator('[data-blok-table-row]');

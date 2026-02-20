@@ -237,8 +237,8 @@ test.describe('Paste HTML Table into Editor', () => {
     expect(tableBlock).toBeDefined();
 
     // Check withHeadings in saved data — the onPaste handler sets this from thead/th detection
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const withHeadings = (tableBlock as Record<string, Record<string, unknown>>).data.withHeadings;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+    const withHeadings = tableBlock?.data.withHeadings;
 
     // The table was created from paste; verify headings flag is set
     expect(withHeadings).toBe(true);
@@ -273,8 +273,8 @@ test.describe('Paste HTML Table into Editor', () => {
 
     expect(tableBlock).toBeDefined();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const withHeadings = (tableBlock as Record<string, Record<string, unknown>>).data.withHeadings;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+    const withHeadings = tableBlock?.data.withHeadings;
 
     expect(withHeadings).toBe(true);
   });

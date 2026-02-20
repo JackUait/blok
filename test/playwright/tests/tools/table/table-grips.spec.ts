@@ -6,10 +6,8 @@ import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
-import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
-const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
 const CELL_SELECTOR = '[data-blok-table-cell]';
 const COL_GRIP_SELECTOR = '[data-blok-table-grip-col]';
 const ROW_GRIP_SELECTOR = '[data-blok-table-grip-row]';

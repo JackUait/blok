@@ -298,7 +298,7 @@ test.describe('Add Row and Column Controls', () => {
     const startY = addRowBox.y + addRowBox.height / 2;
 
     // Measure a row height to know how far to drag
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row
+     
     const firstRowBox = assertBoundingBox(
       await page.locator('[data-blok-table-row]').first().boundingBox(),
       'First row'
@@ -342,7 +342,7 @@ test.describe('Add Row and Column Controls', () => {
       const cellsInRow = row ? row.querySelectorAll('[data-blok-table-cell]') : cells;
       let totalWidth = 0;
 
-      for (const cell of cellsInRow) {
+      for (const cell of Array.from(cellsInRow)) {
         totalWidth += (cell as HTMLElement).offsetWidth;
       }
 
@@ -380,7 +380,7 @@ test.describe('Add Row and Column Controls', () => {
     const startY = addColBox.y + addColBox.height / 2;
 
     // Measure a column width to know how far to drag
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
+     
     const firstCellBox = assertBoundingBox(
       await page.locator(CELL_SELECTOR).first().boundingBox(),
       'First cell'

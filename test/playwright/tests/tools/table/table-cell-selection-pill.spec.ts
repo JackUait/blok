@@ -332,7 +332,7 @@ test.describe('Cell Selection Pill and Popover', () => {
     // 3. Click outside the table to dismiss the selection.
     //    The source code listens for the next pointerdown outside the pill to clear selection.
     //    Escape key is not handled by TableCellSelection (only Delete/Backspace are).
-    await page.click('body', { position: { x: 10, y: 10 } });
+    await page.mouse.click(10, 10);
 
     // Expected: all cells lose data-blok-table-cell-selected
     await expect(selected).toHaveCount(0);

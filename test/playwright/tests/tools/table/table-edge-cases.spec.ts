@@ -120,7 +120,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 const pasteHtml = async (page: Page, selector: string, html: string): Promise<void> => {
   await page.evaluate(
     ({ sel, pasteHtml: htmlContent }) => {
-      const element = document.querySelector(sel) as HTMLElement | null;
+      const element = document.querySelector(sel);
 
       if (!element) {
         throw new Error(`Element not found for selector: ${sel}`);
@@ -193,7 +193,7 @@ test.describe('Edge Cases and Error Handling', () => {
     await colGrip.click({ force: true });
 
     // Delete the only column
-    // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first 'Delete' in the popover
+     
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
     await page.getByText('Delete').first().click({ force: true });
 
@@ -243,7 +243,7 @@ test.describe('Edge Cases and Error Handling', () => {
     await rowGrip.click({ force: true });
 
     // Delete the only row
-    // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first 'Delete' in the popover
+     
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
     await page.getByText('Delete').first().click({ force: true });
 
@@ -499,7 +499,7 @@ test.describe('Edge Cases and Error Handling', () => {
     await expect(lastRowGrip).toBeVisible({ timeout: 2000 });
     // eslint-disable-next-line playwright/no-force-option -- after insert, layout shift may cause interception
     await lastRowGrip.click({ force: true });
-    // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first 'Delete' in the popover
+     
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
     await page.getByText('Delete').first().click({ force: true });
 

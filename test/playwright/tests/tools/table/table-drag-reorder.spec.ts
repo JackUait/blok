@@ -10,12 +10,10 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants
 
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
-const CELL_SELECTOR = '[data-blok-table-cell]';
 const COL_GRIP_SELECTOR = '[data-blok-table-grip-col]';
 const ROW_GRIP_SELECTOR = '[data-blok-table-grip-row]';
 const ADD_ROW_SELECTOR = '[data-blok-table-add-row]';
 const ADD_COL_SELECTOR = '[data-blok-table-add-col]';
-const RESIZE_HANDLE_SELECTOR = '[data-blok-table-resize]';
 
 /**
  * Assert a bounding box is non-null and return it with narrowed type.
@@ -293,17 +291,9 @@ test.describe('Drag-to-Reorder Rows and Columns', () => {
       { steps: 5 }
     );
 
-    // While dragging, verify add controls are hidden
-    const addRowCount = await page.locator(ADD_ROW_SELECTOR).count();
-    const addColCount = await page.locator(ADD_COL_SELECTOR).count();
-
-    // Add controls should either be hidden or not in DOM during drag
-    if (addRowCount > 0) {
-      await expect(page.locator(ADD_ROW_SELECTOR)).toBeHidden();
-    }
-    if (addColCount > 0) {
-      await expect(page.locator(ADD_COL_SELECTOR)).toBeHidden();
-    }
+    // While dragging, add controls should not be visible (either hidden or removed from DOM)
+    await expect(page.locator(ADD_ROW_SELECTOR)).not.toBeVisible();
+    await expect(page.locator(ADD_COL_SELECTOR)).not.toBeVisible();
 
     await page.mouse.up();
   });

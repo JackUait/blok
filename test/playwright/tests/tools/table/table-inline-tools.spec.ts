@@ -122,7 +122,7 @@ const defaultTools: Record<string, SerializableToolConfig> = {
 /**
  * Returns the first contenteditable element inside the cell at the given 0-based index.
  */
-// eslint-disable-next-line playwright/no-nth-methods -- nth() is necessary to index into a grid
+ 
 const getCellEditable = (page: Page, cellIndex: number) =>
   page.locator(CELL_SELECTOR).nth(cellIndex).locator('[contenteditable="true"]').first();
 

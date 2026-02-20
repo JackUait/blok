@@ -276,7 +276,7 @@ test.describe('Table Scroll Overflow', () => {
     // Measure the drag unit size (half average column width) to know how far to drag
     const unitSize = await page.evaluate(() => {
       const row = document.querySelector('[data-blok-table-row]');
-      const cellsInRow = row ? row.querySelectorAll('[data-blok-table-cell]') : [];
+      const cellsInRow = row ? Array.from(row.querySelectorAll('[data-blok-table-cell]')) : [];
       let totalWidth = 0;
 
       for (const cell of cellsInRow) {

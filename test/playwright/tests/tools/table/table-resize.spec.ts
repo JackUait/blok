@@ -10,7 +10,6 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants
 
 const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
-const CELL_SELECTOR = '[data-blok-table-cell]';
 const RESIZE_HANDLE_SELECTOR = '[data-blok-table-resize]';
 
 /**

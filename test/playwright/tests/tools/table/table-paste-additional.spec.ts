@@ -209,13 +209,11 @@ test.describe('Paste HTML Table - Additional Scenarios', () => {
     // Dispatch a paste event with an empty HTML table (no rows or cells)
     await pasteHtml(page, '<table></table>');
 
-    // Wait a moment for any async paste processing to complete
-    await page.waitForTimeout(500);
-
     // Verify no table block with cells was inserted — an empty table produces no displayable cell content
+    // Use expect with polling to wait for any async paste processing to settle
     const cells = page.locator(CELL_SELECTOR);
 
-    await expect(cells).toHaveCount(0);
+    await expect(cells).toHaveCount(0, { timeout: 2000 });
 
     // Verify the editor is still functional — the holder is still present
     const holder = page.locator(`[data-blok-testid="${HOLDER_ID}"]`);
@@ -254,20 +252,17 @@ test.describe('Paste HTML Table - Additional Scenarios', () => {
     // Dispatch a paste event with a nested HTML table inside the focused cell
     await pasteHtml(page, '<table><tr><td>Nested</td></tr></table>');
 
-    // Wait for any async processing to complete
-    await page.waitForTimeout(500);
+    // Verify the editor is still functional — the holder is still present (also waits for paste processing to settle)
+    const holder = page.locator(`[data-blok-testid="${HOLDER_ID}"]`);
+
+    await expect(holder).toBeVisible();
 
     // Verify no JavaScript errors were thrown during paste handling
     expect(errors).toHaveLength(0);
 
     // Verify no nested table element exists inside a table cell — paste should not produce nested tables
-    const nestedTableInCell = page.locator(`${CELL_SELECTOR} table`);
+    const nestedTableInCell = page.locator(CELL_SELECTOR).getByRole('table');
 
-    await expect(nestedTableInCell).toHaveCount(0);
-
-    // Verify the editor is still functional — the holder is still present
-    const holder = page.locator(`[data-blok-testid="${HOLDER_ID}"]`);
-
-    await expect(holder).toBeVisible();
+    await expect(nestedTableInCell).toHaveCount(0, { timeout: 2000 });
   });
 });

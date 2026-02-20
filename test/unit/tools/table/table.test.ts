@@ -3728,18 +3728,19 @@ describe('Table Tool', () => {
       document.dispatchEvent(copyEvent);
 
       // If selection was active, clipboard data should have been set
-      const htmlCalls = clipboardData.setData.mock.calls.filter(
-        (c: [string, string]) => c[0] === 'text/html'
+      const calls = clipboardData.setData.mock.calls as Array<[string, string]>;
+      const htmlCalls = calls.filter(
+        (c) => c[0] === 'text/html'
       );
-      const textCalls = clipboardData.setData.mock.calls.filter(
-        (c: [string, string]) => c[0] === 'text/plain'
+      const textCalls = calls.filter(
+        (c) => c[0] === 'text/plain'
       );
 
       expect(htmlCalls.length).toBeGreaterThanOrEqual(1);
       expect(textCalls.length).toBeGreaterThanOrEqual(1);
 
       // Verify the clipboard content contains the cell text
-      const plainText = textCalls[0][1] as string;
+      const plainText = textCalls[0][1];
 
       expect(plainText).toContain('CopyMe');
       expect(plainText).toContain('CopyToo');
@@ -3764,8 +3765,9 @@ describe('Table Tool', () => {
       // The cut event is intercepted by TableCellSelection.handleCut,
       // which calls this.onCut if it exists. In read-only mode, onCut is not provided,
       // so clipboardData.setData should NOT be called with any cell data.
-      const htmlCalls = clipboardData.setData.mock.calls.filter(
-        (c: [string, string]) => c[0] === 'text/html'
+      const cutCalls = clipboardData.setData.mock.calls as Array<[string, string]>;
+      const htmlCalls = cutCalls.filter(
+        (c) => c[0] === 'text/html'
       );
 
       expect(htmlCalls.length).toBe(0);

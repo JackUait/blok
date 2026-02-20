@@ -24,9 +24,9 @@ export function preprocessGoogleDocsHtml(html: string): string {
 
 /**
  * Strip Google Docs wrapper elements to expose underlying content.
- * Google Docs wraps clipboard HTML in `<b id="docs-internal-guid-..."><div>...</div></b>`.
- * The sanitizer strips the `id` attribute (config is `b: {}`), making
- * the wrapper undetectable later in the pipeline.
+ * Google Docs wraps clipboard HTML in `<b id="docs-internal-guid-...">`.
+ * Content may be split across multiple child `<div>` elements (e.g. one
+ * per table), so all children are moved out of the wrapper.
  */
 function unwrapGoogleDocsContent(wrapper: HTMLElement): void {
   const googleDocsWrapper = wrapper.querySelector<HTMLElement>('b[id^="docs-internal-guid-"]');
@@ -35,11 +35,10 @@ function unwrapGoogleDocsContent(wrapper: HTMLElement): void {
     return;
   }
 
-  const contentSource = googleDocsWrapper.querySelector<HTMLElement>(':scope > div') ?? googleDocsWrapper;
   const fragment = document.createDocumentFragment();
 
-  while (contentSource.firstChild) {
-    fragment.appendChild(contentSource.firstChild);
+  while (googleDocsWrapper.firstChild) {
+    fragment.appendChild(googleDocsWrapper.firstChild);
   }
 
   googleDocsWrapper.replaceWith(fragment);

@@ -104,4 +104,37 @@ describe('preprocessGoogleDocsHtml', () => {
 
     expect(result).toBe('<p>standalone paragraph</p>');
   });
+
+  it('preserves all tables when Google Docs wraps each in a separate div', () => {
+    const html = [
+      '<b id="docs-internal-guid-abc123">',
+      '<div dir="ltr"><table><tr><td>Table 1</td></tr></table></div>',
+      '<p dir="ltr">text between</p>',
+      '<div dir="ltr"><table><tr><td>Table 2</td></tr></table></div>',
+      '</b>',
+    ].join('');
+
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('Table 1');
+    expect(result).toContain('Table 2');
+    expect(result).toContain('text between');
+    expect(result).not.toContain('docs-internal-guid');
+  });
+
+  it('preserves content outside of divs within Google Docs wrapper', () => {
+    const html = [
+      '<b id="docs-internal-guid-xyz789">',
+      '<div dir="ltr"><table><tr><td>First</td></tr></table></div>',
+      '<div dir="ltr"><table><tr><td>Second</td></tr></table></div>',
+      '<div dir="ltr"><table><tr><td>Third</td></tr></table></div>',
+      '</b>',
+    ].join('');
+
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('First');
+    expect(result).toContain('Second');
+    expect(result).toContain('Third');
+  });
 });

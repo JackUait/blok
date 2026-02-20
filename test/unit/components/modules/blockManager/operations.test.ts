@@ -458,6 +458,43 @@ describe('BlockOperations', () => {
 
       expect(operations.currentBlockIndexValue).toBe(3);
     });
+
+    it('demotes restricted tools to paragraph when inserting inside a table cell', () => {
+      // Create a table cell container in the DOM
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(tableCellContainer);
+
+      // Create a block and set up the store first (push appends holder to workingArea)
+      const cellBlock = createMockBlock({ id: 'cell-block', name: 'paragraph' });
+      blocksStore = createBlocksStore([cellBlock]);
+
+      // Move the holder into the table cell container AFTER the store is created
+      // (createBlocksStore's push() would otherwise move it to the workingArea)
+      tableCellContainer.appendChild(cellBlock.holder);
+
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      hierarchy = new BlockHierarchy(repository);
+      operations = new BlockOperations(
+        dependencies,
+        repository,
+        factory,
+        hierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      operations.setYjsSync(yjsSync);
+
+      // Insert a 'header' tool — should be demoted to 'paragraph'
+      const newBlock = operations.insert({ tool: 'header' }, blocksStore);
+
+      expect(newBlock).toBeDefined();
+      expect(newBlock.name).toBe('paragraph');
+
+      // Cleanup
+      document.body.removeChild(tableCellContainer);
+    });
   });
 
   describe('insertDefaultBlockAtIndex', () => {

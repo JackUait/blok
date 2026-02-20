@@ -23,6 +23,7 @@ import type { Caret } from '../caret';
 import type { I18n } from '../i18n';
 import type { YjsManager } from '../yjs';
 
+import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
@@ -205,10 +206,18 @@ export class BlockOperations {
       this.repository.getBlockByIndex(targetIndex)?.unwatchBlockMutations();
     }
 
-    const toolName = tool ?? this.dependencies.config.defaultBlock;
+    let toolName = tool ?? this.dependencies.config.defaultBlock;
 
     if (toolName === undefined) {
       throw new Error('Could not insert Block. Tool name is not specified.');
+    }
+
+    // Demote restricted tools to paragraph when inserting inside a table cell
+    const neighborBlock = this.repository.getBlockByIndex(targetIndex)
+      ?? this.repository.getBlockByIndex(targetIndex - 1);
+
+    if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(toolName)) {
+      toolName = this.dependencies.config.defaultBlock ?? 'paragraph';
     }
 
     // Bind events immediately for user-created blocks so mutations are tracked right away

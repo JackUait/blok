@@ -319,4 +319,70 @@ test.describe('table cells — any block type', () => {
       await expect(firstCell).toContainText('A');
     });
   });
+
+  test.describe('Table cell paste restrictions', () => {
+    test('demotes a pasted header block to paragraph inside a table cell', async ({ page }) => {
+      // Detect platform modifier key
+      const modKey = await page.evaluate(() => {
+        const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+        const platform = (nav.userAgentData?.platform ?? nav.platform ?? '').toLowerCase();
+
+        return platform.includes('mac') ? 'Meta' : 'Control';
+      });
+
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [
+            {
+              type: 'header',
+              data: { text: 'Pasted heading', level: 2 },
+            },
+            {
+              type: 'table',
+              data: {
+                content: [
+                  [{ blocks: [] }, { blocks: [] }],
+                  [{ blocks: [] }, { blocks: [] }],
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      // Click on the header block to focus it
+      const headerBlock = page.locator('[data-blok-tool="header"]');
+
+      await headerBlock.click();
+
+      // Select all text in the header
+      await page.keyboard.press(`${modKey}+a`);
+
+      // Copy it
+      await page.keyboard.press(`${modKey}+c`);
+
+      // Click into the first table cell
+      const firstCell = getCell(page, 0, 0);
+      const cellEditable = firstCell.locator('[contenteditable="true"]').first();
+
+      await cellEditable.click();
+
+      // Paste
+      await page.keyboard.press(`${modKey}+v`);
+
+      // Wait for paste to process
+      await page.waitForTimeout(500);
+
+      // The cell should NOT contain a header block
+      const cellBlocks = firstCell.locator('[data-blok-table-cell-blocks]');
+
+      await expect(cellBlocks.locator('[data-blok-tool="header"]')).toHaveCount(0);
+
+      // Verify the text was preserved as a paragraph
+      const cellText = await cellBlocks.textContent();
+
+      expect(cellText).toContain('Pasted heading');
+    });
+  });
 });

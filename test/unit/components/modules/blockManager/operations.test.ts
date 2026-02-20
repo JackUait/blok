@@ -495,6 +495,57 @@ describe('BlockOperations', () => {
       // Cleanup
       document.body.removeChild(tableCellContainer);
     });
+
+    it('allows non-restricted tools to insert inside a table cell', () => {
+      // Create a table cell container in the DOM
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(tableCellContainer);
+
+      try {
+        // Create a block whose holder is inside the table cell
+        const cellBlock = createMockBlock({ id: 'cell-block', name: 'paragraph' });
+        tableCellContainer.appendChild(cellBlock.holder);
+
+        // Replace blocksStore so current block is the cell block
+        blocksStore = createBlocksStore([cellBlock]);
+        // Move holder back to table cell after createBlocksStore moves it
+        tableCellContainer.appendChild(cellBlock.holder);
+        repository = new BlockRepository();
+        repository.initialize(blocksStore);
+        hierarchy = new BlockHierarchy(repository);
+        operations = new BlockOperations(
+          dependencies,
+          repository,
+          factory,
+          hierarchy,
+          blockDidMutatedSpy,
+          0
+        );
+        operations.setYjsSync(yjsSync);
+
+        // Insert a 'paragraph' tool — should remain paragraph (not restricted)
+        const newBlock = operations.insert({ tool: 'paragraph' }, blocksStore);
+
+        expect(newBlock).toBeDefined();
+        expect(newBlock.name).toBe('paragraph');
+      } finally {
+        document.body.removeChild(tableCellContainer);
+      }
+    });
+
+    it('allows restricted tools to insert outside table cells', () => {
+      // Register 'header' tool in the factory so it can be composed
+      const headerAdapter = createMockBlockToolAdapter('header');
+      (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+        .dependencies.tools.set('header', headerAdapter);
+
+      // No table cell container — blocks are in normal editor area
+      const newBlock = operations.insert({ tool: 'header', index: 0 }, blocksStore);
+
+      expect(newBlock).toBeDefined();
+      expect(newBlock.name).toBe('header');
+    });
   });
 
   describe('insertDefaultBlockAtIndex', () => {

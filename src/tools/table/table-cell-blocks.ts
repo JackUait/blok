@@ -268,11 +268,19 @@ export class TableCellBlocks {
           normalizedRow.push({ blocks: mountedIds });
         } else {
           const text = typeof cellContent === 'string' ? cellContent : '';
-          const block = this.api.blocks.insert('paragraph', { text }, {}, this.api.blocks.getBlocksCount(), false);
+          const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
+          const textsToInsert = segments.length > 0 ? segments : [text];
+          const ids: string[] = [];
 
-          container.appendChild(block.holder);
-          this.api.blocks.setBlockParent(block.id, this.tableBlockId);
-          normalizedRow.push({ blocks: [block.id] });
+          for (const segmentText of textsToInsert) {
+            const block = this.api.blocks.insert('paragraph', { text: segmentText }, {}, this.api.blocks.getBlocksCount(), false);
+
+            container.appendChild(block.holder);
+            this.api.blocks.setBlockParent(block.id, this.tableBlockId);
+            ids.push(block.id);
+          }
+
+          normalizedRow.push({ blocks: ids });
         }
 
         this.stripPlaceholders(container);

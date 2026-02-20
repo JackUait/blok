@@ -1570,6 +1570,94 @@ describe('TableCellBlocks', () => {
       expect(result[0][0]).toEqual({ blocks: ['migrated-1'] });
     });
 
+    it('should split string cells with <br> into multiple paragraph blocks', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      let callCount = 0;
+      const mockInsert = vi.fn().mockImplementation(() => {
+        callCount++;
+
+        return {
+          id: `block-${callCount}`,
+          holder: document.createElement('div'),
+        };
+      });
+
+      const api = {
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn() },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-1',
+      });
+
+      const result = cellBlocks.initializeCells([['line one<br>line two<br>line three']]);
+
+      expect(mockInsert).toHaveBeenCalledTimes(3);
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: 'line one' }, expect.anything(), 1, false);
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: 'line two' }, expect.anything(), 1, false);
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: 'line three' }, expect.anything(), 1, false);
+      expect(result[0][0]).toEqual({ blocks: ['block-1', 'block-2', 'block-3'] });
+    });
+
+    it('should keep single-line string cells as one paragraph block', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const mockBlockHolder = document.createElement('div');
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'single-1',
+        holder: mockBlockHolder,
+      });
+
+      const api = {
+        blocks: { insert: mockInsert, getBlocksCount: vi.fn().mockReturnValue(1), setBlockParent: vi.fn() },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-1',
+      });
+
+      const result = cellBlocks.initializeCells([['no line breaks']]);
+
+      expect(mockInsert).toHaveBeenCalledTimes(1);
+      expect(mockInsert).toHaveBeenCalledWith('paragraph', { text: 'no line breaks' }, expect.anything(), 1, false);
+      expect(result[0][0]).toEqual({ blocks: ['single-1'] });
+    });
+
     it('should mount existing block references', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

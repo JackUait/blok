@@ -132,7 +132,7 @@ const CELL_SANITIZE_CONFIG = {
  * - `<span style="font-weight:700">` or `font-weight:bold` → `<b>`
  * - `<span style="font-style:italic">` → `<i>`
  * - `<p>` boundaries → `<br>` line breaks
- * - Everything else stripped except `<b>`, `<i>`, `<br>`, `<a href>`
+ * - Everything else stripped except `<b>`, `<strong>`, `<i>`, `<em>`, `<br>`, `<a href>`
  */
 function sanitizeCellHtml(td: Element): string {
   const clone = td.cloneNode(true) as HTMLElement;

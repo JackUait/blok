@@ -1131,6 +1131,52 @@ describe('Paste module', () => {
       expect(detail.data.innerHTML).toContain('<i>');
     });
 
+    it('preserves <br> tags inside table cells during sanitization', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tableTool = {
+        name: 'table',
+        pasteConfig: {
+          tags: ['TABLE', 'TR', 'TH', 'TD'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+      mocks.Tools.blockTools.set('table', tableTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'table-block' });
+
+      const html = '<table><tr><td>line one<br>line two</td></tr></table>';
+
+      await paste.processText(html, true);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      const cellContent = detail.data.querySelector('td')?.innerHTML;
+
+      expect(cellContent).toContain('<br>');
+      expect(cellContent).toContain('line one');
+      expect(cellContent).toContain('line two');
+    });
+
     it('processes HTML fragments, default block content and substituted tags', async () => {
       const { paste, mocks } = createPaste();
 

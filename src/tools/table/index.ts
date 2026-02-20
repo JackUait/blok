@@ -12,9 +12,14 @@ import { IconTable } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
-import { TableCellBlocks } from './table-cell-blocks';
+import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
+import {
+  serializeCellsToClipboard,
+  buildClipboardHtml,
+  buildClipboardPlainText,
+} from './table-cell-clipboard';
 import { TableCellSelection } from './table-cell-selection';
-import { TableGrid } from './table-core';
+import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
 import {
   applyPixelWidths,
   computeHalfAvgWidth,
@@ -41,7 +46,7 @@ import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
-import type { TableData, TableConfig } from './types';
+import type { ClipboardBlockData, TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -564,6 +569,78 @@ export class Table implements BlockTool {
     });
   }
 
+  private handleCellCopy(cells: HTMLElement[], clipboardData: DataTransfer): void {
+    const entries = this.collectCellBlockData(cells);
+
+    if (entries.length === 0) {
+      return;
+    }
+
+    const payload = serializeCellsToClipboard(entries);
+
+    clipboardData.setData('text/html', buildClipboardHtml(payload));
+    clipboardData.setData('text/plain', buildClipboardPlainText(payload));
+  }
+
+  private collectCellBlockData(
+    cells: HTMLElement[],
+  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[] }> {
+    const gridEl = this.element?.firstElementChild;
+
+    if (!gridEl) {
+      return [];
+    }
+
+    const allRows = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`));
+
+    return cells.map(cell => {
+      const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
+
+      if (!row) {
+        return null;
+      }
+
+      const rowIndex = allRows.indexOf(row);
+      const cellsInRow = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+      const colIndex = cellsInRow.indexOf(cell);
+
+      const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+      const blocks: ClipboardBlockData[] = [];
+
+      if (container) {
+        container.querySelectorAll('[data-blok-id]').forEach(blockEl => {
+          const blockId = blockEl.getAttribute('data-blok-id');
+
+          if (!blockId) {
+            return;
+          }
+
+          const blockIndex = this.api.blocks.getBlockIndex(blockId);
+
+          if (blockIndex === undefined) {
+            return;
+          }
+
+          const block = this.api.blocks.getBlockByIndex(blockIndex);
+
+          if (!block) {
+            return;
+          }
+
+          blocks.push({
+            tool: block.name,
+            data: block.preservedData,
+            ...(Object.keys(block.preservedTunes).length > 0
+              ? { tunes: block.preservedTunes }
+              : {}),
+          });
+        });
+      }
+
+      return { row: rowIndex, col: colIndex, blocks };
+    }).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  }
+
   private initCellSelection(gridEl: HTMLElement): void {
     this.cellSelection?.destroy();
 
@@ -590,6 +667,12 @@ export class Table implements BlockTool {
         const blockIds = this.cellBlocks.getBlockIdsFromCells(cells);
 
         this.cellBlocks.deleteBlocks(blockIds);
+      },
+      onCopy: (cells, clipboardData) => {
+        this.handleCellCopy(cells, clipboardData);
+      },
+      onCut: (cells, clipboardData) => {
+        this.handleCellCopy(cells, clipboardData);
       },
     });
   }

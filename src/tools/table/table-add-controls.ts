@@ -75,6 +75,7 @@ export class TableAddControls {
   private colHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private rowVisible = false;
   private colVisible = false;
+  private interactive = true;
   private dragState: DragState | null = null;
 
   private boundMouseMove: (e: MouseEvent) => void;
@@ -159,6 +160,8 @@ export class TableAddControls {
    * Disables pointer events and hover effects during cell selection.
    */
   public setInteractive(interactive: boolean): void {
+    this.interactive = interactive;
+
     if (!interactive) {
       this.addRowBtn.style.pointerEvents = 'none';
       this.addColBtn.style.pointerEvents = 'none';
@@ -331,7 +334,7 @@ export class TableAddControls {
 
     if (!this.rowVisible) {
       this.addRowBtn.style.opacity = '1';
-      this.addRowBtn.style.pointerEvents = '';
+      this.addRowBtn.style.pointerEvents = this.interactive ? '' : 'none';
       this.rowVisible = true;
     }
   }
@@ -341,7 +344,7 @@ export class TableAddControls {
 
     if (!this.colVisible) {
       this.addColBtn.style.opacity = '1';
-      this.addColBtn.style.pointerEvents = '';
+      this.addColBtn.style.pointerEvents = this.interactive ? '' : 'none';
       this.colVisible = true;
     }
   }

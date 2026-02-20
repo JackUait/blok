@@ -624,4 +624,96 @@ test.describe('Paste into existing table cell — content integrity', () => {
     // After fix: no orphaned contentIds should remain
     expect(orphanedIds).toEqual([]);
   });
+
+  test('Caret is placed at the end of the last pasted cell after grid paste', async ({ page, context }) => {
+    // After pasting a multi-cell payload, the caret should land at the end of
+    // the last (bottom-right) pasted cell, not at some random empty cell.
+
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              withHeadingColumn: false,
+              content: [
+                ['', '', ''],
+                ['', '', ''],
+                ['', '', ''],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    await expect(cells).toHaveCount(9);
+
+    // Click on cell (0,0)
+    // eslint-disable-next-line playwright/no-nth-methods -- targeting first cell
+    const firstCell = cells.first();
+
+    await firstCell.click();
+
+    const firstCellEditable = firstCell.locator('[contenteditable="true"]');
+
+    await expect(firstCellEditable).toBeFocused({ timeout: 2000 });
+
+    // Paste a 1×3 row (3 cells into first row starting at col 0)
+    const googleDocsHTML = [
+      '<meta charset="utf-8">',
+      '<b style="font-weight:normal;" id="docs-internal-guid-caret-test">',
+      '<div dir="ltr" style="margin-left:0pt;" align="left">',
+      '<table style="border:none;border-collapse:collapse;">',
+      '<tbody>',
+      '<tr>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>alpha</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>beta</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>gamma</span></p>',
+      '</td>',
+      '</tr>',
+      '</tbody>',
+      '</table>',
+      '</div>',
+      '</b>',
+    ].join('');
+
+    await page.evaluate(async (html: string) => {
+      const blob = new Blob([html], { type: 'text/html' });
+      const plainBlob = new Blob(['alpha\tbeta\tgamma'], { type: 'text/plain' });
+
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': blob,
+          'text/plain': plainBlob,
+        }),
+      ]);
+    }, googleDocsHTML);
+
+    await page.keyboard.press('Meta+v');
+
+    await waitForPasteComplete(page, 'gamma');
+
+    // The caret should be in the last pasted cell: row 0, col 2 (the "gamma" cell)
+    const lastPastedCell = cells.nth(2);
+    const lastCellEditable = lastPastedCell.locator('[contenteditable="true"]');
+
+    // The focused element should be inside the last pasted cell
+    await expect(lastCellEditable).toBeFocused({ timeout: 2000 });
+  });
 });

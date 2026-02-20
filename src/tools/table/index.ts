@@ -776,6 +776,19 @@ export class Table implements BlockTool {
     this.initResize(gridEl);
     this.addControls?.syncRowButtonWidth();
     this.rowColControls?.refresh();
+
+    // Place caret at the end of the last pasted cell
+    const lastRow = updatedRows[startRow + payload.rows - 1];
+    const lastCell = lastRow?.querySelectorAll(`[${CELL_ATTR}]`)[startCol + payload.cols - 1] as HTMLElement | undefined;
+
+    if (lastCell && this.cellBlocks) {
+      const blockIds = this.cellBlocks.getBlockIdsFromCells([lastCell]);
+      const lastBlockId = blockIds[blockIds.length - 1];
+
+      if (lastBlockId) {
+        this.api.caret.setToBlock(lastBlockId, 'end');
+      }
+    }
   }
 
   /**

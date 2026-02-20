@@ -305,6 +305,52 @@ describe('KeyboardNavigation', () => {
       // Verify default browser behavior was prevented
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
+
+    it('inserts block below (not above) when the current block is empty', () => {
+      const emptyBlock = createBlock({ isEmpty: true });
+      const insertedBlock = createBlock({ id: 'inserted-block' });
+      const insertDefaultBlockAtIndex = vi.fn(() => insertedBlock);
+      const split = vi.fn(() => insertedBlock);
+      const setToBlock = vi.fn();
+      const moveAndOpen = vi.fn();
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyBlock,
+          split,
+          insertDefaultBlockAtIndex,
+          currentBlockIndex: 1,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          moveAndOpen,
+        } as unknown as BlokModules['Toolbar'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      // When a block is empty, both isCaretAtStartOfInput and isCaretAtEndOfInput return true.
+      // The isEmpty guard should prevent the "insert above" branch and fall through to "insert below".
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // Block should be inserted below (currentBlockIndex + 1), not above (currentBlockIndex)
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+      expect(split).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith(insertedBlock);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
   });
 
   describe('handleBackspace', () => {

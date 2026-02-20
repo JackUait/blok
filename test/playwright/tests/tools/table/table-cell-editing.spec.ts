@@ -252,7 +252,6 @@ test.describe('Cell Editing', () => {
   });
 
   test('Pressing Enter in an empty cell creates a block in the same cell, not the cell above', async ({ page }) => {
-    await resetBlok(page);
     await createBlok(page, {
       tools: defaultTools,
       data: {

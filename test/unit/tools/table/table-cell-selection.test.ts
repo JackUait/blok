@@ -1158,6 +1158,205 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('copy/cut event handling', () => {
+    /**
+     * Helper to create a ClipboardEvent-like object that works in jsdom.
+     * jsdom doesn't support DataTransfer in ClipboardEvent constructor,
+     * so we create a plain Event and add clipboardData manually.
+     */
+    const createClipboardEvent = (type: 'copy' | 'cut'): { event: ClipboardEvent; clipboardData: DataTransfer; preventDefaultSpy: ReturnType<typeof vi.fn> } => {
+      const event = new Event(type, { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = { setData: vi.fn(), getData: vi.fn() } as unknown as DataTransfer;
+      const preventDefaultSpy = vi.fn();
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+      Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy });
+
+      return { event, clipboardData, preventDefaultSpy };
+    };
+
+    it('should call onCopy with selected cells and clipboardData on copy event', () => {
+      const onCopy = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCopy,
+      });
+
+      // Create a selection (row 0 = 3 cells)
+      selection.selectRow(0);
+
+      const { event, clipboardData } = createClipboardEvent('copy');
+
+      document.dispatchEvent(event);
+
+      expect(onCopy).toHaveBeenCalledTimes(1);
+      expect(onCopy.mock.calls[0][0]).toHaveLength(3);
+      expect(onCopy.mock.calls[0][1]).toBe(clipboardData);
+    });
+
+    it('should not call onCopy when no selection is active', () => {
+      const onCopy = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCopy,
+      });
+
+      // Do NOT select anything
+
+      const { event } = createClipboardEvent('copy');
+
+      document.dispatchEvent(event);
+
+      expect(onCopy).not.toHaveBeenCalled();
+    });
+
+    it('should call onCut and then onClearContent on cut event', () => {
+      const onCut = vi.fn();
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCut,
+        onClearContent,
+      });
+
+      // Create a selection (row 1 = 3 cells)
+      selection.selectRow(1);
+
+      const { event, clipboardData } = createClipboardEvent('cut');
+
+      document.dispatchEvent(event);
+
+      expect(onCut).toHaveBeenCalledTimes(1);
+      expect(onCut.mock.calls[0][0]).toHaveLength(3);
+      expect(onCut.mock.calls[0][1]).toBe(clipboardData);
+
+      expect(onClearContent).toHaveBeenCalledTimes(1);
+      expect(onClearContent.mock.calls[0][0]).toHaveLength(3);
+    });
+
+    it('should prevent default on copy event and preserve selection', () => {
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCopy: vi.fn(),
+      });
+
+      selection.selectRow(0);
+
+      const { event, preventDefaultSpy } = createClipboardEvent('copy');
+
+      document.dispatchEvent(event);
+
+      // Selection should still be active after copy (not cleared)
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(3);
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('should prevent default on cut event when selection is active', () => {
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCut: vi.fn(),
+      });
+
+      selection.selectRow(0);
+
+      const { event, preventDefaultSpy } = createClipboardEvent('cut');
+
+      document.dispatchEvent(event);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+      // Selection should be cleared after cut
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).toBeNull();
+    });
+
+    it('should clear selection after cut', () => {
+      const onSelectionActiveChange = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCut: vi.fn(),
+        onSelectionActiveChange,
+      });
+
+      selection.selectRow(0);
+
+      onSelectionActiveChange.mockClear();
+
+      const { event } = createClipboardEvent('cut');
+
+      document.dispatchEvent(event);
+
+      // Overlay and selected attributes should be removed
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).toBeNull();
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+      expect(onSelectionActiveChange).toHaveBeenCalledWith(false);
+    });
+
+    it('should not call onCopy when clipboardData is null', () => {
+      const onCopy = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCopy,
+      });
+
+      selection.selectRow(0);
+
+      // Create event with null clipboardData
+      const event = new Event('copy', { bubbles: true, cancelable: true }) as ClipboardEvent;
+
+      Object.defineProperty(event, 'clipboardData', { value: null });
+
+      document.dispatchEvent(event);
+
+      expect(onCopy).not.toHaveBeenCalled();
+    });
+
+    it('should remove copy/cut listeners on destroy', () => {
+      const onCopy = vi.fn();
+      const onCut = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCopy,
+        onCut,
+      });
+
+      selection.selectRow(0);
+
+      // Destroy should remove listeners
+      selection.destroy();
+
+      const { event: copyEvent } = createClipboardEvent('copy');
+      const { event: cutEvent } = createClipboardEvent('cut');
+
+      document.dispatchEvent(copyEvent);
+      document.dispatchEvent(cutEvent);
+
+      expect(onCopy).not.toHaveBeenCalled();
+      expect(onCut).not.toHaveBeenCalled();
+    });
+  });
+
   describe('pill styling (original behavior)', () => {
     it('pill does not have position: relative (no pseudo-element hit area expansion)', () => {
       simulateDrag(grid, 0, 0, 1, 1);

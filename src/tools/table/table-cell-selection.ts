@@ -57,6 +57,8 @@ interface CellSelectionOptions {
   rectangleSelection?: { cancelActiveSelection: () => void };
   onSelectionActiveChange?: (hasSelection: boolean) => void;
   onClearContent?: (cells: HTMLElement[]) => void;
+  onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
+  onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   i18n: I18n;
 }
 
@@ -75,18 +77,25 @@ export class TableCellSelection {
   private pill: HTMLElement | null = null;
   private pillPopover: PopoverDesktop | null = null;
 
+  private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
+  private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
+
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerUp: () => void;
   private boundClearSelection: (e: PointerEvent) => void;
   private boundCancelRectangle: (e: MouseEvent) => void;
   private boundKeyDown: (e: KeyboardEvent) => void;
+  private boundCopyHandler: (e: ClipboardEvent) => void;
+  private boundCutHandler: (e: ClipboardEvent) => void;
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
     this.rectangleSelection = options.rectangleSelection;
     this.onSelectionActiveChange = options.onSelectionActiveChange;
     this.onClearContent = options.onClearContent;
+    this.onCopy = options.onCopy;
+    this.onCut = options.onCut;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
@@ -96,9 +105,13 @@ export class TableCellSelection {
     this.boundClearSelection = this.handleClearSelection.bind(this);
     this.boundCancelRectangle = this.handleCancelRectangle.bind(this);
     this.boundKeyDown = this.handleKeyDown.bind(this);
+    this.boundCopyHandler = this.handleCopy.bind(this);
+    this.boundCutHandler = this.handleCut.bind(this);
 
     this.grid.addEventListener('pointerdown', this.boundPointerDown);
     document.addEventListener('keydown', this.boundKeyDown);
+    document.addEventListener('copy', this.boundCopyHandler);
+    document.addEventListener('cut', this.boundCutHandler);
   }
 
   public destroy(): void {
@@ -110,6 +123,8 @@ export class TableCellSelection {
     document.removeEventListener('pointerdown', this.boundClearSelection);
     document.removeEventListener('mousemove', this.boundCancelRectangle, true);
     document.removeEventListener('keydown', this.boundKeyDown);
+    document.removeEventListener('copy', this.boundCopyHandler);
+    document.removeEventListener('cut', this.boundCutHandler);
   }
 
   /**
@@ -299,6 +314,26 @@ export class TableCellSelection {
     e.preventDefault();
 
     // Clear content and dismiss selection
+    this.onClearContent?.([...this.selectedCells]);
+    this.clearSelection();
+  }
+
+  private handleCopy(e: ClipboardEvent): void {
+    if (!this.hasSelection || !e.clipboardData) {
+      return;
+    }
+
+    e.preventDefault();
+    this.onCopy?.([...this.selectedCells], e.clipboardData);
+  }
+
+  private handleCut(e: ClipboardEvent): void {
+    if (!this.hasSelection || !e.clipboardData) {
+      return;
+    }
+
+    e.preventDefault();
+    this.onCut?.([...this.selectedCells], e.clipboardData);
     this.onClearContent?.([...this.selectedCells]);
     this.clearSelection();
   }

@@ -206,23 +206,27 @@ export class BlockOperations {
       this.repository.getBlockByIndex(targetIndex)?.unwatchBlockMutations();
     }
 
-    let toolName = tool ?? this.dependencies.config.defaultBlock;
+    const resolvedToolName = (() => {
+      const name = tool ?? this.dependencies.config.defaultBlock;
 
-    if (toolName === undefined) {
-      throw new Error('Could not insert Block. Tool name is not specified.');
-    }
+      if (name === undefined) {
+        throw new Error('Could not insert Block. Tool name is not specified.');
+      }
 
-    // Demote restricted tools to paragraph when inserting inside a table cell
-    const neighborBlock = this.repository.getBlockByIndex(targetIndex)
-      ?? this.repository.getBlockByIndex(targetIndex - 1);
+      // Demote restricted tools to paragraph when inserting inside a table cell
+      const neighborBlock = this.repository.getBlockByIndex(targetIndex)
+        ?? this.repository.getBlockByIndex(targetIndex - 1);
 
-    if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(toolName)) {
-      toolName = this.dependencies.config.defaultBlock ?? 'paragraph';
-    }
+      if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
+        return this.dependencies.config.defaultBlock ?? 'paragraph';
+      }
+
+      return name;
+    })();
 
     // Bind events immediately for user-created blocks so mutations are tracked right away
     const block = this.factory.composeBlock({
-      tool: toolName,
+      tool: resolvedToolName,
       bindEventsImmediately: true,
       ...(id !== undefined && { id }),
       ...(data !== undefined && { data }),

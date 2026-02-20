@@ -364,15 +364,12 @@ test.describe('table cells — any block type', () => {
 
       // Click into the first table cell
       const firstCell = getCell(page, 0, 0);
-      const cellEditable = firstCell.locator('[contenteditable="true"]').first();
+      const cellEditable = getCellEditable(page, 0, 0);
 
       await cellEditable.click();
 
       // Paste
       await page.keyboard.press(`${modKey}+v`);
-
-      // Wait for paste to process
-      await page.waitForTimeout(500);
 
       // The cell should NOT contain a header block
       const cellBlocks = firstCell.locator('[data-blok-table-cell-blocks]');
@@ -380,9 +377,7 @@ test.describe('table cells — any block type', () => {
       await expect(cellBlocks.locator('[data-blok-tool="header"]')).toHaveCount(0);
 
       // Verify the text was preserved as a paragraph
-      const cellText = await cellBlocks.textContent();
-
-      expect(cellText).toContain('Pasted heading');
+      await expect(cellBlocks).toContainText('Pasted heading');
     });
   });
 });

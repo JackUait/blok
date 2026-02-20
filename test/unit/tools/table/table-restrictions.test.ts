@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isInsideTableCell, isRestrictedInTableCell, convertToParagraph } from '../../../../src/tools/table/table-restrictions';
+import {
+  isInsideTableCell,
+  isRestrictedInTableCell,
+  convertToParagraph,
+  registerAdditionalRestrictedTools,
+  clearAdditionalRestrictedTools,
+} from '../../../../src/tools/table/table-restrictions';
 import type { Block } from '../../../../src/components/block';
 import type { API } from '../../../../types';
 
@@ -13,6 +19,7 @@ describe('table-restrictions', () => {
   });
 
   afterEach(() => {
+    clearAdditionalRestrictedTools();
     container.remove();
     vi.restoreAllMocks();
   });
@@ -79,6 +86,65 @@ describe('table-restrictions', () => {
 
     it('returns false for unknown tool', () => {
       expect(isRestrictedInTableCell('unknown-tool')).toBe(false);
+    });
+  });
+
+  describe('registerAdditionalRestrictedTools', () => {
+    it('makes registered tools restricted in table cells', () => {
+      registerAdditionalRestrictedTools(['list', 'checklist']);
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+      expect(isRestrictedInTableCell('checklist')).toBe(true);
+    });
+
+    it('preserves default restricted tools', () => {
+      registerAdditionalRestrictedTools(['list']);
+
+      expect(isRestrictedInTableCell('header')).toBe(true);
+      expect(isRestrictedInTableCell('table')).toBe(true);
+    });
+
+    it('does not affect non-registered tools', () => {
+      registerAdditionalRestrictedTools(['list']);
+
+      expect(isRestrictedInTableCell('paragraph')).toBe(false);
+      expect(isRestrictedInTableCell('unknown')).toBe(false);
+    });
+
+    it('handles duplicate registrations without issue', () => {
+      registerAdditionalRestrictedTools(['list']);
+      registerAdditionalRestrictedTools(['list', 'checklist']);
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+      expect(isRestrictedInTableCell('checklist')).toBe(true);
+    });
+
+    it('handles empty array', () => {
+      registerAdditionalRestrictedTools([]);
+
+      expect(isRestrictedInTableCell('paragraph')).toBe(false);
+      expect(isRestrictedInTableCell('header')).toBe(true);
+    });
+  });
+
+  describe('clearAdditionalRestrictedTools', () => {
+    it('removes all registered additional tools', () => {
+      registerAdditionalRestrictedTools(['list', 'checklist']);
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+
+      clearAdditionalRestrictedTools();
+
+      expect(isRestrictedInTableCell('list')).toBe(false);
+      expect(isRestrictedInTableCell('checklist')).toBe(false);
+    });
+
+    it('does not remove default restricted tools', () => {
+      registerAdditionalRestrictedTools(['list']);
+      clearAdditionalRestrictedTools();
+
+      expect(isRestrictedInTableCell('header')).toBe(true);
+      expect(isRestrictedInTableCell('table')).toBe(true);
     });
   });
 

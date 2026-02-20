@@ -313,5 +313,19 @@ describe('BlockHierarchy', () => {
       hierarchy.updateBlockIndentation(block);
       return block.holder.style.marginLeft;
     }
+
+    it('skips visual indentation for blocks inside table cells', () => {
+      const cellBlocksContainer = document.createElement('div');
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+
+      const cellBlock = requireBlock('child'); // parentId = 'root' → depth 1
+
+      cellBlocksContainer.appendChild(cellBlock.holder);
+
+      hierarchy.updateBlockIndentation(cellBlock);
+
+      expect(cellBlock.holder.style.marginLeft).toBe('');
+      expect(cellBlock.holder).toHaveAttribute('data-blok-depth', '0');
+    });
   });
 });

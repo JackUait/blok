@@ -80,9 +80,19 @@ export class BlockHierarchy {
    * @param block - the block to update indentation for
    */
   public updateBlockIndentation(block: Block): void {
+    const { holder } = block;
+
+    // Blocks inside table cells should not receive visual indentation.
+    // The parent-child relationship is semantic (data tracking), not visual.
+    if (holder.closest('[data-blok-table-cell-blocks]')) {
+      holder.style.marginLeft = '';
+      holder.setAttribute('data-blok-depth', '0');
+
+      return;
+    }
+
     const depth = this.getBlockDepth(block);
     const indentationPx = depth * 24; // 24px per level
-    const { holder } = block;
 
     holder.style.marginLeft = indentationPx > 0 ? `${indentationPx}px` : '';
     holder.setAttribute('data-blok-depth', depth.toString());

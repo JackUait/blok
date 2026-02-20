@@ -332,6 +332,15 @@ export class BlockOperations {
         throw new Error('Can\'t find a Block to remove');
       }
 
+      // Clean up parent's contentIds before removing the block
+      const parentBlock = block.parentId !== null
+        ? this.repository.getBlockById(block.parentId)
+        : undefined;
+
+      if (parentBlock !== undefined) {
+        parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
+      }
+
       blocksStore.remove(index);
 
       /**

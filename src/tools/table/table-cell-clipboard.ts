@@ -146,7 +146,6 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
   }
 
   const cellGrid: Array<Array<{ blocks: ClipboardBlockData[] }>> = [];
-  let maxCols = 0;
 
   rows.forEach((row) => {
     const tds = row.querySelectorAll('td, th');
@@ -160,12 +159,10 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
       });
     });
 
-    if (rowCells.length > maxCols) {
-      maxCols = rowCells.length;
-    }
-
     cellGrid.push(rowCells);
   });
+
+  const maxCols = Math.max(0, ...cellGrid.map((row) => row.length));
 
   if (cellGrid.length === 0 || maxCols === 0) {
     return null;

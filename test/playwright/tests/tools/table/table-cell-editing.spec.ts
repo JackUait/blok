@@ -291,7 +291,7 @@ test.describe('Cell Editing', () => {
         return -1;
       }
 
-      const allCells = [...document.querySelectorAll('[data-blok-table-cell]')];
+      const allCells = Array.from(document.querySelectorAll('[data-blok-table-cell]'));
 
       return allCells.indexOf(cell);
     });

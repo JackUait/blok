@@ -781,14 +781,18 @@ export class Table implements BlockTool {
     const lastRow = updatedRows[startRow + payload.rows - 1];
     const lastCell = lastRow?.querySelectorAll(`[${CELL_ATTR}]`)[startCol + payload.cols - 1] as HTMLElement | undefined;
 
-    if (lastCell && this.cellBlocks) {
-      const blockIds = this.cellBlocks.getBlockIdsFromCells([lastCell]);
-      const lastBlockId = blockIds[blockIds.length - 1];
-
-      if (lastBlockId) {
-        this.api.caret.setToBlock(lastBlockId, 'end');
-      }
+    if (!lastCell || !this.cellBlocks || !this.api.caret) {
+      return;
     }
+
+    const blockIds = this.cellBlocks.getBlockIdsFromCells([lastCell]);
+    const lastBlockId = blockIds[blockIds.length - 1];
+
+    if (lastBlockId === undefined) {
+      return;
+    }
+
+    this.api.caret.setToBlock(lastBlockId, 'end');
   }
 
   /**

@@ -138,35 +138,34 @@ function sanitizeCellHtml(td: Element): string {
   const clone = td.cloneNode(true) as HTMLElement;
 
   // Convert style-based spans to semantic tags
-  clone.querySelectorAll('span').forEach((span) => {
+  for (const span of Array.from(clone.querySelectorAll('span'))) {
     const style = span.getAttribute('style') ?? '';
     const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
     const isItalic = /font-style\s*:\s*italic/i.test(style);
 
-    if (isBold || isItalic) {
-      let wrapped = span.innerHTML;
-
-      if (isItalic) {
-        wrapped = `<i>${wrapped}</i>`;
-      }
-      if (isBold) {
-        wrapped = `<b>${wrapped}</b>`;
-      }
-      span.outerHTML = wrapped;
+    if (!isBold && !isItalic) {
+      continue;
     }
-  });
+
+    const inner = span.innerHTML;
+    const italic = isItalic ? `<i>${inner}</i>` : inner;
+    const wrapped = isBold ? `<b>${italic}</b>` : italic;
+
+    span.replaceWith(document.createRange().createContextualFragment(wrapped));
+  }
 
   // Convert <p> boundaries to <br> line breaks
-  clone.querySelectorAll('p').forEach((p) => {
-    p.outerHTML = p.innerHTML + '<br>';
-  });
+  for (const p of Array.from(clone.querySelectorAll('p'))) {
+    const fragment = document.createRange().createContextualFragment(p.innerHTML + '<br>');
 
-  let html = clean(clone.innerHTML, CELL_SANITIZE_CONFIG);
+    p.replaceWith(fragment);
+  }
 
-  // Trim trailing <br> tags and whitespace
-  html = html.replace(/(<br\s*\/?>|\s)+$/i, '');
+  const html = clean(clone.innerHTML, CELL_SANITIZE_CONFIG)
+    .replace(/(<br\s*\/?>|\s)+$/i, '')
+    .trim();
 
-  return html.trim();
+  return html;
 }
 
 /**

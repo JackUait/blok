@@ -1155,6 +1155,56 @@ describe('Paste module', () => {
       expect(detail.data.innerHTML).toContain('<b><i>bold italic</i></b>');
     });
 
+    it('preserves Google Docs bold/italic through processDataTransfer flow', async () => {
+      const { paste, mocks } = createPaste();
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.getAllInlineToolsSanitizeConfig.mockReturnValue({ b: {}, i: {}, a: { href: true } });
+
+      await paste.prepare();
+
+      // Mock clean to strip <span> tags (simulating real sanitizer behavior)
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => {
+        return html.replace(/<\/?span[^>]*>/g, '');
+      });
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const googleDocsHtml = '<b id="docs-internal-guid-abc123"><div><span style="font-weight:700">bold text</span> and <span style="font-style:italic">italic text</span></div></b>';
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': googleDocsHtml,
+          'text/plain': 'bold text and italic text',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      expect(detail.data.innerHTML).toContain('<b>');
+      expect(detail.data.innerHTML).toContain('<i>');
+    });
+
     it('processes HTML fragments, default block content and substituted tags', async () => {
       const { paste, mocks } = createPaste();
 

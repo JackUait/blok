@@ -1083,4 +1083,90 @@ describe('TableRowColControls', () => {
       expect(grip.style.position).not.toBe('relative');
     });
   });
+
+  describe('setActiveGrip', () => {
+    it('cancels pending scheduleHideAll timer when locking a grip', () => {
+      grid = createGrid(2, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      // Hover a cell to show grips, then leave to start scheduleHideAll
+      simulateMouseOver(getCell(grid, 0, 0));
+      simulateMouseLeave(grid);
+
+      // scheduleHideAll is now pending (150ms timer)
+      // Lock a grip before the timer fires
+      controls.setActiveGrip('col', 1);
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      expect(isGripVisible(colGrips[1])).toBe(true);
+
+      // Advance past the scheduleHideAll delay — the timer should have been cancelled
+      vi.advanceTimersByTime(HIDE_DELAY_MS + 50);
+
+      // The locked grip must still be visible (timer was cancelled by setActiveGrip)
+      expect(isGripVisible(colGrips[1])).toBe(true);
+    });
+
+    it('registers pointerdown unlock listener synchronously', () => {
+      grid = createGrid(2, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      controls.setActiveGrip('col', 1);
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      expect(isGripVisible(colGrips[1])).toBe(true);
+
+      // Dispatch pointerdown on document WITHOUT advancing RAF timers.
+      // If the listener is registered synchronously, it should fire immediately.
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // The grip should now be unlocked and hidden
+      expect(isGripVisible(colGrips[1])).toBe(false);
+    });
+
+    it('does not block hover after grip is unlocked by clicking outside', () => {
+      grid = createGrid(2, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      // Lock a grip
+      controls.setActiveGrip('col', 1);
+
+      // Unlock by clicking outside (pointerdown on document)
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // Now hover a cell — grips should respond
+      simulateMouseOver(getCell(grid, 0, 2));
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+
+      // Column grip 2 should be visible (not blocked by stale lock)
+      expect(isGripVisible(colGrips[2])).toBe(true);
+    });
+  });
 });

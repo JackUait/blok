@@ -162,6 +162,7 @@ export class TableRowColControls {
     }
 
     this.unlockGrip();
+    this.clearHideTimeout();
     this.hideAllGripsExcept(grip);
     this.applyActiveClasses(grip);
 
@@ -173,9 +174,7 @@ export class TableRowColControls {
 
     this.lockedGrip = grip;
 
-    requestAnimationFrame(() => {
-      document.addEventListener('pointerdown', this.boundUnlockGrip);
-    });
+    document.addEventListener('pointerdown', this.boundUnlockGrip);
   }
 
   private handleUnlockGrip(): void {

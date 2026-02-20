@@ -465,6 +465,10 @@ export class Table implements BlockTool {
 
           this.pendingHighlight = null;
 
+          // Lock the grip synchronously so the unlock listener is registered
+          // before any external click can race with a deferred RAF
+          this.rowColControls?.setActiveGrip(type, index);
+
           // Wait for layout so newly inserted cells have dimensions
           requestAnimationFrame(() => {
             if (type === 'row') {
@@ -472,8 +476,6 @@ export class Table implements BlockTool {
             } else {
               this.cellSelection?.selectColumn(index);
             }
-
-            this.rowColControls?.setActiveGrip(type, index);
           });
         } else {
           this.cellSelection?.clearActiveSelection();

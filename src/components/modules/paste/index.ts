@@ -3,6 +3,7 @@ import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 
+import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
 import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
@@ -207,7 +208,8 @@ export class Paste extends Module {
       { br: {} }
     );
 
-    const cleanData = clean(rawHtmlData, customConfig);
+    const preprocessed = preprocessGoogleDocsHtml(rawHtmlData);
+    const cleanData = clean(preprocessed, customConfig);
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
 

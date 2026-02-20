@@ -132,7 +132,7 @@ export class KeyboardNavigation extends BlockEventComposer {
    */
   private createBlockOnEnter(currentBlock: Block): Block {
     // Case 1: Caret at start - insert block above
-    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
+    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && !currentBlock.isEmpty) {
       this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
 
       // Force new undo group so typing in the new block is separate from block creation

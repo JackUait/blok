@@ -251,6 +251,66 @@ test.describe('Cell Editing', () => {
     expect(focusedCellIndex).toBe(0);
   });
 
+  test('Pressing Enter in an empty cell creates a block in the same cell, not the cell above', async ({ page }) => {
+    await resetBlok(page);
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            id: 'table1',
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    // Click the second row, first column cell (row 1, col 0)
+    const targetCell = getCell(page, 1, 0);
+    const editable = getCellEditable(page, 1, 0);
+
+    await editable.click();
+
+    // Press Enter in the empty cell
+    await page.keyboard.press('Enter');
+
+    // The new block should be in the same cell (row 1, col 0)
+    const focusCellIndex = await page.evaluate(() => {
+      const active = document.activeElement;
+
+      if (!active) {
+        return -1;
+      }
+
+      const cell = active.closest('[data-blok-table-cell]');
+
+      if (!cell) {
+        return -1;
+      }
+
+      const allCells = [...document.querySelectorAll('[data-blok-table-cell]')];
+
+      return allCells.indexOf(cell);
+    });
+
+    // Cell index 2 = row 1, col 0 in a 2x2 table (0-indexed: 0,1,2,3)
+    expect(focusCellIndex).toBe(2);
+
+    // Verify the cell above (row 0, col 0) still has only one block
+    const cellAboveBlockCount = await getCell(page, 0, 0).locator('[data-blok-id]').count();
+
+    expect(cellAboveBlockCount).toBe(1);
+
+    // Verify the target cell now has two blocks (original + new from Enter)
+    const targetCellBlockCount = await targetCell.locator('[data-blok-id]').count();
+
+    expect(targetCellBlockCount).toBe(2);
+  });
+
   test('Clicking blank space below block content in a cell focuses the last block', async ({ page }) => {
     // 1. Initialize editor with a 2x2 table with empty cells
     await createBlok(page, {

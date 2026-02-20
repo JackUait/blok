@@ -416,11 +416,21 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].blocks[0].data.text).toBe('<i>italic text</i>');
     });
 
-    it('should convert paragraph boundaries to line breaks', () => {
+    it('should split paragraph boundaries into separate blocks', () => {
       const html = '<table><tr><td><p>line one</p><p>line two</p></td></tr></table>';
       const result = parseGenericHtmlTable(html);
 
-      expect(result?.cells[0][0].blocks[0].data.text).toBe('line one<br>line two');
+      expect(result?.cells[0][0].blocks).toHaveLength(2);
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('line one');
+      expect(result?.cells[0][0].blocks[1].data.text).toBe('line two');
+    });
+
+    it('should produce one block for single-paragraph cells', () => {
+      const html = '<table><tr><td><p>only line</p></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks).toHaveLength(1);
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('only line');
     });
 
     it('should preserve links with href', () => {

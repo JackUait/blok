@@ -172,7 +172,7 @@ function sanitizeCellHtml(td: Element): string {
  * Parse a generic HTML table (e.g. from Google Docs, Word, Excel) into a
  * {@link TableCellsClipboard} payload.
  *
- * Each `<td>`/`<th>` becomes a single paragraph block with the cell's text
+ * Each `<td>`/`<th>` becomes one or more paragraph blocks (split by line breaks).
  * content.  Returns `null` when the HTML does not contain a `<table>`, when
  * the table has no rows, or when the table already carries our custom
  * `data-blok-table-cells` attribute (those should be handled by
@@ -209,10 +209,12 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
 
     tds.forEach((td) => {
       const text = sanitizeCellHtml(td);
+      const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
+      const blocks = segments.length > 0
+        ? segments.map(s => ({ tool: 'paragraph' as const, data: { text: s } }))
+        : [{ tool: 'paragraph' as const, data: { text: '' } }];
 
-      rowCells.push({
-        blocks: [{ tool: 'paragraph', data: { text } }],
-      });
+      rowCells.push({ blocks });
     });
 
     cellGrid.push(rowCells);

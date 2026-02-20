@@ -17,6 +17,7 @@ export function preprocessGoogleDocsHtml(html: string): string {
 
   unwrapGoogleDocsContent(wrapper);
   convertGoogleDocsStyles(wrapper);
+  convertTableCellParagraphs(wrapper);
 
   return wrapper.innerHTML;
 }
@@ -65,5 +66,34 @@ function convertGoogleDocsStyles(wrapper: HTMLElement): void {
     const wrapped = isBold ? `<b>${italic}</b>` : italic;
 
     span.replaceWith(document.createRange().createContextualFragment(wrapped));
+  }
+}
+
+/**
+ * Convert `<p>` boundaries to `<br>` line breaks inside table cells.
+ *
+ * Google Docs wraps each line in a cell as a separate `<p>`.  The sanitizer
+ * strips `<p>` (not in the allowed config), losing line breaks.  Converting
+ * to `<br>` preserves them since `<br>` IS in the config (`{ br: {} }`).
+ *
+ * Only targets `<td>` and `<th>` elements — top-level `<p>` tags are left
+ * intact so the paste pipeline can split them into separate blocks.
+ */
+function convertTableCellParagraphs(wrapper: HTMLElement): void {
+  for (const cell of Array.from(wrapper.querySelectorAll('td, th'))) {
+    const paragraphs = cell.querySelectorAll('p');
+
+    if (paragraphs.length === 0) {
+      continue;
+    }
+
+    for (const p of Array.from(paragraphs)) {
+      const fragment = document.createRange().createContextualFragment(p.innerHTML + '<br>');
+
+      p.replaceWith(fragment);
+    }
+
+    // Remove trailing <br> from the cell
+    cell.innerHTML = cell.innerHTML.replace(/(<br\s*\/?>|\s)+$/i, '');
   }
 }

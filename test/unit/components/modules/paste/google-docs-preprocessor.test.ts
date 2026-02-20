@@ -74,4 +74,34 @@ describe('preprocessGoogleDocsHtml', () => {
 
     expect(result).toContain('<b><a href="https://example.com">bold link</a></b>');
   });
+
+  it('converts <p> boundaries to <br> inside table cells', () => {
+    const html = '<table><tr><td><p>line one</p><p>line two</p></td></tr></table>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<td>line one<br>line two</td>');
+    expect(result).not.toContain('<p>');
+  });
+
+  it('converts <p> boundaries to <br> inside <th> cells', () => {
+    const html = '<table><tr><th><p>header one</p><p>header two</p></th></tr></table>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<th>header one<br>header two</th>');
+  });
+
+  it('does not leave trailing <br> after last paragraph in cell', () => {
+    const html = '<table><tr><td><p>only line</p></td></tr></table>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).not.toMatch(/<br>\s*<\/td>/);
+    expect(result).toContain('only line');
+  });
+
+  it('does not convert <p> outside of table cells', () => {
+    const html = '<p>standalone paragraph</p>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toBe('<p>standalone paragraph</p>');
+  });
 });

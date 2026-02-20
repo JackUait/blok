@@ -521,6 +521,46 @@ describe('Paste module', () => {
       expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(input)).toBe(true);
       expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(div)).toBe(false);
     });
+
+    it('skips processing when event.defaultPrevented is true', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      // Set up a current block so the handler would normally proceed
+      const div = document.createElement('div');
+
+      mocks.holder.appendChild(div);
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue({
+        name: 'paragraph',
+        tool: { isDefault: true },
+        isEmpty: false,
+      });
+
+      // Register the paste listener
+      paste.toggleReadOnly(false);
+
+      // Create a paste event and call preventDefault() to simulate
+      // that another handler (e.g., table grid paste) already handled it
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer({ 'text/html': '<p>test</p>' }, {} as FileList, ['text/html']);
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      event.preventDefault();
+
+      // Dispatch the pre-prevented event
+      div.dispatchEvent(event);
+
+      // Allow any async handlers to settle
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // processDataTransfer should NOT have been called
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      expect(mocks.Toolbar.close).not.toHaveBeenCalled();
+    });
   });
 
   describe('FilesHandler', () => {

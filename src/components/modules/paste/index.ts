@@ -273,6 +273,14 @@ export class Paste extends Module {
    * Check if Blok should process pasted data and pass data transfer object to handler.
    */
   private handlePasteEvent = async (event: ClipboardEvent): Promise<void> => {
+    /**
+     * If the event was already handled (e.g., by the table grid paste listener),
+     * skip processing to prevent duplicate content insertion.
+     */
+    if (event.defaultPrevented) {
+      return;
+    }
+
     const { BlockManager, Toolbar } = this.Blok;
 
     const currentBlock = BlockManager.setCurrentBlockByChildNode(event.target as HTMLElement);

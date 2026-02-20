@@ -8,6 +8,7 @@ import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
 import { HtmlHandler } from './handlers/html-handler';
 import { PatternHandler } from './handlers/pattern-handler';
+import { TableCellsHandler } from './handlers/table-cells-handler';
 import { TextHandler } from './handlers/text-handler';
 import { SanitizerConfigBuilder } from './sanitizer-config';
 import { ToolRegistry } from './tool-registry';
@@ -44,6 +45,7 @@ export class Paste extends Module {
     // Initialize handlers in priority order (higher priority first)
     this.handlers = [
       new BlokDataHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
+      new TableCellsHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new FilesHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new PatternHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
@@ -173,6 +175,10 @@ export class Paste extends Module {
   ): unknown {
     if (handler instanceof BlokDataHandler) {
       return blokData;
+    }
+
+    if (handler instanceof TableCellsHandler) {
+      return rawHtmlData;
     }
 
     if (handler instanceof FilesHandler) {

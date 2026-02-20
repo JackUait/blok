@@ -10,6 +10,7 @@ import { BlokDataHandler } from '../../../../src/components/modules/paste/handle
 import { FilesHandler } from '../../../../src/components/modules/paste/handlers/files-handler';
 import { HtmlHandler } from '../../../../src/components/modules/paste/handlers/html-handler';
 import { PatternHandler } from '../../../../src/components/modules/paste/handlers/pattern-handler';
+import { TableCellsHandler } from '../../../../src/components/modules/paste/handlers/table-cells-handler';
 import { TextHandler } from '../../../../src/components/modules/paste/handlers/text-handler';
 import { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
@@ -1123,6 +1124,10 @@ describe('Paste module', () => {
       const blokHandler = handlers.find((h): h is BlokDataHandler => h instanceof BlokDataHandler);
       expect(blokHandler).toBeDefined();
 
+      // TableCellsHandler should have priority 90
+      const tableCellsHandler = handlers.find((h): h is TableCellsHandler => h instanceof TableCellsHandler);
+      expect(tableCellsHandler).toBeDefined();
+
       // FilesHandler should have priority 80
       const filesHandler = handlers.find((h): h is FilesHandler => h instanceof FilesHandler);
       expect(filesHandler).toBeDefined();
@@ -1141,10 +1146,11 @@ describe('Paste module', () => {
 
       // Verify order - highest priority first
       expect(handlers[0]).toBe(blokHandler);
-      expect(handlers[1]).toBe(filesHandler);
-      expect(handlers[2]).toBe(patternHandler);
-      expect(handlers[3]).toBe(htmlHandler);
-      expect(handlers[4]).toBe(textHandler);
+      expect(handlers[1]).toBe(tableCellsHandler);
+      expect(handlers[2]).toBe(filesHandler);
+      expect(handlers[3]).toBe(patternHandler);
+      expect(handlers[4]).toBe(htmlHandler);
+      expect(handlers[5]).toBe(textHandler);
     });
 
     it('BlokDataHandler returns priority 100 for valid JSON', () => {

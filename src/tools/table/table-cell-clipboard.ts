@@ -113,6 +113,79 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
 }
 
 /**
+ * Parse a generic HTML table (e.g. from Google Docs, Word, Excel) into a
+ * {@link TableCellsClipboard} payload.
+ *
+ * Each `<td>`/`<th>` becomes a single paragraph block with the cell's text
+ * content.  Returns `null` when the HTML does not contain a `<table>`, when
+ * the table has no rows, or when the table already carries our custom
+ * `data-blok-table-cells` attribute (those should be handled by
+ * {@link parseClipboardHtml} instead).
+ */
+export function parseGenericHtmlTable(html: string): TableCellsClipboard | null {
+  if (!html) {
+    return null;
+  }
+
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const table = doc.querySelector('table');
+
+  if (!table) {
+    return null;
+  }
+
+  // Defer to parseClipboardHtml for our own format
+  if (table.hasAttribute(DATA_ATTR)) {
+    return null;
+  }
+
+  const rows = table.querySelectorAll('tr');
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const cellGrid: Array<Array<{ blocks: ClipboardBlockData[] }>> = [];
+  let maxCols = 0;
+
+  rows.forEach((row) => {
+    const tds = row.querySelectorAll('td, th');
+    const rowCells: Array<{ blocks: ClipboardBlockData[] }> = [];
+
+    tds.forEach((td) => {
+      const text = td.textContent?.trim() ?? '';
+
+      rowCells.push({
+        blocks: [{ tool: 'paragraph', data: { text } }],
+      });
+    });
+
+    if (rowCells.length > maxCols) {
+      maxCols = rowCells.length;
+    }
+
+    cellGrid.push(rowCells);
+  });
+
+  if (cellGrid.length === 0 || maxCols === 0) {
+    return null;
+  }
+
+  // Normalize: ensure all rows have the same number of columns
+  for (const row of cellGrid) {
+    while (row.length < maxCols) {
+      row.push({ blocks: [{ tool: 'paragraph', data: { text: '' } }] });
+    }
+  }
+
+  return {
+    rows: cellGrid.length,
+    cols: maxCols,
+    cells: cellGrid,
+  };
+}
+
+/**
  * Attempt to parse a {@link TableCellsClipboard} from an HTML string.
  *
  * Returns `null` if the HTML does not contain a `<table>` with the expected

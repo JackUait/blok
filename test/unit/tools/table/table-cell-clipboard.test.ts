@@ -5,6 +5,7 @@ import {
   buildClipboardHtml,
   buildClipboardPlainText,
   parseClipboardHtml,
+  parseGenericHtmlTable,
 } from '../../../../src/tools/table/table-cell-clipboard';
 
 describe('table-cell-clipboard', () => {
@@ -294,6 +295,111 @@ describe('table-cell-clipboard', () => {
       const result = parseClipboardHtml(html);
 
       expect(result).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // parseGenericHtmlTable
+  // ---------------------------------------------------------------------------
+  describe('parseGenericHtmlTable', () => {
+    it('should parse a simple HTML table into a TableCellsClipboard', () => {
+      const html = '<table><tr><td>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(2);
+      expect(result?.cols).toBe(2);
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('A');
+      expect(result?.cells[0][1].blocks[0].data.text).toBe('B');
+      expect(result?.cells[1][0].blocks[0].data.text).toBe('C');
+      expect(result?.cells[1][1].blocks[0].data.text).toBe('D');
+    });
+
+    it('should handle Google Docs wrapper HTML', () => {
+      const html = `
+        <meta charset="utf-8">
+        <b id="docs-internal-guid-abc123" style="font-weight:normal;">
+          <div dir="ltr">
+            <table style="border:none;">
+              <tbody>
+                <tr>
+                  <td style="padding:5pt;"><p dir="ltr"><span>Hello</span></p></td>
+                  <td style="padding:5pt;"><p dir="ltr"><span>World</span></p></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </b>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(1);
+      expect(result?.cols).toBe(2);
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('Hello');
+      expect(result?.cells[0][1].blocks[0].data.text).toBe('World');
+    });
+
+    it('should handle th elements as cells', () => {
+      const html = '<table><tr><th>Header 1</th><th>Header 2</th></tr><tr><td>Data 1</td><td>Data 2</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(2);
+      expect(result?.cols).toBe(2);
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('Header 1');
+    });
+
+    it('should normalize uneven column counts', () => {
+      const html = '<table><tr><td>A</td><td>B</td><td>C</td></tr><tr><td>D</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(2);
+      expect(result?.cols).toBe(3);
+      // Second row should be padded with empty paragraph blocks
+      expect(result?.cells[1][1].blocks[0].data.text).toBe('');
+      expect(result?.cells[1][2].blocks[0].data.text).toBe('');
+    });
+
+    it('should return null for HTML without a table', () => {
+      const html = '<div><p>Not a table</p></div>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null for empty string', () => {
+      const result = parseGenericHtmlTable('');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null for a table with no rows', () => {
+      const html = '<table></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).toBeNull();
+    });
+
+    it('should skip HTML that contains our custom data attribute', () => {
+      const html = '<table data-blok-table-cells=\'{"rows":1,"cols":1,"cells":[[{"blocks":[]}]]}\'><tr><td>X</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).toBeNull();
+    });
+
+    it('should trim whitespace from cell text', () => {
+      const html = '<table><tr><td>  spaced  </td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('spaced');
+    });
+
+    it('should create paragraph blocks with tool set to paragraph', () => {
+      const html = '<table><tr><td>Test</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].tool).toBe('paragraph');
     });
   });
 });

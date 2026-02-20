@@ -18,6 +18,7 @@ import {
   buildClipboardHtml,
   buildClipboardPlainText,
   parseClipboardHtml,
+  parseGenericHtmlTable,
 } from './table-cell-clipboard';
 import { TableCellSelection } from './table-cell-selection';
 import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
@@ -707,7 +708,7 @@ export class Table implements BlockTool {
     }
 
     const html = e.clipboardData.getData('text/html');
-    const payload = parseClipboardHtml(html);
+    const payload = parseClipboardHtml(html) ?? parseGenericHtmlTable(html);
 
     if (!payload) {
       return;

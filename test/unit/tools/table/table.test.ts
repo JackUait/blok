@@ -3520,6 +3520,110 @@ describe('Table Tool', () => {
 
       document.body.removeChild(element);
     });
+
+    it('distributes generic HTML table cells across the grid', () => {
+      const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      const insertsBefore = mockInsert.mock.calls.length;
+
+      // Paste a plain HTML table (no data-blok-table-cells attribute) like from Google Docs
+      const html = '<table><tr><td>X</td><td>Y</td></tr><tr><td>Z</td><td>W</td></tr></table>';
+      const pasteEvent = createPasteEvent(html);
+      const preventSpy = vi.spyOn(pasteEvent, 'preventDefault');
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Should prevent default — we're handling the paste
+      expect(preventSpy).toHaveBeenCalled();
+
+      // 4 blocks should have been inserted (one per cell)
+      const insertsAfter = mockInsert.mock.calls.length;
+
+      expect(insertsAfter - insertsBefore).toBe(4);
+
+      // Verify the inserted blocks contain the right text
+      const newCalls = mockInsert.mock.calls.slice(insertsBefore);
+
+      expect(newCalls[0][0]).toBe('paragraph');
+      expect(newCalls[0][1]).toEqual({ text: 'X' });
+      expect(newCalls[1][1]).toEqual({ text: 'Y' });
+      expect(newCalls[2][1]).toEqual({ text: 'Z' });
+      expect(newCalls[3][1]).toEqual({ text: 'W' });
+
+      document.body.removeChild(element);
+    });
+
+    it('distributes Google Docs table HTML across the grid', () => {
+      const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      const insertsBefore = mockInsert.mock.calls.length;
+
+      // Realistic Google Docs clipboard HTML
+      const html = `
+        <meta charset="utf-8">
+        <b id="docs-internal-guid-abc123" style="font-weight:normal;">
+          <div dir="ltr">
+            <table style="border:none;">
+              <tbody>
+                <tr>
+                  <td style="padding:5pt;"><p dir="ltr"><span>Hello</span></p></td>
+                  <td style="padding:5pt;"><p dir="ltr"><span>World</span></p></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </b>`;
+      const pasteEvent = createPasteEvent(html);
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // 2 blocks should have been inserted (one per cell in the 1x2 table)
+      const insertsAfter = mockInsert.mock.calls.length;
+
+      expect(insertsAfter - insertsBefore).toBe(2);
+
+      const newCalls = mockInsert.mock.calls.slice(insertsBefore);
+
+      expect(newCalls[0][1]).toEqual({ text: 'Hello' });
+      expect(newCalls[1][1]).toEqual({ text: 'World' });
+
+      document.body.removeChild(element);
+    });
+
+    it('auto-expands grid when generic HTML table is larger than target', () => {
+      const { element } = createPasteTable([['A']]);
+
+      const gridEl = element.firstElementChild as HTMLElement;
+
+      focusCellAt(gridEl, 0, 0);
+
+      // Paste a 2x2 generic table into a 1x1 table
+      const html = '<table><tr><td>R0C0</td><td>R0C1</td></tr><tr><td>R1C0</td><td>R1C1</td></tr></table>';
+      const pasteEvent = createPasteEvent(html);
+
+      gridEl.dispatchEvent(pasteEvent);
+
+      // Table should now have 2 rows with 2 cells each
+      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows).toHaveLength(2);
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('[data-blok-table-cell]');
+
+        expect(cells).toHaveLength(2);
+      });
+
+      document.body.removeChild(element);
+    });
   });
 
   describe('read-only cell selection and copy', () => {

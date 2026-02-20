@@ -2,7 +2,7 @@
 // seed: test/playwright/tests/tools/table.spec.ts
 
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
@@ -144,6 +144,25 @@ const pasteHtml = async (page: Page, html: string): Promise<void> => {
   }, html);
 };
 
+/**
+ * Dispatch a paste event on a specific locator element with typed clipboard data.
+ */
+const paste = async (locator: Locator, data: Record<string, string>): Promise<void> => {
+  await locator.evaluate((element: HTMLElement, pasteData: Record<string, string>) => {
+    const pasteEvent = Object.assign(new Event('paste', {
+      bubbles: true,
+      cancelable: true,
+    }), {
+      clipboardData: {
+        getData: (type: string): string => pasteData[type] ?? '',
+        types: Object.keys(pasteData),
+      },
+    });
+
+    element.dispatchEvent(pasteEvent);
+  }, data);
+};
+
 const defaultTools: Record<string, SerializableToolConfig> = {
   table: {
     className: 'Blok.Table',
@@ -260,7 +279,7 @@ test.describe('Paste HTML Table into Editor', () => {
     expect(withHeadings).toBe(true);
   });
 
-  test('Pasting a Google Docs table creates a table block', async ({ page }) => {
+  test('Pasting a Google Docs table preserves cell content', async ({ page }) => {
     await createBlok(page, {
       tools: defaultTools,
     });
@@ -299,24 +318,19 @@ test.describe('Paste HTML Table into Editor', () => {
       '</b>',
     ].join('');
 
-    await pasteHtml(page, googleDocsHTML);
+    await paste(paragraph, { 'text/html': googleDocsHTML });
 
-    // Wait for the table block to appear
     const table = page.locator(TABLE_SELECTOR);
 
-    await expect(table).toBeVisible({ timeout: 5000 });
+    await expect(table).toBeVisible();
 
-    // Verify a table block was created from the paste
-    const savedData = await page.evaluate(async () => {
-      return window.blokInstance?.save();
-    });
+    const cells = table.locator(CELL_SELECTOR);
 
-    const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
+    await expect(cells).toHaveCount(4);
 
-    expect(tableBlock).toBeDefined();
-
-    // Verify table has content array in saved data
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    expect((tableBlock as Record<string, Record<string, unknown>>).data.content).toBeDefined();
+    await expect(cells.filter({ hasText: 'Name' })).toHaveCount(1);
+    await expect(cells.filter({ hasText: 'Age' })).toHaveCount(1);
+    await expect(cells.filter({ hasText: 'Alice' })).toHaveCount(1);
+    await expect(cells.filter({ hasText: '30' })).toHaveCount(1);
   });
 });

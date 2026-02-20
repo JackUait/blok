@@ -260,16 +260,17 @@ export class Table implements BlockTool {
       content: tableContent,
     };
 
-    if (!this.element?.parentNode) {
+    const oldElement = this.element;
+
+    if (!oldElement?.parentNode) {
       return;
     }
 
     const newElement = this.render();
 
-    this.element.parentNode.replaceChild(newElement, this.element);
-    this.element = newElement;
+    oldElement.parentNode.replaceChild(newElement, oldElement);
 
-    const gridEl = this.element.firstElementChild as HTMLElement;
+    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
     if (!this.readOnly && gridEl) {
       this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;

@@ -272,6 +272,7 @@ export class Table implements BlockTool {
     const gridEl = this.element.firstElementChild as HTMLElement;
 
     if (!this.readOnly && gridEl) {
+      this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);

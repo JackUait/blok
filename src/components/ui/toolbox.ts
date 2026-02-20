@@ -388,24 +388,30 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Toggles hidden state for all popover items belonging to restricted tools.
-   * Handles tools like header that have multiple entries with custom names (header-1, header-2, etc.)
-   * by matching item names that equal or start with a restricted tool name.
+   * Matches by tool registration name so that tools with custom entry names
+   * (e.g., list tool with entries named bulleted-list, numbered-list, check-list)
+   * are correctly restricted.
    */
   private toggleRestrictedToolsHidden(isHidden: boolean): void {
     const restrictedTools = getRestrictedTools();
 
-    for (const item of this.toolboxItemsToBeDisplayed) {
-      if (!('name' in item) || item.name === undefined) {
+    for (const tool of this.toolsToBeDisplayed) {
+      if (!restrictedTools.includes(tool.name)) {
         continue;
       }
 
-      const { name } = item;
-      const isRestricted = restrictedTools.some(
-        restricted => name === restricted || name.startsWith(`${restricted}-`)
-      );
+      const toolboxEntries = tool.toolbox;
 
-      if (isRestricted) {
-        this.popover?.toggleItemHiddenByName(name, isHidden);
+      if (!toolboxEntries) {
+        continue;
+      }
+
+      const entries = Array.isArray(toolboxEntries) ? toolboxEntries : [toolboxEntries];
+
+      for (const entry of entries) {
+        const entryName = entry.name ?? tool.name;
+
+        this.popover?.toggleItemHiddenByName(entryName, isHidden);
       }
     }
   }

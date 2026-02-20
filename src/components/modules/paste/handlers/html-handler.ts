@@ -64,6 +64,8 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
     wrapper.innerHTML = innerHTML;
 
+    this.unwrapGoogleDocsContent(wrapper);
+
     const nodes = this.getNodes(wrapper);
 
     return nodes
@@ -174,6 +176,28 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     }
 
     return this.sanitizerBuilder.sanitizeTable(element, config);
+  }
+
+  /**
+   * Strip Google Docs wrapper elements to expose underlying content.
+   * Google Docs wraps clipboard HTML in <b id="docs-internal-guid-..."><div>...</div></b>.
+   * This wrapper prevents the table from being recognized as a substitutable block element.
+   */
+  private unwrapGoogleDocsContent(wrapper: HTMLElement): void {
+    const googleDocsWrapper = wrapper.querySelector<HTMLElement>('b[id^="docs-internal-guid-"]');
+
+    if (!googleDocsWrapper) {
+      return;
+    }
+
+    const contentSource = googleDocsWrapper.querySelector<HTMLElement>(':scope > div') ?? googleDocsWrapper;
+    const fragment = document.createDocumentFragment();
+
+    while (contentSource.firstChild) {
+      fragment.appendChild(contentSource.firstChild);
+    }
+
+    googleDocsWrapper.replaceWith(fragment);
   }
 
   /**

@@ -64,9 +64,6 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
     wrapper.innerHTML = innerHTML;
 
-    this.unwrapGoogleDocsContent(wrapper);
-    this.convertGoogleDocsStyles(wrapper);
-
     const nodes = this.getNodes(wrapper);
 
     return nodes
@@ -177,54 +174,6 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     }
 
     return this.sanitizerBuilder.sanitizeTable(element, config);
-  }
-
-  /**
-   * Strip Google Docs wrapper elements to expose underlying content.
-   * Google Docs wraps clipboard HTML in <b id="docs-internal-guid-..."><div>...</div></b>.
-   * This wrapper prevents the table from being recognized as a substitutable block element.
-   */
-  private unwrapGoogleDocsContent(wrapper: HTMLElement): void {
-    const googleDocsWrapper = wrapper.querySelector<HTMLElement>('b[id^="docs-internal-guid-"]');
-
-    if (!googleDocsWrapper) {
-      return;
-    }
-
-    const contentSource = googleDocsWrapper.querySelector<HTMLElement>(':scope > div') ?? googleDocsWrapper;
-    const fragment = document.createDocumentFragment();
-
-    while (contentSource.firstChild) {
-      fragment.appendChild(contentSource.firstChild);
-    }
-
-    googleDocsWrapper.replaceWith(fragment);
-  }
-
-  /**
-   * Convert Google Docs style-based `<span>` elements to semantic HTML tags.
-   *
-   * Google Docs encodes bold as `<span style="font-weight:700">` and italic
-   * as `<span style="font-style:italic">` rather than `<b>` / `<i>`.
-   * Without this conversion, the sanitizer strips the `<span>` tags and
-   * formatting is lost.
-   */
-  private convertGoogleDocsStyles(wrapper: HTMLElement): void {
-    for (const span of Array.from(wrapper.querySelectorAll('span[style]'))) {
-      const style = span.getAttribute('style') ?? '';
-      const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
-      const isItalic = /font-style\s*:\s*italic/i.test(style);
-
-      if (!isBold && !isItalic) {
-        continue;
-      }
-
-      const inner = span.innerHTML;
-      const italic = isItalic ? `<i>${inner}</i>` : inner;
-      const wrapped = isBold ? `<b>${italic}</b>` : italic;
-
-      span.replaceWith(document.createRange().createContextualFragment(wrapped));
-    }
   }
 
   /**

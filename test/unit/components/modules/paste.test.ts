@@ -179,11 +179,16 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
 
   pasteWithInternals.listeners = listeners.instance;
 
+  const yjsManager = {
+    stopCapturing: vi.fn(),
+  };
+
   const blokState = {
     BlockManager: blockManager,
     Caret: caret,
     Tools: tools,
     Toolbar: toolbar,
+    YjsManager: yjsManager,
     UI: {
       nodes: {
         holder,

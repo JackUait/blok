@@ -108,6 +108,16 @@ export abstract class BasePasteHandler implements PasteHandler {
       }
 
       for (const [index, pasteData] of data.entries()) {
+        /**
+         * Force each pasted block into its own Yjs undo entry so that
+         * Ctrl+Z removes them one at a time.
+         *
+         * paste() wraps insert() in withAtomicOperation() which suppresses
+         * the normal stopCapturing() from currentBlockIndexValue changes.
+         * Without this, consecutive addBlock() calls within the 500ms
+         * captureTimeout get merged into a single undo entry.
+         */
+        this.Blok.YjsManager.stopCapturing();
         await this.insertBlock(pasteData, index === 0 && canReplaceCurrentBlock);
       }
 

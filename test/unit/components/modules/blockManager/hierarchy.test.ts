@@ -252,6 +252,46 @@ describe('BlockHierarchy', () => {
       expect(block.holder.style.marginLeft).toBe('');
       expect(block.holder).toHaveAttribute('data-blok-depth', '0');
     });
+
+    it('calls onParentChanged callback when parent is set', () => {
+      const onParentChanged = vi.fn();
+
+      hierarchy = new BlockHierarchy(repository, onParentChanged);
+
+      const block = requireBlock('child');
+
+      hierarchy.setBlockParent(block, 'parent-2');
+
+      expect(onParentChanged).toHaveBeenCalledWith('parent-2');
+      expect(onParentChanged).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onParentChanged when parent is null', () => {
+      const onParentChanged = vi.fn();
+
+      hierarchy = new BlockHierarchy(repository, onParentChanged);
+
+      const block = requireBlock('child');
+
+      hierarchy.setBlockParent(block, null);
+
+      expect(onParentChanged).not.toHaveBeenCalled();
+    });
+
+    it('calls onParentChanged for each setBlockParent call', () => {
+      const onParentChanged = vi.fn();
+
+      hierarchy = new BlockHierarchy(repository, onParentChanged);
+
+      const block = requireBlock('child');
+
+      hierarchy.setBlockParent(block, 'parent-2');
+      hierarchy.setBlockParent(block, 'parent-1');
+
+      expect(onParentChanged).toHaveBeenCalledTimes(2);
+      expect(onParentChanged).toHaveBeenNthCalledWith(1, 'parent-2');
+      expect(onParentChanged).toHaveBeenNthCalledWith(2, 'parent-1');
+    });
   });
 
   describe('updateBlockIndentation', () => {

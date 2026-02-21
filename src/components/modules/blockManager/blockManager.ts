@@ -195,6 +195,12 @@ export class BlockManager extends Module {
   private yjsSync!: BlockYjsSync;
 
   /**
+   * Set of parent block IDs awaiting deferred Yjs sync.
+   * Batched via queueMicrotask to avoid multiple syncs during batch operations.
+   */
+  private parentsSyncScheduled = new Set<string>();
+
+  /**
    * Operations handler for state changes
    */
   private operations!: BlockOperations;
@@ -269,8 +275,12 @@ export class BlockManager extends Module {
       this.bindBlockEvents.bind(this)
     );
 
-    // Initialize hierarchy
-    this.hierarchy = new BlockHierarchy(this.repository);
+    // Initialize hierarchy with callback to sync parent data to Yjs
+    this.hierarchy = new BlockHierarchy(this.repository, (parentId) => {
+      if (!this.yjsSync.isSyncingFromYjs) {
+        this.scheduleParentSync(parentId);
+      }
+    });
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution
     this.operations = new BlockOperations(
@@ -934,6 +944,33 @@ export class BlockManager extends Module {
     }
 
     return block;
+  }
+
+  /**
+   * Schedule a deferred sync of a parent block's data to Yjs.
+   * Uses queueMicrotask to batch multiple parent changes (e.g. when initializing
+   * all cells in a new table row) into a single flush.
+   */
+  private scheduleParentSync(parentId: string): void {
+    if (this.parentsSyncScheduled.size === 0) {
+      queueMicrotask(() => this.flushParentSyncs());
+    }
+    this.parentsSyncScheduled.add(parentId);
+  }
+
+  /**
+   * Flush all scheduled parent syncs to Yjs.
+   * Called from the microtask scheduled by scheduleParentSync.
+   */
+  private flushParentSyncs(): void {
+    for (const parentId of this.parentsSyncScheduled) {
+      const parent = this.repository.getBlockById(parentId);
+
+      if (parent !== undefined) {
+        void this.syncBlockDataToYjs(parent);
+      }
+    }
+    this.parentsSyncScheduled.clear();
   }
 
   /**

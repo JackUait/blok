@@ -12,12 +12,15 @@ import type { BlockRepository } from './repository';
  */
 export class BlockHierarchy {
   private readonly repository: BlockRepository;
+  private readonly onParentChanged?: (parentId: string) => void;
 
   /**
    * @param repository - BlockRepository for looking up blocks by id
+   * @param onParentChanged - optional callback invoked after a block is assigned a non-null parent
    */
-  constructor(repository: BlockRepository) {
+  constructor(repository: BlockRepository, onParentChanged?: (parentId: string) => void) {
     this.repository = repository;
+    this.onParentChanged = onParentChanged;
   }
 
   /**
@@ -73,6 +76,11 @@ export class BlockHierarchy {
 
     // Update visual indentation
     this.updateBlockIndentation(block);
+
+    // Notify listener so parent data can be synced (e.g. to Yjs)
+    if (newParentId !== null && this.onParentChanged !== undefined) {
+      this.onParentChanged(newParentId);
+    }
   }
 
   /**

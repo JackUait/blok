@@ -122,6 +122,9 @@ const LOGIC_TESTS = [
   '**/ui/inline-toolbar-nested-popover.spec.ts',
   '**/ui/multilingual-search.spec.ts',
   '**/ui/table-toolbar-visibility.spec.ts',
+
+  // Seed/utility tests
+  '**/seed.spec.ts',
 ] as const;
 
 // Generate cross-browser projects programmatically

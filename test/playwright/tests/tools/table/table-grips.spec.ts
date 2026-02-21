@@ -217,7 +217,7 @@ test.describe('Row and Column Grip Controls', () => {
     await expect(cells).toHaveCount(3);
 
     // Verify original content moved to index 1 (new column at index 0 is empty)
-    const secondCellText = await cells.locator(`>> nth=1`).textContent();
+    const secondCellText = await cells.nth(1).textContent();
 
     expect(secondCellText?.trim()).toBe('A');
   });
@@ -245,8 +245,8 @@ test.describe('Row and Column Grip Controls', () => {
     await expect(cells).toHaveCount(3);
 
     // Verify original columns: A at index 0, new (empty) at index 1, B at index 2
-    const firstCellText = await cells.locator(`>> nth=0`).textContent();
-    const thirdCellText = await cells.locator(`>> nth=2`).textContent();
+    const firstCellText = await cells.nth(0).textContent();
+    const thirdCellText = await cells.nth(2).textContent();
 
     expect(firstCellText?.trim()).toBe('A');
     expect(thirdCellText?.trim()).toBe('B');
@@ -316,7 +316,7 @@ test.describe('Row and Column Grip Controls', () => {
     await expect(rows).toHaveCount(3);
 
     // Verify original first row content moved to index 1
-    const secondRowFirstCell = rows.locator(`>> nth=1`).locator(`${CELL_SELECTOR} >> nth=0`);
+    const secondRowFirstCell = rows.nth(1).locator(`${CELL_SELECTOR} >> nth=0`);
     const cellText = await secondRowFirstCell.textContent();
 
     expect(cellText?.trim()).toBe('A');
@@ -344,12 +344,12 @@ test.describe('Row and Column Grip Controls', () => {
     await expect(rows).toHaveCount(3);
 
     // Verify original rows remain at index 0 and 2, new row is at index 1
-    const firstRowFirstCell = rows.locator(`>> nth=0`).locator(`${CELL_SELECTOR} >> nth=0`);
+    const firstRowFirstCell = rows.nth(0).locator(`${CELL_SELECTOR} >> nth=0`);
     const firstCellText = await firstRowFirstCell.textContent();
 
     expect(firstCellText?.trim()).toBe('A');
 
-    const thirdRowFirstCell = rows.locator(`>> nth=2`).locator(`${CELL_SELECTOR} >> nth=0`);
+    const thirdRowFirstCell = rows.nth(2).locator(`${CELL_SELECTOR} >> nth=0`);
     const thirdCellText = await thirdRowFirstCell.textContent();
 
     expect(thirdCellText?.trim()).toBe('C');
@@ -581,9 +581,9 @@ test.describe('Row and Column Grip Controls', () => {
 
     await expect(rowGripAfter).toBeVisible();
 
-    // Scroll into view and use dispatchEvent to avoid intercept issues from adjacent cells
+    // Scroll into view and force click to avoid intercept issues from adjacent cells
     await rowGripAfter.scrollIntoViewIfNeeded();
-    await rowGripAfter.dispatchEvent('click');
+    await rowGripAfter.click({ force: true });
 
     // Verify popover reopens correctly
     await expect(page.getByText('Insert Row Above')).toBeVisible();

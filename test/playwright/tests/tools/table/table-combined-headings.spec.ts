@@ -161,7 +161,7 @@ test.describe('Combined Heading Row and Column', () => {
 
     await expect(rows).toHaveCount(3);
 
-    const firstRow = rows.locator('>> nth=0');
+    const firstRow = rows.nth(0);
 
     await expect(firstRow).toHaveAttribute('data-blok-table-heading', '');
 
@@ -172,8 +172,8 @@ test.describe('Combined Heading Row and Column', () => {
 
     // Verify each row's first cell has the heading-col attribute
     const firstRowFirstCell = firstRow.locator(`${CELL_SELECTOR} >> nth=0`);
-    const secondRowFirstCell = rows.locator('>> nth=1').locator(`${CELL_SELECTOR} >> nth=0`);
-    const thirdRowFirstCell = rows.locator('>> nth=2').locator(`${CELL_SELECTOR} >> nth=0`);
+    const secondRowFirstCell = rows.nth(1).locator(`${CELL_SELECTOR} >> nth=0`);
+    const thirdRowFirstCell = rows.nth(2).locator(`${CELL_SELECTOR} >> nth=0`);
 
     await expect(firstRowFirstCell).toHaveAttribute('data-blok-table-heading-col', '');
     await expect(secondRowFirstCell).toHaveAttribute('data-blok-table-heading-col', '');
@@ -186,17 +186,17 @@ test.describe('Combined Heading Row and Column', () => {
 
     // 6. Verify non-heading cells (not in row 0, not in first column) have neither attribute
     // Row 1, Col 1 (second row, second column) is an interior non-heading cell
-    const interiorCell = rows.locator('>> nth=1').locator(`${CELL_SELECTOR} >> nth=1`);
+    const interiorCell = rows.nth(1).locator(`${CELL_SELECTOR} >> nth=1`);
 
     await expect(interiorCell).not.toHaveAttribute('data-blok-table-heading-col');
 
     // Row 2, Col 2 (third row, third column) is also an interior non-heading cell
-    const anotherInteriorCell = rows.locator('>> nth=2').locator(`${CELL_SELECTOR} >> nth=2`);
+    const anotherInteriorCell = rows.nth(2).locator(`${CELL_SELECTOR} >> nth=2`);
 
     await expect(anotherInteriorCell).not.toHaveAttribute('data-blok-table-heading-col');
 
     // The non-heading rows themselves should not have the heading row attribute
-    await expect(rows.locator('>> nth=1')).not.toHaveAttribute('data-blok-table-heading');
-    await expect(rows.locator('>> nth=2')).not.toHaveAttribute('data-blok-table-heading');
+    await expect(rows.nth(1)).not.toHaveAttribute('data-blok-table-heading');
+    await expect(rows.nth(2)).not.toHaveAttribute('data-blok-table-heading');
   });
 });

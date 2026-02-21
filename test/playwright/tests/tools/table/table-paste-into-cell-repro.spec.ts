@@ -729,7 +729,8 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'gamma');
 
     // The caret should be in the last pasted cell: row 0, col 2 (the "gamma" cell)
-    const lastPastedCell = cells.locator('>> nth=2');
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(2) targets the specific third cell (last pasted)
+    const lastPastedCell = cells.nth(2);
     const lastCellEditable = lastPastedCell.locator('[contenteditable="true"]');
 
     // The focused element should be inside the last pasted cell

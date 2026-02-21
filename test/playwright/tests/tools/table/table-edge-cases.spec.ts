@@ -193,7 +193,7 @@ test.describe('Edge Cases and Error Handling', () => {
     // Delete the only column
 
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
-    await page.getByText('Delete').locator('>> nth=0').click({ force: true });
+    await page.getByText('Delete').first().click({ force: true });
 
     // Verify no JS errors occurred
     expect(errors).toHaveLength(0);
@@ -241,7 +241,7 @@ test.describe('Edge Cases and Error Handling', () => {
     // Delete the only row
 
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
-    await page.getByText('Delete').locator('>> nth=0').click({ force: true });
+    await page.getByText('Delete').first().click({ force: true });
 
     // Verify no JS errors occurred
     expect(errors).toHaveLength(0);
@@ -487,7 +487,7 @@ test.describe('Edge Cases and Error Handling', () => {
     await lastRowGrip.click({ force: true });
 
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
-    await page.getByText('Delete').locator('>> nth=0').click({ force: true });
+    await page.getByText('Delete').first().click({ force: true });
 
     await expect(page.locator('[data-blok-table-row]')).toHaveCount(2);
 

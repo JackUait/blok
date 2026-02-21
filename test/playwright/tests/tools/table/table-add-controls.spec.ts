@@ -226,7 +226,7 @@ test.describe('Add Row and Column Controls', () => {
 
     await expect(rows).toHaveCount(3);
 
-    const newRow = rows.locator('>> nth=2');
+    const newRow = rows.nth(2);
     const newRowCells = newRow.locator(CELL_SELECTOR);
 
     await expect(newRowCells).toHaveCount(2);
@@ -268,11 +268,11 @@ test.describe('Add Row and Column Controls', () => {
 
     await expect(rows).toHaveCount(2);
 
-    const firstRow = rows.locator('>> nth=0');
+    const firstRow = rows.nth(0);
 
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(3);
 
-    const secondRow = rows.locator('>> nth=1');
+    const secondRow = rows.nth(1);
 
     await expect(secondRow.locator(CELL_SELECTOR)).toHaveCount(3);
   });

@@ -244,7 +244,7 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
 
     await expect(rowGripForRow1).toBeVisible({ timeout: 2000 });
     await rowGripForRow1.scrollIntoViewIfNeeded();
-    await rowGripForRow1.dispatchEvent('click');
+    await rowGripForRow1.click({ force: true });
 
     // Row 1 popover should NOT contain the heading toggle
     await expect(page.getByText('Insert Row Above')).toBeVisible();

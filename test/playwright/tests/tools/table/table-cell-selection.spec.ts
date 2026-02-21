@@ -44,8 +44,8 @@ const assertBoundingBox = (
  */
 const getCell = (page: Page, row: number, col: number): ReturnType<Page['locator']> =>
   page
-    .locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=${row}`)
-    .locator(`[data-blok-table-cell] >> nth=${col}`);
+    .locator(`${TABLE_SELECTOR} [data-blok-table-row]`).nth(row)
+    .locator('[data-blok-table-cell]').nth(col);
 
 /**
  * Returns a locator for the editable area inside a specific cell.
@@ -434,7 +434,7 @@ test.describe('Cell Selection', () => {
     const initialWidth = initialBox.width;
 
     // 3. Attempt to drag a resize handle while the selection is active
-    const resizeHandle = page.locator(`${TABLE_SELECTOR} [data-blok-table-resize]:first-of-type`);
+    const resizeHandle = page.locator(`${TABLE_SELECTOR} [data-blok-table-resize]`).first();
     const handleBox = assertBoundingBox(await resizeHandle.boundingBox(), 'resize handle');
 
     const handleCenterX = handleBox.x + handleBox.width / 2;

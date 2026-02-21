@@ -304,7 +304,8 @@ test.describe('Column Resizing', () => {
     // Verify handles exist before toggling readOnly
     const handlesBefore = page.locator(RESIZE_HANDLE_SELECTOR);
 
-    await expect(handlesBefore.locator('>> nth=0')).toBeAttached();
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) is the clearest way to verify at least one handle exists
+    await expect(handlesBefore.nth(0)).toBeAttached();
 
     // Toggle readOnly mode via blokInstance.readOnly.toggle()
     await page.evaluate(async () => {

@@ -298,8 +298,10 @@ test.describe('Read-Only Mode', () => {
     await expect(headingCols).toHaveCount(2);
 
     // Verify heading column content is rendered
-    await expect(headingCols.locator('>> nth=0')).toContainText('ColH1');
-    await expect(headingCols.locator('>> nth=-1')).toContainText('ColH2');
+    // eslint-disable-next-line playwright/no-nth-methods -- nth(0) is the clearest way to target first heading column
+    await expect(headingCols.nth(0)).toContainText('ColH1');
+    // eslint-disable-next-line playwright/no-nth-methods -- last() is the clearest way to target last heading column
+    await expect(headingCols.last()).toContainText('ColH2');
   });
 
   test('Toggling read-only mode removes interactive controls', async ({ page }) => {

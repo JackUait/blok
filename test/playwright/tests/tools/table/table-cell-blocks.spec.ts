@@ -132,14 +132,14 @@ const defaultTools: Record<string, SerializableToolConfig> = {
  * Returns a locator for a specific cell in the table grid.
  */
 const getCell = (page: Page, row: number, col: number): ReturnType<Page['locator']> =>
-  page.locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=${row}`)
-    .locator(`[data-blok-table-cell] >> nth=${col}`);
+  page.locator(`${TABLE_SELECTOR} [data-blok-table-row]`).nth(row)
+    .locator('[data-blok-table-cell]').nth(col);
 
 /**
  * Returns a locator for the editable area inside a specific cell.
  */
 const getCellEditable = (page: Page, row: number, col: number): ReturnType<Page['locator']> =>
-  getCell(page, row, col).locator('[data-blok-table-cell-blocks] [contenteditable="true"] >> nth=0');
+  getCell(page, row, col).locator('[data-blok-table-cell-blocks] [contenteditable="true"]').nth(0);
 
 /**
  * Helper to create a 2x2 table with empty cells and all default tools registered.
@@ -385,7 +385,7 @@ test.describe('Block Types Inside Table Cells', () => {
     });
 
     // 2. Click the first empty paragraph block and insert a table via slash menu
-    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"] [contenteditable="true"]`);
+    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"][contenteditable="true"]`);
 
     await firstParagraph.click();
     await page.keyboard.type('/');
@@ -405,9 +405,9 @@ test.describe('Block Types Inside Table Cells', () => {
 
     // 3. Click into the first cell and type '/'
     const firstCellEditable = page
-      .locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=0`)
-      .locator('[data-blok-table-cell] >> nth=0')
-      .locator('[data-blok-table-cell-blocks] [contenteditable="true"] >> nth=0');
+      .locator(`${TABLE_SELECTOR} [data-blok-table-row]`).nth(0)
+      .locator('[data-blok-table-cell]').nth(0)
+      .locator('[data-blok-table-cell-blocks] [contenteditable="true"]').nth(0);
 
     await firstCellEditable.click();
     await page.keyboard.type('/');

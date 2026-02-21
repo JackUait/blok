@@ -271,10 +271,11 @@ export class TableCellSelection {
       this.grid.style.userSelect = '';
       this.hasSelection = true;
 
-      // Listen for next pointerdown anywhere to clear selection
-      requestAnimationFrame(() => {
-        document.addEventListener('pointerdown', this.boundClearSelection);
-      });
+      // Listen for next pointerdown anywhere to clear selection.
+      // Register synchronously — pointerdown for the drag already fired
+      // before this pointerup, so there is no risk of the current
+      // interaction's pointerdown triggering the clear handler.
+      document.addEventListener('pointerdown', this.boundClearSelection);
     }
 
     this.isSelecting = false;
@@ -384,10 +385,10 @@ export class TableCellSelection {
     this.anchorCell = null;
     this.extentCell = null;
 
-    // Listen for next pointerdown anywhere to clear the programmatic selection
-    requestAnimationFrame(() => {
-      document.addEventListener('pointerdown', this.boundClearSelection);
-    });
+    // Listen for next pointerdown anywhere to clear the programmatic selection.
+    // Register synchronously to avoid race conditions where a fast
+    // pointerdown arrives before the next animation frame.
+    document.addEventListener('pointerdown', this.boundClearSelection);
   }
 
   private paintSelection(): void {

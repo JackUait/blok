@@ -212,9 +212,15 @@ export class BlockOperations {
         throw new Error('Could not insert Block. Tool name is not specified.');
       }
 
-      // Demote restricted tools to paragraph when inserting inside a table cell
-      const neighborBlock = this.repository.getBlockByIndex(targetIndex)
-        ?? this.repository.getBlockByIndex(targetIndex - 1);
+      // Demote restricted tools to paragraph when inserting inside a table cell.
+      // For replace: check the block being replaced (new block takes its DOM position).
+      // For insert: check the predecessor block (new block is placed after it in the DOM).
+      // Using the block AT targetIndex for non-replace inserts is wrong because that
+      // block may be a child paragraph inside a table cell that gets displaced, while
+      // the new block actually lands at the top level.
+      const neighborBlock = replace
+        ? this.repository.getBlockByIndex(targetIndex)
+        : (this.repository.getBlockByIndex(targetIndex - 1) ?? this.repository.getBlockByIndex(targetIndex));
 
       if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
         return this.dependencies.config.defaultBlock ?? 'paragraph';

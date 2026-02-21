@@ -1241,6 +1241,127 @@ describe('Paste module', () => {
       expect(event3.type).toBe('tag');
       expect(mocks.BlockManager.paste.mock.calls[2].length).toBe(2);
     });
+
+    it('processes multi-table HTML as separate table blocks via processText', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tableTool = {
+        name: 'table',
+        pasteConfig: {
+          tags: ['TABLE', 'TR', 'TH', 'TD'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.blockTools.set('table', tableTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const html = '<p>Intro</p><table><tr><td>Table 1</td></tr></table><p>Middle</p><table><tr><td>Table 2</td></tr></table>';
+
+      await paste.processText(html, true);
+
+      const tableCalls = mocks.BlockManager.paste.mock.calls.filter(
+        ([tool]: [string]) => tool === 'table'
+      );
+
+      expect(tableCalls.length).toBe(2);
+
+      // Verify first table content
+      const firstTableEvent = tableCalls[0][1] as CustomEvent;
+      const firstTableData = (firstTableEvent.detail as { data: HTMLElement }).data;
+
+      expect(firstTableData.querySelector('td')?.textContent).toBe('Table 1');
+
+      // Verify second table content
+      const secondTableEvent = tableCalls[1][1] as CustomEvent;
+      const secondTableData = (secondTableEvent.detail as { data: HTMLElement }).data;
+
+      expect(secondTableData.querySelector('td')?.textContent).toBe('Table 2');
+    });
+
+    it('processes multi-table Google Docs HTML through full processDataTransfer flow', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tableTool = {
+        name: 'table',
+        pasteConfig: {
+          tags: ['TABLE', 'TR', 'TH', 'TD'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.blockTools.set('table', tableTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const googleDocsHtml = [
+        '<meta charset="utf-8">',
+        '<b style="font-weight:normal;" id="docs-internal-guid-abc123">',
+        '<p dir="ltr"><span>Intro</span></p>',
+        '<div dir="ltr" align="left">',
+        '<table><tbody>',
+        '<tr><td><p><span>T1 Cell</span></p></td></tr>',
+        '</tbody></table></div>',
+        '<p dir="ltr"><span>Middle</span></p>',
+        '<div dir="ltr" align="left">',
+        '<table><tbody>',
+        '<tr><td><p><span>T2 Cell</span></p></td></tr>',
+        '</tbody></table></div>',
+        '</b>',
+      ].join('');
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': googleDocsHtml,
+          'text/plain': 'Intro\nT1 Cell\nMiddle\nT2 Cell',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      const tableCalls = mocks.BlockManager.paste.mock.calls.filter(
+        ([tool]: [string]) => tool === 'table'
+      );
+
+      expect(tableCalls.length).toBe(2);
+    });
   });
 
   describe('Handler priority system', () => {

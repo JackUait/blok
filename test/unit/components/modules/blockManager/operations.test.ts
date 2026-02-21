@@ -531,6 +531,55 @@ describe('BlockOperations', () => {
       }
     });
 
+    it('does not demote restricted tools when inserting after a table block whose children are inside cells', () => {
+      // Scenario: table block at index 0, child paragraph at index 1 inside a cell container.
+      // Inserting a 'table' tool after the table (targetIndex = 0 + 1 = 1) should NOT demote,
+      // because the new block is placed at the top level, not inside the table cell.
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(tableCellContainer);
+
+      try {
+        const tableBlock = createMockBlock({ id: 'table-block', name: 'table' });
+        const cellParagraph = createMockBlock({ id: 'cell-para', name: 'paragraph', parentId: 'table-block' });
+
+        blocksStore = createBlocksStore([tableBlock, cellParagraph]);
+
+        // Move the child paragraph's holder into the table cell container
+        // to simulate it being inside a table cell in the DOM
+        tableCellContainer.appendChild(cellParagraph.holder);
+
+        repository = new BlockRepository();
+        repository.initialize(blocksStore);
+        hierarchy = new BlockHierarchy(repository);
+
+        // Register 'table' tool in the factory
+        const tableAdapter = createMockBlockToolAdapter('table');
+        (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+          .dependencies.tools.set('table', tableAdapter);
+
+        operations = new BlockOperations(
+          dependencies,
+          repository,
+          factory,
+          hierarchy,
+          blockDidMutatedSpy,
+          0 // currentBlockIndex = 0 (the table block)
+        );
+        operations.setYjsSync(yjsSync);
+
+        // Insert 'table' tool — targetIndex = 0 + 1 = 1.
+        // The block at index 1 is the child paragraph inside a cell, but the
+        // new block should be placed at the top level (after the table block).
+        const newBlock = operations.insert({ tool: 'table' }, blocksStore);
+
+        expect(newBlock).toBeDefined();
+        expect(newBlock.name).toBe('table');
+      } finally {
+        document.body.removeChild(tableCellContainer);
+      }
+    });
+
     it('allows restricted tools to insert outside table cells', () => {
       // Register 'header' tool in the factory so it can be composed
       const headerAdapter = createMockBlockToolAdapter('header');

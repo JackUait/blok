@@ -465,6 +465,118 @@ describe('BlockYjsSync', () => {
 
         expect(block.setData).not.toHaveBeenCalled();
       });
+
+      it('recreates block when setData returns false', async () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { content: [] },
+          tunes: {},
+        });
+
+        // Override name to 'table' and setData to return false
+        (block as unknown as Record<string, unknown>).name = 'table';
+        (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([
+          createMockBlock({ id: 'block-1' }),
+          block,
+        ]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const newData = { content: [['cell1', 'cell2']] };
+        const ydata = createMockYMap(newData);
+        const yblock = createMockYMap({
+          type: 'table',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'test-block' });
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+        // Wait for async setData + then chain to resolve
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 'test-block',
+            tool: 'table',
+            data: newData,
+            tunes: {},
+            bindEventsImmediately: true,
+          })
+        );
+        expect(mockHandlers.replaceBlock).toHaveBeenCalledWith(1, newBlock);
+      });
+
+      it('does not recreate block when setData returns true', async () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { text: 'old' },
+          tunes: {},
+        });
+
+        // setData returns true by default (from createMockBlock)
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'new text' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock');
+
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+        // Wait for async setData + then chain to resolve
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).not.toHaveBeenCalled();
+        expect(mockHandlers.replaceBlock).not.toHaveBeenCalled();
+      });
     });
 
     describe('handleYjsMove', () => {

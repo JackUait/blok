@@ -229,9 +229,22 @@ export class BlockYjsSync {
         this.yjsSyncCount--;
       }
     } else {
-      // Just update data
+      // Update data in-place; if tool can't handle it, recreate the block
       this.yjsSyncCount++;
-      void block.setData(data).finally(() => {
+      void block.setData(data).then(success => {
+        if (!success) {
+          const blockIndex = this.handlers.getBlockIndex(block);
+          const newBlock = this.factory.composeBlock({
+            id: block.id,
+            tool: block.name,
+            data,
+            tunes: block.preservedTunes,
+            bindEventsImmediately: true,
+          });
+
+          this.handlers.replaceBlock(blockIndex, newBlock);
+        }
+      }).finally(() => {
         this.yjsSyncCount--;
       });
     }

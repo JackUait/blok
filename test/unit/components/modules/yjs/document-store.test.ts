@@ -58,6 +58,29 @@ describe('DocumentStore', () => {
 
       expect(yblock.get('id')).toBe('block1');
     });
+
+    it('clamps index to array length when index exceeds bounds', () => {
+      store.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'First' } });
+
+      // Index 99 exceeds array length of 1 — should clamp to end
+      store.addBlock({ id: 'block2', type: 'paragraph', data: { text: 'Second' } }, 99);
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(2);
+      expect(result[1].id).toBe('block2');
+    });
+
+    it('clamps negative index to zero', () => {
+      store.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'First' } });
+
+      store.addBlock({ id: 'block2', type: 'paragraph', data: { text: 'Second' } }, -5);
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('block2');
+    });
   });
 
   describe('removeBlock', () => {

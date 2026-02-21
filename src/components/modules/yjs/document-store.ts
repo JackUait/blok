@@ -67,7 +67,7 @@ export class DocumentStore {
     const yblock = this.serializer.outputDataToYBlock(blockData);
 
     this.transact(() => {
-      const insertIndex = index ?? this.yblocks.length;
+      const insertIndex = Math.max(0, Math.min(index ?? this.yblocks.length, this.yblocks.length));
       this.yblocks.insert(insertIndex, [yblock]);
     }, 'local');
 

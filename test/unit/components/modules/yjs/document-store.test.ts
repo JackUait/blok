@@ -143,6 +143,56 @@ describe('DocumentStore', () => {
 
       expect(store.toJSON()[0].id).toBe('block1');
     });
+
+    it('clamps toIndex when it exceeds array length after delete', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+        { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
+      ]);
+
+      // toIndex 3 was valid before delete, but after deleting block1
+      // the array is length 2, so insert at index 3 would exceed bounds.
+      // Should clamp to index 2 (end of array).
+      store.moveBlock('block1', 3, 'local');
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(3);
+      // block1 should be at the end
+      expect(result[2].id).toBe('block1');
+    });
+
+    it('handles moving last block to position beyond bounds', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+      ]);
+
+      // Moving block2 (at index 1) to index 2:
+      // After delete, array is length 1, index 2 exceeds bounds.
+      // Should clamp to index 1 (end).
+      store.moveBlock('block2', 2, 'local');
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(2);
+      expect(result[1].id).toBe('block2');
+    });
+
+    it('clamps negative toIndex to zero', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+        { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
+      ]);
+
+      store.moveBlock('block3', -1, 'local');
+
+      const result = store.toJSON();
+
+      expect(result[0].id).toBe('block3');
+    });
   });
 
   describe('updateBlockData', () => {

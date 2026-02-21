@@ -121,10 +121,11 @@ export class DocumentStore {
 
       this.yblocks.delete(fromIndex, 1);
 
-      // toIndex is the final position. Since we just deleted from fromIndex,
-      // the array is now shorter. The insertion index equals toIndex because
-      // Y.Array.insert(n, [item]) places item at index n, shifting others right.
-      this.yblocks.insert(toIndex, [this.serializer.outputDataToYBlock(blockData)]);
+      // Clamp toIndex to valid range after deletion shortened the array.
+      // An out-of-bounds toIndex means the caller had stale state — clamp
+      // to array bounds rather than letting Yjs throw "Length exceeded!".
+      const clampedToIndex = Math.max(0, Math.min(toIndex, this.yblocks.length));
+      this.yblocks.insert(clampedToIndex, [this.serializer.outputDataToYBlock(blockData)]);
     }, transactionOrigin);
   }
 

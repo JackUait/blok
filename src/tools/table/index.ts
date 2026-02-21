@@ -253,7 +253,14 @@ export class Table implements BlockTool {
       this.config
     );
 
-    this.cellBlocks?.deleteAllBlocks();
+    // Only delete cell blocks during normal updates, not Yjs undo/redo.
+    // During Yjs sync, the child cell blocks are managed by Yjs and will be
+    // reattached via mountBlocksInCell(). Deleting them here would destroy
+    // the block data that Yjs is restoring, causing empty cells after undo.
+    if (!this.api.blocks.isSyncingFromYjs) {
+      this.cellBlocks?.deleteAllBlocks();
+    }
+
     this.cellBlocks?.destroy();
 
     const oldElement = this.element;

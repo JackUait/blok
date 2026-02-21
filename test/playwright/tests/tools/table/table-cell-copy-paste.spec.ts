@@ -550,4 +550,111 @@ test.describe('Table cell copy/paste', () => {
 
     await expect(tables).toHaveCount(2, { timeout: 5000 });
   });
+
+  test('Pasting cells that expand the table preserves existing pixel colWidths in saved data', async ({ page }) => {
+    // Initialize editor with TWO tables:
+    // Table 1 (source): 2x3, no colWidths
+    // Table 2 (target): 2x2, with colWidths [200, 200]
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['X1', 'X2', 'X3'],
+                ['Y1', 'Y2', 'Y3'],
+              ],
+            },
+          },
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              colWidths: [200, 200],
+              content: [
+                ['A', 'B'],
+                ['C', 'D'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const allTables = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`);
+
+    await expect(allTables).toHaveCount(2);
+
+    // Helper to get a cell scoped to a specific table instance
+    const getCellInTable = (tableIndex: number, row: number, col: number): ReturnType<Page['locator']> =>
+      allTables
+        .nth(tableIndex)
+        .locator(`[data-blok-table-row] >> nth=${row}`)
+        .locator(`[data-blok-table-cell] >> nth=${col}`);
+
+    const getCellEditableInTable = (tableIndex: number, row: number, col: number): ReturnType<Page['locator']> =>
+      getCellInTable(tableIndex, row, col).locator('[contenteditable="true"]');
+
+    // Select cells (0,0) to (0,2) in table 1 — 3 cells in the first row: X1, X2, X3
+    const startCell = getCellInTable(0, 0, 0);
+    const endCell = getCellInTable(0, 0, 2);
+
+    const startBox = assertBoundingBox(await startCell.boundingBox(), 'table1 cell [0,0]');
+    const endBox = assertBoundingBox(await endCell.boundingBox(), 'table1 cell [0,2]');
+
+    await page.mouse.move(startBox.x + startBox.width / 2, startBox.y + startBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(endBox.x + endBox.width / 2, endBox.y + endBox.height / 2, { steps: 10 });
+    await page.mouse.up();
+
+    // Verify 3 cells are selected in table 1
+    const selected = allTables.nth(0).locator('[data-blok-table-cell-selected]');
+
+    await expect(selected).toHaveCount(3);
+
+    // Copy via synthetic copy event
+    const { html, plain } = await performCopyAndCapture(page);
+
+    expect(html).toContain('<table');
+
+    // Click into cell (0,0) of table 2
+    const targetEditable = getCellEditableInTable(1, 0, 0);
+
+    await targetEditable.click();
+    await expect(targetEditable).toBeFocused();
+
+    // Paste — should auto-expand table 2 from 2 columns to 3 columns
+    await dispatchPasteEvent(page, html, plain);
+
+    // Wait for pasted content to appear in the expanded cell
+    await expect(getCellEditableInTable(1, 0, 2)).toHaveText('X3');
+
+    // Save and verify colWidths in the second table block
+    const savedData = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+
+      return data;
+    });
+
+    expect(savedData).toBeTruthy();
+
+    // Find the second table block in saved data
+    const tableBlocks = savedData?.blocks.filter(
+      (block: { type: string }) => block.type === 'table'
+    );
+
+    expect(tableBlocks).toHaveLength(2);
+
+    const secondTableData = tableBlocks?.[1]?.data as {
+      colWidths?: number[];
+      content: string[][];
+    };
+
+    // The colWidths array should have been expanded from 2 entries to 3
+    expect(secondTableData.colWidths).toBeDefined();
+    expect(secondTableData.colWidths).toHaveLength(3);
+  });
 });

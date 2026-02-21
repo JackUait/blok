@@ -620,4 +620,48 @@ test.describe('Row and Column Grip Controls', () => {
     expect(rowBox.width).toBe(4);
     expect(rowBox.height).toBe(20);
   });
+
+  test('Pressing Escape closes an open grip popover', async ({ page }) => {
+    // Initialize 3x3 table with content
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A', 'B', 'C'],
+                ['D', 'E', 'F'],
+                ['G', 'H', 'I'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    // Hover cell (0,0) to reveal grips
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
+
+    await firstCell.hover();
+
+    // Wait for column grip to become visible
+    const colGrip = page.locator('[data-blok-table-grip-col="0"][data-blok-table-grip-visible]');
+
+    await expect(colGrip).toBeVisible({ timeout: 2000 });
+
+    // Click the column grip to open popover
+    await colGrip.click();
+
+    // Verify the popover is visible
+    await expect(page.getByText('Insert Column Left')).toBeVisible();
+
+    // Press Escape key
+    await page.keyboard.press('Escape');
+
+    // Verify the popover is no longer visible
+    await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
+  });
 });

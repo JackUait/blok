@@ -358,4 +358,104 @@ test.describe('Column Resizing', () => {
 
     expect(secondCellWidth).toBe('200px');
   });
+
+  test('Dragging a resize handle cannot shrink a column below 50px minimum width', async ({ page }) => {
+    // Initialize editor with 2x2 table and explicit colWidths of 100px each
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B'], ['C', 'D']],
+              colWidths: [100, 100],
+            },
+          },
+        ],
+      },
+    });
+
+    // Locate the first data-blok-table-resize handle
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+    const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
+
+    await expect(handle).toBeAttached();
+
+    const handleBox = assertBoundingBox(await handle.boundingBox(), 'Resize handle');
+
+    const startX = handleBox.x + handleBox.width / 2;
+    const startY = handleBox.y + handleBox.height / 2;
+
+    // Drag the resize handle 200px to the left — well past the 50px minimum
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX - 200, startY, { steps: 5 });
+    await page.mouse.up();
+
+    // Verify the first column's rendered width is at least 50px (the enforced minimum)
+    const finalFirstWidth = await page.evaluate(() => {
+      const cells = document.querySelectorAll('[data-blok-table-cell]');
+
+      return (cells[0] as HTMLElement).getBoundingClientRect().width;
+    });
+
+    expect(finalFirstWidth).toBeGreaterThanOrEqual(50);
+  });
+
+  test('First resize on a percent-width table transitions columns to pixel widths', async ({ page }) => {
+    // Initialize editor with 2x2 table WITHOUT colWidths (starts with equal percent widths)
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B'], ['C', 'D']],
+            },
+          },
+        ],
+      },
+    });
+
+    // Verify cells do NOT have an inline width style with px before resize
+    const hasPixelWidthBefore = await page.evaluate(() => {
+      const cells = document.querySelectorAll('[data-blok-table-cell]');
+      const firstRow = [cells[0], cells[1]] as HTMLElement[];
+
+      return firstRow.some((cell) => cell.style.width?.includes('px'));
+    });
+
+    expect(hasPixelWidthBefore).toBe(false);
+
+    // Locate the first data-blok-table-resize handle
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first handle
+    const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
+
+    await expect(handle).toBeAttached();
+
+    const handleBox = assertBoundingBox(await handle.boundingBox(), 'Resize handle');
+
+    const startX = handleBox.x + handleBox.width / 2;
+    const startY = handleBox.y + handleBox.height / 2;
+
+    // Drag the resize handle 50px to the right
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 50, startY, { steps: 5 });
+    await page.mouse.up();
+
+    // Verify all cells in the first row now have inline width style containing px
+    const firstRowPixelWidths = await page.evaluate(() => {
+      const cells = document.querySelectorAll('[data-blok-table-cell]');
+      const firstRow = [cells[0], cells[1]] as HTMLElement[];
+
+      return firstRow.map((cell) => cell.style.width?.includes('px') ?? false);
+    });
+
+    expect(firstRowPixelWidths).toEqual([true, true]);
+  });
 });

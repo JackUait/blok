@@ -519,4 +519,54 @@ test.describe('Block Types Inside Table Cells', () => {
       await expect(container.locator('[data-blok-tool="paragraph"]')).toHaveCount(1);
     }
   });
+
+  test('Deleting all content in a cell leaves it with an empty paragraph block', async ({ page }) => {
+    // Detect platform modifier key
+    const modKey = await page.evaluate(() => {
+      const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+      const platform = (nav.userAgentData?.platform ?? nav.platform ?? '').toLowerCase();
+
+      return platform.includes('mac') ? 'Meta' : 'Control';
+    });
+
+    // 1. Initialize a 3x3 table with content ['A1'..'C3']
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A1', 'B1', 'C1'],
+                ['A2', 'B2', 'C2'],
+                ['A3', 'B3', 'C3'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // 2. Click into the editable area of cell (0, 0) to focus it
+    await getCellEditable(page, 0, 0).click();
+
+    // 3. Select all text in the cell
+    await page.keyboard.press(`${modKey}+a`);
+
+    // 4. Press Backspace to delete all content
+    await page.keyboard.press('Backspace');
+
+    // 5. Verify cell (0, 0) still has exactly 1 contenteditable block element
+    const cellBlocksContainer = getCell(page, 0, 0).locator('[data-blok-table-cell-blocks]');
+    const editableBlocks = cellBlocksContainer.locator('[contenteditable="true"]');
+
+    await expect(editableBlocks).toHaveCount(1);
+
+    // 6. Verify that block is empty (has no text content)
+    await expect(editableBlocks.first()).toHaveText('');
+  });
 });

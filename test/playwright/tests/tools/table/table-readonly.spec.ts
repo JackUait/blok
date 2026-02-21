@@ -132,6 +132,26 @@ const waitForReadOnlyState = async (page: Page, expected: boolean): Promise<void
   }, { expectedState: expected });
 };
 
+/**
+ * Assert a bounding box is non-null and return it with narrowed type.
+ */
+const assertBoundingBox = (
+  box: { x: number; y: number; width: number; height: number } | null,
+  label: string
+): { x: number; y: number; width: number; height: number } => {
+  expect(box, `${label} should have a bounding box`).toBeTruthy();
+
+  return box as { x: number; y: number; width: number; height: number };
+};
+
+/**
+ * Returns a locator for a specific cell in the table grid.
+ */
+const getCell = (page: Page, row: number, col: number): ReturnType<Page['locator']> =>
+  page
+    .locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=${row}`)
+    .locator(`[data-blok-table-cell] >> nth=${col}`);
+
 const defaultTools: Record<string, SerializableToolConfig> = {
   table: {
     className: 'Blok.Table',
@@ -412,5 +432,58 @@ test.describe('Read-Only Mode', () => {
 
       await expect(blockWrapper).toHaveCount(1);
     }
+  });
+
+  test('Cell selection is available in read-only mode for copy operations', async ({ page }) => {
+    // 1. Initialize a 3x3 table with content ['A1'..'C3']
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A1', 'B1', 'C1'],
+                ['A2', 'B2', 'C2'],
+                ['A3', 'B3', 'C3'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Toggle read-only mode
+    await toggleReadOnly(page, true);
+    await waitForReadOnlyState(page, true);
+
+    // 3. Get bounding boxes of cell (0,0) and cell (1,1)
+    const startCell = getCell(page, 0, 0);
+    const endCell = getCell(page, 1, 1);
+
+    const startBox = assertBoundingBox(await startCell.boundingBox(), 'cell [0,0]');
+    const endBox = assertBoundingBox(await endCell.boundingBox(), 'cell [1,1]');
+
+    // 4. Drag from center of cell (0,0) to center of cell (1,1)
+    const startX = startBox.x + startBox.width / 2;
+    const startY = startBox.y + startBox.height / 2;
+    const endX = endBox.x + endBox.width / 2;
+    const endY = endBox.y + endBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(endX, endY, { steps: 10 });
+    await page.mouse.up();
+
+    // 5. Verify 4 cells have [data-blok-table-cell-selected] attribute
+    const selected = page.locator('[data-blok-table-cell-selected]');
+
+    await expect(selected).toHaveCount(4);
   });
 });

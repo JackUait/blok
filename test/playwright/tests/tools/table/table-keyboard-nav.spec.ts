@@ -329,4 +329,61 @@ test.describe('Keyboard Navigation', () => {
     // Index 1 = last cell of first row (B)
     expect(focusedCellIndex).toBe(1);
   });
+
+  test('Tab from a cell with multiple blocks moves focus to the next cell', async ({ page }) => {
+    // 1. Initialize editor with a 3x3 table containing ['A1'..'C3']
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A1', 'B1', 'C1'],
+                ['A2', 'B2', 'C2'],
+                ['A3', 'B3', 'C3'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    // 2. Click into the editable area of cell (0,0) to focus it
+    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to access the first editable
+    await getCellEditable(page, 0, 0).first().click();
+
+    // 3. Press Enter to create a second block within the same cell
+    await page.keyboard.press('Enter');
+
+    // 4. Type "second line" in the new block
+    await page.keyboard.type('second line');
+
+    // 5. Press Tab
+    await page.keyboard.press('Tab');
+
+    // 6. Verify focus is now inside cell (0,1) — NOT still in cell (0,0)
+    const focusedCellIndex = await page.evaluate(() => {
+      const activeEl = document.activeElement;
+
+      if (!activeEl) {
+        return -1;
+      }
+
+      const cell = activeEl.closest('[data-blok-table-cell]');
+
+      if (!cell) {
+        return -1;
+      }
+
+      const allCells = Array.from(document.querySelectorAll('[data-blok-table-cell]'));
+
+      return allCells.indexOf(cell);
+    });
+
+    // Index 1 = second cell in first row (B1), confirming Tab escaped the multi-block cell
+    expect(focusedCellIndex).toBe(1);
+  });
 });

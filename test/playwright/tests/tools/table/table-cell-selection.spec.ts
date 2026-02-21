@@ -450,4 +450,27 @@ test.describe('Cell Selection', () => {
 
     expect(afterBox.width).toBeCloseTo(initialWidth, 0);
   });
+
+  test('Small pointer movement within a single cell does not trigger cell selection', async ({ page }) => {
+    // 1. Initialize editor with a 3x3 table with content
+    await create3x3TableWithContent(page);
+
+    // 2. Get the center of cell (0,0)
+    const cell00 = getCell(page, 0, 0);
+    const box = assertBoundingBox(await cell00.boundingBox(), 'cell [0,0]');
+
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+
+    // 3. Mouse down at center, move +5px (below the 10px drag threshold), mouse up
+    await page.mouse.move(centerX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(centerX + 5, centerY + 5);
+    await page.mouse.up();
+
+    // 4. Verify no cells have the selected attribute
+    const selected = page.locator('[data-blok-table-cell-selected]');
+
+    await expect(selected).toHaveCount(0);
+  });
 });

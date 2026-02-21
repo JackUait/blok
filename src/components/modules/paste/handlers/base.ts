@@ -65,6 +65,9 @@ export abstract class BasePasteHandler implements PasteHandler {
     return isCurrentBlockDefault && currentBlock.isEmpty;
   }
 
+  /** Tools that cannot be nested inside table cells */
+  private static readonly TOOLS_RESTRICTED_IN_TABLE_CELLS = new Set(['table', 'header']);
+
   /**
    * Insert paste data as blocks.
    */
@@ -82,6 +85,28 @@ export abstract class BasePasteHandler implements PasteHandler {
     const isMultipleItems = data.length > 1;
 
     if (isMultipleItems) {
+      /**
+       * If we're inside a table cell and any pasted item uses a tool that can't
+       * be nested in table cells (e.g. table, header), redirect the insertion
+       * point to the parent table block. This prevents new block DOM elements
+       * from being placed inside the existing table's grid structure, which
+       * would corrupt the table's saved data.
+       */
+      const currentBlock = BlockManager.currentBlock;
+
+      if (
+        currentBlock?.holder?.closest('[data-blok-table-cell-blocks]') &&
+        data.some(item => BasePasteHandler.TOOLS_RESTRICTED_IN_TABLE_CELLS.has(item.tool))
+      ) {
+        const tableBlockHolder = currentBlock.holder
+          .closest('[data-blok-tool="table"]')
+          ?.closest('[data-blok-element]') as HTMLElement | null;
+
+        if (tableBlockHolder) {
+          BlockManager.setCurrentBlockByChildNode(tableBlockHolder);
+        }
+      }
+
       for (const [index, pasteData] of data.entries()) {
         await this.insertBlock(pasteData, index === 0 && canReplaceCurrentBlock);
       }

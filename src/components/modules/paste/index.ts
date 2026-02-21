@@ -131,7 +131,8 @@ export class Paste extends Module {
     const canReplaceCurrentBlock = Boolean(
       currentBlock &&
       currentBlock.tool.isDefault &&
-      currentBlock.isEmpty
+      currentBlock.isEmpty &&
+      !currentBlock.holder?.closest('[data-blok-table-cell-blocks]')
     );
 
     const context: HandlerContext = {

@@ -708,10 +708,25 @@ export class Table implements BlockTool {
     }
 
     const html = e.clipboardData.getData('text/html');
-    const payload = parseClipboardHtml(html) ?? parseGenericHtmlTable(html);
+    const blokPayload = parseClipboardHtml(html);
+    const externalPayload = blokPayload === null ? parseGenericHtmlTable(html) : null;
+    const payload = blokPayload ?? externalPayload;
 
     if (!payload) {
       return;
+    }
+
+    /**
+     * If the pasted HTML contains multiple tables (e.g. from Google Docs),
+     * don't intercept — let the Paste module handle it as a document-level paste
+     * so each table becomes a separate block without overwriting existing cells.
+     */
+    if (externalPayload !== null) {
+      const tempDoc = new DOMParser().parseFromString(html, 'text/html');
+
+      if (tempDoc.querySelectorAll('table').length > 1) {
+        return;
+      }
     }
 
     const activeElement = document.activeElement as HTMLElement | null;

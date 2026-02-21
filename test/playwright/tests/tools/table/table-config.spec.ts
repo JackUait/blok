@@ -150,7 +150,6 @@ test.describe('Table Configuration Options', () => {
 
     const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
 
-    // eslint-disable-next-line playwright/no-force-option -- popover container intercepting pointer events
     await tableToolboxItem.click({ force: true });
 
     // 5. Wait for the table block to appear in the editor
@@ -194,7 +193,6 @@ test.describe('Table Configuration Options', () => {
 
     const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
 
-    // eslint-disable-next-line playwright/no-force-option -- popover container intercepting pointer events
     await tableToolboxItem.click({ force: true });
 
     // 5. Wait for the table block to appear in the editor
@@ -249,7 +247,6 @@ test.describe('Table Configuration Options', () => {
 
     const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
 
-    // eslint-disable-next-line playwright/no-force-option -- popover container intercepting pointer events
     await tableToolboxItem.click({ force: true });
 
     // 4. Wait for the table to appear and click into the first cell

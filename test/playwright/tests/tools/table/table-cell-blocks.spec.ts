@@ -397,7 +397,6 @@ test.describe('Block Types Inside Table Cells', () => {
 
     const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
 
-    // eslint-disable-next-line playwright/no-force-option -- popover container intercepting pointer events
     await tableToolboxItem.click({ force: true });
 
     // Wait for the table to appear

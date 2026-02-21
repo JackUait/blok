@@ -187,12 +187,9 @@ test.describe('Edge Cases and Error Handling', () => {
     const colGrip = page.locator(`${COL_GRIP_SELECTOR} >> nth=0`);
 
     await expect(colGrip).toBeVisible({ timeout: 2000 });
-    // eslint-disable-next-line playwright/no-force-option -- grip may be intercepted by overlapping elements
     await colGrip.click({ force: true });
 
     // Delete the only column
-
-    // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
     await page.getByText('Delete').first().click({ force: true });
 
     // Verify no JS errors occurred
@@ -235,12 +232,9 @@ test.describe('Edge Cases and Error Handling', () => {
     const rowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
-    // eslint-disable-next-line playwright/no-force-option -- grip may be intercepted by overlapping elements
     await rowGrip.click({ force: true });
 
     // Delete the only row
-
-    // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
     await page.getByText('Delete').first().click({ force: true });
 
     // Verify no JS errors occurred
@@ -483,10 +477,8 @@ test.describe('Edge Cases and Error Handling', () => {
     const lastRowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=-1`);
 
     await expect(lastRowGrip).toBeVisible({ timeout: 2000 });
-    // eslint-disable-next-line playwright/no-force-option -- after insert, layout shift may cause interception
     await lastRowGrip.click({ force: true });
 
-    // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
     await page.getByText('Delete').first().click({ force: true });
 
     await expect(page.locator('[data-blok-table-row]')).toHaveCount(2);
@@ -499,7 +491,6 @@ test.describe('Edge Cases and Error Handling', () => {
     const rowGripAfterDelete = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGripAfterDelete).toBeVisible({ timeout: 2000 });
-    // eslint-disable-next-line playwright/no-force-option -- after delete, layout shift may cause interception; force bypasses
     await rowGripAfterDelete.click({ force: true });
 
     // Popover should reopen cleanly

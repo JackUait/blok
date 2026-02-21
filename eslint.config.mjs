@@ -1957,7 +1957,7 @@ export default defineConfig(
       'playwright/no-page-pause': 'error',
       'playwright/no-networkidle': 'error',
       'playwright/no-eval': 'error',
-      'playwright/no-force-option': 'warn',
+      'playwright/no-force-option': 'off',
       // Enforce proper async handling
       'playwright/missing-playwright-await': 'error',
       'playwright/no-useless-await': 'error',

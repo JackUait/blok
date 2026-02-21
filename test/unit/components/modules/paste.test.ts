@@ -1284,19 +1284,19 @@ describe('Paste module', () => {
       await paste.processText(html, true);
 
       const tableCalls = mocks.BlockManager.paste.mock.calls.filter(
-        ([tool]: [string]) => tool === 'table'
+        ([tool]) => tool === 'table'
       );
 
       expect(tableCalls.length).toBe(2);
 
       // Verify first table content
-      const firstTableEvent = tableCalls[0][1] as CustomEvent;
+      const firstTableEvent = tableCalls[0][1];
       const firstTableData = (firstTableEvent.detail as { data: HTMLElement }).data;
 
       expect(firstTableData.querySelector('td')?.textContent).toBe('Table 1');
 
       // Verify second table content
-      const secondTableEvent = tableCalls[1][1] as CustomEvent;
+      const secondTableEvent = tableCalls[1][1];
       const secondTableData = (secondTableEvent.detail as { data: HTMLElement }).data;
 
       expect(secondTableData.querySelector('td')?.textContent).toBe('Table 2');
@@ -1362,7 +1362,7 @@ describe('Paste module', () => {
       await paste.processDataTransfer(dataTransfer);
 
       const tableCalls = mocks.BlockManager.paste.mock.calls.filter(
-        ([tool]: [string]) => tool === 'table'
+        ([tool]) => tool === 'table'
       );
 
       expect(tableCalls.length).toBe(2);

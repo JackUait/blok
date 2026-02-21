@@ -253,7 +253,10 @@ test.describe('Paste into existing table cell — content integrity', () => {
       return window.blokInstance?.save();
     });
 
-    const allBlocks = (savedData?.blocks ?? []) as SavedBlock[];
+    expect(savedData).toBeDefined();
+    expect(savedData).toHaveProperty('blocks');
+
+    const allBlocks = (savedData as { blocks: SavedBlock[] }).blocks;
 
     // Should have exactly one table block
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
@@ -263,14 +266,16 @@ test.describe('Paste into existing table cell — content integrity', () => {
     const tableBlock = tableBlocks[0];
 
     // Get the contentIds from the table block
-    const contentIds = tableBlock.content ?? [];
+    expect(tableBlock.content).toBeDefined();
+
+    const contentIds = tableBlock.content as string[];
 
     // All contentIds should reference existing blocks
     const existingBlockIds = new Set(allBlocks.map(b => b.id));
 
     const orphanedIds = contentIds.filter(id => !existingBlockIds.has(id));
 
-    expect(orphanedIds).toEqual([]);
+    expect(orphanedIds).toStrictEqual([]);
 
     // Verify the cell grid has the right content
     const cellGrid = tableBlock.data.content as Array<Array<{ blocks: string[] }>>;
@@ -376,19 +381,25 @@ test.describe('Paste into existing table cell — content integrity', () => {
       return window.blokInstance?.save();
     });
 
-    const allBlocks = (savedData?.blocks ?? []) as SavedBlock[];
+    expect(savedData).toBeDefined();
+    expect(savedData).toHaveProperty('blocks');
+
+    const allBlocks = (savedData as { blocks: SavedBlock[] }).blocks;
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
 
     expect(tableBlocks.length).toBe(1);
 
     const tableBlock = tableBlocks[0];
-    const contentIds = tableBlock.content ?? [];
+
+    expect(tableBlock.content).toBeDefined();
+
+    const contentIds = tableBlock.content as string[];
 
     // All contentIds should reference existing blocks (no orphans)
     const existingBlockIds = new Set(allBlocks.map(b => b.id));
     const orphanedIds = contentIds.filter(id => !existingBlockIds.has(id));
 
-    expect(orphanedIds).toEqual([]);
+    expect(orphanedIds).toStrictEqual([]);
 
     const cellGrid = tableBlock.data.content as Array<Array<{ blocks: string[] }>>;
 
@@ -510,7 +521,10 @@ test.describe('Paste into existing table cell — content integrity', () => {
       return window.blokInstance?.save();
     });
 
-    const allBlocks = (savedData?.blocks ?? []) as SavedBlock[];
+    expect(savedData).toBeDefined();
+    expect(savedData).toHaveProperty('blocks');
+
+    const allBlocks = (savedData as { blocks: SavedBlock[] }).blocks;
 
     // Should have exactly one table block (no new table block created)
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
@@ -527,7 +541,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     // Row 0 should have the pasted content
     const row0Texts = cellGrid[0].map(cell => resolveBlockText(allBlocks, cell.blocks[0]));
 
-    expect(row0Texts).toEqual(['test', 'test', 'peach test', 'new column']);
+    expect(row0Texts).toStrictEqual(['test', 'test', 'peach test', 'new column']);
 
     // Row 2 (last row) should NOT contain any pasted text — all cells should be empty
     const row2Texts = cellGrid[2].map(cell => resolveBlockText(allBlocks, cell.blocks[0]));
@@ -612,17 +626,22 @@ test.describe('Paste into existing table cell — content integrity', () => {
       return window.blokInstance?.save();
     });
 
-    const allBlocks = (savedData?.blocks ?? []) as SavedBlock[];
+    expect(savedData).toBeDefined();
+    expect(savedData).toHaveProperty('blocks');
+
+    const allBlocks = (savedData as { blocks: SavedBlock[] }).blocks;
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
 
     expect(tableBlocks.length).toBe(1);
 
-    const contentIds = tableBlocks[0].content ?? [];
+    expect(tableBlocks[0].content).toBeDefined();
+
+    const contentIds = tableBlocks[0].content as string[];
     const existingBlockIds = new Set(allBlocks.map(b => b.id));
     const orphanedIds = contentIds.filter(id => !existingBlockIds.has(id));
 
     // After fix: no orphaned contentIds should remain
-    expect(orphanedIds).toEqual([]);
+    expect(orphanedIds).toStrictEqual([]);
   });
 
   test('Caret is placed at the end of the last pasted cell after grid paste', async ({ page, context }) => {
@@ -710,7 +729,7 @@ test.describe('Paste into existing table cell — content integrity', () => {
     await waitForPasteComplete(page, 'gamma');
 
     // The caret should be in the last pasted cell: row 0, col 2 (the "gamma" cell)
-    const lastPastedCell = cells.nth(2);
+    const lastPastedCell = cells.locator('>> nth=2');
     const lastCellEditable = lastPastedCell.locator('[contenteditable="true"]');
 
     // The focused element should be inside the last pasted cell

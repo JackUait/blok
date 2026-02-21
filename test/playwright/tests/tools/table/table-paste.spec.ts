@@ -405,9 +405,12 @@ test.describe('Paste HTML Table into Editor', () => {
       return window.blokInstance?.save();
     });
 
-    const topLevelBlocksAfter = afterToggle?.blocks.filter(
-      (b: { parent?: string }) => b.parent === undefined
-    ) ?? [];
+    expect(afterToggle).toBeDefined();
+    expect(afterToggle).toHaveProperty('blocks');
+
+    const topLevelBlocksAfter = (afterToggle as { blocks: Array<{ parent?: string }> }).blocks.filter(
+      (b) => b.parent === undefined
+    );
 
     // At most 2 top-level blocks: the table + one trailing default paragraph
     expect(topLevelBlocksAfter.length).toBeLessThanOrEqual(2);

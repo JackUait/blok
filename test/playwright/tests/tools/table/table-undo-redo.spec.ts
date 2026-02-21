@@ -246,7 +246,7 @@ test.describe('Table Undo/Redo', () => {
 
     // Verify paragraph blocks still contain the original text
     const paragraphBlocks = savedData.blocks.filter((b: { type: string }) => b.type === 'paragraph');
-    const paragraphTexts = paragraphBlocks.map((b: { data: { text: string } }) => b.data.text) as string[];
+    const paragraphTexts = paragraphBlocks.map((b: { data: { text: string } }) => b.data.text);
 
     expect(paragraphTexts).toContain('Alpha');
     expect(paragraphTexts).toContain('Beta');
@@ -386,7 +386,7 @@ test.describe('Table Undo/Redo', () => {
 
     // Verify paragraph blocks contain the original text
     const paragraphBlocks = savedData.blocks.filter((b: { type: string }) => b.type === 'paragraph');
-    const paragraphTexts = paragraphBlocks.map((b: { data: { text: string } }) => b.data.text) as string[];
+    const paragraphTexts = paragraphBlocks.map((b: { data: { text: string } }) => b.data.text);
 
     expect(paragraphTexts).toContain('Name');
     expect(paragraphTexts).toContain('Value');

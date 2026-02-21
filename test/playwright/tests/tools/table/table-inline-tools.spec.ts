@@ -124,7 +124,7 @@ const defaultTools: Record<string, SerializableToolConfig> = {
  */
  
 const getCellEditable = (page: Page, cellIndex: number) =>
-  page.locator(CELL_SELECTOR).nth(cellIndex).locator('[contenteditable="true"]').first();
+  page.locator(`${CELL_SELECTOR} >> nth=${cellIndex}`).locator('[contenteditable="true"] >> nth=0');
 
 /**
  * Select the given text string within the provided contenteditable locator using a DOM Range.

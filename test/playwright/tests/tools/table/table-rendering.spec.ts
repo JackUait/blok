@@ -133,7 +133,7 @@ test.describe('Table Rendering and Initial State', () => {
     await createBlok(page, { tools: defaultTools });
 
     // 2. Click the first empty paragraph block
-    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"] >> nth=0`);
 
     await firstParagraph.click();
 
@@ -325,14 +325,14 @@ test.describe('Table Rendering and Initial State', () => {
     });
 
     // 3. Verify: The table block IS included (auto-initialized content passes validate)
-    const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
+    expect(savedData).toBeDefined();
+    expect(savedData).toHaveProperty('blocks');
+
+    const blocks = (savedData as { blocks: Array<{ type: string; data: Record<string, unknown> }> }).blocks;
+    const tableBlock = blocks.find((b) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
 
-    if (tableBlock === undefined) {
-      return;
-    }
-
-    expect(tableBlock.data).toHaveProperty('content');
+    expect((tableBlock as { data: Record<string, unknown> }).data).toHaveProperty('content');
   });
 });

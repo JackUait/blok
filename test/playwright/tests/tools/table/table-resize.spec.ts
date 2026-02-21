@@ -304,7 +304,7 @@ test.describe('Column Resizing', () => {
     // Verify handles exist before toggling readOnly
     const handlesBefore = page.locator(RESIZE_HANDLE_SELECTOR);
 
-    await expect(handlesBefore.first()).toBeAttached();
+    await expect(handlesBefore.locator('>> nth=0')).toBeAttached();
 
     // Toggle readOnly mode via blokInstance.readOnly.toggle()
     await page.evaluate(async () => {

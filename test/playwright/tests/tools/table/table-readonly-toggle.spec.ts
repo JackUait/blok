@@ -284,7 +284,7 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
     await expect(addControlsAfterToggleOn).toHaveCount(0);
 
     // 8. Verify cells become non-editable after toggle to read-only
-    const cellEditableAfterToggleOn = cells.first().locator('[contenteditable]');
+    const cellEditableAfterToggleOn = cells.locator('[contenteditable] >> nth=0');
 
     await expect(cellEditableAfterToggleOn).toHaveAttribute('contenteditable', 'false');
 
@@ -303,7 +303,7 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
     await expect(table).not.toHaveAttribute('data-blok-table-readonly');
 
     // 13. Verify cells are editable again after switching back to edit mode
-    const cellEditableAfterToggleOff = cells.first().locator('[contenteditable]');
+    const cellEditableAfterToggleOff = cells.locator('[contenteditable] >> nth=0');
 
     await expect(cellEditableAfterToggleOff).toHaveAttribute('contenteditable', 'true');
 

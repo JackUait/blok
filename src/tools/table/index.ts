@@ -781,12 +781,11 @@ export class Table implements BlockTool {
      * don't intercept — let the Paste module handle it as a document-level paste
      * so each table becomes a separate block without overwriting existing cells.
      */
-    if (externalPayload !== null) {
-      const tempDoc = new DOMParser().parseFromString(html, 'text/html');
-
-      if (tempDoc.querySelectorAll('table').length > 1) {
-        return;
-      }
+    if (
+      externalPayload !== null &&
+      new DOMParser().parseFromString(html, 'text/html').querySelectorAll('table').length > 1
+    ) {
+      return;
     }
 
     const activeElement = document.activeElement as HTMLElement | null;

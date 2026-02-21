@@ -12,6 +12,18 @@ const HOLDER_ID = 'blok';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
 const CELL_SELECTOR = '[data-blok-table-cell]';
 
+/**
+ * Assert a bounding box is non-null and return it with narrowed type.
+ */
+const assertBoundingBox = (
+  box: { x: number; y: number; width: number; height: number } | null,
+  label: string
+): { x: number; y: number; width: number; height: number } => {
+  expect(box, `${label} should have a bounding box`).toBeTruthy();
+
+  return box as { x: number; y: number; width: number; height: number };
+};
+
 type SerializableToolConfig = {
   className?: string;
   config?: Record<string, unknown>;
@@ -122,15 +134,16 @@ const defaultTools: Record<string, SerializableToolConfig> = {
  * Returns the cell at the given 0-based row and column index.
  */
 const getCell = (page: Page, row: number, col: number) => {
-  return page.locator(CELL_SELECTOR).nth(row * 2 + col);
+  return page
+    .locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=${row}`)
+    .locator(`${CELL_SELECTOR} >> nth=${col}`);
 };
 
 /**
  * Returns the first contenteditable element inside the cell at (row, col).
  */
 const getCellEditable = (page: Page, row: number, col: number) => {
-  // eslint-disable-next-line playwright/no-nth-methods -- nth() is necessary to index into a grid by row/col
-  return getCell(page, row, col).locator('[contenteditable="true"]').first();
+  return getCell(page, row, col).locator('[data-blok-table-cell-blocks] [contenteditable="true"] >> nth=0');
 };
 
 test.describe('Cell Editing', () => {
@@ -223,8 +236,7 @@ test.describe('Cell Editing', () => {
     await page.keyboard.type('Second line');
 
     // 6. Verify both 'First line' and 'Second line' appear in the first cell
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = getCell(page, 0, 0);
 
     await expect(firstCell).toContainText('First line');
     await expect(firstCell).toContainText('Second line');
@@ -300,14 +312,14 @@ test.describe('Cell Editing', () => {
     expect(focusCellIndex).toBe(2);
 
     // Verify the cell above (row 0, col 0) still has only one block
-    const cellAboveBlockCount = await getCell(page, 0, 0).locator('[data-blok-id]').count();
+    const cellAboveBlockCount = getCell(page, 0, 0).locator('[data-blok-id]');
 
-    expect(cellAboveBlockCount).toBe(1);
+    await expect(cellAboveBlockCount).toHaveCount(1);
 
     // Verify the target cell now has two blocks (original + new from Enter)
-    const targetCellBlockCount = await targetCell.locator('[data-blok-id]').count();
+    const targetCellBlockCount = targetCell.locator('[data-blok-id]');
 
-    expect(targetCellBlockCount).toBe(2);
+    await expect(targetCellBlockCount).toHaveCount(2);
   });
 
   test('Clicking blank space below block content in a cell focuses the last block', async ({ page }) => {
@@ -328,20 +340,15 @@ test.describe('Cell Editing', () => {
     });
 
     // 2. Click on the cell element (not the contenteditable, but the cell background/blocks container)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = getCell(page, 0, 0);
 
     // Click near the bottom of the cell to land on blank space
-    const cellBox = await firstCell.boundingBox();
+    const cellBox = assertBoundingBox(await firstCell.boundingBox(), 'First cell');
 
-    expect(cellBox, 'First cell should have a bounding box').toBeTruthy();
-
-    if (cellBox) {
-      await page.mouse.click(
-        cellBox.x + cellBox.width / 2,
-        cellBox.y + cellBox.height - 4
-      );
-    }
+    await page.mouse.click(
+      cellBox.x + cellBox.width / 2,
+      cellBox.y + cellBox.height - 4
+    );
 
     // 3. Verify the contenteditable element of the last block in the cell receives focus
     const focusedInFirstCell = await page.evaluate(() => {

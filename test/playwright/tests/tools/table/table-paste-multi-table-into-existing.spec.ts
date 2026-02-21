@@ -258,15 +258,18 @@ test.describe('Multi-table paste into existing table — content preservation', 
       'text/plain': 'PastedA1\tPastedA2\nPastedB1\tPastedB2',
     });
 
-    // Wait for any paste processing to settle
-    await page.waitForTimeout(1000);
+    // Wait for paste processing to settle by polling save() until the table data is available
+    const allBlocks = await page.waitForFunction(async () => {
+      const data = await window.blokInstance?.save();
+      const blocks = data?.blocks;
 
-    // Save and check results
-    const savedData = await page.evaluate(async () => {
-      return window.blokInstance?.save();
-    });
+      if (!Array.isArray(blocks) || blocks.length === 0) {
+        return false;
+      }
 
-    const allBlocks = (savedData?.blocks ?? []) as SavedBlock[];
+      return blocks;
+    }, undefined, { timeout: 5000 }).then(handle => handle.jsonValue()) as SavedBlock[];
+
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
 
     // The existing table should still exist
@@ -344,15 +347,18 @@ test.describe('Multi-table paste into existing table — content preservation', 
       'text/plain': 'PastedA1\tPastedA2\nPastedB1\tPastedB2',
     });
 
-    // Wait for paste processing to settle
-    await page.waitForTimeout(1000);
+    // Wait for paste processing to settle by polling save() until all 3 table blocks appear
+    const allBlocks = await page.waitForFunction(async () => {
+      const data = await window.blokInstance?.save();
+      const blocks = data?.blocks;
 
-    // Save and check results
-    const savedData = await page.evaluate(async () => {
-      return window.blokInstance?.save();
-    });
+      if (!Array.isArray(blocks) || blocks.length === 0) {
+        return false;
+      }
 
-    const allBlocks = (savedData?.blocks ?? []) as SavedBlock[];
+      return blocks;
+    }, undefined, { timeout: 5000 }).then(handle => handle.jsonValue()) as SavedBlock[];
+
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
 
     // Should have 3 table blocks: 1 existing + 2 pasted

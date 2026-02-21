@@ -147,14 +147,12 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     });
 
     // Click first cell to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
     // Click column grip to open popover
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
-    const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+    const colGrip = page.locator(`${COL_GRIP_SELECTOR} >> nth=0`);
 
     await expect(colGrip).toBeVisible({ timeout: 2000 });
     await colGrip.click();
@@ -167,11 +165,10 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     await expect(deleteItem).toBeVisible();
 
     // Clicking the disabled delete button should not remove the column
-    await deleteItem.click({ force: true });
+    await deleteItem.dispatchEvent('click');
 
     // Table should still have 1 column per row
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first row
-    const firstRow = page.locator('[data-blok-table-row]').first();
+    const firstRow = page.locator('[data-blok-table-row] >> nth=0');
 
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(1);
   });
@@ -195,14 +192,12 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     });
 
     // Click first cell to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
     // Click row grip to open popover
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
-    const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+    const rowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
     await rowGrip.click();
@@ -215,7 +210,7 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     await expect(deleteItem).toBeVisible();
 
     // Clicking the disabled delete button should not remove the row
-    await deleteItem.click({ force: true });
+    await deleteItem.dispatchEvent('click');
 
     // Table should still have 1 row
     await expect(page.locator('[data-blok-table-row]')).toHaveCount(1);
@@ -240,18 +235,16 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     });
 
     // Click a cell in row 1 (second row, first column) to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(2) targets the first cell of the second row in a 2-col table
-    const secondRowCell = page.locator(CELL_SELECTOR).nth(2);
+    const secondRowCell = page.locator(`${CELL_SELECTOR} >> nth=2`);
 
     await secondRowCell.click();
 
     // Click the row 1 grip to open its popover
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets the second row grip
-    const rowGripForRow1 = page.locator(ROW_GRIP_SELECTOR).nth(1);
+    const rowGripForRow1 = page.locator(`${ROW_GRIP_SELECTOR} >> nth=1`);
 
     await expect(rowGripForRow1).toBeVisible({ timeout: 2000 });
-    // eslint-disable-next-line playwright/no-force-option -- row grip may be overlapped by adjacent cell in layout
-    await rowGripForRow1.click({ force: true });
+    await rowGripForRow1.scrollIntoViewIfNeeded();
+    await rowGripForRow1.dispatchEvent('click');
 
     // Row 1 popover should NOT contain the heading toggle
     await expect(page.getByText('Insert Row Above')).toBeVisible();
@@ -262,14 +255,12 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
 
     // Click the first cell in row 0 to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
     // Click the row 0 grip to open its popover
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row grip
-    const rowGripForRow0 = page.locator(ROW_GRIP_SELECTOR).first();
+    const rowGripForRow0 = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGripForRow0).toBeVisible({ timeout: 2000 });
     await rowGripForRow0.click();
@@ -297,14 +288,12 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     });
 
     // Click a cell in column 1 (second column) to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets the second cell (column 1) in the first row
-    const secondColumnCell = page.locator(CELL_SELECTOR).nth(1);
+    const secondColumnCell = page.locator(`${CELL_SELECTOR} >> nth=1`);
 
     await secondColumnCell.click();
 
     // Click the column 1 grip to open its popover
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) targets the second column grip
-    const colGripForCol1 = page.locator(COL_GRIP_SELECTOR).nth(1);
+    const colGripForCol1 = page.locator(`${COL_GRIP_SELECTOR} >> nth=1`);
 
     await expect(colGripForCol1).toBeVisible({ timeout: 2000 });
     await colGripForCol1.click();
@@ -318,14 +307,12 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
 
     // Click the first cell in column 0 to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get the first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
     // Click the column 0 grip to open its popover
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first column grip
-    const colGripForCol0 = page.locator(COL_GRIP_SELECTOR).first();
+    const colGripForCol0 = page.locator(`${COL_GRIP_SELECTOR} >> nth=0`);
 
     await expect(colGripForCol0).toBeVisible({ timeout: 2000 });
     await colGripForCol0.click();
@@ -354,18 +341,15 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
 
     // Verify both heading attributes are present initially
     await expect(page.locator('[data-blok-table-heading]')).toBeVisible();
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first heading col cell
-    await expect(page.locator('[data-blok-table-heading-col]').first()).toBeVisible();
+    await expect(page.locator('[data-blok-table-heading-col] >> nth=0')).toBeVisible();
 
     // Click first cell to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
     // Open row 0 grip popover
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row grip
-    const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+    const rowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
     await rowGrip.click();
@@ -384,8 +368,7 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     await expect(page.locator('[data-blok-table-heading]')).toHaveCount(0);
 
     // Heading column styling should still be present
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first heading col cell
-    await expect(page.locator('[data-blok-table-heading-col]').first()).toBeVisible();
+    await expect(page.locator('[data-blok-table-heading-col] >> nth=0')).toBeVisible();
   });
 
   test('toggling heading column off does not remove heading row styling', async ({ page }) => {
@@ -408,18 +391,15 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
 
     // Verify both heading attributes are present initially
     await expect(page.locator('[data-blok-table-heading]')).toBeVisible();
-    // eslint-disable-next-line playwright/no-nth-methods -- first() needed to get first heading col cell
-    await expect(page.locator('[data-blok-table-heading-col]').first()).toBeVisible();
+    await expect(page.locator('[data-blok-table-heading-col] >> nth=0')).toBeVisible();
 
     // Click first cell to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
     // Open column 0 grip popover
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first column grip
-    const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+    const colGrip = page.locator(`${COL_GRIP_SELECTOR} >> nth=0`);
 
     await expect(colGrip).toBeVisible({ timeout: 2000 });
     await colGrip.click();

@@ -278,8 +278,8 @@ test.describe('Read-Only Mode', () => {
     await expect(headingCols).toHaveCount(2);
 
     // Verify heading column content is rendered
-    await expect(headingCols.first()).toContainText('ColH1');
-    await expect(headingCols.last()).toContainText('ColH2');
+    await expect(headingCols.locator('>> nth=0')).toContainText('ColH1');
+    await expect(headingCols.locator('>> nth=-1')).toContainText('ColH2');
   });
 
   test('Toggling read-only mode removes interactive controls', async ({ page }) => {
@@ -311,8 +311,7 @@ test.describe('Read-Only Mode', () => {
     // Cells should be contenteditable=true in edit mode
     const cells = page.locator(CELL_SELECTOR);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check edit mode attribute
-    const firstCellEditable = cells.first().locator('[contenteditable]');
+    const firstCellEditable = cells.locator('[contenteditable] >> nth=0');
 
     await expect(firstCellEditable).toHaveAttribute('contenteditable', 'true');
 
@@ -337,7 +336,7 @@ test.describe('Read-Only Mode', () => {
     await expect(resizeHandles).toHaveCount(0);
 
     // Cells become non-editable
-    const cellEditable = cells.first().locator('[contenteditable]');
+    const cellEditable = cells.locator('[contenteditable] >> nth=0');
 
     await expect(cellEditable).toHaveAttribute('contenteditable', 'false');
   });

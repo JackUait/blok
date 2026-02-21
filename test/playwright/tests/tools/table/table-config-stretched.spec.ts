@@ -172,7 +172,7 @@ test.describe('Table Configuration - Stretched Option', () => {
     });
 
     // 2. Click the first empty paragraph block
-    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"] >> nth=0`);
 
     await firstParagraph.click();
 

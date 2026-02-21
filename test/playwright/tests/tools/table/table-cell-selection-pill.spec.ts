@@ -271,7 +271,8 @@ test.describe('Cell Selection Pill and Popover', () => {
     // 4. Click the pill element to open the popover
     const pill = page.locator('[data-blok-table-selection-pill]');
 
-    await pill.click({ force: true });
+    await expect(pill).toBeVisible();
+    await pill.click();
 
     // Expected: popover appears with "Clear" menu item
     await expect(page.getByText('Clear')).toBeVisible();
@@ -293,7 +294,8 @@ test.describe('Cell Selection Pill and Popover', () => {
 
     const pill = page.locator('[data-blok-table-selection-pill]');
 
-    await pill.click({ force: true });
+    await expect(pill).toBeVisible();
+    await pill.click();
 
     // 4. Click the "Clear" menu item in the popover
     const clearButton = page.getByText('Clear');
@@ -364,25 +366,22 @@ test.describe('Cell Selection Pill and Popover', () => {
     const overlayStyles = await overlay.evaluate((el) => {
       const computed = getComputedStyle(el);
       const htmlEl = el as HTMLElement;
+      const styleAttr = htmlEl.getAttribute('style') ?? '';
 
       return {
         position: htmlEl.style.position,
-        // Read from the style attribute to get the raw value before browser normalisation,
-        // and also read the computed border as a fallback.
-        borderRaw: htmlEl.getAttribute('style') ?? '',
-        borderComputed: computed.border,
+        // The inline style is set as '#3b82f6' but browsers normalise to rgb().
+        // Check both representations inside the browser context.
+        hasBlueBorder:
+          styleAttr.includes('#3b82f6') ||
+          computed.border.includes('rgb(59, 130, 246)'),
+        borderDebug: `raw="${styleAttr}", computed="${computed.border}"`,
         pointerEvents: computed.pointerEvents,
       };
     });
 
     expect(overlayStyles.position).toBe('absolute');
-    // The inline style is set as '#3b82f6' but browsers normalise the value to rgb().
-    // Accept either the hex value in the raw attribute or the rgb form in computed style.
-    const hasBlueBorder =
-      overlayStyles.borderRaw.includes('#3b82f6') ||
-      overlayStyles.borderComputed.includes('rgb(59, 130, 246)');
-
-    expect(hasBlueBorder, `Expected blue border (#3b82f6 or rgb(59, 130, 246)), got raw="${overlayStyles.borderRaw}", computed="${overlayStyles.borderComputed}"`).toBe(true);
+    expect(overlayStyles.hasBlueBorder, `Expected blue border (#3b82f6 or rgb(59, 130, 246)), got ${overlayStyles.borderDebug}`).toBe(true);
     // Overlay should have pointer-events: none so mouse events pass through to cells
     expect(overlayStyles.pointerEvents).toBe('none');
   });

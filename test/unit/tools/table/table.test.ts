@@ -3286,6 +3286,13 @@ describe('Table Tool', () => {
       // Should prevent default to handle paste ourselves
       expect(preventSpy).toHaveBeenCalled();
 
+      // The pasted block should be appended to the target cell's container
+      const targetCell = gridEl.querySelector('[data-blok-table-row]')
+        ?.querySelector('[data-blok-table-cell]');
+      const pastedBlock = targetCell?.querySelector('[data-blok-id]');
+
+      expect(pastedBlock).toBeTruthy();
+
       document.body.removeChild(element);
     });
 
@@ -3915,6 +3922,7 @@ describe('Table Tool', () => {
       // Blocks should still be present after Delete key
       const blocksBefore = gridEl.querySelectorAll('[data-blok-id]').length;
 
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Cell selection listens on document for keydown; no user-event alternative for document-level listeners
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
 
       const blocksAfter = gridEl.querySelectorAll('[data-blok-id]').length;

@@ -180,22 +180,20 @@ test.describe('Edge Cases and Error Handling', () => {
     });
 
     // Click the first cell to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
-    const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+    const colGrip = page.locator(`${COL_GRIP_SELECTOR} >> nth=0`);
 
     await expect(colGrip).toBeVisible({ timeout: 2000 });
     // eslint-disable-next-line playwright/no-force-option -- grip may be intercepted by overlapping elements
     await colGrip.click({ force: true });
 
     // Delete the only column
-     
+
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
-    await page.getByText('Delete').first().click({ force: true });
+    await page.getByText('Delete').locator('>> nth=0').click({ force: true });
 
     // Verify no JS errors occurred
     expect(errors).toHaveLength(0);
@@ -230,22 +228,20 @@ test.describe('Edge Cases and Error Handling', () => {
     });
 
     // Click the first cell to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
-    const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+    const rowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
     // eslint-disable-next-line playwright/no-force-option -- grip may be intercepted by overlapping elements
     await rowGrip.click({ force: true });
 
     // Delete the only row
-     
+
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
-    await page.getByText('Delete').first().click({ force: true });
+    await page.getByText('Delete').locator('>> nth=0').click({ force: true });
 
     // Verify no JS errors occurred
     expect(errors).toHaveLength(0);
@@ -269,8 +265,7 @@ test.describe('Edge Cases and Error Handling', () => {
     });
 
     // Type content into first cell to make sure state is active
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first editable
-    const firstCellEditable = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
+    const firstCellEditable = page.locator(`${CELL_SELECTOR} >> nth=0`).locator('[contenteditable="true"] >> nth=0');
 
     await firstCellEditable.click();
     await page.keyboard.type('Typed');
@@ -320,13 +315,11 @@ test.describe('Edge Cases and Error Handling', () => {
     });
 
     // Click first cell to activate grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
-    const colGrip = page.locator(COL_GRIP_SELECTOR).first();
+    const colGrip = page.locator(`${COL_GRIP_SELECTOR} >> nth=0`);
 
     await expect(colGrip).toBeVisible({ timeout: 2000 });
 
@@ -334,8 +327,7 @@ test.describe('Edge Cases and Error Handling', () => {
     await colGrip.click();
     await page.getByText('Insert Column Right').click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is needed
-    const firstRow = page.locator('[data-blok-table-row]').first();
+    const firstRow = page.locator('[data-blok-table-row] >> nth=0');
 
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(4);
 
@@ -361,8 +353,7 @@ test.describe('Edge Cases and Error Handling', () => {
     await page.waitForTimeout(300);
 
     // Verify grips are still functional after consecutive insertions
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    await page.locator(CELL_SELECTOR).first().hover();
+    await page.locator(`${CELL_SELECTOR} >> nth=0`).hover();
 
     const visibleGrip = page.locator(`${COL_GRIP_SELECTOR}[data-blok-table-grip-visible]`);
 
@@ -379,8 +370,7 @@ test.describe('Edge Cases and Error Handling', () => {
     const EDITABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`;
 
     // Click the paragraph block to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to target first contenteditable
-    const paragraph = page.locator(EDITABLE_SELECTOR).first();
+    const paragraph = page.locator(`${EDITABLE_SELECTOR} >> nth=0`);
 
     await paragraph.click();
 
@@ -471,13 +461,11 @@ test.describe('Edge Cases and Error Handling', () => {
     });
 
     // Click first cell to show grips
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCell = page.locator(CELL_SELECTOR).first();
+    const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
     await firstCell.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first visible grip
-    const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+    const rowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGrip).toBeVisible({ timeout: 2000 });
 
@@ -488,31 +476,27 @@ test.describe('Edge Cases and Error Handling', () => {
     await expect(page.locator('[data-blok-table-row]')).toHaveCount(3);
 
     // Delete the inserted row — click a cell in the last row
-    // eslint-disable-next-line playwright/no-nth-methods -- last() targets the last row
-    const lastCell = page.locator(CELL_SELECTOR).last();
+    const lastCell = page.locator(`${CELL_SELECTOR} >> nth=-1`);
 
     await lastCell.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- last() targets the last row grip
-    const lastRowGrip = page.locator(ROW_GRIP_SELECTOR).last();
+    const lastRowGrip = page.locator(`${ROW_GRIP_SELECTOR} >> nth=-1`);
 
     await expect(lastRowGrip).toBeVisible({ timeout: 2000 });
     // eslint-disable-next-line playwright/no-force-option -- after insert, layout shift may cause interception
     await lastRowGrip.click({ force: true });
-     
+
     // eslint-disable-next-line playwright/no-force-option -- popover-items container intercepts pointer events
-    await page.getByText('Delete').first().click({ force: true });
+    await page.getByText('Delete').locator('>> nth=0').click({ force: true });
 
     await expect(page.locator('[data-blok-table-row]')).toHaveCount(2);
 
     // Reopen grip on the remaining row to verify popover works
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const cellAfterDelete = page.locator(CELL_SELECTOR).first().locator('[contenteditable="true"]').first();
+    const cellAfterDelete = page.locator(`${CELL_SELECTOR} >> nth=0`).locator('[contenteditable="true"] >> nth=0');
 
     await cellAfterDelete.click();
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() targets the first row grip after delete
-    const rowGripAfterDelete = page.locator(ROW_GRIP_SELECTOR).first();
+    const rowGripAfterDelete = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
 
     await expect(rowGripAfterDelete).toBeVisible({ timeout: 2000 });
     // eslint-disable-next-line playwright/no-force-option -- after delete, layout shift may cause interception; force bypasses

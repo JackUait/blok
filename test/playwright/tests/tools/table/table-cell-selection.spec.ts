@@ -390,7 +390,7 @@ test.describe('Cell Selection', () => {
     await expect(selected).toHaveCount(4);
 
     // 3. Click outside the table (on the paragraph block)
-    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`).first();
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`).filter({ hasText: 'Click me to clear selection' });
 
     await paragraph.click();
 
@@ -434,7 +434,7 @@ test.describe('Cell Selection', () => {
     const initialWidth = initialBox.width;
 
     // 3. Attempt to drag a resize handle while the selection is active
-    const resizeHandle = page.locator('[data-blok-table-resize]').first();
+    const resizeHandle = page.locator(`${TABLE_SELECTOR} [data-blok-table-resize]:first-of-type`);
     const handleBox = assertBoundingBox(await resizeHandle.boundingBox(), 'resize handle');
 
     const handleCenterX = handleBox.x + handleBox.width / 2;

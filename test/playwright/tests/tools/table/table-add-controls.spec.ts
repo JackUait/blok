@@ -226,8 +226,7 @@ test.describe('Add Row and Column Controls', () => {
 
     await expect(rows).toHaveCount(3);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(2) is the clearest way to get third row
-    const newRow = rows.nth(2);
+    const newRow = rows.locator('>> nth=2');
     const newRowCells = newRow.locator(CELL_SELECTOR);
 
     await expect(newRowCells).toHaveCount(2);
@@ -269,13 +268,11 @@ test.describe('Add Row and Column Controls', () => {
 
     await expect(rows).toHaveCount(2);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row
-    const firstRow = rows.first();
+    const firstRow = rows.locator('>> nth=0');
 
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(3);
 
-    // eslint-disable-next-line playwright/no-nth-methods -- nth(1) is the clearest way to get second row
-    const secondRow = rows.nth(1);
+    const secondRow = rows.locator('>> nth=1');
 
     await expect(secondRow.locator(CELL_SELECTOR)).toHaveCount(3);
   });
@@ -300,7 +297,7 @@ test.describe('Add Row and Column Controls', () => {
     // Measure a row height to know how far to drag
      
     const firstRowBox = assertBoundingBox(
-      await page.locator('[data-blok-table-row]').first().boundingBox(),
+      await page.locator('[data-blok-table-row] >> nth=0').boundingBox(),
       'First row'
     );
     const rowHeight = firstRowBox.height;
@@ -356,8 +353,7 @@ test.describe('Add Row and Column Controls', () => {
     await page.mouse.up();
 
     // 4. Verify two new columns are appended (each row now has 4 cells)
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row
-    const firstRow = page.locator('[data-blok-table-row]').first();
+    const firstRow = page.locator('[data-blok-table-row] >> nth=0');
 
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(4);
   });
@@ -382,7 +378,7 @@ test.describe('Add Row and Column Controls', () => {
     // Measure a column width to know how far to drag
      
     const firstCellBox = assertBoundingBox(
-      await page.locator(CELL_SELECTOR).first().boundingBox(),
+      await page.locator(`${CELL_SELECTOR} >> nth=0`).boundingBox(),
       'First cell'
     );
     const colWidth = firstCellBox.width;
@@ -397,8 +393,7 @@ test.describe('Add Row and Column Controls', () => {
     await page.mouse.up();
 
     // 4. Verify the newly added columns are removed — back to original 2 columns
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first row
-    const firstRow = page.locator('[data-blok-table-row]').first();
+    const firstRow = page.locator('[data-blok-table-row] >> nth=0');
 
     await expect(firstRow.locator(CELL_SELECTOR)).toHaveCount(2);
   });

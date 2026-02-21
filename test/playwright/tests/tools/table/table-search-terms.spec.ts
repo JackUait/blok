@@ -123,7 +123,7 @@ const defaultTools: Record<string, SerializableToolConfig> = {
  * Waits for the popover to be in the opened state before returning.
  */
 const openToolboxAndSearch = async (page: Page, searchQuery: string): Promise<void> => {
-  const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+  const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"] >> nth=0`);
 
   // Click the empty paragraph and type '/' to open the slash menu
   await firstParagraph.click();

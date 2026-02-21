@@ -139,7 +139,7 @@ const getCell = (page: Page, row: number, col: number): ReturnType<Page['locator
  * Returns a locator for the editable area inside a specific cell.
  */
 const getCellEditable = (page: Page, row: number, col: number): ReturnType<Page['locator']> =>
-  getCell(page, row, col).locator('[contenteditable="true"]').first();
+  getCell(page, row, col).locator('[data-blok-table-cell-blocks] [contenteditable="true"] >> nth=0');
 
 /**
  * Helper to create a 2x2 table with empty cells and all default tools registered.
@@ -268,7 +268,7 @@ test.describe('Block Types Inside Table Cells', () => {
     await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
 
     // 3. Click 'List' in the toolbox popover
-    await page.getByText('List').first().click();
+    await page.locator(`${TOOLBOX_POPOVER_SELECTOR} [data-blok-item-name="bulleted-list"]`).click();
 
     // A list block should appear inside the first cell
     const firstCell = getCell(page, 0, 0);
@@ -385,7 +385,7 @@ test.describe('Block Types Inside Table Cells', () => {
     });
 
     // 2. Click the first empty paragraph block and insert a table via slash menu
-    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+    const firstParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"] [contenteditable="true"]`);
 
     await firstParagraph.click();
     await page.keyboard.type('/');
@@ -404,9 +404,10 @@ test.describe('Block Types Inside Table Cells', () => {
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 
     // 3. Click into the first cell and type '/'
-    // eslint-disable-next-line playwright/no-nth-methods -- first() is the clearest way to get first cell
-    const firstCellEditable = page.locator('[data-blok-table-cell]').first()
-      .locator('[contenteditable="true"]').first();
+    const firstCellEditable = page
+      .locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=0`)
+      .locator('[data-blok-table-cell] >> nth=0')
+      .locator('[data-blok-table-cell-blocks] [contenteditable="true"] >> nth=0');
 
     await firstCellEditable.click();
     await page.keyboard.type('/');

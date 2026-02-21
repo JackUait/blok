@@ -240,6 +240,53 @@ export class Table implements BlockTool {
     return savedData.content.length > 0;
   }
 
+  /**
+   * Update table with new data in-place (used by undo/redo).
+   * Follows the onPaste() pattern: delete old blocks, re-render, reinitialize.
+   */
+  public setData(newData: Partial<TableData>): void {
+    this.data = normalizeTableData(
+      {
+        ...this.data,
+        ...newData,
+      } as TableData,
+      this.config
+    );
+
+    this.cellBlocks?.deleteAllBlocks();
+    this.cellBlocks?.destroy();
+
+    const oldElement = this.element;
+
+    if (!oldElement?.parentNode) {
+      return;
+    }
+
+    this.resize?.destroy();
+    this.resize = null;
+    this.addControls?.destroy();
+    this.addControls = null;
+    this.rowColControls?.destroy();
+    this.rowColControls = null;
+    this.cellSelection?.destroy();
+    this.cellSelection = null;
+
+    const newElement = this.render();
+
+    oldElement.parentNode.replaceChild(newElement, oldElement);
+
+    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
+
+    if (!this.readOnly && gridEl) {
+      this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
+      this.initResize(gridEl);
+      this.initAddControls(gridEl);
+      this.initRowColControls(gridEl);
+      this.initCellSelection(gridEl);
+      this.initGridPasteListener(gridEl);
+    }
+  }
+
   public onPaste(event: HTMLPasteEvent): void {
     const content = event.detail.data;
     const rows = content.querySelectorAll('tr');

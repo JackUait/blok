@@ -3937,4 +3937,128 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
   });
+
+  describe('setData', () => {
+    let container: HTMLDivElement;
+
+    beforeEach(() => {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+    });
+
+    afterEach(() => {
+      container.remove();
+    });
+
+    it('replaces table DOM with new data in-place', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // Verify initial state: 2 rows
+      const initialGrid = element.firstElementChild as HTMLElement;
+
+      expect(initialGrid.querySelectorAll('[data-blok-table-row]')).toHaveLength(2);
+
+      // Call setData with 3 rows and headings enabled
+      table.setData({
+        content: [['H1', 'H2'], ['X', 'Y'], ['P', 'Q']],
+        withHeadings: true,
+      });
+
+      // The old element was replaced — find the new element in the container
+      const newWrapper = container.firstElementChild as HTMLElement;
+
+      expect(newWrapper).not.toBe(element);
+
+      const newGrid = newWrapper.firstElementChild as HTMLElement;
+      const newRows = newGrid.querySelectorAll('[data-blok-table-row]');
+
+      expect(newRows).toHaveLength(3);
+
+      // First row should have heading attribute
+      expect(newRows[0].hasAttribute('data-blok-table-heading')).toBe(true);
+      expect(newRows[1].hasAttribute('data-blok-table-heading')).toBe(false);
+
+      // Each cell should be initialized with a paragraph block
+      const cells = newGrid.querySelectorAll('[data-blok-table-cell]');
+
+      cells.forEach(cell => {
+        const blocksContainer = cell.querySelector('[data-blok-table-cell-blocks]');
+
+        expect(blocksContainer).not.toBeNull();
+        // initializeCells inserts a paragraph block per cell
+        expect(blocksContainer?.querySelectorAll('[data-blok-id]').length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('does nothing when element has no parent node', () => {
+      const options = createTableOptions({
+        content: [['A']],
+      });
+      const table = new Table(options);
+
+      // Render but do NOT mount in the DOM
+      table.render();
+      table.rendered();
+
+      // Should not throw even though element is not in the DOM
+      expect(() => {
+        table.setData({ content: [['X', 'Y']] });
+      }).not.toThrow();
+    });
+
+    it('can toggle headings off via setData', () => {
+      const options = createTableOptions({
+        withHeadings: true,
+        content: [['H1', 'H2'], ['D1', 'D2']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // Verify heading is initially on
+      const initialRows = element.querySelectorAll('[data-blok-table-row]');
+
+      expect(initialRows[0].hasAttribute('data-blok-table-heading')).toBe(true);
+
+      // Toggle heading off
+      table.setData({ withHeadings: false });
+
+      const newWrapper = container.firstElementChild as HTMLElement;
+      const newRows = newWrapper.querySelectorAll('[data-blok-table-row]');
+
+      expect(newRows[0].hasAttribute('data-blok-table-heading')).toBe(false);
+    });
+
+    it('preserves saved data after setData', () => {
+      const options = createTableOptions({
+        content: [['A']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setData({
+        content: [['X', 'Y'], ['P', 'Q']],
+        withHeadings: true,
+      });
+
+      const newWrapper = container.firstElementChild as HTMLElement;
+      const saved = table.save(newWrapper);
+
+      expect(saved.withHeadings).toBe(true);
+      expect(saved.content).toHaveLength(2);
+      expect(saved.content[0]).toHaveLength(2);
+    });
+  });
 });

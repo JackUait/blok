@@ -8,6 +8,12 @@ import {BlockTuneData} from '../block-tunes/block-tune-data';
  */
 export interface Blocks {
   /**
+   * Returns true when a Yjs sync operation (undo/redo) is in progress.
+   * Tools can use this to skip cleanup that would interfere with Yjs state management.
+   */
+  readonly isSyncingFromYjs: boolean;
+
+  /**
    * Remove all blocks from Blok zone
    */
   clear(): Promise<void>;

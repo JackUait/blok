@@ -20,7 +20,12 @@ export class BlocksAPI extends Module {
    * @returns {Blocks}
    */
   public get methods(): Blocks {
+    const blocksAPI = this;
+
     return {
+      get isSyncingFromYjs(): boolean {
+        return blocksAPI.Blok.BlockManager.isSyncingFromYjs;
+      },
       clear: (): Promise<void> => this.clear(),
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),

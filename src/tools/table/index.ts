@@ -340,7 +340,13 @@ export class Table implements BlockTool {
   }
 
   public destroy(): void {
-    this.cellBlocks?.deleteAllBlocks();
+    // Only delete cell blocks during normal removal, not Yjs undo.
+    // When the table is removed via Yjs undo, its child cell blocks are managed
+    // by Yjs and will be restored during redo. Deleting them here would make
+    // redo create empty paragraphs instead of restoring the original content.
+    if (!this.api.blocks.isSyncingFromYjs) {
+      this.cellBlocks?.deleteAllBlocks();
+    }
 
     this.resize?.destroy();
     this.resize = null;

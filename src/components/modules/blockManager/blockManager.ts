@@ -144,6 +144,14 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Returns true when a Yjs sync operation (undo/redo) is in progress.
+   * Used by the Blocks API to expose sync state to tools.
+   */
+  public get isSyncingFromYjs(): boolean {
+    return this.yjsSync.isSyncingFromYjs;
+  }
+
+  /**
    * Index of current working block
    * @type {number}
    */

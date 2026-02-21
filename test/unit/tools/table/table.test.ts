@@ -4061,4 +4061,104 @@ describe('Table Tool', () => {
       expect(saved.content[0]).toHaveLength(2);
     });
   });
+
+  describe('destroy', () => {
+    it('calls deleteAllBlocks during normal destroy', () => {
+      const mockDelete = vi.fn();
+      let insertCounter = 0;
+      const blockIndexMap = new Map<string, number>();
+
+      const mockApi = createMockAPI({
+        blocks: {
+          delete: mockDelete,
+          isSyncingFromYjs: false,
+          insert: vi.fn().mockImplementation(() => {
+            insertCounter++;
+            const blockId = `cell-block-${insertCounter}`;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', blockId);
+            blockIndexMap.set(blockId, insertCounter - 1);
+
+            return { id: blockId, holder };
+          }),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockImplementation((id: string) => blockIndexMap.get(id)),
+        },
+      } as never);
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      expect(insertCounter).toBe(4);
+
+      table.destroy();
+
+      // All 4 cell blocks should be deleted during normal destroy
+      expect(mockDelete).toHaveBeenCalledTimes(4);
+
+      document.body.removeChild(element);
+    });
+
+    it('skips deleteAllBlocks when Yjs sync is in progress', () => {
+      const mockDelete = vi.fn();
+      let insertCounter = 0;
+      const blockIndexMap = new Map<string, number>();
+
+      const mockApi = createMockAPI({
+        blocks: {
+          delete: mockDelete,
+          isSyncingFromYjs: true,
+          insert: vi.fn().mockImplementation(() => {
+            insertCounter++;
+            const blockId = `cell-block-${insertCounter}`;
+            const holder = document.createElement('div');
+
+            holder.setAttribute('data-blok-id', blockId);
+            blockIndexMap.set(blockId, insertCounter - 1);
+
+            return { id: blockId, holder };
+          }),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          getBlocksCount: vi.fn().mockReturnValue(0),
+          getBlockIndex: vi.fn().mockImplementation((id: string) => blockIndexMap.get(id)),
+        },
+      } as never);
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: 'table-1' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      expect(insertCounter).toBe(4);
+
+      table.destroy();
+
+      // Cell blocks should NOT be deleted during Yjs-driven removal
+      expect(mockDelete).not.toHaveBeenCalled();
+
+      document.body.removeChild(element);
+    });
+  });
 });

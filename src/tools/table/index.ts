@@ -87,7 +87,7 @@ export class Table implements BlockTool {
     this.api = api;
     this.readOnly = readOnly;
     this.config = config ?? {};
-    const normalized = normalizeTableData(data, config ?? {});
+    const normalized = normalizeTableData(data, this.config);
 
     this.initialContent = normalized.content;
     this.grid = new TableGrid({ readOnly });
@@ -179,7 +179,7 @@ export class Table implements BlockTool {
   }
 
   public rendered(): void {
-    if (!this.element) {
+    if (!this.element || this.initialContent === null) {
       return;
     }
 
@@ -189,20 +189,23 @@ export class Table implements BlockTool {
       return;
     }
 
+    const content = this.initialContent;
+
+    this.initialContent = null;
+
     if (this.readOnly) {
-      mountCellBlocksReadOnly(gridEl, this.initialContent ?? [], this.api, this.blockId ?? '');
+      mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
       this.initReadOnlyCellSelection(gridEl);
 
       return;
     }
 
-    const initializedContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+    const initializedContent = this.cellBlocks?.initializeCells(content) ?? content;
 
     this.model.replaceAll({
       ...this.model.snapshot(),
       content: initializedContent,
     });
-    this.initialContent = null;
 
     if (this.isNewTable) {
       populateNewCells(gridEl, this.cellBlocks);

@@ -42,6 +42,28 @@ export class TableModel {
     return this.contentGrid.length > 0 ? this.contentGrid[0].length : 0;
   }
 
+  // ─── Metadata getters ────────────────────────────────────────────
+
+  get withHeadings(): boolean {
+    return this.withHeadingsValue;
+  }
+
+  get withHeadingColumn(): boolean {
+    return this.withHeadingColumnValue;
+  }
+
+  get stretched(): boolean {
+    return this.stretchedValue;
+  }
+
+  get colWidths(): number[] | undefined {
+    return this.colWidthsValue ? [...this.colWidthsValue] : undefined;
+  }
+
+  get initialColWidth(): number | undefined {
+    return this.initialColWidthValue;
+  }
+
   // ─── Snapshot ───────────────────────────────────────────────────
 
   /**

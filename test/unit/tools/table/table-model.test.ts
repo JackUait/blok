@@ -1107,6 +1107,74 @@ describe('TableModel', () => {
     });
   });
 
+  // ─── Task 1 (refactor): Metadata getters ─────────────────────────
+
+  describe('metadata getters', () => {
+    it('exposes withHeadings', () => {
+      const model = new TableModel(makeData({ withHeadings: true }));
+
+      expect(model.withHeadings).toBe(true);
+    });
+
+    it('exposes withHeadingColumn', () => {
+      const model = new TableModel(makeData({ withHeadingColumn: true }));
+
+      expect(model.withHeadingColumn).toBe(true);
+    });
+
+    it('exposes stretched', () => {
+      const model = new TableModel(makeData({ stretched: true }));
+
+      expect(model.stretched).toBe(true);
+    });
+
+    it('exposes colWidths as a copy', () => {
+      const model = new TableModel(makeData({ colWidths: [100, 200] }));
+
+      const widths = model.colWidths;
+
+      expect(widths).toEqual([100, 200]);
+
+      // Mutating the returned array must not affect the model
+      widths?.push(999);
+      expect(model.colWidths).toEqual([100, 200]);
+    });
+
+    it('returns undefined for colWidths when not set', () => {
+      const model = new TableModel(makeData());
+
+      expect(model.colWidths).toBeUndefined();
+    });
+
+    it('exposes initialColWidth', () => {
+      const model = new TableModel(makeData({ initialColWidth: 150 }));
+
+      expect(model.initialColWidth).toBe(150);
+    });
+
+    it('returns undefined for initialColWidth when not set', () => {
+      const model = new TableModel();
+
+      expect(model.initialColWidth).toBeUndefined();
+    });
+
+    it('reflects setter updates', () => {
+      const model = new TableModel();
+
+      model.setWithHeadings(true);
+      model.setWithHeadingColumn(true);
+      model.setStretched(true);
+      model.setColWidths([300, 400]);
+      model.setInitialColWidth(350);
+
+      expect(model.withHeadings).toBe(true);
+      expect(model.withHeadingColumn).toBe(true);
+      expect(model.stretched).toBe(true);
+      expect(model.colWidths).toEqual([300, 400]);
+      expect(model.initialColWidth).toBe(350);
+    });
+  });
+
   // ─── Model invariants ────────────────────────────────────────────
 
   describe('model invariants', () => {

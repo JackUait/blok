@@ -453,10 +453,12 @@ export class Table implements BlockTool {
       return;
     }
 
-    const { blocksToDelete } = this.model.deleteRow(rowIndex);
+    this.runStructuralOp(() => {
+      const { blocksToDelete } = this.model.deleteRow(rowIndex);
 
-    this.cellBlocks?.deleteBlocks(blocksToDelete);
-    this.grid.deleteRow(gridEl, rowIndex);
+      this.cellBlocks?.deleteBlocks(blocksToDelete);
+      this.grid.deleteRow(gridEl, rowIndex);
+    });
   }
 
   public deleteColumnWithCleanup(colIndex: number): void {
@@ -466,13 +468,15 @@ export class Table implements BlockTool {
       return;
     }
 
-    // model.deleteColumn() already removes the width at colIndex from
-    // colWidthsValue internally, so no additional syncColWidthsAfterDeleteColumn
-    // call is needed — that would double-delete.
-    const { blocksToDelete } = this.model.deleteColumn(colIndex);
+    this.runStructuralOp(() => {
+      // model.deleteColumn() already removes the width at colIndex from
+      // colWidthsValue internally, so no additional syncColWidthsAfterDeleteColumn
+      // call is needed — that would double-delete.
+      const { blocksToDelete } = this.model.deleteColumn(colIndex);
 
-    this.cellBlocks?.deleteBlocks(blocksToDelete);
-    this.grid.deleteColumn(gridEl, colIndex);
+      this.cellBlocks?.deleteBlocks(blocksToDelete);
+      this.grid.deleteColumn(gridEl, colIndex);
+    });
   }
 
   public getBlockIdsInRow(rowIndex: number): string[] {
@@ -504,29 +508,33 @@ export class Table implements BlockTool {
           : computeHalfAvgWidth(colWidths);
       },
       onAddRow: () => {
-        this.grid.addRow(gridEl);
-        this.model.addRow();
-        populateNewCells(gridEl, this.cellBlocks);
-        updateHeadingStyles(this.element, this.model.withHeadings);
-        updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
-        this.initResize(gridEl);
-        this.addControls?.syncRowButtonWidth();
-        this.rowColControls?.refresh();
+        this.runStructuralOp(() => {
+          this.grid.addRow(gridEl);
+          this.model.addRow();
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingStyles(this.element, this.model.withHeadings);
+          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+          this.initResize(gridEl);
+          this.addControls?.syncRowButtonWidth();
+          this.rowColControls?.refresh();
+        });
       },
       onAddColumn: () => {
-        const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-        const halfWidth = this.model.initialColWidth !== undefined
-          ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-          : computeHalfAvgWidth(colWidths);
+        this.runStructuralOp(() => {
+          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
+          const halfWidth = this.model.initialColWidth !== undefined
+            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
+            : computeHalfAvgWidth(colWidths);
 
-        this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-        this.model.addColumn(undefined, halfWidth);
-        this.model.setColWidths([...colWidths, halfWidth]);
-        populateNewCells(gridEl, this.cellBlocks);
-        updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
-        this.initResize(gridEl);
-        this.addControls?.syncRowButtonWidth();
-        this.rowColControls?.refresh();
+          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          this.model.addColumn(undefined, halfWidth);
+          this.model.setColWidths([...colWidths, halfWidth]);
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+          this.initResize(gridEl);
+          this.addControls?.syncRowButtonWidth();
+          this.rowColControls?.refresh();
+        });
       },
       onDragStart: () => {
         if (this.resize) {
@@ -536,67 +544,75 @@ export class Table implements BlockTool {
         this.rowColControls?.setGripsDisplay(false);
       },
       onDragAddRow: () => {
-        this.grid.addRow(gridEl);
-        this.model.addRow();
-        populateNewCells(gridEl, this.cellBlocks);
-        updateHeadingStyles(this.element, this.model.withHeadings);
-        updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+        this.runStructuralOp(() => {
+          this.grid.addRow(gridEl);
+          this.model.addRow();
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingStyles(this.element, this.model.withHeadings);
+          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+        });
       },
       onDragRemoveRow: () => {
-        const rowCount = this.grid.getRowCount(gridEl);
+        this.runStructuralOp(() => {
+          const rowCount = this.grid.getRowCount(gridEl);
 
-        if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
-          const { blocksToDelete } = this.model.deleteRow(rowCount - 1);
+          if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
+            const { blocksToDelete } = this.model.deleteRow(rowCount - 1);
 
-          this.cellBlocks?.deleteBlocks(blocksToDelete);
-          this.grid.deleteRow(gridEl, rowCount - 1);
-        }
+            this.cellBlocks?.deleteBlocks(blocksToDelete);
+            this.grid.deleteRow(gridEl, rowCount - 1);
+          }
+        });
       },
       onDragAddCol: () => {
-        const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
-        const halfWidth = this.model.initialColWidth !== undefined
-          ? Math.round((this.model.initialColWidth / 2) * 100) / 100
-          : computeHalfAvgWidth(colWidths);
+        this.runStructuralOp(() => {
+          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
+          const halfWidth = this.model.initialColWidth !== undefined
+            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
+            : computeHalfAvgWidth(colWidths);
 
-        const newWidths = [...colWidths, halfWidth];
+          const newWidths = [...colWidths, halfWidth];
 
-        this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-        this.model.addColumn(undefined, halfWidth);
-        this.model.setColWidths(newWidths);
-        applyPixelWidths(gridEl, newWidths);
-        populateNewCells(gridEl, this.cellBlocks);
-        updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
-        this.initResize(gridEl);
+          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          this.model.addColumn(undefined, halfWidth);
+          this.model.setColWidths(newWidths);
+          applyPixelWidths(gridEl, newWidths);
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+          this.initResize(gridEl);
 
-        dragState.addedCols++;
+          dragState.addedCols++;
 
-        if (this.element) {
-          this.element.scrollLeft = this.element.scrollWidth;
-        }
+          if (this.element) {
+            this.element.scrollLeft = this.element.scrollWidth;
+          }
+        });
       },
       onDragRemoveCol: () => {
-        const colCount = this.grid.getColumnCount(gridEl);
+        this.runStructuralOp(() => {
+          const colCount = this.grid.getColumnCount(gridEl);
 
-        if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
-          return;
-        }
+          if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
+            return;
+          }
 
-        // model.deleteColumn() already removes the width internally,
-        // so no additional syncColWidthsAfterDeleteColumn is needed.
-        const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
+          // model.deleteColumn() already removes the width internally,
+          // so no additional syncColWidthsAfterDeleteColumn is needed.
+          const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
 
-        this.cellBlocks?.deleteBlocks(blocksToDelete);
-        this.grid.deleteColumn(gridEl, colCount - 1);
+          this.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.grid.deleteColumn(gridEl, colCount - 1);
 
-        const updatedWidths = this.model.colWidths;
+          const updatedWidths = this.model.colWidths;
 
-        if (updatedWidths) {
-          applyPixelWidths(gridEl, updatedWidths);
-        }
+          if (updatedWidths) {
+            applyPixelWidths(gridEl, updatedWidths);
+          }
 
-        this.initResize(gridEl);
+          this.initResize(gridEl);
 
-        dragState.addedCols--;
+          dragState.addedCols--;
+        });
       },
       onDragEnd: () => {
         this.initResize(gridEl);
@@ -671,58 +687,60 @@ export class Table implements BlockTool {
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
-    // Capture colWidths BEFORE the model mutation so the action handler
-    // receives pre-mutation widths. Model methods (addColumn, deleteColumn,
-    // moveColumn) update colWidths internally, and the handler functions
-    // (syncColWidthsAfterMove, syncColWidthsAfterDeleteColumn, computeInsertColumnWidths)
-    // also transform widths — passing post-mutation widths would double-apply
-    // the transformation.
-    const colWidthsBeforeMutation = this.model.colWidths;
+    this.runStructuralOp(() => {
+      // Capture colWidths BEFORE the model mutation so the action handler
+      // receives pre-mutation widths. Model methods (addColumn, deleteColumn,
+      // moveColumn) update colWidths internally, and the handler functions
+      // (syncColWidthsAfterMove, syncColWidthsAfterDeleteColumn, computeInsertColumnWidths)
+      // also transform widths — passing post-mutation widths would double-apply
+      // the transformation.
+      const colWidthsBeforeMutation = this.model.colWidths;
 
-    // Sync model structural operation before DOM changes
-    const { blocksToDelete } = this.syncModelForAction(action);
+      // Sync model structural operation before DOM changes
+      const { blocksToDelete } = this.syncModelForAction(action);
 
-    const result = executeRowColAction(
-      gridEl,
-      action,
-      {
-        grid: this.grid,
-        data: {
-          colWidths: colWidthsBeforeMutation,
-          withHeadings: this.model.withHeadings,
-          withHeadingColumn: this.model.withHeadingColumn,
-          initialColWidth: this.model.initialColWidth,
+      const result = executeRowColAction(
+        gridEl,
+        action,
+        {
+          grid: this.grid,
+          data: {
+            colWidths: colWidthsBeforeMutation,
+            withHeadings: this.model.withHeadings,
+            withHeadingColumn: this.model.withHeadingColumn,
+            initialColWidth: this.model.initialColWidth,
+          },
+          cellBlocks: this.cellBlocks,
+          blocksToDelete,
         },
-        cellBlocks: this.cellBlocks,
-        blocksToDelete,
-      },
-    );
+      );
 
-    this.model.setColWidths(result.colWidths);
-    this.model.setWithHeadings(result.withHeadings);
-    this.model.setWithHeadingColumn(result.withHeadingColumn);
-    this.pendingHighlight = result.pendingHighlight;
+      this.model.setColWidths(result.colWidths);
+      this.model.setWithHeadings(result.withHeadings);
+      this.model.setWithHeadingColumn(result.withHeadingColumn);
+      this.pendingHighlight = result.pendingHighlight;
 
-    updateHeadingStyles(this.element, this.model.withHeadings);
-    updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
-    this.initResize(gridEl);
-    this.addControls?.syncRowButtonWidth();
-    this.rowColControls?.refresh();
+      updateHeadingStyles(this.element, this.model.withHeadings);
+      updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+      this.initResize(gridEl);
+      this.addControls?.syncRowButtonWidth();
+      this.rowColControls?.refresh();
 
-    if (!result.moveSelection) {
-      return;
-    }
+      if (!result.moveSelection) {
+        return;
+      }
 
-    // After move operations, select the moved row/column to show where it landed
-    const { type: moveType, index: moveIndex } = result.moveSelection;
+      // After move operations, select the moved row/column to show where it landed
+      const { type: moveType, index: moveIndex } = result.moveSelection;
 
-    if (moveType === 'row') {
-      this.cellSelection?.selectRow(moveIndex);
-    } else {
-      this.cellSelection?.selectColumn(moveIndex);
-    }
+      if (moveType === 'row') {
+        this.cellSelection?.selectRow(moveIndex);
+      } else {
+        this.cellSelection?.selectColumn(moveIndex);
+      }
 
-    this.rowColControls?.setActiveGrip(moveType, moveIndex);
+      this.rowColControls?.setActiveGrip(moveType, moveIndex);
+    });
   }
 
   private syncModelForAction(action: RowColAction): { blocksToDelete?: string[] } {
@@ -986,40 +1004,43 @@ export class Table implements BlockTool {
     startRow: number,
     startCol: number,
   ): void {
-    this.expandGridForPaste(gridEl, startRow + payload.rows, startCol + payload.cols);
+    this.runStructuralOp(() => {
+      this.expandGridForPaste(gridEl, startRow + payload.rows, startCol + payload.cols);
 
-    // Paste block data into target cells
-    const updatedRows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+      // Paste block data into target cells
+      const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
 
-    Array.from({ length: payload.rows }, (_, r) => r).forEach((r) => {
-      const row = updatedRows[startRow + r];
+      Array.from({ length: payload.rows }, (_, r) => r).forEach((r) => {
+        const row = rows[startRow + r];
 
-      if (!row) {
-        return;
-      }
-
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      Array.from({ length: payload.cols }, (_, c) => c).forEach((c) => {
-        const cell = cells[startCol + c] as HTMLElement | undefined;
-
-        if (cell) {
-          this.pasteCellPayload(cell, payload.cells[r][c]);
-
-          // Sync pasted block IDs to model
-          const blockIds = this.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
-
-          this.model.setCellBlocks(startRow + r, startCol + c, blockIds);
+        if (!row) {
+          return;
         }
+
+        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+        Array.from({ length: payload.cols }, (_, c) => c).forEach((c) => {
+          const cell = cells[startCol + c] as HTMLElement | undefined;
+
+          if (cell) {
+            this.pasteCellPayload(cell, payload.cells[r][c]);
+
+            // Sync pasted block IDs to model
+            const blockIds = this.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
+
+            this.model.setCellBlocks(startRow + r, startCol + c, blockIds);
+          }
+        });
       });
+
+      // Update table state after paste
+      this.initResize(gridEl);
+      this.addControls?.syncRowButtonWidth();
+      this.rowColControls?.refresh();
     });
 
-    // Update table state after paste
-    this.initResize(gridEl);
-    this.addControls?.syncRowButtonWidth();
-    this.rowColControls?.refresh();
-
-    // Place caret at the end of the last pasted cell
+    // Caret placement outside the lock (no structural mutation)
+    const updatedRows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
     const lastRow = updatedRows[startRow + payload.rows - 1];
     const lastCell = lastRow?.querySelectorAll(`[${CELL_ATTR}]`)[startCol + payload.cols - 1] as HTMLElement | undefined;
 

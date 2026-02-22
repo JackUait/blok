@@ -367,4 +367,38 @@ describe('Table structural operation lock', () => {
 
     expect(cells).toHaveLength(1);
   });
+
+  it('wraps deleteRowWithCleanup in structural op lock', () => {
+    const api = createMockAPI();
+    const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+      data: { withHeadings: false, withHeadingColumn: false, content: [['A'], ['B']] },
+      config: {},
+      api,
+      readOnly: false,
+      block: { id: 'table-1' } as never,
+    };
+
+    const table = new Table(options);
+    const element = table.render();
+
+    container.appendChild(element);
+    table.rendered();
+
+    // Should have 2 rows
+    const rowsBefore = element.querySelectorAll('[data-blok-table-row]');
+
+    expect(rowsBefore).toHaveLength(2);
+
+    // Delete the second row
+    table.deleteRowWithCleanup(1);
+
+    // Should have 1 row remaining, model consistent
+    const rowsAfter = element.querySelectorAll('[data-blok-table-row]');
+
+    expect(rowsAfter).toHaveLength(1);
+
+    const saved = table.save(element);
+
+    expect(saved.content).toHaveLength(1);
+  });
 });

@@ -1,6 +1,7 @@
 import type { API } from '../../../types';
 
 import { CELL_ATTR, ROW_ATTR } from './table-core';
+import type { TableModel } from './table-model';
 import type { LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
 
@@ -35,6 +36,7 @@ interface TableCellBlocksOptions {
   api: API;
   gridElement: HTMLElement;
   tableBlockId: string;
+  model: TableModel;
   onNavigateToCell?: CellNavigationCallback;
 }
 
@@ -46,6 +48,7 @@ export class TableCellBlocks {
   private api: API;
   private gridElement: HTMLElement;
   private tableBlockId: string;
+  private model: TableModel;
   private _activeCellWithBlocks: CellPosition | null = null;
   private onNavigateToCell?: CellNavigationCallback;
 
@@ -70,6 +73,7 @@ export class TableCellBlocks {
     this.api = options.api;
     this.gridElement = options.gridElement;
     this.tableBlockId = options.tableBlockId;
+    this.model = options.model;
     this.onNavigateToCell = options.onNavigateToCell;
 
     this.api.events.on('block changed', this.handleBlockMutation);
@@ -438,14 +442,22 @@ export class TableCellBlocks {
       // remains in the cell.
       this.recordRemovedBlockCell(detail);
 
-      // Schedule deferred empty-cell checks instead of running immediately.
-      // This avoids creating spurious paragraphs during BlockManager.replace(),
-      // where block-removed is immediately followed by block-added.
-      const cells = this.gridElement.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`);
+      // Remove the block from the model
+      const blockId = detail.target.id;
+      const cellPos = this.model.findCellForBlock(blockId);
 
-      cells.forEach(cell => {
-        this.cellsPendingCheck.add(cell);
-      });
+      if (cellPos) {
+        this.model.removeBlockFromCell(cellPos.row, cellPos.col, blockId);
+
+        // Schedule deferred empty-cell check for ONLY the affected cell.
+        // This avoids creating spurious paragraphs in unrelated cells during
+        // structural operations like deleteColumn (fixes C3).
+        const affectedCell = this.getCell(cellPos.row, cellPos.col);
+
+        if (affectedCell) {
+          this.cellsPendingCheck.add(affectedCell);
+        }
+      }
 
       this.schedulePendingCellCheck();
 
@@ -473,6 +485,7 @@ export class TableCellBlocks {
     // in the DOM, which may be inside a different cell.
     if (removedCell) {
       this.claimBlockForCell(removedCell, detail.target.id);
+      this.syncBlockToModel(removedCell, detail.target.id);
       this.cellsPendingCheck.delete(removedCell);
 
       return;
@@ -501,9 +514,48 @@ export class TableCellBlocks {
 
     if (cell) {
       this.claimBlockForCell(cell, detail.target.id);
+      this.syncBlockToModel(cell, detail.target.id);
       this.cellsPendingCheck.delete(cell);
     }
   };
+
+  /**
+   * Find the DOM cell's row/col position and add the block to the model.
+   */
+  private syncBlockToModel(cell: HTMLElement, blockId: string): void {
+    const pos = this.getCellPosition(cell);
+
+    if (pos) {
+      this.model.addBlockToCell(pos.row, pos.col, blockId);
+    }
+  }
+
+  /**
+   * Get the row/col position of a cell element within the grid.
+   */
+  private getCellPosition(cell: HTMLElement): { row: number; col: number } | null {
+    const row = cell.closest<HTMLElement>(`[${ROW_ATTR}]`);
+
+    if (!row) {
+      return null;
+    }
+
+    const rows = Array.from(this.gridElement.querySelectorAll(`[${ROW_ATTR}]`));
+    const rowIndex = rows.indexOf(row);
+
+    if (rowIndex < 0) {
+      return null;
+    }
+
+    const cells = Array.from(row.querySelectorAll(`[${CELL_ATTR}]`));
+    const colIndex = cells.indexOf(cell);
+
+    if (colIndex < 0) {
+      return null;
+    }
+
+    return { row: rowIndex, col: colIndex };
+  }
 
   /**
    * If the removed block's holder is currently inside a cell of this table,

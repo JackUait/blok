@@ -676,6 +676,7 @@ export class Table implements BlockTool {
       api: this.api,
       gridElement: gridEl,
       tableBlockId: this.blockId ?? '',
+      model: this.model,
     });
   }
 

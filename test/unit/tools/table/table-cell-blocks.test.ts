@@ -1,5 +1,29 @@
 import type { API } from '../../../../types';
+import type { TableModel } from '../../../../src/tools/table/table-model';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const createMockModel = (): TableModel => ({
+  findCellForBlock: vi.fn(() => null),
+  removeBlockFromCell: vi.fn(),
+  addBlockToCell: vi.fn(),
+  addRow: vi.fn(),
+  deleteRow: vi.fn(),
+  addColumn: vi.fn(),
+  deleteColumn: vi.fn(),
+  moveRow: vi.fn(),
+  moveColumn: vi.fn(),
+  replaceAll: vi.fn(),
+  snapshot: vi.fn(),
+  setCellBlocks: vi.fn(),
+  getCellBlocks: vi.fn(() => []),
+  setWithHeadings: vi.fn(),
+  setWithHeadingColumn: vi.fn(),
+  setStretched: vi.fn(),
+  setColWidths: vi.fn(),
+  setInitialColWidth: vi.fn(),
+  rows: 0,
+  cols: 0,
+} as unknown as TableModel);
 
 describe('TableCellBlocks', () => {
   beforeEach(() => {
@@ -126,6 +150,7 @@ describe('TableCellBlocks', () => {
         api: mockApi as never,
         gridElement: gridEl,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       expect(cellBlocks).toBeInstanceOf(TableCellBlocks);
@@ -138,6 +163,7 @@ describe('TableCellBlocks', () => {
         api: mockApi as never,
         gridElement: gridEl,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       expect(cellBlocks.activeCellWithBlocks).toBeNull();
@@ -493,7 +519,7 @@ describe('TableCellBlocks', () => {
       const focusSpy = vi.spyOn(editable1, 'focus');
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
       const preventSpy = vi.spyOn(event, 'preventDefault');
@@ -551,7 +577,7 @@ describe('TableCellBlocks', () => {
       const focusSpy = vi.spyOn(editable0b, 'focus');
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
       const preventSpy = vi.spyOn(event, 'preventDefault');
@@ -606,7 +632,7 @@ describe('TableCellBlocks', () => {
       const focusSpy = vi.spyOn(ed10, 'focus');
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
 
@@ -669,7 +695,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // Directly test the claim method
       cellBlocks.claimBlockForCell(cell, 'new-1');
@@ -725,7 +751,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // Find cell for a block at index 1, whose previous sibling (index 0) is in a cell
       const foundCell = cellBlocks.findCellForNewBlock(1);
@@ -746,7 +772,7 @@ describe('TableCellBlocks', () => {
 
       const gridElement = document.createElement('div');
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       expect(api.events.on).toHaveBeenCalledWith('block changed', expect.any(Function));
     });
@@ -764,7 +790,7 @@ describe('TableCellBlocks', () => {
 
       const gridElement = document.createElement('div');
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       cellBlocks.destroy();
 
@@ -824,7 +850,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // Capture the event handler that was registered
       const onCall = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(
@@ -900,7 +926,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const onCall = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(
         (call: unknown[]) => call[0] === 'block changed'
@@ -977,7 +1003,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const onCall = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(
         (call: unknown[]) => call[0] === 'block changed'
@@ -1043,7 +1069,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // Block at index 0 — no previous block, but next block (index 1) is in a cell
       const foundCell = cellBlocks.findCellForNewBlock(0);
@@ -1082,7 +1108,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const foundCell = cellBlocks.findCellForNewBlock(1);
 
@@ -1117,7 +1143,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       cellBlocks.ensureCellHasBlock(cell);
 
@@ -1155,7 +1181,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       cellBlocks.ensureCellHasBlock(cell);
 
@@ -1207,8 +1233,13 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
+      // Configure mock model to know about the block in cell (0,0)
+      const model = createMockModel();
+
+      vi.mocked(model.findCellForBlock).mockReturnValue({ row: 0, col: 0 });
+
       // Constructor subscribes to block events (side effect only)
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model });
 
       // Simulate block removal — remove from DOM, then fire event
       removedBlock.remove();
@@ -1309,7 +1340,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // Step 1: block-removed fires (paragraph is being replaced)
       // Remove the old block from DOM as the editor would
@@ -1427,7 +1458,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // Step 1: block-removed fires BEFORE holder.remove()
       // At this point paraBlock.holder is still inside container00 in cell00
@@ -1507,6 +1538,7 @@ describe('TableCellBlocks', () => {
         api,
         gridElement,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       const result = cellBlocks.initializeCells([['']]);
@@ -1556,6 +1588,7 @@ describe('TableCellBlocks', () => {
         api,
         gridElement,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       const result = cellBlocks.initializeCells([['Hello world']]);
@@ -1606,6 +1639,7 @@ describe('TableCellBlocks', () => {
         api,
         gridElement,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       const result = cellBlocks.initializeCells([['line one<br>line two<br>line three']]);
@@ -1649,6 +1683,7 @@ describe('TableCellBlocks', () => {
         api,
         gridElement,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       const result = cellBlocks.initializeCells([['no line breaks']]);
@@ -1696,6 +1731,7 @@ describe('TableCellBlocks', () => {
         api,
         gridElement,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       const result = cellBlocks.initializeCells([[{ blocks: ['existing-1'] }]]);
@@ -1752,6 +1788,7 @@ describe('TableCellBlocks', () => {
         api,
         gridElement,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       cellBlocks.initializeCells([[{ blocks: ['image-1', 'cell-1'] }]]);
@@ -1798,6 +1835,7 @@ describe('TableCellBlocks', () => {
         api,
         gridElement,
         tableBlockId: 'table-1',
+        model: createMockModel(),
       });
 
       cellBlocks.initializeCells([['']]);
@@ -1846,7 +1884,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // claimBlockForCell calls stripPlaceholders internally
       cellBlocks.claimBlockForCell(cell, 'header-1');
@@ -1916,7 +1954,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // initializeCells calls stripPlaceholders after mounting blocks
       cellBlocks.initializeCells([[{ blocks: ['para-1', 'header-1'] }]]);
@@ -1967,7 +2005,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       // Should not throw — stripPlaceholders should be safe even for code blocks
       expect(() => cellBlocks.ensureCellHasBlock(cell)).not.toThrow();
@@ -2014,7 +2052,7 @@ describe('TableCellBlocks', () => {
       gridElement.appendChild(row);
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const ids = cellBlocks.getBlockIdsFromCells([cell0, cell1]);
 
@@ -2031,7 +2069,7 @@ describe('TableCellBlocks', () => {
       cell.setAttribute('data-blok-table-cell', '');
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const ids = cellBlocks.getBlockIdsFromCells([cell]);
 
@@ -2049,7 +2087,7 @@ describe('TableCellBlocks', () => {
       cell.appendChild(container);
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const ids = cellBlocks.getBlockIdsFromCells([cell]);
 
@@ -2077,7 +2115,7 @@ describe('TableCellBlocks', () => {
       } as unknown as API;
 
       const gridElement = document.createElement('div');
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       cellBlocks.deleteBlocks(['b1', 'b2', 'b3']);
 
@@ -2105,7 +2143,7 @@ describe('TableCellBlocks', () => {
       } as unknown as API;
 
       const gridElement = document.createElement('div');
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       cellBlocks.deleteBlocks(['b1', 'nonexistent', 'also-missing']);
 
@@ -2147,7 +2185,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const result = cellBlocks.initializeCells([[{ blocks: ['nonexistent-block-id'] }]]);
 
@@ -2201,7 +2239,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const result = cellBlocks.initializeCells([[{ blocks: ['existing-1', 'missing-1'] }]]);
 
@@ -2273,7 +2311,7 @@ describe('TableCellBlocks', () => {
         gridElement.appendChild(row);
       }
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const content = [
         [{ blocks: ['h1'] }, { blocks: ['h2'] }, { blocks: ['h3'] }],
@@ -2340,7 +2378,7 @@ describe('TableCellBlocks', () => {
       row.appendChild(cell);
       gridElement.appendChild(row);
 
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const result = cellBlocks.initializeCells([[{ blocks: ['block-a', 'block-b'] }]]);
 
@@ -2380,7 +2418,7 @@ describe('TableCellBlocks', () => {
       gridElement.appendChild(row);
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
-      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1' });
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
 
       const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
       const preventSpy = vi.spyOn(event, 'preventDefault');

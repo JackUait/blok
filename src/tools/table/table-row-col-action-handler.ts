@@ -9,16 +9,26 @@ import {
   syncColWidthsAfterMove,
 } from './table-operations';
 import type { RowColAction } from './table-row-col-controls';
-import type { TableData } from './types';
 
 /**
  * Describes which row or column to highlight after an action completes.
  */
 export type PendingHighlight = { type: 'row' | 'col'; index: number };
 
+/**
+ * Minimal metadata the action handler needs.
+ * Decoupled from TableData so callers can pass model-derived primitives.
+ */
+export interface ActionData {
+  colWidths?: number[];
+  withHeadings: boolean;
+  withHeadingColumn: boolean;
+  initialColWidth?: number;
+}
+
 interface ActionContext {
   grid: TableGrid;
-  data: TableData;
+  data: ActionData;
   cellBlocks: TableCellBlocks | null;
   blocksToDelete?: string[];
 }
@@ -53,7 +63,7 @@ const handleInsertCol = (
   index: number,
   ctx: ActionContext,
 ): ActionResult => {
-  const colWidths = computeInsertColumnWidths(gridEl, index, ctx.data, ctx.grid);
+  const colWidths = computeInsertColumnWidths(gridEl, index, ctx.data.colWidths, ctx.data.initialColWidth, ctx.grid);
 
   populateNewCells(gridEl, ctx.cellBlocks);
 

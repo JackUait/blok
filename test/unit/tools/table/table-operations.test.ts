@@ -456,7 +456,7 @@ describe('table-operations', () => {
         initialColWidth: 250,
       };
 
-      const result = computeInsertColumnWidths(gridEl, 1, data, grid);
+      const result = computeInsertColumnWidths(gridEl, 1, data.colWidths, data.initialColWidth, grid);
 
       // New column should be initialColWidth / 2 = 125
       expect(result).toEqual([200, 125, 300, 100]);
@@ -481,7 +481,7 @@ describe('table-operations', () => {
         colWidths: [200, 300, 100],
       };
 
-      const result = computeInsertColumnWidths(gridEl, 1, data, grid);
+      const result = computeInsertColumnWidths(gridEl, 1, data.colWidths, undefined, grid);
 
       // Half average of [200, 300, 100] = 100
       expect(result).toEqual([200, 100, 300, 100]);

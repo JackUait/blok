@@ -163,18 +163,19 @@ export const syncColWidthsAfterDeleteColumn = (colWidths: number[] | undefined, 
 export const computeInsertColumnWidths = (
   gridEl: HTMLElement,
   index: number,
-  data: TableData,
+  colWidths: number[] | undefined,
+  initialColWidth: number | undefined,
   grid: TableGrid,
 ): number[] => {
-  const colWidths = data.colWidths ?? readPixelWidths(gridEl);
+  const widths = colWidths ?? readPixelWidths(gridEl);
 
-  const halfWidth = data.initialColWidth !== undefined
-    ? Math.round((data.initialColWidth / 2) * 100) / 100
-    : computeHalfAvgWidth(colWidths);
+  const halfWidth = initialColWidth !== undefined
+    ? Math.round((initialColWidth / 2) * 100) / 100
+    : computeHalfAvgWidth(widths);
 
-  grid.addColumn(gridEl, index, colWidths, halfWidth);
+  grid.addColumn(gridEl, index, widths, halfWidth);
 
-  const newWidths = [...colWidths];
+  const newWidths = [...widths];
 
   newWidths.splice(index, 0, halfWidth);
 

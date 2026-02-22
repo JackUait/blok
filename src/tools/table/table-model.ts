@@ -91,11 +91,8 @@ export class TableModel {
 
     if (existing) {
       const oldCell = this.contentGrid[existing.row][existing.col];
-      const idx = oldCell.blocks.indexOf(blockId);
 
-      if (idx !== -1) {
-        oldCell.blocks.splice(idx, 1);
-      }
+      oldCell.blocks = oldCell.blocks.filter(id => id !== blockId);
     }
 
     this.contentGrid[row][col].blocks.push(blockId);
@@ -229,10 +226,10 @@ export class TableModel {
 
     const cellsToPopulate: Array<{ row: number; col: number }> = [];
 
-    for (let r = 0; r < this.contentGrid.length; r++) {
-      this.contentGrid[r].splice(clampedIndex, 0, { blocks: [] });
+    this.contentGrid.forEach((row, r) => {
+      row.splice(clampedIndex, 0, { blocks: [] });
       cellsToPopulate.push({ row: r, col: clampedIndex });
-    }
+    });
 
     if (this.colWidthsValue !== undefined) {
       const insertWidth = width ?? 0;
@@ -269,10 +266,10 @@ export class TableModel {
 
     if (this.colWidthsValue !== undefined) {
       this.colWidthsValue.splice(index, 1);
+    }
 
-      if (this.colWidthsValue.length === 0) {
-        this.colWidthsValue = undefined;
-      }
+    if (this.colWidthsValue?.length === 0) {
+      this.colWidthsValue = undefined;
     }
 
     this.rebuildBlockCellMap();
@@ -377,13 +374,13 @@ export class TableModel {
   private rebuildBlockCellMap(): void {
     this.blockCellMap.clear();
 
-    for (let r = 0; r < this.contentGrid.length; r++) {
-      for (let c = 0; c < this.contentGrid[r].length; c++) {
-        for (const blockId of this.contentGrid[r][c].blocks) {
+    this.contentGrid.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        for (const blockId of cell.blocks) {
           this.blockCellMap.set(blockId, { row: r, col: c });
         }
-      }
-    }
+      });
+    });
   }
 
   private isInBounds(row: number, col: number): boolean {

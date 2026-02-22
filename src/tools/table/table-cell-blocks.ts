@@ -437,30 +437,7 @@ export class TableCellBlocks {
     const { type, detail } = data.event;
 
     if (type === 'block-removed') {
-      // Record which cell the removed block was in (holder is still in cell DOM
-      // at this point during a replace operation). This lets the subsequent
-      // block-added handler find the correct cell even when no adjacent block
-      // remains in the cell.
-      this.recordRemovedBlockCell(detail);
-
-      // Remove the block from the model
-      const blockId = detail.target.id;
-      const cellPos = this.model.findCellForBlock(blockId);
-
-      if (cellPos) {
-        this.model.removeBlockFromCell(cellPos.row, cellPos.col, blockId);
-
-        // Schedule deferred empty-cell check for ONLY the affected cell.
-        // This avoids creating spurious paragraphs in unrelated cells during
-        // structural operations like deleteColumn (fixes C3).
-        const affectedCell = this.getCell(cellPos.row, cellPos.col);
-
-        if (affectedCell) {
-          this.cellsPendingCheck.add(affectedCell);
-        }
-      }
-
-      this.schedulePendingCellCheck();
+      this.handleBlockRemoved(detail);
 
       return;
     }
@@ -499,16 +476,18 @@ export class TableCellBlocks {
 
     if (existingContainer) {
       this.stripPlaceholders(existingContainer);
+    }
 
-      // Sync to model if not already tracked (e.g. toolbox conversion)
-      if (!this.model.findCellForBlock(detail.target.id)) {
-        const cell = existingContainer.closest<HTMLElement>(`[${CELL_ATTR}]`);
+    // Sync to model if holder landed in a cell but isn't tracked yet (e.g. toolbox conversion)
+    const untrackedCell = existingContainer && !this.model.findCellForBlock(detail.target.id)
+      ? existingContainer.closest<HTMLElement>(`[${CELL_ATTR}]`)
+      : null;
 
-        if (cell) {
-          this.syncBlockToModel(cell, detail.target.id);
-        }
-      }
+    if (untrackedCell) {
+      this.syncBlockToModel(untrackedCell, detail.target.id);
+    }
 
+    if (existingContainer) {
       return;
     }
 
@@ -528,6 +507,30 @@ export class TableCellBlocks {
       this.cellsPendingCheck.delete(cell);
     }
   };
+
+  /**
+   * Handle a block-removed event: update the model and schedule an empty-cell check.
+   */
+  private handleBlockRemoved(detail: { target: { id: string; holder: HTMLElement }; index?: number }): void {
+    this.recordRemovedBlockCell(detail);
+    const blockId = detail.target.id;
+    const cellPos = this.model.findCellForBlock(blockId);
+
+    if (!cellPos) {
+      this.schedulePendingCellCheck();
+
+      return;
+    }
+
+    this.model.removeBlockFromCell(cellPos.row, cellPos.col, blockId);
+    const affectedCell = this.getCell(cellPos.row, cellPos.col);
+
+    if (affectedCell) {
+      this.cellsPendingCheck.add(affectedCell);
+    }
+
+    this.schedulePendingCellCheck();
+  }
 
   /**
    * Find the DOM cell's row/col position and add the block to the model.

@@ -90,6 +90,13 @@ export class Table implements BlockTool {
    */
   private setDataGeneration = 0;
 
+  /**
+   * Depth counter for structural operations (add/delete/move row/col).
+   * When > 0, TableCellBlocks defers handleBlockMutation events to prevent
+   * event cascade corruption during multi-step structural changes.
+   */
+  private structuralOpDepth = 0;
+
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<TableData, TableConfig>) {
     this.api = api;
     this.readOnly = readOnly;
@@ -103,6 +110,32 @@ export class Table implements BlockTool {
 
     if (this.config.restrictedTools !== undefined) {
       registerAdditionalRestrictedTools(this.config.restrictedTools);
+    }
+  }
+
+  /**
+   * Execute a function within a structural operation lock.
+   * While active, block-changed events are deferred in TableCellBlocks.
+   *
+   * @param fn - The structural operation to execute
+   * @param discard - If true, discard deferred events (for full rebuilds like setData/onPaste).
+   *                  If false (default), replay deferred events after the operation.
+   */
+  private runStructuralOp<T>(fn: () => T, discard = false): T {
+    this.structuralOpDepth++;
+
+    try {
+      return fn();
+    } finally {
+      this.structuralOpDepth--;
+
+      if (this.structuralOpDepth === 0) {
+        if (discard) {
+          this.cellBlocks?.discardDeferredEvents();
+        } else {
+          this.cellBlocks?.flushDeferredEvents();
+        }
+      }
     }
   }
 
@@ -759,6 +792,7 @@ export class Table implements BlockTool {
       gridElement: gridEl,
       tableBlockId: this.blockId ?? '',
       model: this.model,
+      isStructuralOpActive: () => this.structuralOpDepth > 0,
     });
   }
 

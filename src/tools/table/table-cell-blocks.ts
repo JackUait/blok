@@ -38,6 +38,8 @@ interface TableCellBlocksOptions {
   tableBlockId: string;
   model: TableModel;
   onNavigateToCell?: CellNavigationCallback;
+  /** When true, handleBlockMutation defers events instead of processing immediately. */
+  isStructuralOpActive?: () => boolean;
 }
 
 /**
@@ -78,12 +80,19 @@ export class TableCellBlocks {
    */
   private removedBlockCells = new Map<string, { cell: HTMLElement; index: number }>();
 
+  /** Callback to check if a structural operation is active on the parent Table. */
+  private isStructuralOpActive: () => boolean;
+
+  /** Events deferred during structural operations, replayed or discarded afterward. */
+  private deferredEvents: Array<unknown> = [];
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
     this.tableBlockId = options.tableBlockId;
     this.model = options.model;
     this.onNavigateToCell = options.onNavigateToCell;
+    this.isStructuralOpActive = options.isStructuralOpActive ?? (() => false);
 
     this.api.events.on('block changed', this.handleBlockMutation);
     this.gridElement.addEventListener('click', this.handleCellBlankSpaceClick);
@@ -439,6 +448,12 @@ export class TableCellBlocks {
    * When a block is removed, ensure no cell is left empty.
    */
   private handleBlockMutation = (data: unknown): void => {
+    if (this.isStructuralOpActive()) {
+      this.deferredEvents.push(data);
+
+      return;
+    }
+
     if (!this.isBlockMutationEvent(data)) {
       return;
     }
@@ -849,5 +864,28 @@ export class TableCellBlocks {
     this._activeCellWithBlocks = null;
     this.cellsPendingCheck.clear();
     this.removedBlockCells.clear();
+    this.deferredEvents.length = 0;
+  }
+
+  /**
+   * Replay all deferred events. Called after interactive structural ops
+   * (add/delete/move row/col) complete so block lifecycle events are processed.
+   */
+  public flushDeferredEvents(): void {
+    const events = [...this.deferredEvents];
+
+    this.deferredEvents.length = 0;
+
+    for (const data of events) {
+      this.handleBlockMutation(data);
+    }
+  }
+
+  /**
+   * Discard all deferred events. Called after full-rebuild ops (setData, onPaste)
+   * where the entire grid is replaced and old events are meaningless.
+   */
+  public discardDeferredEvents(): void {
+    this.deferredEvents.length = 0;
   }
 }

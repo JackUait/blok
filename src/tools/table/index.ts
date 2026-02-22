@@ -48,7 +48,7 @@ import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
-import type { ClipboardBlockData, TableCellsClipboard, TableData, TableConfig } from './types';
+import type { ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -70,7 +70,7 @@ export class Table implements BlockTool {
   private api: API;
   private readOnly: boolean;
   private config: TableConfig;
-  private data: TableData;
+  private initialContent: LegacyCellContent[][] | null = null;
   private grid: TableGrid;
   private model: TableModel;
   private resize: TableResize | null = null;
@@ -87,9 +87,11 @@ export class Table implements BlockTool {
     this.api = api;
     this.readOnly = readOnly;
     this.config = config ?? {};
-    this.data = normalizeTableData(data, config ?? {});
+    const normalized = normalizeTableData(data, config ?? {});
+
+    this.initialContent = normalized.content;
     this.grid = new TableGrid({ readOnly });
-    this.model = new TableModel(this.data);
+    this.model = new TableModel(normalized);
     this.blockId = block?.id;
 
     if (this.config.restrictedTools !== undefined) {
@@ -142,15 +144,15 @@ export class Table implements BlockTool {
       wrapper.setAttribute('data-blok-table-readonly', '');
     }
 
-    this.isNewTable = this.data.content.length === 0;
+    this.isNewTable = (this.initialContent?.length ?? 0) === 0;
 
-    const rows = this.data.content.length || this.config.rows || DEFAULT_ROWS;
-    const cols = this.data.content[0]?.length || this.config.cols || DEFAULT_COLS;
+    const rows = this.initialContent?.length || this.config.rows || DEFAULT_ROWS;
+    const cols = this.initialContent?.[0]?.length || this.config.cols || DEFAULT_COLS;
 
     const gridEl = this.grid.createGrid(rows, cols, this.model.colWidths);
 
-    if (this.data.content.length > 0) {
-      this.grid.fillGrid(gridEl, this.data.content);
+    if ((this.initialContent?.length ?? 0) > 0) {
+      this.grid.fillGrid(gridEl, this.initialContent ?? []);
     }
 
     if (this.model.colWidths) {
@@ -188,14 +190,19 @@ export class Table implements BlockTool {
     }
 
     if (this.readOnly) {
-      mountCellBlocksReadOnly(gridEl, this.data.content, this.api, this.blockId ?? '');
+      mountCellBlocksReadOnly(gridEl, this.initialContent ?? [], this.api, this.blockId ?? '');
       this.initReadOnlyCellSelection(gridEl);
 
       return;
     }
 
-    this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
-    this.model.replaceAll(this.data);
+    const initializedContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+
+    this.model.replaceAll({
+      ...this.model.snapshot(),
+      content: initializedContent,
+    });
+    this.initialContent = null;
 
     if (this.isNewTable) {
       populateNewCells(gridEl, this.cellBlocks);
@@ -235,14 +242,16 @@ export class Table implements BlockTool {
    * Follows the onPaste() pattern: delete old blocks, re-render, reinitialize.
    */
   public setData(newData: Partial<TableData>): void {
-    this.data = normalizeTableData(
+    const normalized = normalizeTableData(
       {
-        ...this.data,
+        ...this.model.snapshot(),
         ...newData,
       } as TableData,
       this.config
     );
-    this.model.replaceAll(this.data);
+
+    this.initialContent = normalized.content;
+    this.model.replaceAll(normalized);
 
     // Only delete cell blocks during normal updates, not Yjs undo/redo.
     // During Yjs sync, the child cell blocks are managed by Yjs and will be
@@ -276,8 +285,13 @@ export class Table implements BlockTool {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
     if (!this.readOnly && gridEl) {
-      this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
-      this.model.replaceAll(this.data);
+      const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+
+      this.model.replaceAll({
+        ...this.model.snapshot(),
+        content: setDataContent,
+      });
+      this.initialContent = null;
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);
@@ -308,13 +322,8 @@ export class Table implements BlockTool {
     const hasThHeadings = rows[0]?.querySelector('th') !== null;
     const withHeadings = hasTheadHeadings || hasThHeadings;
 
-    this.data = {
-      withHeadings,
-      withHeadingColumn: this.model.withHeadingColumn,
-      stretched: this.model.stretched,
-      content: tableContent,
-    };
-    this.model.replaceAll(this.data);
+    this.initialContent = tableContent;
+    this.model.setWithHeadings(withHeadings);
 
     this.cellBlocks?.deleteAllBlocks();
     this.cellBlocks?.destroy();
@@ -332,8 +341,13 @@ export class Table implements BlockTool {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
     if (!this.readOnly && gridEl) {
-      this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
-      this.model.replaceAll(this.data);
+      const pasteContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+
+      this.model.replaceAll({
+        ...this.model.snapshot(),
+        content: pasteContent,
+      });
+      this.initialContent = null;
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);

@@ -48,6 +48,8 @@ describe('table-operations', () => {
           insert: mockInsert,
           getBlockIndex: mockGetBlockIndex,
           getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
         },
       } as unknown as API;
 
@@ -55,15 +57,15 @@ describe('table-operations', () => {
       const legacyContent = [['Legacy content']];
 
       // Call the function
-      mountCellBlocksReadOnly(gridElement, legacyContent, api);
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, 'table-id');
 
       // Verify that api.blocks.insert was called with correct parameters
       expect(mockInsert).toHaveBeenCalledWith(
         'paragraph',
         { text: 'Legacy content' },
-        expect.anything(),
-        undefined,
-        true
+        {},
+        1,
+        false
       );
 
       // Verify that the block holder was appended to the container
@@ -108,19 +110,21 @@ describe('table-operations', () => {
           insert: mockInsert,
           getBlockIndex: mockGetBlockIndex,
           getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
         },
       } as unknown as API;
 
       const legacyContent = [['']];
 
-      mountCellBlocksReadOnly(gridElement, legacyContent, api);
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, 'table-id');
 
       expect(mockInsert).toHaveBeenCalledWith(
         'paragraph',
         { text: '' },
-        expect.anything(),
-        undefined,
-        true
+        {},
+        1,
+        false
       );
 
       expect(container.contains(mockBlockHolder)).toBe(true);
@@ -184,6 +188,8 @@ describe('table-operations', () => {
           insert: mockInsert,
           getBlockIndex: mockGetBlockIndex,
           getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
         },
       } as unknown as API;
 
@@ -192,15 +198,15 @@ describe('table-operations', () => {
         ['Legacy text', { blocks: ['existing-block'] }]
       ];
 
-      mountCellBlocksReadOnly(gridElement, mixedContent, api);
+      mountCellBlocksReadOnly(gridElement, mixedContent, api, 'table-id');
 
       // Verify legacy string was converted
       expect(mockInsert).toHaveBeenCalledWith(
         'paragraph',
         { text: 'Legacy text' },
-        expect.anything(),
-        undefined,
-        true
+        {},
+        1,
+        false
       );
       expect(container0.contains(legacyBlockHolder)).toBe(true);
 
@@ -242,12 +248,14 @@ describe('table-operations', () => {
           insert: mockInsert,
           getBlockIndex: mockGetBlockIndex,
           getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
         },
       } as unknown as API;
 
       const blockBasedContent = [[{ blocks: ['block-1'] }]];
 
-      mountCellBlocksReadOnly(gridElement, blockBasedContent, api);
+      mountCellBlocksReadOnly(gridElement, blockBasedContent, api, 'table-id');
 
       // Should NOT call insert for block-based content
       expect(mockInsert).not.toHaveBeenCalled();
@@ -291,14 +299,16 @@ describe('table-operations', () => {
           insert: mockInsert,
           getBlockIndex: vi.fn(),
           getBlockByIndex: vi.fn(),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
         },
       } as unknown as API;
 
       const legacyContent = [['Test content']];
 
       // Call mountCellBlocksReadOnly TWICE (simulating rendered() being called multiple times)
-      mountCellBlocksReadOnly(gridElement, legacyContent, api);
-      mountCellBlocksReadOnly(gridElement, legacyContent, api);
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, 'table-id');
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, 'table-id');
 
       // CRITICAL: api.blocks.insert should only be called ONCE, not twice
       expect(mockInsert).toHaveBeenCalledTimes(1);
@@ -309,6 +319,64 @@ describe('table-operations', () => {
 
       // Verify the content is not duplicated
       expect(container).toHaveTextContent('Test content');
+    });
+
+    it('should call setBlockParent for legacy string cells to prevent orphan blocks', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const mockBlockHolder = document.createElement('div');
+      mockBlockHolder.setAttribute('data-blok-id', 'cell-para-1');
+
+      const mockSetBlockParent = vi.fn();
+      const mockGetBlocksCount = vi.fn().mockReturnValue(5);
+
+      const mockInsert = vi.fn().mockReturnValue({
+        id: 'cell-para-1',
+        holder: mockBlockHolder,
+      });
+
+      const api = {
+        blocks: {
+          insert: mockInsert,
+          getBlockIndex: vi.fn(),
+          getBlockByIndex: vi.fn(),
+          setBlockParent: mockSetBlockParent,
+          getBlocksCount: mockGetBlocksCount,
+        },
+      } as unknown as API;
+
+      const legacyContent = [['Cell text']];
+      const tableBlockId = 'table-block-123';
+
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, tableBlockId);
+
+      // Should insert at end of block list, not at undefined index
+      expect(mockInsert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Cell text' },
+        {},
+        5,
+        false
+      );
+
+      // Should set the parent to prevent orphan root-level blocks
+      expect(mockSetBlockParent).toHaveBeenCalledWith('cell-para-1', 'table-block-123');
     });
   });
 

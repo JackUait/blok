@@ -293,6 +293,7 @@ export const mountCellBlocksReadOnly = (
   gridEl: HTMLElement,
   content: LegacyCellContent[][],
   api: API,
+  tableBlockId: string,
 ): void => {
   const rowElements = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
 
@@ -332,11 +333,12 @@ export const mountCellBlocksReadOnly = (
           'paragraph',
           { text: legacyText },
           {},
-          undefined,
-          true
+          api.blocks.getBlocksCount(),
+          false
         );
 
-        insertedBlock?.holder && container.appendChild(insertedBlock.holder);
+        container.appendChild(insertedBlock.holder);
+        api.blocks.setBlockParent(insertedBlock.id, tableBlockId);
 
         return;
       }

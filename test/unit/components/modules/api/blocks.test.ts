@@ -516,22 +516,51 @@ describe('BlocksAPI', () => {
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('inserts default block when last block is removed', async () => {
+    it('does not insert default block from delete — removeBlock handles it', async () => {
       const block = createBlockStub({ id: 'only' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
+      blockManager.removeBlock.mockImplementationOnce(() => {
+        // Simulate removeBlock(addLastBlock=true): removes block then adds default
+        blockManager.blocks = [];
+        blockManager.currentBlock = null;
+        // In real code, removeBlock inserts a default block synchronously.
+        // The api.blocks.delete() should NOT also insert one.
+      });
+
+      await blocksApi.delete(0);
+
+      // delete() should NOT call insert — removeBlock handles the empty-store case
+      expect(blockManager.insert).not.toHaveBeenCalled();
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Toolbar.close).toHaveBeenCalled();
+    });
+
+    it('does not insert orphan block when delete microtask runs after clear repopulates store', async () => {
+      /**
+       * Regression: when table.destroy() fires void api.blocks.delete() for cell blocks,
+       * the await in delete() defers the blocks.length check to a microtask. If clear()
+       * has already repopulated the store by then, the check must not insert a default block.
+       */
+      const cellBlock = createBlockStub({ id: 'cell-para' });
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ cellBlock ] });
+
+      // Simulate removeBlock clearing the cell block
       blockManager.removeBlock.mockImplementationOnce(() => {
         blockManager.blocks = [];
         blockManager.currentBlock = null;
       });
 
-      await blocksApi.delete(0);
+      // Fire delete without awaiting (matches void this.api.blocks.delete() in deleteBlocks)
+      const deletePromise = blocksApi.delete(0);
 
-      expect(blockManager.insert).toHaveBeenCalledTimes(1);
-      expect(blockManager.blocks).toHaveLength(1);
-      expect(blockManager.blocks[0].name).toBe('paragraph');
-      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
-      expect(blok.Toolbar.close).toHaveBeenCalled();
+      // Simulate clear() + render() repopulating the store before the microtask runs
+      blockManager.blocks = [createBlockStub({ id: 'new-1' }), createBlockStub({ id: 'new-2' })];
+
+      await deletePromise;
+
+      // delete() must NOT insert a default block — the store is no longer empty
+      expect(blockManager.insert).not.toHaveBeenCalled();
     });
 
     it('logs warning when block removal throws', async () => {

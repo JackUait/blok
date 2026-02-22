@@ -323,4 +323,67 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
 
     await expect(rowGripRestored).toBeVisible({ timeout: 2000 });
   });
+
+  test('toggling to readonly does not add extra blocks to saved data', async ({ page }) => {
+    // 1. Init editor in edit mode with a table + paragraph after it
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['Alpha', 'Beta'],
+                ['Gamma', 'Delta'],
+              ],
+            },
+          },
+          {
+            type: 'paragraph',
+            data: { text: 'Trailing paragraph' },
+          },
+        ],
+      },
+    });
+
+    // 2. Save data before toggling — count the root blocks
+    const beforeData = await page.evaluate(async () => {
+      return window.blokInstance?.save();
+    });
+
+    const blockCountBefore = beforeData?.blocks.length ?? 0;
+
+    // 3. Toggle to readOnly
+    await page.evaluate(async () => {
+      await window.blokInstance?.readOnly.toggle();
+    });
+    await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === true);
+
+    // 4. Toggle back to edit mode
+    await page.evaluate(async () => {
+      await window.blokInstance?.readOnly.toggle();
+    });
+    await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === false);
+
+    // 5. Save data after round-trip
+    const afterData = await page.evaluate(async () => {
+      return window.blokInstance?.save();
+    });
+
+    const blockCountAfter = afterData?.blocks.length ?? 0;
+
+    // 6. Block count must be identical — no extra paragraphs added
+    expect(blockCountAfter).toBe(blockCountBefore);
+
+    // 7. Verify no unexpected paragraph blocks appeared
+    const paragraphBlocks = afterData?.blocks.filter(b => b.type === 'paragraph') ?? [];
+    const trailingParagraphs = paragraphBlocks.filter(
+      b => (b.data as { text?: string }).text === 'Trailing paragraph'
+    );
+
+    // There should be exactly one trailing paragraph (the original)
+    expect(trailingParagraphs.length).toBe(1);
+  });
 });

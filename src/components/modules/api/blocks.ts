@@ -173,12 +173,12 @@ export class BlocksAPI extends Module {
     }
 
     /**
-     * in case of last block deletion
-     * Insert the new default empty block
+     * Note: default-block insertion when the store is empty is handled
+     * synchronously by removeBlock(block, addLastBlock=true).
+     * A redundant async check here would race with clear()/render()
+     * and could insert a spurious paragraph after the store has been
+     * repopulated by Renderer.
      */
-    if (this.Blok.BlockManager.blocks.length === 0) {
-      this.Blok.BlockManager.insert();
-    }
 
     /**
      * After Block deletion currentBlock is updated

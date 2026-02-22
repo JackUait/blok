@@ -186,7 +186,7 @@ export class Table implements BlockTool {
     }
 
     if (this.readOnly) {
-      mountCellBlocksReadOnly(gridEl, this.data.content, this.api);
+      mountCellBlocksReadOnly(gridEl, this.data.content, this.api, this.blockId ?? '');
       this.initReadOnlyCellSelection(gridEl);
 
       return;

@@ -1,7 +1,7 @@
 import { twMerge } from '../../components/utils/tw';
 
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import type { CellContent, LegacyCellContent } from './types';
+import type { LegacyCellContent } from './types';
 
 export const ROW_ATTR = 'data-blok-table-row';
 export const CELL_ATTR = 'data-blok-table-cell';
@@ -71,27 +71,6 @@ export class TableGrid {
    */
   public fillGrid(_table: HTMLElement, _content: LegacyCellContent[][]): void {
     // Content is populated by TableCellBlocks.initializeCells()
-  }
-
-  /**
-   * Extract 2D array from grid DOM
-   */
-  public getData(table: HTMLElement): CellContent[][] {
-    const rows = table.querySelectorAll(`[${ROW_ATTR}]`);
-    const result: CellContent[][] = [];
-
-    rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-      const rowData: CellContent[] = [];
-
-      cells.forEach(cell => {
-        rowData.push(this.getCellContent(cell as HTMLElement));
-      });
-
-      result.push(rowData);
-    });
-
-    return result;
   }
 
   /**
@@ -373,24 +352,6 @@ export class TableGrid {
     });
 
     return widths;
-  }
-
-  /**
-   * Get cell content as block references
-   */
-  private getCellContent(cell: HTMLElement): CellContent {
-    const blocksContainer = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
-
-    if (!blocksContainer) {
-      return { blocks: [] };
-    }
-
-    const blockElements = blocksContainer.querySelectorAll('[data-blok-id]');
-    const blockIds = Array.from(blockElements)
-      .map(el => el.getAttribute('data-blok-id') ?? '')
-      .filter(id => id !== '');
-
-    return { blocks: blockIds };
   }
 
   /**

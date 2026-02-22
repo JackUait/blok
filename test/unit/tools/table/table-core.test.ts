@@ -4,7 +4,7 @@ import { TableModel } from '../../../../src/tools/table/table-model';
 
 /**
  * Place mock block elements into cells' blocks containers.
- * Each label becomes a block ID so getData() returns { blocks: [label] }.
+ * Each label becomes a block ID.
  */
 const fillWithBlocks = (grid: TableGrid, element: HTMLElement, labels: string[][]): void => {
   const rows = element.querySelectorAll('[data-blok-table-row]');
@@ -142,34 +142,6 @@ describe('TableGrid', () => {
       // Container should exist and be empty (fillGrid should not populate it)
       expect(container).not.toBeNull();
       expect(container?.children.length).toBe(0);
-    });
-  });
-
-  describe('getData', () => {
-    it('should return block references for all cells', () => {
-      const grid = new TableGrid({ readOnly: false });
-      const gridEl = grid.createGrid(1, 1);
-
-      // Simulate a cell with a mounted block
-      const cell = gridEl.querySelector('[data-blok-table-cell]') as HTMLElement;
-      const container = cell.querySelector('[data-blok-table-cell-blocks]') as HTMLElement;
-      const blockHolder = document.createElement('div');
-
-      blockHolder.setAttribute('data-blok-id', 'block-123');
-      container.appendChild(blockHolder);
-
-      const data = grid.getData(gridEl);
-
-      expect(data[0][0]).toEqual({ blocks: ['block-123'] });
-    });
-
-    it('should return empty blocks array for cell with no blocks', () => {
-      const grid = new TableGrid({ readOnly: false });
-      const gridEl = grid.createGrid(1, 1);
-
-      const data = grid.getData(gridEl);
-
-      expect(data[0][0]).toEqual({ blocks: [] });
     });
   });
 

@@ -365,6 +365,7 @@ export class Table implements BlockTool {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
     if (gridEl) {
+      this.model.deleteRow(rowIndex);
       deleteRowWithBlockCleanup(gridEl, rowIndex, this.grid, this.cellBlocks);
     }
   }
@@ -373,7 +374,9 @@ export class Table implements BlockTool {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
     if (gridEl) {
+      this.model.deleteColumn(colIndex);
       this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, colIndex, this.data.colWidths, this.grid, this.cellBlocks);
+      this.model.setColWidths(this.data.colWidths);
     }
   }
 
@@ -407,6 +410,7 @@ export class Table implements BlockTool {
       },
       onAddRow: () => {
         this.grid.addRow(gridEl);
+        this.model.addRow();
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingStyles(this.element, this.data.withHeadings);
         updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
@@ -421,7 +425,9 @@ export class Table implements BlockTool {
           : computeHalfAvgWidth(colWidths);
 
         this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+        this.model.addColumn(undefined, halfWidth);
         this.data.colWidths = [...colWidths, halfWidth];
+        this.model.setColWidths(this.data.colWidths);
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
         this.initResize(gridEl);
@@ -437,6 +443,7 @@ export class Table implements BlockTool {
       },
       onDragAddRow: () => {
         this.grid.addRow(gridEl);
+        this.model.addRow();
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingStyles(this.element, this.data.withHeadings);
         updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
@@ -445,6 +452,7 @@ export class Table implements BlockTool {
         const rowCount = this.grid.getRowCount(gridEl);
 
         if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
+          this.model.deleteRow(rowCount - 1);
           deleteRowWithBlockCleanup(gridEl, rowCount - 1, this.grid, this.cellBlocks);
         }
       },
@@ -455,7 +463,9 @@ export class Table implements BlockTool {
           : computeHalfAvgWidth(colWidths);
 
         this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+        this.model.addColumn(undefined, halfWidth);
         this.data.colWidths = [...colWidths, halfWidth];
+        this.model.setColWidths(this.data.colWidths);
         applyPixelWidths(gridEl, this.data.colWidths);
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
@@ -474,7 +484,9 @@ export class Table implements BlockTool {
           return;
         }
 
+        this.model.deleteColumn(colCount - 1);
         this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, colCount - 1, this.data.colWidths, this.grid, this.cellBlocks);
+        this.model.setColWidths(this.data.colWidths);
 
         if (this.data.colWidths) {
           applyPixelWidths(gridEl, this.data.colWidths);
@@ -557,6 +569,9 @@ export class Table implements BlockTool {
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
+    // Sync model structural operation before DOM changes
+    this.syncModelForAction(action);
+
     const result = executeRowColAction(
       gridEl,
       action,
@@ -567,6 +582,11 @@ export class Table implements BlockTool {
     this.data.withHeadings = result.withHeadings;
     this.data.withHeadingColumn = result.withHeadingColumn;
     this.pendingHighlight = result.pendingHighlight;
+
+    // Sync model metadata
+    this.model.setColWidths(this.data.colWidths);
+    this.model.setWithHeadings(this.data.withHeadings);
+    this.model.setWithHeadingColumn(this.data.withHeadingColumn);
 
     updateHeadingStyles(this.element, this.data.withHeadings);
     updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
@@ -588,6 +608,39 @@ export class Table implements BlockTool {
     }
 
     this.rowColControls?.setActiveGrip(moveType, moveIndex);
+  }
+
+  private syncModelForAction(action: RowColAction): void {
+    switch (action.type) {
+      case 'insert-row-above':
+        this.model.addRow(action.index);
+        break;
+      case 'insert-row-below':
+        this.model.addRow(action.index + 1);
+        break;
+      case 'insert-col-left':
+        this.model.addColumn(action.index);
+        break;
+      case 'insert-col-right':
+        this.model.addColumn(action.index + 1);
+        break;
+      case 'move-row':
+        this.model.moveRow(action.fromIndex, action.toIndex);
+        break;
+      case 'move-col':
+        this.model.moveColumn(action.fromIndex, action.toIndex);
+        break;
+      case 'delete-row':
+        this.model.deleteRow(action.index);
+        break;
+      case 'delete-col':
+        this.model.deleteColumn(action.index);
+        break;
+      case 'toggle-heading':
+      case 'toggle-heading-column':
+        // Metadata only — handled after executeRowColAction
+        break;
+    }
   }
 
   private initResize(gridEl: HTMLElement): void {
@@ -872,6 +925,7 @@ export class Table implements BlockTool {
     // Auto-expand rows
     Array.from({ length: Math.max(0, neededRows - currentRowCount) }).forEach(() => {
       this.grid.addRow(gridEl);
+      this.model.addRow();
       populateNewCells(gridEl, this.cellBlocks);
       updateHeadingStyles(this.element, this.data.withHeadings);
       updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
@@ -885,7 +939,9 @@ export class Table implements BlockTool {
         : computeHalfAvgWidth(colWidths);
 
       this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+      this.model.addColumn(undefined, halfWidth);
       this.data.colWidths = [...colWidths, halfWidth];
+      this.model.setColWidths(this.data.colWidths);
       populateNewCells(gridEl, this.cellBlocks);
       updateHeadingColumnStyles(this.element, this.data.withHeadingColumn);
     });

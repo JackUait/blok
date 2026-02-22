@@ -38,7 +38,7 @@ interface TableGridOptions {
 
 /**
  * Manages the table grid DOM structure.
- * Creates rows, columns, cells and extracts data from the grid.
+ * Creates, deletes, moves, and queries rows, columns, and cells.
  */
 export class TableGrid {
   private readOnly: boolean;

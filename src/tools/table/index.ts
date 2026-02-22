@@ -889,6 +889,11 @@ export class Table implements BlockTool {
 
         if (cell) {
           this.pasteCellPayload(cell, payload.cells[r][c]);
+
+          // Sync pasted block IDs to model
+          const blockIds = this.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
+
+          this.model.setCellBlocks(startRow + r, startCol + c, blockIds);
         }
       });
     });

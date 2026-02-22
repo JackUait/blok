@@ -420,6 +420,7 @@ export class TableCellBlocks {
 
     container.appendChild(block.holder);
     this.api.blocks.setBlockParent(block.id, this.tableBlockId);
+    this.syncBlockToModel(cell, block.id);
     this.stripPlaceholders(container);
   }
 
@@ -498,6 +499,15 @@ export class TableCellBlocks {
 
     if (existingContainer) {
       this.stripPlaceholders(existingContainer);
+
+      // Sync to model if not already tracked (e.g. toolbox conversion)
+      if (!this.model.findCellForBlock(detail.target.id)) {
+        const cell = existingContainer.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+        if (cell) {
+          this.syncBlockToModel(cell, detail.target.id);
+        }
+      }
 
       return;
     }

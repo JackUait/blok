@@ -42,6 +42,7 @@ import {
   updateHeadingColumnStyles,
   updateHeadingStyles,
 } from './table-operations';
+import { TableModel } from './table-model';
 import { TableResize } from './table-resize';
 import { executeRowColAction } from './table-row-col-action-handler';
 import type { PendingHighlight } from './table-row-col-action-handler';
@@ -72,6 +73,7 @@ export class Table implements BlockTool {
   private config: TableConfig;
   private data: TableData;
   private grid: TableGrid;
+  private model: TableModel;
   private resize: TableResize | null = null;
   private addControls: TableAddControls | null = null;
   private rowColControls: TableRowColControls | null = null;
@@ -88,6 +90,7 @@ export class Table implements BlockTool {
     this.config = config ?? {};
     this.data = normalizeTableData(data, config ?? {});
     this.grid = new TableGrid({ readOnly });
+    this.model = new TableModel(this.data);
     this.blockId = block?.id;
 
     if (this.config.restrictedTools !== undefined) {
@@ -193,6 +196,7 @@ export class Table implements BlockTool {
     }
 
     this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
+    this.model.replaceAll(this.data);
 
     if (this.isNewTable) {
       populateNewCells(gridEl, this.cellBlocks);
@@ -219,21 +223,8 @@ export class Table implements BlockTool {
     }
   }
 
-  public save(blockContent: HTMLElement): TableData {
-    const gridEl = blockContent.firstElementChild as HTMLElement;
-    const colWidths = this.data.colWidths;
-    const content = this.readOnly
-      ? this.data.content
-      : this.grid.getData(gridEl);
-
-    return {
-      withHeadings: this.data.withHeadings,
-      withHeadingColumn: this.data.withHeadingColumn,
-      stretched: this.data.stretched,
-      content,
-      ...(colWidths ? { colWidths } : {}),
-      ...(this.data.initialColWidth !== undefined ? { initialColWidth: this.data.initialColWidth } : {}),
-    };
+  public save(_blockContent: HTMLElement): TableData {
+    return this.model.snapshot();
   }
 
   public validate(savedData: TableData): boolean {
@@ -286,6 +277,7 @@ export class Table implements BlockTool {
 
     if (!this.readOnly && gridEl) {
       this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
+      this.model.replaceAll(this.data);
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);
@@ -340,6 +332,7 @@ export class Table implements BlockTool {
 
     if (!this.readOnly && gridEl) {
       this.data.content = this.cellBlocks?.initializeCells(this.data.content) ?? this.data.content;
+      this.model.replaceAll(this.data);
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);

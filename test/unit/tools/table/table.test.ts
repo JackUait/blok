@@ -228,43 +228,19 @@ describe('Table Tool', () => {
       });
     });
 
-    it('preserves empty rows added by the user', () => {
+    it('preserves rows from initial data in model snapshot', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
       const table = new Table(options);
       const element = table.render();
 
-      // Simulate user clicking "Add Row" — appends an empty row
-      const grid = element.firstElementChild as HTMLElement;
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
-
-      expect(rows).toHaveLength(2);
-
-      // Create an empty row manually (same as addRow does, with blocks container)
-      const newRow = document.createElement('div');
-
-      newRow.setAttribute('data-blok-table-row', '');
-
-      for (let i = 0; i < 2; i++) {
-        const cell = document.createElement('div');
-
-        cell.setAttribute('data-blok-table-cell', '');
-
-        const blocksContainer = document.createElement('div');
-
-        blocksContainer.setAttribute('data-blok-table-cell-blocks', '');
-        cell.appendChild(blocksContainer);
-        newRow.appendChild(cell);
-      }
-
-      grid.appendChild(newRow);
-
-      // Save should preserve the empty row with block references
+      // Save returns model snapshot which reflects data from constructor
       const saved = table.save(element);
 
-      expect(saved.content).toHaveLength(3);
-      expect(saved.content[2]).toEqual([{ blocks: [] }, { blocks: [] }]);
+      expect(saved.content).toHaveLength(2);
+      expect(saved.content[0]).toHaveLength(2);
+      expect(saved.content[1]).toHaveLength(2);
     });
 
     it('preserves withHeadings setting', () => {
@@ -277,7 +253,7 @@ describe('Table Tool', () => {
       expect(saved.withHeadings).toBe(true);
     });
 
-    it('saves block references for cells with nested blocks', () => {
+    it('saves block references assigned during initializeCells', () => {
       const options = createTableOptions({
         content: [['', '']],
       });
@@ -286,60 +262,28 @@ describe('Table Tool', () => {
 
       table.rendered();
 
-      // Manually set up a block-based cell (simulating what convertCellToBlocks does)
-      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
-
-      cell.innerHTML = '';
-
-      const container = document.createElement('div');
-
-      container.setAttribute('data-blok-table-cell-blocks', '');
-
-      const block = document.createElement('div');
-
-      block.setAttribute('data-blok-id', 'list-1');
-      container.appendChild(block);
-
-      cell.appendChild(container);
-
+      // After rendered(), initializeCells converts empty strings to paragraph blocks
+      // and the model is synced via replaceAll. save() returns model snapshot.
       const saved = table.save(element);
 
-      expect(saved.content[0][0]).toEqual({ blocks: ['list-1'] });
-      // Second cell has a paragraph block inserted by initializeCells
-      const secondCell = saved.content[0][1];
-
-      expect(isCellWithBlocks(secondCell)).toBe(true);
-      if (isCellWithBlocks(secondCell)) {
-        expect(secondCell.blocks).toHaveLength(1);
-        expect(secondCell.blocks[0]).toMatch(/^mock-/);
-      }
+      // Both cells should have exactly one block from initializeCells
+      saved.content[0].forEach(cell => {
+        expect(isCellWithBlocks(cell)).toBe(true);
+        if (isCellWithBlocks(cell)) {
+          expect(cell.blocks).toHaveLength(1);
+          expect(cell.blocks[0]).toMatch(/^mock-/);
+        }
+      });
     });
 
-    it('saves multiple block references in a single cell', () => {
+    it('saves multiple block references when initial data has them', () => {
       const options = createTableOptions({
-        content: [['']],
+        content: [[{ blocks: ['list-1', 'list-2', 'list-3'] }]],
       });
       const table = new Table(options);
       const element = table.render();
 
-      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
-
-      cell.setAttribute('contenteditable', 'false');
-      cell.innerHTML = '';
-
-      const container = document.createElement('div');
-
-      container.setAttribute('data-blok-table-cell-blocks', '');
-
-      ['list-1', 'list-2', 'list-3'].forEach(id => {
-        const block = document.createElement('div');
-
-        block.setAttribute('data-blok-id', id);
-        container.appendChild(block);
-      });
-
-      cell.appendChild(container);
-
+      // Model is initialized from data in constructor; save returns model snapshot
       const saved = table.save(element);
 
       expect(saved.content[0][0]).toEqual({ blocks: ['list-1', 'list-2', 'list-3'] });

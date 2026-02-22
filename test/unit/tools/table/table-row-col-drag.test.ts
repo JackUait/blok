@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TableRowColDrag } from '../../../../src/tools/table/table-row-col-drag';
 
 const DRAG_THRESHOLD = 10;
@@ -87,6 +87,10 @@ const getCellsInColumn = (grid: HTMLElement, colIndex: number): HTMLElement[] =>
 
 describe('TableRowColDrag', () => {
   let grid: HTMLDivElement;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   afterEach(() => {
     grid?.remove();
@@ -204,6 +208,157 @@ describe('TableRowColDrag', () => {
         expect(cell.style.backgroundColor).toBe('');
         expect(cell.style.opacity).toBe('');
       });
+    });
+  });
+
+  describe('pointercancel triggers cleanup', () => {
+    it('removes ghost element from document.body on pointercancel', () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      const ghost = document.querySelector('[data-blok-table-drag-ghost]');
+
+      expect(ghost).not.toBeNull();
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      const ghostAfter = document.querySelector('[data-blok-table-drag-ghost]');
+
+      expect(ghostAfter).toBeNull();
+    });
+
+    it('resets document.body.style.cursor on pointercancel', () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      expect(document.body.style.cursor).toBe('grabbing');
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      expect(document.body.style.cursor).toBe('');
+    });
+
+    it('resets grid.style.userSelect on pointercancel', () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      expect(grid.style.userSelect).toBe('none');
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      expect(grid.style.userSelect).toBe('');
+    });
+
+    it('clears overlay cell styles on pointercancel', () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      const cells = getCellsInRow(grid, 1);
+
+      cells.forEach(cell => {
+        expect(cell.style.backgroundColor).toBe('rgb(243, 244, 246)');
+      });
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      cells.forEach(cell => {
+        expect(cell.style.backgroundColor).toBe('');
+        expect(cell.style.opacity).toBe('');
+      });
+    });
+
+    it('does not call onAction on pointercancel (drag is aborted)', () => {
+      grid = createGrid(3, 3);
+      const onAction = vi.fn();
+      const drag = new TableRowColDrag({ grid, onAction });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      document.dispatchEvent(new PointerEvent('pointercancel', {
+        clientX: 50,
+        clientY: 200,
+      }));
+
+      expect(onAction).not.toHaveBeenCalled();
+    });
+
+    it('resolves the tracking promise on pointercancel', async () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      const trackingPromise = drag.beginTracking('row', 1, 50, 50);
+
+      // Move past threshold to start dragging
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        clientX: 50 + DRAG_THRESHOLD + 1,
+        clientY: 50 + DRAG_THRESHOLD + 1,
+      }));
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      const wasDrag = await trackingPromise;
+
+      expect(wasDrag).toBe(true);
+    });
+
+    it('removes document pointermove and pointerup listeners on pointercancel', () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      const removeSpy = vi.spyOn(document, 'removeEventListener');
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      const removedTypes = removeSpy.mock.calls.map(call => call[0]);
+
+      expect(removedTypes).toContain('pointermove');
+      expect(removedTypes).toContain('pointerup');
+
+      removeSpy.mockRestore();
+    });
+
+    it('notifies drag state change callback on pointercancel', () => {
+      grid = createGrid(3, 3);
+      const onDragStateChange = vi.fn();
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn(), onDragStateChange });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      onDragStateChange.mockClear();
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      expect(onDragStateChange).toHaveBeenCalledWith(false, null);
+    });
+
+    it('cleans up column drag on pointercancel', () => {
+      grid = createGrid(3, 3);
+      const onAction = vi.fn();
+      const drag = new TableRowColDrag({ grid, onAction });
+
+      startDrag(drag, 'col', 1, 150, 20);
+
+      expect(document.body.style.cursor).toBe('grabbing');
+
+      const ghost = document.querySelector('[data-blok-table-drag-ghost]');
+
+      expect(ghost).not.toBeNull();
+
+      document.dispatchEvent(new PointerEvent('pointercancel'));
+
+      expect(document.body.style.cursor).toBe('');
+      expect(document.querySelector('[data-blok-table-drag-ghost]')).toBeNull();
+      expect(onAction).not.toHaveBeenCalled();
     });
   });
 });

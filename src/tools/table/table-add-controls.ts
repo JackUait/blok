@@ -90,6 +90,7 @@ export class TableAddControls {
   private onDragEnd: () => void;
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerUp: (e: PointerEvent) => void;
+  private boundPointerCancel: (e: PointerEvent) => void;
   private boundRowPointerDown: (e: PointerEvent) => void;
   private boundColPointerDown: (e: PointerEvent) => void;
   private getNewColumnWidth: (() => number) | undefined;
@@ -112,6 +113,7 @@ export class TableAddControls {
     this.boundMouseLeave = this.handleMouseLeave.bind(this);
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
+    this.boundPointerCancel = this.handlePointerCancel.bind(this);
     this.boundRowPointerDown = (e: PointerEvent): void => this.handlePointerDown('row', e);
     this.boundColPointerDown = (e: PointerEvent): void => this.handlePointerDown('col', e);
 
@@ -184,6 +186,7 @@ export class TableAddControls {
 
       target.removeEventListener('pointermove', this.boundPointerMove);
       target.removeEventListener('pointerup', this.boundPointerUp);
+      target.removeEventListener('pointercancel', this.boundPointerCancel);
       document.body.style.cursor = '';
       this.dragState = null;
     }
@@ -215,6 +218,7 @@ export class TableAddControls {
 
     target.addEventListener('pointermove', this.boundPointerMove);
     target.addEventListener('pointerup', this.boundPointerUp);
+    target.addEventListener('pointercancel', this.boundPointerCancel);
   }
 
   private handlePointerMove(e: PointerEvent): void {
@@ -267,6 +271,7 @@ export class TableAddControls {
     target.releasePointerCapture(pointerId);
     target.removeEventListener('pointermove', this.boundPointerMove);
     target.removeEventListener('pointerup', this.boundPointerUp);
+    target.removeEventListener('pointercancel', this.boundPointerCancel);
 
     document.body.style.cursor = '';
     this.dragState = null;
@@ -280,6 +285,31 @@ export class TableAddControls {
     }
 
     this.onDragEnd();
+  }
+
+  /**
+   * Handle pointercancel — browser aborted the pointer (touch gesture, system dialog, etc.).
+   * Cleans up drag state without triggering click or commit actions.
+   */
+  private handlePointerCancel(_e: PointerEvent): void {
+    if (!this.dragState) {
+      return;
+    }
+
+    const { axis, didDrag } = this.dragState;
+
+    const target = axis === 'row' ? this.addRowBtn : this.addColBtn;
+
+    target.removeEventListener('pointermove', this.boundPointerMove);
+    target.removeEventListener('pointerup', this.boundPointerUp);
+    target.removeEventListener('pointercancel', this.boundPointerCancel);
+
+    document.body.style.cursor = '';
+    this.dragState = null;
+
+    if (didDrag) {
+      this.onDragEnd();
+    }
   }
 
   private measureUnitSize(axis: 'row' | 'col'): number {

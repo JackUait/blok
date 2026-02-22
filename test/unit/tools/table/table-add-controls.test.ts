@@ -1011,6 +1011,169 @@ describe('TableAddControls', () => {
     });
   });
 
+  describe('pointercancel triggers cleanup', () => {
+    /**
+     * Simulate pointerdown + pointermove past threshold (initiating a drag),
+     * then fire pointercancel instead of pointerup.
+     */
+    const simulateDragThenCancel = (
+      element: HTMLElement,
+      axis: 'row' | 'col',
+      startPos: number,
+      movePos: number,
+    ): void => {
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      element.releasePointerCapture = vi.fn();
+
+      const clientKey = axis === 'row' ? 'clientY' : 'clientX';
+
+      element.dispatchEvent(new PointerEvent('pointerdown', {
+        [clientKey]: startPos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointermove', {
+        [clientKey]: movePos,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      element.dispatchEvent(new PointerEvent('pointercancel', {
+        pointerId: 1,
+        bubbles: true,
+      }));
+    };
+
+    it('resets document.body.style.cursor on pointercancel during row drag', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      simulateDragThenCancel(addRowBtn, 'row', 0, 50);
+
+      expect(document.body.style.cursor).toBe('');
+    });
+
+    it('resets document.body.style.cursor on pointercancel during col drag', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      simulateDragThenCancel(addColBtn, 'col', 0, 50);
+
+      expect(document.body.style.cursor).toBe('');
+    });
+
+    it('calls onDragEnd on pointercancel when drag was active', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      simulateDragThenCancel(addRowBtn, 'row', 0, 50);
+
+      expect(callbacks.onDragEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it('nulls dragState so subsequent interactions work after pointercancel', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const onAddRow = vi.fn();
+      const callbacks = defaultDragCallbacks();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow,
+        onAddColumn: vi.fn(),
+        ...callbacks,
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Start a drag and cancel it
+      simulateDragThenCancel(addRowBtn, 'row', 0, 50);
+
+      // Now a simple click should work (not be blocked by stale dragState)
+      simulateClick(addRowBtn);
+
+      expect(onAddRow).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onAddRow on pointercancel without drag (just click abort)', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 2));
+
+      const onAddRow = vi.fn();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow,
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addRowBtn.setPointerCapture = vi.fn();
+      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+      addRowBtn.releasePointerCapture = vi.fn();
+
+      // pointerdown without moving past threshold, then cancel
+      addRowBtn.dispatchEvent(new PointerEvent('pointerdown', {
+        clientY: 0,
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      addRowBtn.dispatchEvent(new PointerEvent('pointercancel', {
+        pointerId: 1,
+        bubbles: true,
+      }));
+
+      // Should not trigger the click-add since the pointer was cancelled, not released
+      expect(onAddRow).not.toHaveBeenCalled();
+    });
+  });
+
   describe('column drag unit size', () => {
     it('uses getNewColumnWidth as drag unit size instead of existing cell width', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 3));

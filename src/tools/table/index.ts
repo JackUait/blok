@@ -82,6 +82,14 @@ export class Table implements BlockTool {
   private pendingHighlight: PendingHighlight | null = null;
   private isNewTable = false;
 
+  /**
+   * Generation counter for setData calls.
+   * Incremented at the start of each setData; checked before expensive operations
+   * (DOM rebuild, initializeCells) to bail out if a newer call has started.
+   * Prevents orphaned blocks when rapid undo/redo triggers overlapping setData calls.
+   */
+  private setDataGeneration = 0;
+
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<TableData, TableConfig>) {
     this.api = api;
     this.readOnly = readOnly;
@@ -146,7 +154,7 @@ export class Table implements BlockTool {
     this.isNewTable = (this.initialContent?.length ?? 0) === 0;
 
     const rows = this.initialContent?.length || this.config.rows || DEFAULT_ROWS;
-    const cols = this.initialContent?.[0]?.length || this.config.cols || DEFAULT_COLS;
+    const cols = this.initialContent?.reduce((max, row) => Math.max(max, row?.length ?? 0), 0) || this.config.cols || DEFAULT_COLS;
 
     const gridEl = this.grid.createGrid(rows, cols, this.model.colWidths);
 
@@ -244,6 +252,9 @@ export class Table implements BlockTool {
    * Follows the onPaste() pattern: delete old blocks, re-render, reinitialize.
    */
   public setData(newData: Partial<TableData>): void {
+    this.setDataGeneration++;
+    const currentGeneration = this.setDataGeneration;
+
     const normalized = normalizeTableData(
       {
         ...this.model.snapshot(),
@@ -271,6 +282,13 @@ export class Table implements BlockTool {
       return;
     }
 
+    // If a newer setData call has started, bail out. The newer call will
+    // handle the full DOM rebuild and block initialization, so continuing
+    // here would create blocks that the newer call immediately orphans.
+    if (currentGeneration !== this.setDataGeneration) {
+      return;
+    }
+
     this.resize?.destroy();
     this.resize = null;
     this.addControls?.destroy();
@@ -287,7 +305,20 @@ export class Table implements BlockTool {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
     if (!this.readOnly && gridEl) {
+      // Check generation before initializeCells — if a re-entrant setData
+      // was triggered during render() or replaceChild(), bail out.
+      if (currentGeneration !== this.setDataGeneration) {
+        return;
+      }
+
       const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+
+      // Check generation after initializeCells — if a re-entrant setData
+      // was triggered during block insertion inside initializeCells, bail
+      // out to avoid overwriting the newer call's model and controls.
+      if (currentGeneration !== this.setDataGeneration) {
+        return;
+      }
 
       this.model.replaceAll({
         ...this.model.snapshot(),
@@ -326,6 +357,8 @@ export class Table implements BlockTool {
 
     this.initialContent = tableContent;
     this.model.setWithHeadings(withHeadings);
+    this.model.setWithHeadingColumn(false);
+    this.model.setColWidths(undefined);
 
     this.cellBlocks?.deleteAllBlocks();
     this.cellBlocks?.destroy();

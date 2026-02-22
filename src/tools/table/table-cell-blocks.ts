@@ -62,12 +62,21 @@ export class TableCellBlocks {
   private pendingCheckScheduled = false;
 
   /**
-   * Maps a flat-list block index to the cell it was in when block-removed fired.
-   * Used during replace operations: block-removed fires while the holder is still
-   * in the cell DOM, then block-added fires at the same index after the holder
-   * has been removed. This map lets the block-added handler find the correct cell.
+   * Maps a removed block's ID to the cell it was in and its flat-list index
+   * when block-removed fired.
+   *
+   * Used during replace operations: block-removed fires while the holder is
+   * still in the cell DOM, then block-added fires at the same index after the
+   * holder has been removed. This map lets the block-added handler find the
+   * correct cell.
+   *
+   * Keyed by block ID (not flat index) to prevent two classes of bugs:
+   * - Non-replace deletion + coincidental same-index insertion claiming the
+   *   wrong cell.
+   * - Cross-table interference when two TableCellBlocks instances both
+   *   subscribe to the global "block changed" event.
    */
-  private removedBlockCells = new Map<number, HTMLElement>();
+  private removedBlockCells = new Map<string, { cell: HTMLElement; index: number }>();
 
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
@@ -454,17 +463,20 @@ export class TableCellBlocks {
 
     // Check if a block was just removed at this index (replace operation).
     // Use the recorded cell so the replacement lands in the correct cell.
-    const removedCell = this.removedBlockCells.get(blockIndex);
-
-    this.removedBlockCells.delete(blockIndex);
+    // The map is keyed by the removed block's ID, so we iterate to find an
+    // entry whose stored index matches the newly added block's index.
+    const removedEntry = this.findRemovedEntryForIndex(blockIndex);
 
     // For replace operations, always move the block to the recorded cell.
     // blocksStore.insert() places the holder adjacent to the previous block
     // in the DOM, which may be inside a different cell.
-    if (removedCell) {
-      this.claimBlockForCell(removedCell, detail.target.id);
-      this.syncBlockToModel(removedCell, detail.target.id);
-      this.cellsPendingCheck.delete(removedCell);
+    // Guard: verify the new block actually belongs to this table by checking
+    // that an adjacent block is either the table block itself or a block
+    // mounted inside this table's grid.
+    if (removedEntry && this.isAdjacentToThisTable(blockIndex)) {
+      this.claimBlockForCell(removedEntry.cell, detail.target.id);
+      this.syncBlockToModel(removedEntry.cell, detail.target.id);
+      this.cellsPendingCheck.delete(removedEntry.cell);
 
       return;
     }
@@ -575,7 +587,7 @@ export class TableCellBlocks {
    * record the mapping so a subsequent block-added at the same index can
    * find the correct cell.
    */
-  private recordRemovedBlockCell(detail: { target: { holder: HTMLElement }; index?: number }): void {
+  private recordRemovedBlockCell(detail: { target: { id: string; holder: HTMLElement }; index?: number }): void {
     if (detail.index === undefined) {
       return;
     }
@@ -583,8 +595,104 @@ export class TableCellBlocks {
     const cell = detail.target.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
     if (cell && this.gridElement.contains(cell)) {
-      this.removedBlockCells.set(detail.index, cell);
+      this.removedBlockCells.set(detail.target.id, { cell, index: detail.index });
     }
+  }
+
+  /**
+   * Find a removedBlockCells entry whose stored index matches the given block index.
+   * Removes and returns the first match, or null if none found.
+   */
+  private findRemovedEntryForIndex(blockIndex: number): { cell: HTMLElement; index: number } | null {
+    for (const [removedId, entry] of this.removedBlockCells) {
+      if (entry.index === blockIndex) {
+        this.removedBlockCells.delete(removedId);
+
+        return entry;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check whether a block at the given flat-list index belongs to this table's
+   * block range. Used to prevent cross-table interference when two
+   * TableCellBlocks instances both subscribe to the global "block changed" event.
+   *
+   * Returns true if:
+   * - An adjacent block (index-1 or index+1) is mounted inside a cell of this
+   *   table's grid, OR
+   * - The table block is immediately before this index AND either the index
+   *   after is also within this table (block in a cell) or does not exist
+   *   (the new block is the last in the flat list).
+   *
+   * The table block alone being adjacent is NOT sufficient — a second table
+   * could immediately follow this one in the flat list, making the table
+   * block adjacent to BOTH tables' blocks.
+   */
+  private isAdjacentToThisTable(blockIndex: number): boolean {
+    const blocksCount = this.api.blocks.getBlocksCount();
+
+    // Check if any adjacent block is in a cell of this table
+    for (const offset of [-1, 1]) {
+      const adjacentIndex = blockIndex + offset;
+
+      if (adjacentIndex < 0 || adjacentIndex >= blocksCount) {
+        continue;
+      }
+
+      const block = this.api.blocks.getBlockByIndex(adjacentIndex);
+
+      if (!block) {
+        continue;
+      }
+
+      const cell = block.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+      if (cell && this.gridElement.contains(cell)) {
+        return true;
+      }
+    }
+
+    // For single-block-in-cell tables: the table block is at index-1 and
+    // either (a) no block follows at index+1, or (b) the block at index+1
+    // is inside this table's grid. This avoids matching blocks that belong
+    // to a different table immediately following this one.
+    if (!this.isTableBlockAtPrevIndex(blockIndex)) {
+      return false;
+    }
+
+    const nextIndex = blockIndex + 1;
+
+    if (nextIndex >= blocksCount) {
+      return true;
+    }
+
+    const nextBlock = this.api.blocks.getBlockByIndex(nextIndex);
+
+    if (!nextBlock) {
+      return true;
+    }
+
+    const nextCell = nextBlock.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+    return nextCell !== null && this.gridElement.contains(nextCell);
+  }
+
+  /**
+   * Check if this table's block is at the index immediately before the given index.
+   */
+  private isTableBlockAtPrevIndex(blockIndex: number): boolean {
+    const prevIndex = blockIndex - 1;
+
+    if (prevIndex < 0) {
+      return false;
+    }
+
+    const prevBlock = this.api.blocks.getBlockByIndex(prevIndex);
+
+    return prevBlock?.id === this.tableBlockId;
   }
 
   /**

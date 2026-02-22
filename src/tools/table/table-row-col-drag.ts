@@ -56,6 +56,7 @@ export class TableRowColDrag {
 
   private boundDocPointerMove: (e: PointerEvent) => void;
   private boundDocPointerUp: (e: PointerEvent) => void;
+  private boundDocPointerCancel: () => void;
 
   /** Resolves when drag ends — set by beginTracking, consumed by caller */
   private resolveTracking: ((wasDrag: boolean) => void) | null = null;
@@ -67,6 +68,7 @@ export class TableRowColDrag {
 
     this.boundDocPointerMove = this.handleDocPointerMove.bind(this);
     this.boundDocPointerUp = this.handleDocPointerUp.bind(this);
+    this.boundDocPointerCancel = this.handleDocPointerCancel.bind(this);
   }
 
   /**
@@ -87,6 +89,7 @@ export class TableRowColDrag {
 
     document.addEventListener('pointermove', this.boundDocPointerMove);
     document.addEventListener('pointerup', this.boundDocPointerUp);
+    document.addEventListener('pointercancel', this.boundDocPointerCancel);
 
     return new Promise<boolean>(resolve => {
       this.resolveTracking = resolve;
@@ -113,6 +116,7 @@ export class TableRowColDrag {
 
     document.removeEventListener('pointermove', this.boundDocPointerMove);
     document.removeEventListener('pointerup', this.boundDocPointerUp);
+    document.removeEventListener('pointercancel', this.boundDocPointerCancel);
 
     this.onDragStateChange?.(false, null);
     this.isDragging = false;
@@ -139,6 +143,7 @@ export class TableRowColDrag {
   private handleDocPointerUp(e: PointerEvent): void {
     document.removeEventListener('pointermove', this.boundDocPointerMove);
     document.removeEventListener('pointerup', this.boundDocPointerUp);
+    document.removeEventListener('pointercancel', this.boundDocPointerCancel);
 
     if (this.isDragging) {
       this.finishDrag(e);
@@ -147,6 +152,15 @@ export class TableRowColDrag {
       this.resolveTracking?.(false);
     }
 
+    this.cleanup();
+  }
+
+  /**
+   * Handle pointercancel — browser aborted the pointer (touch gesture, system dialog, etc.).
+   * Cleans up without applying the move (treats as abort).
+   */
+  private handleDocPointerCancel(): void {
+    this.resolveTracking?.(this.isDragging);
     this.cleanup();
   }
 

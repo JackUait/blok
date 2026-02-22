@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TableGrid } from '../../../../src/tools/table/table-core';
+import { TableModel } from '../../../../src/tools/table/table-model';
 
 /**
  * Place mock block elements into cells' blocks containers.
@@ -260,13 +261,17 @@ describe('TableGrid', () => {
     it('removes a row at index', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(3, 2);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
       grid.deleteRow(element, 1);
+      model.deleteRow(1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('A'), b('B')], [b('E'), b('F')]]);
+      expect(model.snapshot().content).toEqual([[b('A'), b('B')], [b('E'), b('F')]]);
     });
   });
 
@@ -284,13 +289,17 @@ describe('TableGrid', () => {
     it('inserts a column at specific index', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 2);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B')], [b('C'), b('D')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D']]);
       grid.addColumn(element, 1);
+      model.addColumn(1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('A'), empty, b('B')], [b('C'), empty, b('D')]]);
+      expect(model.snapshot().content).toEqual([[b('A'), empty, b('B')], [b('C'), empty, b('D')]]);
     });
 
     it('keeps existing pixel widths unchanged and adds new column with default width', () => {
@@ -451,13 +460,17 @@ describe('TableGrid', () => {
     it('removes a column at index', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 3);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
       grid.deleteColumn(element, 1);
+      model.deleteColumn(1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('A'), b('C')], [b('D'), b('F')]]);
+      expect(model.snapshot().content).toEqual([[b('A'), b('C')], [b('D'), b('F')]]);
     });
 
     it('preserves remaining column widths in px mode', () => {
@@ -532,61 +545,81 @@ describe('TableGrid', () => {
     it('moves a row from one index to another', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(3, 2);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
       grid.moveRow(element, 0, 2);
+      model.moveRow(0, 2);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('C'), b('D')], [b('E'), b('F')], [b('A'), b('B')]]);
+      expect(model.snapshot().content).toEqual([[b('C'), b('D')], [b('E'), b('F')], [b('A'), b('B')]]);
     });
 
     it('moves a row from last to first', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(3, 2);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
       grid.moveRow(element, 2, 0);
+      model.moveRow(2, 0);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('E'), b('F')], [b('A'), b('B')], [b('C'), b('D')]]);
+      expect(model.snapshot().content).toEqual([[b('E'), b('F')], [b('A'), b('B')], [b('C'), b('D')]]);
     });
 
     it('does nothing when fromIndex equals toIndex', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(3, 2);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
       grid.moveRow(element, 1, 1);
+      model.moveRow(1, 1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]]);
+      expect(model.snapshot().content).toEqual([[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]]);
     });
 
     it('moves adjacent rows correctly (swap down)', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(3, 2);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
       grid.moveRow(element, 0, 1);
+      model.moveRow(0, 1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('C'), b('D')], [b('A'), b('B')], [b('E'), b('F')]]);
+      expect(model.snapshot().content).toEqual([[b('C'), b('D')], [b('A'), b('B')], [b('E'), b('F')]]);
     });
 
     it('moves adjacent rows correctly (swap up)', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(3, 2);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B')], [b('C'), b('D')], [b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B'], ['C', 'D'], ['E', 'F']]);
       grid.moveRow(element, 2, 1);
+      model.moveRow(2, 1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('A'), b('B')], [b('E'), b('F')], [b('C'), b('D')]]);
+      expect(model.snapshot().content).toEqual([[b('A'), b('B')], [b('E'), b('F')], [b('C'), b('D')]]);
     });
   });
 
@@ -594,49 +627,65 @@ describe('TableGrid', () => {
     it('moves a column from one index to another', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 3);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
       grid.moveColumn(element, 0, 2);
+      model.moveColumn(0, 2);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('B'), b('C'), b('A')], [b('E'), b('F'), b('D')]]);
+      expect(model.snapshot().content).toEqual([[b('B'), b('C'), b('A')], [b('E'), b('F'), b('D')]]);
     });
 
     it('moves a column from last to first', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 3);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
       grid.moveColumn(element, 2, 0);
+      model.moveColumn(2, 0);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('C'), b('A'), b('B')], [b('F'), b('D'), b('E')]]);
+      expect(model.snapshot().content).toEqual([[b('C'), b('A'), b('B')], [b('F'), b('D'), b('E')]]);
     });
 
     it('does nothing when fromIndex equals toIndex', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 3);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
       grid.moveColumn(element, 1, 1);
+      model.moveColumn(1, 1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]]);
+      expect(model.snapshot().content).toEqual([[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]]);
     });
 
     it('moves adjacent columns correctly (swap right)', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 3);
+      const model = new TableModel({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [[b('A'), b('B'), b('C')], [b('D'), b('E'), b('F')]],
+      });
 
       fillWithBlocks(grid, element, [['A', 'B', 'C'], ['D', 'E', 'F']]);
       grid.moveColumn(element, 0, 1);
+      model.moveColumn(0, 1);
 
-      const data = grid.getData(element);
-
-      expect(data).toEqual([[b('B'), b('A'), b('C')], [b('E'), b('D'), b('F')]]);
+      expect(model.snapshot().content).toEqual([[b('B'), b('A'), b('C')], [b('E'), b('D'), b('F')]]);
     });
 
     it('preserves cell widths when moving columns', () => {

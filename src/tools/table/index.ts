@@ -335,6 +335,8 @@ export class Table implements BlockTool {
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);
+      this.initCellSelection(gridEl);
+      this.initGridPasteListener(gridEl);
     }
   }
 
@@ -671,6 +673,7 @@ export class Table implements BlockTool {
       widths,
       (newWidths: number[]) => {
         this.data.colWidths = newWidths;
+        this.model.setColWidths(newWidths);
         enableScrollOverflow(this.element);
         this.rowColControls?.positionGrips();
       },

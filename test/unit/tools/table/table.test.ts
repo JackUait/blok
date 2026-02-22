@@ -572,6 +572,32 @@ describe('Table Tool', () => {
 
       document.body.removeChild(element);
     });
+
+    it('syncs resized colWidths to model so save() returns updated widths', () => {
+      const options = createTableOptions({
+        content: [['A', 'B']],
+        colWidths: [300, 300],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      // Simulate a resize drag: pointerdown → pointermove → pointerup
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      const saved = table.save(element);
+
+      // The first column should now be 400px in the saved data
+      expect(saved.colWidths).toEqual([400, 300]);
+
+      document.body.removeChild(element);
+    });
   });
 
   describe('add row/column controls', () => {
@@ -1148,6 +1174,92 @@ describe('Table Tool', () => {
           expect(cell.blocks[0]).toMatch(/^mock-/);
         }
       });
+    });
+
+    it('reinitializes grid paste listener after onPaste so cell-level paste works', () => {
+      // Spy on addEventListener before any Table work
+      const addEventSpy = vi.spyOn(HTMLElement.prototype, 'addEventListener');
+
+      const options = createTableOptions({
+        content: [['X', 'Y']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Clear spy to only track calls during onPaste
+      addEventSpy.mockClear();
+
+      // Paste a table to trigger onPaste
+      const tableEl = document.createElement('table');
+
+      tableEl.innerHTML = '<tr><td>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr>';
+
+      const pasteEvent = {
+        detail: { data: tableEl },
+      } as unknown as CustomEvent;
+
+      table.onPaste(pasteEvent);
+
+      // After onPaste, initGridPasteListener should attach a 'paste' listener
+      // to the new grid element
+      const pasteListenerCalls = addEventSpy.mock.calls.filter(
+        ([eventName]) => eventName === 'paste'
+      );
+
+      expect(pasteListenerCalls.length).toBeGreaterThan(0);
+
+      addEventSpy.mockRestore();
+
+      // onPaste replaces the old element in DOM, so clean up the new one
+      const newElement = element.parentNode ? element : document.querySelector('[data-blok-tool="table"]');
+
+      newElement?.parentNode?.removeChild(newElement);
+    });
+
+    it('reinitializes cell selection after onPaste so pointerdown handlers are attached', () => {
+      // Spy on addEventListener before any Table work
+      const addEventSpy = vi.spyOn(HTMLElement.prototype, 'addEventListener');
+
+      const options = createTableOptions({
+        content: [['X', 'Y']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Clear spy to only track calls during onPaste
+      addEventSpy.mockClear();
+
+      // Paste a table to trigger onPaste
+      const tableEl = document.createElement('table');
+
+      tableEl.innerHTML = '<tr><td>A</td><td>B</td></tr>';
+
+      const pasteEvent = {
+        detail: { data: tableEl },
+      } as unknown as CustomEvent;
+
+      table.onPaste(pasteEvent);
+
+      // After onPaste, initCellSelection should attach a 'pointerdown' listener
+      // to the new grid element for cell selection
+      const pointerdownCalls = addEventSpy.mock.calls.filter(
+        ([eventName]) => eventName === 'pointerdown'
+      );
+
+      expect(pointerdownCalls.length).toBeGreaterThan(0);
+
+      addEventSpy.mockRestore();
+
+      // onPaste replaces the old element in DOM, so clean up the new one
+      const newElement = element.parentNode ? element : document.querySelector('[data-blok-tool="table"]');
+
+      newElement?.parentNode?.removeChild(newElement);
     });
   });
 

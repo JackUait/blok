@@ -1415,8 +1415,12 @@ describe('Table Tool', () => {
     it('should delete nested blocks when deleting a row with block-based cells', () => {
       const mockDelete = vi.fn();
       const mockGetBlockIndex = vi.fn().mockImplementation((id: string) => {
-        // Return index based on block ID for testing
-        if (id === 'list-block-to-delete') {
+        // Return indices for blocks in row 0 (created during initializeCells)
+        if (id === 'mock-block-1') {
+          return 0;
+        }
+
+        if (id === 'mock-block-2') {
           return 1;
         }
 
@@ -1452,32 +1456,18 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      // Set up a block-based cell in first row
-      const firstRowCell = element.querySelectorAll('[data-blok-table-row]')[0]
-        .querySelector('[data-blok-table-cell]') as HTMLElement;
-
-      firstRowCell.setAttribute('contenteditable', 'false');
-      firstRowCell.innerHTML = '';
-
-      const container = document.createElement('div');
-
-      container.setAttribute('data-blok-table-cell-blocks', '');
-
-      const block = document.createElement('div');
-
-      block.setAttribute('data-blok-id', 'list-block-to-delete');
-      container.appendChild(block);
-
-      firstRowCell.appendChild(container);
-
       // Trigger row deletion via the public method
+      // Row 0 has mock-block-1 and mock-block-2 from initializeCells
       table.deleteRowWithCleanup(0);
 
-      // Verify getBlockIndex was called with the block ID
-      expect(mockGetBlockIndex).toHaveBeenCalledWith('list-block-to-delete');
+      // Verify getBlockIndex was called with the block IDs from the model
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('mock-block-1');
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('mock-block-2');
 
-      // Verify delete was called with the index returned by getBlockIndex
-      expect(mockDelete).toHaveBeenCalledWith(1);
+      // Verify delete was called with the indices (sorted descending to avoid index shift)
+      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(mockDelete).toHaveBeenNthCalledWith(1, 1);
+      expect(mockDelete).toHaveBeenNthCalledWith(2, 0);
 
       document.body.removeChild(element);
     });
@@ -1485,13 +1475,14 @@ describe('Table Tool', () => {
     it('should delete nested blocks when deleting a column with block-based cells', () => {
       const mockDelete = vi.fn();
       const mockGetBlockIndex = vi.fn().mockImplementation((id: string) => {
-        // Return index based on block ID for testing - higher indices for blocks to be deleted last
-        if (id === 'col-block-0') {
-          return 2;
+        // Return indices for blocks in column 0 (created during initializeCells)
+        // Row 0 col 0 = mock-block-1, Row 1 col 0 = mock-block-3
+        if (id === 'mock-block-1') {
+          return 0;
         }
 
-        if (id === 'col-block-1') {
-          return 3;
+        if (id === 'mock-block-3') {
+          return 2;
         }
 
         return undefined;
@@ -1526,39 +1517,19 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      // Set up block-based cells in first column
-      const rows = element.querySelectorAll('[data-blok-table-row]');
-
-      rows.forEach((row, rowIndex) => {
-        const cell = row.querySelector('[data-blok-table-cell]') as HTMLElement;
-
-        cell.setAttribute('contenteditable', 'false');
-        cell.innerHTML = '';
-
-        const container = document.createElement('div');
-
-        container.setAttribute('data-blok-table-cell-blocks', '');
-
-        const block = document.createElement('div');
-
-        block.setAttribute('data-blok-id', `col-block-${rowIndex}`);
-        container.appendChild(block);
-
-        cell.appendChild(container);
-      });
-
       // Trigger column deletion via the public method
+      // Column 0 has mock-block-1 (row 0) and mock-block-3 (row 1) from initializeCells
       table.deleteColumnWithCleanup(0);
 
-      // Verify getBlockIndex was called for both blocks
-      expect(mockGetBlockIndex).toHaveBeenCalledWith('col-block-0');
-      expect(mockGetBlockIndex).toHaveBeenCalledWith('col-block-1');
+      // Verify getBlockIndex was called for both blocks in column 0
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('mock-block-1');
+      expect(mockGetBlockIndex).toHaveBeenCalledWith('mock-block-3');
 
       // Verify delete was called with the indices (sorted descending to avoid index shift)
-      // Index 3 should be deleted before index 2
+      // Index 2 should be deleted before index 0
       expect(mockDelete).toHaveBeenCalledTimes(2);
-      expect(mockDelete).toHaveBeenNthCalledWith(1, 3);
-      expect(mockDelete).toHaveBeenNthCalledWith(2, 2);
+      expect(mockDelete).toHaveBeenNthCalledWith(1, 2);
+      expect(mockDelete).toHaveBeenNthCalledWith(2, 0);
 
       document.body.removeChild(element);
     });

@@ -230,53 +230,6 @@ export const getBlockIdsInColumn = (element: HTMLElement | null, cellBlocks: Tab
   return cellBlocks?.getBlockIdsFromCells(cellsInColumn) ?? [];
 };
 
-// ─── Row/column deletion with block cleanup ─────────────────────────
-
-export const deleteRowWithBlockCleanup = (
-  gridEl: HTMLElement,
-  rowIndex: number,
-  grid: TableGrid,
-  cellBlocks: TableCellBlocks | null,
-): void => {
-  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-  const row = rows[rowIndex];
-
-  if (row && cellBlocks) {
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-    cellBlocks.deleteBlocks(cellBlocks.getBlockIdsFromCells(cells));
-  }
-
-  grid.deleteRow(gridEl, rowIndex);
-};
-
-export const deleteColumnWithBlockCleanup = (
-  gridEl: HTMLElement,
-  colIndex: number,
-  colWidths: number[] | undefined,
-  grid: TableGrid,
-  cellBlocks: TableCellBlocks | null,
-): number[] | undefined => {
-  if (cellBlocks) {
-    const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-    const cellsInColumn: Element[] = [];
-
-    rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      if (colIndex < cells.length) {
-        cellsInColumn.push(cells[colIndex]);
-      }
-    });
-
-    cellBlocks.deleteBlocks(cellBlocks.getBlockIdsFromCells(cellsInColumn));
-  }
-
-  grid.deleteColumn(gridEl, colIndex);
-
-  return syncColWidthsAfterDeleteColumn(colWidths, colIndex);
-};
-
 // ─── Populate new cells ─────────────────────────────────────────────
 
 export const populateNewCells = (gridEl: HTMLElement, cellBlocks: TableCellBlocks | null): void => {

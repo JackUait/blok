@@ -26,8 +26,6 @@ import {
   applyPixelWidths,
   computeHalfAvgWidth,
   computeInitialColWidth,
-  deleteColumnWithBlockCleanup,
-  deleteRowWithBlockCleanup,
   enableScrollOverflow,
   getBlockIdsInColumn,
   getBlockIdsInRow,
@@ -39,6 +37,7 @@ import {
   readPixelWidths,
   SCROLL_OVERFLOW_CLASSES,
   setupKeyboardNavigation,
+  syncColWidthsAfterDeleteColumn,
   updateHeadingColumnStyles,
   updateHeadingStyles,
 } from './table-operations';
@@ -364,20 +363,29 @@ export class Table implements BlockTool {
   public deleteRowWithCleanup(rowIndex: number): void {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
-    if (gridEl) {
-      this.model.deleteRow(rowIndex);
-      deleteRowWithBlockCleanup(gridEl, rowIndex, this.grid, this.cellBlocks);
+    if (!gridEl) {
+      return;
     }
+
+    const { blocksToDelete } = this.model.deleteRow(rowIndex);
+
+    this.cellBlocks?.deleteBlocks(blocksToDelete);
+    this.grid.deleteRow(gridEl, rowIndex);
   }
 
   public deleteColumnWithCleanup(colIndex: number): void {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
-    if (gridEl) {
-      this.model.deleteColumn(colIndex);
-      this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, colIndex, this.data.colWidths, this.grid, this.cellBlocks);
-      this.model.setColWidths(this.data.colWidths);
+    if (!gridEl) {
+      return;
     }
+
+    const { blocksToDelete } = this.model.deleteColumn(colIndex);
+
+    this.cellBlocks?.deleteBlocks(blocksToDelete);
+    this.grid.deleteColumn(gridEl, colIndex);
+    this.data.colWidths = syncColWidthsAfterDeleteColumn(this.data.colWidths, colIndex);
+    this.model.setColWidths(this.data.colWidths);
   }
 
   public getBlockIdsInRow(rowIndex: number): string[] {
@@ -452,8 +460,10 @@ export class Table implements BlockTool {
         const rowCount = this.grid.getRowCount(gridEl);
 
         if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
-          this.model.deleteRow(rowCount - 1);
-          deleteRowWithBlockCleanup(gridEl, rowCount - 1, this.grid, this.cellBlocks);
+          const { blocksToDelete } = this.model.deleteRow(rowCount - 1);
+
+          this.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.grid.deleteRow(gridEl, rowCount - 1);
         }
       },
       onDragAddCol: () => {
@@ -484,8 +494,11 @@ export class Table implements BlockTool {
           return;
         }
 
-        this.model.deleteColumn(colCount - 1);
-        this.data.colWidths = deleteColumnWithBlockCleanup(gridEl, colCount - 1, this.data.colWidths, this.grid, this.cellBlocks);
+        const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
+
+        this.cellBlocks?.deleteBlocks(blocksToDelete);
+        this.grid.deleteColumn(gridEl, colCount - 1);
+        this.data.colWidths = syncColWidthsAfterDeleteColumn(this.data.colWidths, colCount - 1);
         this.model.setColWidths(this.data.colWidths);
 
         if (this.data.colWidths) {
@@ -570,12 +583,12 @@ export class Table implements BlockTool {
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
     // Sync model structural operation before DOM changes
-    this.syncModelForAction(action);
+    const { blocksToDelete } = this.syncModelForAction(action);
 
     const result = executeRowColAction(
       gridEl,
       action,
-      { grid: this.grid, data: this.data, cellBlocks: this.cellBlocks },
+      { grid: this.grid, data: this.data, cellBlocks: this.cellBlocks, blocksToDelete },
     );
 
     this.data.colWidths = result.colWidths;
@@ -610,7 +623,7 @@ export class Table implements BlockTool {
     this.rowColControls?.setActiveGrip(moveType, moveIndex);
   }
 
-  private syncModelForAction(action: RowColAction): void {
+  private syncModelForAction(action: RowColAction): { blocksToDelete?: string[] } {
     switch (action.type) {
       case 'insert-row-above':
         this.model.addRow(action.index);
@@ -631,16 +644,16 @@ export class Table implements BlockTool {
         this.model.moveColumn(action.fromIndex, action.toIndex);
         break;
       case 'delete-row':
-        this.model.deleteRow(action.index);
-        break;
+        return this.model.deleteRow(action.index);
       case 'delete-col':
-        this.model.deleteColumn(action.index);
-        break;
+        return this.model.deleteColumn(action.index);
       case 'toggle-heading':
       case 'toggle-heading-column':
         // Metadata only — handled after executeRowColAction
         break;
     }
+
+    return {};
   }
 
   private initResize(gridEl: HTMLElement): void {

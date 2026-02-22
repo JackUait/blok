@@ -3,10 +3,9 @@ import type { TableGrid } from './table-core';
 import {
   applyPixelWidths,
   computeInsertColumnWidths,
-  deleteColumnWithBlockCleanup,
-  deleteRowWithBlockCleanup,
   populateNewCells,
   redistributePercentWidths,
+  syncColWidthsAfterDeleteColumn,
   syncColWidthsAfterMove,
 } from './table-operations';
 import type { RowColAction } from './table-row-col-controls';
@@ -21,6 +20,7 @@ interface ActionContext {
   grid: TableGrid;
   data: TableData;
   cellBlocks: TableCellBlocks | null;
+  blocksToDelete?: string[];
 }
 
 interface ActionResult {
@@ -105,7 +105,9 @@ const handleDeleteRow = (
   index: number,
   ctx: ActionContext,
 ): ActionResult => {
-  deleteRowWithBlockCleanup(gridEl, index, ctx.grid, ctx.cellBlocks);
+  ctx.cellBlocks?.deleteBlocks(ctx.blocksToDelete ?? []);
+  ctx.grid.deleteRow(gridEl, index);
+
   const newRowCount = ctx.grid.getRowCount(gridEl);
   const neighborRow = index < newRowCount ? index : index - 1;
 
@@ -123,7 +125,10 @@ const handleDeleteCol = (
   index: number,
   ctx: ActionContext,
 ): ActionResult => {
-  const colWidths = deleteColumnWithBlockCleanup(gridEl, index, ctx.data.colWidths, ctx.grid, ctx.cellBlocks);
+  ctx.cellBlocks?.deleteBlocks(ctx.blocksToDelete ?? []);
+  ctx.grid.deleteColumn(gridEl, index);
+
+  const colWidths = syncColWidthsAfterDeleteColumn(ctx.data.colWidths, index);
 
   if (colWidths) {
     applyPixelWidths(gridEl, colWidths);

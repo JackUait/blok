@@ -37,7 +37,6 @@ import {
   readPixelWidths,
   SCROLL_OVERFLOW_CLASSES,
   setupKeyboardNavigation,
-  syncColWidthsAfterDeleteColumn,
   updateHeadingColumnStyles,
   updateHeadingStyles,
 } from './table-operations';
@@ -401,11 +400,13 @@ export class Table implements BlockTool {
       return;
     }
 
+    // model.deleteColumn() already removes the width at colIndex from
+    // colWidthsValue internally, so no additional syncColWidthsAfterDeleteColumn
+    // call is needed — that would double-delete.
     const { blocksToDelete } = this.model.deleteColumn(colIndex);
 
     this.cellBlocks?.deleteBlocks(blocksToDelete);
     this.grid.deleteColumn(gridEl, colIndex);
-    this.model.setColWidths(syncColWidthsAfterDeleteColumn(this.model.colWidths, colIndex));
   }
 
   public getBlockIdsInRow(rowIndex: number): string[] {
@@ -514,13 +515,14 @@ export class Table implements BlockTool {
           return;
         }
 
+        // model.deleteColumn() already removes the width internally,
+        // so no additional syncColWidthsAfterDeleteColumn is needed.
         const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
 
         this.cellBlocks?.deleteBlocks(blocksToDelete);
         this.grid.deleteColumn(gridEl, colCount - 1);
-        const updatedWidths = syncColWidthsAfterDeleteColumn(this.model.colWidths, colCount - 1);
 
-        this.model.setColWidths(updatedWidths);
+        const updatedWidths = this.model.colWidths;
 
         if (updatedWidths) {
           applyPixelWidths(gridEl, updatedWidths);
@@ -603,6 +605,14 @@ export class Table implements BlockTool {
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
+    // Capture colWidths BEFORE the model mutation so the action handler
+    // receives pre-mutation widths. Model methods (addColumn, deleteColumn,
+    // moveColumn) update colWidths internally, and the handler functions
+    // (syncColWidthsAfterMove, syncColWidthsAfterDeleteColumn, computeInsertColumnWidths)
+    // also transform widths — passing post-mutation widths would double-apply
+    // the transformation.
+    const colWidthsBeforeMutation = this.model.colWidths;
+
     // Sync model structural operation before DOM changes
     const { blocksToDelete } = this.syncModelForAction(action);
 
@@ -612,7 +622,7 @@ export class Table implements BlockTool {
       {
         grid: this.grid,
         data: {
-          colWidths: this.model.colWidths,
+          colWidths: colWidthsBeforeMutation,
           withHeadings: this.model.withHeadings,
           withHeadingColumn: this.model.withHeadingColumn,
           initialColWidth: this.model.initialColWidth,

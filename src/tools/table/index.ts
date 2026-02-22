@@ -204,9 +204,9 @@ export class Table implements BlockTool {
     if (this.model.initialColWidth === undefined) {
       const widths = this.model.colWidths ?? readPixelWidths(gridEl);
 
-      this.data.initialColWidth = widths.length > 0
+      this.model.setInitialColWidth(widths.length > 0
         ? computeInitialColWidth(widths)
-        : undefined;
+        : undefined);
     }
 
     this.initResize(gridEl);
@@ -388,8 +388,7 @@ export class Table implements BlockTool {
 
     this.cellBlocks?.deleteBlocks(blocksToDelete);
     this.grid.deleteColumn(gridEl, colIndex);
-    this.data.colWidths = syncColWidthsAfterDeleteColumn(this.data.colWidths, colIndex);
-    this.model.setColWidths(this.data.colWidths);
+    this.model.setColWidths(syncColWidthsAfterDeleteColumn(this.model.colWidths, colIndex));
   }
 
   public getBlockIdsInRow(rowIndex: number): string[] {
@@ -438,8 +437,7 @@ export class Table implements BlockTool {
 
         this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
         this.model.addColumn(undefined, halfWidth);
-        this.data.colWidths = [...colWidths, halfWidth];
-        this.model.setColWidths(this.data.colWidths);
+        this.model.setColWidths([...colWidths, halfWidth]);
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
         this.initResize(gridEl);
@@ -476,11 +474,12 @@ export class Table implements BlockTool {
           ? Math.round((this.model.initialColWidth / 2) * 100) / 100
           : computeHalfAvgWidth(colWidths);
 
+        const newWidths = [...colWidths, halfWidth];
+
         this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
         this.model.addColumn(undefined, halfWidth);
-        this.data.colWidths = [...colWidths, halfWidth];
-        this.model.setColWidths(this.data.colWidths);
-        applyPixelWidths(gridEl, this.data.colWidths);
+        this.model.setColWidths(newWidths);
+        applyPixelWidths(gridEl, newWidths);
         populateNewCells(gridEl, this.cellBlocks);
         updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
         this.initResize(gridEl);
@@ -502,11 +501,12 @@ export class Table implements BlockTool {
 
         this.cellBlocks?.deleteBlocks(blocksToDelete);
         this.grid.deleteColumn(gridEl, colCount - 1);
-        this.data.colWidths = syncColWidthsAfterDeleteColumn(this.data.colWidths, colCount - 1);
-        this.model.setColWidths(this.data.colWidths);
+        const updatedWidths = syncColWidthsAfterDeleteColumn(this.model.colWidths, colCount - 1);
 
-        if (this.model.colWidths) {
-          applyPixelWidths(gridEl, this.model.colWidths);
+        this.model.setColWidths(updatedWidths);
+
+        if (updatedWidths) {
+          applyPixelWidths(gridEl, updatedWidths);
         }
 
         this.initResize(gridEl);
@@ -605,15 +605,10 @@ export class Table implements BlockTool {
       },
     );
 
-    this.data.colWidths = result.colWidths;
-    this.data.withHeadings = result.withHeadings;
-    this.data.withHeadingColumn = result.withHeadingColumn;
+    this.model.setColWidths(result.colWidths);
+    this.model.setWithHeadings(result.withHeadings);
+    this.model.setWithHeadingColumn(result.withHeadingColumn);
     this.pendingHighlight = result.pendingHighlight;
-
-    // Sync model metadata
-    this.model.setColWidths(this.data.colWidths);
-    this.model.setWithHeadings(this.data.withHeadings);
-    this.model.setWithHeadingColumn(this.data.withHeadingColumn);
 
     updateHeadingStyles(this.element, this.model.withHeadings);
     updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
@@ -684,7 +679,6 @@ export class Table implements BlockTool {
       gridEl,
       widths,
       (newWidths: number[]) => {
-        this.data.colWidths = newWidths;
         this.model.setColWidths(newWidths);
         enableScrollOverflow(this.element);
         this.rowColControls?.positionGrips();
@@ -974,8 +968,7 @@ export class Table implements BlockTool {
 
       this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
       this.model.addColumn(undefined, halfWidth);
-      this.data.colWidths = [...colWidths, halfWidth];
-      this.model.setColWidths(this.data.colWidths);
+      this.model.setColWidths([...colWidths, halfWidth]);
       populateNewCells(gridEl, this.cellBlocks);
       updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
     });

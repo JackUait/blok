@@ -319,17 +319,21 @@ export class BlockYjsSync {
       return;
     }
 
-    // Emit block-removed event BEFORE removal so listeners can inspect
-    // the block's DOM position (e.g., which table cell it's in)
-    this.handlers.onBlockRemoved(block, index);
+    // Keep Yjs sync state active for the full remove lifecycle so listeners
+    // and block.destroy handlers can detect undo/redo-originated removals.
+    this.withAtomicOperation(() => {
+      // Emit block-removed event BEFORE removal so listeners can inspect
+      // the block's DOM position (e.g., which table cell it's in)
+      this.handlers.onBlockRemoved(block, index);
 
-    // Remove from DOM
-    this.blocksStore.remove(index);
+      // Remove from DOM
+      this.blocksStore.remove(index);
 
-    // If all blocks removed, insert a default block
-    if (this.blocksStore.length === 0) {
-      this.handlers.insertDefaultBlock(true);
-    }
+      // If all blocks removed, insert a default block
+      if (this.blocksStore.length === 0) {
+        this.handlers.insertDefaultBlock(true);
+      }
+    });
   }
 
   /**

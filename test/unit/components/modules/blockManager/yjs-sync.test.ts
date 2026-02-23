@@ -759,6 +759,38 @@ describe('BlockYjsSync', () => {
 
         expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
       });
+
+      it('keeps Yjs sync state active while removing a block', () => {
+        const syncStates: boolean[] = [];
+        const blockToRemove = createMockBlock({ id: 'to-remove' });
+        const testBlocksStore = createBlocksStore([blockToRemove]);
+
+        (blockToRemove.destroy as ReturnType<typeof vi.fn>).mockImplementation(() => {
+          syncStates.push(yjsSync.isSyncingFromYjs);
+        });
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.onBlockRemoved = vi.fn(() => {
+          syncStates.push(yjsSync.isSyncingFromYjs);
+        });
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+        yjsSync.subscribe();
+
+        callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+
+        expect(syncStates).toEqual([true, true]);
+        expect(yjsSync.isSyncingFromYjs).toBe(false);
+      });
     });
   });
 

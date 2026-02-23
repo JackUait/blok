@@ -240,16 +240,18 @@ export class Table implements BlockTool {
       return;
     }
 
-    const initializedContent = this.cellBlocks?.initializeCells(content) ?? content;
+    this.runStructuralOp(() => {
+      const initializedContent = this.cellBlocks?.initializeCells(content) ?? content;
 
-    this.model.replaceAll({
-      ...this.model.snapshot(),
-      content: initializedContent,
-    });
+      this.model.replaceAll({
+        ...this.model.snapshot(),
+        content: initializedContent,
+      });
 
-    if (this.isNewTable) {
-      populateNewCells(gridEl, this.cellBlocks);
-    }
+      if (this.isNewTable) {
+        populateNewCells(gridEl, this.cellBlocks);
+      }
+    }, true);
 
     if (this.model.initialColWidth === undefined) {
       const widths = this.model.colWidths ?? readPixelWidths(gridEl);
@@ -304,7 +306,9 @@ export class Table implements BlockTool {
     // reattached via mountBlocksInCell(). Deleting them here would destroy
     // the block data that Yjs is restoring, causing empty cells after undo.
     if (!this.api.blocks.isSyncingFromYjs) {
-      this.cellBlocks?.deleteAllBlocks();
+      this.runStructuralOp(() => {
+        this.cellBlocks?.deleteAllBlocks();
+      }, true);
     }
 
     this.cellBlocks?.destroy();
@@ -344,20 +348,27 @@ export class Table implements BlockTool {
         return;
       }
 
-      const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+      this.runStructuralOp(() => {
+        const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
 
-      // Check generation after initializeCells — if a re-entrant setData
-      // was triggered during block insertion inside initializeCells, bail
-      // out to avoid overwriting the newer call's model and controls.
+        // Check generation after initializeCells — if a re-entrant setData
+        // was triggered during block insertion inside initializeCells, bail
+        // out to avoid overwriting the newer call's model and controls.
+        if (currentGeneration !== this.setDataGeneration) {
+          return;
+        }
+
+        this.model.replaceAll({
+          ...this.model.snapshot(),
+          content: setDataContent,
+        });
+        this.initialContent = null;
+      }, true);
+
       if (currentGeneration !== this.setDataGeneration) {
         return;
       }
 
-      this.model.replaceAll({
-        ...this.model.snapshot(),
-        content: setDataContent,
-      });
-      this.initialContent = null;
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);
@@ -393,7 +404,9 @@ export class Table implements BlockTool {
     this.model.setWithHeadingColumn(false);
     this.model.setColWidths(undefined);
 
-    this.cellBlocks?.deleteAllBlocks();
+    this.runStructuralOp(() => {
+      this.cellBlocks?.deleteAllBlocks();
+    }, true);
     this.cellBlocks?.destroy();
 
     const oldElement = this.element;
@@ -409,13 +422,16 @@ export class Table implements BlockTool {
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
     if (!this.readOnly && gridEl) {
-      const pasteContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+      this.runStructuralOp(() => {
+        const pasteContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
 
-      this.model.replaceAll({
-        ...this.model.snapshot(),
-        content: pasteContent,
-      });
-      this.initialContent = null;
+        this.model.replaceAll({
+          ...this.model.snapshot(),
+          content: pasteContent,
+        });
+        this.initialContent = null;
+      }, true);
+
       this.initResize(gridEl);
       this.initAddControls(gridEl);
       this.initRowColControls(gridEl);

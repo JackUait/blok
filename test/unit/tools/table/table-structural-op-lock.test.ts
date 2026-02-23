@@ -368,6 +368,33 @@ describe('Table structural operation lock', () => {
     expect(cells).toHaveLength(1);
   });
 
+  it('discards deferred events during setData full rebuild', () => {
+    const api = createMockAPI();
+    const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+      data: { withHeadings: false, withHeadingColumn: false, content: [['A']] },
+      config: {},
+      api,
+      readOnly: false,
+      block: { id: 'table-1' } as never,
+    };
+
+    const table = new Table(options);
+    const element = table.render();
+
+    container.appendChild(element);
+    table.rendered();
+
+    // Call setData with new content
+    table.setData({ content: [['X', 'Y'], ['P', 'Q']], withHeadings: true });
+
+    // Model should reflect the setData call
+    const saved = table.save(container.firstElementChild as HTMLElement);
+
+    expect(saved.withHeadings).toBe(true);
+    expect(saved.content).toHaveLength(2);
+    expect(saved.content[0]).toHaveLength(2);
+  });
+
   it('wraps deleteRowWithCleanup in structural op lock', () => {
     const api = createMockAPI();
     const options: BlockToolConstructorOptions<TableData, TableConfig> = {

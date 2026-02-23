@@ -395,6 +395,34 @@ describe('Table structural operation lock', () => {
     expect(saved.content[0]).toHaveLength(2);
   });
 
+  it('calls transact when available for structural operations', () => {
+    const api = createMockAPI();
+
+    // Add a mock transact method
+    (api.blocks as Record<string, unknown>).transact = vi.fn().mockImplementation(
+      (fn: () => void) => fn()
+    );
+
+    const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+      data: { withHeadings: false, withHeadingColumn: false, content: [['A'], ['B']] },
+      config: {},
+      api,
+      readOnly: false,
+      block: { id: 'table-1' } as never,
+    };
+
+    const table = new Table(options);
+    const element = table.render();
+
+    container.appendChild(element);
+    table.rendered();
+
+    // Delete a row — should be wrapped in transact
+    table.deleteRowWithCleanup(1);
+
+    expect((api.blocks as Record<string, unknown>).transact).toHaveBeenCalled();
+  });
+
   it('wraps deleteRowWithCleanup in structural op lock', () => {
     const api = createMockAPI();
     const options: BlockToolConstructorOptions<TableData, TableConfig> = {

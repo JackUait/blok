@@ -1018,7 +1018,7 @@ In `types/api/blocks.d.ts`, add to the `Blocks` interface (after `splitBlock`, a
  *
  * @param fn - The function containing block operations to group
  */
-transact(fn: () => void): void;
+transact?(fn: () => void): void;
 ```
 
 In `src/components/modules/blockManager/blockManager.ts`, add a public method to `BlockManager`:

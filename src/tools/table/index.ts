@@ -139,6 +139,27 @@ export class Table implements BlockTool {
     }
   }
 
+  /**
+   * Execute a structural operation within a Yjs transaction.
+   * Combines the structural op lock (event deferral) with Yjs undo grouping.
+   * Used for interactive operations that should be a single undo entry.
+   */
+  private runTransactedStructuralOp<T>(fn: () => T): T {
+    let result: T | undefined;
+
+    const wrappedFn = (): void => {
+      result = this.runStructuralOp(fn);
+    };
+
+    if (this.api.blocks.transact) {
+      this.api.blocks.transact(wrappedFn);
+    } else {
+      wrappedFn();
+    }
+
+    return result as T;
+  }
+
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconTable,
@@ -469,7 +490,7 @@ export class Table implements BlockTool {
       return;
     }
 
-    this.runStructuralOp(() => {
+    this.runTransactedStructuralOp(() => {
       const { blocksToDelete } = this.model.deleteRow(rowIndex);
 
       this.cellBlocks?.deleteBlocks(blocksToDelete);
@@ -484,7 +505,7 @@ export class Table implements BlockTool {
       return;
     }
 
-    this.runStructuralOp(() => {
+    this.runTransactedStructuralOp(() => {
       // model.deleteColumn() already removes the width at colIndex from
       // colWidthsValue internally, so no additional syncColWidthsAfterDeleteColumn
       // call is needed — that would double-delete.
@@ -524,7 +545,7 @@ export class Table implements BlockTool {
           : computeHalfAvgWidth(colWidths);
       },
       onAddRow: () => {
-        this.runStructuralOp(() => {
+        this.runTransactedStructuralOp(() => {
           this.grid.addRow(gridEl);
           this.model.addRow();
           populateNewCells(gridEl, this.cellBlocks);
@@ -536,7 +557,7 @@ export class Table implements BlockTool {
         });
       },
       onAddColumn: () => {
-        this.runStructuralOp(() => {
+        this.runTransactedStructuralOp(() => {
           const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
           const halfWidth = this.model.initialColWidth !== undefined
             ? Math.round((this.model.initialColWidth / 2) * 100) / 100
@@ -560,7 +581,7 @@ export class Table implements BlockTool {
         this.rowColControls?.setGripsDisplay(false);
       },
       onDragAddRow: () => {
-        this.runStructuralOp(() => {
+        this.runTransactedStructuralOp(() => {
           this.grid.addRow(gridEl);
           this.model.addRow();
           populateNewCells(gridEl, this.cellBlocks);
@@ -569,7 +590,7 @@ export class Table implements BlockTool {
         });
       },
       onDragRemoveRow: () => {
-        this.runStructuralOp(() => {
+        this.runTransactedStructuralOp(() => {
           const rowCount = this.grid.getRowCount(gridEl);
 
           if (rowCount > 1 && isRowEmpty(gridEl, rowCount - 1)) {
@@ -581,7 +602,7 @@ export class Table implements BlockTool {
         });
       },
       onDragAddCol: () => {
-        this.runStructuralOp(() => {
+        this.runTransactedStructuralOp(() => {
           const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
           const halfWidth = this.model.initialColWidth !== undefined
             ? Math.round((this.model.initialColWidth / 2) * 100) / 100
@@ -605,7 +626,7 @@ export class Table implements BlockTool {
         });
       },
       onDragRemoveCol: () => {
-        this.runStructuralOp(() => {
+        this.runTransactedStructuralOp(() => {
           const colCount = this.grid.getColumnCount(gridEl);
 
           if (colCount <= 1 || !isColumnEmpty(gridEl, colCount - 1)) {
@@ -703,7 +724,7 @@ export class Table implements BlockTool {
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
-    this.runStructuralOp(() => {
+    this.runTransactedStructuralOp(() => {
       // Capture colWidths BEFORE the model mutation so the action handler
       // receives pre-mutation widths. Model methods (addColumn, deleteColumn,
       // moveColumn) update colWidths internally, and the handler functions
@@ -1020,7 +1041,7 @@ export class Table implements BlockTool {
     startRow: number,
     startCol: number,
   ): void {
-    this.runStructuralOp(() => {
+    this.runTransactedStructuralOp(() => {
       this.expandGridForPaste(gridEl, startRow + payload.rows, startCol + payload.cols);
 
       // Paste block data into target cells

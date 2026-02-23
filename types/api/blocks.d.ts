@@ -181,4 +181,14 @@ export interface Blocks {
     newBlockData: BlockToolData,
     insertIndex: number,
   ): BlockAPI;
+
+  /**
+   * Execute a function within a transaction.
+   * All block operations (insert, delete, move) within fn are grouped
+   * into a single undo entry. Prevents undo-group splitting that would
+   * make structural operations partially undoable.
+   *
+   * @param fn - The function containing block operations to group
+   */
+  transact?(fn: () => void): void;
 }

@@ -656,6 +656,30 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Execute a function with stopCapturing suppressed.
+   * All block operations within fn are kept in the same undo group.
+   * Used by tools that perform multi-step structural operations
+   * (e.g., table add row = multiple block inserts).
+   */
+  public transactForTool(fn: () => void): void {
+    this.Blok.YjsManager.stopCapturing();
+
+    const prevSuppress = this.operations.suppressStopCapturing;
+
+    this.operations.suppressStopCapturing = true;
+
+    try {
+      fn();
+    } finally {
+      this.operations.suppressStopCapturing = prevSuppress;
+
+      requestAnimationFrame(() => {
+        this.Blok.YjsManager.stopCapturing();
+      });
+    }
+  }
+
+  /**
    * Splits a block by updating the current block's data and inserting a new block.
    * Both operations are grouped into a single undo entry.
    */

@@ -46,6 +46,7 @@ export class BlocksAPI extends Module {
       setBlockParent: (blockId: string, parentId: string | null): void => this.setBlockParent(blockId, parentId),
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
       splitBlock: this.splitBlock,
+      transact: (fn: () => void): void => this.transact(fn),
     };
   }
 
@@ -450,6 +451,14 @@ export class BlocksAPI extends Module {
 
     return new BlockAPI(newBlock);
   };
+
+  /**
+   * Execute a function within a transaction, grouping all block operations
+   * into a single undo entry.
+   */
+  private transact(fn: () => void): void {
+    this.Blok.BlockManager.transactForTool(fn);
+  }
 
   /**
    * Validated block index and throws an error if it's invalid

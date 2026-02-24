@@ -130,7 +130,7 @@ describe('Table scroll container', () => {
   });
 
   describe('without colWidths (editable)', () => {
-    it('creates scroll container with padding to prevent layout shift on first resize', () => {
+    it('creates scroll container without padding classes (grips are in overlay)', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -140,8 +140,8 @@ describe('Table scroll container', () => {
       const scrollContainer = element.querySelector('[data-blok-table-scroll]');
 
       expect(scrollContainer).not.toBeNull();
-      expect(scrollContainer?.classList.contains('pt-[9px]')).toBe(true);
-      expect(scrollContainer?.classList.contains('pl-[9px]')).toBe(true);
+      expect(scrollContainer?.classList.contains('pt-[9px]')).toBe(false);
+      expect(scrollContainer?.classList.contains('pl-[9px]')).toBe(false);
 
       const rows = scrollContainer?.querySelectorAll('[data-blok-table-row]');
 

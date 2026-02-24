@@ -60,7 +60,7 @@ describe('Table resize shift regression', () => {
     vi.restoreAllMocks();
   });
 
-  it('percent-mode table has scroll container with padding before first resize', () => {
+  it('percent-mode table has scroll container without padding (grips are in overlay)', () => {
     const options = createTableOptions({
       content: [['A', 'B'], ['C', 'D']],
     });
@@ -71,12 +71,13 @@ describe('Table resize shift regression', () => {
     table.rendered();
 
     // A scroll container must exist from the start so that the table does not
-    // shift 9px down and right when the user first resizes a column.
+    // shift when the user first resizes a column.
+    // Padding is no longer needed because grips live in a separate overlay.
     const scrollContainer = element.querySelector('[data-blok-table-scroll]');
 
     expect(scrollContainer).not.toBeNull();
-    expect(scrollContainer?.classList.contains('pt-[9px]')).toBe(true);
-    expect(scrollContainer?.classList.contains('pl-[9px]')).toBe(true);
+    expect(scrollContainer?.classList.contains('pt-[9px]')).toBe(false);
+    expect(scrollContainer?.classList.contains('pl-[9px]')).toBe(false);
 
     document.body.removeChild(element);
   });

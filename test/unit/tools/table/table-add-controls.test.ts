@@ -1273,26 +1273,17 @@ describe('TableAddControls', () => {
       spy.mockRestore();
     });
 
-    it('offsets left for scroll container padding when grid has pixel width', () => {
+    it('aligns add-row button at left:0 when grid has pixel width inside scroll container', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       const scrollContainer = document.createElement('div');
 
-      scrollContainer.style.paddingLeft = '9px';
       wrapper.insertBefore(scrollContainer, grid);
       scrollContainer.appendChild(grid);
 
       grid.style.width = '400px';
 
       Object.defineProperty(scrollContainer, 'clientWidth', { value: 600, configurable: true });
-
-      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
-        if (el === scrollContainer) {
-          return { paddingLeft: '9px' } as CSSStyleDeclaration;
-        }
-
-        return { paddingRight: '0px' } as CSSStyleDeclaration;
-      });
 
       new TableAddControls({
         wrapper,
@@ -1306,10 +1297,8 @@ describe('TableAddControls', () => {
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.width).toBe('400px');
-      expect(addRowBtn.style.left).toBe('9px');
+      expect(addRowBtn.style.left).toBe('0px');
       expect(addRowBtn.style.right).toBe('');
-
-      spy.mockRestore();
     });
 
     it('sets left:0 in pixel mode when grid parent is the wrapper itself', () => {
@@ -1426,7 +1415,7 @@ describe('TableAddControls', () => {
 
       // Button width should be the full grid width (scroll tracking uses translateX for alignment)
       expect(addRowBtn.style.width).toBe('1200px');
-      expect(addRowBtn.style.left).toBe('9px');
+      expect(addRowBtn.style.left).toBe('0px');
 
       spy.mockRestore();
     });
@@ -1466,7 +1455,7 @@ describe('TableAddControls', () => {
 
       // Grid fits, so button should match grid width
       expect(addRowBtn.style.width).toBe('400px');
-      expect(addRowBtn.style.left).toBe('9px');
+      expect(addRowBtn.style.left).toBe('0px');
 
       spy.mockRestore();
     });

@@ -651,7 +651,7 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
-    it('aligns add-row button left with scroll container padding in percent mode', () => {
+    it('aligns add-row button left at 0px in percent mode', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -659,39 +659,24 @@ describe('Table Tool', () => {
       const element = table.render();
 
       document.body.appendChild(element);
-
-      // In edit mode, the scroll container is created during render() with pl-[9px].
-      // Mock getComputedStyle BEFORE rendered() so syncRowButtonWidth sees the padding.
-      const scrollContainer = element.firstElementChild as HTMLElement;
-      const originalGetComputedStyle = window.getComputedStyle;
-      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
-        const result = originalGetComputedStyle(el);
-
-        if (el === scrollContainer) {
-          return { ...result, paddingLeft: '9px' } as CSSStyleDeclaration;
-        }
-
-        return result;
-      });
 
       table.rendered();
 
       // Grid has no style.width (percent mode) → percent branch of syncRowButtonWidth
+      const scrollContainer = element.firstElementChild as HTMLElement;
       const grid = scrollContainer.firstElementChild as HTMLElement;
 
       expect(grid.style.width).toBe('');
 
-      // The add-row button should offset by the scroll container's left padding
-      // so it aligns with the grid, not the wrapper
+      // The add-row button should be at left: 0px (no padding offset needed)
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
-      expect(addRowBtn.style.left).toBe('9px');
+      expect(addRowBtn.style.left).toBe('0px');
 
-      spy.mockRestore();
       document.body.removeChild(element);
     });
 
-    it('aligns add-row button left with scroll container padding after percent-to-pixel resize', () => {
+    it('aligns add-row button left at 0px after percent-to-pixel resize', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -700,22 +685,9 @@ describe('Table Tool', () => {
 
       document.body.appendChild(element);
 
-      // Scroll container exists from render() for editable tables.
-      // Mock getComputedStyle BEFORE rendered() so syncRowButtonWidth sees the padding.
-      const scrollContainer = element.querySelector('[data-blok-table-scroll]') as HTMLElement;
-      const originalGetComputedStyle = window.getComputedStyle;
-      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
-        const result = originalGetComputedStyle(el);
-
-        if (el === scrollContainer) {
-          return { ...result, paddingLeft: '9px' } as CSSStyleDeclaration;
-        }
-
-        return result;
-      });
-
       table.rendered();
 
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]') as HTMLElement;
       const grid = scrollContainer.firstElementChild as HTMLElement;
 
       expect(grid.style.width).toBe('');
@@ -730,12 +702,11 @@ describe('Table Tool', () => {
       // After resize, the grid should have a pixel width
       expect(grid.style.width).toMatch(/px$/);
 
-      // The add-row button should be aligned with the scroll container's left padding
+      // The add-row button should be at left: 0px (no padding offset needed)
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
-      expect(addRowBtn.style.left).toBe('9px');
+      expect(addRowBtn.style.left).toBe('0px');
 
-      spy.mockRestore();
       document.body.removeChild(element);
     });
   });

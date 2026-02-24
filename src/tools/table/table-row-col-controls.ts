@@ -33,6 +33,8 @@ export type RowColAction =
 
 export interface TableRowColControlsOptions {
   grid: HTMLElement;
+  overlay?: HTMLElement;
+  scrollContainer?: HTMLElement;
   getColumnCount: () => number;
   getRowCount: () => number;
   isHeadingRow: () => boolean;
@@ -83,6 +85,8 @@ const GRIP_ACTIVE_CLASSES = [
  */
 export class TableRowColControls {
   private grid: HTMLElement;
+  private overlay: HTMLElement | undefined;
+  private scrollContainer: HTMLElement | undefined;
   private getColumnCount: () => number;
   private getRowCount: () => number;
   private isHeadingRow: () => boolean;
@@ -108,9 +112,12 @@ export class TableRowColControls {
   private boundMouseOver: (e: MouseEvent) => void;
   private boundMouseLeave: (e: MouseEvent) => void;
   private boundPointerDown: (e: PointerEvent) => void;
+  private boundScrollHandler: (() => void) | null = null;
 
   constructor(options: TableRowColControlsOptions) {
     this.grid = options.grid;
+    this.overlay = options.overlay;
+    this.scrollContainer = options.scrollContainer;
     this.getColumnCount = options.getColumnCount;
     this.getRowCount = options.getRowCount;
     this.isHeadingRow = options.isHeadingRow;
@@ -208,28 +215,45 @@ export class TableRowColControls {
   private createGrips(): void {
     const colCount = this.getColumnCount();
     const rowCount = this.getRowCount();
+    const gripContainer = this.overlay ?? this.grid;
 
     Array.from({ length: colCount }).forEach((_, i) => {
       const grip = this.createGripElement('col', i);
 
       this.colGrips.push(grip);
-      this.grid.appendChild(grip);
+      gripContainer.appendChild(grip);
     });
 
     Array.from({ length: rowCount }).forEach((_, i) => {
       const grip = this.createGripElement('row', i);
 
       this.rowGrips.push(grip);
-      this.grid.appendChild(grip);
+      gripContainer.appendChild(grip);
     });
 
     this.positionGrips();
     this.observeRowHeights();
+    this.attachScrollListener();
+  }
+
+  private attachScrollListener(): void {
+    if (this.overlay && this.scrollContainer) {
+      this.boundScrollHandler = () => this.positionGrips();
+      this.scrollContainer.addEventListener('scroll', this.boundScrollHandler);
+    }
+  }
+
+  private detachScrollListener(): void {
+    if (this.boundScrollHandler && this.scrollContainer) {
+      this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
+      this.boundScrollHandler = null;
+    }
   }
 
   private destroyGrips(): void {
     this.rowResizeObserver?.disconnect();
     this.rowResizeObserver = null;
+    this.detachScrollListener();
     this.colGrips.forEach(g => g.remove());
     this.rowGrips.forEach(g => g.remove());
     this.colGrips = [];
@@ -260,6 +284,9 @@ export class TableRowColControls {
 
     grip.addEventListener('pointerdown', this.boundPointerDown);
     grip.addEventListener('mouseenter', () => {
+      if (this.overlay) {
+        this.clearHideTimeout();
+      }
       if (!this.isGripInteractionLocked()) {
         expandGrip(grip, type);
       }
@@ -267,6 +294,9 @@ export class TableRowColControls {
     grip.addEventListener('mouseleave', () => {
       if (!this.isGripInteractionLocked()) {
         collapseGrip(grip, type, pillSize);
+        if (this.overlay) {
+          this.scheduleHideAll();
+        }
       }
     });
 
@@ -286,6 +316,12 @@ export class TableRowColControls {
     }
 
     const edges = getCumulativeColEdges(this.grid);
+    const scrollLeft = this.overlay && this.scrollContainer
+      ? this.scrollContainer.scrollLeft
+      : 0;
+    const containerWidth = this.overlay && this.scrollContainer
+      ? this.scrollContainer.clientWidth
+      : Infinity;
 
     this.colGrips.forEach((grip, i) => {
       if (i + 1 >= edges.length) {
@@ -293,10 +329,16 @@ export class TableRowColControls {
       }
 
       const centerX = (edges[i] + edges[i + 1]) / 2;
+      const adjustedX = centerX - scrollLeft;
       const style = grip.style;
 
       style.top = `${-BORDER_WIDTH / 2}px`;
-      style.left = `${centerX}px`;
+      style.left = `${adjustedX}px`;
+
+      // Hide grips scrolled out of the visible area
+      if (this.overlay) {
+        style.visibility = (adjustedX < 0 || adjustedX > containerWidth) ? 'hidden' : '';
+      }
     });
 
     this.rowGrips.forEach((grip, i) => {

@@ -4,9 +4,31 @@ import type * as UtilsModule from '../../../../../src/components/utils';
 import { BlockHovered } from '../../../../../src/components/events/BlockHovered';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
+/**
+ * Lightweight stub class that satisfies `instanceof Block` in the hover handler.
+ * Defined via vi.hoisted so it's available when vi.mock runs (hoisted to file top).
+ */
+const BlockStub = vi.hoisted(() => {
+  return class BlockStub {
+    public id: string;
+    public name = 'paragraph';
+    public holder: HTMLDivElement;
+
+    constructor(id: string) {
+      this.id = id;
+      this.holder = document.createElement('div');
+      this.holder.setAttribute('data-blok-testid', 'block-wrapper');
+    }
+  };
+});
+
 vi.mock('../../../../../src/components/icons', () => ({
   IconMenu: '<svg></svg>',
   IconPlus: '<svg></svg>',
+}));
+
+vi.mock('../../../../../src/components/block', () => ({
+  Block: BlockStub,
 }));
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
@@ -341,6 +363,117 @@ describe('Toolbar module interactions', () => {
     expect(closeSpy).not.toHaveBeenCalled();
     const hoveredBlock = (toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock;
     expect(hoveredBlock).toBe(cellBlock);
+  });
+
+  /**
+   * Creates a minimal stub that passes `instanceof Block` and has the
+   * properties the BlockHovered handler and moveAndOpen need.
+   */
+  const createBlockStub = (id: string): BlockStub => {
+    return new BlockStub(id);
+  };
+
+  describe('explicitlyClosed flag recovery on hover', () => {
+    it('resets explicitlyClosed and opens toolbar when hovering a DIFFERENT block after close', () => {
+      enableBindings();
+
+      const blockB = createBlockStub('block-b');
+
+      const blok = getBlok();
+
+      blok.BlockSettings.opened = false;
+      blok.BlockSettings.isOpening = false;
+
+      (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+        opened: false,
+        close: vi.fn(),
+      };
+
+      /**
+       * Simulate: user typed in a block which called Toolbar.close(),
+       * setting explicitlyClosed = true and hoveredBlock = null.
+       */
+      (toolbar as unknown as { explicitlyClosed: boolean }).explicitlyClosed = true;
+      (toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock = null;
+
+      const moveSpy = vi.spyOn(
+        toolbar as unknown as { moveAndOpen: (block: unknown, target?: Element) => void },
+        'moveAndOpen'
+      ).mockImplementation(() => {});
+
+      /** Hover over blockB — should reset the flag and call moveAndOpen */
+      blockHoveredHandler?.({ block: blockB });
+
+      expect(moveSpy).toHaveBeenCalledWith(blockB, undefined);
+      expect((toolbar as unknown as { explicitlyClosed: boolean }).explicitlyClosed).toBe(false);
+    });
+
+    it('does NOT reopen toolbar when hovering the SAME block that was explicitly closed', () => {
+      enableBindings();
+
+      const blockA = createBlockStub('block-a');
+
+      const blok = getBlok();
+
+      blok.BlockSettings.opened = false;
+      blok.BlockSettings.isOpening = false;
+
+      (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+        opened: false,
+        close: vi.fn(),
+      };
+
+      /**
+       * Simulate: user typed in blockA which called Toolbar.close(),
+       * setting explicitlyClosed = true. We also track which block was
+       * last hovered so the handler can know the user is still on the same block.
+       */
+      (toolbar as unknown as { explicitlyClosed: boolean }).explicitlyClosed = true;
+      (toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock = blockA;
+
+      const moveSpy = vi.spyOn(
+        toolbar as unknown as { moveAndOpen: (block: unknown, target?: Element) => void },
+        'moveAndOpen'
+      ).mockImplementation(() => {});
+
+      /** Hover same block — should NOT reopen */
+      blockHoveredHandler?.({ block: blockA });
+
+      expect(moveSpy).not.toHaveBeenCalled();
+    });
+
+    it('resets explicitlyClosed when hovering any block after Toolbar.close() with no prior hover', () => {
+      enableBindings();
+
+      const blockA = createBlockStub('block-a');
+
+      const blok = getBlok();
+
+      blok.BlockSettings.opened = false;
+      blok.BlockSettings.isOpening = false;
+
+      (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+        opened: false,
+        close: vi.fn(),
+      };
+
+      /**
+       * Simulate: Toolbar.close() was called (e.g. from paste or navigation)
+       * when hoveredBlock was already null (toolbar was not attached to any block).
+       * hoveredBlock == null means ANY incoming hover should be treated as "different".
+       */
+      (toolbar as unknown as { explicitlyClosed: boolean }).explicitlyClosed = true;
+      (toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock = null;
+
+      const moveSpy = vi.spyOn(
+        toolbar as unknown as { moveAndOpen: (block: unknown, target?: Element) => void },
+        'moveAndOpen'
+      ).mockImplementation(() => {});
+
+      blockHoveredHandler?.({ block: blockA });
+
+      expect(moveSpy).toHaveBeenCalledWith(blockA, undefined);
+    });
   });
 });
 

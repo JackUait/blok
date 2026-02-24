@@ -703,6 +703,95 @@ describe('BlockHoverController', () => {
       });
     });
 
+    it('skips cell blocks in nearest-block detection and returns the table block instead', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      /**
+       * Build DOM hierarchy:
+       * Table block wrapper (top 100–400) contains a cell-blocks container
+       * with a cell paragraph block (top 200–250).
+       * A paragraph block (top 500–600) sits below the table.
+       *
+       * When the cursor is in the gap at Y=220 (inside the table's Y range),
+       * the cell block center (225) is closest (distance=5).
+       * Without filtering, the cell block would be returned.
+       * With filtering, the table block (center=250, dist=30) should be returned
+       * instead of the paragraph block (center=550, dist=330).
+       */
+      const tableBlock = createMockBlock('table-block', 100, 400);
+      const cellBlock = createMockBlock('cell-block', 200, 250);
+      const paragraphBlock = createMockBlock('paragraph-block', 500, 600);
+
+      /** Nest cell block's holder inside a [data-blok-table-cell-blocks] container within the table */
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellBlocksContainer);
+      cellBlocksContainer.appendChild(cellBlock.holder);
+      document.body.appendChild(tableBlock.holder);
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [tableBlock, cellBlock, paragraphBlock];
+
+      /** Cursor at Y=220 — within the table area, very close to cell block center */
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 220,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      /** Should emit the TABLE block (center=250, distance=30), not the cell block (center=225, distance=5) */
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: tableBlock,
+        target: tableBlock.holder,
+      });
+    });
+
+    it('handles case where all blocks are inside table cells gracefully', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      /**
+       * Edge case: if the ONLY blocks in BlockManager are cell blocks
+       * (shouldn't normally happen but guards against crashes).
+       */
+      const cellBlock = createMockBlock('cell-block', 100, 200);
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(cellBlock.holder);
+      document.body.appendChild(cellBlocksContainer);
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [cellBlock];
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 150,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      /** No top-level blocks available — should not emit anything */
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
     it('deduplicates events for nearest block same as direct hover', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController();
 

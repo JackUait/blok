@@ -157,13 +157,27 @@ export class BlockHoverController extends Controller {
       return null;
     }
 
-    const result = blocks.reduce<{ block: Block; distance: number }>((nearest, block) => {
+    /**
+     * Filter out blocks whose holders are inside a table cell container.
+     * Cell blocks should not participate in nearest-block detection —
+     * the parent table block should be found instead.
+     * This matches the direct-hit path which also resolves cell blocks to their parent table block.
+     */
+    const topLevelBlocks = blocks.filter(block =>
+      block.holder.closest('[data-blok-table-cell-blocks]') === null
+    );
+
+    if (topLevelBlocks.length === 0) {
+      return null;
+    }
+
+    const result = topLevelBlocks.reduce<{ block: Block; distance: number }>((nearest, block) => {
       const rect = block.holder.getBoundingClientRect();
       const centerY = (rect.top + rect.bottom) / 2;
       const distance = Math.abs(clientY - centerY);
 
       return distance < nearest.distance ? { block, distance } : nearest;
-    }, { block: blocks[0], distance: Infinity });
+    }, { block: topLevelBlocks[0], distance: Infinity });
 
     return result.block;
   }

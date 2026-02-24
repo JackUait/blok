@@ -782,4 +782,44 @@ describe('PopoverDesktop', () => {
       expect(popover.getElement()).not.toHaveAttribute('data-blok-popover-opened');
     });
   });
+
+  describe('size cache invalidation', () => {
+    it('recalculates size after item visibility changes via toggleItemHiddenByName', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Keep',
+            name: 'keep',
+            onActivate: vi.fn(),
+          },
+          {
+            title: 'Hideable',
+            name: 'hideable',
+            onActivate: vi.fn(),
+          },
+        ],
+      });
+
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      /** Access size to warm the cache */
+      const sizeBeforeHide = instance.size;
+
+      /** Hide an item — the cached size should be invalidated */
+      popover.toggleItemHiddenByName('hideable', true);
+
+      /** Access size again — should NOT return the stale cached value */
+      const sizeAfterHide = instance.size;
+
+      /**
+       * In jsdom offsetHeight/offsetWidth are always 0, so we can't assert actual
+       * dimension differences. Instead we verify the cache was invalidated by checking
+       * that size is re-computed (the getter re-runs its clone-measure logic).
+       * If the cache was NOT invalidated, both calls return the exact same object reference.
+       */
+      expect(sizeAfterHide).not.toBe(sizeBeforeHide);
+    });
+  });
 });

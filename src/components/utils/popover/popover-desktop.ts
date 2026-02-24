@@ -139,6 +139,18 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Toggles hidden state of all items matching the given name.
+   * Invalidates the cached size so the next access re-measures the popover.
+   * @param name - name of the items to toggle
+   * @param isHidden - true to hide, false to show
+   */
+  public override toggleItemHiddenByName(name: string, isHidden: boolean): void {
+    super.toggleItemHiddenByName(name, isHidden);
+
+    this._size = undefined;
+  }
+
+  /**
    * Scroll position inside items container of the popover
    */
   public get scrollTop(): number {

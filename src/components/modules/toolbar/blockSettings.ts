@@ -160,61 +160,69 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * Set isOpening flag BEFORE async operations to prevent toolbar from moving
      * while menu items are being created. This fixes a bug where hovering over a different
      * block during async getTunesItems() causes the toolbar to reposition incorrectly.
+     *
+     * Wrapped in try/catch to guarantee isOpening is always reset — if any step
+     * (getTunes, getTunesItems, PopoverClass constructor) throws, without cleanup
+     * the flag stays true and the toolbar permanently stops appearing on hover.
      */
     this.isOpening = true;
 
-    /**
-     * If block settings contains any inputs, focus will be set there,
-     * so we need to save current selection to restore it after block settings is closed
-     */
-    this.selection.save();
+    try {
+      /**
+       * If block settings contains any inputs, focus will be set there,
+       * so we need to save current selection to restore it after block settings is closed
+       */
+      this.selection.save();
 
-    /**
-     * Highlight content of a Block we are working with
-     * For multiple blocks, they should already be selected
-     */
-    if (!hasMultipleBlocksSelected) {
-      this.Blok.BlockSelection.selectBlock(block);
-      this.Blok.BlockSelection.clearCache();
+      /**
+       * Highlight content of a Block we are working with
+       * For multiple blocks, they should already be selected
+       */
+      if (!hasMultipleBlocksSelected) {
+        this.Blok.BlockSelection.selectBlock(block);
+        this.Blok.BlockSelection.clearCache();
+      }
+
+      /** Get tool's settings data - only relevant for single block selection */
+      const { toolTunes, commonTunes } = block.getTunes();
+
+      const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
+      const popoverParams: PopoverParams & { flipper?: Flipper } = {
+        searchable: false,
+        trigger: trigger || this.nodes.wrapper,
+        items: await this.getTunesItems(block, commonTunes, toolTunes),
+        scopeElement: this.Blok.API.methods.ui.nodes.redactor,
+        messages: {
+          nothingFound: this.Blok.I18n.t('popover.nothingFound'),
+          search: this.Blok.I18n.t('popover.search'),
+        },
+      };
+
+      if (PopoverClass === PopoverDesktop) {
+        popoverParams.flipper = this.flipperInstance;
+      }
+
+      this.popover = new PopoverClass(popoverParams);
+      this.popover.getElement().setAttribute('data-blok-testid', 'block-tunes-popover');
+
+      this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
+
+      /**
+       * Set opened flag AFTER popover is created to prevent race conditions
+       * where close() is called during the async getTunesItems() call
+       * when opened=true but popover is still null
+       */
+      this.opened = true;
+      this.isOpening = false;
+
+      /** Tell to subscribers that block settings is opened */
+      this.eventsDispatcher.emit(this.events.opened);
+
+      this.popover.show();
+      this.attachFlipperKeydownListener(block);
+    } catch {
+      this.isOpening = false;
     }
-
-    /** Get tool's settings data - only relevant for single block selection */
-    const { toolTunes, commonTunes } = block.getTunes();
-
-    const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
-    const popoverParams: PopoverParams & { flipper?: Flipper } = {
-      searchable: false,
-      trigger: trigger || this.nodes.wrapper,
-      items: await this.getTunesItems(block, commonTunes, toolTunes),
-      scopeElement: this.Blok.API.methods.ui.nodes.redactor,
-      messages: {
-        nothingFound: this.Blok.I18n.t('popover.nothingFound'),
-        search: this.Blok.I18n.t('popover.search'),
-      },
-    };
-
-    if (PopoverClass === PopoverDesktop) {
-      popoverParams.flipper = this.flipperInstance;
-    }
-
-    this.popover = new PopoverClass(popoverParams);
-    this.popover.getElement().setAttribute('data-blok-testid', 'block-tunes-popover');
-
-    this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
-
-    /**
-     * Set opened flag AFTER popover is created to prevent race conditions
-     * where close() is called during the async getTunesItems() call
-     * when opened=true but popover is still null
-     */
-    this.opened = true;
-    this.isOpening = false; // Clear isOpening flag after popover is created
-
-    /** Tell to subscribers that block settings is opened */
-    this.eventsDispatcher.emit(this.events.opened);
-
-    this.popover.show();
-    this.attachFlipperKeydownListener(block);
   }
 
   /**

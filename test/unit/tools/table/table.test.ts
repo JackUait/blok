@@ -158,7 +158,7 @@ describe('Table Tool', () => {
 
     it('removes only the destroyed table instance restricted tools', () => {
       const tableA = new Table(createTableOptions({}, { restrictedTools: ['list'] }));
-      const tableB = new Table(createTableOptions({}, { restrictedTools: ['checklist'] }));
+      const _tableB = new Table(createTableOptions({}, { restrictedTools: ['checklist'] }));
 
       expect(isRestrictedInTableCell('list')).toBe(true);
       expect(isRestrictedInTableCell('checklist')).toBe(true);

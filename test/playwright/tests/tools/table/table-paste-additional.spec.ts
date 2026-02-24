@@ -181,17 +181,18 @@ test.describe('Paste HTML Table - Additional Scenarios', () => {
     await expect(table).toBeVisible({ timeout: 5000 });
 
     // The paste handler does not interpret colspan attributes — it counts actual <td>/<th>
-    // elements per row to determine the grid dimensions. Because the first row has a single
-    // <td colspan="2">, the grid is created with 1 column. The second row's "B" cell is
-    // dropped since there is no second column to place it in.
+    // elements per row to determine the grid dimensions. The maximum column count
+    // across all rows determines the grid width. Row 1 has 1 <td>, row 2 has 2 <td>s,
+    // so maxCols = 2. Rows with fewer cells are padded with empty cells.
     // Scope assertions to the table to avoid matching the page heading.
     await expect(table.getByText('Merged')).toBeVisible();
     await expect(table.getByText('A', { exact: true })).toBeVisible();
+    await expect(table.getByText('B', { exact: true })).toBeVisible();
 
-    // Verify that exactly 2 cells are rendered (one per row, single column)
+    // Verify that 4 cells are rendered (2 rows × 2 columns)
     const cells = table.locator(CELL_SELECTOR);
 
-    await expect(cells).toHaveCount(2);
+    await expect(cells).toHaveCount(4);
   });
 
   test('pasting an empty HTML table tag results in no table block being inserted', async ({ page }) => {

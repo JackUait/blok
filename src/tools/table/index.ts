@@ -130,12 +130,13 @@ export class Table implements BlockTool {
     } finally {
       this.structuralOpDepth--;
 
-      if (this.structuralOpDepth === 0) {
-        if (discard) {
-          this.cellBlocks?.discardDeferredEvents();
-        } else {
-          this.cellBlocks?.flushDeferredEvents();
-        }
+      const shouldFlush = this.structuralOpDepth === 0;
+
+      if (shouldFlush && discard) {
+        this.cellBlocks?.discardDeferredEvents();
+      }
+      if (shouldFlush && !discard) {
+        this.cellBlocks?.flushDeferredEvents();
       }
     }
   }
@@ -146,19 +147,17 @@ export class Table implements BlockTool {
    * Used for interactive operations that should be a single undo entry.
    */
   private runTransactedStructuralOp<T>(fn: () => T): T {
-    let result: T | undefined;
-
-    const wrappedFn = (): void => {
-      result = this.runStructuralOp(fn);
-    };
-
-    if (this.api.blocks.transact) {
-      this.api.blocks.transact(wrappedFn);
-    } else {
-      wrappedFn();
+    if (!this.api.blocks.transact) {
+      return this.runStructuralOp(fn);
     }
 
-    return result as T;
+    const ref = { current: undefined as T | undefined };
+
+    this.api.blocks.transact(() => {
+      ref.current = this.runStructuralOp(fn);
+    });
+
+    return ref.current as T;
   }
 
   /**
@@ -294,9 +293,21 @@ export class Table implements BlockTool {
     this.runStructuralOp(() => {
       const initializedContent = this.cellBlocks?.initializeCells(content) ?? content;
 
+      // When a new table is created with empty content, the DOM grid already has
+      // the correct dimensions but the model has zero rows. Pre-populate the
+      // model with an empty grid so populateNewCells can sync blocks via
+      // addBlockToCell (which requires valid row/col bounds).
+      const contentForModel = this.isNewTable && initializedContent.length === 0
+        ? Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`), (row) => {
+          const cellCount = row.querySelectorAll(`[${CELL_ATTR}]`).length;
+
+          return Array.from({ length: cellCount }, () => ({ blocks: [] as string[] }));
+        })
+        : initializedContent;
+
       this.model.replaceAll({
         ...this.model.snapshot(),
-        content: initializedContent,
+        content: contentForModel,
       });
 
       if (this.isNewTable) {
@@ -381,36 +392,38 @@ export class Table implements BlockTool {
 
     const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
 
-    if (!this.readOnly && gridEl) {
-      // Check generation before initializeCells — if a re-entrant setData
-      // was triggered during render() or replaceChild(), bail out.
-      if (currentGeneration !== this.setDataGeneration) {
-        return;
-      }
-
-      this.runStructuralOp(() => {
-        const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
-
-        // Check generation after initializeCells — if a re-entrant setData
-        // was triggered during block insertion inside initializeCells, bail
-        // out to avoid overwriting the newer call's model and controls.
-        if (currentGeneration !== this.setDataGeneration) {
-          return;
-        }
-
-        this.model.replaceAll({
-          ...this.model.snapshot(),
-          content: setDataContent,
-        });
-        this.initialContent = null;
-      }, true);
-
-      if (currentGeneration !== this.setDataGeneration) {
-        return;
-      }
-
-      this.initSubsystems(gridEl);
+    if (this.readOnly || !gridEl) {
+      return;
     }
+
+    // Check generation before initializeCells — if a re-entrant setData
+    // was triggered during render() or replaceChild(), bail out.
+    if (currentGeneration !== this.setDataGeneration) {
+      return;
+    }
+
+    this.runStructuralOp(() => {
+      const setDataContent = this.cellBlocks?.initializeCells(this.initialContent ?? []) ?? this.initialContent ?? [];
+
+      // Check generation after initializeCells — if a re-entrant setData
+      // was triggered during block insertion inside initializeCells, bail
+      // out to avoid overwriting the newer call's model and controls.
+      if (currentGeneration !== this.setDataGeneration) {
+        return;
+      }
+
+      this.model.replaceAll({
+        ...this.model.snapshot(),
+        content: setDataContent,
+      });
+      this.initialContent = null;
+    }, true);
+
+    if (currentGeneration !== this.setDataGeneration) {
+      return;
+    }
+
+    this.initSubsystems(gridEl);
   }
 
   public onPaste(event: HTMLPasteEvent): void {
@@ -907,46 +920,46 @@ export class Table implements BlockTool {
       const container = cell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
       const blocks: ClipboardBlockData[] = [];
 
-      if (container) {
-        container.querySelectorAll('[data-blok-id]').forEach(blockEl => {
-          const blockId = blockEl.getAttribute('data-blok-id');
+      if (!container) {
+        return { row: rowIndex, col: colIndex, blocks };
+      }
 
-          if (!blockId) {
-            return;
-          }
+      container.querySelectorAll('[data-blok-id]').forEach(blockEl => {
+        const blockId = blockEl.getAttribute('data-blok-id');
 
-          const blockIndex = this.api.blocks.getBlockIndex(blockId);
-
-          if (blockIndex === undefined) {
-            return;
-          }
-
-          const block = this.api.blocks.getBlockByIndex(blockIndex);
-
-          if (!block) {
-            return;
-          }
-
-          blocks.push({
-            tool: block.name,
-            data: block.preservedData,
-            ...(Object.keys(block.preservedTunes).length > 0
-              ? { tunes: block.preservedTunes }
-              : {}),
-          });
-        });
-
-        // Read-only legacy cells can render plain text without mounted block holders.
-        if (blocks.length === 0) {
-          const text = (container.textContent ?? '').trim();
-
-          if (text.length > 0) {
-            blocks.push({
-              tool: 'paragraph',
-              data: { text },
-            });
-          }
+        if (!blockId) {
+          return;
         }
+
+        const blockIndex = this.api.blocks.getBlockIndex(blockId);
+
+        if (blockIndex === undefined) {
+          return;
+        }
+
+        const block = this.api.blocks.getBlockByIndex(blockIndex);
+
+        if (!block) {
+          return;
+        }
+
+        blocks.push({
+          tool: block.name,
+          data: block.preservedData,
+          ...(Object.keys(block.preservedTunes).length > 0
+            ? { tunes: block.preservedTunes }
+            : {}),
+        });
+      });
+
+      // Read-only legacy cells can render plain text without mounted block holders.
+      const text = blocks.length === 0 ? (container.textContent ?? '').trim() : '';
+
+      if (blocks.length === 0 && text.length > 0) {
+        blocks.push({
+          tool: 'paragraph',
+          data: { text },
+        });
       }
 
       return { row: rowIndex, col: colIndex, blocks };

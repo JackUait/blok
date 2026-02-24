@@ -380,33 +380,32 @@ export class TableModel {
     if (this.contentGrid.length > 0) {
       const expectedCols = this.contentGrid[0].length;
 
-      for (let r = 0; r < this.contentGrid.length; r++) {
-        if (this.contentGrid[r].length !== expectedCols) {
+      this.contentGrid.forEach((row, r) => {
+        if (row.length !== expectedCols) {
           throw new Error(
-            `Invariant violation: row ${r} has ${this.contentGrid[r].length} columns, expected ${expectedCols}`
+            `Invariant violation: row ${r} has ${row.length} columns, expected ${expectedCols}`
           );
         }
-      }
+      });
     }
 
     // Invariant 2: colWidths sync
-    if (this.colWidthsValue !== undefined && this.contentGrid.length > 0) {
-      if (this.colWidthsValue.length !== this.contentGrid[0].length) {
-        throw new Error(
-          `Invariant violation: colWidths has ${this.colWidthsValue.length} entries but grid has ${this.contentGrid[0].length} columns`
-        );
-      }
+    if (
+      this.colWidthsValue !== undefined &&
+      this.contentGrid.length > 0 &&
+      this.colWidthsValue.length !== this.contentGrid[0].length
+    ) {
+      throw new Error(
+        `Invariant violation: colWidths has ${this.colWidthsValue.length} entries but grid has ${this.contentGrid[0].length} columns`
+      );
     }
 
     // Invariant 3 + 4: blockCellMap consistency and no duplicates
     const seenBlocks = new Set<string>();
-    let gridBlockCount = 0;
 
-    for (let r = 0; r < this.contentGrid.length; r++) {
-      for (let c = 0; c < this.contentGrid[r].length; c++) {
-        for (const blockId of this.contentGrid[r][c].blocks) {
-          gridBlockCount++;
-
+    this.contentGrid.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        for (const blockId of cell.blocks) {
           if (seenBlocks.has(blockId)) {
             throw new Error(
               `Invariant violation: block "${blockId}" appears in multiple cells`
@@ -427,13 +426,13 @@ export class TableModel {
             );
           }
         }
-      }
-    }
+      });
+    });
 
     // Check map doesn't have extra entries
-    if (this.blockCellMap.size !== gridBlockCount) {
+    if (this.blockCellMap.size !== seenBlocks.size) {
       throw new Error(
-        `Invariant violation: blockCellMap has ${this.blockCellMap.size} entries but grid has ${gridBlockCount} blocks`
+        `Invariant violation: blockCellMap has ${this.blockCellMap.size} entries but grid has ${seenBlocks.size} blocks`
       );
     }
   }

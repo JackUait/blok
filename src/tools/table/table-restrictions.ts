@@ -29,14 +29,14 @@ export const registerAdditionalRestrictedTools = (tools: string[]): (() => void)
     additionalRestrictedTools.set(tool, currentCount + 1);
   }
 
-  let isCleanedUp = false;
+  const state = { cleanedUp: false };
 
   return (): void => {
-    if (isCleanedUp) {
+    if (state.cleanedUp) {
       return;
     }
 
-    isCleanedUp = true;
+    state.cleanedUp = true;
 
     for (const tool of uniqueTools) {
       const currentCount = additionalRestrictedTools.get(tool);

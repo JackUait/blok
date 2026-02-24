@@ -198,17 +198,17 @@ describe('TableOwnershipRegistry', () => {
       // Verify every block position matches model
       const snapshot = model.snapshot();
 
-      for (let r = 0; r < snapshot.content.length; r++) {
-        for (let c = 0; c < snapshot.content[r].length; c++) {
-          const cellContent = snapshot.content[r][c] as CellContent;
+      snapshot.content.forEach((row, r) => {
+        row.forEach((rawCell, c) => {
+          const cellContent = rawCell as CellContent;
 
           for (const blockId of cellContent.blocks) {
             const owner = registry.getOwner(blockId);
 
             expect(owner).toEqual({ tableId: 'table-A', row: r, col: c });
           }
-        }
-      }
+        });
+      });
     });
   });
 

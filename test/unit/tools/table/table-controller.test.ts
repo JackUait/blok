@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { TableController } from '../../../../src/tools/table/core/table-controller';
 import { TableModel } from '../../../../src/tools/table/table-model';
 import type { TableCommand } from '../../../../src/tools/table/core/table-commands';

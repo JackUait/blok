@@ -235,7 +235,7 @@ export class TableResize {
     rowCells.forEach(cells => {
       cells.forEach((cellEl, i) => {
         if (i < this.colWidths.length) {
-          cellEl.style.width = `${this.colWidths[i]}px`;
+          cellEl.style.setProperty('width', `${this.colWidths[i]}px`);
         }
       });
     });

@@ -22,27 +22,24 @@ const assertBlockCellMapConsistency = (model: TableModel): void => {
   const snap = model.snapshot();
 
   // Forward check: every block in grid is in map with correct position
-  for (let r = 0; r < snap.content.length; r++) {
-    for (let c = 0; c < snap.content[r].length; c++) {
-      const cellContent = snap.content[r][c] as CellContent;
+  snap.content.forEach((row, r) => {
+    row.forEach((rawCell, c) => {
+      const cellContent = rawCell as CellContent;
 
       for (const blockId of cellContent.blocks) {
         const found = model.findCellForBlock(blockId);
 
         expect(found, `block ${blockId} at [${r},${c}] missing from map`).toEqual({ row: r, col: c });
       }
-    }
-  }
+    });
+  });
 
   // Reverse check: every entry in map points to a cell containing that block
   // We do this indirectly — count all blocks in grid, ensure same count as map lookups
-  let totalBlocks = 0;
-
-  for (let r = 0; r < snap.content.length; r++) {
-    for (let c = 0; c < snap.content[r].length; c++) {
-      totalBlocks += (snap.content[r][c] as CellContent).blocks.length;
-    }
-  }
+  const totalBlocks = snap.content.reduce(
+    (sum, row) => sum + row.reduce((rowSum, rawCell) => rowSum + (rawCell as CellContent).blocks.length, 0),
+    0
+  );
 
   // If map has extra entries, findCellForBlock would return positions not in grid
   // We've verified forward direction above, so consistency is established

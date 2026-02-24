@@ -222,12 +222,13 @@ test.describe('Read-Only Mode', () => {
     await expect(cells.filter({ hasText: 'C' })).toHaveCount(1);
     await expect(cells.filter({ hasText: 'D' })).toHaveCount(1);
 
-    // Verify cells are not contenteditable (should be contenteditable="false")
+    // Verify cells are not editable — in readonly mode cells render as plain text
+    // without any contenteditable elements
     // eslint-disable-next-line playwright/no-nth-methods -- Need first cell to check readonly attribute
     const firstCell = cells.first();
-    const contentEditable = firstCell.locator('[contenteditable]');
+    const editableElements = firstCell.locator('[contenteditable="true"]');
 
-    await expect(contentEditable).toHaveAttribute('contenteditable', 'false');
+    await expect(editableElements).toHaveCount(0);
 
     // Verify no grip elements exist in the DOM
     const grips = page.locator('[data-blok-table-grip-col], [data-blok-table-grip-row]');

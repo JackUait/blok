@@ -95,15 +95,15 @@ export class TableOwnershipRegistry {
     // Re-populate from model snapshot
     const snapshot = model.snapshot();
 
-    for (let r = 0; r < snapshot.content.length; r++) {
-      for (let c = 0; c < snapshot.content[r].length; c++) {
-        const cellContent = snapshot.content[r][c] as CellContent;
+    snapshot.content.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        const cellContent = cell as CellContent;
 
         for (const blockId of cellContent.blocks) {
           this.owners.set(blockId, { tableId, row: r, col: c });
         }
-      }
-    }
+      });
+    });
   }
 
   /**

@@ -1,4 +1,5 @@
 import type { TableModel } from '../table-model';
+import type { TableData } from '../types';
 import type { TableCommand } from './table-commands';
 import type { TableDomainEvent } from './table-events';
 
@@ -222,7 +223,7 @@ export class TableController {
     };
   }
 
-  private handleReplaceAll(data: import('../types').TableData): TableDomainEvent {
+  private handleReplaceAll(data: TableData): TableDomainEvent {
     this.model.replaceAll(data);
 
     return { type: 'model-replaced' };

@@ -214,6 +214,7 @@ describe('TableCellBlocks', () => {
           api: mockApi as never,
           gridElement: gridEl,
           tableBlockId: 'table-1',
+          model: createMockModel(),
         });
 
         const { cell } = buildGridWithBlock(gridEl, 'block-1');
@@ -233,6 +234,7 @@ describe('TableCellBlocks', () => {
           api: mockApi as never,
           gridElement: gridEl,
           tableBlockId: 'table-1',
+          model: createMockModel(),
         });
 
         const { container } = buildGridWithBlock(gridEl, 'block-2');
@@ -252,6 +254,7 @@ describe('TableCellBlocks', () => {
           api: mockApi as never,
           gridElement: gridEl,
           tableBlockId: 'table-1',
+          model: createMockModel(),
         });
 
         const { blockHolder } = buildGridWithBlock(gridEl, 'block-3');
@@ -271,6 +274,7 @@ describe('TableCellBlocks', () => {
           api: mockApi as never,
           gridElement: gridEl,
           tableBlockId: 'table-1',
+          model: createMockModel(),
         });
 
         const row = document.createElement('div');
@@ -308,6 +312,7 @@ describe('TableCellBlocks', () => {
           api: mockApi as never,
           gridElement: gridEl,
           tableBlockId: 'table-1',
+          model: createMockModel(),
         });
 
         const { cell } = buildGridWithBlock(gridEl, 'block-4');
@@ -395,6 +400,7 @@ describe('TableCellBlocks', () => {
         api: mockApi as never,
         gridElement: gridEl,
         tableBlockId: 'table-1',
+        model: createMockModel(),
         onNavigateToCell,
       });
 
@@ -414,6 +420,7 @@ describe('TableCellBlocks', () => {
         api: mockApi as never,
         gridElement: gridEl,
         tableBlockId: 'table-1',
+        model: createMockModel(),
         onNavigateToCell,
       });
 
@@ -431,6 +438,7 @@ describe('TableCellBlocks', () => {
         api: mockApi as never,
         gridElement: gridEl,
         tableBlockId: 'table-1',
+        model: createMockModel(),
         onNavigateToCell,
       });
 
@@ -448,6 +456,7 @@ describe('TableCellBlocks', () => {
         api: mockApi as never,
         gridElement: gridEl,
         tableBlockId: 'table-1',
+        model: createMockModel(),
         onNavigateToCell,
       });
 
@@ -465,6 +474,7 @@ describe('TableCellBlocks', () => {
         api: mockApi as never,
         gridElement: gridEl,
         tableBlockId: 'table-1',
+        model: createMockModel(),
         onNavigateToCell,
       });
 

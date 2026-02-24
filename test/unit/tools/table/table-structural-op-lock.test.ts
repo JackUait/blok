@@ -118,6 +118,10 @@ describe('Table structural operation lock', () => {
 
     expect(onCall).toBeDefined();
 
+    if (onCall === undefined) {
+      return;
+    }
+
     const handleBlockMutation = onCall[1] as (data: unknown) => void;
 
     // Create a mock block-added event payload
@@ -186,6 +190,10 @@ describe('Table structural operation lock', () => {
 
     expect(onCall).toBeDefined();
 
+    if (onCall === undefined) {
+      return;
+    }
+
     const handleBlockMutation = onCall[1] as (data: unknown) => void;
 
     const holder = document.createElement('div');
@@ -251,6 +259,10 @@ describe('Table structural operation lock', () => {
 
     expect(onCall).toBeDefined();
 
+    if (onCall === undefined) {
+      return;
+    }
+
     const handleBlockMutation = onCall[1] as (data: unknown) => void;
 
     // Send an invalid event (not a block mutation event) — should return early
@@ -301,6 +313,10 @@ describe('Table structural operation lock', () => {
     );
 
     expect(onCall).toBeDefined();
+
+    if (onCall === undefined) {
+      return;
+    }
 
     const handleBlockMutation = onCall[1] as (data: unknown) => void;
 
@@ -399,7 +415,7 @@ describe('Table structural operation lock', () => {
     const api = createMockAPI();
 
     // Add a mock transact method
-    (api.blocks as Record<string, unknown>).transact = vi.fn().mockImplementation(
+    (api.blocks as unknown as Record<string, unknown>).transact = vi.fn().mockImplementation(
       (fn: () => void) => fn()
     );
 
@@ -420,7 +436,7 @@ describe('Table structural operation lock', () => {
     // Delete a row — should be wrapped in transact
     table.deleteRowWithCleanup(1);
 
-    expect((api.blocks as Record<string, unknown>).transact).toHaveBeenCalled();
+    expect((api.blocks as unknown as Record<string, unknown>).transact).toHaveBeenCalled();
   });
 
   it('wraps deleteRowWithCleanup in structural op lock', () => {

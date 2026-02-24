@@ -84,6 +84,10 @@ export class StyleManager {
    * @returns The CSS class string
    */
   public getContentClasses(selected: boolean, stretched: boolean): string {
+    if (selected && stretched) {
+      return twMerge(StyleManager.styles.content, StyleManager.styles.contentSelected, StyleManager.styles.contentStretched);
+    }
+
     if (selected) {
       return twMerge(StyleManager.styles.content, StyleManager.styles.contentSelected);
     }

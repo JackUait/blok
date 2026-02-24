@@ -23,6 +23,14 @@ export class DragPreview {
     // Reset styles on clone
     clone.className = twMerge(PREVIEW_STYLES.content, isStretched ? 'max-w-none' : '');
 
+    // Set explicit width on clone so percentage-based children (e.g. table cells)
+    // have a sizing reference inside the position:fixed preview container
+    const computedWidth = contentElement.getBoundingClientRect().width;
+
+    if (computedWidth > 0) {
+      clone.style.width = `${computedWidth}px`;
+    }
+
     // Reset margin on the tool's rendered element (first child) to prevent offset
     const toolElement = clone.firstElementChild as HTMLElement | null;
 

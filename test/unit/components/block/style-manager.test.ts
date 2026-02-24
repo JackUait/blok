@@ -92,11 +92,12 @@ describe('StyleManager', () => {
       expect(contentElement.className).toBe(classes);
     });
 
-    it('applies selected classes over stretched when both are true', () => {
+    it('applies both selected and stretched classes when both are true', () => {
       styleManager.updateContentState(true, true);
 
       const classes = styleManager.getContentClasses(true, true);
       expect(classes).toContain('bg-selection');
+      expect(classes).toContain('max-w-none');
       expect(contentElement.className).toBe(classes);
     });
 
@@ -129,11 +130,11 @@ describe('StyleManager', () => {
       expect(classes).toContain('max-w-none');
     });
 
-    it('returns selected classes when both selected and stretched', () => {
+    it('returns both selected and stretched classes when both are true', () => {
       const classes = styleManager.getContentClasses(true, true);
 
       expect(classes).toContain('bg-selection');
-      expect(classes).not.toContain('max-w-none');
+      expect(classes).toContain('max-w-none');
     });
 
     it('returns base classes when neither selected nor stretched', () => {

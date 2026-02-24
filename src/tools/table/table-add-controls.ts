@@ -133,17 +133,38 @@ export class TableAddControls {
   }
 
   /**
-   * Match the add-row button width to the grid's explicit width.
-   * When the grid has a pixel width (from colWidths), the button must use
-   * the same value so it scrolls with the table instead of staying at 100%
-   * of the wrapper's visible area.
+   * Match the add-row button width and horizontal position to the grid.
+   *
+   * Pixel mode (colWidths set): use the grid's exact pixel width and offset
+   * `left` by any padding on the scroll container so the pill aligns with
+   * the grid columns.
+   *
+   * Percent mode (no colWidths): clear `width` and use `left`/`right`
+   * constraints so the browser auto-sizes the button to the wrapper's
+   * content area, avoiding the wrapper's right padding.
    */
   public syncRowButtonWidth(): void {
     const gridWidth = this.grid.style.width;
+    const scrollContainer = this.grid.parentElement;
+    const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
 
-    this.addRowBtn.style.width = gridWidth && gridWidth.endsWith('px')
-      ? gridWidth
-      : '100%';
+    if (gridWidth && gridWidth.endsWith('px')) {
+      this.addRowBtn.style.width = gridWidth;
+      this.addRowBtn.style.right = '';
+
+      const paddingLeft = isInsideScrollContainer
+        ? parseFloat(getComputedStyle(scrollContainer).paddingLeft) || 0
+        : 0;
+
+      this.addRowBtn.style.left = `${paddingLeft}px`;
+    } else {
+      this.addRowBtn.style.width = '';
+      this.addRowBtn.style.left = '0px';
+
+      const paddingRight = parseFloat(getComputedStyle(this.wrapper).paddingRight) || 0;
+
+      this.addRowBtn.style.right = `${paddingRight}px`;
+    }
   }
 
   /**
@@ -432,7 +453,6 @@ export class TableAddControls {
     btn.style.bottom = '-36px';
     btn.style.zIndex = '1';
     btn.style.boxSizing = 'content-box';
-    btn.style.width = '100%';
     btn.style.height = '32px';
     btn.style.padding = '4px 8px 0';
     btn.style.marginLeft = '-8px';

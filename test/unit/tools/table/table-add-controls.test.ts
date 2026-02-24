@@ -1241,4 +1241,131 @@ describe('TableAddControls', () => {
     });
   });
 
+  describe('syncRowButtonWidth', () => {
+    it('uses left/right constraints instead of width:100% when grid has no pixel width', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      wrapper.style.paddingRight = '20px';
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === wrapper) {
+          return { paddingRight: '20px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingLeft: '0px' } as CSSStyleDeclaration;
+      });
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.left).toBe('0px');
+      expect(addRowBtn.style.right).toBe('20px');
+      expect(addRowBtn.style.width).toBe('');
+
+      spy.mockRestore();
+    });
+
+    it('offsets left for scroll container padding when grid has pixel width', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const scrollContainer = document.createElement('div');
+
+      scrollContainer.style.paddingLeft = '9px';
+      wrapper.insertBefore(scrollContainer, grid);
+      scrollContainer.appendChild(grid);
+
+      grid.style.width = '400px';
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === scrollContainer) {
+          return { paddingLeft: '9px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingRight: '0px' } as CSSStyleDeclaration;
+      });
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.width).toBe('400px');
+      expect(addRowBtn.style.left).toBe('9px');
+      expect(addRowBtn.style.right).toBe('');
+
+      spy.mockRestore();
+    });
+
+    it('sets left:0 in pixel mode when grid parent is the wrapper itself', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      grid.style.width = '300px';
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.width).toBe('300px');
+      expect(addRowBtn.style.left).toBe('0px');
+    });
+
+    it('updates position when called again after grid width changes', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === wrapper) {
+          return { paddingRight: '20px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingLeft: '0px' } as CSSStyleDeclaration;
+      });
+
+      const controls = new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Initially percent mode
+      expect(addRowBtn.style.width).toBe('');
+      expect(addRowBtn.style.right).toBe('20px');
+
+      // Switch to pixel mode
+      grid.style.width = '500px';
+      controls.syncRowButtonWidth();
+
+      expect(addRowBtn.style.width).toBe('500px');
+      expect(addRowBtn.style.right).toBe('');
+      expect(addRowBtn.style.left).toBe('0px');
+
+      spy.mockRestore();
+    });
+  });
+
 });

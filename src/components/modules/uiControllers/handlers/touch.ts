@@ -51,7 +51,19 @@ export const createRedactorTouchHandler = (
      * (used for showing Block Settings toggler after opening and closing Inline Toolbar)
      */
     if (!deps.Blok.ReadOnly.isEnabled && !deps.Blok.Toolbar.contains(initialTarget)) {
-      deps.Blok.Toolbar.moveAndOpen(undefined, clickedNode);
+      /**
+       * When the clicked node is inside a table cell, resolve to the parent table block
+       * so moveAndOpen receives the table block (not undefined / the inner cell paragraph).
+       * Without this, moveAndOpen falls back to currentBlock (the cell paragraph), detects
+       * it's inside a table cell, and hides the plus button and settings toggler.
+       */
+      const tableCellContainer = clickedNode.closest?.('[data-blok-table-cell-blocks]');
+      const tableBlockWrapper = tableCellContainer?.closest('[data-blok-testid="block-wrapper"]');
+      const resolvedBlock = tableBlockWrapper
+        ? deps.Blok.BlockManager.getBlockByChildNode(tableBlockWrapper)
+        : undefined;
+
+      deps.Blok.Toolbar.moveAndOpen(resolvedBlock, clickedNode);
     }
   };
 }

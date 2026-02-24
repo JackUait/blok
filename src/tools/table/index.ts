@@ -932,6 +932,7 @@ export class Table implements BlockTool {
         this.model.setColWidths(newWidths);
         enableScrollOverflow(this.ensureScrollContainer());
         this.rowColControls?.positionGrips();
+        this.addControls?.syncRowButtonWidth();
       },
       () => {
         this.rowColControls?.hideAllGrips();

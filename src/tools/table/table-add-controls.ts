@@ -154,7 +154,7 @@ export class TableAddControls {
         : 0;
 
       const numericWidth = parseFloat(gridWidth);
-      const maxWidth = isInsideScrollContainer
+      const maxWidth = isInsideScrollContainer && scrollContainer.clientWidth > 0
         ? scrollContainer.clientWidth - paddingLeft
         : numericWidth;
 

@@ -13,6 +13,7 @@ const createBlokStub = (): BlokModules => {
   return {
     BlockManager: {
       setCurrentBlockByChildNode: vi.fn(),
+      getBlockByChildNode: vi.fn(),
     },
     RectangleSelection: {
       isRectActivated: vi.fn(() => false),
@@ -272,6 +273,91 @@ describe('Touch Handler', () => {
       expect(blok.Caret.setToTheLastBlock).toHaveBeenCalled();
       // Verify toolbar still moves to the clicked node
       expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(undefined, target);
+    });
+
+    describe('table cell toolbar preservation', () => {
+      /**
+       * Creates a DOM structure that mimics a table cell containing a paragraph block.
+       * The target (paragraph's contenteditable) is nested inside [data-blok-table-cell-blocks].
+       */
+      const createTableCellDOM = (): {
+        tableBlockWrapper: HTMLElement;
+        cellTarget: HTMLElement;
+        tableBlock: { id: string; holder: HTMLElement };
+      } => {
+        // Table block wrapper
+        const tableBlockWrapper = document.createElement('div');
+
+        tableBlockWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+        tableBlockWrapper.setAttribute('data-blok-id', 'table-block-1');
+
+        // Cell blocks container
+        const cellBlocksContainer = document.createElement('div');
+
+        cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+        tableBlockWrapper.appendChild(cellBlocksContainer);
+
+        // Inner paragraph block wrapper (inside table cell)
+        const paragraphWrapper = document.createElement('div');
+
+        paragraphWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+        paragraphWrapper.setAttribute('data-blok-id', 'para-block-1');
+        cellBlocksContainer.appendChild(paragraphWrapper);
+
+        // Contenteditable element inside paragraph
+        const contentEditable = document.createElement('div');
+
+        contentEditable.setAttribute('contenteditable', 'true');
+        paragraphWrapper.appendChild(contentEditable);
+
+        const tableBlock = { id: 'table-block-1', holder: tableBlockWrapper };
+
+        return { tableBlockWrapper, cellTarget: contentEditable, tableBlock };
+      };
+
+      it('should pass the resolved table block to moveAndOpen when clicking inside a table cell', () => {
+        const { tableBlockWrapper, cellTarget, tableBlock } = createTableCellDOM();
+
+        redactorElement.appendChild(tableBlockWrapper);
+
+        vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(tableBlock as unknown as Parameters<typeof blok.BlockManager.getBlockByChildNode>[0] extends Node ? ReturnType<typeof blok.BlockManager.getBlockByChildNode> : never);
+
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        const event = new MouseEvent('mousedown', { bubbles: true });
+
+        Object.defineProperty(event, 'target', { value: cellTarget });
+
+        handler(event);
+
+        // moveAndOpen should receive the TABLE block, not undefined
+        const moveAndOpenCall = vi.mocked(blok.Toolbar.moveAndOpen).mock.calls[0];
+
+        expect(moveAndOpenCall[0]).toBe(tableBlock);
+      });
+
+      it('should still pass undefined for non-table-cell blocks', () => {
+        const target = document.createElement('div');
+
+        target.setAttribute('contenteditable', 'true');
+        redactorElement.appendChild(target);
+
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        const event = new MouseEvent('mousedown', { bubbles: true });
+
+        Object.defineProperty(event, 'target', { value: target });
+
+        handler(event);
+
+        expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(undefined, target);
+      });
     });
   });
 });

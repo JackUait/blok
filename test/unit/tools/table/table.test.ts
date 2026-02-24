@@ -634,6 +634,58 @@ describe('Table Tool', () => {
 
       document.body.removeChild(element);
     });
+
+    it('aligns add-row button left with scroll container padding after percent-to-pixel resize', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Mock getComputedStyle so the scroll container (created by enableScrollOverflow)
+      // returns paddingLeft: 9px, simulating Tailwind's pl-[9px] class.
+      const originalGetComputedStyle = window.getComputedStyle;
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        const result = originalGetComputedStyle(el);
+
+        // The scroll container is the element between wrapper (element) and grid
+        if (el === element.firstElementChild && el !== gridBefore) {
+          return { ...result, paddingLeft: '9px' } as CSSStyleDeclaration;
+        }
+
+        return result;
+      });
+
+      // Table starts in percent mode — grid is direct child of wrapper (element)
+      const gridBefore = element.firstElementChild as HTMLElement;
+
+      expect(gridBefore.style.width).toBe('');
+
+      const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      // Simulate a resize drag: percent → pixel mode transition
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 150 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      // After resize, grid should be inside a scroll container with pl-[9px]
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
+
+      expect(scrollContainer).not.toBe(gridBefore);
+      expect(grid.style.width).toMatch(/px$/);
+
+      // The add-row button should be aligned with the scroll container's left padding
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      expect(addRowBtn.style.left).toBe('9px');
+
+      spy.mockRestore();
+      document.body.removeChild(element);
+    });
   });
 
   describe('add row/column controls', () => {

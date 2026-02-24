@@ -163,8 +163,12 @@ export class TableAddControls {
 
       this.addRowBtn.style.left = `${paddingLeft}px`;
     } else {
+      const paddingLeft = isInsideScrollContainer
+        ? parseFloat(getComputedStyle(scrollContainer).paddingLeft) || 0
+        : 0;
+
       this.addRowBtn.style.width = '';
-      this.addRowBtn.style.left = '0px';
+      this.addRowBtn.style.left = `${paddingLeft}px`;
 
       const paddingRight = parseFloat(getComputedStyle(this.wrapper).paddingRight) || 0;
 

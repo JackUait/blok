@@ -359,7 +359,8 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const gridEl = scrollContainer.firstElementChild as HTMLElement;
       const rows = gridEl.querySelectorAll('[data-blok-table-row]');
 
       // Simulate stale state: heading attr left on row 1 (as if a row was inserted above)
@@ -635,6 +636,46 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
+    it('aligns add-row button left with scroll container padding in percent mode', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+
+      // In edit mode, the scroll container is created during render() with pl-[9px].
+      // Mock getComputedStyle BEFORE rendered() so syncRowButtonWidth sees the padding.
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const originalGetComputedStyle = window.getComputedStyle;
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        const result = originalGetComputedStyle(el);
+
+        if (el === scrollContainer) {
+          return { ...result, paddingLeft: '9px' } as CSSStyleDeclaration;
+        }
+
+        return result;
+      });
+
+      table.rendered();
+
+      // Grid has no style.width (percent mode) → percent branch of syncRowButtonWidth
+      const grid = scrollContainer.firstElementChild as HTMLElement;
+
+      expect(grid.style.width).toBe('');
+
+      // The add-row button should offset by the scroll container's left padding
+      // so it aligns with the grid, not the wrapper
+      const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
+
+      expect(addRowBtn.style.left).toBe('9px');
+
+      spy.mockRestore();
+      document.body.removeChild(element);
+    });
+
     it('aligns add-row button left with scroll container padding after percent-to-pixel resize', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
@@ -643,26 +684,26 @@ describe('Table Tool', () => {
       const element = table.render();
 
       document.body.appendChild(element);
-      table.rendered();
 
-      // Mock getComputedStyle so the scroll container (created by enableScrollOverflow)
-      // returns paddingLeft: 9px, simulating Tailwind's pl-[9px] class.
+      // Scroll container exists from render() for editable tables.
+      // Mock getComputedStyle BEFORE rendered() so syncRowButtonWidth sees the padding.
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]') as HTMLElement;
       const originalGetComputedStyle = window.getComputedStyle;
       const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
         const result = originalGetComputedStyle(el);
 
-        // The scroll container is the element between wrapper (element) and grid
-        if (el === element.firstElementChild && el !== gridBefore) {
+        if (el === scrollContainer) {
           return { ...result, paddingLeft: '9px' } as CSSStyleDeclaration;
         }
 
         return result;
       });
 
-      // Table starts in percent mode — grid is direct child of wrapper (element)
-      const gridBefore = element.firstElementChild as HTMLElement;
+      table.rendered();
 
-      expect(gridBefore.style.width).toBe('');
+      const grid = scrollContainer.firstElementChild as HTMLElement;
+
+      expect(grid.style.width).toBe('');
 
       const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
 
@@ -671,11 +712,7 @@ describe('Table Tool', () => {
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 150 }));
       document.dispatchEvent(new PointerEvent('pointerup', {}));
 
-      // After resize, grid should be inside a scroll container with pl-[9px]
-      const scrollContainer = element.firstElementChild as HTMLElement;
-      const grid = scrollContainer.firstElementChild as HTMLElement;
-
-      expect(scrollContainer).not.toBe(gridBefore);
+      // After resize, the grid should have a pixel width
       expect(grid.style.width).toMatch(/px$/);
 
       // The add-row button should be aligned with the scroll container's left padding
@@ -2946,7 +2983,8 @@ describe('Table Tool', () => {
       // No colWidths = percentage mode
       const { element } = createDeletionTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
       const firstRow = gridEl.querySelector('[data-blok-table-row]');
       const cellsBefore = firstRow?.querySelectorAll('[data-blok-table-cell]');
 
@@ -3124,7 +3162,8 @@ describe('Table Tool', () => {
     it('selects the moved row after drag-and-drop reorder', async () => {
       // 3 rows x 2 cols
       const { table, element } = createMoveTable([['A', 'B'], ['C', 'D'], ['E', 'F']]);
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       const action: RowColAction = { type: 'move-row', fromIndex: 0, toIndex: 2 };
 
@@ -3145,7 +3184,8 @@ describe('Table Tool', () => {
     it('selects the moved column after drag-and-drop reorder', async () => {
       // 2 rows x 3 cols
       const { table, element } = createMoveTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       const action: RowColAction = { type: 'move-col', fromIndex: 0, toIndex: 2 };
 
@@ -3166,7 +3206,8 @@ describe('Table Tool', () => {
     it('shows active grip on the moved row after drag-and-drop', async () => {
       // 3 rows x 2 cols
       const { table, element } = createMoveTable([['A', 'B'], ['C', 'D'], ['E', 'F']]);
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       const action: RowColAction = { type: 'move-row', fromIndex: 0, toIndex: 2 };
 
@@ -3186,7 +3227,8 @@ describe('Table Tool', () => {
     it('shows active grip on the moved column after drag-and-drop', async () => {
       // 2 rows x 3 cols
       const { table, element } = createMoveTable([['A', 'B', 'C'], ['D', 'E', 'F']]);
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       const action: RowColAction = { type: 'move-col', fromIndex: 0, toIndex: 2 };
 
@@ -3737,7 +3779,8 @@ describe('Table Tool', () => {
     it('auto-expands grid when generic HTML table is larger than target', () => {
       const { element } = createPasteTable([['A']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -4095,7 +4138,8 @@ describe('Table Tool', () => {
       table.rendered();
 
       // Verify initial state: 2 rows
-      const initialGrid = element.firstElementChild as HTMLElement;
+      const initialSc = element.firstElementChild as HTMLElement;
+      const initialGrid = initialSc.firstElementChild as HTMLElement;
 
       expect(initialGrid.querySelectorAll('[data-blok-table-row]')).toHaveLength(2);
 
@@ -4110,7 +4154,8 @@ describe('Table Tool', () => {
 
       expect(newWrapper).not.toBe(element);
 
-      const newGrid = newWrapper.firstElementChild as HTMLElement;
+      const newSc = newWrapper.firstElementChild as HTMLElement;
+      const newGrid = newSc.firstElementChild as HTMLElement;
       const newRows = newGrid.querySelectorAll('[data-blok-table-row]');
 
       expect(newRows).toHaveLength(3);

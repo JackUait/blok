@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Напишите что-нибудь или нажмите / для выбора блока",
   "tools.table.title": "Таблица",
   "tools.table.clearSelection": "Очистить",
+  "tools.table.copySelection": "Копировать",
   "tools.table.headerColumn": "Колонка-заголовок",
   "tools.table.insertColumnLeft": "Вставить столбец слева",
   "tools.table.insertColumnRight": "Вставить столбец справа",

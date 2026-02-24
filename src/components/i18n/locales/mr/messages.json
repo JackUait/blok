@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "काहीतरी लिहा किंवा साधन निवडण्यासाठी / दाबा",
   "tools.table.title": "तक्ता",
   "tools.table.clearSelection": "साफ करा",
+  "tools.table.copySelection": "कॉपी करा",
   "tools.table.headerColumn": "शीर्ष स्तंभ",
   "tools.table.insertColumnLeft": "डावीकडे स्तंभ घाला",
   "tools.table.insertColumnRight": "उजवीकडे स्तंभ घाला",

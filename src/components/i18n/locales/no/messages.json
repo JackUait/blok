@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Skriv noe eller trykk / for å velge",
   "tools.table.title": "Tabell",
   "tools.table.clearSelection": "Tøm",
+  "tools.table.copySelection": "Kopier",
   "tools.table.headerColumn": "Overskriftskolonne",
   "tools.table.insertColumnLeft": "Sett inn kolonne til venstre",
   "tools.table.insertColumnRight": "Sett inn kolonne til høyre",

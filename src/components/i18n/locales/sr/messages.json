@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Напишите нешто или притисните / за избор",
   "tools.table.title": "Табела",
   "tools.table.clearSelection": "Очисти",
+  "tools.table.copySelection": "Копирај",
   "tools.table.headerColumn": "Колона заглавља",
   "tools.table.insertColumnLeft": "Уметни колону лево",
   "tools.table.insertColumnRight": "Уметни колону десно",

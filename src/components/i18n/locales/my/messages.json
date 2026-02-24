@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "တစ်ခုခုရေးပါ သို့မဟုတ် / ကိုနှိပ်၍ ကိရိယာရွေးပါ",
   "tools.table.title": "ဇယား",
   "tools.table.clearSelection": "ရှင်းလင်းရန်",
+  "tools.table.copySelection": "ကူးယူပါ",
   "tools.table.headerColumn": "ခေါင်းစဉ်ကော်လံ",
   "tools.table.insertColumnLeft": "ဘယ်ဘက်တွင် ကော်လံထည့်ရန်",
   "tools.table.insertColumnRight": "ညာဘက်တွင် ကော်လံထည့်ရန်",

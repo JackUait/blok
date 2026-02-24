@@ -44,6 +44,7 @@
   "a11y.atBottom": "Το μπλοκ είναι στο κάτω μέρος",
   "tools.table.title": "Πίνακας",
   "tools.table.clearSelection": "Καθαρισμός",
+  "tools.table.copySelection": "Αντιγραφή",
   "tools.table.headerColumn": "Στήλη επικεφαλίδας",
   "tools.table.insertColumnLeft": "Εισαγωγή στήλης αριστερά",
   "tools.table.insertColumnRight": "Εισαγωγή στήλης δεξιά",

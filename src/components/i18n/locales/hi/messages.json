@@ -44,6 +44,7 @@
   "a11y.atBottom": "ब्लॉक सबसे नीचे है, और नीचे नहीं जा सकता",
   "tools.table.title": "तालिका",
   "tools.table.clearSelection": "साफ़ करें",
+  "tools.table.copySelection": "कॉपी करें",
   "tools.table.headerColumn": "शीर्ष स्तंभ",
   "tools.table.insertColumnLeft": "बाईं ओर स्तंभ जोड़ें",
   "tools.table.insertColumnRight": "दाईं ओर स्तंभ जोड़ें",

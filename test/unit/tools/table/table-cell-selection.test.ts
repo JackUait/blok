@@ -10,6 +10,7 @@ interface MockPopoverItem {
   onActivate?: () => void;
   icon?: string;
   title?: string;
+  secondaryLabel?: string;
 }
 
 interface MockPopoverArgs {
@@ -210,6 +211,7 @@ describe('TableCellSelection', () => {
     t: vi.fn((key: string) => {
       const translations: Record<string, string> = {
         'tools.table.clearSelection': 'Clear',
+        'tools.table.copySelection': 'Copy',
       };
 
       return translations[key] || key;
@@ -632,7 +634,7 @@ describe('TableCellSelection', () => {
       expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
     });
 
-    it('clicking pill opens PopoverDesktop with Clear item', () => {
+    it('clicking pill opens PopoverDesktop with Copy and Clear items', () => {
       vi.useFakeTimers();
 
       simulateDrag(grid, 0, 0, 1, 1);
@@ -646,9 +648,70 @@ describe('TableCellSelection', () => {
       vi.useRealTimers();
 
       expect(lastPopoverArgs).not.toBeNull();
-      expect(lastPopoverArgs?.items).toHaveLength(1);
-      expect(lastPopoverArgs?.items?.[0]?.title).toBe('Clear');
+      expect(lastPopoverArgs?.items).toHaveLength(2);
+      expect(lastPopoverArgs?.items?.[0]?.title).toBe('Copy');
+      expect(lastPopoverArgs?.items?.[0]?.secondaryLabel).toMatch(/[⌘C]|Ctrl\+C/);
+      expect(lastPopoverArgs?.items?.[1]?.title).toBe('Clear');
+      expect(lastPopoverArgs?.items?.[1]?.secondaryLabel).toBe('Del');
       expect(mockPopoverShow).toHaveBeenCalled();
+    });
+
+    it('fires onCopyViaButton with selected cells when Copy action activates', () => {
+      const onCopyViaButton = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCopyViaButton,
+      });
+
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      const items = lastPopoverArgs?.items;
+
+      items?.[0]?.onActivate?.();
+
+      vi.useRealTimers();
+
+      expect(onCopyViaButton).toHaveBeenCalledTimes(1);
+      expect(onCopyViaButton.mock.calls[0][0]).toHaveLength(4);
+    });
+
+    it('does not clear selection after Copy action activates', () => {
+      const onCopyViaButton = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onCopyViaButton,
+      });
+
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      lastPopoverArgs?.items?.[0]?.onActivate?.();
+
+      vi.useRealTimers();
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`).length).toBeGreaterThan(0);
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
     });
 
     it('fires onClearContent with selected cells when Clear action activates', () => {
@@ -673,7 +736,7 @@ describe('TableCellSelection', () => {
 
       const items = lastPopoverArgs?.items;
 
-      items?.[0]?.onActivate?.();
+      items?.[1]?.onActivate?.();
 
       vi.useRealTimers();
 
@@ -709,7 +772,8 @@ describe('TableCellSelection', () => {
 
       const items = lastPopoverArgs?.items;
 
-      items?.[0]?.onActivate?.();
+      // Clear is at index 1 (after Copy)
+      items?.[1]?.onActivate?.();
 
       vi.useRealTimers();
 
@@ -737,7 +801,8 @@ describe('TableCellSelection', () => {
 
       pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
 
-      lastPopoverArgs?.items?.[0]?.onActivate?.();
+      // Clear is at index 1 (after Copy)
+      lastPopoverArgs?.items?.[1]?.onActivate?.();
 
       vi.useRealTimers();
 

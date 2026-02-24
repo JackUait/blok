@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "ຂຽນບາງສິ່ງ ຫຼື ກົດ / ເພື່ອເລືອກເຄື່ອງມື",
   "tools.table.title": "ຕາຕະລາງ",
   "tools.table.clearSelection": "ລ້າງ",
+  "tools.table.copySelection": "ສຳເນົາ",
   "tools.table.headerColumn": "ຖັນຫົວຂໍ້",
   "tools.table.insertColumnLeft": "ແຊກຖັນຊ້າຍ",
   "tools.table.insertColumnRight": "ແຊກຖັນຂວາ",

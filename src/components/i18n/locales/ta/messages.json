@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "ஏதாவது எழுதவும் அல்லது கருவி தேர்வு செய்ய / அழுத்தவும்",
   "tools.table.title": "அட்டவணை",
   "tools.table.clearSelection": "தெளி",
+  "tools.table.copySelection": "நகலெடு",
   "tools.table.headerColumn": "தலைப்பு நெடுவரிசை",
   "tools.table.insertColumnLeft": "இடதில் நெடுவரிசை சேர்",
   "tools.table.insertColumnRight": "வலதில் நெடுவரிசை சேர்",

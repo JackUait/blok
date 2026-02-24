@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Skriv något eller tryck / för att välja",
   "tools.table.title": "Tabell",
   "tools.table.clearSelection": "Rensa",
+  "tools.table.copySelection": "Kopiera",
   "tools.table.headerColumn": "Rubrikkolumn",
   "tools.table.insertColumnLeft": "Infoga kolumn till vänster",
   "tools.table.insertColumnRight": "Infoga kolumn till höger",

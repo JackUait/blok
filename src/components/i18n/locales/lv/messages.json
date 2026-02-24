@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "Rakstiet kaut ko vai nospiediet / lai izvēlētos",
   "tools.table.title": "Tabula",
   "tools.table.clearSelection": "Notīrīt",
+  "tools.table.copySelection": "Kopēt",
   "tools.table.headerColumn": "Virsraksta kolonna",
   "tools.table.insertColumnLeft": "Ievietot kolonnu kreisajā pusē",
   "tools.table.insertColumnRight": "Ievietot kolonnu labajā pusē",

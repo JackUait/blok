@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Andika kitu au bonyeza / kuchagua",
   "tools.table.title": "Jedwali",
   "tools.table.clearSelection": "Futa",
+  "tools.table.copySelection": "Nakili",
   "tools.table.headerColumn": "Safu wima ya kichwa",
   "tools.table.insertColumnLeft": "Ingiza safu wima kushoto",
   "tools.table.insertColumnRight": "Ingiza safu wima kulia",

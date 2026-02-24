@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "اكتب شيئاً أو اضغط / لاختيار أداة",
   "tools.table.title": "جدول",
   "tools.table.clearSelection": "مسح",
+  "tools.table.copySelection": "نسخ",
   "tools.table.headerColumn": "عمود رأس",
   "tools.table.insertColumnLeft": "إدراج عمود يساراً",
   "tools.table.insertColumnRight": "إدراج عمود يميناً",

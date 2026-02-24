@@ -44,6 +44,7 @@
   "a11y.atBottom": "ব্লক সবার নিচে আছে, আর নিচে সরানো যাবে না",
   "tools.table.title": "টেবিল",
   "tools.table.clearSelection": "সাফ করুন",
+  "tools.table.copySelection": "কপি",
   "tools.table.headerColumn": "শিরোনাম কলাম",
   "tools.table.insertColumnLeft": "বামে কলাম ঢোকান",
   "tools.table.insertColumnRight": "ডানে কলাম ঢোকান",

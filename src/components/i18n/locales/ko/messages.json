@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "내용을 입력하거나 /를 눌러 도구 선택",
   "tools.table.title": "표",
   "tools.table.clearSelection": "지우기",
+  "tools.table.copySelection": "복사",
   "tools.table.headerColumn": "머리글 열",
   "tools.table.insertColumnLeft": "왼쪽에 열 삽입",
   "tools.table.insertColumnRight": "오른쪽에 열 삽입",

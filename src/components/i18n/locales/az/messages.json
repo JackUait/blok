@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Nəsə yazın və ya alət seçmək üçün / basın",
   "tools.table.title": "Cədvəl",
   "tools.table.clearSelection": "Təmizlə",
+  "tools.table.copySelection": "Kopyala",
   "tools.table.headerColumn": "Başlıq sütunu",
   "tools.table.insertColumnLeft": "Soldan sütun əlavə et",
   "tools.table.insertColumnRight": "Sağdan sütun əlavə et",

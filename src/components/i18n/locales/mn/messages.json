@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Бичих эсвэл / дарж хэрэгсэл сонгоно уу",
   "tools.table.title": "Хүснэгт",
   "tools.table.clearSelection": "Цэвэрлэх",
+  "tools.table.copySelection": "Хуулах",
   "tools.table.headerColumn": "Толгой багана",
   "tools.table.insertColumnLeft": "Зүүн тийш багана нэмэх",
   "tools.table.insertColumnRight": "Баруун тийш багана нэмэх",

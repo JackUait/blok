@@ -44,6 +44,7 @@
   "a11y.atBottom": "Impossible de descendre davantage",
   "tools.table.title": "Tableau",
   "tools.table.clearSelection": "Effacer",
+  "tools.table.copySelection": "Copier",
   "tools.table.headerColumn": "Colonne d'en-tête",
   "tools.table.insertColumnLeft": "Insérer colonne à gauche",
   "tools.table.insertColumnRight": "Insérer colonne à droite",

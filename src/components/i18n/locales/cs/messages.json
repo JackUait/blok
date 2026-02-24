@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Napište něco nebo stiskněte / pro výběr",
   "tools.table.title": "Tabulka",
   "tools.table.clearSelection": "Vymazat",
+  "tools.table.copySelection": "Kopírovat",
   "tools.table.headerColumn": "Sloupec záhlaví",
   "tools.table.insertColumnLeft": "Vložit sloupec vlevo",
   "tools.table.insertColumnRight": "Vložit sloupec vpravo",

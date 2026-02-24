@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Napisz coś lub naciśnij / aby wybrać",
   "tools.table.title": "Tabela",
   "tools.table.clearSelection": "Wyczyść",
+  "tools.table.copySelection": "Kopiuj",
   "tools.table.headerColumn": "Kolumna nagłówka",
   "tools.table.insertColumnLeft": "Wstaw kolumnę z lewej",
   "tools.table.insertColumnRight": "Wstaw kolumnę z prawej",

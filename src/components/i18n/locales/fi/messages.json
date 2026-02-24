@@ -44,6 +44,7 @@
   "a11y.atBottom": "Lohko on alimpana, ei voi siirtää alas",
   "tools.table.title": "Taulukko",
   "tools.table.clearSelection": "Tyhjennä",
+  "tools.table.copySelection": "Kopioi",
   "tools.table.headerColumn": "Otsikkosarake",
   "tools.table.insertColumnLeft": "Lisää sarake vasemmalle",
   "tools.table.insertColumnRight": "Lisää sarake oikealle",

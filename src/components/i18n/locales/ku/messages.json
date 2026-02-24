@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "شتیک بنووسە یان / بکە بۆ هەڵبژاردنی ئامرازێک",
   "tools.table.title": "خشتە",
   "tools.table.clearSelection": "پاککردنەوە",
+  "tools.table.copySelection": "Kopî bike",
   "tools.table.headerColumn": "ستوونی سەرپەڕە",
   "tools.table.insertColumnLeft": "زیادکردنی ستوون لە چەپ",
   "tools.table.insertColumnRight": "زیادکردنی ستوون لە ڕاست",

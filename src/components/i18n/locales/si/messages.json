@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "යමක් ලියන්න හෝ තෝරා ගැනීමට / ඔබන්න",
   "tools.table.title": "වගුව",
   "tools.table.clearSelection": "හිස් කරන්න",
+  "tools.table.copySelection": "පිටපත් කරන්න",
   "tools.table.headerColumn": "ශීර්ෂ තීරුව",
   "tools.table.insertColumnLeft": "වමට තීරුව එක් කරන්න",
   "tools.table.insertColumnRight": "දකුණට තීරුව එක් කරන්න",

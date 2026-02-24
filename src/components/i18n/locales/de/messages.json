@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Schreiben Sie etwas oder drücken Sie / zur Auswahl",
   "tools.table.title": "Tabelle",
   "tools.table.clearSelection": "Löschen",
+  "tools.table.copySelection": "Kopieren",
   "tools.table.headerColumn": "Kopfspalte",
   "tools.table.insertColumnLeft": "Spalte links einfügen",
   "tools.table.insertColumnRight": "Spalte rechts einfügen",

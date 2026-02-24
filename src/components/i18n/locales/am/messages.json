@@ -44,6 +44,7 @@
   "a11y.atBottom": "ብሎክ ከታች ነው፣ ወደ ታች መሄድ አይችልም",
   "tools.table.title": "ሰንጠረዥ",
   "tools.table.clearSelection": "አጽዳ",
+  "tools.table.copySelection": "ቅዳ",
   "tools.table.headerColumn": "የራስጌ አምድ",
   "tools.table.insertColumnLeft": "ከግራ አምድ አስገባ",
   "tools.table.insertColumnRight": "ከቀኝ አምድ አስገባ",

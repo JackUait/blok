@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "بىر نەرسە يېزىڭ ياكى / نى بېسىپ قورال تاللاڭ",
   "tools.table.title": "جەدۋەل",
   "tools.table.clearSelection": "تازىلاش",
+  "tools.table.copySelection": "كۆچۈر",
   "tools.table.headerColumn": "ماۋزۇ ئىستونى",
   "tools.table.insertColumnLeft": "سولغا ئىستون قىستۇرۇش",
   "tools.table.insertColumnRight": "ئوڭغا ئىستون قىستۇرۇش",

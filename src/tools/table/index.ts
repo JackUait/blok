@@ -917,6 +917,28 @@ export class Table implements BlockTool {
     clipboardData.setData('text/plain', buildClipboardPlainText(payload));
   }
 
+  private handleCellCopyViaButton(cells: HTMLElement[]): void {
+    const entries = this.collectCellBlockData(cells);
+
+    if (entries.length === 0) {
+      return;
+    }
+
+    const payload = serializeCellsToClipboard(entries);
+    const html = buildClipboardHtml(payload);
+    const plainText = buildClipboardPlainText(payload);
+
+    const htmlBlob = new Blob([html], { type: 'text/html' });
+    const textBlob = new Blob([plainText], { type: 'text/plain' });
+
+    void navigator.clipboard.write([
+      new ClipboardItem({
+        'text/html': htmlBlob,
+        'text/plain': textBlob,
+      }),
+    ]);
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
   ): Array<{ row: number; col: number; blocks: ClipboardBlockData[] }> {
@@ -1021,6 +1043,9 @@ export class Table implements BlockTool {
       onCut: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);
       },
+      onCopyViaButton: (cells) => {
+        this.handleCellCopyViaButton(cells);
+      },
     });
   }
 
@@ -1035,6 +1060,9 @@ export class Table implements BlockTool {
       i18n: this.api.i18n,
       onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);
+      },
+      onCopyViaButton: (cells) => {
+        this.handleCellCopyViaButton(cells);
       },
     });
   }

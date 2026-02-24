@@ -44,6 +44,7 @@
   "a11y.atBottom": "બ્લોક તળિયે છે, નીચે ખસેડી શકાતો નથી",
   "tools.table.title": "કોષ્ટક",
   "tools.table.clearSelection": "સાફ કરો",
+  "tools.table.copySelection": "કૉપી કરો",
   "tools.table.headerColumn": "હેડર કૉલમ",
   "tools.table.insertColumnLeft": "ડાબી બાજુએ કૉલમ ઉમેરો",
   "tools.table.insertColumnRight": "જમણી બાજુએ કૉલમ ઉમેરો",

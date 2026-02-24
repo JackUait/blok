@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk pilih alat",
   "tools.table.title": "Jadual",
   "tools.table.clearSelection": "Kosongkan",
+  "tools.table.copySelection": "Salin",
   "tools.table.headerColumn": "Lajur pengepala",
   "tools.table.insertColumnLeft": "Sisip lajur ke kiri",
   "tools.table.insertColumnRight": "Sisip lajur ke kanan",

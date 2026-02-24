@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "เขียนอะไรสักอย่าง หรือกด / เพื่อเลือกเครื่องมือ",
   "tools.table.title": "ตาราง",
   "tools.table.clearSelection": "ล้าง",
+  "tools.table.copySelection": "คัดลอก",
   "tools.table.headerColumn": "คอลัมน์หัวข้อ",
   "tools.table.insertColumnLeft": "แทรกคอลัมน์ทางซ้าย",
   "tools.table.insertColumnRight": "แทรกคอลัมน์ทางขวา",

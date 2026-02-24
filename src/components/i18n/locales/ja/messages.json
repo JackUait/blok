@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "入力するか / を押してツールを選択",
   "tools.table.title": "表",
   "tools.table.clearSelection": "クリア",
+  "tools.table.copySelection": "コピー",
   "tools.table.headerColumn": "見出し列",
   "tools.table.insertColumnLeft": "左に列を挿入",
   "tools.table.insertColumnRight": "右に列を挿入",

@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "یو څه ولیکئ یا / فشار ورکړئ د وسیلې غوره کولو لپاره",
   "tools.table.title": "جدول",
   "tools.table.clearSelection": "پاکول",
+  "tools.table.copySelection": "کاپي",
   "tools.table.headerColumn": "د سرلیک کالم",
   "tools.table.insertColumnLeft": "کیڼ کالم داخلول",
   "tools.table.insertColumnRight": "ښی کالم داخلول",

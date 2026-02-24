@@ -323,6 +323,14 @@ export const IconMoveRight = `
 </svg>
 `;
 
+// Copy icon
+export const IconCopy = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="7" y="7" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M5 13h-.5A1.5 1.5 0 0 1 3 11.5v-7A1.5 1.5 0 0 1 4.5 3h7A1.5 1.5 0 0 1 13 4.5V5" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
 // Trash/Delete icon
 export const IconTrash = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

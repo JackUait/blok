@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Skriv noget eller tryk / for at vælge",
   "tools.table.title": "Tabel",
   "tools.table.clearSelection": "Ryd",
+  "tools.table.copySelection": "Kopiér",
   "tools.table.headerColumn": "Overskriftskolonne",
   "tools.table.insertColumnLeft": "Indsæt kolonne til venstre",
   "tools.table.insertColumnRight": "Indsæt kolonne til højre",

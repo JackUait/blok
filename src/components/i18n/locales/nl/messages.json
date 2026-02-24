@@ -44,6 +44,7 @@
   "a11y.atBottom": "Blok staat onderaan, kan niet lager",
   "tools.table.title": "Tabel",
   "tools.table.clearSelection": "Wissen",
+  "tools.table.copySelection": "Kopiëren",
   "tools.table.headerColumn": "Kolomkop",
   "tools.table.insertColumnLeft": "Kolom links invoegen",
   "tools.table.insertColumnRight": "Kolom rechts invoegen",

@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk memilih alat",
   "tools.table.title": "Tabel",
   "tools.table.clearSelection": "Hapus",
+  "tools.table.copySelection": "Salin",
   "tools.table.headerColumn": "Kolom judul",
   "tools.table.insertColumnLeft": "Sisipkan kolom kiri",
   "tools.table.insertColumnRight": "Sisipkan kolom kanan",

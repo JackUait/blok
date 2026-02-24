@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "כתוב משהו או הקש / לבחירה",
   "tools.table.title": "טבלה",
   "tools.table.clearSelection": "נקה",
+  "tools.table.copySelection": "העתק",
   "tools.table.headerColumn": "עמודת כותרת",
   "tools.table.insertColumnLeft": "הוסף עמודה משמאל",
   "tools.table.insertColumnRight": "הוסף עמודה מימין",

@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Viết gì đó hoặc nhấn / để chọn công cụ",
   "tools.table.title": "Bảng",
   "tools.table.clearSelection": "Xóa",
+  "tools.table.copySelection": "Sao chép",
   "tools.table.headerColumn": "Cột tiêu đề",
   "tools.table.insertColumnLeft": "Chèn cột bên trái",
   "tools.table.insertColumnRight": "Chèn cột bên phải",

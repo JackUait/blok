@@ -44,6 +44,7 @@
   "a11y.atBottom": "ބްލޮކް އެންމެ ތިރީގައި، ތިރިއަށް ނުދެވޭނެ",
   "tools.table.title": "ޓޭބަލް",
   "tools.table.clearSelection": "ސާފުކުރޭ",
+  "tools.table.copySelection": "ކޮޕީކުރޭ",
   "tools.table.headerColumn": "ހެޑަރ ކޮލަމް",
   "tools.table.insertColumnLeft": "ކަނާތުން ކޮލަމް އިތުރުކުރޭ",
   "tools.table.insertColumnRight": "ވާތުން ކޮލަމް އިތުރުކުރޭ",

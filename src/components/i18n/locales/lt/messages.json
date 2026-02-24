@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "Rašykite ką nors arba spauskite / pasirinkimui",
   "tools.table.title": "Lentelė",
   "tools.table.clearSelection": "Išvalyti",
+  "tools.table.copySelection": "Kopijuoti",
   "tools.table.headerColumn": "Antraštės stulpelis",
   "tools.table.insertColumnLeft": "Įterpti stulpelį kairėje",
   "tools.table.insertColumnRight": "Įterpti stulpelį dešinėje",

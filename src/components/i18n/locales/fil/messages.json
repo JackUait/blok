@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Sumulat ng kahit ano o pindutin ang / para pumili ng tool",
   "tools.table.title": "Talahanayan",
   "tools.table.clearSelection": "I-clear",
+  "tools.table.copySelection": "Kopyahin",
   "tools.table.headerColumn": "Header na kolum",
   "tools.table.insertColumnLeft": "Magsingit ng kolum sa kaliwa",
   "tools.table.insertColumnRight": "Magsingit ng kolum sa kanan",

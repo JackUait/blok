@@ -257,7 +257,9 @@ export class PopoverItemDefault extends PopoverItem {
     if (title !== undefined) {
       const titleEl = document.createElement('div');
 
-      titleEl.className = 'mr-auto truncate text-sm font-medium leading-5';
+      titleEl.className = params.secondaryLabel
+        ? 'flex-grow truncate text-sm font-medium leading-5'
+        : 'mr-auto truncate text-sm font-medium leading-5';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       titleEl.textContent = title;
@@ -270,7 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'whitespace-nowrap pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
+      secondaryEl.className = 'min-w-[3.5rem] text-right whitespace-nowrap pl-3 pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;
@@ -324,8 +326,8 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
-      // Asymmetric padding for vertical popovers (better visual balance)
-      !isInline && !isNestedInline && 'pl-2 pr-8',
+      // Asymmetric padding: pr-8 for visual balance, pr-2 when secondary label occupies right edge
+      !isInline && !isNestedInline && (this.params.secondaryLabel ? 'pl-2 pr-2' : 'pl-2 pr-8'),
       isInline && cssInline.item,
       isNestedInline && cssNestedInline.item,
       this.params.isDisabled && css.itemDisabled

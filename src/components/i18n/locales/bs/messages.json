@@ -44,6 +44,7 @@
   "a11y.atBottom": "Blok je na dnu, ne može se pomjeriti dolje",
   "tools.table.title": "Tabela",
   "tools.table.clearSelection": "Očisti",
+  "tools.table.copySelection": "Kopiraj",
   "tools.table.headerColumn": "Kolona zaglavlja",
   "tools.table.insertColumnLeft": "Umetni kolonu lijevo",
   "tools.table.insertColumnRight": "Umetni kolonu desno",

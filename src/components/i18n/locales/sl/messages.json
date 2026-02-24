@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Napišite nekaj ali pritisnite / za izbiro",
   "tools.table.title": "Tabela",
   "tools.table.clearSelection": "Počisti",
+  "tools.table.copySelection": "Kopiraj",
   "tools.table.headerColumn": "Stolpec glave",
   "tools.table.insertColumnLeft": "Vstavi stolpec levo",
   "tools.table.insertColumnRight": "Vstavi stolpec desno",

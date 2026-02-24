@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Kirjuta midagi või vajuta / valimiseks",
   "tools.table.title": "Tabel",
   "tools.table.clearSelection": "Tühista",
+  "tools.table.copySelection": "Kopeeri",
   "tools.table.headerColumn": "Päiseveerg",
   "tools.table.insertColumnLeft": "Lisa veerg vasakule",
   "tools.table.insertColumnRight": "Lisa veerg paremale",

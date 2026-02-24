@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "کچھ لکھیں یا منتخب کرنے کیلئے / دبائیں",
   "tools.table.title": "ٹیبل",
   "tools.table.clearSelection": "صاف کریں",
+  "tools.table.copySelection": "کاپی",
   "tools.table.headerColumn": "ہیڈر کالم",
   "tools.table.insertColumnLeft": "بائیں کالم شامل کریں",
   "tools.table.insertColumnRight": "دائیں کالم شامل کریں",

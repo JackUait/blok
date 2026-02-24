@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "Напишіть щось або натисніть / для вибору",
   "tools.table.title": "Таблиця",
   "tools.table.clearSelection": "Очистити",
+  "tools.table.copySelection": "Копіювати",
   "tools.table.headerColumn": "Колонка-заголовок",
   "tools.table.insertColumnLeft": "Вставити колонку зліва",
   "tools.table.insertColumnRight": "Вставити колонку справа",

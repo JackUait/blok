@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Shkruaj diçka ose shtyp / për të zgjedhur",
   "tools.table.title": "Tabelë",
   "tools.table.clearSelection": "Pastro",
+  "tools.table.copySelection": "Kopjo",
   "tools.table.headerColumn": "Kolonë titull",
   "tools.table.insertColumnLeft": "Shto kolonë majtas",
   "tools.table.insertColumnRight": "Shto kolonë djathtas",

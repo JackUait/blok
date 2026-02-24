@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "ಏನಾದರೂ ಬರೆಯಿರಿ ಅಥವಾ ಆಯ್ಕೆ ಮಾಡಲು / ಒತ್ತಿ",
   "tools.table.title": "ಕೋಷ್ಟಕ",
   "tools.table.clearSelection": "ತೆರವುಗೊಳಿಸಿ",
+  "tools.table.copySelection": "ನಕಲು",
   "tools.table.headerColumn": "ಹೆಡರ್ ಕಾಲಂ",
   "tools.table.insertColumnLeft": "ಎಡಕ್ಕೆ ಕಾಲಂ ಸೇರಿಸಿ",
   "tools.table.insertColumnRight": "ಬಲಕ್ಕೆ ಕಾಲಂ ಸೇರಿಸಿ",

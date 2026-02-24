@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "ఏదైనా రాయండి లేదా సాధనం ఎంచుకోడానికి / నొక్కండి",
   "tools.table.title": "పట్టిక",
   "tools.table.clearSelection": "తుడుచు",
+  "tools.table.copySelection": "కాపీ చేయి",
   "tools.table.headerColumn": "శీర్ష స్తంభం",
   "tools.table.insertColumnLeft": "ఎడమవైపు స్తంభం చొప్పించు",
   "tools.table.insertColumnRight": "కుడివైపు స్తంభం చొప్పించు",

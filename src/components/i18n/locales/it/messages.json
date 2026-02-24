@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Scrivi qualcosa o premi / per selezionare",
   "tools.table.title": "Tabella",
   "tools.table.clearSelection": "Cancella",
+  "tools.table.copySelection": "Copia",
   "tools.table.headerColumn": "Colonna intestazione",
   "tools.table.insertColumnLeft": "Inserisci colonna a sinistra",
   "tools.table.insertColumnRight": "Inserisci colonna a destra",

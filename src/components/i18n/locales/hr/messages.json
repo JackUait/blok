@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Napiši nešto ili pritisni / za odabir",
   "tools.table.title": "Tablica",
   "tools.table.clearSelection": "Očisti",
+  "tools.table.copySelection": "Kopiraj",
   "tools.table.headerColumn": "Stupac zaglavlja",
   "tools.table.insertColumnLeft": "Umetni stupac lijevo",
   "tools.table.insertColumnRight": "Umetni stupac desno",

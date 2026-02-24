@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "Napíšte niečo alebo stlačte / pre výber",
   "tools.table.title": "Tabuľka",
   "tools.table.clearSelection": "Vymazať",
+  "tools.table.copySelection": "Kopírovať",
   "tools.table.headerColumn": "Stĺpec hlavičky",
   "tools.table.insertColumnLeft": "Vložiť stĺpec vľavo",
   "tools.table.insertColumnRight": "Vložiť stĺpec vpravo",

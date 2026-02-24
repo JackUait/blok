@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "Írjon valamit vagy nyomja meg a / gombot",
   "tools.table.title": "Táblázat",
   "tools.table.clearSelection": "Törlés",
+  "tools.table.copySelection": "Másolás",
   "tools.table.headerColumn": "Fejléc oszlop",
   "tools.table.insertColumnLeft": "Oszlop beszúrása balra",
   "tools.table.insertColumnRight": "Oszlop beszúrása jobbra",

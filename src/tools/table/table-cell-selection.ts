@@ -1,5 +1,6 @@
 import type { I18n } from '../../../types/api';
-import { IconCross } from '../../components/icons';
+import { IconCopy, IconCross } from '../../components/icons';
+import { MODIFIER_KEY } from '../../components/constants';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
@@ -59,6 +60,7 @@ interface CellSelectionOptions {
   onClearContent?: (cells: HTMLElement[]) => void;
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
+  onCopyViaButton?: (cells: HTMLElement[]) => void;
   i18n: I18n;
 }
 
@@ -79,6 +81,7 @@ export class TableCellSelection {
 
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
+  private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -96,6 +99,7 @@ export class TableCellSelection {
     this.onClearContent = options.onClearContent;
     this.onCopy = options.onCopy;
     this.onCut = options.onCut;
+    this.onCopyViaButton = options.onCopyViaButton;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
@@ -518,10 +522,22 @@ export class TableCellSelection {
 
     this.expandPill();
 
+    const copyShortcut = MODIFIER_KEY === 'Meta' ? '⌘C' : 'Ctrl+C';
+
     const items: PopoverItemParams[] = [
+      {
+        icon: IconCopy,
+        title: this.i18n.t('tools.table.copySelection'),
+        secondaryLabel: copyShortcut,
+        closeOnActivate: true,
+        onActivate: (): void => {
+          this.onCopyViaButton?.([...this.selectedCells]);
+        },
+      },
       {
         icon: IconCross,
         title: this.i18n.t('tools.table.clearSelection'),
+        secondaryLabel: 'Del',
         closeOnActivate: true,
         onActivate: (): void => {
           this.onClearContent?.([...this.selectedCells]);

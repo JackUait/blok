@@ -44,6 +44,7 @@
   "a11y.atBottom": "Բլոկը արդեն ներքևում է",
   "tools.table.title": "Աղյուսակ",
   "tools.table.clearSelection": "Մաքրել",
+  "tools.table.copySelection": "Պատճենել",
   "tools.table.headerColumn": "Վերնագրի սյունակ",
   "tools.table.insertColumnLeft": "Ավելացնել սյունակ ձախից",
   "tools.table.insertColumnRight": "Ավելացնել սյունակ աջից",

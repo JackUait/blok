@@ -29,6 +29,7 @@
   "tools.paragraph.placeholder": "សរសេរអ្វីមួយ ឬចុច / ដើម្បីជ្រើសរើស",
   "tools.table.title": "តារាង",
   "tools.table.clearSelection": "លុបចោល",
+  "tools.table.copySelection": "ចម្លង",
   "tools.table.headerColumn": "ជួរឈរចំណងជើង",
   "tools.table.insertColumnLeft": "បញ្ចូលជួរឈរខាងឆ្វេង",
   "tools.table.insertColumnRight": "បញ្ចូលជួរឈរខាងស្តាំ",

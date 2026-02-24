@@ -44,6 +44,7 @@
   "tools.paragraph.placeholder": "Bir şeyler yazın veya seçmek için / tuşuna basın",
   "tools.table.title": "Tablo",
   "tools.table.clearSelection": "Temizle",
+  "tools.table.copySelection": "Kopyala",
   "tools.table.headerColumn": "Başlık sütunu",
   "tools.table.insertColumnLeft": "Sola sütun ekle",
   "tools.table.insertColumnRight": "Sağa sütun ekle",

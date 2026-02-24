@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
+import type { RowColAction } from '../../../../src/tools/table/table-row-col-controls';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 /**
@@ -347,6 +348,130 @@ describe('Table setData generation guard', () => {
     table.setData({ content: [['X', 'Y', 'Z']], withHeadings: false });
 
     // The model should reflect the re-entrant call's state
+    const finalWrapper = container.firstElementChild as HTMLElement;
+    const saved = table.save(finalWrapper);
+
+    expect(saved.withHeadings).toBe(true);
+    expect(saved.content).toHaveLength(1);
+    expect(saved.content[0]).toHaveLength(1);
+  });
+
+  it('does not let stale delete-row action overwrite model after re-entrant setData', () => {
+    let insertCounter = 0;
+    const blockIndexMap = new Map<string, number>();
+    let tableRef: Table | null = null;
+    let reentrantCallMade = false;
+
+    const mockApi = createMockAPI({
+      blocks: {
+        delete: vi.fn().mockImplementation(() => {
+          if (!reentrantCallMade && tableRef) {
+            reentrantCallMade = true;
+            tableRef.setData({ content: [['FINAL']], withHeadings: true });
+          }
+        }),
+        isSyncingFromYjs: false,
+        insert: vi.fn().mockImplementation(() => {
+          insertCounter++;
+          const blockId = `cell-block-${insertCounter}`;
+          const holder = document.createElement('div');
+
+          holder.setAttribute('data-blok-id', blockId);
+          blockIndexMap.set(blockId, insertCounter - 1);
+
+          return { id: blockId, holder };
+        }),
+        getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+        getBlocksCount: vi.fn().mockReturnValue(0),
+        getBlockIndex: vi.fn().mockImplementation((id: string) => blockIndexMap.get(id)),
+        setBlockParent: vi.fn(),
+      },
+    });
+
+    const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+      data: { withHeadings: false, withHeadingColumn: false, content: [['A'], ['B']] },
+      config: {},
+      api: mockApi,
+      readOnly: false,
+      block: { id: 'table-1' } as never,
+    };
+
+    const table = new Table(options);
+
+    tableRef = table;
+    const element = table.render();
+
+    container.appendChild(element);
+    table.rendered();
+
+    const gridEl = element.firstElementChild as HTMLElement;
+    const action: RowColAction = { type: 'delete-row', index: 0 };
+
+    (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+      .handleRowColAction(gridEl, action);
+
+    const finalWrapper = container.firstElementChild as HTMLElement;
+    const saved = table.save(finalWrapper);
+
+    expect(saved.withHeadings).toBe(true);
+    expect(saved.content).toHaveLength(1);
+    expect(saved.content[0]).toHaveLength(1);
+  });
+
+  it('does not let stale delete-col action overwrite model after re-entrant setData', () => {
+    let insertCounter = 0;
+    const blockIndexMap = new Map<string, number>();
+    let tableRef: Table | null = null;
+    let reentrantCallMade = false;
+
+    const mockApi = createMockAPI({
+      blocks: {
+        delete: vi.fn().mockImplementation(() => {
+          if (!reentrantCallMade && tableRef) {
+            reentrantCallMade = true;
+            tableRef.setData({ content: [['FINAL']], withHeadings: true });
+          }
+        }),
+        isSyncingFromYjs: false,
+        insert: vi.fn().mockImplementation(() => {
+          insertCounter++;
+          const blockId = `cell-block-${insertCounter}`;
+          const holder = document.createElement('div');
+
+          holder.setAttribute('data-blok-id', blockId);
+          blockIndexMap.set(blockId, insertCounter - 1);
+
+          return { id: blockId, holder };
+        }),
+        getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+        getBlocksCount: vi.fn().mockReturnValue(0),
+        getBlockIndex: vi.fn().mockImplementation((id: string) => blockIndexMap.get(id)),
+        setBlockParent: vi.fn(),
+      },
+    });
+
+    const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+      data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
+      config: {},
+      api: mockApi,
+      readOnly: false,
+      block: { id: 'table-1' } as never,
+    };
+
+    const table = new Table(options);
+
+    tableRef = table;
+    const element = table.render();
+
+    container.appendChild(element);
+    table.rendered();
+
+    const gridEl = element.firstElementChild as HTMLElement;
+    const action: RowColAction = { type: 'delete-col', index: 0 };
+
+    (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
+      .handleRowColAction(gridEl, action);
+
     const finalWrapper = container.firstElementChild as HTMLElement;
     const saved = table.save(finalWrapper);
 

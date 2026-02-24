@@ -638,6 +638,22 @@ export class TableCellBlocks {
   }
 
   /**
+   * Resolve a block id to a cell only when this table model explicitly tracks
+   * that block in one of this table's cells.
+   */
+  private getOwnedCellForBlock(blockId: string): HTMLElement | null {
+    const cellPos = this.model.findCellForBlock(blockId);
+
+    if (!cellPos) {
+      return null;
+    }
+
+    const cell = this.getCell(cellPos.row, cellPos.col);
+
+    return cell && this.gridElement.contains(cell) ? cell : null;
+  }
+
+  /**
    * Check whether a block at the given flat-list index belongs to this table's
    * block range. Used to prevent cross-table interference when two
    * TableCellBlocks instances both subscribe to the global "block changed" event.
@@ -656,7 +672,7 @@ export class TableCellBlocks {
   private isAdjacentToThisTable(blockIndex: number): boolean {
     const blocksCount = this.api.blocks.getBlocksCount();
 
-    // Check if any adjacent block is in a cell of this table
+    // Check if any adjacent block is explicitly tracked by this table model.
     for (const offset of [-1, 1]) {
       const adjacentIndex = blockIndex + offset;
 
@@ -670,9 +686,7 @@ export class TableCellBlocks {
         continue;
       }
 
-      const cell = block.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
-
-      if (cell && this.gridElement.contains(cell)) {
+      if (this.getOwnedCellForBlock(block.id)) {
         return true;
       }
     }
@@ -697,9 +711,7 @@ export class TableCellBlocks {
       return true;
     }
 
-    const nextCell = nextBlock.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
-
-    return nextCell !== null && this.gridElement.contains(nextCell);
+    return this.getOwnedCellForBlock(nextBlock.id) !== null;
   }
 
   /**

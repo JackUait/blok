@@ -728,7 +728,13 @@ export class Table implements BlockTool {
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
+    const generationAtStart = this.setDataGeneration;
+
     this.runTransactedStructuralOp(() => {
+      if (generationAtStart !== this.setDataGeneration || this.element?.firstElementChild !== gridEl) {
+        return;
+      }
+
       // Capture colWidths BEFORE the model mutation so the action handler
       // receives pre-mutation widths. Model methods (addColumn, deleteColumn,
       // moveColumn) update colWidths internally, and the handler functions
@@ -755,6 +761,10 @@ export class Table implements BlockTool {
           blocksToDelete,
         },
       );
+
+      if (generationAtStart !== this.setDataGeneration || this.element?.firstElementChild !== gridEl) {
+        return;
+      }
 
       this.model.setColWidths(result.colWidths);
       this.model.setWithHeadings(result.withHeadings);

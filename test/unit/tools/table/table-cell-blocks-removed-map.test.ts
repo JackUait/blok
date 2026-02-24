@@ -50,6 +50,102 @@ describe('removedBlockCells index-based key bugs', () => {
   });
 
   describe('cross-table interference', () => {
+    it('should not treat a foreign adjacent block as this table ownership during replace matching', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridA = document.createElement('div');
+      const rowA = document.createElement('div');
+      rowA.setAttribute('data-blok-table-row', '');
+
+      const cellA = document.createElement('div');
+      cellA.setAttribute('data-blok-table-cell', '');
+      const containerA = document.createElement('div');
+      containerA.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      const blockAHolder = document.createElement('div');
+      blockAHolder.setAttribute('data-blok-id', 'block-a');
+      containerA.appendChild(blockAHolder);
+
+      // Foreign block holder from another table temporarily present in gridA.
+      const foreignHolder = document.createElement('div');
+      foreignHolder.setAttribute('data-blok-id', 'foreign-block');
+      containerA.appendChild(foreignHolder);
+
+      cellA.appendChild(containerA);
+      rowA.appendChild(cellA);
+      gridA.appendChild(rowA);
+
+      const tableAHolder = document.createElement('div');
+      tableAHolder.setAttribute('data-blok-id', 'table-a');
+      const insertedHolder = document.createElement('div');
+      insertedHolder.setAttribute('data-blok-id', 'inserted');
+
+      const eventsApi = {
+        on: vi.fn(),
+        off: vi.fn(),
+      };
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'inserted') return 1;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            // New flat list around index=1:
+            // 0 -> table-a, 1 -> inserted, 2 -> foreign-block
+            if (index === 0) return { id: 'table-a', holder: tableAHolder };
+            if (index === 1) return { id: 'inserted', holder: insertedHolder };
+            if (index === 2) return { id: 'foreign-block', holder: foreignHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(3),
+          setBlockParent: vi.fn(),
+        },
+        events: eventsApi,
+      } as unknown as API;
+
+      const model = createMockModel();
+      vi.mocked(model.findCellForBlock).mockImplementation((blockId: string) => {
+        if (blockId === 'block-a') return { row: 0, col: 0 };
+        // foreign-block is deliberately not tracked by Table A model.
+        return null;
+      });
+
+      const instance = new TableCellBlocks({ api, gridElement: gridA, tableBlockId: 'table-a', model });
+      const handler = getBlockChangedHandler(eventsApi.on);
+
+      handler({
+        event: {
+          type: 'block-removed',
+          detail: {
+            target: { id: 'block-a', holder: blockAHolder },
+            index: 1,
+          },
+        },
+      });
+
+      blockAHolder.remove();
+
+      handler({
+        event: {
+          type: 'block-added',
+          detail: {
+            target: { id: 'inserted', holder: insertedHolder },
+            index: 1,
+          },
+        },
+      });
+
+      expect(containerA.contains(insertedHolder)).toBe(false);
+
+      await Promise.resolve();
+      instance.destroy();
+    });
+
     it('should NOT let Table A claim a block that was added between two tables at the same index', async () => {
       /**
        * Scenario:
@@ -388,6 +484,7 @@ describe('removedBlockCells index-based key bugs', () => {
       const model = createMockModel();
       vi.mocked(model.findCellForBlock).mockImplementation((blockId: string) => {
         if (blockId === 'para-1') return { row: 0, col: 0 };
+        if (blockId === 'other-1') return { row: 0, col: 1 };
 
         return null;
       });

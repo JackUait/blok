@@ -1458,7 +1458,15 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+      const model = createMockModel();
+      vi.mocked(model.findCellForBlock).mockImplementation((blockId: string) => {
+        if (blockId === 'para-1') return { row: 0, col: 0 };
+        if (blockId === 'other-1') return { row: 0, col: 1 };
+
+        return null;
+      });
+
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model });
 
       // Step 1: block-removed fires BEFORE holder.remove()
       // At this point paraBlock.holder is still inside container00 in cell00

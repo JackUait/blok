@@ -94,6 +94,8 @@ export class TableAddControls {
   private boundRowPointerDown: (e: PointerEvent) => void;
   private boundColPointerDown: (e: PointerEvent) => void;
   private getNewColumnWidth: (() => number) | undefined;
+  private boundScrollHandler: (() => void) | null = null;
+  private scrollTarget: HTMLElement | null = null;
 
   constructor(options: TableAddControlsOptions) {
     this.wrapper = options.wrapper;
@@ -123,6 +125,7 @@ export class TableAddControls {
     this.wrapper.appendChild(this.addRowBtn);
     this.grid.appendChild(this.addColBtn);
     this.syncRowButtonWidth();
+    this.attachScrollListener();
 
     this.wrapper.addEventListener('mousemove', this.boundMouseMove);
     this.wrapper.addEventListener('mouseleave', this.boundMouseLeave);
@@ -154,14 +157,12 @@ export class TableAddControls {
         : 0;
 
       const numericWidth = parseFloat(gridWidth);
-      const maxWidth = isInsideScrollContainer && scrollContainer.clientWidth > 0
-        ? scrollContainer.clientWidth - paddingLeft
-        : numericWidth;
 
-      this.addRowBtn.style.width = `${Math.min(numericWidth, maxWidth)}px`;
+      this.addRowBtn.style.width = `${numericWidth}px`;
       this.addRowBtn.style.right = '';
-
       this.addRowBtn.style.left = `${paddingLeft}px`;
+
+      this.applyScrollTransform();
     } else {
       const paddingLeft = isInsideScrollContainer
         ? parseFloat(getComputedStyle(scrollContainer).paddingLeft) || 0
@@ -169,6 +170,7 @@ export class TableAddControls {
 
       this.addRowBtn.style.width = '';
       this.addRowBtn.style.left = `${paddingLeft}px`;
+      this.addRowBtn.style.transform = '';
 
       const paddingRight = parseFloat(getComputedStyle(this.wrapper).paddingRight) || 0;
 
@@ -206,6 +208,7 @@ export class TableAddControls {
   }
 
   public destroy(): void {
+    this.detachScrollListener();
     this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);
     this.addRowBtn.removeEventListener('pointerdown', this.boundRowPointerDown);
@@ -226,6 +229,59 @@ export class TableAddControls {
 
     this.addRowBtn.remove();
     this.addColBtn.remove();
+  }
+
+  /**
+   * Apply a translateX transform on the add-row button to mirror
+   * the scroll container's current scrollLeft. This keeps the
+   * button aligned with the grid content when the table overflows.
+   */
+  private applyScrollTransform(): void {
+    const scrollContainer = this.grid.parentElement;
+    const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
+
+    if (!isInsideScrollContainer) {
+      this.addRowBtn.style.transform = '';
+
+      return;
+    }
+
+    const scrollLeft = scrollContainer.scrollLeft;
+
+    this.addRowBtn.style.transform = scrollLeft > 0
+      ? `translateX(-${scrollLeft}px)`
+      : '';
+  }
+
+  /**
+   * Listen for horizontal scroll on the scroll container so the
+   * add-row button tracks the grid position.
+   */
+  private attachScrollListener(): void {
+    const scrollContainer = this.grid.parentElement;
+    const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
+
+    if (!isInsideScrollContainer) {
+      return;
+    }
+
+    this.boundScrollHandler = (): void => {
+      this.applyScrollTransform();
+    };
+
+    this.scrollTarget = scrollContainer;
+    scrollContainer.addEventListener('scroll', this.boundScrollHandler, { passive: true });
+  }
+
+  /**
+   * Remove the scroll listener attached via attachScrollListener.
+   */
+  private detachScrollListener(): void {
+    if (this.boundScrollHandler && this.scrollTarget) {
+      this.scrollTarget.removeEventListener('scroll', this.boundScrollHandler);
+      this.boundScrollHandler = null;
+      this.scrollTarget = null;
+    }
   }
 
   private handlePointerDown(axis: 'row' | 'col', e: PointerEvent): void {

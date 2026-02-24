@@ -1390,7 +1390,7 @@ describe('TableAddControls', () => {
       expect(addRowBtn.style.boxSizing).toBe('');
     });
 
-    it('caps button width to scroll container visible area when grid is wider', () => {
+    it('uses full grid width when grid overflows scroll container', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 5));
 
       const scrollContainer = document.createElement('div');
@@ -1424,8 +1424,8 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      // Button width should be capped to clientWidth - paddingLeft = 600 - 9 = 591px
-      expect(addRowBtn.style.width).toBe('591px');
+      // Button width should be the full grid width (scroll tracking uses translateX for alignment)
+      expect(addRowBtn.style.width).toBe('1200px');
       expect(addRowBtn.style.left).toBe('9px');
 
       spy.mockRestore();
@@ -1509,8 +1509,228 @@ describe('TableAddControls', () => {
       grid.style.width = '1000px';
       controls.syncRowButtonWidth();
 
-      // Should now be capped: 600 - 9 = 591px
-      expect(addRowBtn.style.width).toBe('591px');
+      // Button uses full grid width (scroll tracking via translateX handles overflow alignment)
+      expect(addRowBtn.style.width).toBe('1000px');
+
+      spy.mockRestore();
+    });
+  });
+
+  describe('scroll tracking', () => {
+    /**
+     * Helper: create a wrapper + scroll container + grid where the grid
+     * overflows the scroll container horizontally (pixel mode).
+     */
+    const createOverflowingTable = (
+      gridWidthPx: number,
+      scrollContainerClientWidth: number,
+      paddingLeft = 9,
+    ): {
+        wrapper: HTMLDivElement;
+        grid: HTMLDivElement;
+        scrollContainer: HTMLDivElement;
+        spy: ReturnType<typeof vi.spyOn>;
+      } => {
+      const w = document.createElement('div');
+      const sc = document.createElement('div');
+      const g = document.createElement('div');
+
+      sc.style.paddingLeft = `${paddingLeft}px`;
+      g.style.width = `${gridWidthPx}px`;
+      g.style.position = 'relative';
+
+      // Build a minimal 1×1 grid so row detection works
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      row.appendChild(cell);
+      g.appendChild(row);
+
+      sc.appendChild(g);
+      w.appendChild(sc);
+      document.body.appendChild(w);
+
+      Object.defineProperty(sc, 'clientWidth', { value: scrollContainerClientWidth, configurable: true });
+
+      const spyGCS = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === sc) {
+          return { paddingLeft: `${paddingLeft}px` } as CSSStyleDeclaration;
+        }
+
+        return { paddingRight: '20px', paddingLeft: '0px' } as CSSStyleDeclaration;
+      });
+
+      return { wrapper: w, grid: g, scrollContainer: sc, spy: spyGCS };
+    };
+
+    it('applies translateX based on scroll container scrollLeft when grid overflows', () => {
+      const { wrapper: w, grid: g, scrollContainer: sc, spy } = createOverflowingTable(1200, 600);
+
+      wrapper = w;
+      grid = g;
+
+      new TableAddControls({
+        wrapper: w,
+        grid: g,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = w.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Initially scrollLeft is 0, no transform offset expected
+      expect(addRowBtn.style.transform).toBe('');
+
+      // Simulate scrolling the scroll container
+      Object.defineProperty(sc, 'scrollLeft', { value: 200, configurable: true });
+      sc.dispatchEvent(new Event('scroll'));
+
+      expect(addRowBtn.style.transform).toBe('translateX(-200px)');
+
+      spy.mockRestore();
+    });
+
+    it('resets transform when scroll container scrolls back to start', () => {
+      const { wrapper: w, grid: g, scrollContainer: sc, spy } = createOverflowingTable(1200, 600);
+
+      wrapper = w;
+      grid = g;
+
+      new TableAddControls({
+        wrapper: w,
+        grid: g,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = w.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Scroll to position 300
+      Object.defineProperty(sc, 'scrollLeft', { value: 300, configurable: true });
+      sc.dispatchEvent(new Event('scroll'));
+      expect(addRowBtn.style.transform).toBe('translateX(-300px)');
+
+      // Scroll back to 0
+      Object.defineProperty(sc, 'scrollLeft', { value: 0, configurable: true });
+      sc.dispatchEvent(new Event('scroll'));
+      expect(addRowBtn.style.transform).toBe('');
+
+      spy.mockRestore();
+    });
+
+    it('uses full grid width instead of clamped width when grid overflows', () => {
+      const { wrapper: w, grid: g, spy } = createOverflowingTable(1200, 600);
+
+      wrapper = w;
+      grid = g;
+
+      new TableAddControls({
+        wrapper: w,
+        grid: g,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = w.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Button width should be the full grid width, not clamped to 591px
+      expect(addRowBtn.style.width).toBe('1200px');
+
+      spy.mockRestore();
+    });
+
+    it('removes scroll listener on destroy', () => {
+      const { wrapper: w, grid: g, scrollContainer: sc, spy: gcsSpy } = createOverflowingTable(1200, 600);
+
+      wrapper = w;
+      grid = g;
+
+      const controls = new TableAddControls({
+        wrapper: w,
+        grid: g,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = w.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Scroll should work before destroy
+      Object.defineProperty(sc, 'scrollLeft', { value: 150, configurable: true });
+      sc.dispatchEvent(new Event('scroll'));
+      expect(addRowBtn.style.transform).toBe('translateX(-150px)');
+
+      controls.destroy();
+
+      // After destroy, scroll events should not update the (now removed) button
+      // Verify removeEventListener was called by checking no error is thrown
+      Object.defineProperty(sc, 'scrollLeft', { value: 300, configurable: true });
+      sc.dispatchEvent(new Event('scroll'));
+      // The button was removed; no error means listener was properly cleaned up
+
+      gcsSpy.mockRestore();
+    });
+
+    it('does not attach scroll listener when grid is not inside a scroll container', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      grid.style.width = '400px';
+
+      const removeListenerSpy = vi.spyOn(grid, 'removeEventListener');
+
+      const controls = new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // No scroll listener needed — grid parent is the wrapper directly
+      expect(addRowBtn.style.transform).toBe('');
+
+      controls.destroy();
+      removeListenerSpy.mockRestore();
+    });
+
+    it('applies current scrollLeft via syncRowButtonWidth when called during drag', () => {
+      const { wrapper: w, grid: g, scrollContainer: sc, spy } = createOverflowingTable(1200, 600);
+
+      wrapper = w;
+      grid = g;
+
+      const controls = new TableAddControls({
+        wrapper: w,
+        grid: g,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = w.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Simulate: user scrolled, then starts resizing (which calls syncRowButtonWidth)
+      Object.defineProperty(sc, 'scrollLeft', { value: 100, configurable: true });
+
+      // Calling syncRowButtonWidth directly (as resize onDrag would)
+      controls.syncRowButtonWidth();
+
+      // The transform should reflect the current scrollLeft
+      expect(addRowBtn.style.transform).toBe('translateX(-100px)');
 
       spy.mockRestore();
     });

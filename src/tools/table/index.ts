@@ -59,6 +59,7 @@ const WRAPPER_CLASSES = [
 
 const WRAPPER_EDIT_CLASSES = [
   'relative',
+  'overflow-x-hidden',
   'after:content-[""]',
   'after:absolute',
   'after:-bottom-10',

@@ -149,12 +149,17 @@ export class TableAddControls {
     const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
 
     if (gridWidth && gridWidth.endsWith('px')) {
-      this.addRowBtn.style.width = gridWidth;
-      this.addRowBtn.style.right = '';
-
       const paddingLeft = isInsideScrollContainer
         ? parseFloat(getComputedStyle(scrollContainer).paddingLeft) || 0
         : 0;
+
+      const numericWidth = parseFloat(gridWidth);
+      const maxWidth = isInsideScrollContainer
+        ? scrollContainer.clientWidth - paddingLeft
+        : numericWidth;
+
+      this.addRowBtn.style.width = `${Math.min(numericWidth, maxWidth)}px`;
+      this.addRowBtn.style.right = '';
 
       this.addRowBtn.style.left = `${paddingLeft}px`;
     } else {

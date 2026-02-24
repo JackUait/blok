@@ -1284,6 +1284,8 @@ describe('TableAddControls', () => {
 
       grid.style.width = '400px';
 
+      Object.defineProperty(scrollContainer, 'clientWidth', { value: 600, configurable: true });
+
       const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
         if (el === scrollContainer) {
           return { paddingLeft: '9px' } as CSSStyleDeclaration;
@@ -1386,6 +1388,131 @@ describe('TableAddControls', () => {
       expect(addRowBtn.style.marginLeft).toBe('');
       expect(addRowBtn.style.marginRight).toBe('');
       expect(addRowBtn.style.boxSizing).toBe('');
+    });
+
+    it('caps button width to scroll container visible area when grid is wider', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 5));
+
+      const scrollContainer = document.createElement('div');
+
+      scrollContainer.style.paddingLeft = '9px';
+      wrapper.insertBefore(scrollContainer, grid);
+      scrollContainer.appendChild(grid);
+
+      // Grid is wider than the scroll container's visible area
+      grid.style.width = '1200px';
+
+      // Mock clientWidth on the scroll container (visible area including padding)
+      Object.defineProperty(scrollContainer, 'clientWidth', { value: 600, configurable: true });
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === scrollContainer) {
+          return { paddingLeft: '9px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingRight: '0px' } as CSSStyleDeclaration;
+      });
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Button width should be capped to clientWidth - paddingLeft = 600 - 9 = 591px
+      expect(addRowBtn.style.width).toBe('591px');
+      expect(addRowBtn.style.left).toBe('9px');
+
+      spy.mockRestore();
+    });
+
+    it('uses grid width when grid fits within scroll container', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      const scrollContainer = document.createElement('div');
+
+      scrollContainer.style.paddingLeft = '9px';
+      wrapper.insertBefore(scrollContainer, grid);
+      scrollContainer.appendChild(grid);
+
+      // Grid is narrower than the scroll container
+      grid.style.width = '400px';
+
+      Object.defineProperty(scrollContainer, 'clientWidth', { value: 600, configurable: true });
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === scrollContainer) {
+          return { paddingLeft: '9px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingRight: '0px' } as CSSStyleDeclaration;
+      });
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Grid fits, so button should match grid width
+      expect(addRowBtn.style.width).toBe('400px');
+      expect(addRowBtn.style.left).toBe('9px');
+
+      spy.mockRestore();
+    });
+
+    it('recaps width when syncRowButtonWidth is called after columns are added', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 3));
+
+      const scrollContainer = document.createElement('div');
+
+      scrollContainer.style.paddingLeft = '9px';
+      wrapper.insertBefore(scrollContainer, grid);
+      scrollContainer.appendChild(grid);
+
+      grid.style.width = '400px';
+      Object.defineProperty(scrollContainer, 'clientWidth', { value: 600, configurable: true });
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === scrollContainer) {
+          return { paddingLeft: '9px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingRight: '0px' } as CSSStyleDeclaration;
+      });
+
+      const controls = new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      // Initially fits
+      expect(addRowBtn.style.width).toBe('400px');
+
+      // Simulate columns added — grid grows beyond scroll container
+      grid.style.width = '1000px';
+      controls.syncRowButtonWidth();
+
+      // Should now be capped: 600 - 9 = 591px
+      expect(addRowBtn.style.width).toBe('591px');
+
+      spy.mockRestore();
     });
   });
 

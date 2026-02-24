@@ -430,6 +430,7 @@ export class TableAddControls {
     btn.style.position = 'absolute';
     btn.style.left = '0';
     btn.style.bottom = '-36px';
+    btn.style.zIndex = '1';
     btn.style.boxSizing = 'content-box';
     btn.style.width = '100%';
     btn.style.height = '32px';

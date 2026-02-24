@@ -77,7 +77,8 @@ const createTableWithColWidths = (
   document.body.appendChild(element);
   table.rendered();
 
-  const gridEl = element.firstElementChild as HTMLElement;
+  const scrollContainer = element.firstElementChild as HTMLElement;
+  const gridEl = scrollContainer.firstElementChild as HTMLElement;
 
   return { table, element, gridEl };
 };

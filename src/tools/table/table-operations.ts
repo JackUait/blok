@@ -376,13 +376,7 @@ export const enableScrollOverflow = (element: HTMLDivElement | null): void => {
 
 // ─── Heading styles ─────────────────────────────────────────────────
 
-export const updateHeadingStyles = (element: HTMLDivElement | null, withHeadings: boolean): void => {
-  if (!element) {
-    return;
-  }
-
-  const gridEl = element.firstElementChild as HTMLElement;
-
+export const updateHeadingStyles = (gridEl: HTMLElement | null, withHeadings: boolean): void => {
   if (!gridEl) {
     return;
   }
@@ -398,13 +392,7 @@ export const updateHeadingStyles = (element: HTMLDivElement | null, withHeadings
   }
 };
 
-export const updateHeadingColumnStyles = (element: HTMLDivElement | null, withHeadingColumn: boolean): void => {
-  if (!element) {
-    return;
-  }
-
-  const gridEl = element.firstElementChild as HTMLElement;
-
+export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadingColumn: boolean): void => {
   if (!gridEl) {
     return;
   }

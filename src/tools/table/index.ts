@@ -78,6 +78,8 @@ export class Table implements BlockTool {
   private cellBlocks: TableCellBlocks | null = null;
   private cellSelection: TableCellSelection | null = null;
   private element: HTMLDivElement | null = null;
+  private gridElement: HTMLElement | null = null;
+  private scrollContainer: HTMLDivElement | null = null;
   private blockId: string | undefined;
   private pendingHighlight: PendingHighlight | null = null;
   private isNewTable = false;
@@ -227,10 +229,35 @@ export class Table implements BlockTool {
     };
   }
 
+  /**
+   * Ensure a scroll container exists between the wrapper and the grid.
+   * Creates one on demand (e.g. when the first resize converts percent → pixel mode).
+   */
+  private ensureScrollContainer(): HTMLDivElement {
+    if (this.scrollContainer) {
+      return this.scrollContainer;
+    }
+
+    const sc = document.createElement('div');
+
+    sc.setAttribute('data-blok-table-scroll', '');
+
+    const grid = this.gridElement;
+
+    if (grid && this.element) {
+      this.element.insertBefore(sc, grid);
+      sc.appendChild(grid);
+    }
+
+    this.scrollContainer = sc;
+
+    return sc;
+  }
+
   public render(): HTMLDivElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES, this.model.colWidths && SCROLL_OVERFLOW_CLASSES);
+    wrapper.className = twMerge(WRAPPER_CLASSES, !this.readOnly && WRAPPER_EDIT_CLASSES);
     wrapper.setAttribute(DATA_ATTR.tool, 'table');
 
     if (this.readOnly) {
@@ -252,15 +279,29 @@ export class Table implements BlockTool {
       applyPixelWidths(gridEl, this.model.colWidths);
     }
 
-    wrapper.appendChild(gridEl);
+    this.gridElement = gridEl;
+
+    if (this.model.colWidths) {
+      const sc = document.createElement('div');
+
+      sc.setAttribute('data-blok-table-scroll', '');
+      sc.classList.add(...SCROLL_OVERFLOW_CLASSES);
+      sc.appendChild(gridEl);
+      wrapper.appendChild(sc);
+      this.scrollContainer = sc;
+    } else {
+      wrapper.appendChild(gridEl);
+      this.scrollContainer = null;
+    }
+
     this.element = wrapper;
 
     if (this.model.withHeadings) {
-      updateHeadingStyles(this.element, this.model.withHeadings);
+      updateHeadingStyles(this.gridElement, this.model.withHeadings);
     }
 
     if (this.model.withHeadingColumn) {
-      updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+      updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
     }
 
     if (!this.readOnly) {
@@ -276,7 +317,7 @@ export class Table implements BlockTool {
       return;
     }
 
-    const gridEl = this.element.firstElementChild as HTMLElement;
+    const gridEl = this.gridElement;
 
     if (!gridEl) {
       return;
@@ -393,7 +434,7 @@ export class Table implements BlockTool {
 
     oldElement.parentNode.replaceChild(newElement, oldElement);
 
-    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
+    const gridEl = this.gridElement;
 
     if (this.readOnly || !gridEl) {
       return;
@@ -491,7 +532,7 @@ export class Table implements BlockTool {
 
     oldElement.parentNode.replaceChild(newElement, oldElement);
 
-    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
+    const gridEl = this.gridElement;
 
     if (!this.readOnly && gridEl) {
       this.runStructuralOp(() => {
@@ -523,11 +564,13 @@ export class Table implements BlockTool {
     this.teardownSubsystems();
     this.cellBlocks?.destroy();
     this.cellBlocks = null;
+    this.gridElement = null;
+    this.scrollContainer = null;
     this.element = null;
   }
 
   public deleteRowWithCleanup(rowIndex: number): void {
-    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
+    const gridEl = this.gridElement;
 
     if (!gridEl) {
       return;
@@ -542,7 +585,7 @@ export class Table implements BlockTool {
   }
 
   public deleteColumnWithCleanup(colIndex: number): void {
-    const gridEl = this.element?.firstElementChild as HTMLElement | undefined;
+    const gridEl = this.gridElement;
 
     if (!gridEl) {
       return;
@@ -592,8 +635,8 @@ export class Table implements BlockTool {
           this.grid.addRow(gridEl);
           this.model.addRow();
           populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingStyles(this.element, this.model.withHeadings);
-          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+          updateHeadingStyles(this.gridElement, this.model.withHeadings);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
           this.initResize(gridEl);
           this.addControls?.syncRowButtonWidth();
           this.rowColControls?.refresh();
@@ -610,7 +653,7 @@ export class Table implements BlockTool {
           this.model.addColumn(undefined, halfWidth);
           this.model.setColWidths([...colWidths, halfWidth]);
           populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
           this.initResize(gridEl);
           this.addControls?.syncRowButtonWidth();
           this.rowColControls?.refresh();
@@ -628,8 +671,8 @@ export class Table implements BlockTool {
           this.grid.addRow(gridEl);
           this.model.addRow();
           populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingStyles(this.element, this.model.withHeadings);
-          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+          updateHeadingStyles(this.gridElement, this.model.withHeadings);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
         });
       },
       onDragRemoveRow: () => {
@@ -658,13 +701,13 @@ export class Table implements BlockTool {
           this.model.setColWidths(newWidths);
           applyPixelWidths(gridEl, newWidths);
           populateNewCells(gridEl, this.cellBlocks);
-          updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
           this.initResize(gridEl);
 
           dragState.addedCols++;
 
-          if (this.element) {
-            this.element.scrollLeft = this.element.scrollWidth;
+          if (this.scrollContainer) {
+            this.scrollContainer.scrollLeft = this.scrollContainer.scrollWidth;
           }
         });
       },
@@ -699,8 +742,8 @@ export class Table implements BlockTool {
         this.addControls?.syncRowButtonWidth();
         this.rowColControls?.refresh();
 
-        if (this.element) {
-          this.element.scrollLeft = dragState.addedCols > 0 ? this.element.scrollWidth : 0;
+        if (this.scrollContainer) {
+          this.scrollContainer.scrollLeft = dragState.addedCols > 0 ? this.scrollContainer.scrollWidth : 0;
         }
 
         dragState.addedCols = 0;
@@ -770,7 +813,7 @@ export class Table implements BlockTool {
     const generationAtStart = this.setDataGeneration;
 
     this.runTransactedStructuralOp(() => {
-      if (generationAtStart !== this.setDataGeneration || this.element?.firstElementChild !== gridEl) {
+      if (generationAtStart !== this.setDataGeneration || this.gridElement !== gridEl) {
         return;
       }
 
@@ -801,7 +844,7 @@ export class Table implements BlockTool {
         },
       );
 
-      if (generationAtStart !== this.setDataGeneration || this.element?.firstElementChild !== gridEl) {
+      if (generationAtStart !== this.setDataGeneration || this.gridElement !== gridEl) {
         return;
       }
 
@@ -810,8 +853,8 @@ export class Table implements BlockTool {
       this.model.setWithHeadingColumn(result.withHeadingColumn);
       this.pendingHighlight = result.pendingHighlight;
 
-      updateHeadingStyles(this.element, this.model.withHeadings);
-      updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+      updateHeadingStyles(this.gridElement, this.model.withHeadings);
+      updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
       this.initResize(gridEl);
       this.addControls?.syncRowButtonWidth();
       this.rowColControls?.refresh();
@@ -873,7 +916,7 @@ export class Table implements BlockTool {
     const widths = this.model.colWidths ?? readPixelWidths(gridEl);
 
     if (!isPercentMode) {
-      enableScrollOverflow(this.element);
+      enableScrollOverflow(this.ensureScrollContainer());
     }
 
     this.resize = new TableResize(
@@ -881,7 +924,7 @@ export class Table implements BlockTool {
       widths,
       (newWidths: number[]) => {
         this.model.setColWidths(newWidths);
-        enableScrollOverflow(this.element);
+        enableScrollOverflow(this.ensureScrollContainer());
         this.rowColControls?.positionGrips();
       },
       () => {
@@ -942,7 +985,7 @@ export class Table implements BlockTool {
   private collectCellBlockData(
     cells: HTMLElement[],
   ): Array<{ row: number; col: number; blocks: ClipboardBlockData[] }> {
-    const gridEl = this.element?.firstElementChild;
+    const gridEl = this.gridElement;
 
     if (!gridEl) {
       return [];
@@ -1200,8 +1243,8 @@ export class Table implements BlockTool {
       this.grid.addRow(gridEl);
       this.model.addRow();
       populateNewCells(gridEl, this.cellBlocks);
-      updateHeadingStyles(this.element, this.model.withHeadings);
-      updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+      updateHeadingStyles(this.gridElement, this.model.withHeadings);
+      updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
     });
 
     // Auto-expand columns
@@ -1215,7 +1258,7 @@ export class Table implements BlockTool {
       this.model.addColumn(undefined, halfWidth);
       this.model.setColWidths([...colWidths, halfWidth]);
       populateNewCells(gridEl, this.cellBlocks);
-      updateHeadingColumnStyles(this.element, this.model.withHeadingColumn);
+      updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
     });
   }
 

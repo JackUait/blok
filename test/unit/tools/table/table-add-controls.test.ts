@@ -119,6 +119,23 @@ describe('TableAddControls', () => {
       expect(addRowBtn).not.toBeNull();
     });
 
+    it('add-row button has z-index 1 to paint above sibling blocks', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.zIndex).toBe('1');
+    });
+
     it('creates an add-column button with the correct data attribute', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 

@@ -366,8 +366,8 @@ describe('Table Tool', () => {
       rows[1].setAttribute('data-blok-table-heading', '');
 
       // Toggle heading off then on via updateHeadingStyles
-      updateHeadingStyles(element, false); // toggle off
-      updateHeadingStyles(element, true); // toggle on
+      updateHeadingStyles(gridEl, false); // toggle off
+      updateHeadingStyles(gridEl, true); // toggle on
 
       // Only row 0 should have heading
       expect(rows[0]).toHaveAttribute('data-blok-table-heading');
@@ -762,7 +762,8 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      const gridBefore = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const gridBefore = scrollContainer.firstElementChild as HTMLElement;
       const cellsBefore = gridBefore.querySelectorAll('[data-blok-table-row]')[0]
         .querySelectorAll('[data-blok-table-cell]');
       const widthsBefore = Array.from(cellsBefore).map(c => (c as HTMLElement).style.width);
@@ -771,7 +772,7 @@ describe('Table Tool', () => {
 
       pointerClick(addColBtn);
 
-      const gridAfter = element.firstElementChild as HTMLElement;
+      const gridAfter = scrollContainer.firstElementChild as HTMLElement;
       const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
         .querySelectorAll('[data-blok-table-cell]');
 
@@ -807,7 +808,8 @@ describe('Table Tool', () => {
 
       pointerClick(addColBtn);
 
-      const gridAfter = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const gridAfter = scrollContainer.firstElementChild as HTMLElement;
       const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
         .querySelectorAll('[data-blok-table-cell]');
 
@@ -828,7 +830,8 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      const grid = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
       expect(addRowBtn.style.width).toBe(grid.style.width);
@@ -851,7 +854,8 @@ describe('Table Tool', () => {
 
       pointerClick(addColBtn);
 
-      const grid = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
       expect(addRowBtn.style.width).toBe(grid.style.width);
@@ -981,7 +985,8 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const grid = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
 
       expect(grid.style.width).toBe('601px');
     });
@@ -994,7 +999,8 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const grid = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
 
       // Grid has a 1px left border with box-sizing: border-box,
       // so width must be sum of colWidths + 1px to avoid cell overflow
@@ -2166,7 +2172,8 @@ describe('Table Tool', () => {
         [200, 200]
       );
 
-      const grid = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
       const widthBefore = parseFloat(grid.style.width);
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
@@ -2201,7 +2208,8 @@ describe('Table Tool', () => {
         }
       });
 
-      const grid = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
       const widthBefore = parseFloat(grid.style.width);
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
@@ -2247,7 +2255,8 @@ describe('Table Tool', () => {
         bubbles: true,
       }));
 
-      const grid = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const grid = scrollContainer.firstElementChild as HTMLElement;
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
 
       expect(addRowBtn.style.width).toBe(grid.style.width);
@@ -2489,15 +2498,17 @@ describe('Table Tool', () => {
         [200, 200]
       );
 
+      const scrollContainer = element.firstElementChild as HTMLElement;
+
       // Mock scrollWidth since jsdom doesn't compute layout
-      Object.defineProperty(element, 'scrollWidth', { value: 600, configurable: true });
+      Object.defineProperty(scrollContainer, 'scrollWidth', { value: 600, configurable: true });
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
       // Drag right by enough to add one column (unitSize defaults to 100px in jsdom)
       simulateDragStart(addColBtn, 'col', 0, 110);
 
-      expect(element.scrollLeft).toBeGreaterThan(0);
+      expect(scrollContainer.scrollLeft).toBeGreaterThan(0);
 
       document.body.removeChild(element);
     });
@@ -2508,7 +2519,9 @@ describe('Table Tool', () => {
         [200, 200]
       );
 
-      Object.defineProperty(element, 'scrollWidth', { value: 600, configurable: true });
+      const scrollContainer = element.firstElementChild as HTMLElement;
+
+      Object.defineProperty(scrollContainer, 'scrollWidth', { value: 600, configurable: true });
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
@@ -2535,7 +2548,7 @@ describe('Table Tool', () => {
       }));
 
       // scrollLeft should NOT be reset to 0 since columns were added
-      expect(element.scrollLeft).toBeGreaterThan(0);
+      expect(scrollContainer.scrollLeft).toBeGreaterThan(0);
 
       document.body.removeChild(element);
     });
@@ -3469,7 +3482,8 @@ describe('Table Tool', () => {
     it('auto-expands columns when payload exceeds current column count', () => {
       const { element } = createPasteTable([['A'], ['B']], { colWidths: [200] });
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const scrollContainer = element.firstElementChild as HTMLElement;
+      const gridEl = scrollContainer.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 

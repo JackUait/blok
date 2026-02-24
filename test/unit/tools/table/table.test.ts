@@ -709,25 +709,6 @@ describe('Table Tool', () => {
       expect(element).not.toHaveAttribute('data-blok-table-readonly');
     });
 
-    it('adds hover zone in edit mode for add-row button reachability', () => {
-      const options = createTableOptions({ content: [['A', 'B']] });
-      const table = new Table(options);
-      const element = table.render();
-
-      expect(element).toHaveAttribute('data-blok-table-hover-zone');
-    });
-
-    it('does not add hover zone in readOnly mode', () => {
-      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        ...createTableOptions({ content: [['A', 'B']] }),
-        readOnly: true,
-      };
-      const table = new Table(options);
-      const element = table.render();
-
-      expect(element).not.toHaveAttribute('data-blok-table-hover-zone');
-    });
-
     it('clicking add-row appends a new row to the table', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],

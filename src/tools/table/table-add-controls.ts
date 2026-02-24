@@ -452,10 +452,7 @@ export class TableAddControls {
     btn.style.left = '0';
     btn.style.bottom = '-36px';
     btn.style.zIndex = '1';
-    btn.style.boxSizing = 'content-box';
     btn.style.height = '32px';
-    btn.style.padding = '4px 8px 0';
-    btn.style.marginLeft = '-8px';
 
     const visual = document.createElement('div');
 

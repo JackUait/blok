@@ -1366,6 +1366,27 @@ describe('TableAddControls', () => {
 
       spy.mockRestore();
     });
+
+    it('does not apply horizontal padding or margin that would offset the button from the grid', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.paddingLeft).toBe('');
+      expect(addRowBtn.style.paddingRight).toBe('');
+      expect(addRowBtn.style.marginLeft).toBe('');
+      expect(addRowBtn.style.marginRight).toBe('');
+      expect(addRowBtn.style.boxSizing).toBe('');
+    });
   });
 
 });

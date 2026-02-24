@@ -59,8 +59,12 @@ const WRAPPER_CLASSES = [
 
 const WRAPPER_EDIT_CLASSES = [
   'relative',
-  'pb-10',
-  '-mb-10',
+  'after:content-[""]',
+  'after:absolute',
+  'after:-bottom-10',
+  'after:left-0',
+  'after:right-0',
+  'after:h-10',
 ];
 
 /**
@@ -264,8 +268,6 @@ export class Table implements BlockTool {
 
     if (this.readOnly) {
       wrapper.setAttribute('data-blok-table-readonly', '');
-    } else {
-      wrapper.setAttribute('data-blok-table-hover-zone', '');
     }
 
     this.isNewTable = (this.initialContent?.length ?? 0) === 0;

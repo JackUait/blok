@@ -334,6 +334,48 @@ export class Blocks {
   }
 
   /**
+   * Add a block to the internal array at the given index WITHOUT inserting
+   * its holder into the DOM. Use {@link activateBlock} later to place it
+   * into the DOM and fire the RENDERED lifecycle hook.
+   *
+   * This is used during batch-add (undo of hierarchical blocks) so that all
+   * blocks exist in the array before any lifecycle hooks run.
+   */
+  public addToArray(index: number, block: Block): void {
+    const insertIndex = index > this.length ? this.length : index;
+
+    this.blocks.splice(insertIndex, 0, block);
+  }
+
+  /**
+   * Activate a block that was previously added via {@link addToArray}.
+   *
+   * If the block's holder already has a parent element (e.g. a parent tool's
+   * `rendered()` moved it into a cell container), only the RENDERED
+   * lifecycle hook is called. Otherwise the holder is positioned in the
+   * working area relative to the adjacent block in the array.
+   */
+  public activateBlock(block: Block): void {
+    if (block.holder.parentElement !== null) {
+      block.call(BlockToolAPI.RENDERED);
+
+      return;
+    }
+
+    const index = this.blocks.indexOf(block);
+
+    if (index > 0) {
+      const previousBlock = this.blocks[index - 1];
+
+      this.insertToDOM(block, 'afterend', previousBlock);
+
+      return;
+    }
+
+    this.insertToDOM(block);
+  }
+
+  /**
    * Insert new Block into DOM
    * @param {Block} block - Block to insert
    * @param {InsertPosition} position — insert position (if set, will use insertAdjacentElement)

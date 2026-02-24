@@ -205,25 +205,28 @@ export class BlockYjsSync {
    * @param event - the block change event from YjsManager
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
-    const { blockId, type: changeType } = event;
-
-    if (changeType === 'update') {
-      this.handleYjsUpdate(blockId);
+    if (event.type === 'update') {
+      this.handleYjsUpdate(event.blockId);
       return;
     }
 
-    if (changeType === 'move') {
+    if (event.type === 'move') {
       this.handleYjsMove();
       return;
     }
 
-    if (changeType === 'add') {
-      this.handleYjsAdd(blockId);
+    if (event.type === 'add') {
+      this.handleYjsAdd(event.blockId);
       return;
     }
 
-    if (changeType === 'remove') {
-      this.handleYjsRemove(blockId);
+    if (event.type === 'batch-add') {
+      this.handleYjsBatchAdd(event.blockIds);
+      return;
+    }
+
+    if (event.type === 'remove') {
+      this.handleYjsRemove(event.blockId);
     }
   }
 
@@ -339,6 +342,80 @@ export class BlockYjsSync {
       // Apply indentation if needed
       if (parentId !== undefined) {
         this.handlers.updateIndentation(block);
+      }
+    }, { extendThroughRAF: true });
+  }
+
+  /**
+   * Handle batch block add from Yjs (undo/redo).
+   *
+   * When multiple blocks are restored at once (e.g. a table + its cell
+   * paragraphs), we use a two-pass approach:
+   *   1. Create ALL blocks and insert them into the blocks array (no DOM).
+   *   2. Activate each block (DOM insert + RENDERED lifecycle hook).
+   *
+   * This ensures that when a parent tool's `rendered()` hook fires (pass 2),
+   * child blocks already exist in BlockManager, so helpers like
+   * `mountBlocksInCell()` can find them by ID.
+   */
+  private handleYjsBatchAdd(blockIds: string[]): void {
+    const yjsBlocks = this.dependencies.YjsManager.toJSON();
+
+    // Collect blocks to create — skip any that already exist
+    const toCreate: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; targetIndex: number }> = [];
+
+    for (const blockId of blockIds) {
+      if (this.repository.getBlockById(blockId) !== undefined) {
+        continue;
+      }
+
+      const yblock = this.dependencies.YjsManager.getBlockById(blockId);
+
+      if (yblock === undefined) {
+        continue;
+      }
+
+      const toolName = yblock.get('type') as string;
+      const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+      const parentId = yblock.get('parentId') as string | undefined;
+      const targetIndex = yjsBlocks.findIndex((b) => b.id === blockId);
+
+      if (targetIndex === -1) {
+        continue;
+      }
+
+      toCreate.push({ blockId, toolName, data, parentId: parentId ?? undefined, targetIndex });
+    }
+
+    if (toCreate.length === 0) {
+      return;
+    }
+
+    this.withAtomicOperation(() => {
+      // Pass 1 — create blocks and add to array (no DOM, no RENDERED)
+      const created: Array<{ block: Block; targetIndex: number; parentId: string | undefined }> = [];
+
+      for (const entry of toCreate) {
+        const block = this.factory.composeBlock({
+          id: entry.blockId,
+          tool: entry.toolName,
+          data: entry.data,
+          parentId: entry.parentId,
+          bindEventsImmediately: true,
+        });
+
+        this.blocksStore.addToArray(entry.targetIndex, block);
+        created.push({ block, targetIndex: entry.targetIndex, parentId: entry.parentId });
+      }
+
+      // Pass 2 — activate blocks (DOM insert + RENDERED), then emit events
+      for (const { block, targetIndex, parentId } of created) {
+        this.blocksStore.activateBlock(block);
+        this.handlers.onBlockAdded(block, targetIndex);
+
+        if (parentId !== undefined) {
+          this.handlers.updateIndentation(block);
+        }
       }
     }, { extendThroughRAF: true });
   }

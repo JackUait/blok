@@ -1139,5 +1139,100 @@ describe('Blocks', () => {
       expect(blocks.length).toBe(0);
     });
   });
+
+  describe('addToArray', () => {
+    it('adds block to the array at the specified index without DOM insertion', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+
+      blocks.push(block1);
+
+      blocks.addToArray(1, block2);
+
+      expect(blocks.blocks[1]).toBe(block2);
+      expect(blocks.length).toBe(2);
+
+      // Block should NOT be in the DOM
+      expect(block2.holder.parentElement).toBeNull();
+      expect(workingArea.contains(block2.holder)).toBe(false);
+
+      // RENDERED should NOT have been called
+      expect(block2.call).not.toHaveBeenCalled();
+    });
+
+    it('inserts at the correct position in a non-empty array', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+      const block3 = createMockBlock('block-3');
+
+      blocks.push(block1);
+      blocks.push(block3);
+
+      blocks.addToArray(1, block2);
+
+      expect(blocks.blocks[0]).toBe(block1);
+      expect(blocks.blocks[1]).toBe(block2);
+      expect(blocks.blocks[2]).toBe(block3);
+    });
+  });
+
+  describe('activateBlock', () => {
+    it('inserts block into DOM and calls RENDERED when holder is not connected', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+
+      // Add to array only (no DOM)
+      blocks.addToArray(0, block1);
+
+      expect(block1.holder.parentElement).toBeNull();
+
+      blocks.activateBlock(block1);
+
+      // Now it should be in DOM and RENDERED called
+      expect(workingArea.contains(block1.holder)).toBe(true);
+      expect(block1.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
+    });
+
+    it('only calls RENDERED (no DOM move) when holder already has a parent', () => {
+      const blocks = createBlocks();
+      const tableBlock = createMockBlock('table-1');
+      const cellBlock = createMockBlock('cell-1');
+
+      // Table is in DOM
+      blocks.push(tableBlock);
+
+      // Cell is in array but its holder is inside the table (simulating mountBlocksInCell)
+      blocks.addToArray(1, cellBlock);
+      tableBlock.holder.appendChild(cellBlock.holder);
+
+      // Cell holder has a parent element (the table holder)
+      expect(cellBlock.holder.parentElement).toBe(tableBlock.holder);
+
+      (cellBlock.call as ReturnType<typeof vi.fn>).mockClear();
+      blocks.activateBlock(cellBlock);
+
+      // Should only call RENDERED, not move the holder
+      expect(cellBlock.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
+      // Should still be inside the table, not moved to working area
+      expect(tableBlock.holder.contains(cellBlock.holder)).toBe(true);
+    });
+
+    it('positions block relative to previous block in array when not connected', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+
+      blocks.push(block1);
+      blocks.addToArray(1, block2);
+
+      blocks.activateBlock(block2);
+
+      // block2 should be after block1 in the DOM
+      const children = Array.from(workingArea.children);
+      expect(children.indexOf(block1.holder)).toBeLessThan(children.indexOf(block2.holder));
+    });
+  });
 });
 

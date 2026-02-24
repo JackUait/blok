@@ -498,6 +498,58 @@ describe('BlockObserver', () => {
     });
   });
 
+  describe('batch-add events', () => {
+    it('emits batch-add when multiple blocks are added in a single transaction', () => {
+      const callback = vi.fn();
+      observer.onBlocksChanged(callback);
+
+      ydoc.transact(() => {
+        const table = new Y.Map<unknown>();
+        table.set('id', 'table-1');
+        table.set('type', 'table');
+        table.set('data', new Y.Map<unknown>());
+
+        const child1 = new Y.Map<unknown>();
+        child1.set('id', 'child-1');
+        child1.set('type', 'paragraph');
+        child1.set('data', new Y.Map<unknown>());
+        child1.set('parentId', 'table-1');
+
+        const child2 = new Y.Map<unknown>();
+        child2.set('id', 'child-2');
+        child2.set('type', 'paragraph');
+        child2.set('data', new Y.Map<unknown>());
+        child2.set('parentId', 'table-1');
+
+        yblocks.push([table, child1, child2]);
+      }, 'local');
+
+      // Should emit a single batch-add event instead of individual add events
+      expect(callback).toHaveBeenCalledTimes(1);
+      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      expect(event.type).toBe('batch-add');
+      expect(event.blockIds).toEqual(['table-1', 'child-1', 'child-2']);
+    });
+
+    it('emits regular add for a single block', () => {
+      const callback = vi.fn();
+      observer.onBlocksChanged(callback);
+
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'single-1');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      expect(event.type).toBe('add');
+      expect(event.blockId).toBe('single-1');
+    });
+  });
+
   describe('edge cases', () => {
     it('handles block without id gracefully during remove', () => {
       // Add block without id
@@ -603,7 +655,12 @@ describe('BlockObserver', () => {
       expect(eventTypes.every((type) => type === 'add')).toBe(true);
 
       // Verify specific events contain correct block IDs
-      const blockIds = callback.mock.calls.map((call) => (call[0] as BlockChangeEvent).blockId);
+      const blockIds = callback.mock.calls.map((call) => {
+        const event = call[0] as BlockChangeEvent;
+
+        return event.type === 'batch-add' ? event.blockIds : [event.blockId];
+      }).flat();
+
       for (let i = 0; i < 10; i++) {
         expect(blockIds).toContain(`b${i}`);
       }

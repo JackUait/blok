@@ -787,6 +787,180 @@ describe('BlockYjsSync', () => {
       });
     });
 
+    describe('handleYjsBatchAdd', () => {
+      it('creates all blocks and adds to array before activating any', () => {
+        const tableBlock = createMockBlock({ id: 'table-1' });
+        const childBlock = createMockBlock({ id: 'child-1' });
+
+        const activationOrder: string[] = [];
+
+        // Track when RENDERED is called (activation) for each block
+        (tableBlock.call as ReturnType<typeof vi.fn>).mockImplementation((method: string) => {
+          if (method === 'rendered') {
+            activationOrder.push('table-1');
+            // When table's rendered() fires, child should already be in blocks array
+            const childInArray = blocksStore.blocks.some(
+              (b: Block) => b.id === 'child-1'
+            );
+            expect(childInArray).toBe(true);
+          }
+        });
+        (childBlock.call as ReturnType<typeof vi.fn>).mockImplementation((method: string) => {
+          if (method === 'rendered') {
+            activationOrder.push('child-1');
+          }
+        });
+
+        vi.spyOn(factory, 'composeBlock').mockImplementation((options) => {
+          if ((options as { id: string }).id === 'table-1') return tableBlock;
+          return childBlock;
+        });
+
+        const tableYblock = createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [] }),
+        });
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'table-1',
+        });
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'table-1') return tableYblock;
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+          { id: 'table-1', type: 'table' },
+          { id: 'child-1', type: 'paragraph', parentId: 'table-1' },
+        ]);
+
+        callback({ blockIds: ['table-1', 'child-1'], type: 'batch-add', origin: 'undo' });
+
+        // Both blocks should be in the array
+        expect(blocksStore.blocks.some((b: Block) => b.id === 'table-1')).toBe(true);
+        expect(blocksStore.blocks.some((b: Block) => b.id === 'child-1')).toBe(true);
+
+        // Table should be activated (RENDERED) before child
+        expect(activationOrder).toEqual(['table-1', 'child-1']);
+      });
+
+      it('skips blocks that already exist in the repository', () => {
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock');
+
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+        });
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+        ]);
+
+        // block-1 already exists in repository
+        callback({ blockIds: ['block-1', 'new-block'], type: 'batch-add', origin: 'undo' });
+
+        // Should only compose the new block, not the existing one
+        const composedIds = composeBlockSpy.mock.calls.map(
+          (call) => (call[0] as { id: string }).id
+        );
+        expect(composedIds).not.toContain('block-1');
+      });
+
+      it('does not insert child holders into DOM directly when parent mounts them', () => {
+        const tableBlock = createMockBlock({ id: 'table-1' });
+        const childBlock = createMockBlock({ id: 'child-1' });
+
+        // Simulate: when table's RENDERED fires, it mounts child into its DOM
+        (tableBlock.call as ReturnType<typeof vi.fn>).mockImplementation((method: string) => {
+          if (method === 'rendered') {
+            // Simulate mountBlocksInCell: parent appends child holder into its own holder
+            tableBlock.holder.appendChild(childBlock.holder);
+          }
+        });
+
+        vi.spyOn(factory, 'composeBlock').mockImplementation((options) => {
+          if ((options as { id: string }).id === 'table-1') return tableBlock;
+          return childBlock;
+        });
+
+        const tableYblock = createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [] }),
+        });
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'table-1',
+        });
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'table-1') return tableYblock;
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+          { id: 'table-1', type: 'table' },
+          { id: 'child-1', type: 'paragraph', parentId: 'table-1' },
+        ]);
+
+        callback({ blockIds: ['table-1', 'child-1'], type: 'batch-add', origin: 'undo' });
+
+        // Child should still be inside the table holder (not moved to working area)
+        expect(tableBlock.holder.contains(childBlock.holder)).toBe(true);
+      });
+
+      it('emits onBlockAdded for each block after activation', () => {
+        const tableBlock = createMockBlock({ id: 'table-1' });
+        const childBlock = createMockBlock({ id: 'child-1' });
+
+        vi.spyOn(factory, 'composeBlock').mockImplementation((options) => {
+          if ((options as { id: string }).id === 'table-1') return tableBlock;
+          return childBlock;
+        });
+
+        const tableYblock = createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [] }),
+        });
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'table-1',
+        });
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'table-1') return tableYblock;
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+          { id: 'table-1', type: 'table' },
+          { id: 'child-1', type: 'paragraph', parentId: 'table-1' },
+        ]);
+
+        mockHandlers.onBlockAdded = vi.fn();
+
+        callback({ blockIds: ['table-1', 'child-1'], type: 'batch-add', origin: 'undo' });
+
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledTimes(2);
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(tableBlock, expect.any(Number));
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(childBlock, expect.any(Number));
+      });
+    });
+
     describe('handleYjsRemove', () => {
       it('removes block from blocks store', () => {
         const blockToRemove = createMockBlock({ id: 'to-remove' });

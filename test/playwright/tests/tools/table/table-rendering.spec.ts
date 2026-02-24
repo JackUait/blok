@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
@@ -110,6 +111,19 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
       serializedTools,
     }
   );
+};
+
+const assertNoCriticalOrSeriousTableA11yViolations = async (page: Page): Promise<void> => {
+  const { violations } = await new AxeBuilder({ page })
+    .include(TABLE_SELECTOR)
+    .analyze();
+
+  const highImpactViolations = violations.filter(({ impact }) => impact === 'critical' || impact === 'serious');
+  const violationSummary = highImpactViolations
+    .map(({ id, impact, help }) => `${impact ?? 'unknown'}: ${id} - ${help}`)
+    .join('\n');
+
+  expect(highImpactViolations, violationSummary).toStrictEqual([]);
 };
 
 const defaultTools: Record<string, SerializableToolConfig> = {
@@ -296,6 +310,32 @@ test.describe('Table Rendering and Initial State', () => {
     });
 
     expect(secondCellWidth).toBe('200px');
+  });
+
+  test('Table has no critical or serious axe-core accessibility violations in edit mode', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: true,
+              content: [
+                ['H1', 'H2', 'H3'],
+                ['R1C1', 'R1C2', 'R1C3'],
+                ['R2C1', 'R2C2', 'R2C3'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+    await expect(page.locator(CELL_SELECTOR)).toHaveCount(9);
+
+    await assertNoCriticalOrSeriousTableA11yViolations(page);
   });
 
   test('Table auto-initializes with default grid when content array is empty', async ({ page }) => {

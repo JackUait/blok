@@ -78,17 +78,20 @@ The Blok editor table tool is a full-featured block-based rich-text table. Each 
   - The second column renders at 200px wide
   - The table wrapper has overflow-x-auto scroll behavior enabled
 
-#### 1.6. Table validates as invalid when content array is empty
+#### 1.6. Table auto-initializes from empty content and saves as valid
 
 **File:** `tests/tools/table/table-rendering.spec.ts`
 
 **Steps:**
   1. Initialize an editor with a table block that has an empty content array
-  2. Call the editor save() method
-  3. Inspect the saved blocks
+  2. Wait for the table block to render
+  3. Call the editor save() method
+  4. Inspect the saved blocks
 
 **Expected Results:**
-  - The table block is not included in the saved output (validate() returns false for empty content)
+  - The rendered table auto-initializes to a default 3x3 grid
+  - The table block is included in the saved output
+  - The saved table data contains a non-empty content array
   - No error is thrown
 
 ### 2. Cell Editing
@@ -787,17 +790,17 @@ The Blok editor table tool is a full-featured block-based rich-text table. Each 
   - All 3 cells in column 0 have data-blok-table-cell-selected attribute
   - Cells in other columns are not selected
 
-#### 8.6. Selection is cleared when clicking outside the table
+#### 8.6. Selection is cleared on primary pointerdown outside the table
 
 **File:** `tests/tools/table/table-cell-selection.spec.ts`
 
 **Steps:**
   1. Initialize editor with a 3x3 table and a paragraph block above it
   2. Drag to select a range of cells
-  3. Click outside the table (on the paragraph block)
+  3. Trigger a primary-button pointerdown outside the table (for example on the paragraph block)
 
 **Expected Results:**
-  - data-blok-table-cell-selected attributes are removed from all cells
+  - data-blok-table-cell-selected attributes are removed from all cells after the outside pointerdown
   - Add controls and resize become interactive again
 
 #### 8.7. Resize is disabled while cells are selected

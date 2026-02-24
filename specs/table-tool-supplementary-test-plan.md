@@ -2,7 +2,7 @@
 
 ## Application Overview
 
-The Blok editor table tool is a full-featured block-based rich-text table. Each cell contains one or more nested block editors. The existing test plan (specs/table-tool-test-plan.md) covers 16 scenarios with 95 tests across rendering, cell editing, keyboard navigation, column resizing, add row/column controls, row/column grip popovers, drag-to-reorder, cell selection, block types inside cells, HTML paste, read-only mode, data save/load, toolbar visibility, configuration, grip positioning, and edge cases. This supplementary plan documents additional scenarios discovered by deep source analysis that are NOT yet covered by the existing 95 tests. Key gaps identified: the cell selection pill popover (Clear Selection action), the delete button behavior when only one row or column remains in the table, the stretched table configuration option, the colWidths scroll overflow activation, Google Docs HTML paste handling, inline tools (bold, italic, link) applied to text inside table cells, Escape key behavior to dismiss the cell selection, the selection overlay visual element positioning, and behavior when table has both heading row and heading column simultaneously.
+The Blok editor table tool is a full-featured block-based rich-text table. Each cell contains one or more nested block editors. The existing test plan (specs/table-tool-test-plan.md) covers 16 scenarios with 95 tests across rendering, cell editing, keyboard navigation, column resizing, add row/column controls, row/column grip popovers, drag-to-reorder, cell selection, block types inside cells, HTML paste, read-only mode, data save/load, toolbar visibility, configuration, grip positioning, and edge cases. This supplementary plan documents additional scenarios discovered by deep source analysis that are NOT yet covered by the existing 95 tests. Key gaps identified: the cell selection pill popover (Clear Selection action), the delete button behavior when only one row or column remains in the table, the stretched table configuration option, the colWidths scroll overflow activation, Google Docs HTML paste handling, inline tools (bold, italic, link) applied to text inside table cells, outside-pointerdown behavior to dismiss cell selection, the selection overlay visual element positioning, and behavior when table has both heading row and heading column simultaneously.
 
 ## Test Scenarios
 
@@ -60,20 +60,20 @@ The Blok editor table tool is a full-featured block-based rich-text table. Each 
   - The selection is cleared and no cells have data-blok-table-cell-selected attribute
   - Each cleared cell still contains an empty paragraph block
 
-#### 1.4. Pressing Escape key clears an active cell selection
+#### 1.4. Primary pointerdown outside the table clears an active cell selection
 
 **File:** `tests/tools/table/table-cell-selection.spec.ts`
 
 **Steps:**
-  1. Initialize editor with a 3x3 table containing content
+  1. Initialize editor with a paragraph block and a 3x3 table containing content
   2. Drag from cell (0,0) to cell (2,2) to select all 9 cells
   3. Verify all 9 cells have data-blok-table-cell-selected attribute
-  4. Press the Escape key
+  4. Trigger a primary-button pointerdown on the paragraph block (outside the table)
   5. Check for data-blok-table-cell-selected attributes
 
 **Expected Results:**
-  - After pressing Escape, all cells lose the data-blok-table-cell-selected attribute
-  - Cell content is preserved (Escape only clears selection highlight, not content)
+  - After the outside pointerdown, all cells lose the data-blok-table-cell-selected attribute
+  - Cell content is preserved (selection highlight is cleared, not cell data)
   - The selection overlay rectangle is no longer visible
 
 #### 1.5. Selection overlay is an absolutely positioned element with blue border

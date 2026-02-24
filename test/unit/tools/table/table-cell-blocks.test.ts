@@ -2153,7 +2153,7 @@ describe('TableCellBlocks', () => {
   });
 
   describe('initializeCells recovery for missing blocks', () => {
-    it('should create a fallback paragraph when all referenced blocks are missing from BlockManager', async () => {
+    it('should preserve missing block IDs while rendering a fallback paragraph when all referenced blocks are missing', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const fallbackHolder = document.createElement('div');
@@ -2199,11 +2199,12 @@ describe('TableCellBlocks', () => {
       );
       // The container should contain the fallback block
       expect(container.contains(fallbackHolder)).toBe(true);
-      // The normalized result should reference the fallback block, not the missing one
-      expect(result[0][0]).toEqual({ blocks: ['fallback-p'] });
+      // The normalized result should preserve original IDs and append fallback ID(s)
+      expect(result[0][0].blocks[0]).toBe('nonexistent-block-id');
+      expect(result[0][0].blocks[1]).toBe('fallback-p');
     });
 
-    it('should keep successfully mounted blocks and only add fallback for missing ones in a mixed cell', async () => {
+    it('should preserve missing IDs when a cell mixes existing and missing block references', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const existingHolder = document.createElement('div');
@@ -2247,11 +2248,11 @@ describe('TableCellBlocks', () => {
       expect(container.contains(existingHolder)).toBe(true);
       // No fallback needed — cell has at least one block
       expect(api.blocks.insert).not.toHaveBeenCalled();
-      // Normalized content should only include the existing block
-      expect(result[0][0]).toEqual({ blocks: ['existing-1'] });
+      // Normalized content should preserve both existing and missing IDs
+      expect(result[0][0]).toEqual({ blocks: ['existing-1', 'missing-1'] });
     });
 
-    it('should handle a 3x3 table where body cells reference missing blocks', async () => {
+    it('should preserve missing IDs for body cells while rendering fallbacks in a mixed 3x3 table', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Header row blocks exist, body row blocks are missing (the real-world bug scenario)
@@ -2263,12 +2264,10 @@ describe('TableCellBlocks', () => {
       });
 
       let insertCallCount = 0;
-      const fallbackHolders: HTMLElement[] = [];
       const mockInsert = vi.fn().mockImplementation(() => {
         const holder = document.createElement('div');
         const id = `fallback-${insertCallCount++}`;
         holder.setAttribute('data-blok-id', id);
-        fallbackHolders.push(holder);
 
         return { id, holder };
       });
@@ -2329,12 +2328,21 @@ describe('TableCellBlocks', () => {
       // Body rows: blocks are missing, fallback paragraphs should be created
       expect(mockInsert).toHaveBeenCalledTimes(6);
 
-      // Each body cell should have a fallback block reference
+      // Body rows should keep original missing IDs and append fallback IDs in normalized output
       for (let r = 1; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
-          const cellResult = result[r][c];
-          expect(cellResult.blocks).toHaveLength(1);
-          expect(cellResult.blocks[0]).toMatch(/^fallback-/);
+          expect(result[r][c].blocks[0]).toBe(content[r][c].blocks[0]);
+          expect(result[r][c].blocks[1]).toMatch(/^fallback-/);
+
+          const bodyCell = gridElement
+            .querySelectorAll('[data-blok-table-row]')
+            [r]
+            ?.querySelectorAll('[data-blok-table-cell]')[c] as HTMLElement | undefined;
+          const bodyContainer = bodyCell?.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+          const renderedFallback = bodyContainer?.querySelector('[data-blok-id]');
+
+          expect(renderedFallback).not.toBeNull();
+          expect(renderedFallback?.getAttribute('data-blok-id')).toMatch(/^fallback-/);
         }
       }
     });

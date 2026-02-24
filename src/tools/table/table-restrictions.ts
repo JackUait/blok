@@ -11,18 +11,47 @@ const DEFAULT_RESTRICTED_TOOLS = ['header', 'table'];
  * Additional restricted tools registered via table tool config.
  * Users can extend the default list by setting `restrictedTools` in the table tool config.
  */
-const additionalRestrictedTools = new Set<string>();
+const additionalRestrictedTools = new Map<string, number>();
 
 /**
  * Register additional tools as restricted in table cells.
  * Called by the Table tool constructor when `restrictedTools` is set in the config.
  *
  * @param tools - Tool names to add to the restricted list
+ * @returns Cleanup function to unregister these tools when the owner is destroyed
  */
-export const registerAdditionalRestrictedTools = (tools: string[]): void => {
-  for (const tool of tools) {
-    additionalRestrictedTools.add(tool);
+export const registerAdditionalRestrictedTools = (tools: string[]): (() => void) => {
+  const uniqueTools = [...new Set(tools)];
+
+  for (const tool of uniqueTools) {
+    const currentCount = additionalRestrictedTools.get(tool) ?? 0;
+
+    additionalRestrictedTools.set(tool, currentCount + 1);
   }
+
+  let isCleanedUp = false;
+
+  return (): void => {
+    if (isCleanedUp) {
+      return;
+    }
+
+    isCleanedUp = true;
+
+    for (const tool of uniqueTools) {
+      const currentCount = additionalRestrictedTools.get(tool);
+
+      if (currentCount === undefined) {
+        continue;
+      }
+
+      if (currentCount <= 1) {
+        additionalRestrictedTools.delete(tool);
+      } else {
+        additionalRestrictedTools.set(tool, currentCount - 1);
+      }
+    }
+  };
 };
 
 /**
@@ -40,7 +69,7 @@ export const clearAdditionalRestrictedTools = (): void => {
  * @returns Array of all restricted tool names
  */
 export const getRestrictedTools = (): string[] => {
-  return [...DEFAULT_RESTRICTED_TOOLS, ...additionalRestrictedTools];
+  return [...DEFAULT_RESTRICTED_TOOLS, ...additionalRestrictedTools.keys()];
 };
 
 /**

@@ -126,6 +126,33 @@ describe('table-restrictions', () => {
       expect(isRestrictedInTableCell('paragraph')).toBe(false);
       expect(isRestrictedInTableCell('header')).toBe(true);
     });
+
+    it('returns cleanup that only removes its own registration', () => {
+      const cleanupA = registerAdditionalRestrictedTools(['list']);
+      const cleanupB = registerAdditionalRestrictedTools(['list', 'checklist']);
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+      expect(isRestrictedInTableCell('checklist')).toBe(true);
+
+      cleanupA();
+      expect(isRestrictedInTableCell('list')).toBe(true);
+      expect(isRestrictedInTableCell('checklist')).toBe(true);
+
+      cleanupB();
+      expect(isRestrictedInTableCell('list')).toBe(false);
+      expect(isRestrictedInTableCell('checklist')).toBe(false);
+    });
+
+    it('cleanup is idempotent', () => {
+      const cleanup = registerAdditionalRestrictedTools(['list']);
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+
+      cleanup();
+      cleanup();
+
+      expect(isRestrictedInTableCell('list')).toBe(false);
+    });
   });
 
   describe('clearAdditionalRestrictedTools', () => {

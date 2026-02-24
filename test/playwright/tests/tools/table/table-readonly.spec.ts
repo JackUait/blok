@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
@@ -130,6 +131,19 @@ const waitForReadOnlyState = async (page: Page, expected: boolean): Promise<void
   await page.waitForFunction(({ expectedState }) => {
     return window.blokInstance?.readOnly.isEnabled === expectedState;
   }, { expectedState: expected });
+};
+
+const assertNoCriticalOrSeriousTableA11yViolations = async (page: Page): Promise<void> => {
+  const { violations } = await new AxeBuilder({ page })
+    .include(TABLE_SELECTOR)
+    .analyze();
+
+  const highImpactViolations = violations.filter(({ impact }) => impact === 'critical' || impact === 'serious');
+  const violationSummary = highImpactViolations
+    .map(({ id, impact, help }) => `${impact ?? 'unknown'}: ${id} - ${help}`)
+    .join('\n');
+
+  expect(highImpactViolations, violationSummary).toStrictEqual([]);
 };
 
 /**
@@ -264,6 +278,35 @@ test.describe('Read-Only Mode', () => {
     // Verify heading content is rendered
     await expect(headingRow).toContainText('H1');
     await expect(headingRow).toContainText('H2');
+  });
+
+  test('Table has no critical or serious axe-core accessibility violations in read-only mode', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      readOnly: true,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: true,
+              content: [
+                ['H1', 'H2'],
+                ['A', 'B'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+    await expect(table).toHaveAttribute('data-blok-table-readonly', '');
+    await expect(page.locator(CELL_SELECTOR)).toHaveCount(4);
+
+    await assertNoCriticalOrSeriousTableA11yViolations(page);
   });
 
   test('Heading column is displayed in read-only mode', async ({ page }) => {

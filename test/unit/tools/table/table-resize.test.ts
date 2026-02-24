@@ -439,6 +439,37 @@ describe('TableResize', () => {
     });
   });
 
+  describe('performance', () => {
+    it('avoids repeated row and cell querying on each pointermove in one drag', () => {
+      grid = createMultiRowGrid(3, [300, 300]);
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+      const firstRow = grid.querySelector('[data-blok-table-row]') as HTMLElement;
+
+      const gridQueryAllSpy = vi.spyOn(grid, 'querySelectorAll');
+      const rowQueryAllSpy = vi.spyOn(firstRow, 'querySelectorAll');
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 350 }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      const rowQueryCount = gridQueryAllSpy.mock.calls
+        .filter(([selector]) => selector === '[data-blok-table-row]')
+        .length;
+      const cellQueryCount = rowQueryAllSpy.mock.calls
+        .filter(([selector]) => selector === '[data-blok-table-cell]')
+        .length;
+
+      expect(rowQueryCount).toBeLessThanOrEqual(1);
+      expect(cellQueryCount).toBeLessThanOrEqual(1);
+
+      gridQueryAllSpy.mockRestore();
+      rowQueryAllSpy.mockRestore();
+    });
+  });
+
   describe('destroy', () => {
     it('removes event listeners on destroy', () => {
       grid = createGrid([300, 300]);

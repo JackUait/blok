@@ -23,6 +23,7 @@ export class TableResize {
   private dragStartX = 0;
   private dragColIndex = -1;
   private startColWidth = 0;
+  private dragRowCells: HTMLElement[][] | null = null;
   private handles: HTMLElement[] = [];
   private needsInitialApply: boolean;
 
@@ -73,6 +74,7 @@ export class TableResize {
     this.gridEl.removeEventListener('pointerdown', this.boundPointerDown);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
+    this.dragRowCells = null;
 
     this.handles.forEach(handle => handle.remove());
     this.handles = [];
@@ -168,6 +170,7 @@ export class TableResize {
     this.isDragging = true;
     this.dragStartX = e.clientX;
     this.startColWidth = this.colWidths[this.dragColIndex];
+    this.dragRowCells = this.resolveRowCells();
 
     this.onDragStart?.();
     this.gridEl.style.userSelect = 'none';
@@ -192,7 +195,7 @@ export class TableResize {
     const newWidth = Math.max(MIN_COL_WIDTH, rawWidth);
 
     this.colWidths[this.dragColIndex] = newWidth;
-    this.applyWidths();
+    this.applyWidths(this.dragRowCells ?? undefined);
     this.updateHandlePositions();
     this.onDrag?.();
   }
@@ -213,24 +216,25 @@ export class TableResize {
 
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
+    this.dragRowCells = null;
 
     this.onChange([...this.colWidths]);
   }
 
-  private applyWidths(): void {
+  private resolveRowCells(): HTMLElement[][] {
+    const rows = this.gridEl.querySelectorAll<HTMLElement>(`[${ROW_ATTR}]`);
+
+    return Array.from(rows, row => Array.from(row.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`)));
+  }
+
+  private applyWidths(rowCells: HTMLElement[][] = this.resolveRowCells()): void {
     const totalWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
 
     this.gridEl.style.width = `${totalWidth + BORDER_WIDTH}px`;
 
-    const rows = this.gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-
-    rows.forEach(row => {
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
-      cells.forEach((node, i) => {
+    rowCells.forEach(cells => {
+      cells.forEach((cellEl, i) => {
         if (i < this.colWidths.length) {
-          const cellEl = node as HTMLElement;
-
           cellEl.style.width = `${this.colWidths[i]}px`;
         }
       });

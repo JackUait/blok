@@ -282,12 +282,15 @@ export class TableCellBlocks {
           return;
         }
 
-        const mountedIds = isCellWithBlocks(cellContent)
-          ? this.mountBlocksInCell(container, cellContent.blocks)
+        const referencedBlockIds = isCellWithBlocks(cellContent) && cellContent.blocks.length > 0
+          ? [...cellContent.blocks]
+          : null;
+        const mountedIds = referencedBlockIds
+          ? this.mountBlocksInCell(container, referencedBlockIds)
           : [];
 
         if (mountedIds.length > 0) {
-          normalizedRow.push({ blocks: mountedIds });
+          normalizedRow.push({ blocks: referencedBlockIds ?? mountedIds });
         } else {
           const text = typeof cellContent === 'string' ? cellContent : '';
           const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
@@ -302,7 +305,11 @@ export class TableCellBlocks {
             ids.push(block.id);
           }
 
-          normalizedRow.push({ blocks: ids });
+          normalizedRow.push({
+            blocks: referencedBlockIds === null
+              ? ids
+              : [...referencedBlockIds, ...ids],
+          });
         }
 
         this.stripPlaceholders(container);

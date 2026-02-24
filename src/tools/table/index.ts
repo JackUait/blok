@@ -81,6 +81,7 @@ export class Table implements BlockTool {
   private blockId: string | undefined;
   private pendingHighlight: PendingHighlight | null = null;
   private isNewTable = false;
+  private unregisterRestrictedTools: (() => void) | null = null;
 
   /**
    * Generation counter for setData calls.
@@ -109,7 +110,7 @@ export class Table implements BlockTool {
     this.blockId = block?.id;
 
     if (this.config.restrictedTools !== undefined) {
-      registerAdditionalRestrictedTools(this.config.restrictedTools);
+      this.unregisterRestrictedTools = registerAdditionalRestrictedTools(this.config.restrictedTools);
     }
   }
 
@@ -462,6 +463,9 @@ export class Table implements BlockTool {
   }
 
   public destroy(): void {
+    this.unregisterRestrictedTools?.();
+    this.unregisterRestrictedTools = null;
+
     // Only delete cell blocks during normal removal, not Yjs undo.
     // When the table is removed via Yjs undo, its child cell blocks are managed
     // by Yjs and will be restored during redo. Deleting them here would make
@@ -917,6 +921,18 @@ export class Table implements BlockTool {
               : {}),
           });
         });
+
+        // Read-only legacy cells can render plain text without mounted block holders.
+        if (blocks.length === 0) {
+          const text = (container.textContent ?? '').trim();
+
+          if (text.length > 0) {
+            blocks.push({
+              tool: 'paragraph',
+              data: { text },
+            });
+          }
+        }
       }
 
       return { row: rowIndex, col: colIndex, blocks };

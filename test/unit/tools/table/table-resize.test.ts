@@ -598,4 +598,63 @@ describe('TableResize', () => {
     });
   });
 
+  describe('model-first width authority', () => {
+    it('reports final widths through onChange that match applied DOM state', () => {
+      grid = createGrid([300, 300]);
+      const onChange = vi.fn();
+
+      new TableResize(grid, [300, 300], onChange);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 350 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      const reportedWidths = onChange.mock.calls[0][0] as number[];
+      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+      const domWidths = Array.from(cells).map(cell => parseInt((cell as HTMLElement).style.width, 10));
+
+      expect(reportedWidths).toEqual(domWidths);
+    });
+
+    it('constructor widths override existing DOM cell widths', () => {
+      grid = createGrid([300, 300]);
+
+      new TableResize(grid, [200, 400], vi.fn());
+
+      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+      const firstCell = cells[0] as HTMLElement;
+      const secondCell = cells[1] as HTMLElement;
+
+      expect(firstCell.style.width).toBe('200px');
+      expect(secondCell.style.width).toBe('400px');
+    });
+
+    it('does not read from DOM during drag — uses internal state', () => {
+      grid = createGrid([300, 300]);
+      const onChange = vi.fn();
+
+      new TableResize(grid, [300, 300], onChange);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+
+      // Externally mutate DOM widths to something unexpected during drag
+      const cells = grid.querySelectorAll('[data-blok-table-cell]');
+
+      (cells[0] as HTMLElement).style.width = '999px';
+
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 350 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      const reportedWidths = onChange.mock.calls[0][0] as number[];
+
+      // Should be 300+50=350, not 999+50=1049 — proving internal state is used
+      expect(reportedWidths[0]).toBe(350);
+      expect(reportedWidths[1]).toBe(300);
+    });
+  });
+
 });

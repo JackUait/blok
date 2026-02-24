@@ -1,5 +1,6 @@
 import type { PasteEvent, PasteEventDetail } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PasteData } from '../types';
@@ -65,9 +66,6 @@ export abstract class BasePasteHandler implements PasteHandler {
     return isCurrentBlockDefault && currentBlock.isEmpty;
   }
 
-  /** Tools that cannot be nested inside table cells */
-  private static readonly TOOLS_RESTRICTED_IN_TABLE_CELLS = new Set(['table', 'header']);
-
   /**
    * If we're inside a table cell and any pasted item uses a tool that can't
    * be nested in table cells (e.g. table, header), redirect the insertion
@@ -78,7 +76,8 @@ export abstract class BasePasteHandler implements PasteHandler {
   private redirectToTableParentIfNeeded(data: PasteData[], BlockManager: BlokModules['BlockManager']): void {
     const currentBlock = BlockManager.currentBlock;
     const isInsideTableCell = currentBlock?.holder?.closest('[data-blok-table-cell-blocks]');
-    const hasRestrictedTools = data.some(item => BasePasteHandler.TOOLS_RESTRICTED_IN_TABLE_CELLS.has(item.tool));
+    const restricted = new Set(getRestrictedTools());
+    const hasRestrictedTools = data.some(item => restricted.has(item.tool));
 
     if (!isInsideTableCell || !hasRestrictedTools || currentBlock === undefined) {
       return;

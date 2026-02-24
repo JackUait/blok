@@ -138,6 +138,20 @@ export class DropTargetDetector {
       return null;
     }
 
+    /**
+     * If the target block is inside a table cell and the source block is NOT
+     * in the same cell, redirect the drop target to the table block itself.
+     * This prevents blocks from being dropped into table cells via drag & drop.
+     */
+    const targetCellContainer = targetBlock.holder.closest('[data-blok-table-cell-blocks]');
+    const sourceCellContainer = sourceBlock.holder.closest('[data-blok-table-cell-blocks]');
+    const isTargetInCell = targetCellContainer !== null;
+    const isCrossCellDrop = sourceCellContainer !== targetCellContainer;
+
+    if (isTargetInCell && isCrossCellDrop) {
+      return this.redirectToTableBlock(targetCellContainer, clientY);
+    }
+
     // Determine edge (top or bottom half of block)
     const rect = blockHolder.getBoundingClientRect();
     const isTopHalf = clientY < rect.top + rect.height / 2;
@@ -201,6 +215,30 @@ export class DropTargetDetector {
     }
 
     return 0;
+  }
+
+  /**
+   * Redirect a drop target to the table block that contains the given cell container.
+   * Finds the outermost [data-blok-element] ancestor and returns it as the target.
+   *
+   * @param cellContainer - The [data-blok-table-cell-blocks] element containing the target
+   * @param clientY - Cursor Y position for edge calculation
+   * @returns Drop target pointing to the table block, or null if table block not found
+   */
+  private redirectToTableBlock(cellContainer: Element, clientY: number): DropTarget | null {
+    const tableHolder = cellContainer.closest(createSelector(DATA_ATTR.element));
+    const tableBlock = tableHolder
+      ? this.blockManager.blocks.find(b => b.holder === tableHolder)
+      : undefined;
+
+    if (!tableBlock) {
+      return null;
+    }
+
+    const tableRect = tableBlock.holder.getBoundingClientRect();
+    const isTopHalf = clientY < tableRect.top + tableRect.height / 2;
+
+    return { block: tableBlock, edge: isTopHalf ? 'top' : 'bottom', depth: 0 };
   }
 
 }

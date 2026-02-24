@@ -372,6 +372,34 @@ describe('BlockManager', () => {
     })).toBe(true);
   });
 
+  it('should not move a restricted tool into a table cell', () => {
+    // Setup: block-1 (paragraph inside table cell), block-2 (header outside)
+    const cellBlock = createBlockStub({ id: 'cell-block', name: 'paragraph' });
+    const headerBlock = createBlockStub({ id: 'header-block', name: 'header' });
+    const { blockManager } = createBlockManager({
+      initialBlocks: [cellBlock, headerBlock],
+    });
+
+    // Place cellBlock's holder inside a table cell container
+    const tableCellContainer = document.createElement('div');
+    tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+    document.body.appendChild(tableCellContainer);
+    tableCellContainer.appendChild(cellBlock.holder);
+
+    blockManager.currentBlockIndex = 1;
+
+    // Try to move header block (index 1) to index 0 (next to the cell block)
+    blockManager.move(0, 1);
+
+    // The move should be rejected — header is restricted in table cells
+    // The header block should stay at its original position
+    expect(blockManager.blocks[1]).toBe(headerBlock);
+    expect(blockManager.blocks[0]).toBe(cellBlock);
+
+    // Clean up
+    document.body.removeChild(tableCellContainer);
+  });
+
   it('recreates block with merged data when updating', async () => {
     const block = createBlockStub({ id: 'block-1',
       data: { text: 'Hello' },

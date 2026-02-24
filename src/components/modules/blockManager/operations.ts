@@ -497,6 +497,17 @@ export class BlockOperations {
       return;
     }
 
+    // Check if the move would place a restricted tool inside a table cell
+    const movingBlock = this.repository.getBlockByIndex(fromIndex);
+    const neighborBlock = this.repository.getBlockByIndex(toIndex);
+
+    if (movingBlock !== undefined && neighborBlock !== undefined &&
+        isInsideTableCell(neighborBlock) && isRestrictedInTableCell(movingBlock.name)) {
+      log(`Warning during 'move' call: '${movingBlock.name}' is restricted in table cells.`, 'warn');
+
+      return;
+    }
+
     // Suppress stopCapturing to keep DOM + Yjs move as single undo entry
     this.suppressStopCapturing = true;
     try {

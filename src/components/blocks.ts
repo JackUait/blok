@@ -125,14 +125,10 @@ export class Blocks {
     const block = this.blocks.splice(fromIndex, 1)[0];
 
     if (!skipDOM) {
-      // manipulate DOM
-      const prevIndex = toIndex - 1;
-      const previousBlockIndex = Math.max(0, prevIndex);
-      const previousBlock = this.blocks[previousBlockIndex];
+      const previousBlockIndex = Math.max(0, toIndex - 1);
+      const position: InsertPosition = toIndex > 0 ? 'afterend' : 'beforebegin';
 
-      const position = toIndex > 0 ? 'afterend' : 'beforebegin';
-
-      this.insertToDOM(block, position, previousBlock);
+      this.moveHolderInDOM(block, this.blocks[previousBlockIndex].holder, position);
     }
 
     // move in array
@@ -351,5 +347,46 @@ export class Blocks {
     }
 
     block.call(BlockToolAPI.RENDERED);
+  }
+
+  /**
+   * Walk from an element up to find the ancestor that is a direct child of workingArea.
+   * If the element itself is a direct child, returns the element.
+   * Returns null if the element is not inside workingArea.
+   *
+   * @param element - Starting element to walk up from
+   * @returns Direct child of workingArea, or null
+   */
+  /**
+   * Move a block's holder in the DOM relative to a reference element.
+   * If the reference is nested inside a container (e.g. a table cell),
+   * walks up to find the workingArea-level ancestor and inserts relative to that.
+   *
+   * @param block - Block whose holder to move
+   * @param referenceHolder - The reference element to position relative to
+   * @param position - Where to insert relative to the reference
+   */
+  private moveHolderInDOM(block: Block, referenceHolder: Element, position: InsertPosition): void {
+    const referenceNode = this.findWorkingAreaChild(referenceHolder);
+
+    if (referenceNode !== null) {
+      referenceNode.insertAdjacentElement(position, block.holder);
+    } else {
+      this.workingArea.appendChild(block.holder);
+    }
+
+    block.call(BlockToolAPI.RENDERED);
+  }
+
+  private findWorkingAreaChild(element: Element): Element | null {
+    if (element.parentElement === this.workingArea) {
+      return element;
+    }
+
+    if (element.parentElement === null) {
+      return null;
+    }
+
+    return this.findWorkingAreaChild(element.parentElement);
   }
 }

@@ -358,6 +358,125 @@ describe('DropTargetDetector', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should redirect target to table block when targeting a cell-interior block', () => {
+      const sourceBlock = createMockBlock('source');
+      sourceBlock.name = 'header';
+
+      const tableBlock = createMockBlock('table');
+      tableBlock.name = 'table';
+
+      const cellBlock = createMockBlock('cell-paragraph');
+      cellBlock.name = 'paragraph';
+
+      // Build DOM: tableBlock.holder > [data-blok-table-cell-blocks] > cellBlock.holder
+      const cellBlocksContainer = document.createElement('div');
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellBlocksContainer);
+      cellBlocksContainer.appendChild(cellBlock.holder);
+
+      document.body.appendChild(tableBlock.holder);
+
+      mockBlockManager.blocks = [tableBlock, cellBlock, sourceBlock];
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === tableBlock) return 0;
+        if (block === cellBlock) return 1;
+        if (block === sourceBlock) return 2;
+        return -1;
+      });
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
+
+      vi.spyOn(cellBlock.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 200,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 100,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+
+      vi.spyOn(tableBlock.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 50,
+        bottom: 300,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 250,
+        x: 0,
+        y: 50,
+        toJSON: () => ({}),
+      });
+
+      // Target element inside cell block holder
+      const targetElement = document.createElement('div');
+      cellBlock.holder.appendChild(targetElement);
+
+      const result = detector.determineDropTarget(targetElement, 50, 170, sourceBlock);
+
+      expect(result).not.toBeNull();
+      // Should redirect to the table block, NOT the cell block
+      expect(result?.block).toBe(tableBlock);
+
+      // Clean up
+      document.body.removeChild(tableBlock.holder);
+    });
+
+    it('should allow targeting cell-interior blocks when source is also in the same cell', () => {
+      const tableBlock = createMockBlock('table');
+      tableBlock.name = 'table';
+
+      const sourceBlock = createMockBlock('source-in-cell');
+      sourceBlock.name = 'paragraph';
+
+      const targetBlock = createMockBlock('target-in-cell');
+      targetBlock.name = 'paragraph';
+
+      // Build DOM: tableBlock.holder > [data-blok-table-cell-blocks] > sourceBlock.holder + targetBlock.holder
+      const cellBlocksContainer = document.createElement('div');
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellBlocksContainer);
+      cellBlocksContainer.appendChild(sourceBlock.holder);
+      cellBlocksContainer.appendChild(targetBlock.holder);
+
+      document.body.appendChild(tableBlock.holder);
+
+      mockBlockManager.blocks = [tableBlock, sourceBlock, targetBlock];
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === tableBlock) return 0;
+        if (block === sourceBlock) return 1;
+        if (block === targetBlock) return 2;
+        return -1;
+      });
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
+
+      vi.spyOn(targetBlock.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 200,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 100,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+
+      // Target element inside the target block holder
+      const targetElement = document.createElement('div');
+      targetBlock.holder.appendChild(targetElement);
+
+      const result = detector.determineDropTarget(targetElement, 50, 170, sourceBlock);
+
+      expect(result).not.toBeNull();
+      // Should NOT redirect — source is in the same cell, so targeting the cell block is valid
+      expect(result?.block).toBe(targetBlock);
+
+      // Clean up
+      document.body.removeChild(tableBlock.holder);
+    });
   });
 
   describe('calculateTargetDepth', () => {

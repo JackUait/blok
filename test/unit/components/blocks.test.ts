@@ -391,6 +391,66 @@ describe('Blocks', () => {
       expect(blocks.blocks[2]).toBe(block2);
       expect(blocks.blocks[3]).toBe(block3);
     });
+
+    it('should keep block in workingArea when previous block is inside a nested container', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+      const block3 = createMockBlock('block-3');
+
+      blocks.push(block1);
+      blocks.push(block2);
+      blocks.push(block3);
+
+      // Simulate block2's holder being inside a nested container (e.g. a table cell)
+      const nestedContainer = document.createElement('div');
+
+      workingArea.appendChild(nestedContainer);
+      nestedContainer.appendChild(block2.holder);
+
+      /**
+       * move(toIndex=1, fromIndex=0): moves block1 to index 1.
+       * After splice of block1, blocks = [block2, block3].
+       * previousBlock = blocks[toIndex-1] = blocks[0] = block2 (nested!).
+       * insertAdjacentElement('afterend', block1.holder) on block2.holder
+       * places block1 inside the nested container — this is the bug.
+       */
+      blocks.move(1, 0);
+
+      // block1's holder should remain in the workingArea, NOT inside the nested container
+      expect(block1.holder.parentElement).toBe(workingArea);
+      expect(nestedContainer.contains(block1.holder)).toBe(false);
+    });
+
+    it('should not place moved block inside table cell container', () => {
+      const blocks = createBlocks();
+      const block1 = createMockBlock('block-1');
+      const block2 = createMockBlock('block-2');
+      const block3 = createMockBlock('block-3');
+
+      blocks.push(block1);
+      blocks.push(block2);
+      blocks.push(block3);
+
+      // Create a table cell container with the actual attribute used in the codebase
+      const tableCellContainer = document.createElement('div');
+
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      workingArea.appendChild(tableCellContainer);
+      tableCellContainer.appendChild(block2.holder);
+
+      /**
+       * move(toIndex=1, fromIndex=0): moves block1 to index 1.
+       * After splice, previousBlock is block2 whose holder is inside
+       * tableCellContainer. insertAdjacentElement('afterend') on block2.holder
+       * places block1 inside the table cell container — this is the bug.
+       */
+      blocks.move(1, 0);
+
+      // The moved block must stay in workingArea, not end up inside the table cell
+      expect(block1.holder.parentElement).toBe(workingArea);
+      expect(tableCellContainer.contains(block1.holder)).toBe(false);
+    });
   });
 
   describe('insert', () => {

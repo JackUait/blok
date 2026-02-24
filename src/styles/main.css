@@ -146,3 +146,11 @@
 [data-blok-table-heading-col] {
   @apply font-semibold bg-gray-50;
 }
+
+/**
+ * Table scroll haze overlays
+ * Gradient indicators that show horizontal scroll availability
+ */
+[data-blok-table-haze][data-blok-table-haze-visible] {
+  @apply opacity-100;
+}

@@ -47,6 +47,7 @@ import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
+import { TableScrollHaze } from './table-scroll-haze';
 import type { ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -59,7 +60,6 @@ const WRAPPER_CLASSES = [
 
 const WRAPPER_EDIT_CLASSES = [
   'relative',
-  'overflow-x-clip',
   'after:content-[""]',
   'after:absolute',
   'after:-bottom-10',
@@ -85,9 +85,11 @@ export class Table implements BlockTool {
   private rowColControls: TableRowColControls | null = null;
   private cellBlocks: TableCellBlocks | null = null;
   private cellSelection: TableCellSelection | null = null;
+  private scrollHaze: TableScrollHaze | null = null;
   private element: HTMLDivElement | null = null;
   private gridElement: HTMLElement | null = null;
   private scrollContainer: HTMLDivElement | null = null;
+  private gripOverlay: HTMLDivElement | null = null;
   private blockId: string | undefined;
   private pendingHighlight: PendingHighlight | null = null;
   private isNewTable = false;
@@ -187,6 +189,8 @@ export class Table implements BlockTool {
     this.rowColControls = null;
     this.cellSelection?.destroy();
     this.cellSelection = null;
+    this.scrollHaze?.destroy();
+    this.scrollHaze = null;
   }
 
   /**
@@ -200,6 +204,7 @@ export class Table implements BlockTool {
     this.initRowColControls(gridEl);
     this.initCellSelection(gridEl);
     this.initGridPasteListener(gridEl);
+    this.initScrollHaze();
   }
 
   public static get toolbox(): ToolboxConfig {
@@ -300,6 +305,18 @@ export class Table implements BlockTool {
     } else {
       wrapper.appendChild(gridEl);
       this.scrollContainer = null;
+    }
+
+    if (!this.readOnly) {
+      const overlay = document.createElement('div');
+
+      overlay.setAttribute('data-blok-table-grip-overlay', '');
+      overlay.style.position = 'absolute';
+      overlay.style.inset = '0';
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '3';
+      wrapper.appendChild(overlay);
+      this.gripOverlay = overlay;
     }
 
     this.element = wrapper;
@@ -768,6 +785,8 @@ export class Table implements BlockTool {
 
     this.rowColControls = new TableRowColControls({
       grid: gridEl,
+      overlay: this.gripOverlay ?? undefined,
+      scrollContainer: this.scrollContainer ?? undefined,
       getColumnCount: () => this.grid.getColumnCount(gridEl),
       getRowCount: () => this.grid.getRowCount(gridEl),
       isHeadingRow: () => this.model.withHeadings,
@@ -935,12 +954,14 @@ export class Table implements BlockTool {
         enableScrollOverflow(this.ensureScrollContainer());
         this.rowColControls?.positionGrips();
         this.addControls?.syncRowButtonWidth();
+        this.scrollHaze?.update();
       },
       () => {
         this.rowColControls?.hideAllGrips();
       },
       () => {
         this.addControls?.syncRowButtonWidth();
+        this.scrollHaze?.update();
       },
       isPercentMode,
     );
@@ -1118,6 +1139,17 @@ export class Table implements BlockTool {
         this.handleCellCopyViaButton(cells);
       },
     });
+  }
+
+  private initScrollHaze(): void {
+    this.scrollHaze?.destroy();
+
+    if (!this.element || !this.scrollContainer) {
+      return;
+    }
+
+    this.scrollHaze = new TableScrollHaze();
+    this.scrollHaze.init(this.element, this.scrollContainer);
   }
 
   private initGridPasteListener(gridEl: HTMLElement): void {

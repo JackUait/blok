@@ -397,6 +397,94 @@ describe('BlockEvents', () => {
     });
   });
 
+  describe('beforeKeydownProcessing', () => {
+    it('closes Toolbar when typing a printable key in a regular block', () => {
+      const closeSpy = vi.fn();
+      const holder = document.createElement('div');
+      const currentBlock = { holder } as unknown as Block;
+
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          opened: true,
+          close: closeSpy,
+          toolbox: { open: vi.fn() },
+        } as unknown as BlokModules['Toolbar'],
+        BlockManager: {
+          currentBlock,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createKeyboardEvent({ key: 'a', keyCode: 65 });
+
+      blockEvents.beforeKeydownProcessing(event);
+
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close Toolbar when typing a printable key inside a table cell', () => {
+      const closeSpy = vi.fn();
+
+      // Build a DOM hierarchy that includes a table cell container
+      const tableCellBlocks = document.createElement('div');
+      tableCellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+      tableCellBlocks.appendChild(holder);
+
+      const currentBlock = { holder } as unknown as Block;
+
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          opened: true,
+          close: closeSpy,
+          toolbox: { open: vi.fn() },
+        } as unknown as BlokModules['Toolbar'],
+        BlockManager: {
+          currentBlock,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createKeyboardEvent({ key: 'a', keyCode: 65 });
+
+      blockEvents.beforeKeydownProcessing(event);
+
+      expect(closeSpy).not.toHaveBeenCalled();
+    });
+
+    it('still clears block selection when typing in a table cell', () => {
+      const clearSelectionSpy = vi.fn();
+
+      const tableCellBlocks = document.createElement('div');
+      tableCellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+      tableCellBlocks.appendChild(holder);
+
+      const currentBlock = { holder } as unknown as Block;
+
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          opened: true,
+          close: vi.fn(),
+          toolbox: { open: vi.fn() },
+        } as unknown as BlokModules['Toolbar'],
+        BlockManager: {
+          currentBlock,
+        } as unknown as BlokModules['BlockManager'],
+        BlockSelection: {
+          anyBlockSelected: false,
+          clearSelection: clearSelectionSpy,
+          copySelectedBlocks: vi.fn(() => Promise.resolve()),
+          selectedBlocks: [],
+        } as unknown as BlokModules['BlockSelection'],
+      });
+
+      const event = createKeyboardEvent({ key: 'a', keyCode: 65 });
+
+      blockEvents.beforeKeydownProcessing(event);
+
+      expect(clearSelectionSpy).toHaveBeenCalledWith(event);
+    });
+  });
+
   describe('input', () => {
     const createInputEvent = (options: Partial<InputEvent> = {}): InputEvent => {
       return {

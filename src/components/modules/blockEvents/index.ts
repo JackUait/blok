@@ -236,7 +236,19 @@ export class BlockEvents extends Module {
       return;
     }
 
-    this.Blok.Toolbar.close();
+    /**
+     * Don't close the toolbar when typing in a table cell — the toolbar
+     * belongs to the parent table block, not the cell being edited.
+     * Closing it here would make it permanently hidden until the user
+     * hovers a different block, because the hover controller deduplicates
+     * by lastHoveredBlockId and won't re-emit BlockHovered for the same block.
+     */
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const isInsideTableCell = Boolean(currentBlock?.holder?.closest('[data-blok-table-cell-blocks]'));
+
+    if (!isInsideTableCell) {
+      this.Blok.Toolbar.close();
+    }
 
     /**
      * Allow to use shortcuts with selected blocks

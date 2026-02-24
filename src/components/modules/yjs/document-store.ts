@@ -2,6 +2,7 @@ import * as Y from 'yjs';
 
 import type { YBlockSerializer, YjsOutputBlockData } from './serializer';
 import type { TransactionOrigin } from './types';
+import { equals } from '../../utils/object';
 
 // Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
 type DocumentStoreBlockData = YjsOutputBlockData;
@@ -162,8 +163,9 @@ export class DocumentStore {
 
     // Skip if value hasn't changed - this prevents creating unnecessary undo entries
     // when block data is synced after mutations that don't actually change data
-    // (e.g., marker updates in list items during undo/redo)
-    if (currentValue === value) {
+    // (e.g., marker updates in list items during undo/redo, or table content
+    // arrays that are reference-different but structurally identical)
+    if (equals(currentValue, value)) {
       return;
     }
 

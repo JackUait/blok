@@ -393,4 +393,94 @@ test.describe('Table Undo/Redo', () => {
     expect(paragraphTexts).toContain('foo');
     expect(paragraphTexts).toContain('bar');
   });
+
+  test('Undo of typing in a newly created empty table preserves interactivity', async ({ page }) => {
+    // Regression test for the kill chain: create empty table → type → undo
+    // Previously, undo would revert table content to [] and leave it non-interactive
+
+    // 1. Create a new empty table (no pre-existing content)
+    await createBlok(page, {
+      tools: defaultTools,
+    });
+
+    // Insert a table via the toolbox slash menu
+    const firstBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+
+    await firstBlock.click();
+    await page.keyboard.type('/');
+
+    // Wait for toolbox popover to open
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') !== null,
+      { timeout: 3000 }
+    );
+
+    const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
+
+    await tableToolboxItem.click({ force: true });
+
+    // Wait for the table to appear and cells to be populated
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Wait for cell blocks to be initialized
+    const firstCellEditable = table.locator('[contenteditable="true"]').first();
+
+    await expect(firstCellEditable).toBeVisible();
+
+    // Wait for Yjs to finalize the table creation entry
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 2. Type text in the first cell
+    await firstCellEditable.click();
+    await page.keyboard.type('Hello');
+
+    await expect(firstCellEditable).toContainText('Hello');
+
+    // Wait for Yjs to capture the typing
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 3. Undo the typing
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // 4. Table should still be interactive — cells should have contenteditable elements
+    const cellEditables = table.locator('[contenteditable="true"]');
+
+    await expect(cellEditables.first()).toBeVisible();
+
+    // 5. The typed text should be removed
+    await expect(firstCellEditable).not.toContainText('Hello');
+
+    // 6. Table structure should be intact (3x3 default grid)
+    const rows = table.locator(ROW_SELECTOR);
+
+    await expect(rows).toHaveCount(3);
+
+    const cells = table.locator(CELL_SELECTOR);
+
+    await expect(cells).toHaveCount(9);
+
+    // 7. Redo should restore the text
+    await page.keyboard.press(REDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    await expect(firstCellEditable).toContainText('Hello');
+
+    // 8. Table should still be interactive after redo
+    await expect(cellEditables.first()).toBeVisible();
+
+    // 9. Save and verify data integrity
+    const savedData = await saveBlok(page);
+    const tableBlock = savedData.blocks.find((b: { type: string }) => b.type === 'table');
+
+    expect(tableBlock).toBeDefined();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const content = tableBlock?.data.content as { blocks: string[] }[][];
+
+    expect(content).toHaveLength(3);
+    expect(content[0]).toHaveLength(3);
+  });
 });

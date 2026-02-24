@@ -235,6 +235,76 @@ describe('DocumentStore', () => {
       // Value should still be there
       expect(store.toJSON()[0].data.text).toBe('Hello');
     });
+
+    it('skips update when array value is deeply equal but reference-different', () => {
+      const originalContent = [
+        [{ blocks: ['p1', 'p2'] }, { blocks: ['p3'] }],
+        [{ blocks: ['p4'] }, { blocks: ['p5', 'p6'] }],
+      ];
+
+      store.fromJSON([{ id: 'block1', type: 'table', data: { content: originalContent } }]);
+
+      // Create a Y.UndoManager to track whether new undo entries are created
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Update with a deeply-equal but reference-different array
+      const newContent = [
+        [{ blocks: ['p1', 'p2'] }, { blocks: ['p3'] }],
+        [{ blocks: ['p4'] }, { blocks: ['p5', 'p6'] }],
+      ];
+
+      store.updateBlockData('block1', 'content', newContent);
+
+      // No new undo entry should be created — the value hasn't semantically changed
+      expect(undoManager.undoStack.length).toBe(initialStackLength);
+
+      // Data should still be intact
+      expect(store.toJSON()[0].data.content).toEqual(originalContent);
+
+      undoManager.destroy();
+    });
+
+    it('skips update when simple array value is deeply equal but reference-different', () => {
+      store.fromJSON([{ id: 'block1', type: 'table', data: { colWidths: [100, 200, 150] } }]);
+
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Update with deeply-equal but new reference
+      store.updateBlockData('block1', 'colWidths', [100, 200, 150]);
+
+      expect(undoManager.undoStack.length).toBe(initialStackLength);
+
+      undoManager.destroy();
+    });
+
+    it('still updates when array value has actually changed', () => {
+      store.fromJSON([{ id: 'block1', type: 'table', data: { content: [{ blocks: ['p1'] }] } }]);
+
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Update with a different value
+      store.updateBlockData('block1', 'content', [{ blocks: ['p1', 'p2'] }]);
+
+      // Should create a new undo entry
+      expect(undoManager.undoStack.length).toBe(initialStackLength + 1);
+
+      // Data should reflect the change
+      expect(store.toJSON()[0].data.content).toEqual([{ blocks: ['p1', 'p2'] }]);
+
+      undoManager.destroy();
+    });
   });
 
   describe('getBlockById', () => {

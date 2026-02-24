@@ -145,16 +145,19 @@ export class Table implements BlockTool {
    * Execute a structural operation within a Yjs transaction.
    * Combines the structural op lock (event deferral) with Yjs undo grouping.
    * Used for interactive operations that should be a single undo entry.
+   *
+   * @param fn - The structural operation to execute
+   * @param discard - If true, discard deferred events (forwarded to runStructuralOp)
    */
-  private runTransactedStructuralOp<T>(fn: () => T): T {
+  private runTransactedStructuralOp<T>(fn: () => T, discard = false): T {
     if (!this.api.blocks.transact) {
-      return this.runStructuralOp(fn);
+      return this.runStructuralOp(fn, discard);
     }
 
     const ref = { current: undefined as T | undefined };
 
     this.api.blocks.transact(() => {
-      ref.current = this.runStructuralOp(fn);
+      ref.current = this.runStructuralOp(fn, discard);
     });
 
     return ref.current as T;
@@ -290,7 +293,7 @@ export class Table implements BlockTool {
       return;
     }
 
-    this.runStructuralOp(() => {
+    this.runTransactedStructuralOp(() => {
       const initializedContent = this.cellBlocks?.initializeCells(content) ?? content;
 
       // When a new table is created with empty content, the DOM grid already has
@@ -412,10 +415,29 @@ export class Table implements BlockTool {
         return;
       }
 
-      this.model.replaceAll({
-        ...this.model.snapshot(),
-        content: setDataContent,
-      });
+      // When undoing reverts content to empty, the grid has default dimensions
+      // but initializeCells([]) mounted zero blocks. Pre-populate the model
+      // with empty cell entries so populateNewCells can place blocks correctly.
+      if (this.api.blocks.isSyncingFromYjs && setDataContent.length === 0 && gridEl) {
+        const emptyGridContent = Array.from(gridEl.querySelectorAll(`[${ROW_ATTR}]`), (row) => {
+          const cellCount = row.querySelectorAll(`[${CELL_ATTR}]`).length;
+
+          return Array.from({ length: cellCount }, () => ({ blocks: [] as string[] }));
+        });
+
+        this.model.replaceAll({
+          ...this.model.snapshot(),
+          content: emptyGridContent,
+        });
+
+        populateNewCells(gridEl, this.cellBlocks);
+      } else {
+        this.model.replaceAll({
+          ...this.model.snapshot(),
+          content: setDataContent,
+        });
+      }
+
       this.initialContent = null;
     }, true);
 

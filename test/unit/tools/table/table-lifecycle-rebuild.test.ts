@@ -366,4 +366,102 @@ describe('Table lifecycle rebuild', () => {
       expect(() => table.destroy()).not.toThrow();
     });
   });
+
+  describe('rendered() undo grouping', () => {
+    it('wraps cell population in a Yjs transaction via api.blocks.transact', () => {
+      const transactFn = vi.fn((fn: () => void) => fn());
+
+      const options = createTableOptions(
+        {},
+        {},
+        { blocks: { transact: transactFn } }
+      );
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // rendered() should use runTransactedStructuralOp, which calls api.blocks.transact
+      expect(transactFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('still initializes cells correctly when transact is available', () => {
+      const transactFn = vi.fn((fn: () => void) => fn());
+
+      const options = createTableOptions(
+        { content: [['A', 'B'], ['C', 'D']] },
+        {},
+        { blocks: { transact: transactFn } }
+      );
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // Cells should have blocks mounted despite the transaction wrapper
+      const { cellBlockContainers } = countSubsystemElements(element);
+
+      expect(cellBlockContainers).toBe(4);
+
+      // Each cell should have a paragraph block
+      const blockElements = element.querySelectorAll('[data-blok-id]');
+
+      expect(blockElements.length).toBe(4);
+    });
+  });
+
+  describe('setData() with empty content during Yjs sync', () => {
+    it('populates empty cells when content reverts to empty during undo', () => {
+      const options = createTableOptions(
+        { content: [['A', 'B'], ['C', 'D']] },
+        {},
+        { blocks: { isSyncingFromYjs: true } }
+      );
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // setData with empty content (simulating undo reverting table to initial state)
+      table.setData({ content: [] });
+
+      const newWrapper = container.firstElementChild as HTMLElement;
+
+      // Grid should have default dimensions (3x3) since content is empty
+      const rows = newWrapper.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows.length).toBeGreaterThan(0);
+
+      // Each cell should still have a block (populated via populateNewCells)
+      const blockElements = newWrapper.querySelectorAll('[data-blok-id]');
+
+      expect(blockElements.length).toBeGreaterThan(0);
+      expect(blockElements.length).toBe(rows.length * rows[0].querySelectorAll('[data-blok-table-cell]').length);
+    });
+
+    it('does not populate cells when content has actual data', () => {
+      const options = createTableOptions(
+        { content: [['A', 'B'], ['C', 'D']] },
+        {},
+        { blocks: { isSyncingFromYjs: true } }
+      );
+      const table = new Table(options);
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      // setData with real content - should work normally without extra population
+      table.setData({ content: [['X', 'Y']] });
+
+      const newWrapper = container.firstElementChild as HTMLElement;
+      const { cellBlockContainers } = countSubsystemElements(newWrapper);
+
+      // 1 row × 2 cols = 2 cells
+      expect(cellBlockContainers).toBe(2);
+    });
+  });
 });

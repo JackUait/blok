@@ -112,21 +112,43 @@ export class BlockYjsSync {
    * @param fn - Function to execute
    * @param options - Options for controlling the atomic operation behavior
    */
-  public withAtomicOperation<T>(fn: () => T, options?: { extendThroughRAF?: boolean }): T {
+  /**
+   * Begin an atomic operation by incrementing sync count and suppressing stop capturing.
+   *
+   * @returns cleanup function to call when operation completes
+   */
+  private beginAtomicOperation(): () => void {
     this.yjsSyncCount++;
     const operations = this.dependencies.operations;
-    const shouldExtend = options?.extendThroughRAF === true;
 
     if (operations) {
       operations.suppressStopCapturing = true;
     }
 
-    const decrementSyncCount = (): void => {
+    return (): void => {
       this.yjsSyncCount--;
       if (operations && this.yjsSyncCount === 0) {
         operations.suppressStopCapturing = false;
       }
     };
+  }
+
+  /**
+   * End an atomic operation, optionally deferring cleanup through RAF.
+   *
+   * @param cleanup - function to call to decrement sync count
+   * @param extendThroughRAF - if true, defer cleanup until after next animation frame
+   */
+  private endAtomicOperation(cleanup: () => void, extendThroughRAF: boolean): void {
+    if (extendThroughRAF) {
+      requestAnimationFrame(cleanup);
+    } else {
+      cleanup();
+    }
+  }
+
+  public withAtomicOperation<T>(fn: () => T, options?: { extendThroughRAF?: boolean }): T {
+    const cleanup = this.beginAtomicOperation();
 
     try {
       const result = fn();
@@ -134,16 +156,34 @@ export class BlockYjsSync {
       // If extendThroughRAF is true, delay decrementing yjsSyncCount until after requestAnimationFrame callbacks
       // This ensures that DOM updates scheduled by rendered() hooks don't trigger
       // block data sync to Yjs, which would create new undo entries and clear the redo stack
-      if (shouldExtend) {
-        requestAnimationFrame(decrementSyncCount);
-      } else {
-        decrementSyncCount();
-      }
+      this.endAtomicOperation(cleanup, options?.extendThroughRAF === true);
 
       return result;
     } catch (error) {
-      // If an error occurs, decrement immediately
-      decrementSyncCount();
+      cleanup();
+      throw error;
+    }
+  }
+
+  /**
+   * Async version of withAtomicOperation for operations that return promises.
+   * Keeps yjsSyncCount elevated until the async work completes, then optionally
+   * extends through RAF to cover deferred DOM callbacks.
+   *
+   * @param fn - Async function to execute
+   * @param options - Options for controlling the atomic operation behavior
+   */
+  public async withAtomicOperationAsync(
+    fn: () => Promise<void>,
+    options?: { extendThroughRAF?: boolean }
+  ): Promise<void> {
+    const cleanup = this.beginAtomicOperation();
+
+    try {
+      await fn();
+      this.endAtomicOperation(cleanup, options?.extendThroughRAF === true);
+    } catch (error) {
+      cleanup();
       throw error;
     }
   }
@@ -221,17 +261,19 @@ export class BlockYjsSync {
         bindEventsImmediately: true,
       });
 
-      // Increment counter to prevent syncing back to Yjs during undo/redo
-      this.yjsSyncCount++;
-      try {
+      // Use atomic operation with RAF extension to prevent DOM mutation observers
+      // from syncing back to Yjs after block replacement
+      this.withAtomicOperation(() => {
         this.handlers.replaceBlock(blockIndex, newBlock);
-      } finally {
-        this.yjsSyncCount--;
-      }
+      }, { extendThroughRAF: true });
     } else {
-      // Update data in-place; if tool can't handle it, recreate the block
-      this.yjsSyncCount++;
-      void block.setData(data).then(success => {
+      // Update data in-place; if tool can't handle it, recreate the block.
+      // Use async atomic operation with RAF extension to keep isSyncingFromYjs
+      // true through the entire setData lifecycle + one RAF frame, preventing
+      // DOM mutation observers from writing back to Yjs and clearing the redo stack.
+      void this.withAtomicOperationAsync(async () => {
+        const success = await block.setData(data);
+
         if (!success) {
           const blockIndex = this.handlers.getBlockIndex(block);
           const newBlock = this.factory.composeBlock({
@@ -244,9 +286,7 @@ export class BlockYjsSync {
 
           this.handlers.replaceBlock(blockIndex, newBlock);
         }
-      }).finally(() => {
-        this.yjsSyncCount--;
-      });
+      }, { extendThroughRAF: true });
     }
   }
 

@@ -577,6 +577,108 @@ describe('BlockYjsSync', () => {
         expect(composeBlockSpy).not.toHaveBeenCalled();
         expect(mockHandlers.replaceBlock).not.toHaveBeenCalled();
       });
+
+      it('keeps isSyncingFromYjs true through RAF after setData resolves', async () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { text: 'old' },
+          tunes: {},
+        });
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'new text' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+        // Immediately after the event, isSyncingFromYjs should be true
+        expect(yjsSync.isSyncingFromYjs).toBe(true);
+
+        // Wait for setData promise to resolve
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // After setData resolves, isSyncingFromYjs should still be true
+        // (extended through RAF to prevent DOM mutation observers from syncing back)
+        expect(yjsSync.isSyncingFromYjs).toBe(true);
+
+        // Wait for requestAnimationFrame to fire
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+
+        // Now it should be false
+        expect(yjsSync.isSyncingFromYjs).toBe(false);
+      });
+
+      it('keeps isSyncingFromYjs true through RAF for tunes-changed path', () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { text: 'old' },
+          tunes: { alignment: 'left' },
+        });
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'old' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          // Different tunes to trigger tunes-changed path
+          tunes: createMockYMap({ alignment: 'center' }),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'test-block' });
+
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+        // After synchronous replaceBlock, isSyncingFromYjs should still be true
+        // (extended through RAF)
+        expect(yjsSync.isSyncingFromYjs).toBe(true);
+      });
     });
 
     describe('handleYjsMove', () => {

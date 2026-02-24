@@ -145,6 +145,42 @@ describe('Table Tool', () => {
 
       expect(isRestrictedInTableCell('list')).toBe(false);
     });
+
+    it('cleans up registered restricted tools when the table is destroyed', () => {
+      const table = new Table(createTableOptions({}, { restrictedTools: ['list'] }));
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+
+      table.destroy();
+
+      expect(isRestrictedInTableCell('list')).toBe(false);
+    });
+
+    it('removes only the destroyed table instance restricted tools', () => {
+      const tableA = new Table(createTableOptions({}, { restrictedTools: ['list'] }));
+      const tableB = new Table(createTableOptions({}, { restrictedTools: ['checklist'] }));
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+      expect(isRestrictedInTableCell('checklist')).toBe(true);
+
+      tableA.destroy();
+
+      expect(isRestrictedInTableCell('list')).toBe(false);
+      expect(isRestrictedInTableCell('checklist')).toBe(true);
+    });
+
+    it('keeps a shared restricted tool active until all owning tables are destroyed', () => {
+      const tableA = new Table(createTableOptions({}, { restrictedTools: ['list'] }));
+      const tableB = new Table(createTableOptions({}, { restrictedTools: ['list'] }));
+
+      expect(isRestrictedInTableCell('list')).toBe(true);
+
+      tableA.destroy();
+      expect(isRestrictedInTableCell('list')).toBe(true);
+
+      tableB.destroy();
+      expect(isRestrictedInTableCell('list')).toBe(false);
+    });
   });
 
   describe('render', () => {
@@ -3852,10 +3888,8 @@ describe('Table Tool', () => {
       const { element, table } = createReadOnlyTable([['CopyMe', 'CopyToo']]);
       const gridEl = element.firstElementChild as HTMLElement;
 
-      // Verify blocks are mounted
-      const blockEls = gridEl.querySelectorAll('[data-blok-id]');
-
-      expect(blockEls.length).toBe(2);
+      expect(gridEl).toHaveTextContent('CopyMe');
+      expect(gridEl).toHaveTextContent('CopyToo');
 
       // Select cells via pointer drag
       simulateCellDrag(gridEl, 0, 1);
@@ -3946,16 +3980,15 @@ describe('Table Tool', () => {
       // Select cells via pointer drag
       simulateCellDrag(gridEl, 0, 1);
 
-      // Blocks should still be present after Delete key
-      const blocksBefore = gridEl.querySelectorAll('[data-blok-id]').length;
+      const textBefore = gridEl.textContent;
 
       // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Cell selection listens on document for keydown; no user-event alternative for document-level listeners
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
 
-      const blocksAfter = gridEl.querySelectorAll('[data-blok-id]').length;
+      const textAfter = gridEl.textContent;
 
-      // Blocks should not be cleared (no onClearContent callback)
-      expect(blocksAfter).toBe(blocksBefore);
+      // Content should not be cleared (no onClearContent callback)
+      expect(textAfter).toBe(textBefore);
 
       document.body.removeChild(element);
       table.destroy();

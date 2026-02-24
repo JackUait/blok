@@ -247,7 +247,7 @@ export const mountCellBlocksReadOnly = (
   gridEl: HTMLElement,
   content: LegacyCellContent[][],
   api: API,
-  tableBlockId: string,
+  _tableBlockId: string,
 ): void => {
   const rowElements = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
 
@@ -281,20 +281,18 @@ export const mountCellBlocksReadOnly = (
       }
 
       if (!isCellWithBlocks(cellContent)) {
-        // Handle legacy string content by creating a paragraph block
+        // Read-only render path must not mutate block state.
+        // Render legacy content as plain text in-place.
         const legacyText = typeof cellContent === 'string' ? cellContent : '';
-        const insertedBlock = api.blocks.insert(
-          'paragraph',
-          { text: legacyText },
-          {},
-          api.blocks.getBlocksCount(),
-          false
-        );
 
-        container.appendChild(insertedBlock.holder);
-        api.blocks.setBlockParent(insertedBlock.id, tableBlockId);
+        container.textContent = legacyText;
 
         return;
+      }
+
+      // If this container previously rendered legacy text, clear it before mounting holders.
+      if (!hasExistingBlocks && (container.textContent ?? '').length > 0) {
+        container.textContent = '';
       }
 
       for (const blockId of cellContent.blocks) {

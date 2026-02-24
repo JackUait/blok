@@ -409,4 +409,28 @@ describe('table-operations', () => {
       expect(result).toEqual([200, 100, 300, 100]);
     });
   });
+
+  describe('SCROLL_OVERFLOW_CLASSES', () => {
+    it('should include overflow-y-hidden to prevent implicit vertical scrollbar from overflow-x-auto', async () => {
+      const { SCROLL_OVERFLOW_CLASSES } = await import('../../../../src/tools/table/table-operations');
+
+      // CSS spec: setting overflow-x to non-visible without setting overflow-y
+      // causes the browser to compute overflow-y as 'auto' instead of 'visible'.
+      // This creates an unwanted vertical scrollbar when absolutely-positioned
+      // children (e.g. the add-row button) extend beyond the wrapper.
+      // SCROLL_OVERFLOW_CLASSES must explicitly set overflow-y to prevent this.
+      expect(SCROLL_OVERFLOW_CLASSES).toContain('overflow-y-hidden');
+    });
+
+    it('should apply overflow-y-hidden via enableScrollOverflow', async () => {
+      const { enableScrollOverflow } = await import('../../../../src/tools/table/table-operations');
+
+      const element = document.createElement('div') as HTMLDivElement;
+
+      enableScrollOverflow(element);
+
+      expect(element.classList.contains('overflow-y-hidden')).toBe(true);
+      expect(element.classList.contains('overflow-x-auto')).toBe(true);
+    });
+  });
 });

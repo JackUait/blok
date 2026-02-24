@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Table } from '../../../../src/tools/table/index';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions, BlockAPI } from '../../../../types';
 
@@ -64,8 +65,7 @@ describe('Table tool with cell blocks integration', () => {
   });
 
   describe('initialization', () => {
-    it('should initialize TableCellBlocks when rendered in edit mode', async () => {
-      const { Table } = await import('../../../../src/tools/table/index');
+    it('should initialize TableCellBlocks when rendered in edit mode', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -80,8 +80,7 @@ describe('Table tool with cell blocks integration', () => {
       expect(cells.length).toBe(4);
     });
 
-    it('should NOT initialize TableCellBlocks in readOnly mode', async () => {
-      const { Table } = await import('../../../../src/tools/table/index');
+    it('should NOT initialize TableCellBlocks in readOnly mode', () => {
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
         ...createTableOptions({
           content: [['A', 'B'], ['C', 'D']],
@@ -97,8 +96,7 @@ describe('Table tool with cell blocks integration', () => {
   });
 
   describe('input handling for markdown triggers', () => {
-    it('should listen for input events on cells', async () => {
-      const { Table } = await import('../../../../src/tools/table/index');
+    it('should listen for input events on cells', () => {
       const options = createTableOptions({
         content: [['', '']],
       });
@@ -119,7 +117,6 @@ describe('Table tool with cell blocks integration', () => {
     });
 
     it('should not call blocks.insert for regular input events', async () => {
-      const { Table } = await import('../../../../src/tools/table/index');
       const mockApi = createMockAPI();
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
         data: { withHeadings: false, content: [['', '']] } as TableData,
@@ -155,8 +152,7 @@ describe('Table tool with cell blocks integration', () => {
   });
 
   describe('cleanup', () => {
-    it('should clean up TableCellBlocks on destroy', async () => {
-      const { Table } = await import('../../../../src/tools/table/index');
+    it('should clean up TableCellBlocks on destroy', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });

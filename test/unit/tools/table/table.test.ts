@@ -234,6 +234,21 @@ describe('Table Tool', () => {
       const cells = rows[0].querySelectorAll('[data-blok-table-cell]');
       expect(cells).toHaveLength(4);
     });
+
+    it('applies pointer-events-none to the ::after hover zone so clicks pass through to the bottom zone', () => {
+      const options = createTableOptions();
+      const table = new Table(options);
+      const element = table.render();
+
+      /**
+       * The table wrapper has an ::after pseudo-element that extends 40px below
+       * the table for add-row button hover detection. Without pointer-events: none,
+       * this pseudo-element intercepts clicks meant for the editor's bottom zone,
+       * preventing users from clicking below the last table to create a new block.
+       */
+      // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing Tailwind CSS class that controls pointer-events on ::after pseudo-element
+      expect(element.classList.contains('after:pointer-events-none')).toBe(true);
+    });
   });
 
   describe('save', () => {
@@ -3420,7 +3435,8 @@ describe('Table Tool', () => {
     it('ignores paste events with non-table-cell clipboard data', () => {
       const { element } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -3438,7 +3454,8 @@ describe('Table Tool', () => {
     it('intercepts paste events containing table cell clipboard data', () => {
       const { element } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -3469,7 +3486,8 @@ describe('Table Tool', () => {
     it('inserts blocks from clipboard payload into the target cell', () => {
       const { element, mockInsert, mockSetBlockParent } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -3505,7 +3523,8 @@ describe('Table Tool', () => {
     it('pastes a 2x2 payload into a 2x2 table starting from (0,0)', () => {
       const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -3541,7 +3560,8 @@ describe('Table Tool', () => {
     it('auto-expands rows when payload exceeds current row count', () => {
       const { element } = createPasteTable([['A', 'B']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -3642,7 +3662,8 @@ describe('Table Tool', () => {
     it('ignores paste when active element is not inside the grid', () => {
       const { element, mockInsert } = createPasteTable([['A', 'B']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
       const insertsBefore = mockInsert.mock.calls.length;
 
       // Focus something outside the grid
@@ -3675,7 +3696,8 @@ describe('Table Tool', () => {
     it('handles empty clipboard payload cells gracefully', () => {
       const { element } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -3702,7 +3724,8 @@ describe('Table Tool', () => {
     it('distributes generic HTML table cells across the grid', () => {
       const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 
@@ -3738,7 +3761,8 @@ describe('Table Tool', () => {
     it('distributes Google Docs table HTML across the grid', () => {
       const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
-      const gridEl = element.firstElementChild as HTMLElement;
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
 
       focusCellAt(gridEl, 0, 0);
 

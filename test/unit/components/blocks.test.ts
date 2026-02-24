@@ -1058,6 +1058,40 @@ describe('Blocks', () => {
       expect(blocks.blocks[0]).toBe(block1);
     });
 
+    it('should not place inserted block inside a nested container when previous block holder is nested', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Simulate two consecutive tables: Table1 with a cell block nested inside it,
+       * then Table2 after it. When Table2 is deleted and undo restores it,
+       * the insert method uses the previous block (cellBlock) as the reference.
+       * Since cellBlock's holder is nested inside Table1's DOM, inserting
+       * 'afterend' of cellBlock.holder places Table2 INSIDE Table1's cell — a bug.
+       */
+      const tableBlock = createMockBlock('table-1', 'table');
+      const cellBlock = createMockBlock('cell-1', 'paragraph');
+
+      blocks.push(tableBlock);
+
+      // Nest the cell block's holder inside the table (simulating a table cell container)
+      const cellContainer = document.createElement('div');
+
+      cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellContainer);
+      cellContainer.appendChild(cellBlock.holder);
+      blocks.blocks.push(cellBlock);
+
+      // Insert a new top-level block at index 2 (after all existing blocks)
+      const restoredTable = createMockBlock('table-2', 'table');
+
+      blocks.insert(2, restoredTable);
+
+      // CRITICAL: The restored table must be a direct child of workingArea,
+      // not nested inside Table1's cell container
+      expect(restoredTable.holder.parentElement).toBe(workingArea);
+      expect(tableBlock.holder.contains(restoredTable.holder)).toBe(false);
+    });
+
     it('should append to workingArea when appendToWorkingArea is true, even when previous block is nested', () => {
       const blocks = createBlocks();
 

@@ -129,37 +129,46 @@ describe('Table scroll container', () => {
     });
   });
 
-  describe('without colWidths', () => {
-    it('grid is a direct child of wrapper (no scroll container)', () => {
+  describe('without colWidths (editable)', () => {
+    it('creates scroll container with padding to prevent layout shift on first resize', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
       const table = new Table(options);
       const element = table.render();
 
-      // No scroll container
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]');
+
+      expect(scrollContainer).not.toBeNull();
+      expect(scrollContainer?.classList.contains('pt-[9px]')).toBe(true);
+      expect(scrollContainer?.classList.contains('pl-[9px]')).toBe(true);
+
+      const rows = scrollContainer?.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows?.length).toBe(2);
+    });
+  });
+
+  describe('without colWidths (readOnly)', () => {
+    it('grid is a direct child of wrapper (no scroll container)', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({ content: [['A', 'B'], ['C', 'D']] }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
       expect(element.querySelector('[data-blok-table-scroll]')).toBeNull();
 
-      // The grid (with rows) is a direct child
       const firstChild = element.firstElementChild as HTMLElement;
       const rows = firstChild?.querySelectorAll('[data-blok-table-row]');
 
       expect(rows?.length).toBe(2);
     });
-
-    it('wrapper does NOT have a scroll container', () => {
-      const options = createTableOptions({
-        content: [['A', 'B'], ['C', 'D']],
-      });
-      const table = new Table(options);
-      const element = table.render();
-
-      expect(element.querySelector('[data-blok-table-scroll]')).toBeNull();
-    });
   });
 
-  describe('resize creates scroll container on demand', () => {
-    it('enableScrollOverflow during resize creates scroll container', () => {
+  describe('resize preserves scroll container', () => {
+    it('scroll container exists before and after resize — no mid-drag reparenting', () => {
       const options = createTableOptions({
         content: [['A', 'B']],
       });
@@ -169,27 +178,29 @@ describe('Table scroll container', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      // Initially no scroll container (no colWidths)
-      expect(element.querySelector('[data-blok-table-scroll]')).toBeNull();
+      // Scroll container exists from initial render
+      const scrollBefore = element.querySelector('[data-blok-table-scroll]');
 
-      // Simulate a resize drag: triggers enableScrollOverflow
+      expect(scrollBefore).not.toBeNull();
+
+      // Simulate a resize drag
       const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
 
-      if (handle) {
-        handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
-        document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200 }));
-        document.dispatchEvent(new PointerEvent('pointerup', {}));
+      expect(handle).not.toBeNull();
 
-        // After resize, a scroll container should have been created
-        const scrollContainer = element.querySelector('[data-blok-table-scroll]');
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
 
-        expect(scrollContainer).not.toBeNull();
+      // Same scroll container still exists (not recreated)
+      const scrollAfter = element.querySelector('[data-blok-table-scroll]');
 
-        // Grid should be inside the scroll container
-        const rows = scrollContainer?.querySelectorAll('[data-blok-table-row]');
+      expect(scrollAfter).toBe(scrollBefore);
 
-        expect(rows?.length).toBe(1);
-      }
+      // Grid still inside the scroll container
+      const rows = scrollAfter?.querySelectorAll('[data-blok-table-row]');
+
+      expect(rows?.length).toBe(1);
 
       document.body.removeChild(element);
     });

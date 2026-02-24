@@ -65,6 +65,7 @@ const WRAPPER_EDIT_CLASSES = [
   'after:left-0',
   'after:right-0',
   'after:h-10',
+  'after:pointer-events-none',
 ];
 
 /**

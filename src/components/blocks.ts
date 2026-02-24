@@ -340,8 +340,17 @@ export class Blocks {
    * @param {Block} target — Block related to position
    */
   private insertToDOM(block: Block, position?: InsertPosition, target?: Block): void {
-    if (position && target !== undefined) {
-      target.holder.insertAdjacentElement(position, block.holder);
+    if (!position || target === undefined) {
+      this.workingArea.appendChild(block.holder);
+      block.call(BlockToolAPI.RENDERED);
+
+      return;
+    }
+
+    const referenceNode = this.findWorkingAreaChild(target.holder);
+
+    if (referenceNode !== null) {
+      referenceNode.insertAdjacentElement(position, block.holder);
     } else {
       this.workingArea.appendChild(block.holder);
     }

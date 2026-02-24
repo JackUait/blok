@@ -138,7 +138,8 @@ describe('Table setData generation guard', () => {
 
     // The DOM should reflect the LAST (re-entrant) setData call
     const finalWrapper = container.firstElementChild as HTMLElement;
-    const finalGrid = finalWrapper?.firstElementChild as HTMLElement;
+    const finalSc = finalWrapper?.firstElementChild as HTMLElement;
+    const finalGrid = finalSc?.firstElementChild as HTMLElement;
     const finalCells = finalGrid?.querySelectorAll('[data-blok-table-cell]');
 
     expect(finalCells).toHaveLength(1);
@@ -199,7 +200,8 @@ describe('Table setData generation guard', () => {
     table.setData({ content: [['X', 'Y'], ['P', 'Q']] });
 
     const newWrapper = container.firstElementChild as HTMLElement;
-    const newGrid = newWrapper?.firstElementChild as HTMLElement;
+    const newSc = newWrapper?.firstElementChild as HTMLElement;
+    const newGrid = newSc?.firstElementChild as HTMLElement;
     const newRows = newGrid?.querySelectorAll('[data-blok-table-row]');
 
     expect(newRows).toHaveLength(2);
@@ -273,7 +275,8 @@ describe('Table setData generation guard', () => {
 
     // The DOM should reflect the innermost (latest) setData call
     const finalWrapper = container.firstElementChild as HTMLElement;
-    const finalGrid = finalWrapper?.firstElementChild as HTMLElement;
+    const finalSc = finalWrapper?.firstElementChild as HTMLElement;
+    const finalGrid = finalSc?.firstElementChild as HTMLElement;
     const finalCells = finalGrid?.querySelectorAll('[data-blok-table-cell]');
 
     expect(finalCells).toHaveLength(1);
@@ -404,7 +407,7 @@ describe('Table setData generation guard', () => {
     container.appendChild(element);
     table.rendered();
 
-    const gridEl = element.firstElementChild as HTMLElement;
+    const gridEl = (element.firstElementChild as HTMLElement).firstElementChild as HTMLElement;
     const action: RowColAction = { type: 'delete-row', index: 0 };
 
     (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })
@@ -466,7 +469,7 @@ describe('Table setData generation guard', () => {
     container.appendChild(element);
     table.rendered();
 
-    const gridEl = element.firstElementChild as HTMLElement;
+    const gridEl = (element.firstElementChild as HTMLElement).firstElementChild as HTMLElement;
     const action: RowColAction = { type: 'delete-col', index: 0 };
 
     (table as unknown as { handleRowColAction: (grid: HTMLElement, a: RowColAction) => void })

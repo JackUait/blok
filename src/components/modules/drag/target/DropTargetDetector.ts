@@ -165,24 +165,29 @@ export class DropTargetDetector {
     const canUsePreviousBlock = previousBlock && !this.sourceBlocks.includes(previousBlock);
 
     if (isTopHalf && targetIndex > 0 && canUsePreviousBlock) {
-      const targetDepth = this.calculateTargetDepth(previousBlock, 'bottom');
+      const targetDepth = this.calculateTargetDepth(previousBlock, 'bottom', sourceBlock);
       return { block: previousBlock, edge: 'bottom', depth: targetDepth };
     }
 
     // First block top half, or any block bottom half
     const edge: 'top' | 'bottom' = isTopHalf ? 'top' : 'bottom';
-    const targetDepth = this.calculateTargetDepth(targetBlock, edge);
+    const targetDepth = this.calculateTargetDepth(targetBlock, edge, sourceBlock);
 
     return { block: targetBlock, edge, depth: targetDepth };
   }
 
   /**
-   * Calculates the target depth for list item nesting
+   * Calculates the target depth for list item nesting.
+   * When a sourceBlock is provided and is a list item, the depth is calculated
+   * to match what ListDepthValidator.getTargetDepthForMove will produce post-drop,
+   * ensuring the visual indicator accurately predicts the final depth.
+   *
    * @param targetBlock - Block being dropped onto
    * @param targetEdge - Edge of target ('top' or 'bottom')
+   * @param sourceBlock - Optional block being dragged (for accurate list item depth prediction)
    * @returns The target depth (0 for root level, 1+ for nested)
    */
-  calculateTargetDepth(targetBlock: Block, targetEdge: 'top' | 'bottom'): number {
+  calculateTargetDepth(targetBlock: Block, targetEdge: 'top' | 'bottom', sourceBlock?: Block): number {
     const targetIndex = this.blockManager.getBlockIndex(targetBlock);
     const dropIndex = targetEdge === 'top' ? targetIndex : targetIndex + 1;
 
@@ -198,23 +203,69 @@ export class DropTargetDetector {
       return 0;
     }
 
-    const previousDepth = this.listItemDepth.getDepth(previousBlock) ?? 0;
+    const previousDepth = this.listItemDepth.getDepth(previousBlock);
+    const previousIsListItem = previousDepth !== null;
+    const prevDepthValue = previousDepth ?? 0;
 
     // Get the block that will be immediately after the drop position
     const nextBlock = this.blockManager.getBlockByIndex(dropIndex);
-    const nextDepth = nextBlock ? (this.listItemDepth.getDepth(nextBlock) ?? 0) : 0;
+    const nextDepth = nextBlock ? this.listItemDepth.getDepth(nextBlock) : null;
+    const nextIsListItem = nextDepth !== null;
+    const nextDepthValue = nextDepth ?? 0;
 
-    // If next item is nested, match its depth (become sibling)
-    if (nextDepth > 0 && nextDepth <= previousDepth + 1) {
-      return nextDepth;
+    // When dragging a list item, predict the exact depth ListDepthValidator will
+    // compute post-drop — so the visual indicator matches the actual result.
+    const sourceDepth = sourceBlock ? this.listItemDepth.getDepth(sourceBlock) : null;
+
+    if (sourceDepth !== null) {
+      return this.predictListItemDepth(
+        sourceDepth, prevDepthValue, previousIsListItem, nextDepthValue, nextIsListItem
+      );
     }
 
-    // If previous item is nested, match its depth
-    if (previousDepth > 0) {
-      return previousDepth;
+    // For non-list blocks (or when sourceBlock not provided), use neighbor-based
+    // depth for cosmetic indicator positioning only.
+    if (nextDepthValue > 0 && nextDepthValue <= prevDepthValue + 1) {
+      return nextDepthValue;
+    }
+
+    if (prevDepthValue > 0) {
+      return prevDepthValue;
     }
 
     return 0;
+  }
+
+  /**
+   * Mirrors ListDepthValidator.getTargetDepthForMove to predict the exact
+   * post-drop depth for a list item. This ensures the visual indicator
+   * shows the same depth the item will actually have after being dropped.
+   */
+  private predictListItemDepth(
+    currentDepth: number,
+    previousDepth: number,
+    previousIsListItem: boolean,
+    nextDepth: number,
+    nextIsListItem: boolean
+  ): number {
+    const maxAllowedDepth = previousIsListItem ? previousDepth + 1 : 0;
+
+    // Cap current depth at max allowed
+    if (currentDepth > maxAllowedDepth) {
+      return maxAllowedDepth;
+    }
+
+    // Match next depth if it's deeper than current and within bounds
+    if (nextIsListItem && nextDepth > currentDepth && nextDepth <= maxAllowedDepth) {
+      return nextDepth;
+    }
+
+    // Match previous depth if deeper than current and no next list item
+    if (previousIsListItem && !nextIsListItem && previousDepth > currentDepth && previousDepth <= maxAllowedDepth) {
+      return previousDepth;
+    }
+
+    return currentDepth;
   }
 
   /**

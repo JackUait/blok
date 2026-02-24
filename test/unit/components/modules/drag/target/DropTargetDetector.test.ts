@@ -567,6 +567,133 @@ describe('DropTargetDetector', () => {
 
       expect(depth).toBe(0);
     });
+
+    describe('with sourceBlock (depth prediction accuracy)', () => {
+      it('should predict depth 1 when depth-1 list item is dropped after a depth-0 list item with no next block', () => {
+        // Scenario: List A (depth 0) at index 0. Dragging List B (depth 1) to bottom of A.
+        // ListDepthValidator would compute: maxAllowed = 0+1 = 1, currentDepth(1) <= 1, return 1.
+        // The indicator must match and predict depth 1.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 1);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          // dropIndex = bottom of index 0 = 1
+          // previous at index 0 = previousBlock (depth 0)
+          // next at index 1 = undefined
+          if (index === 0) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(1);
+      });
+
+      it('should predict depth 0 when depth-2 list item is dropped after paragraph and before depth-1 list', () => {
+        // Scenario: Paragraph at index 0, List C (depth 1) at index 1.
+        // Dragging List B (depth 2) to top of index 1 (between paragraph and list C).
+        // ListDepthValidator: previous is not a list → maxAllowed = 0, depth-2 capped to 0.
+        // The indicator must match and predict depth 0.
+        const previousBlock = createMockBlock('prev'); // paragraph, no depth
+        const nextBlock = createMockListBlock('next', 1);
+        const targetBlock = createMockBlock('target');
+        const sourceBlock = createMockListBlock('source', 2);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          // dropIndex = top of index 1 = 1
+          // previous at index 0 = previousBlock (paragraph)
+          // next at index 1 = nextBlock (depth 1)
+          if (index === 0) return previousBlock;
+          if (index === 1) return nextBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'top', sourceBlock);
+
+        expect(depth).toBe(0);
+      });
+
+      it('should cap depth when source depth exceeds maxAllowed', () => {
+        // Source at depth 3, but previous list item is depth 1 → max = 2
+        const previousBlock = createMockListBlock('prev', 1);
+        const targetBlock = createMockListBlock('target', 1);
+        const sourceBlock = createMockListBlock('source', 3);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(2); // maxAllowed = 1 + 1 = 2
+      });
+
+      it('should match next list item depth when deeper than capped source depth', () => {
+        // Source at depth 0, previous at depth 1, next at depth 2
+        // maxAllowed = 2, currentDepth = 0, next(2) > 0 && 2 <= 2 → match next
+        const previousBlock = createMockListBlock('prev', 1);
+        const nextBlock = createMockListBlock('next', 2);
+        const targetBlock = createMockListBlock('target', 1);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+          if (index === 2) return nextBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(2);
+      });
+
+      it('should preserve source depth when valid and no adjustments needed', () => {
+        // Source at depth 1, previous at depth 1 (maxAllowed = 2). No constraints violated.
+        const previousBlock = createMockListBlock('prev', 1);
+        const targetBlock = createMockListBlock('target', 1);
+        const sourceBlock = createMockListBlock('source', 1);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(1);
+      });
+
+      it('should not change behavior for non-list source blocks', () => {
+        // Source is a paragraph (no depth), previous is a list at depth 2
+        // Should use the neighbor-based algorithm (return 2)
+        const previousBlock = createMockListBlock('prev', 2);
+        const targetBlock = createMockBlock('target');
+        const sourceBlock = createMockBlock('source'); // paragraph
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(2);
+      });
+    });
   });
 });
 

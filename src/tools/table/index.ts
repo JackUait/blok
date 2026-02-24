@@ -161,6 +161,35 @@ export class Table implements BlockTool {
     return result as T;
   }
 
+  /**
+   * Tear down all visual subsystems (resize, add-controls, row/col-controls,
+   * cell-selection). Called before DOM rebuild in setData/onPaste and during
+   * destroy(). Does NOT tear down cellBlocks — that has special Yjs handling.
+   */
+  private teardownSubsystems(): void {
+    this.resize?.destroy();
+    this.resize = null;
+    this.addControls?.destroy();
+    this.addControls = null;
+    this.rowColControls?.destroy();
+    this.rowColControls = null;
+    this.cellSelection?.destroy();
+    this.cellSelection = null;
+  }
+
+  /**
+   * Initialize all visual subsystems on a grid element.
+   * Shared by rendered(), setData(), and onPaste() to ensure consistent
+   * subsystem initialization order.
+   */
+  private initSubsystems(gridEl: HTMLElement): void {
+    this.initResize(gridEl);
+    this.initAddControls(gridEl);
+    this.initRowColControls(gridEl);
+    this.initCellSelection(gridEl);
+    this.initGridPasteListener(gridEl);
+  }
+
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconTable,
@@ -283,11 +312,7 @@ export class Table implements BlockTool {
         : undefined);
     }
 
-    this.initResize(gridEl);
-    this.initAddControls(gridEl);
-    this.initRowColControls(gridEl);
-    this.initCellSelection(gridEl);
-    this.initGridPasteListener(gridEl);
+    this.initSubsystems(gridEl);
 
     if (this.isNewTable) {
       const firstEditable = gridEl.querySelector<HTMLElement>('[contenteditable="true"]');
@@ -348,14 +373,7 @@ export class Table implements BlockTool {
       return;
     }
 
-    this.resize?.destroy();
-    this.resize = null;
-    this.addControls?.destroy();
-    this.addControls = null;
-    this.rowColControls?.destroy();
-    this.rowColControls = null;
-    this.cellSelection?.destroy();
-    this.cellSelection = null;
+    this.teardownSubsystems();
 
     const newElement = this.render();
 
@@ -391,11 +409,7 @@ export class Table implements BlockTool {
         return;
       }
 
-      this.initResize(gridEl);
-      this.initAddControls(gridEl);
-      this.initRowColControls(gridEl);
-      this.initCellSelection(gridEl);
-      this.initGridPasteListener(gridEl);
+      this.initSubsystems(gridEl);
     }
   }
 
@@ -430,6 +444,7 @@ export class Table implements BlockTool {
       this.cellBlocks?.deleteAllBlocks();
     }, true);
     this.cellBlocks?.destroy();
+    this.teardownSubsystems();
 
     const oldElement = this.element;
 
@@ -454,11 +469,7 @@ export class Table implements BlockTool {
         this.initialContent = null;
       }, true);
 
-      this.initResize(gridEl);
-      this.initAddControls(gridEl);
-      this.initRowColControls(gridEl);
-      this.initCellSelection(gridEl);
-      this.initGridPasteListener(gridEl);
+      this.initSubsystems(gridEl);
     }
   }
 
@@ -474,16 +485,9 @@ export class Table implements BlockTool {
       this.cellBlocks?.deleteAllBlocks();
     }
 
-    this.resize?.destroy();
-    this.resize = null;
-    this.addControls?.destroy();
-    this.addControls = null;
-    this.rowColControls?.destroy();
-    this.rowColControls = null;
+    this.teardownSubsystems();
     this.cellBlocks?.destroy();
     this.cellBlocks = null;
-    this.cellSelection?.destroy();
-    this.cellSelection = null;
     this.element = null;
   }
 

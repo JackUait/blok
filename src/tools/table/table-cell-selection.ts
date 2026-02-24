@@ -61,6 +61,7 @@ interface CellSelectionOptions {
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton?: (cells: HTMLElement[]) => void;
+  isPopoverOpen?: () => boolean;
   i18n: I18n;
 }
 
@@ -82,6 +83,7 @@ export class TableCellSelection {
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
+  private isPopoverOpen: (() => boolean) | undefined;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -100,6 +102,7 @@ export class TableCellSelection {
     this.onCopy = options.onCopy;
     this.onCut = options.onCut;
     this.onCopyViaButton = options.onCopyViaButton;
+    this.isPopoverOpen = options.isPopoverOpen;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
@@ -297,6 +300,13 @@ export class TableCellSelection {
     // Don't clear while the pill popover is open — the user may be
     // clicking a popover item whose pointerdown bubbles to the document.
     if (this.pillPopover !== null) {
+      return;
+    }
+
+    // Don't clear while a grip popover is open — clicking a popover
+    // action fires pointerdown before the click handler that performs
+    // the action and re-establishes the selection.
+    if (this.isPopoverOpen?.()) {
       return;
     }
 

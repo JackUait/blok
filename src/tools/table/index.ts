@@ -287,7 +287,7 @@ export class Table implements BlockTool {
 
     this.gridElement = gridEl;
 
-    if (this.model.colWidths) {
+    if (this.model.colWidths || !this.readOnly) {
       const sc = document.createElement('div');
 
       sc.setAttribute('data-blok-table-scroll', '');
@@ -1070,6 +1070,7 @@ export class Table implements BlockTool {
       grid: gridEl,
       rectangleSelection, // Pass reference
       i18n: this.api.i18n,
+      isPopoverOpen: () => this.rowColControls?.isPopoverOpen ?? false,
       onSelectionActiveChange: (hasSelection) => {
         if (this.resize) {
           this.resize.enabled = !hasSelection;

@@ -191,6 +191,10 @@ export class TableRowColControls {
     this.lockedGrip = null;
   }
 
+  public get isPopoverOpen(): boolean {
+    return this.popoverState.popover !== null;
+  }
+
   public destroy(): void {
     this.destroyPopover();
     this.unlockGrip();

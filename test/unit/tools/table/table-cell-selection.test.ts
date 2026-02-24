@@ -1433,5 +1433,88 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('isPopoverOpen guard', () => {
+    it('does not clear selection when isPopoverOpen returns true', () => {
+      const callback = vi.fn();
+      const isPopoverOpen = vi.fn().mockReturnValue(true);
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+        isPopoverOpen,
+      });
+
+      selection.selectColumn(1);
+
+      callback.mockClear();
+
+      // Simulate a pointerdown on the document (e.g. clicking a grip popover action item).
+      // boundClearSelection is registered synchronously by showProgrammaticSelection.
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      document.dispatchEvent(clearEvent);
+
+      // Selection must remain because the grip popover is open
+      expect(callback).not.toHaveBeenCalledWith(false);
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(3);
+    });
+
+    it('clears selection when isPopoverOpen returns false', () => {
+      const callback = vi.fn();
+      const isPopoverOpen = vi.fn().mockReturnValue(false);
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+        isPopoverOpen,
+      });
+
+      selection.selectColumn(1);
+
+      callback.mockClear();
+
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      document.dispatchEvent(clearEvent);
+
+      expect(callback).toHaveBeenCalledWith(false);
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+    });
+
+    it('clears selection when isPopoverOpen is not provided', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      selection.selectColumn(1);
+
+      callback.mockClear();
+
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      document.dispatchEvent(clearEvent);
+
+      expect(callback).toHaveBeenCalledWith(false);
+    });
+  });
+
 });
 

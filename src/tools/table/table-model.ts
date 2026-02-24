@@ -363,6 +363,81 @@ export class TableModel {
     this.initialColWidthValue = value;
   }
 
+  // ─── Invariant validation ───────────────────────────────────────
+
+  /**
+   * Validate all model invariants. Throws if any invariant is violated.
+   * Useful for debugging and test assertions.
+   *
+   * Invariants checked:
+   * 1. Rectangular grid: all rows have the same length
+   * 2. colWidths sync: colWidths length matches column count when defined
+   * 3. blockCellMap consistency: map matches grid contents
+   * 4. No duplicate blocks: each block ID appears in exactly one cell
+   */
+  validateInvariants(): void {
+    // Invariant 1: Rectangular grid
+    if (this.contentGrid.length > 0) {
+      const expectedCols = this.contentGrid[0].length;
+
+      for (let r = 0; r < this.contentGrid.length; r++) {
+        if (this.contentGrid[r].length !== expectedCols) {
+          throw new Error(
+            `Invariant violation: row ${r} has ${this.contentGrid[r].length} columns, expected ${expectedCols}`
+          );
+        }
+      }
+    }
+
+    // Invariant 2: colWidths sync
+    if (this.colWidthsValue !== undefined && this.contentGrid.length > 0) {
+      if (this.colWidthsValue.length !== this.contentGrid[0].length) {
+        throw new Error(
+          `Invariant violation: colWidths has ${this.colWidthsValue.length} entries but grid has ${this.contentGrid[0].length} columns`
+        );
+      }
+    }
+
+    // Invariant 3 + 4: blockCellMap consistency and no duplicates
+    const seenBlocks = new Set<string>();
+    let gridBlockCount = 0;
+
+    for (let r = 0; r < this.contentGrid.length; r++) {
+      for (let c = 0; c < this.contentGrid[r].length; c++) {
+        for (const blockId of this.contentGrid[r][c].blocks) {
+          gridBlockCount++;
+
+          if (seenBlocks.has(blockId)) {
+            throw new Error(
+              `Invariant violation: block "${blockId}" appears in multiple cells`
+            );
+          }
+          seenBlocks.add(blockId);
+
+          const mapped = this.blockCellMap.get(blockId);
+
+          if (!mapped) {
+            throw new Error(
+              `Invariant violation: block "${blockId}" at [${r},${c}] not in blockCellMap`
+            );
+          }
+          if (mapped.row !== r || mapped.col !== c) {
+            throw new Error(
+              `Invariant violation: block "${blockId}" at [${r},${c}] mapped to [${mapped.row},${mapped.col}]`
+            );
+          }
+        }
+      }
+    }
+
+    // Check map doesn't have extra entries
+    if (this.blockCellMap.size !== gridBlockCount) {
+      throw new Error(
+        `Invariant violation: blockCellMap has ${this.blockCellMap.size} entries but grid has ${gridBlockCount} blocks`
+      );
+    }
+  }
+
   // ─── Private helpers ────────────────────────────────────────────
 
   /**

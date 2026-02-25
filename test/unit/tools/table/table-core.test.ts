@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { TableGrid } from '../../../../src/tools/table/table-core';
 import { TableModel } from '../../../../src/tools/table/table-model';
 
@@ -677,6 +679,24 @@ describe('TableGrid', () => {
       expect((movedCells[0] as HTMLElement).style.width).toBe('200px');
       expect((movedCells[1] as HTMLElement).style.width).toBe('300px');
       expect((movedCells[2] as HTMLElement).style.width).toBe('100px');
+    });
+  });
+
+  describe('table cell block height in readonly mode', () => {
+    it('main.css applies min-height to .blok-block inside table cells so empty cells match edit-mode height', () => {
+      const mainCss = readFileSync(
+        resolve(__dirname, '../../../../src/styles/main.css'),
+        'utf-8'
+      );
+
+      // The rule for [data-blok-table-cell-blocks] .blok-block must include min-h
+      // to prevent empty non-contenteditable paragraphs from collapsing to 0px height
+      const blockRule = mainCss.match(
+        /\[data-blok-table-cell-blocks\]\s*\.blok-block\s*\{[^}]*\}/
+      );
+
+      expect(blockRule).not.toBeNull();
+      expect(blockRule?.[0]).toContain('min-h-');
     });
   });
 

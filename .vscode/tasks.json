@@ -60,6 +60,11 @@
 			"label": "Run unit tests",
 			"type": "shell",
 			"command": "npx vitest run test/unit/components/blocks.test.ts test/unit/components/modules/yjs/block-observer.test.ts test/unit/components/modules/blockManager/yjs-sync.test.ts --reporter=verbose 2>&1 | tail -100"
+		},
+		{
+			"label": "Force rebuild and test",
+			"type": "shell",
+			"command": "rm -rf dist && yarn build:test 2>&1 | tail -5 && echo 'BUILD DONE'"
 		}
 	]
 }

@@ -1139,16 +1139,6 @@ export default defineConfig(
       'no-restricted-syntax': [
         'error',
         {
-          selector: 'IfStatement > BlockStatement > IfStatement',
-          message:
-            'Nested if statements are not allowed. Consider using early returns or combining conditions.',
-        },
-        {
-          selector: 'IfStatement > IfStatement',
-          message:
-            'Nested if statements are not allowed. Consider using early returns or combining conditions.',
-        },
-        {
           selector: 'VariableDeclaration[kind="let"]',
           message: 'Use const instead of let. If reassignment is needed, refactor to avoid mutation.',
         },

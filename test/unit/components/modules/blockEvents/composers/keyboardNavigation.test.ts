@@ -429,7 +429,7 @@ describe('KeyboardNavigation', () => {
         navigationOccurred = true;
         return true;
       });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const removeBlock = vi.fn();
       const mergeBlocks = vi.fn();
       const setToBlock = vi.fn();
@@ -445,7 +445,7 @@ describe('KeyboardNavigation', () => {
           setToBlock,
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -456,8 +456,8 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      // Verify toolbar block actions were hidden (observable side effect)
-      expect(hideBlockActions).toHaveBeenCalled();
+      // Verify toolbar was closed (observable side effect)
+      expect(close).toHaveBeenCalled();
       // Verify navigation occurred (caret moved to previous input)
       expect(navigationOccurred).toBe(true);
       // Verify default browser behavior was prevented (custom behavior occurred)
@@ -472,7 +472,7 @@ describe('KeyboardNavigation', () => {
 
     it('returns early when at first block with no previous block', () => {
       const mockBlock = createBlock();
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const removeBlock = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const setToBlock = vi.fn();
@@ -490,7 +490,7 @@ describe('KeyboardNavigation', () => {
           positions: { START: 'start', END: 'end', DEFAULT: 'default' },
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -500,8 +500,8 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      // Toolbar block actions are hidden (observable side effect)
-      expect(hideBlockActions).toHaveBeenCalled();
+      // Toolbar is closed (observable side effect)
+      expect(close).toHaveBeenCalled();
       // Default behavior is prevented - verify observable DOM event state
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(event.defaultPrevented).toBe(true);
@@ -517,7 +517,7 @@ describe('KeyboardNavigation', () => {
     it('removes previous empty block', () => {
       const emptyPreviousBlock = createBlock({ id: 'empty-previous', isEmpty: true });
       const mockBlock = createBlock();
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const removeBlock = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
@@ -526,7 +526,7 @@ describe('KeyboardNavigation', () => {
           removeBlock,
         } as unknown as BlokModules['BlockManager'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -536,7 +536,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(removeBlock).toHaveBeenCalledWith(emptyPreviousBlock);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
@@ -546,7 +546,7 @@ describe('KeyboardNavigation', () => {
     it('removes current empty block and sets caret to end of previous block', () => {
       const previousBlock = createBlock({ id: 'previous-block', isEmpty: false });
       const emptyCurrentBlock = createBlock({ id: 'empty-current', isEmpty: true });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const removeBlock = vi.fn();
       const setToBlock = vi.fn();
       const blok = createBlokModules({
@@ -561,7 +561,7 @@ describe('KeyboardNavigation', () => {
           positions: { START: 'start', END: 'end', DEFAULT: 'default' },
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -571,7 +571,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(removeBlock).toHaveBeenCalledWith(emptyCurrentBlock);
       expect(setToBlock).toHaveBeenCalled();
       const setToBlockCall = setToBlock.mock.calls[0] as [Block, string];
@@ -588,7 +588,7 @@ describe('KeyboardNavigation', () => {
         writable: false,
       });
       const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const blok = createBlokModules({
         BlockManager: {
@@ -597,7 +597,7 @@ describe('KeyboardNavigation', () => {
           mergeBlocks,
         } as unknown as BlokModules['BlockManager'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -607,7 +607,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(mergeBlocks).toHaveBeenCalledWith(previousBlock, mockBlock);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
@@ -617,7 +617,7 @@ describe('KeyboardNavigation', () => {
     it('navigates to previous block when blocks are not mergeable', () => {
       const previousBlock = createBlock({ id: 'previous-block', isEmpty: false, mergeable: false });
       const mockBlock = createBlock({ id: 'current-block', isEmpty: false });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const setToBlock = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const blok = createBlokModules({
@@ -631,7 +631,7 @@ describe('KeyboardNavigation', () => {
           positions: { START: 'start', END: 'end', DEFAULT: 'default' },
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -641,7 +641,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(mergeBlocks).not.toHaveBeenCalled();
       expect(setToBlock).toHaveBeenCalledWith(previousBlock, 'end');
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
@@ -725,7 +725,7 @@ describe('KeyboardNavigation', () => {
         navigationOccurred = true;
         return true;
       });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const removeBlock = vi.fn();
       const mergeBlocks = vi.fn();
       const setToBlock = vi.fn();
@@ -741,7 +741,7 @@ describe('KeyboardNavigation', () => {
           setToBlock,
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -751,7 +751,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleDelete(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(navigationOccurred).toBe(true);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(removeBlock).not.toHaveBeenCalled();
@@ -763,7 +763,7 @@ describe('KeyboardNavigation', () => {
 
     it('returns early when at last block with no next block', () => {
       const mockBlock = createBlock();
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const removeBlock = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const setToBlock = vi.fn();
@@ -781,7 +781,7 @@ describe('KeyboardNavigation', () => {
           positions: { START: 'start', END: 'end', DEFAULT: 'default' },
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -791,8 +791,8 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleDelete(event);
 
-      // Toolbar block actions are hidden (observable side effect)
-      expect(hideBlockActions).toHaveBeenCalled();
+      // Toolbar is closed (observable side effect)
+      expect(close).toHaveBeenCalled();
       // Default behavior is prevented - verify observable DOM event state
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(event.defaultPrevented).toBe(true);
@@ -808,7 +808,7 @@ describe('KeyboardNavigation', () => {
     it('removes next empty block', () => {
       const emptyNextBlock = createBlock({ id: 'empty-next', isEmpty: true });
       const mockBlock = createBlock();
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const removeBlock = vi.fn();
       const blok = createBlokModules({
         BlockManager: {
@@ -817,7 +817,7 @@ describe('KeyboardNavigation', () => {
           removeBlock,
         } as unknown as BlokModules['BlockManager'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -827,7 +827,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleDelete(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(removeBlock).toHaveBeenCalledWith(emptyNextBlock);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
@@ -837,7 +837,7 @@ describe('KeyboardNavigation', () => {
     it('removes current empty block and sets caret to start of next block', () => {
       const nextBlock = createBlock({ id: 'next-block', isEmpty: false });
       const emptyCurrentBlock = createBlock({ id: 'empty-current', isEmpty: true });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const setToBlock = vi.fn();
       let currentBlockValue = emptyCurrentBlock;
       const removeBlock = vi.fn((block: Block) => {
@@ -856,7 +856,7 @@ describe('KeyboardNavigation', () => {
           positions: { START: 'start', END: 'end', DEFAULT: 'default' },
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
 
@@ -875,7 +875,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleDelete(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(removeBlock).toHaveBeenCalledWith(emptyCurrentBlock);
       expect(setToBlock).toHaveBeenCalledWith(nextBlock, 'start');
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
@@ -890,7 +890,7 @@ describe('KeyboardNavigation', () => {
         writable: false,
       });
       const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const blok = createBlokModules({
         BlockManager: {
@@ -899,7 +899,7 @@ describe('KeyboardNavigation', () => {
           mergeBlocks,
         } as unknown as BlokModules['BlockManager'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -909,7 +909,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleDelete(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(mergeBlocks).toHaveBeenCalledWith(mockBlock, nextBlock);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
@@ -919,7 +919,7 @@ describe('KeyboardNavigation', () => {
     it('navigates to next block when blocks are not mergeable', () => {
       const nextBlock = createBlock({ id: 'next-block', isEmpty: false, name: 'other-tool' });
       const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: false });
-      const hideBlockActions = vi.fn();
+      const close = vi.fn();
       const setToBlock = vi.fn();
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const blok = createBlokModules({
@@ -933,7 +933,7 @@ describe('KeyboardNavigation', () => {
           positions: { START: 'start', END: 'end', DEFAULT: 'default' },
         } as unknown as BlokModules['Caret'],
         Toolbar: {
-          hideBlockActions,
+          close,
         } as unknown as BlokModules['Toolbar'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -943,7 +943,7 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleDelete(event);
 
-      expect(hideBlockActions).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
       expect(mergeBlocks).not.toHaveBeenCalled();
       expect(setToBlock).toHaveBeenCalledWith(nextBlock, 'start');
       expect(event.preventDefault).toHaveBeenCalledTimes(1);

@@ -366,19 +366,16 @@ export class TableAddControls {
 
   private handleMouseMove(e: MouseEvent): void {
     const gridRect = this.grid.getBoundingClientRect();
-    const wrapperRect = this.wrapper.getBoundingClientRect();
     const distFromBottom = Math.abs(e.clientY - gridRect.bottom);
     const distFromRight = Math.abs(e.clientX - gridRect.right);
-    const isBelowGrid = e.clientY > gridRect.bottom;
-    const isRightOfWrapper = e.clientX > wrapperRect.right;
 
-    if (distFromBottom <= PROXIMITY_PX && (!isBelowGrid || this.rowVisible)) {
+    if (distFromBottom <= PROXIMITY_PX) {
       this.showRow();
     } else {
       this.scheduleHideRow();
     }
 
-    if (distFromRight <= PROXIMITY_PX && (!isRightOfWrapper || this.colVisible)) {
+    if (distFromRight <= PROXIMITY_PX) {
       this.showCol();
     } else {
       this.scheduleHideCol();

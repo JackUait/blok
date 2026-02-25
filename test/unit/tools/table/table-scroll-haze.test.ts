@@ -12,6 +12,9 @@ const createScrollContainer = (options: {
 } = {}): HTMLDivElement => {
   const el = document.createElement('div');
 
+  /** Real scroll containers always have overflow-x: auto when scrolling is possible. */
+  el.style.overflowX = 'auto';
+
   Object.defineProperty(el, 'scrollWidth', { value: options.scrollWidth ?? 800, configurable: true });
   Object.defineProperty(el, 'clientWidth', { value: options.clientWidth ?? 400, configurable: true });
   Object.defineProperty(el, 'scrollLeft', { value: options.scrollLeft ?? 0, writable: true, configurable: true });
@@ -192,6 +195,43 @@ describe('TableScrollHaze', () => {
       const rightHaze = wrapper.querySelector('[data-blok-table-haze="right"]') as HTMLElement;
 
       expect(leftHaze.hasAttribute('data-blok-table-haze-visible')).toBe(true);
+      expect(rightHaze.hasAttribute('data-blok-table-haze-visible')).toBe(true);
+
+      haze.destroy();
+    });
+  });
+
+  describe('overflow-x: visible (no scroll support)', () => {
+    it('hides right haze when scrollWidth > clientWidth but overflow-x is visible', () => {
+      // Resize handles can protrude beyond the grid, inflating scrollWidth
+      // even when the scroll container has overflow: visible (no scrollbar).
+      const sc = createScrollContainer({ scrollWidth: 638, clientWidth: 630, scrollLeft: 0 });
+
+      // Override to simulate default overflow (visible) — no scrolling possible
+      sc.style.overflowX = 'visible';
+
+      const haze = new TableScrollHaze();
+
+      haze.init(wrapper, sc);
+
+      const rightHaze = wrapper.querySelector('[data-blok-table-haze="right"]') as HTMLElement;
+
+      expect(rightHaze.hasAttribute('data-blok-table-haze-visible')).toBe(false);
+
+      haze.destroy();
+    });
+
+    it('shows right haze when overflow-x is auto and content overflows', () => {
+      const sc = createScrollContainer({ scrollWidth: 800, clientWidth: 400, scrollLeft: 0 });
+
+      sc.style.overflowX = 'auto';
+
+      const haze = new TableScrollHaze();
+
+      haze.init(wrapper, sc);
+
+      const rightHaze = wrapper.querySelector('[data-blok-table-haze="right"]') as HTMLElement;
+
       expect(rightHaze.hasAttribute('data-blok-table-haze-visible')).toBe(true);
 
       haze.destroy();

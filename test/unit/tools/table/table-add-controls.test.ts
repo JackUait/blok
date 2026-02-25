@@ -289,7 +289,7 @@ describe('TableAddControls', () => {
       expect(addColBtn.style.opacity).toBe('0');
     });
 
-    it('add-row button does NOT become visible when cursor is below the grid bottom edge', () => {
+    it('add-row button becomes visible when cursor is below the grid but within proximity', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -307,10 +307,10 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      expect(addRowBtn.style.opacity).toBe('0');
+      expect(addRowBtn.style.opacity).toBe('1');
     });
 
-    it('add-column button does NOT become visible when cursor is right of the wrapper right edge', () => {
+    it('add-column button becomes visible when cursor is right of grid but within proximity', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -328,7 +328,7 @@ describe('TableAddControls', () => {
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addColBtn.style.opacity).toBe('0');
+      expect(addColBtn.style.opacity).toBe('1');
     });
 
     it('add-column button becomes visible when cursor is in wrapper padding (right of grid but within wrapper)', () => {

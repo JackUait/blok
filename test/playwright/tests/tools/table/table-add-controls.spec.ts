@@ -466,4 +466,67 @@ test.describe('Add Row and Column Controls', () => {
 
     expect((cellParagraph as { data: { text: string } })?.data.text).toBe('NewContent');
   });
+
+  test('Add-row button appears when approaching from below the table', async ({ page }) => {
+    // Regression: hovering from outside (below) the table should reveal the add-row button.
+    await createTable2x2(page);
+
+    const table = page.locator(TABLE_SELECTOR);
+    const tableBox = assertBoundingBox(await table.boundingBox(), 'Table');
+    const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+    // 1. Confirm button starts hidden (opacity 0)
+    await expect(addRowBtn).toHaveCSS('opacity', '0');
+
+    // 2. Move cursor well below the table (outside any hover zone)
+    await page.mouse.move(
+      tableBox.x + tableBox.width / 2,
+      tableBox.y + tableBox.height + 200
+    );
+
+    // 3. Still hidden after moving outside
+    await expect(addRowBtn).toHaveCSS('opacity', '0');
+
+    // 4. Move cursor upward into the hover zone below the table
+    //    (within 40px of the grid's bottom edge, but below the wrapper box)
+    await page.mouse.move(
+      tableBox.x + tableBox.width / 2,
+      tableBox.y + tableBox.height + 15,
+      { steps: 5 }
+    );
+
+    // 5. The add-row button should become visible (opacity 1)
+    await expect(addRowBtn).toHaveCSS('opacity', '1');
+  });
+
+  test('Add-column button appears when approaching from the right of the table', async ({ page }) => {
+    // Regression: hovering from outside (right) the table should reveal the add-column button.
+    await createTable2x2(page);
+
+    const table = page.locator(TABLE_SELECTOR);
+    const tableBox = assertBoundingBox(await table.boundingBox(), 'Table');
+    const addColBtn = page.locator('[data-blok-table-add-col]');
+
+    // 1. Confirm button starts hidden (opacity 0)
+    await expect(addColBtn).toHaveCSS('opacity', '0');
+
+    // 2. Move cursor well to the right of the table (outside any hover zone)
+    await page.mouse.move(
+      tableBox.x + tableBox.width + 200,
+      tableBox.y + tableBox.height / 2
+    );
+
+    // 3. Still hidden after moving outside
+    await expect(addColBtn).toHaveCSS('opacity', '0');
+
+    // 4. Move cursor leftward into the table — stopping just inside the right edge
+    await page.mouse.move(
+      tableBox.x + tableBox.width - 5,
+      tableBox.y + tableBox.height / 2,
+      { steps: 5 }
+    );
+
+    // 5. The add-column button should become visible (opacity 1)
+    await expect(addColBtn).toHaveCSS('opacity', '1');
+  });
 });

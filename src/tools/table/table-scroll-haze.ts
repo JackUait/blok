@@ -121,6 +121,16 @@ export class TableScrollHaze {
       return;
     }
 
+    const { overflowX } = getComputedStyle(sc);
+    const canScroll = overflowX === 'auto' || overflowX === 'scroll';
+
+    if (!canScroll) {
+      this.setVisible(this.leftHaze, false);
+      this.setVisible(this.rightHaze, false);
+
+      return;
+    }
+
     const { scrollLeft, scrollWidth, clientWidth } = sc;
     const maxScroll = scrollWidth - clientWidth;
 

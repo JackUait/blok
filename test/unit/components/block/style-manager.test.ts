@@ -153,6 +153,11 @@ describe('StyleManager', () => {
       expect(StyleManager.wrapperStyles).toContain('opacity-100');
     });
 
+    it('wrapper styles remove bottom padding and margin on last block', () => {
+      expect(StyleManager.wrapperStyles).toContain('last:pb-0');
+      expect(StyleManager.wrapperStyles).toContain('last:mb-0');
+    });
+
     it('provides contentStyles', () => {
       expect(StyleManager.contentStyles).toContain('mx-auto');
       expect(StyleManager.contentStyles).toContain('max-w-content');

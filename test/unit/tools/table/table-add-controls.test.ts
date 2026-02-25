@@ -267,6 +267,112 @@ describe('TableAddControls', () => {
       expect(addColBtn.style.opacity).toBe('0');
     });
 
+    it('add-row button does NOT become visible when cursor is below the grid bottom edge', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      // Grid rect: top=0, left=0, width=200, height=100 → bottom=100, right=200
+      // Move cursor BELOW the grid (y=120, which is 20px below bottom=100, within PROXIMITY_PX=40)
+      moveNear(wrapper, grid, 50, 120);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('0');
+    });
+
+    it('add-column button does NOT become visible when cursor is right of the grid right edge', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      // Grid rect: top=0, left=0, width=200, height=100 → bottom=100, right=200
+      // Move cursor RIGHT of the grid (x=220, which is 20px past right=200, within PROXIMITY_PX=40)
+      moveNear(wrapper, grid, 220, 50);
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addColBtn.style.opacity).toBe('0');
+    });
+
+    it('add-row button stays visible when cursor moves from inside grid to below grid (onto button)', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      vi.useFakeTimers();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      // Step 1: hover near bottom from inside the grid to make button visible
+      moveNear(wrapper, grid, 50, 90);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Step 2: move cursor below grid (onto the button area, y=120, 20px below bottom=100)
+      moveNear(wrapper, grid, 50, 120);
+
+      // Advance past the hide delay to ensure it doesn't hide
+      vi.advanceTimersByTime(200);
+
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      vi.useRealTimers();
+    });
+
+    it('add-column button stays visible when cursor moves from inside grid to right of grid (onto button)', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      vi.useFakeTimers();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      // Step 1: hover near right edge from inside the grid to make button visible
+      moveNear(wrapper, grid, 190, 50);
+
+      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addColBtn.style.opacity).toBe('1');
+
+      // Step 2: move cursor right of grid (onto the button area, x=220, 20px past right=200)
+      moveNear(wrapper, grid, 220, 50);
+
+      // Advance past the hide delay to ensure it doesn't hide
+      vi.advanceTimersByTime(200);
+
+      expect(addColBtn.style.opacity).toBe('1');
+
+      vi.useRealTimers();
+    });
+
     it('add-column button becomes visible when cursor is near the right edge', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 

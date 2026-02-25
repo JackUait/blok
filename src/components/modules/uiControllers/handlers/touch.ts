@@ -35,14 +35,38 @@ export const createRedactorTouchHandler = (
     /**
      * Select clicked Block as Current
      */
-    try {
-      deps.Blok.BlockManager.setCurrentBlockByChildNode(clickedNode);
-    } catch (_e) {
+    const block = deps.Blok.BlockManager.setCurrentBlockByChildNode(clickedNode);
+
+    if (!block) {
       /**
        * If clicked outside first-level Blocks and it is not RectSelection, set Caret to the last empty Block
        */
       if (!deps.Blok.RectangleSelection.isRectActivated()) {
         deps.Blok.Caret.setToTheLastBlock();
+      }
+    } else {
+      /**
+       * If the click landed below the last block's content area (in the holder padding zone),
+       * create/focus a new paragraph instead of keeping the block selected.
+       * This prevents clicks in the gap between a block's content and the bottomZone
+       * from silently selecting the block (especially tables with large padding).
+       */
+      const clientY = getClientY(event);
+      const isLastBlock = block === deps.Blok.BlockManager.lastBlock;
+
+      if (isLastBlock && clientY !== null) {
+        const contentEl = block.holder.querySelector('[data-blok-element-content]');
+        const contentRect = contentEl?.getBoundingClientRect();
+
+        if (contentRect && clientY > contentRect.bottom) {
+          deps.Blok.Caret.setToTheLastBlock();
+
+          if (!deps.Blok.ReadOnly.isEnabled) {
+            deps.Blok.Toolbar.moveAndOpen(deps.Blok.BlockManager.lastBlock);
+          }
+
+          return;
+        }
       }
     }
 
@@ -104,4 +128,22 @@ export const getClickedNode = (
   }
 
   return initialTarget;
+}
+
+/**
+ * Extracts the clientY coordinate from a mouse or touch event
+ *
+ * @param event - The event to extract clientY from
+ * @returns The clientY value, or null if not available
+ */
+const getClientY = (event: Event): number | null => {
+  if (event instanceof MouseEvent) {
+    return event.clientY;
+  }
+
+  if (event instanceof TouchEvent && event.touches.length > 0) {
+    return event.touches[0].clientY;
+  }
+
+  return null;
 }

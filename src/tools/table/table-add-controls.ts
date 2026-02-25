@@ -414,14 +414,16 @@ export class TableAddControls {
     const gridRect = this.grid.getBoundingClientRect();
     const distFromBottom = Math.abs(e.clientY - gridRect.bottom);
     const distFromRight = Math.abs(e.clientX - gridRect.right);
+    const isBelowGrid = e.clientY > gridRect.bottom;
+    const isRightOfGrid = e.clientX > gridRect.right;
 
-    if (distFromBottom <= PROXIMITY_PX) {
+    if (distFromBottom <= PROXIMITY_PX && (!isBelowGrid || this.rowVisible)) {
       this.showRow();
     } else {
       this.scheduleHideRow();
     }
 
-    if (distFromRight <= PROXIMITY_PX) {
+    if (distFromRight <= PROXIMITY_PX && (!isRightOfGrid || this.colVisible)) {
       this.showCol();
     } else {
       this.scheduleHideCol();

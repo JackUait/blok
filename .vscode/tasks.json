@@ -1,55 +1,65 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "🚀 Release",
-      "type": "shell",
-      "command": "yarn release",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      }
-    },
-    {
-      "label": "🧪 Release (Beta)",
-      "type": "shell",
-      "command": "yarn release:beta",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      }
-    },
-    {
-      "label": "🔬 Release (Alpha)",
-      "type": "shell",
-      "command": "yarn release:alpha",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      }
-    },
-    {
-      "label": "🎯 Release (RC)",
-      "type": "shell",
-      "command": "yarn release:rc",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      }
-    },
-    {
-      "label": "👀 Release (Dry Run)",
-      "type": "shell",
-      "command": "yarn release:dry",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      }
-    }
-  ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "🚀 Release",
+			"type": "shell",
+			"command": "yarn release",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "🧪 Release (Beta)",
+			"type": "shell",
+			"command": "yarn release:beta",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "🔬 Release (Alpha)",
+			"type": "shell",
+			"command": "yarn release:alpha",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "🎯 Release (RC)",
+			"type": "shell",
+			"command": "yarn release:rc",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "👀 Release (Dry Run)",
+			"type": "shell",
+			"command": "yarn release:dry",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "Run new tests",
+			"type": "shell",
+			"command": "npx vitest run test/unit/components/blocks.test.ts test/unit/components/modules/yjs/block-observer.test.ts test/unit/components/modules/blockManager/yjs-sync.test.ts --reporter=verbose 2>&1 | tail -80"
+		},
+		{
+			"label": "Run unit tests",
+			"type": "shell",
+			"command": "npx vitest run test/unit/components/blocks.test.ts test/unit/components/modules/yjs/block-observer.test.ts test/unit/components/modules/blockManager/yjs-sync.test.ts --reporter=verbose 2>&1 | tail -100"
+		}
+	]
 }

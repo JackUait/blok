@@ -120,10 +120,8 @@ describe('Touch Handler', () => {
       const target = document.createElement('div');
       redactorElement.appendChild(target);
 
-      // The real implementation uses try/catch, expecting setCurrentBlockByChildNode to throw
-      vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockImplementation(() => {
-        throw new Error('Not found');
-      });
+      // setCurrentBlockByChildNode returns undefined when no block is found
+      vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockReturnValue(undefined);
       vi.mocked(blok.RectangleSelection.isRectActivated).mockReturnValue(false);
 
       const event = new MouseEvent('mousedown', {
@@ -148,9 +146,7 @@ describe('Touch Handler', () => {
       const target = document.createElement('div');
       redactorElement.appendChild(target);
 
-      vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockImplementation(() => {
-        throw new Error('Not found');
-      });
+      vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockReturnValue(undefined);
       vi.mocked(blok.RectangleSelection.isRectActivated).mockReturnValue(true);
 
       const event = new MouseEvent('mousedown', {
@@ -246,7 +242,7 @@ describe('Touch Handler', () => {
       expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(redactorElement);
     });
 
-    it('handles failed setCurrentBlockByChildNode without error', () => {
+    it('falls back to setToTheLastBlock when no block is found', () => {
       const handler = createRedactorTouchHandler({
         Blok: blok,
         redactorElement,
@@ -255,9 +251,7 @@ describe('Touch Handler', () => {
       const target = document.createElement('div');
       redactorElement.appendChild(target);
 
-      vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockImplementation(() => {
-        throw new Error('No block found');
-      });
+      vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockReturnValue(undefined);
       vi.mocked(blok.RectangleSelection.isRectActivated).mockReturnValue(false);
       vi.mocked(blok.Toolbar.contains).mockReturnValue(false);
 
@@ -273,6 +267,147 @@ describe('Touch Handler', () => {
       expect(blok.Caret.setToTheLastBlock).toHaveBeenCalled();
       // Verify toolbar still moves to the clicked node
       expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(undefined, target);
+    });
+
+    describe('click below last block content', () => {
+      it('delegates to setToTheLastBlock when click is below the last block content area', () => {
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        // Create a block wrapper with a content element
+        const blockWrapper = document.createElement('div');
+
+        blockWrapper.setAttribute('data-blok-element', '');
+
+        const contentEl = document.createElement('div');
+
+        contentEl.setAttribute('data-blok-element-content', '');
+        blockWrapper.appendChild(contentEl);
+        redactorElement.appendChild(blockWrapper);
+
+        // Mock the block as the last block
+        const mockBlock = {
+          holder: blockWrapper,
+        };
+
+        vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockReturnValue(mockBlock as unknown as ReturnType<typeof blok.BlockManager.setCurrentBlockByChildNode>);
+
+        // Make it the last block
+        Object.defineProperty(blok.BlockManager, 'lastBlock', {
+          get: () => mockBlock,
+          configurable: true,
+        });
+
+        // Mock contentElement bounding rect: bottom at 100px
+        vi.spyOn(contentEl, 'getBoundingClientRect').mockReturnValue(
+          new DOMRect(0, 0, 200, 100)
+        );
+
+        // Click at Y=120, which is below the content bottom (100)
+        const event = new MouseEvent('mousedown', {
+          bubbles: true,
+          clientY: 120,
+        });
+
+        Object.defineProperty(event, 'target', { value: blockWrapper });
+
+        handler(event);
+
+        expect(blok.Caret.setToTheLastBlock).toHaveBeenCalled();
+      });
+
+      it('does NOT delegate to setToTheLastBlock when click is inside the last block content area', () => {
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        const blockWrapper = document.createElement('div');
+
+        blockWrapper.setAttribute('data-blok-element', '');
+
+        const contentEl = document.createElement('div');
+
+        contentEl.setAttribute('data-blok-element-content', '');
+        blockWrapper.appendChild(contentEl);
+        redactorElement.appendChild(blockWrapper);
+
+        const mockBlock = {
+          holder: blockWrapper,
+        };
+
+        vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockReturnValue(mockBlock as unknown as ReturnType<typeof blok.BlockManager.setCurrentBlockByChildNode>);
+
+        Object.defineProperty(blok.BlockManager, 'lastBlock', {
+          get: () => mockBlock,
+          configurable: true,
+        });
+
+        vi.spyOn(contentEl, 'getBoundingClientRect').mockReturnValue(
+          new DOMRect(0, 0, 200, 100)
+        );
+
+        // Click at Y=50, which is INSIDE the content area (bottom=100)
+        const event = new MouseEvent('mousedown', {
+          bubbles: true,
+          clientY: 50,
+        });
+
+        Object.defineProperty(event, 'target', { value: contentEl });
+
+        handler(event);
+
+        expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+      });
+
+      it('does NOT delegate to setToTheLastBlock when click is on a non-last block', () => {
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        const blockWrapper = document.createElement('div');
+
+        blockWrapper.setAttribute('data-blok-element', '');
+
+        const contentEl = document.createElement('div');
+
+        contentEl.setAttribute('data-blok-element-content', '');
+        blockWrapper.appendChild(contentEl);
+        redactorElement.appendChild(blockWrapper);
+
+        const mockBlock = {
+          holder: blockWrapper,
+        };
+        const anotherBlock = {
+          holder: document.createElement('div'),
+        };
+
+        vi.mocked(blok.BlockManager.setCurrentBlockByChildNode).mockReturnValue(mockBlock as unknown as ReturnType<typeof blok.BlockManager.setCurrentBlockByChildNode>);
+
+        // lastBlock is a different block
+        Object.defineProperty(blok.BlockManager, 'lastBlock', {
+          get: () => anotherBlock,
+          configurable: true,
+        });
+
+        vi.spyOn(contentEl, 'getBoundingClientRect').mockReturnValue(
+          new DOMRect(0, 0, 200, 100)
+        );
+
+        const event = new MouseEvent('mousedown', {
+          bubbles: true,
+          clientY: 120,
+        });
+
+        Object.defineProperty(event, 'target', { value: blockWrapper });
+
+        handler(event);
+
+        expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+      });
     });
 
     describe('table cell toolbar preservation', () => {

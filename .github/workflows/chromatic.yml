@@ -16,26 +16,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
-
-      - name: Cache Yarn dependencies
-        id: yarn-cache
-        uses: actions/cache@v4
-        with:
-          path: .yarn/cache
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
+          cache: 'yarn'
 
       - name: Install dependencies
         run: yarn install --immutable
-
-      - name: Verify cache hit
-        if: steps.yarn-cache.outputs.cache-hit != 'true'
-        run: echo "::warning::Yarn cache miss, slower install expected"
 
       - name: Build Storybook
         run: yarn storybook:build

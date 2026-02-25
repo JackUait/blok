@@ -1318,9 +1318,9 @@ describe('TableAddControls', () => {
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
 
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+
       addRowBtn.setPointerCapture = vi.fn();
-      // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+
       addRowBtn.releasePointerCapture = vi.fn();
 
       // pointerdown without moving past threshold, then cancel

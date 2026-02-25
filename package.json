@@ -49,6 +49,7 @@
   "publishConfig": {
     "access": "public"
   },
+  "packageManager": "yarn@4.9.4",
   "engines": {
     "node": ">=18.0.0"
   },

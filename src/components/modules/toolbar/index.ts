@@ -589,6 +589,16 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Hides the block actions (plus button and settings toggler) without
+   * closing the entire toolbar or setting explicitlyClosed.
+   * Used when the toolbar should remain positioned but its action buttons
+   * should temporarily step aside (e.g., during typing or inline toolbar use).
+   */
+  public hideBlockActions(): void {
+    this.blockActions.hide();
+  }
+
+  /**
    * Resets the explicitlyClosed flag to allow the toolbar to reopen on hover.
    * Called when drag is cancelled to re-enable hover-based toolbar opening.
    */

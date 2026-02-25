@@ -123,7 +123,7 @@ export class TableAddControls {
     this.addColBtn = this.createAddColumnButton();
 
     this.wrapper.appendChild(this.addRowBtn);
-    this.grid.appendChild(this.addColBtn);
+    this.wrapper.appendChild(this.addColBtn);
     this.syncRowButtonWidth();
     this.attachScrollListener();
 
@@ -535,7 +535,7 @@ export class TableAddControls {
     btn.style.opacity = '0';
     btn.style.pointerEvents = 'none';
     btn.style.position = 'absolute';
-    btn.style.right = '-36px';
+    btn.style.right = '-12px';
     btn.style.top = '0px';
     btn.style.bottom = '0px';
     btn.style.width = '32px';

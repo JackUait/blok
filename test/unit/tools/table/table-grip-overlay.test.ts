@@ -78,7 +78,7 @@ describe('Table grip overlay', () => {
       expect(scrollContainer?.classList.contains('pl-[9px]')).toBe(false);
     });
 
-    it('scroll container still has overflow classes', () => {
+    it('scroll container defers overflow classes in percent mode (no colWidths)', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -87,8 +87,8 @@ describe('Table grip overlay', () => {
 
       const scrollContainer = element.querySelector('[data-blok-table-scroll]');
 
-      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(true);
-      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(true);
+      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(false);
+      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(false);
     });
   });
 

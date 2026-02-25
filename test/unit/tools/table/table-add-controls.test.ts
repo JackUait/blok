@@ -148,9 +148,26 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`);
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`);
 
       expect(addColBtn).not.toBeNull();
+    });
+
+    it('add-column button is positioned outside the grid content area (right: -12px)', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addColBtn.style.right).toBe('-12px');
     });
 
     it('add-row button contains a plus SVG icon', () => {
@@ -182,7 +199,7 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addColBtn.querySelector('svg')).not.toBeNull();
     });
@@ -200,7 +217,7 @@ describe('TableAddControls', () => {
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`);
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`);
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`);
 
       expect(addRowBtn?.getAttribute('contenteditable')).toBe('false');
       expect(addColBtn?.getAttribute('contenteditable')).toBe('false');
@@ -238,7 +255,7 @@ describe('TableAddControls', () => {
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.opacity).toBe('0');
       expect(addColBtn.style.opacity).toBe('0');
@@ -261,7 +278,7 @@ describe('TableAddControls', () => {
       moveNear(wrapper, grid, 50, 90);
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.opacity).toBe('1');
       expect(addColBtn.style.opacity).toBe('0');
@@ -304,7 +321,7 @@ describe('TableAddControls', () => {
       // Move cursor RIGHT of the grid (x=220, which is 20px past right=200, within PROXIMITY_PX=40)
       moveNear(wrapper, grid, 220, 50);
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addColBtn.style.opacity).toBe('0');
     });
@@ -358,7 +375,7 @@ describe('TableAddControls', () => {
       // Step 1: hover near right edge from inside the grid to make button visible
       moveNear(wrapper, grid, 190, 50);
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addColBtn.style.opacity).toBe('1');
 
@@ -389,7 +406,7 @@ describe('TableAddControls', () => {
       moveNear(wrapper, grid, 190, 20);
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.opacity).toBe('0');
       expect(addColBtn.style.opacity).toBe('1');
@@ -411,7 +428,7 @@ describe('TableAddControls', () => {
       moveNear(wrapper, grid, 190, 90);
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.opacity).toBe('1');
       expect(addColBtn.style.opacity).toBe('1');
@@ -439,7 +456,7 @@ describe('TableAddControls', () => {
       vi.advanceTimersByTime(200);
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.opacity).toBe('0');
       expect(addColBtn.style.opacity).toBe('0');
@@ -515,7 +532,7 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       simulateClick(addColBtn);
 
@@ -540,7 +557,7 @@ describe('TableAddControls', () => {
       controls.destroy();
 
       expect(wrapper.querySelector(`[${ADD_ROW_ATTR}]`)).toBeNull();
-      expect(grid.querySelector(`[${ADD_COL_ATTR}]`)).toBeNull();
+      expect(wrapper.querySelector(`[${ADD_COL_ATTR}]`)).toBeNull();
     });
 
     it('removes hover listeners after destroy', () => {
@@ -589,7 +606,7 @@ describe('TableAddControls', () => {
 
       // Grab references before destroy removes them
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       controls.destroy();
 
@@ -626,7 +643,7 @@ describe('TableAddControls', () => {
       controls.setDisplay(false);
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.display).toBe('none');
       expect(addColBtn.style.display).toBe('none');
@@ -648,7 +665,7 @@ describe('TableAddControls', () => {
       controls.setDisplay(true);
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn.style.display).toBe('');
       expect(addColBtn.style.display).toBe('');
@@ -675,7 +692,7 @@ describe('TableAddControls', () => {
       expect(addRowBtn?.previousElementSibling).toBe(grid);
     });
 
-    it('add-column button is inside the grid element', () => {
+    it('add-column button is a direct child of the wrapper', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -687,9 +704,9 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`);
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`);
 
-      expect(addColBtn?.parentElement).toBe(grid);
+      expect(addColBtn?.parentElement).toBe(wrapper);
     });
 
     it('add-column button is absolutely positioned', () => {
@@ -704,7 +721,7 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addColBtn.style.position).toBe('absolute');
       expect(addColBtn.style.top).toBe('0px');
@@ -743,7 +760,7 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addColBtn).toHaveClass('cursor-col-resize');
       expect(addColBtn).not.toHaveClass('cursor-pointer');
@@ -824,7 +841,7 @@ describe('TableAddControls', () => {
         ...callbacks,
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       // Drag leftward by 200px (negative direction) — should trigger removal
       simulateDrag(addColBtn, 'col', 300, 100);
@@ -922,7 +939,7 @@ describe('TableAddControls', () => {
         ...callbacks,
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       // Drag rightward past threshold (>5px)
       simulateDragStart(addColBtn, 'col', 0, 10);
@@ -1035,7 +1052,7 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(mockOnHover).toHaveBeenCalledWith(
         addColBtn,
@@ -1127,7 +1144,7 @@ describe('TableAddControls', () => {
       });
 
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       expect(addRowBtn).not.toHaveAttribute('title');
       expect(addColBtn).not.toHaveAttribute('title');
@@ -1205,7 +1222,7 @@ describe('TableAddControls', () => {
         ...callbacks,
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       simulateDragThenCancel(addColBtn, 'col', 0, 50);
 
@@ -1314,7 +1331,7 @@ describe('TableAddControls', () => {
         ...callbacks,
       });
 
-      const addColBtn = grid.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
       addColBtn.setPointerCapture = vi.fn();
       addColBtn.releasePointerCapture = vi.fn();

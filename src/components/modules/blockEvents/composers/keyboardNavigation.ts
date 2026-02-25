@@ -57,16 +57,19 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
-   * Close toolbar only if the current block is NOT inside a table cell.
+   * Hide toolbar block actions only if the current block is NOT inside a table cell.
    * Extracted to avoid nested-if lint violations and provide a single
    * point for the table-cell guard logic.
+   *
+   * Uses hideBlockActions() instead of close() so the toolbar remains
+   * positioned and can be reopened at the new block by moveAndOpen().
    */
-  private closeToolbarIfNotInTableCell(): void {
+  private hideToolbarActionsIfNotInTableCell(): void {
     if (this.isCurrentBlockInsideTableCell) {
       return;
     }
 
-    this.Blok.Toolbar.close();
+    this.Blok.Toolbar.hideBlockActions();
   }
 
   /**
@@ -213,7 +216,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     event.preventDefault();
 
-    this.closeToolbarIfNotInTableCell();
+    this.hideToolbarActionsIfNotInTableCell();
 
     const isFirstInputFocused = currentBlock.currentInput === currentBlock.firstInput;
 
@@ -301,7 +304,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     event.preventDefault();
 
-    this.closeToolbarIfNotInTableCell();
+    this.hideToolbarActionsIfNotInTableCell();
 
     const isLastInputFocused = currentBlock.currentInput === currentBlock.lastInput;
 
@@ -344,7 +347,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       const newCurrentBlock = BlockManager.currentBlock;
 
       newCurrentBlock && Caret.setToBlock(newCurrentBlock, Caret.positions.START);
-      this.closeToolbarIfNotInTableCell();
+      this.hideToolbarActionsIfNotInTableCell();
 
       return;
     }
@@ -379,7 +382,8 @@ export class KeyboardNavigation extends BlockEventComposer {
     BlockManager
       .mergeBlocks(targetBlock, blockToMerge)
       .then(() => {
-        this.closeToolbarIfNotInTableCell();
+        this.hideToolbarActionsIfNotInTableCell();
+        this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
       })
       .catch(() => {
         // Error handling for mergeBlocks
@@ -423,7 +427,6 @@ export class KeyboardNavigation extends BlockEventComposer {
      * table block and the hover controller won't re-emit BlockHovered for it.
      */
     if (!event.shiftKey && !this.isCurrentBlockInsideTableCell) {
-      this.Blok.Toolbar.close();
       this.Blok.InlineToolbar.close();
     }
 
@@ -507,6 +510,11 @@ export class KeyboardNavigation extends BlockEventComposer {
        */
       event.preventDefault();
 
+      /**
+       * Reopen the toolbar at the new block position after navigation
+       */
+      this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
+
       return;
     }
 
@@ -566,7 +574,6 @@ export class KeyboardNavigation extends BlockEventComposer {
      * table block and the hover controller won't re-emit BlockHovered for it.
      */
     if (!event.shiftKey && !this.isCurrentBlockInsideTableCell) {
-      this.Blok.Toolbar.close();
       this.Blok.InlineToolbar.close();
     }
 
@@ -636,6 +643,11 @@ export class KeyboardNavigation extends BlockEventComposer {
        * Default behaviour moves cursor by 1 character, we need to prevent it
        */
       event.preventDefault();
+
+      /**
+       * Reopen the toolbar at the new block position after navigation
+       */
+      this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
 
       return;
     }

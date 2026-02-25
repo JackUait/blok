@@ -147,6 +147,81 @@ describe('Table scroll container', () => {
 
       expect(rows?.length).toBe(2);
     });
+
+    it('scroll container does NOT have overflow-x-auto in percent mode', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]');
+
+      expect(scrollContainer).not.toBeNull();
+      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(false);
+      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(false);
+    });
+
+    it('add-col button is NOT inside the scroll container (prevents unwanted horizontal scroll)', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]');
+
+      expect(addColBtn).not.toBeNull();
+      expect(scrollContainer?.contains(addColBtn)).toBe(false);
+      expect(addColBtn.parentElement).toBe(element);
+
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('scroll overflow classes', () => {
+    it('scroll container has overflow classes when colWidths are present', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+        colWidths: [200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]');
+
+      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(true);
+      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(true);
+    });
+  });
+
+  describe('with colWidths (readOnly)', () => {
+    it('initializes scroll haze overlays after rendered()', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        ...createTableOptions({
+          content: [['A', 'B'], ['C', 'D']],
+          colWidths: [200, 200],
+        }),
+        readOnly: true,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const leftHaze = element.querySelector('[data-blok-table-haze="left"]');
+      const rightHaze = element.querySelector('[data-blok-table-haze="right"]');
+
+      expect(leftHaze).not.toBeNull();
+      expect(rightHaze).not.toBeNull();
+
+      document.body.removeChild(element);
+    });
   });
 
   describe('without colWidths (readOnly)', () => {

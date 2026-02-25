@@ -32,6 +32,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     Toolbar: {
       opened: false,
       close: vi.fn(),
+      hideBlockActions: vi.fn(),
       moveAndOpen: vi.fn(),
       toolbox: {
         open: vi.fn(),
@@ -344,6 +345,7 @@ describe('BlockEvents', () => {
         } as unknown as BlokModules['Caret'],
         Toolbar: {
           opened: false,
+          hideBlockActions: vi.fn(),
           moveAndOpen,
           toolbox: {
             open: toolboxOpen,
@@ -398,8 +400,9 @@ describe('BlockEvents', () => {
   });
 
   describe('beforeKeydownProcessing', () => {
-    it('closes Toolbar when typing a printable key in a regular block', () => {
+    it('does not close or hide toolbar when typing a printable key in a regular block', () => {
       const closeSpy = vi.fn();
+      const hideBlockActionsSpy = vi.fn();
       const holder = document.createElement('div');
       const currentBlock = { holder } as unknown as Block;
 
@@ -407,6 +410,7 @@ describe('BlockEvents', () => {
         Toolbar: {
           opened: true,
           close: closeSpy,
+          hideBlockActions: hideBlockActionsSpy,
           toolbox: { open: vi.fn() },
         } as unknown as BlokModules['Toolbar'],
         BlockManager: {
@@ -418,11 +422,13 @@ describe('BlockEvents', () => {
 
       blockEvents.beforeKeydownProcessing(event);
 
-      expect(closeSpy).toHaveBeenCalledTimes(1);
+      expect(closeSpy).not.toHaveBeenCalled();
+      expect(hideBlockActionsSpy).not.toHaveBeenCalled();
     });
 
-    it('does not close Toolbar when typing a printable key inside a table cell', () => {
+    it('does not hide block actions or close Toolbar when typing inside a table cell', () => {
       const closeSpy = vi.fn();
+      const hideBlockActionsSpy = vi.fn();
 
       // Build a DOM hierarchy that includes a table cell container
       const tableCellBlocks = document.createElement('div');
@@ -436,6 +442,7 @@ describe('BlockEvents', () => {
         Toolbar: {
           opened: true,
           close: closeSpy,
+          hideBlockActions: hideBlockActionsSpy,
           toolbox: { open: vi.fn() },
         } as unknown as BlokModules['Toolbar'],
         BlockManager: {
@@ -448,6 +455,7 @@ describe('BlockEvents', () => {
       blockEvents.beforeKeydownProcessing(event);
 
       expect(closeSpy).not.toHaveBeenCalled();
+      expect(hideBlockActionsSpy).not.toHaveBeenCalled();
     });
 
     it('still clears block selection when typing in a table cell', () => {

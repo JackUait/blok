@@ -298,7 +298,11 @@ export class Table implements BlockTool {
       const sc = document.createElement('div');
 
       sc.setAttribute('data-blok-table-scroll', '');
-      sc.classList.add(...SCROLL_OVERFLOW_CLASSES);
+
+      if (this.model.colWidths) {
+        sc.classList.add(...SCROLL_OVERFLOW_CLASSES);
+      }
+
       sc.appendChild(gridEl);
       wrapper.appendChild(sc);
       this.scrollContainer = sc;
@@ -355,6 +359,7 @@ export class Table implements BlockTool {
     if (this.readOnly) {
       mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
       this.initReadOnlyCellSelection(gridEl);
+      this.initScrollHaze();
 
       return;
     }

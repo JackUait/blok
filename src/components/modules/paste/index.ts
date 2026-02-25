@@ -305,6 +305,6 @@ export class Paste extends Module {
       await this.processDataTransfer(event.clipboardData);
     }
 
-    Toolbar.close();
+    Toolbar.moveAndOpen();
   };
 }

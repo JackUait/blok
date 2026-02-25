@@ -57,19 +57,17 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
-   * Hide toolbar block actions only if the current block is NOT inside a table cell.
-   * Extracted to avoid nested-if lint violations and provide a single
-   * point for the table-cell guard logic.
-   *
-   * Uses hideBlockActions() instead of close() so the toolbar remains
-   * positioned and can be reopened at the new block by moveAndOpen().
+   * Fully close the toolbar if the current block is NOT inside a table cell.
+   * Used for destructive operations (Backspace, Delete, merge) where the
+   * toolbar should be dismissed — unlike arrow navigation where
+   * hideBlockActions() is preferred to allow reopening.
    */
-  private hideToolbarActionsIfNotInTableCell(): void {
+  private closeToolbarIfNotInTableCell(): void {
     if (this.isCurrentBlockInsideTableCell) {
       return;
     }
 
-    this.Blok.Toolbar.hideBlockActions();
+    this.Blok.Toolbar.close();
   }
 
   /**
@@ -216,7 +214,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     event.preventDefault();
 
-    this.hideToolbarActionsIfNotInTableCell();
+    this.closeToolbarIfNotInTableCell();
 
     const isFirstInputFocused = currentBlock.currentInput === currentBlock.firstInput;
 
@@ -304,7 +302,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     event.preventDefault();
 
-    this.hideToolbarActionsIfNotInTableCell();
+    this.closeToolbarIfNotInTableCell();
 
     const isLastInputFocused = currentBlock.currentInput === currentBlock.lastInput;
 
@@ -347,7 +345,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       const newCurrentBlock = BlockManager.currentBlock;
 
       newCurrentBlock && Caret.setToBlock(newCurrentBlock, Caret.positions.START);
-      this.hideToolbarActionsIfNotInTableCell();
+      this.closeToolbarIfNotInTableCell();
 
       return;
     }
@@ -382,8 +380,7 @@ export class KeyboardNavigation extends BlockEventComposer {
     BlockManager
       .mergeBlocks(targetBlock, blockToMerge)
       .then(() => {
-        this.hideToolbarActionsIfNotInTableCell();
-        this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
+        this.closeToolbarIfNotInTableCell();
       })
       .catch(() => {
         // Error handling for mergeBlocks

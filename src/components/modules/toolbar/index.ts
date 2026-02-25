@@ -886,19 +886,12 @@ export class Toolbar extends Module<ToolbarNodes> {
         }
 
         /**
-         * Do not move toolbar if it was explicitly closed (e.g., after block deletion)
-         * AND the user is still hovering the same block.
-         */
-        if (this.explicitlyClosed && hoveredBlock === this.hoveredBlock) {
-          return;
-        }
-
-        /**
-         * If user moved to a different block, reset the flag and allow the
-         * toolbar to open — otherwise it stays permanently hidden until a click.
+         * Do not move toolbar if it was explicitly closed (e.g., after block deletion).
+         * The flag is reset by moveAndOpen() on the next click, keyboard navigation,
+         * or other intentional user action — not by passive hover events.
          */
         if (this.explicitlyClosed) {
-          this.explicitlyClosed = false;
+          return;
         }
 
         /**

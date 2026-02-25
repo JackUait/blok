@@ -492,8 +492,9 @@ test.describe('delete keydown', () => {
       await page.keyboard.press('Delete');
 
       const lastBlock = await getLastBlock(page);
+      const lastBlockContent = lastBlock.locator('[contenteditable]');
 
-      await expect(lastBlock).toHaveText(/^(12|1 2)$/);
+      await expect(lastBlockContent).toHaveText(/^(12|1 2)$/);
     });
   });
 

@@ -336,17 +336,15 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Track whether the interaction originated from inside a table cell.
-     * When the blockHover controller resolves a cell paragraph to the parent
-     * table block, `unresolvedBlock` is already the table block (whose holder
-     * is NOT inside a cell container). So we also check `target` — the actual
-     * DOM element that was hovered — to detect the cell origin correctly.
+     * Track whether the block itself lives inside a table cell.
+     * The blockHover controller already resolves cell paragraphs to the parent
+     * table block, so when hovering a table, `unresolvedBlock` IS the table
+     * block (whose holder is NOT inside a cell). We only check the block's
+     * holder — not the raw mouse target — to avoid hiding the plus button
+     * for the table block itself.
      */
-    const targetIsInsideCell = target instanceof Element
-      && target.closest('[data-blok-table-cell-blocks]') !== null;
-
-    this.hoveredBlockIsFromTableCell = targetIsInsideCell
-      || unresolvedBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+    this.hoveredBlockIsFromTableCell =
+      unresolvedBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
 
     const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 

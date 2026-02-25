@@ -109,33 +109,26 @@ describe("caret-manager", () => {
   });
 
   describe("setCaretToBlockContent", () => {
-    it("schedules caret positioning for next animation frame", () => {
+    it("applies focus synchronously when content element is available", () => {
       setCaretToBlockContent(mockAPI, mockBlock, "end");
 
-      // Caret positioning is scheduled via requestAnimationFrame (or timers in test)
-      // so immediate observable behavior should not change yet
-      expect(mockAPI.caret.updateLastCaretAfterPosition).not.toHaveBeenCalled();
-
-      vi.runAllTimers();
-
-      // Verify observable behavior: content element should be focused
+      // Focus should be applied immediately (no RAF needed)
       const contentEl = mockBlock.holder.querySelector(
         '[contenteditable="true"]',
       );
       expect(contentEl).toHaveFocus();
 
-      // Verify observable behavior: selection should be set
+      // Selection should be set synchronously
       const selection = window.getSelection();
       expect(selection?.rangeCount).toBeGreaterThan(0);
 
-      // Verify the mock was called (implementation detail)
-      expect(mockAPI.caret.updateLastCaretAfterPosition).toHaveBeenCalled();
+      // updateLastCaretAfterPosition is NOT called synchronously
+      // (it's only called in the deferred fallback path)
+      expect(mockAPI.caret.updateLastCaretAfterPosition).not.toHaveBeenCalled();
     });
 
-    it("updates last caret after position", () => {
+    it("sets selection at end position synchronously", () => {
       setCaretToBlockContent(mockAPI, mockBlock, "end");
-
-      vi.runAllTimers();
 
       // Verify observable behavior: content element should be focused
       const contentEl = mockBlock.holder.querySelector(
@@ -154,18 +147,19 @@ describe("caret-manager", () => {
         // Verify the range is within the content element
         expect(contentEl?.contains(range.startContainer)).toBe(true);
       }
-
-      // Verify the mock was called (implementation detail)
-      expect(mockAPI.caret.updateLastCaretAfterPosition).toHaveBeenCalled();
     });
 
-    it("falls back to setToBlock when content element not found", () => {
+    it("falls back to setToBlock via RAF when content element not found", () => {
       const holderWithNoContent = document.createElement("div");
+      document.body.appendChild(holderWithNoContent);
       // No contenteditable element
 
       const blockWithoutContent = createMockBlock(holderWithNoContent);
 
       setCaretToBlockContent(mockAPI, blockWithoutContent, "end");
+
+      // Not called synchronously — deferred to RAF
+      expect(mockAPI.caret.setToBlock).not.toHaveBeenCalled();
 
       vi.runAllTimers();
 
@@ -218,9 +212,7 @@ describe("caret-manager", () => {
     it('defaults to "end" position when not specified', () => {
       setCaretToBlockContent(mockAPI, mockBlock);
 
-      vi.runAllTimers();
-
-      // Verify observable behavior: content element should be focused
+      // Verify observable behavior: content element should be focused synchronously
       const contentEl = mockBlock.holder.querySelector(
         '[contenteditable="true"]',
       );
@@ -230,9 +222,6 @@ describe("caret-manager", () => {
       const selection = window.getSelection();
       const range = selection?.getRangeAt(0);
       expect(range?.collapsed).toBe(true);
-
-      // Verify the mock was called (implementation detail)
-      expect(mockAPI.caret.updateLastCaretAfterPosition).toHaveBeenCalled();
     });
 
     it("handles empty content element", () => {
@@ -240,12 +229,12 @@ describe("caret-manager", () => {
       const emptyContentEl = document.createElement("div");
       emptyContentEl.setAttribute("contenteditable", "true");
       holder.appendChild(emptyContentEl);
+      document.body.appendChild(holder);
 
       const emptyBlock = createMockBlock(holder);
 
       expect(() => {
         setCaretToBlockContent(mockAPI, emptyBlock, "start");
-        vi.runAllTimers();
       }).not.toThrow();
     });
 
@@ -254,12 +243,12 @@ describe("caret-manager", () => {
       const contentEl = document.createElement("div");
       contentEl.setAttribute("contenteditable", "true");
       holder.appendChild(contentEl);
+      document.body.appendChild(holder);
 
       const block = createMockBlock(holder);
 
       expect(() => {
         setCaretToBlockContent(mockAPI, block, "end");
-        vi.runAllTimers();
       }).not.toThrow();
     });
   });

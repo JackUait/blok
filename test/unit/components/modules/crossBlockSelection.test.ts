@@ -458,7 +458,7 @@ describe('CrossBlockSelection', () => {
          * For the child it returns the parent table block (blocks[2]);
          * for any root-level block it returns itself.
          */
-        (blockManager as Record<string, unknown>).resolveToRootBlock = vi.fn((block: Block) => {
+        (blockManager as unknown as Record<string, unknown>).resolveToRootBlock = vi.fn((block: Block) => {
           if (block === (childBlock as unknown as Block)) {
             return blocks[2];
           }
@@ -484,7 +484,7 @@ describe('CrossBlockSelection', () => {
         const blockManager = blokState.BlockManager;
 
         expect(blockManager.getBlockByChildNode).toHaveBeenCalledWith(childBlock.holder);
-        expect((blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
+        expect((blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
 
         /**
          * Selection should land on the root table block (blocks[2]),
@@ -514,7 +514,7 @@ describe('CrossBlockSelection', () => {
         const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
         const blockManager = blokState.BlockManager;
 
-        expect((blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
+        expect((blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
         expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[3]);
       });
 
@@ -539,7 +539,7 @@ describe('CrossBlockSelection', () => {
          * resolveToRootBlock should be called but return the same
          * block since these are root-level blocks.
          */
-        expect((blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
+        expect((blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
 
         expect(blocks[0].selected).toBe(true);
         expect(blocks[1].selected).toBe(true);
@@ -571,7 +571,7 @@ describe('CrossBlockSelection', () => {
           return blocks.find((b) => b.holder === node || b.holder.contains(node)) ?? null;
         });
 
-        (blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock.mockImplementation(
+        (blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock.mockImplementation(
           (block: Block) => {
             if (block === (childBlock as unknown as Block) || block === (secondChild as unknown as Block)) {
               return blocks[2];

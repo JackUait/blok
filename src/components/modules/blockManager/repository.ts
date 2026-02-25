@@ -202,6 +202,29 @@ export class BlockRepository {
   }
 
   /**
+   * Walks up the parentId chain and returns the top-level (root) block.
+   * If the block has no parent, returns it as-is.
+   * Used by selection modules to treat hierarchical blocks (e.g. table cells)
+   * as a single unit rather than selecting child blocks individually.
+   * @param block - the block to resolve
+   * @returns {Block} the root ancestor block
+   */
+  public resolveToRootBlock(block: Block): Block {
+    let current = block;
+
+    while (current.parentId !== null) {
+      const parent = this.getBlockById(current.parentId);
+
+      if (parent === undefined) {
+        break;
+      }
+      current = parent;
+    }
+
+    return current;
+  }
+
+  /**
    * Get block at a specific index from the blocks store nodes array
    * @param index - the index
    * @returns {Block | undefined}

@@ -30,6 +30,8 @@ type BlockManagerModuleMock = {
   blocks: BlockType[];
   getBlockByChildNode: Mock<(node: Node) => BlockType | undefined>;
   getBlockByIndex: Mock<(index: number) => BlockType | undefined>;
+  getBlockById: Mock<(id: string) => BlockType | undefined>;
+  resolveToRootBlock: Mock<(block: BlockType) => BlockType>;
   lastBlock: { holder: HTMLElement };
 };
 
@@ -92,6 +94,8 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     blocks,
     getBlockByChildNode: vi.fn<(node: Node) => BlockType | undefined>(),
     getBlockByIndex: vi.fn<(index: number) => BlockType | undefined>((index: number) => blocks[index]),
+    getBlockById: vi.fn<(id: string) => BlockType | undefined>(),
+    resolveToRootBlock: vi.fn<(block: BlockType) => BlockType>((block: BlockType) => block),
     lastBlock: {
       holder: lastBlockHolder,
     },
@@ -1246,6 +1250,219 @@ describe('RectangleSelection', () => {
       // Verify internal state is reset by trying to start a new selection
       rectangleSelection.startSelection(200, 200, false);
       expect(rectangleSelection.isRectActivated()).toBe(false);
+    });
+  });
+
+  describe('genInfoForMouseSelection resolves child blocks to root blocks', () => {
+    it('returns the root block index when getBlockByChildNode returns a child block with parentId', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      const tableHolder = document.createElement('div');
+      const childHolder = document.createElement('div');
+
+      tableHolder.appendChild(blockContent);
+
+      const tableBlock = {
+        id: 'table-1',
+        holder: tableHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      const childBlock = {
+        id: 'child-1',
+        holder: childHolder,
+        parentId: 'table-1',
+      } as unknown as BlockType;
+
+      blockManager.blocks.push(tableBlock, childBlock);
+      blockManager.lastBlock = { holder: tableHolder };
+
+      // elementFromPoint hits the child block's element
+      blockManager.getBlockByChildNode.mockReturnValue(childBlock);
+      // resolveToRootBlock walks up the parentId chain and returns the table
+      blockManager.resolveToRootBlock.mockReturnValue(tableBlock);
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(childHolder);
+
+      const result = internal.genInfoForMouseSelection();
+
+      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(childBlock);
+      expect(result.index).toBe(0); // table is at index 0, not child at index 1
+
+      elementFromPointSpy.mockRestore();
+    });
+
+    it('returns the block index directly when the block has no parentId', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.appendChild(blockContent);
+
+      const rootBlock = {
+        id: 'paragraph-1',
+        holder: blockHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      blockManager.blocks.push(rootBlock);
+      blockManager.lastBlock = { holder: blockHolder };
+
+      blockManager.getBlockByChildNode.mockReturnValue(rootBlock);
+      // resolveToRootBlock returns the same block when parentId is null
+      blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(blockHolder);
+
+      const result = internal.genInfoForMouseSelection();
+
+      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(rootBlock);
+      expect(result.index).toBe(0);
+
+      elementFromPointSpy.mockRestore();
+    });
+
+    it('selects only the table block index when mouse is over a cell paragraph inside a table', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      // Set up blocks: [paragraph, table, cellParagraph1, cellParagraph2, paragraph2]
+      const paragraphHolder = document.createElement('div');
+      const tableHolder = document.createElement('div');
+      const cellParagraph1Holder = document.createElement('div');
+      const cellParagraph2Holder = document.createElement('div');
+      const paragraph2Holder = document.createElement('div');
+
+      tableHolder.appendChild(blockContent);
+
+      const paragraph = {
+        id: 'p-1',
+        holder: paragraphHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      const table = {
+        id: 'table-1',
+        holder: tableHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      const cellParagraph1 = {
+        id: 'cell-p-1',
+        holder: cellParagraph1Holder,
+        parentId: 'table-1',
+      } as unknown as BlockType;
+
+      const cellParagraph2 = {
+        id: 'cell-p-2',
+        holder: cellParagraph2Holder,
+        parentId: 'table-1',
+      } as unknown as BlockType;
+
+      const paragraph2 = {
+        id: 'p-2',
+        holder: paragraph2Holder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      blockManager.blocks.push(paragraph, table, cellParagraph1, cellParagraph2, paragraph2);
+      blockManager.lastBlock = { holder: paragraph2Holder };
+
+      // Mouse is over cellParagraph1
+      blockManager.getBlockByChildNode.mockReturnValue(cellParagraph1);
+      // resolveToRootBlock walks cellParagraph1 → table
+      blockManager.resolveToRootBlock.mockReturnValue(table);
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(cellParagraph1Holder);
+
+      const result = internal.genInfoForMouseSelection();
+
+      // Should return the TABLE's index (1), not cellParagraph1's index (2)
+      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(cellParagraph1);
+      expect(result.index).toBe(1);
+
+      elementFromPointSpy.mockRestore();
+    });
+
+    it('returns undefined index when no element is found under cursor', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.appendChild(blockContent);
+      blockManager.lastBlock = { holder: blockHolder };
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
+
+      const result = internal.genInfoForMouseSelection();
+
+      expect(result.index).toBeUndefined();
+      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
+
+      elementFromPointSpy.mockRestore();
     });
   });
 });

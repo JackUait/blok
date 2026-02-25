@@ -521,4 +521,56 @@ describe('BlockRepository', () => {
       expect(block).toBeUndefined();
     });
   });
+
+  describe('resolveToRootBlock', () => {
+    it('returns the same block when parentId is null (root block)', () => {
+      const blocksStore = createEmptyBlocksStore(workingArea);
+      const rootBlock = createMockBlock({ id: 'root', parentId: null });
+      blocksStore.push(rootBlock);
+      repository.initialize(blocksStore);
+
+      const result = repository.resolveToRootBlock(rootBlock);
+
+      expect(result).toBe(rootBlock);
+    });
+
+    it('returns the parent when block has one level of nesting', () => {
+      const blocksStore = createEmptyBlocksStore(workingArea);
+      const parentBlock = createMockBlock({ id: 'parent', parentId: null });
+      const childBlock = createMockBlock({ id: 'child', parentId: 'parent' });
+      blocksStore.push(parentBlock);
+      blocksStore.push(childBlock);
+      repository.initialize(blocksStore);
+
+      const result = repository.resolveToRootBlock(childBlock);
+
+      expect(result).toBe(parentBlock);
+    });
+
+    it('returns the root when block has multiple levels of nesting', () => {
+      const blocksStore = createEmptyBlocksStore(workingArea);
+      const grandparentBlock = createMockBlock({ id: 'grandparent', parentId: null });
+      const parentBlock = createMockBlock({ id: 'parent', parentId: 'grandparent' });
+      const childBlock = createMockBlock({ id: 'child', parentId: 'parent' });
+      blocksStore.push(grandparentBlock);
+      blocksStore.push(parentBlock);
+      blocksStore.push(childBlock);
+      repository.initialize(blocksStore);
+
+      const result = repository.resolveToRootBlock(childBlock);
+
+      expect(result).toBe(grandparentBlock);
+    });
+
+    it('returns the block itself if parentId references a non-existent block', () => {
+      const blocksStore = createEmptyBlocksStore(workingArea);
+      const orphanBlock = createMockBlock({ id: 'orphan', parentId: 'non-existent' });
+      blocksStore.push(orphanBlock);
+      repository.initialize(blocksStore);
+
+      const result = repository.resolveToRootBlock(orphanBlock);
+
+      expect(result).toBe(orphanBlock);
+    });
+  });
 });

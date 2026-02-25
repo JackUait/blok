@@ -95,6 +95,7 @@ describe('CrossBlockSelection', () => {
       currentBlock: blocks[0],
       getBlock: vi.fn((element: HTMLElement) => findBlockByNode(element)),
       getBlockByChildNode: vi.fn((node: Node) => findBlockByNode(node)),
+      resolveToRootBlock: vi.fn((block: Block) => block),
     };
 
     crossBlockSelection.state = {
@@ -424,6 +425,182 @@ describe('CrossBlockSelection', () => {
       expect(inlineToolbarClose).toHaveBeenCalled();
       expect(toggleSpy).toHaveBeenCalledWith(blocks[1], blocks[2]);
       expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[2]);
+    });
+
+    describe('resolveToRootBlock integration', () => {
+      let childBlock: BlockWithSelection;
+
+      beforeEach(() => {
+        childBlock = createBlockStub();
+        /**
+         * The child block lives inside a table cell, so its holder is
+         * inside the parent (blocks[2]) holder in the DOM.
+         */
+        blocks[2].holder.appendChild(childBlock.holder);
+
+        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+        const blockManager = blokState.BlockManager;
+
+        /**
+         * getBlockByChildNode may return the child block when the mouse
+         * target is inside a table cell.
+         */
+        (blockManager.getBlockByChildNode as ReturnType<typeof vi.fn>).mockImplementation((node: Node) => {
+          if (node === childBlock.holder || childBlock.holder.contains(node)) {
+            return childBlock;
+          }
+
+          return blocks.find((b) => b.holder === node || b.holder.contains(node)) ?? null;
+        });
+
+        /**
+         * resolveToRootBlock walks up the parentId chain.
+         * For the child it returns the parent table block (blocks[2]);
+         * for any root-level block it returns itself.
+         */
+        (blockManager as Record<string, unknown>).resolveToRootBlock = vi.fn((block: Block) => {
+          if (block === (childBlock as unknown as Block)) {
+            return blocks[2];
+          }
+
+          return block;
+        });
+      });
+
+      it('resolves a child block inside a table to the parent table block for selection', () => {
+        setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+        setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
+
+        blocks[0].selected = false;
+
+        const event = {
+          relatedTarget: blocks[0].holder,
+          target: childBlock.holder,
+        } as unknown as MouseEvent;
+
+        accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
+
+        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+        const blockManager = blokState.BlockManager;
+
+        expect(blockManager.getBlockByChildNode).toHaveBeenCalledWith(childBlock.holder);
+        expect((blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
+
+        /**
+         * Selection should land on the root table block (blocks[2]),
+         * NOT on the child block.
+         */
+        expect(blocks[2].selected).toBe(true);
+        expect(childBlock.selected).toBe(false);
+      });
+
+      it('resolves a child block used as relatedTarget to the parent table block', () => {
+        setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+        setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
+        blocks[0].selected = true;
+        blocks[2].selected = true;
+
+        /**
+         * Mouse moves from the child (inside table) to blocks[3].
+         * relatedTarget is the child — should resolve to blocks[2].
+         */
+        const event = {
+          relatedTarget: childBlock.holder,
+          target: blocks[3].holder,
+        } as unknown as MouseEvent;
+
+        accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
+
+        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+        const blockManager = blokState.BlockManager;
+
+        expect((blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
+        expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[3]);
+      });
+
+      it('does not change behavior for root-level blocks (parentId is null)', () => {
+        setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+        setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
+
+        blocks[0].selected = false;
+        blocks[1].selected = false;
+
+        const event = {
+          relatedTarget: blocks[0].holder,
+          target: blocks[1].holder,
+        } as unknown as MouseEvent;
+
+        accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
+
+        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+        const blockManager = blokState.BlockManager;
+
+        /**
+         * resolveToRootBlock should be called but return the same
+         * block since these are root-level blocks.
+         */
+        expect((blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
+
+        expect(blocks[0].selected).toBe(true);
+        expect(blocks[1].selected).toBe(true);
+        expect(childBlock.selected).toBe(false);
+      });
+
+      it('skips selection when both target and relatedTarget resolve to the same root block', () => {
+        setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+        setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
+
+        /**
+         * Create a second child that also resolves to blocks[2].
+         */
+        const secondChild = createBlockStub();
+
+        blocks[2].holder.appendChild(secondChild.holder);
+
+        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+        const blockManager = blokState.BlockManager;
+
+        (blockManager.getBlockByChildNode as ReturnType<typeof vi.fn>).mockImplementation((node: Node) => {
+          if (node === childBlock.holder || childBlock.holder.contains(node)) {
+            return childBlock;
+          }
+          if (node === secondChild.holder || secondChild.holder.contains(node)) {
+            return secondChild;
+          }
+
+          return blocks.find((b) => b.holder === node || b.holder.contains(node)) ?? null;
+        });
+
+        (blockManager as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock.mockImplementation(
+          (block: Block) => {
+            if (block === (childBlock as unknown as Block) || block === (secondChild as unknown as Block)) {
+              return blocks[2];
+            }
+
+            return block;
+          }
+        );
+
+        blocks[0].selected = true;
+        blocks[2].selected = true;
+
+        const event = {
+          relatedTarget: childBlock.holder,
+          target: secondChild.holder,
+        } as unknown as MouseEvent;
+
+        accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
+
+        /**
+         * Both children resolve to the same root block (blocks[2]),
+         * so the early `targetBlock === relatedBlock` guard should
+         * prevent any selection change.
+         */
+        expect(blocks[0].selected).toBe(true);
+        expect(blocks[2].selected).toBe(true);
+        expect(childBlock.selected).toBe(false);
+        expect(secondChild.selected).toBe(false);
+      });
     });
   });
 

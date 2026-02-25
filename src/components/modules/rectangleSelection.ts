@@ -611,9 +611,12 @@ export class RectangleSelection extends Module {
       };
     }
     const blockInCurrentPos = this.Blok.BlockManager.getBlockByChildNode(elementUnderMouse);
+    const rootBlock = blockInCurrentPos !== undefined
+      ? this.Blok.BlockManager.resolveToRootBlock(blockInCurrentPos)
+      : undefined;
 
-    const index = blockInCurrentPos !== undefined
-      ? this.Blok.BlockManager.blocks.findIndex((block) => block.holder === blockInCurrentPos.holder)
+    const index = rootBlock !== undefined
+      ? this.Blok.BlockManager.blocks.findIndex((block) => block.holder === rootBlock.holder)
       : undefined;
 
     return {

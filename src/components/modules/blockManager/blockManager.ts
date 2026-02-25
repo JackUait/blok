@@ -725,6 +725,16 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Walks up the parentId chain and returns the top-level (root) block.
+   * If the block has no parent, returns it as-is.
+   * @param block - the block to resolve
+   * @returns {Block} the root ancestor block
+   */
+  public resolveToRootBlock(block: Block): Block {
+    return this.repository.resolveToRootBlock(block);
+  }
+
+  /**
    * Returns the depth (nesting level) of a block in the hierarchy.
    * @param block - the block to get depth for
    * @returns {number} - depth level (0 for root, 1 for first level children, etc.)

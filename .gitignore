@@ -57,3 +57,7 @@ docs/plans/
 
 # Git worktrees
 .worktrees/
+
+# Local run artifacts
+nohup.out
+e2e-results.log

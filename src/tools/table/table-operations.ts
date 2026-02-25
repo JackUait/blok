@@ -310,6 +310,15 @@ export const mountCellBlocksReadOnly = (
 
         container.appendChild(block.holder);
       }
+
+      // Strip placeholder attributes so paragraphs inside table cells
+      // don't show standalone-paragraph placeholders in readonly mode.
+      container.querySelectorAll<HTMLElement>('[data-blok-placeholder-active]').forEach(el => {
+        el.removeAttribute('data-blok-placeholder-active');
+      });
+      container.querySelectorAll<HTMLElement>('[data-placeholder]').forEach(el => {
+        el.removeAttribute('data-placeholder');
+      });
     });
   });
 };

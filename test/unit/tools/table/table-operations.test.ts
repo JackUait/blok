@@ -216,6 +216,57 @@ describe('table-operations', () => {
       expect(container.contains(existingBlockHolder)).toBe(true);
     });
 
+    it('should strip placeholder attributes from mounted blocks', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // Simulate a readonly paragraph block whose drawView() sets placeholder attributes
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'block-1');
+
+      const paragraphDiv = document.createElement('div');
+      paragraphDiv.setAttribute('data-blok-placeholder-active', 'Type or press / for menu');
+      paragraphDiv.setAttribute('data-placeholder', 'Some placeholder');
+      blockHolder.appendChild(paragraphDiv);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockByIndex: vi.fn().mockReturnValue({
+            id: 'block-1',
+            holder: blockHolder,
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      const content = [[{ blocks: ['block-1'] }]];
+
+      mountCellBlocksReadOnly(gridElement, content, api, 'table-id');
+
+      // Placeholder attributes must be stripped — paragraphs inside table cells
+      // should not show standalone-paragraph placeholders (especially in readonly)
+      expect(paragraphDiv.hasAttribute('data-blok-placeholder-active')).toBe(false);
+      expect(paragraphDiv.hasAttribute('data-placeholder')).toBe(false);
+    });
+
     it('should be idempotent when called multiple times with legacy string content', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
       const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');

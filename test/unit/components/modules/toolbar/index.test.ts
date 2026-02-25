@@ -369,7 +369,7 @@ describe('Toolbar module interactions', () => {
    * Creates a minimal stub that passes `instanceof Block` and has the
    * properties the BlockHovered handler and moveAndOpen need.
    */
-  const createBlockStub = (id: string): BlockStub => {
+  const createBlockStub = (id: string): InstanceType<typeof BlockStub> => {
     return new BlockStub(id);
   };
 

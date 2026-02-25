@@ -292,11 +292,12 @@ export class TableRowColControls {
       }
     });
     grip.addEventListener('mouseleave', () => {
-      if (!this.isGripInteractionLocked()) {
-        collapseGrip(grip, type, pillSize);
-        if (this.overlay) {
-          this.scheduleHideAll();
-        }
+      if (this.isGripInteractionLocked()) {
+        return;
+      }
+      collapseGrip(grip, type, pillSize);
+      if (this.overlay) {
+        this.scheduleHideAll();
       }
     });
 

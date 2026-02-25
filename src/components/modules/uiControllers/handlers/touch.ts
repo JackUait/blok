@@ -37,37 +37,32 @@ export const createRedactorTouchHandler = (
      */
     const block = deps.Blok.BlockManager.setCurrentBlockByChildNode(clickedNode);
 
-    if (!block) {
-      /**
-       * If clicked outside first-level Blocks and it is not RectSelection, set Caret to the last empty Block
-       */
-      if (!deps.Blok.RectangleSelection.isRectActivated()) {
-        deps.Blok.Caret.setToTheLastBlock();
-      }
-    } else {
-      /**
-       * If the click landed below the last block's content area (in the holder padding zone),
-       * create/focus a new paragraph instead of keeping the block selected.
-       * This prevents clicks in the gap between a block's content and the bottomZone
-       * from silently selecting the block (especially tables with large padding).
-       */
-      const clientY = getClientY(event);
-      const isLastBlock = block === deps.Blok.BlockManager.lastBlock;
+    /**
+     * If clicked outside first-level Blocks and it is not RectSelection, set Caret to the last empty Block
+     */
+    if (!block && !deps.Blok.RectangleSelection.isRectActivated()) {
+      deps.Blok.Caret.setToTheLastBlock();
+    }
 
-      if (isLastBlock && clientY !== null) {
-        const contentEl = block.holder.querySelector('[data-blok-element-content]');
-        const contentRect = contentEl?.getBoundingClientRect();
+    /**
+     * If the click landed below the last block's content area (in the holder padding zone),
+     * create/focus a new paragraph instead of keeping the block selected.
+     */
+    const isBelowLastBlock = block !== undefined
+      && block === deps.Blok.BlockManager.lastBlock
+      && isClickBelowLastBlockContent(block.holder, event);
 
-        if (contentRect && clientY > contentRect.bottom) {
-          deps.Blok.Caret.setToTheLastBlock();
+    if (isBelowLastBlock && !deps.Blok.ReadOnly.isEnabled) {
+      deps.Blok.Caret.setToTheLastBlock();
+      deps.Blok.Toolbar.moveAndOpen(deps.Blok.BlockManager.lastBlock);
 
-          if (!deps.Blok.ReadOnly.isEnabled) {
-            deps.Blok.Toolbar.moveAndOpen(deps.Blok.BlockManager.lastBlock);
-          }
+      return;
+    }
 
-          return;
-        }
-      }
+    if (isBelowLastBlock) {
+      deps.Blok.Caret.setToTheLastBlock();
+
+      return;
     }
 
     /**
@@ -147,3 +142,27 @@ const getClientY = (event: Event): number | null => {
 
   return null;
 }
+
+/**
+ * Checks whether a click event landed below a block's content area.
+ * Used to detect clicks in the holder padding zone below the last block.
+ *
+ * @param blockHolder - The block's holder element
+ * @param event - The mouse or touch event
+ * @returns True if the click was below the block content's bottom edge
+ */
+const isClickBelowLastBlockContent = (
+  blockHolder: HTMLElement,
+  event: Event
+): boolean => {
+  const clientY = getClientY(event);
+
+  if (clientY === null) {
+    return false;
+  }
+
+  const contentEl = blockHolder.querySelector('[data-blok-element-content]');
+  const contentRect = contentEl?.getBoundingClientRect();
+
+  return contentRect !== undefined && clientY > contentRect.bottom;
+};

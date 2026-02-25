@@ -210,18 +210,17 @@ export class BlockRepository {
    * @returns {Block} the root ancestor block
    */
   public resolveToRootBlock(block: Block): Block {
-    let current = block;
-
-    while (current.parentId !== null) {
-      const parent = this.getBlockById(current.parentId);
-
-      if (parent === undefined) {
-        break;
-      }
-      current = parent;
+    if (block.parentId === null) {
+      return block;
     }
 
-    return current;
+    const parent = this.getBlockById(block.parentId);
+
+    if (parent === undefined) {
+      return block;
+    }
+
+    return this.resolveToRootBlock(parent);
   }
 
   /**

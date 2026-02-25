@@ -351,7 +351,6 @@ export const ConfirmationState: Story = {
         deleteButton.setAttribute('data-blok-popover-item-confirmation', 'true');
         deleteButton.setAttribute('data-blok-popover-item-no-hover', 'true');
         deleteButton.setAttribute('data-blok-popover-item-no-focus', 'true');
-        // eslint-disable-next-line internal-storybook/no-class-selectors
         deleteButton.classList.add('!bg-item-confirm-bg', '!text-white');
       }
 
@@ -516,7 +515,6 @@ export const DisabledItem: Story = {
         // Add the proper disabled classes and attribute that match the real implementation
         // The itemDisabled class from popover-item-default.const.ts is:
         // 'cursor-default pointer-events-none text-text-secondary'
-        // eslint-disable-next-line internal-storybook/no-class-selectors
         popoverItem.classList.add('cursor-default', 'pointer-events-none', 'text-text-secondary');
         popoverItem.setAttribute('data-blok-disabled', 'true');
       }

@@ -38,7 +38,7 @@ describe('Paste handler table cell restrictions', () => {
 
     // Verify the handler no longer has a static hardcoded TOOLS_RESTRICTED_IN_TABLE_CELLS set
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handler = BasePasteHandler as Record<string, unknown>;
+    const handler = BasePasteHandler as unknown as Record<string, unknown>;
     const staticSet = handler['TOOLS_RESTRICTED_IN_TABLE_CELLS'];
 
     // After the fix, the static set should be removed (undefined)

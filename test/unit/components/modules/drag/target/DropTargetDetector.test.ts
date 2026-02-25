@@ -360,14 +360,11 @@ describe('DropTargetDetector', () => {
     });
 
     it('should redirect target to table block when targeting a cell-interior block', () => {
-      const sourceBlock = createMockBlock('source');
-      sourceBlock.name = 'header';
+      const sourceBlock = createMockBlock('source', 'header');
 
-      const tableBlock = createMockBlock('table');
-      tableBlock.name = 'table';
+      const tableBlock = createMockBlock('table', 'table');
 
       const cellBlock = createMockBlock('cell-paragraph');
-      cellBlock.name = 'paragraph';
 
       // Build DOM: tableBlock.holder > [data-blok-table-cell-blocks] > cellBlock.holder
       const cellBlocksContainer = document.createElement('div');
@@ -425,14 +422,11 @@ describe('DropTargetDetector', () => {
     });
 
     it('should allow targeting cell-interior blocks when source is also in the same cell', () => {
-      const tableBlock = createMockBlock('table');
-      tableBlock.name = 'table';
+      const tableBlock = createMockBlock('table', 'table');
 
       const sourceBlock = createMockBlock('source-in-cell');
-      sourceBlock.name = 'paragraph';
 
       const targetBlock = createMockBlock('target-in-cell');
-      targetBlock.name = 'paragraph';
 
       // Build DOM: tableBlock.holder > [data-blok-table-cell-blocks] > sourceBlock.holder + targetBlock.holder
       const cellBlocksContainer = document.createElement('div');
@@ -700,14 +694,14 @@ describe('DropTargetDetector', () => {
 /**
  * Helper to create a mock block
  */
-const createMockBlock = (id: string): Block => {
+const createMockBlock = (id: string, name = 'paragraph'): Block => {
   const holder = document.createElement('div');
   holder.setAttribute(DATA_ATTR.element, 'block');
 
   return {
     id,
     holder,
-    name: 'paragraph',
+    name,
     stretched: false,
   } as Block;
 };

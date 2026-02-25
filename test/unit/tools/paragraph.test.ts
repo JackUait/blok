@@ -59,7 +59,6 @@ describe('Paragraph Tool - Custom Configurations', () => {
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
 
-      // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing CSS class presence for empty-editor placeholder
       expect(element.getAttribute('class')).toContain('data-blok-empty');
     });
   });

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-/* eslint-disable internal-unit-test/no-class-selectors -- StyleManager's purpose is to manage CSS classes */
 
 import { StyleManager } from '../../../../src/components/block/style-manager';
 import { DATA_ATTR } from '../../../../src/components/constants';

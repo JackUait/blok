@@ -476,7 +476,7 @@ describe('table-operations', () => {
     it('should apply overflow-y-hidden via enableScrollOverflow', async () => {
       const { enableScrollOverflow } = await import('../../../../src/tools/table/table-operations');
 
-      const element = document.createElement('div') as HTMLDivElement;
+      const element = document.createElement('div');
 
       enableScrollOverflow(element);
 

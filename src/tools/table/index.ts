@@ -299,9 +299,9 @@ export class Table implements BlockTool {
 
       sc.setAttribute('data-blok-table-scroll', '');
 
-      if (this.model.colWidths) {
-        sc.classList.add(...SCROLL_OVERFLOW_CLASSES);
-      }
+      const overflowClasses = this.model.colWidths ? SCROLL_OVERFLOW_CLASSES : [];
+
+      sc.classList.add(...overflowClasses);
 
       sc.appendChild(gridEl);
       wrapper.appendChild(sc);

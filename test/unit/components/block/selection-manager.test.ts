@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-/* eslint-disable internal-unit-test/no-class-selectors -- Testing StyleManager integration */
 
 import { SelectionManager } from '../../../../src/components/block/selection-manager';
 import { StyleManager } from '../../../../src/components/block/style-manager';

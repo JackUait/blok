@@ -246,7 +246,6 @@ describe('Table Tool', () => {
        * this pseudo-element intercepts clicks meant for the editor's bottom zone,
        * preventing users from clicking below the last table to create a new block.
        */
-      // eslint-disable-next-line internal-unit-test/no-class-selectors -- Testing Tailwind CSS class that controls pointer-events on ::after pseudo-element
       expect(element.classList.contains('after:pointer-events-none')).toBe(true);
     });
   });

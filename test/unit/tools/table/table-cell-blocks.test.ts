@@ -885,7 +885,7 @@ describe('TableCellBlocks', () => {
       expect(container.contains(newBlockHolder)).toBe(true);
     });
 
-    it('should not claim block when its holder is outside the grid', async () => {
+    it('should not claim block when its holder is outside the grid and current block is not in this table', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -913,6 +913,12 @@ describe('TableCellBlocks', () => {
       newBlockHolder.setAttribute('data-blok-id', 'new-1');
       document.body.appendChild(newBlockHolder);
 
+      const model = createMockModel();
+
+      // existing-1 is NOT tracked by the model — simulating that the current block
+      // is not owned by this table (e.g., undo/restore of a top-level block)
+      (model.findCellForBlock as ReturnType<typeof vi.fn>).mockReturnValue(null);
+
       const api = {
         blocks: {
           getBlockIndex: vi.fn((id: string) => {
@@ -929,6 +935,7 @@ describe('TableCellBlocks', () => {
           }),
           getBlocksCount: vi.fn().mockReturnValue(2),
           setBlockParent: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(-1),
         },
         events: {
           on: vi.fn(),
@@ -936,7 +943,7 @@ describe('TableCellBlocks', () => {
         },
       } as unknown as API;
 
-      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model });
 
       const onCall = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(
         (call: unknown[]) => call[0] === 'block changed'
@@ -954,7 +961,94 @@ describe('TableCellBlocks', () => {
       });
 
       // Block should NOT have been claimed into the cell since it's outside the grid
+      // and the current block is not owned by this table
       expect(container.contains(newBlockHolder)).toBe(false);
+
+      newBlockHolder.remove();
+    });
+
+    it('should claim block outside the grid when current block is owned by this table', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      const existingBlock = document.createElement('div');
+
+      existingBlock.setAttribute('data-blok-id', 'existing-1');
+      container.appendChild(existingBlock);
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // New block holder is outside the grid (placed by insertToDOM after the table)
+      const newBlockHolder = document.createElement('div');
+
+      newBlockHolder.setAttribute('data-blok-id', 'new-1');
+      document.body.appendChild(newBlockHolder);
+
+      const model = createMockModel();
+
+      // existing-1 IS tracked by the model in cell (0,0) — simulating that the
+      // current block is a cell paragraph owned by this table
+      (model.findCellForBlock as ReturnType<typeof vi.fn>).mockImplementation((id: string) => {
+        if (id === 'existing-1') return { row: 0, col: 0 };
+
+        return null;
+      });
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'existing-1') return 0;
+            if (id === 'new-1') return 1;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'existing-1', holder: existingBlock };
+            if (index === 1) return { id: 'new-1', holder: newBlockHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(2),
+          setBlockParent: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+        },
+        events: {
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as unknown as API;
+
+      new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model });
+
+      const onCall = (api.events.on as ReturnType<typeof vi.fn>).mock.calls.find(
+        (call: unknown[]) => call[0] === 'block changed'
+      );
+      const handler = onCall?.[1] as (data: unknown) => void;
+
+      handler({
+        event: {
+          type: 'block-added',
+          detail: {
+            target: { id: 'new-1', holder: newBlockHolder },
+            index: 1,
+          },
+        },
+      });
+
+      // Block SHOULD have been claimed into the cell because the current block
+      // (existing-1 at index 0) is owned by this table
+      expect(container.contains(newBlockHolder)).toBe(true);
 
       newBlockHolder.remove();
     });

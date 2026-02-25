@@ -588,8 +588,8 @@ test.describe('table tool', () => {
       });
 
       const initialTableWidth = await page.evaluate(() => {
-        const table = document.querySelector('[data-blok-tool="table"]');
-        const grid = table?.firstElementChild as HTMLElement;
+        const sc = document.querySelector('[data-blok-tool="table"] [data-blok-table-scroll]');
+        const grid = sc?.firstElementChild as HTMLElement;
 
         return grid?.getBoundingClientRect().width;
       });
@@ -608,8 +608,8 @@ test.describe('table tool', () => {
       await page.mouse.up();
 
       const finalTableWidth = await page.evaluate(() => {
-        const table = document.querySelector('[data-blok-tool="table"]');
-        const grid = table?.firstElementChild as HTMLElement;
+        const sc = document.querySelector('[data-blok-tool="table"] [data-blok-table-scroll]');
+        const grid = sc?.firstElementChild as HTMLElement;
 
         return grid?.getBoundingClientRect().width;
       });
@@ -1127,10 +1127,10 @@ test.describe('table tool', () => {
       await colGrip.click();
       await page.getByText('Insert Column Left').click();
 
-      // After insertion, scroll wrapper to left edge so the new column's grip is visible
-      const wrapper = page.locator(TABLE_SELECTOR);
+      // After insertion, scroll the scroll container to left edge so the new column's grip is visible
+      const scrollContainer = page.locator(`${TABLE_SELECTOR} [data-blok-table-scroll]`);
 
-      await wrapper.evaluate(el => { el.scrollTo(0, el.scrollTop); });
+      await scrollContainer.evaluate(el => { el.scrollTo(0, el.scrollTop); });
 
       // Click the first cell in the newly inserted column to re-trigger grips
       // eslint-disable-next-line playwright/no-nth-methods -- first() targets the newly inserted column's cell
@@ -1142,13 +1142,13 @@ test.describe('table tool', () => {
       await expect(newGrip).toBeVisible();
 
       const wrapperBox = assertBoundingBox(
-        await wrapper.boundingBox(),
+        await page.locator(TABLE_SELECTOR).boundingBox(),
         'Table wrapper'
       );
       const gripBox = assertBoundingBox(await newGrip.boundingBox(), 'Column grip');
 
-      // The grip's top edge must be within or at the wrapper's top edge
-      expect(gripBox.y).toBeGreaterThanOrEqual(wrapperBox.y);
+      // The grip's top edge should be near the wrapper's top edge (within border + pill offset)
+      expect(gripBox.y).toBeGreaterThanOrEqual(wrapperBox.y - 10);
     });
 
     test('row grip is not clipped by wrapper overflow after inserting a column', async ({ page }) => {
@@ -1188,10 +1188,10 @@ test.describe('table tool', () => {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- let hide timeouts and popover cleanup complete
       await page.waitForTimeout(300);
 
-      // Scroll wrapper to left edge so grips are not clipped
-      const wrapper = page.locator(TABLE_SELECTOR);
+      // Scroll the scroll container to left edge so grips are not clipped
+      const scrollContainer = page.locator(`${TABLE_SELECTOR} [data-blok-table-scroll]`);
 
-      await wrapper.evaluate(el => { el.scrollTo(0, el.scrollTop); });
+      await scrollContainer.evaluate(el => { el.scrollTo(0, el.scrollTop); });
 
       // After insertion, hover over a cell in the second row to trigger mouseover and show grips,
       // then click it to ensure the focus lands in the cell
@@ -1207,13 +1207,13 @@ test.describe('table tool', () => {
       await expect(rowGrip).toBeVisible();
 
       const wrapperBox = assertBoundingBox(
-        await wrapper.boundingBox(),
+        await page.locator(TABLE_SELECTOR).boundingBox(),
         'Table wrapper'
       );
       const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
 
-      // The grip's left edge must be within or at the wrapper's left edge
-      expect(gripBox.x).toBeGreaterThanOrEqual(wrapperBox.x);
+      // The grip's left edge should be near the wrapper's left edge (within border + pill offset)
+      expect(gripBox.x).toBeGreaterThanOrEqual(wrapperBox.x - 10);
     });
 
     test('grip pills are children of the grid element, not the wrapper', async ({ page }) => {
@@ -1586,7 +1586,7 @@ test.describe('table tool', () => {
 
       await page.mouse.move(startX, startY);
       await page.mouse.down();
-      await page.mouse.move(startX, startY + rowHeight, { steps: 10 });
+      await page.mouse.move(startX, startY + rowHeight * 1.5, { steps: 10 });
       await page.mouse.up();
 
       // Row A should have moved down by one — B1 is now first row

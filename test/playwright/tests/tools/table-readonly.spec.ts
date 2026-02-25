@@ -375,11 +375,10 @@ test.describe('table readonly mode', () => {
     const cells = page.locator(CELL_SELECTOR);
     await expect(cells).toHaveCount(2);
 
-    // Count blocks in first cell initially — scope to the cell containing "Test Cell A"
+    // Verify first cell has content (legacy string rendered as textContent in readonly)
     const firstCell = cells.filter({ hasText: 'Test Cell A' });
     const firstCellContainer = firstCell.locator(CELL_BLOCKS_CONTAINER_SELECTOR);
-    const initialBlocks = firstCellContainer.locator('[data-blok-id]');
-    await expect(initialBlocks).toHaveCount(1);
+    await expect(firstCellContainer).toHaveText('Test Cell A');
 
     // Manually trigger rendered() lifecycle again to simulate the bug scenario
     await page.evaluate(async () => {
@@ -402,19 +401,14 @@ test.describe('table readonly mode', () => {
       }
     });
 
-    // Verify blocks are still only 1 per cell (not duplicated)
-    const blocksAfterSecondRender = firstCellContainer.locator('[data-blok-id]');
-    await expect(blocksAfterSecondRender).toHaveCount(1);
-
-    // Verify content is not duplicated
+    // Verify content is not duplicated after second render
     await expect(firstCellContainer).toHaveText('Test Cell A');
     await expect(firstCellContainer).not.toHaveText('Test Cell ATest Cell A');
 
-    // Verify all cells still have exactly 1 block wrapper each
-    const allContainers = await page.locator(CELL_BLOCKS_CONTAINER_SELECTOR).all();
-    for (const container of allContainers) {
-      const blockWrappers = container.locator('[data-blok-testid="block-wrapper"]');
-      await expect(blockWrappers).toHaveCount(1);
-    }
+    // Verify all cells still have correct text content
+    const allTexts = await page.locator(CELL_BLOCKS_CONTAINER_SELECTOR).allTextContents();
+    expect(allTexts).toHaveLength(2);
+    expect(allTexts[0]).toBe('Test Cell A');
+    expect(allTexts[1]).toBe('Test Cell B');
   });
 });

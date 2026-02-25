@@ -384,6 +384,12 @@ export class TableCellBlocks {
       return;
     }
 
+    // Guard against circular DOM: never append the table block's own holder
+    // into one of its descendant cell containers.
+    if (block.holder.contains(container)) {
+      return;
+    }
+
     container.appendChild(block.holder);
     this.api.blocks.setBlockParent(blockId, this.tableBlockId);
     this.stripPlaceholders(container);
@@ -477,6 +483,13 @@ export class TableCellBlocks {
       return;
     }
 
+    // Never claim the table block itself as a cell content block.
+    // This can happen when rendered() creates cell blocks synchronously,
+    // polluting currentBlockIndex before the table's own block-added fires.
+    if (detail.target.id === this.tableBlockId) {
+      return;
+    }
+
     const blockIndex = detail.index;
 
     if (blockIndex === undefined) {
@@ -526,9 +539,35 @@ export class TableCellBlocks {
     }
 
     // Only claim blocks whose holder is inside this table's grid.
-    // Blocks placed outside the grid (e.g., via replaceWith during toolbox
-    // insertion) should not be pulled into a cell by adjacency.
+    // Blocks placed outside the grid (e.g., via undo/restore or API inserts)
+    // should not be pulled into a cell by adjacency alone.
+    //
+    // However, blocks created while the editor's focus is inside this table
+    // (e.g., via Enter key or paste in a cell) land outside the grid because
+    // insertToDOM walks up from cell blocks to the table holder level.
+    // For those, check that the current block at the time of insertion belongs
+    // to this table — indicating the user was editing inside a cell.
     if (!this.gridElement.contains(holder)) {
+      const currentIndex = this.api.blocks.getCurrentBlockIndex();
+      const currentBlock = currentIndex >= 0
+        ? this.api.blocks.getBlockByIndex(currentIndex)
+        : null;
+      const currentBlockInOurTable = currentBlock !== null
+        && currentBlock !== undefined
+        && this.getOwnedCellForBlock(currentBlock.id) !== null;
+
+      if (!currentBlockInOurTable) {
+        return;
+      }
+
+      const cell = this.findCellForNewBlock(blockIndex);
+
+      if (cell) {
+        this.claimBlockForCell(cell, detail.target.id);
+        this.syncBlockToModel(cell, detail.target.id);
+        this.cellsPendingCheck.delete(cell);
+      }
+
       return;
     }
 

@@ -372,6 +372,18 @@ export class Blocks {
       return;
     }
 
+    // At index 0: find the first subsequent block whose holder is already
+    // in the DOM and insert before it, matching the insert() method logic.
+    const nextMounted = this.blocks.slice(index + 1).find(
+      (b) => b.holder.parentElement !== null
+    );
+
+    if (nextMounted) {
+      this.insertToDOM(block, 'beforebegin', nextMounted);
+
+      return;
+    }
+
     this.insertToDOM(block);
   }
 

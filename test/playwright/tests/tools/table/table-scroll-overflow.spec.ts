@@ -180,8 +180,12 @@ test.describe('Table Scroll Overflow', () => {
 
     await expect(table).toBeVisible();
 
-    // 3. Inspect table wrapper CSS classes - expect overflow-x-auto to be present
-    const hasOverflowAuto = await table.evaluate((el) => {
+    // 3. Inspect the scroll container CSS classes - expect overflow-x-auto to be present
+    const scrollContainer = table.locator('[data-blok-table-scroll]');
+
+    await expect(scrollContainer).toBeAttached();
+
+    const hasOverflowAuto = await scrollContainer.evaluate((el) => {
       return el.classList.contains('overflow-x-auto');
     });
 
@@ -209,8 +213,12 @@ test.describe('Table Scroll Overflow', () => {
 
     await expect(table).toBeVisible();
 
-    // 2. Verify no overflow-x-auto class initially (no colWidths set)
-    const hasOverflowAutoBefore = await table.evaluate((el) => {
+    // 2. Verify no overflow-x-auto on the scroll container initially (no colWidths set)
+    const scrollContainer = table.locator('[data-blok-table-scroll]');
+
+    await expect(scrollContainer).toBeAttached();
+
+    const hasOverflowAutoBefore = await scrollContainer.evaluate((el) => {
       return el.classList.contains('overflow-x-auto');
     });
 
@@ -232,8 +240,8 @@ test.describe('Table Scroll Overflow', () => {
     await page.mouse.move(startX + 200, startY, { steps: 10 });
     await page.mouse.up();
 
-    // 4. Verify the wrapper now has overflow-x-auto after resize sets colWidths
-    const hasOverflowAutoAfter = await table.evaluate((el) => {
+    // 4. Verify the scroll container now has overflow-x-auto after resize sets colWidths
+    const hasOverflowAutoAfter = await scrollContainer.evaluate((el) => {
       return el.classList.contains('overflow-x-auto');
     });
 
@@ -294,11 +302,60 @@ test.describe('Table Scroll Overflow', () => {
     await page.mouse.move(startX + unitSize * 1.5, startY, { steps: 10 });
     await page.mouse.up();
 
-    // 4. Verify wrapper scrollLeft > 0 (auto-scrolled after adding column)
-    const scrollLeft = await table.evaluate((el) => {
+    // 4. Verify scroll container scrollLeft > 0 (auto-scrolled after adding column)
+    const scrollContainer = table.locator('[data-blok-table-scroll]');
+
+    await expect(scrollContainer).toBeAttached();
+
+    const scrollLeft = await scrollContainer.evaluate((el) => {
       return (el as HTMLElement).scrollLeft;
     });
 
     expect(scrollLeft).toBeGreaterThan(0);
+  });
+
+  test('add-row button is clipped by the scroll container when the table overflows', async ({ page }) => {
+    // 1. Init editor with a wide 2x3 table that overflows the viewport
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+              colWidths: [400, 400, 400],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Hover near the bottom edge to reveal the add-row button
+    const tableBox = assertBoundingBox(await table.boundingBox(), 'Table wrapper');
+
+    await page.mouse.move(
+      tableBox.x + tableBox.width / 2,
+      tableBox.y + tableBox.height - 10
+    );
+
+    const addRowBtn = page.locator('[data-blok-table-add-row]');
+
+    await expect(addRowBtn).toBeVisible();
+
+    // 3. The add-row button's visible width should not exceed the wrapper width.
+    //    When the grid is wider than the wrapper, the button must be clipped.
+    const addRowBox = assertBoundingBox(await addRowBtn.boundingBox(), 'Add-row button');
+    const wrapperBox = assertBoundingBox(await table.boundingBox(), 'Table wrapper');
+
+    expect(
+      addRowBox.x + addRowBox.width,
+      'add-row button right edge should not extend past the wrapper right edge'
+    ).toBeLessThanOrEqual(wrapperBox.x + wrapperBox.width + 1);
   });
 });

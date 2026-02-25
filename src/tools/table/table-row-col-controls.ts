@@ -184,12 +184,28 @@ export class TableRowColControls {
     document.addEventListener('pointerdown', this.boundUnlockGrip);
   }
 
-  private handleUnlockGrip(): void {
+  private handleUnlockGrip(e: PointerEvent): void {
     document.removeEventListener('pointerdown', this.boundUnlockGrip);
 
     if (this.lockedGrip) {
       this.applyIdleClasses(this.lockedGrip);
       this.lockedGrip = null;
+    }
+
+    // Re-evaluate grip visibility: the preceding mouseover was blocked
+    // by isGripInteractionLocked(). Check if pointer is over a table cell.
+    const target = e.target instanceof HTMLElement ? e.target : null;
+    const cell = target?.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+    if (cell) {
+      const position = this.getCellPosition(cell);
+
+      if (position) {
+        this.clearHideTimeout();
+        this.showColGrip(position.col);
+        this.showRowGrip(position.row);
+        this.isInsideTable = true;
+      }
     }
   }
 

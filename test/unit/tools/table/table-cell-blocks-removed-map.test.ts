@@ -102,6 +102,7 @@ describe('removedBlockCells index-based key bugs', () => {
 
             return undefined;
           }),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(-1),
           getBlocksCount: vi.fn().mockReturnValue(3),
           setBlockParent: vi.fn(),
         },
@@ -224,6 +225,7 @@ describe('removedBlockCells index-based key bugs', () => {
 
           return undefined;
         }),
+        getCurrentBlockIndex: vi.fn().mockReturnValue(-1),
         getBlocksCount: vi.fn().mockReturnValue(4),
         setBlockParent: vi.fn(),
       };
@@ -356,6 +358,7 @@ describe('removedBlockCells index-based key bugs', () => {
 
           return undefined;
         }),
+        getCurrentBlockIndex: vi.fn().mockReturnValue(-1),
         getBlocksCount: vi.fn().mockReturnValue(3),
         setBlockParent: vi.fn(),
       };

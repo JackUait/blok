@@ -153,7 +153,7 @@ describe('TableAddControls', () => {
       expect(addColBtn).not.toBeNull();
     });
 
-    it('add-column button is positioned outside the grid content area (right: -12px)', () => {
+    it('add-column button is positioned outside the grid content area (right: -16px)', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -167,7 +167,7 @@ describe('TableAddControls', () => {
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addColBtn.style.right).toBe('-12px');
+      expect(addColBtn.style.right).toBe('-16px');
     });
 
     it('add-row button contains a plus SVG icon', () => {

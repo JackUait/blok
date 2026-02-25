@@ -535,7 +535,7 @@ export class TableAddControls {
     btn.style.opacity = '0';
     btn.style.pointerEvents = 'none';
     btn.style.position = 'absolute';
-    btn.style.right = '-12px';
+    btn.style.right = '-16px';
     btn.style.top = '0px';
     btn.style.bottom = '0px';
     btn.style.width = '32px';

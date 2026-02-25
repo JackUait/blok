@@ -163,6 +163,9 @@ export class TableAddControls {
       this.addRowBtn.style.right = '';
       this.addRowBtn.style.left = '0px';
       this.addRowBtn.style.transform = '';
+
+      this.addColBtn.style.left = `${visibleWidth}px`;
+      this.addColBtn.style.right = '';
     } else {
       this.addRowBtn.style.width = '';
       this.addRowBtn.style.left = '0px';
@@ -171,6 +174,9 @@ export class TableAddControls {
       const paddingRight = parseFloat(getComputedStyle(this.wrapper).paddingRight) || 0;
 
       this.addRowBtn.style.right = `${paddingRight}px`;
+
+      this.addColBtn.style.left = '';
+      this.addColBtn.style.right = '-16px';
     }
   }
 
@@ -366,8 +372,14 @@ export class TableAddControls {
 
   private handleMouseMove(e: MouseEvent): void {
     const gridRect = this.grid.getBoundingClientRect();
+    const scrollContainer = this.grid.parentElement;
+    const isInsideScrollContainer = scrollContainer !== null && scrollContainer !== this.wrapper;
+    const visibleRight = isInsideScrollContainer
+      ? Math.min(gridRect.right, scrollContainer.getBoundingClientRect().right)
+      : gridRect.right;
+
     const distFromBottom = Math.abs(e.clientY - gridRect.bottom);
-    const distFromRight = Math.abs(e.clientX - gridRect.right);
+    const distFromRight = Math.abs(e.clientX - visibleRight);
 
     if (distFromBottom <= PROXIMITY_PX) {
       this.showRow();

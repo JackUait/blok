@@ -153,7 +153,7 @@ describe('TableAddControls', () => {
       expect(addColBtn).not.toBeNull();
     });
 
-    it('add-column button is positioned outside the grid content area (right: -16px)', () => {
+    it('add-column button is positioned outside the grid content area (right: -36px)', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -167,7 +167,7 @@ describe('TableAddControls', () => {
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addColBtn.style.right).toBe('-16px');
+      expect(addColBtn.style.right).toBe('-36px');
     });
 
     it('add-row button contains a plus SVG icon', () => {
@@ -229,7 +229,7 @@ describe('TableAddControls', () => {
      * Helper: dispatch a mousemove on the wrapper at the given clientX/clientY.
      * We stub both grid.getBoundingClientRect and wrapper.getBoundingClientRect
      * so the proximity calculation works inside jsdom (which returns all-zero rects by default).
-     * The wrapper rect defaults to 20px wider than the grid to simulate pr-5 padding.
+     * The wrapper rect matches the grid by default (no extra padding).
      */
     const moveNear = (
       target: HTMLElement,
@@ -241,7 +241,7 @@ describe('TableAddControls', () => {
     ): void => {
       vi.spyOn(gridEl, 'getBoundingClientRect').mockReturnValue(rect);
       vi.spyOn(target, 'getBoundingClientRect').mockReturnValue(
-        wrapperRect ?? new DOMRect(rect.x, rect.y, rect.width + 20, rect.height)
+        wrapperRect ?? new DOMRect(rect.x, rect.y, rect.width, rect.height)
       );
       const hoverEvent = new MouseEvent('mousemove', { clientX, clientY, bubbles: true });
       target.dispatchEvent(hoverEvent);
@@ -322,8 +322,8 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      // Grid rect: right=200, wrapper rect: right=220 (pr-5 padding)
-      // Move cursor RIGHT of the wrapper (x=240, past wrapper right=220, within PROXIMITY_PX=40 of grid right)
+      // Grid rect: right=200, wrapper rect: right=200 (no padding)
+      // Move cursor RIGHT of the wrapper (x=240, past wrapper right=200, within PROXIMITY_PX=40 of grid right)
       moveNear(wrapper, grid, 240, 50);
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
@@ -331,7 +331,7 @@ describe('TableAddControls', () => {
       expect(addColBtn.style.opacity).toBe('1');
     });
 
-    it('add-column button becomes visible when cursor is in wrapper padding (right of grid but within wrapper)', () => {
+    it('add-column button becomes visible when cursor is near right edge of grid', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -343,9 +343,9 @@ describe('TableAddControls', () => {
         ...defaultDragCallbacks(),
       });
 
-      // Grid rect: right=200, wrapper rect: right=220 (pr-5 padding)
-      // Move cursor into wrapper padding zone (x=210, right of grid but within wrapper)
-      moveNear(wrapper, grid, 210, 50);
+      // Grid rect: right=200, wrapper rect: right=200 (no padding)
+      // Move cursor near the grid's right edge (x=185, within PROXIMITY_PX=40 of grid right)
+      moveNear(wrapper, grid, 185, 50);
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
@@ -1776,6 +1776,173 @@ describe('TableAddControls', () => {
       controls.syncRowButtonWidth();
 
       expect(addRowBtn.style.width).toBe('800px');
+    });
+  });
+
+  describe('symmetric positioning', () => {
+    it('add-row and add-col buttons are equidistant from the grid edge', () => {
+      ({ wrapper, grid } = createGridAndWrapper(3, 3));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      // Both buttons should use the same offset magnitude from the wrapper edge
+      // bottom: -Npx and right: -Npx should match
+      expect(addRowBtn.style.bottom).toBe('-36px');
+      expect(addColBtn.style.right).toBe('-36px');
+
+      // Both hit areas should be the same size in their respective axis
+      expect(addRowBtn.style.height).toBe('32px');
+      expect(addColBtn.style.width).toBe('32px');
+    });
+
+    it('add-col button extends fully outside the wrapper (no reliance on wrapper padding)', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      // Even when wrapper has no right padding, add-col should work correctly
+      wrapper.style.paddingRight = '0px';
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      // Button should extend outside the wrapper
+      expect(addColBtn.style.right).toBe('-36px');
+      expect(addColBtn.style.width).toBe('32px');
+    });
+
+    it('syncRowButtonWidth uses right:0 when wrapper has no padding', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === wrapper) {
+          return { paddingRight: '0px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingLeft: '0px' } as CSSStyleDeclaration;
+      });
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.left).toBe('0px');
+      expect(addRowBtn.style.right).toBe('0px');
+
+      spy.mockRestore();
+    });
+  });
+
+  describe('overflow proximity', () => {
+    /**
+     * Helper: simulate a scroll container between wrapper and grid.
+     * The scroll container clips the grid (overflow-x: auto), so the
+     * visible right edge is the scroll container's right, not the grid's.
+     */
+    const createScrollContainer = (
+      wrapperEl: HTMLElement,
+      gridEl: HTMLElement
+    ): HTMLDivElement => {
+      const sc = document.createElement('div');
+
+      sc.setAttribute('data-blok-table-scroll', '');
+      wrapperEl.insertBefore(sc, gridEl);
+      sc.appendChild(gridEl);
+
+      return sc;
+    };
+
+    it('add-column button appears when cursor is near visible right edge even when grid overflows', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 5));
+
+      const scrollContainer = createScrollContainer(wrapper, grid);
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      // Grid is 900px wide but scroll container clips to 650px.
+      // Wrapper is also 650px. Grid's getBoundingClientRect reports full 900px.
+      const gridRect = new DOMRect(0, 0, 900, 100);
+      const wrapperRect = new DOMRect(0, 0, 650, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+      vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(wrapperRect);
+      vi.spyOn(scrollContainer, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(0, 0, 650, 100)
+      );
+
+      // Move cursor near the visible right edge (x=640, near wrapper right=650)
+      wrapper.dispatchEvent(
+        new MouseEvent('mousemove', { clientX: 640, clientY: 50, bubbles: true })
+      );
+
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addColBtn.style.opacity).toBe('1');
+    });
+
+    it('add-column button does NOT require cursor to reach full grid right when grid overflows', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 5));
+
+      const scrollContainer = createScrollContainer(wrapper, grid);
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      // Grid overflows: 900px inside 650px scroll container
+      const gridRect = new DOMRect(0, 0, 900, 100);
+      const wrapperRect = new DOMRect(0, 0, 650, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+      vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(wrapperRect);
+      vi.spyOn(scrollContainer, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(0, 0, 650, 100)
+      );
+
+      // Cursor at x=620 is 30px from visible right edge (650) — within PROXIMITY_PX=40
+      // But it is 280px from grid right (900) — would fail with the old code
+      wrapper.dispatchEvent(
+        new MouseEvent('mousemove', { clientX: 620, clientY: 50, bubbles: true })
+      );
+
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addColBtn.style.opacity).toBe('1');
     });
   });
 

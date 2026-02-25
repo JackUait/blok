@@ -176,7 +176,7 @@ export class TableAddControls {
       this.addRowBtn.style.right = `${paddingRight}px`;
 
       this.addColBtn.style.left = '';
-      this.addColBtn.style.right = '-16px';
+      this.addColBtn.style.right = '-36px';
     }
   }
 
@@ -499,7 +499,7 @@ export class TableAddControls {
     btn.style.opacity = '0';
     btn.style.pointerEvents = 'none';
     btn.style.position = 'absolute';
-    btn.style.right = '-16px';
+    btn.style.right = '-36px';
     btn.style.top = '0px';
     btn.style.bottom = '0px';
     btn.style.width = '32px';

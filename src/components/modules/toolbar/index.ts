@@ -337,14 +337,20 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Track whether the hover originated from inside a table cell.
-     * The blockHover controller resolves cell paragraphs to the parent table block,
-     * so `unresolvedBlock` is the table block (whose holder is NOT inside a cell).
-     * Instead, check the raw `target` element from the mouse event — if it's inside
-     * a cell container, the user is hovering a cell, not the table chrome.
+     * Check the BLOCK's holder position — if the block's holder is nested inside
+     * [data-blok-table-cell-blocks], that block is a cell-paragraph and its
+     * toolbar buttons (plus, settings) should be suppressed.
+     *
+     * NOTE: Do NOT use the raw `target` element here. blockHover.ts already
+     * resolves cell paragraphs up to the parent table block before emitting
+     * BlockHovered, so `unresolvedBlock` is always the TABLE block when
+     * hovering any part of a table. The table block's holder is at the top level
+     * (not inside a cell) — using `target.closest(...)` would incorrectly set
+     * this flag whenever the pointer lands on a cell, hiding the plus button
+     * for the TABLE itself.
      */
     this.hoveredBlockIsFromTableCell =
-      (target !== null && target !== undefined && target.closest('[data-blok-table-cell-blocks]') !== null) ||
-      (target == null && unresolvedBlock?.holder.closest('[data-blok-table-cell-blocks]') !== null);
+      unresolvedBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
 
     const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 

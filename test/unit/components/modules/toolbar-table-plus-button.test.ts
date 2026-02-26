@@ -64,6 +64,7 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
     } as unknown as BlokModules['BlockSettings'],
     BlockManager: {
       currentBlock: null,
+      blocks: [],
       getBlockByChildNode: vi.fn().mockReturnValue(null),
     } as unknown as BlokModules['BlockManager'],
     UI: {
@@ -72,6 +73,7 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
     ReadOnly: {
       isEnabled: false,
     } as unknown as BlokModules['ReadOnly'],
+    DragManager: {} as unknown as BlokModules['DragManager'],
   };
 
   toolbar.state = { ...defaultBlok, ...blokOverrides } as BlokModules;
@@ -117,8 +119,10 @@ describe('Toolbar — table block plus button visibility', () => {
       id: 'table-1',
       name: 'table',
       holder: tableHolder, // NOT inside [data-blok-table-cell-blocks]
+      isEmpty: false,
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
     } as unknown as Block;
 
     // Act — call with table block but with a target that is inside a cell
@@ -155,13 +159,16 @@ describe('Toolbar — table block plus button visibility', () => {
       id: 'table-1',
       name: 'table',
       holder: tableHolder,
+      isEmpty: false,
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
     } as unknown as Block;
 
     const { toolbar, plusButton } = createToolbar({
       BlockManager: {
         currentBlock: null,
+        blocks: [],
         getBlockByChildNode: vi.fn().mockReturnValue(tableBlock),
       } as unknown as BlokModules['BlockManager'],
     });
@@ -172,7 +179,10 @@ describe('Toolbar — table block plus button visibility', () => {
       id: 'para-1',
       name: 'paragraph',
       holder: cellParagraphHolder, // IS inside [data-blok-table-cell-blocks]
+      isEmpty: false,
       cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
     } as unknown as Block;
 
     toolbar.moveAndOpen(cellParagraphBlock, cellParagraphHolder);

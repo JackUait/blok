@@ -36,6 +36,7 @@ describe('Broker replaces heuristic routing', () => {
   });
 
   describe('cross-table adjacency scenarios (replaces isAdjacentToThisTable)', () => {
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('routes block-added to correct table when blocks are adjacent in flat list', () => {
       // Scenario: Two tables back-to-back. Block at flat index N belongs to
       // table-A, block at N+1 belongs to table-B. A new block at N+1 should
@@ -61,6 +62,7 @@ describe('Broker replaces heuristic routing', () => {
       expect(handlerA).not.toHaveBeenCalled();
     });
 
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('routes block events correctly with interleaved table blocks', () => {
       // Scenario: In a complex layout, table blocks are interleaved
       // (not contiguous in flat list).
@@ -153,6 +155,7 @@ describe('Broker replaces heuristic routing', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('routes events correctly after ownership reconciliation post-structural-op', () => {
       // After a structural op (e.g., add column), the model is updated
       // and ownership is reconciled. Subsequent events route correctly.
@@ -176,6 +179,7 @@ describe('Broker replaces heuristic routing', () => {
       expect(handler).toHaveBeenCalledTimes(2);
     });
 
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('model operations update ownership so broker routes correctly', () => {
       const handler = vi.fn();
 

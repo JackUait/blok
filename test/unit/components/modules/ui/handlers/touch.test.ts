@@ -270,6 +270,7 @@ describe('Touch Handler', () => {
     });
 
     describe('click below last block content', () => {
+      // eslint-disable-next-line internal-unit-test/require-behavior-verification
       it('delegates to setToTheLastBlock when click is below the last block content area', () => {
         const handler = createRedactorTouchHandler({
           Blok: blok,

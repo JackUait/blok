@@ -37,7 +37,7 @@ describe('Paste handler table cell restrictions', () => {
     const { BasePasteHandler } = await import('../../../../../src/components/modules/paste/handlers/base');
 
     // Verify the handler no longer has a static hardcoded TOOLS_RESTRICTED_IN_TABLE_CELLS set
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const handler = BasePasteHandler as unknown as Record<string, unknown>;
     const staticSet = handler['TOOLS_RESTRICTED_IN_TABLE_CELLS'];
 

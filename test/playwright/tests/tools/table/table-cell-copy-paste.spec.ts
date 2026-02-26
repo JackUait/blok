@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
@@ -537,7 +538,7 @@ test.describe('Table cell copy/paste', () => {
     expect(html).toContain('<table');
 
     // Click on the paragraph block below the table to focus it
-    // eslint-disable-next-line playwright/no-nth-methods -- last() is the clearest way to target the trailing paragraph
+     
     const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`).last();
 
     await paragraph.click();

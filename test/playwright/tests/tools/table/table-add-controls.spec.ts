@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 // spec: specs/table-tool-test-plan.md
 // seed: test/playwright/tests/tools/table.spec.ts
 

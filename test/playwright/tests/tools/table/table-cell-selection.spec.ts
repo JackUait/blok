@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 // spec: specs/table-tool-test-plan.md (section 8)
 // seed: test/playwright/tests/tools/table-cell-selection-delete.spec.ts
 

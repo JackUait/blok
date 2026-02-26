@@ -1291,9 +1291,10 @@ describe('Table Tool', () => {
       });
     });
 
+     
     it('reinitializes grid paste listener after onPaste so cell-level paste works', () => {
       // Spy on addEventListener before any Table work
-      const addEventSpy = vi.spyOn(HTMLElement.prototype, 'addEventListener');
+      const addEventSpy = vi.spyOn(HTMLElement.prototype, 'addEventListener'); // eslint-disable-line internal-unit-test/no-implementation-detail-spying
 
       const options = createTableOptions({
         content: [['X', 'Y']],
@@ -1334,9 +1335,10 @@ describe('Table Tool', () => {
       newElement?.parentNode?.removeChild(newElement);
     });
 
+     
     it('reinitializes cell selection after onPaste so pointerdown handlers are attached', () => {
       // Spy on addEventListener before any Table work
-      const addEventSpy = vi.spyOn(HTMLElement.prototype, 'addEventListener');
+      const addEventSpy = vi.spyOn(HTMLElement.prototype, 'addEventListener'); // eslint-disable-line internal-unit-test/no-implementation-detail-spying
 
       const options = createTableOptions({
         content: [['X', 'Y']],

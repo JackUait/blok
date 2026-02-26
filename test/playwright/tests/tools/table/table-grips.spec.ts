@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 // spec: specs/plan.md (Row and Column Grip Controls)
 // seed: test/playwright/tests/tools/table.spec.ts
 

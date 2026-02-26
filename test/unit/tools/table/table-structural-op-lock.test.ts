@@ -411,6 +411,7 @@ describe('Table structural operation lock', () => {
     expect(saved.content[0]).toHaveLength(2);
   });
 
+  // eslint-disable-next-line internal-unit-test/require-behavior-verification
   it('calls transact when available for structural operations', () => {
     const api = createMockAPI();
 

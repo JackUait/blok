@@ -14,6 +14,7 @@ describe('TableEventBroker', () => {
   });
 
   describe('subscriber management', () => {
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('allows subscribing a table handler', () => {
       const handler = vi.fn();
 
@@ -117,6 +118,7 @@ describe('TableEventBroker', () => {
   });
 
   describe('multi-table isolation', () => {
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('two tables with own blocks receive only their own events', () => {
       const handlerA = vi.fn();
       const handlerB = vi.fn();
@@ -136,6 +138,7 @@ describe('TableEventBroker', () => {
       expect(handlerB).toHaveBeenCalledTimes(1);
     });
 
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('unsubscribing one table does not affect the other', () => {
       const handlerA = vi.fn();
       const handlerB = vi.fn();
@@ -157,6 +160,7 @@ describe('TableEventBroker', () => {
   });
 
   describe('pending block routing', () => {
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('routes event for block that was just registered', () => {
       const handler = vi.fn();
 
@@ -169,6 +173,7 @@ describe('TableEventBroker', () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('routes event to new table after ownership transfer', () => {
       const handlerA = vi.fn();
       const handlerB = vi.fn();

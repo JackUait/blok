@@ -302,6 +302,17 @@ export class BlockEvents extends Module {
       return;
     }
 
+    /**
+     * Eagerly update currentBlock from the event target.
+     * The debounced selectionchange handler (180ms) may not have fired yet
+     * if '/' was typed quickly after clicking into a different block (e.g. a table cell).
+     * Without this, currentBlockIndex is stale and the toolbox checks
+     * the wrong block for table-cell containment, failing to hide restricted tools.
+     */
+    if (event.target instanceof Node) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
     const currentBlock = this.Blok.BlockManager.currentBlock;
     const canOpenToolbox = currentBlock?.isEmpty;
 

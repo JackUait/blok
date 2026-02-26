@@ -334,6 +334,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockManager: {
           currentBlock,
+          setCurrentBlockByChildNode: vi.fn(),
         } as unknown as BlokModules['BlockManager'],
         UI: {
           nodes: {

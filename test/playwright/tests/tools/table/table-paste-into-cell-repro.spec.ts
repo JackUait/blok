@@ -423,13 +423,10 @@ test.describe('Paste into existing table cell — content integrity', () => {
     expect(allTexts.filter(t => t === 'CopiedY').length).toBe(1);
   });
 
-  test('Pasting a single Google Docs row into the first cell does not duplicate content in the last row', async ({ page, context }) => {
+  test('Pasting a single Google Docs row into the first cell does not duplicate content in the last row', async ({ page }) => {
     // Regression test: copying one row (4 cells) from Google Docs and pasting into
     // cell (0,0) of a default 3×3 empty table should insert content only in the
     // first row — not also in the last row — and should expand to 4 cols, not 8.
-
-    // Grant clipboard permissions for real paste simulation
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
     await createBlok(page, {
       tools: defaultTools,
@@ -497,21 +494,11 @@ test.describe('Paste into existing table cell — content integrity', () => {
       '</b>',
     ].join('');
 
-    // Write HTML content to clipboard and trigger real paste via keyboard
-    await page.evaluate(async (html: string) => {
-      const blob = new Blob([html], { type: 'text/html' });
-      const plainBlob = new Blob(['test\ttest\tpeach test\tnew column'], { type: 'text/plain' });
-
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': blob,
-          'text/plain': plainBlob,
-        }),
-      ]);
-    }, googleDocsHTML);
-
-    // Trigger real paste via keyboard shortcut
-    await page.keyboard.press('Meta+v');
+    // Paste Google Docs HTML using synthetic paste event (works reliably in headless CI)
+    await paste(firstCellEditable, {
+      'text/html': googleDocsHTML,
+      'text/plain': 'test\ttest\tpeach test\tnew column',
+    });
 
     // Wait for pasted content to appear in the DOM
     await waitForPasteComplete(page, 'new column');
@@ -644,11 +631,9 @@ test.describe('Paste into existing table cell — content integrity', () => {
     expect(orphanedIds).toStrictEqual([]);
   });
 
-  test('Caret is placed at the end of the last pasted cell after grid paste', async ({ page, context }) => {
+  test('Caret is placed at the end of the last pasted cell after grid paste', async ({ page }) => {
     // After pasting a multi-cell payload, the caret should land at the end of
     // the last (bottom-right) pasted cell, not at some random empty cell.
-
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
     await createBlok(page, {
       tools: defaultTools,
@@ -712,19 +697,11 @@ test.describe('Paste into existing table cell — content integrity', () => {
       '</b>',
     ].join('');
 
-    await page.evaluate(async (html: string) => {
-      const blob = new Blob([html], { type: 'text/html' });
-      const plainBlob = new Blob(['alpha\tbeta\tgamma'], { type: 'text/plain' });
-
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': blob,
-          'text/plain': plainBlob,
-        }),
-      ]);
-    }, googleDocsHTML);
-
-    await page.keyboard.press('Meta+v');
+    // Paste Google Docs HTML using synthetic paste event (works reliably in headless CI)
+    await paste(firstCellEditable, {
+      'text/html': googleDocsHTML,
+      'text/plain': 'alpha\tbeta\tgamma',
+    });
 
     await waitForPasteComplete(page, 'gamma');
 

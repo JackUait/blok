@@ -1,14 +1,12 @@
 /**
  * Unit tests for Toolbar.moveAndOpen() — table block plus button visibility.
  *
- * Regression test for: plus button hidden when hovering a table block because
- * the raw pointer target is inside [data-blok-table-cell-blocks].
- *
  * Expected behaviour:
- * - Plus button VISIBLE when `unresolvedBlock.holder` is NOT inside a cell
- *   (i.e. the block IS the table block itself), even if `target` is a cell element.
+ * - Plus button HIDDEN when `target` is inside a [data-blok-table-cell-blocks]
+ *   container (i.e. the pointer is on a cell's content area).
+ * - Plus button VISIBLE when the target is NOT inside a cell (e.g. table border/padding).
  * - Plus button HIDDEN when `unresolvedBlock.holder` IS inside a cell
- *   (i.e. a cell-paragraph block is passed directly).
+ *   (i.e. a cell-paragraph block is passed directly via activateToolbox / slash menu).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -92,18 +90,56 @@ describe('Toolbar — table block plus button visibility', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows plus button for a table block even when the mouse target is inside a cell', () => {
+  it('hides plus button when the focused element is inside a table cell', () => {
     /**
-     * Scenario: Playwright's `tableBlock.hover()` places the pointer at the
-     * centre of the table, landing on a cell element. The raw `target` that
-     * reaches moveAndOpen is therefore inside [data-blok-table-cell-blocks].
-     * However the BLOCK being hovered is the TABLE itself (blockHover.ts
-     * resolves cell paragraphs to the parent table before emitting BlockHovered).
-     * The plus button must remain visible.
+     * Scenario: The user clicks inside a table cell, causing document.activeElement
+     * to be inside [data-blok-table-cell-blocks]. The plus button should be hidden.
      */
     const { toolbar, plusButton } = createToolbar();
 
-    // DOM structure: top-level table holder → cell container → target element
+    // DOM structure: top-level table holder → cell container → focusable element
+    const tableHolder = document.createElement('div');
+    const cellContainer = document.createElement('div');
+
+    cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+    const cellEditable = document.createElement('div');
+
+    cellEditable.setAttribute('contenteditable', 'true');
+    cellEditable.tabIndex = 0;
+    cellContainer.appendChild(cellEditable);
+    tableHolder.appendChild(cellContainer);
+    tableHolder.appendChild(toolbar.nodes.wrapper as HTMLElement);
+    document.body.appendChild(tableHolder);
+
+    const tableBlock = {
+      id: 'table-1',
+      name: 'table',
+      holder: tableHolder,
+      isEmpty: false,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    // Focus inside the cell (simulates a click)
+    cellEditable.focus();
+
+    // Act — call moveAndOpen while cell has focus
+    toolbar.moveAndOpen(tableBlock, cellEditable);
+
+    // Plus button must be HIDDEN (focus is inside a cell)
+    expect(plusButton.style.display).toBe('none');
+
+    document.body.removeChild(tableHolder);
+  });
+
+  it('shows plus button for a table block when no cell has focus (hover only)', () => {
+    /**
+     * Scenario: The pointer hovers over the table block but no cell is focused.
+     * The plus button should remain visible so the user can click it.
+     */
+    const { toolbar, plusButton } = createToolbar();
+
     const tableHolder = document.createElement('div');
     const cellContainer = document.createElement('div');
 
@@ -118,29 +154,30 @@ describe('Toolbar — table block plus button visibility', () => {
     const tableBlock = {
       id: 'table-1',
       name: 'table',
-      holder: tableHolder, // NOT inside [data-blok-table-cell-blocks]
+      holder: tableHolder,
       isEmpty: false,
       cleanupDraggable: vi.fn(),
       setupDraggable: vi.fn(),
       getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
     } as unknown as Block;
 
-    // Act — call with table block but with a target that is inside a cell
+    // Ensure no cell has focus (blur everything)
+    (document.activeElement as HTMLElement | null)?.blur?.();
+
+    // Act — hover (target is inside a cell, but no focus)
     toolbar.moveAndOpen(tableBlock, cellTarget);
 
-    // Plus button must be visible
-    expect(plusButton.style.display).not.toBe('none');
+    // Plus button must be VISIBLE (no cell has focus)
     expect(plusButton.style.display).toBe('');
 
     document.body.removeChild(tableHolder);
   });
 
-  it('hides plus button when the block holder itself is nested inside a table cell', () => {
+  it('hides plus button when a cell-paragraph block is passed directly and cell is focused', () => {
     /**
      * Scenario: A cell-paragraph block is passed directly to moveAndOpen
-     * (e.g. via a direct call, not through the blockHover resolver).
-     * Its holder is inside [data-blok-table-cell-blocks], so the plus button
-     * should be suppressed.
+     * (e.g. via activateToolbox → slash press, not through the blockHover resolver).
+     * The cell is focused (user typed "/" in it), so the plus button should be hidden.
      */
     // Bottom-up DOM: tableHolder > cellContainer > cellParagraphHolder
     const tableHolder = document.createElement('div');
@@ -151,6 +188,8 @@ describe('Toolbar — table block plus button visibility', () => {
     cellContainer.setAttribute('data-blok-table-cell-blocks', '');
     const cellParagraphHolder = document.createElement('div');
 
+    cellParagraphHolder.setAttribute('contenteditable', 'true');
+    cellParagraphHolder.tabIndex = 0;
     cellContainer.appendChild(cellParagraphHolder);
     tableHolder.appendChild(cellContainer);
     document.body.appendChild(tableHolder);
@@ -184,6 +223,9 @@ describe('Toolbar — table block plus button visibility', () => {
       setupDraggable: vi.fn(),
       getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
     } as unknown as Block;
+
+    // Focus inside the cell (simulates typing "/" in a cell)
+    cellParagraphHolder.focus();
 
     toolbar.moveAndOpen(cellParagraphBlock, cellParagraphHolder);
 

@@ -24,7 +24,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       // Mobile styles
       'mobile:right-auto',
       // RTL styles
-      'group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*(var(--width-toolbox-btn)))]',
+      'group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*(var(--spacing-toolbox-btn)))]',
       'mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]'
     ),
     actionsOpened: 'opacity-100',
@@ -43,7 +43,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
       'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
       // RTL styles
-      'group-data-[blok-rtl=true]:right-[calc(-1*(var(--width-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto',
+      'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto',
       // Narrow mode (not-mobile)
       'not-mobile:group-data-[blok-narrow=true]:left-[5px]',
       // Narrow mode RTL (not-mobile)

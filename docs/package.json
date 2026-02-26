@@ -27,12 +27,12 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-v8": "^3.2.0",
     "jsdom": "^25.0.1",
     "react-grab": "^0.0.98",
     "rimraf": "^6.0.1",
     "typescript": "~5.6.3",
     "vite": "^6.0.1",
-    "vitest": "^2.1.8"
+    "vitest": "^3.2.0"
   }
 }

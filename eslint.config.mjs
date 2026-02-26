@@ -1238,6 +1238,12 @@ export default defineConfig(
       tailwindcss,
       'internal-dom': internalDomPlugin,
     },
+    settings: {
+      tailwindcss: {
+        // Tailwind v4 uses CSS-based config; suppress "Cannot resolve default config path" warning
+        config: {},
+      },
+    },
     rules: {
       'max-lines': 'off', // Style-only: file length is organizational preference
       // Prevent .dataset assignment, prefer .setAttribute()

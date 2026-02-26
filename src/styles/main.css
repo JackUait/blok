@@ -1,6 +1,10 @@
 /* Tailwind CSS - must be first */
 @import 'tailwindcss';
 
+@custom-variant mobile (@media (max-width: 650px));
+@custom-variant not-mobile (@media (min-width: 651px));
+@custom-variant can-hover (@media (hover: hover));
+
 @config '../../tailwind.config.js';
 
 /*

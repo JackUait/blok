@@ -1,6 +1,18 @@
 /* Tailwind CSS - must be first */
 @import 'tailwindcss';
 
+/*
+  Exclude non-source directories from Tailwind's automatic content detection.
+  Without this, Tailwind v4 scans all non-gitignored files (including docs/,
+  test/, .claude/) and picks up false class candidates from code examples,
+  test fixtures, and markdown — generating dead CSS in the production bundle.
+*/
+@source not "../../docs";
+@source not "../../test";
+@source not "../../.claude";
+@source not "../../scripts";
+@source not "../../.storybook";
+
 @custom-variant mobile (@media (max-width: 650px));
 @custom-variant not-mobile (@media (min-width: 651px));
 @custom-variant can-hover (@media (hover: hover));

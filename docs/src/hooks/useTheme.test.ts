@@ -2,19 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTheme } from './useTheme';
 
-// Polyfill MediaQueryListEvent for test environment
-if (typeof MediaQueryListEvent === 'undefined') {
-  global.MediaQueryListEvent = class MediaQueryListEvent extends Event {
-    public matches: boolean;
-    public media: string;
-
-    constructor(type: string, eventInitDict: MediaQueryListEventInit = {}) {
-      super(type);
-      this.matches = eventInitDict.matches ?? false;
-      this.media = eventInitDict.media ?? '';
-    }
-  };
-}
+/**
+ * Create a synthetic MediaQueryListEvent-like object.
+ * jsdom 28 does not provide MediaQueryListEvent natively,
+ * so we build one from a plain Event + the required fields.
+ */
+const createMediaQueryEvent = (matches: boolean): MediaQueryListEvent =>
+  Object.assign(new Event('change'), { matches, media: '' }) as MediaQueryListEvent;
 
 describe('useTheme', () => {
   const localStorageMock = (() => {
@@ -34,16 +28,18 @@ describe('useTheme', () => {
   let mediaQueryChangeHandler: ((e: MediaQueryListEvent) => void) | null = null;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     localStorageMock.clear();
     mediaQueryChangeHandler = null;
     Object.defineProperty(window, 'localStorage', {
       value: localStorageMock,
       writable: true,
+      configurable: true,
     });
     Object.defineProperty(window, 'matchMedia', {
       value: matchMediaMock,
       writable: true,
+      configurable: true,
     });
     // Default to light mode in system preference
     matchMediaMock.mockReturnValue({
@@ -228,9 +224,7 @@ describe('useTheme', () => {
 
       // Simulate system theme change to dark
       act(() => {
-        mediaQueryChangeHandler?.(
-          new MediaQueryListEvent('change', { matches: true })
-        );
+        mediaQueryChangeHandler?.(createMediaQueryEvent(true));
       });
 
       // Theme should update to dark when system changes
@@ -257,9 +251,7 @@ describe('useTheme', () => {
 
       // Simulate system theme change to light
       act(() => {
-        mediaQueryChangeHandler?.(
-          new MediaQueryListEvent('change', { matches: false })
-        );
+        mediaQueryChangeHandler?.(createMediaQueryEvent(false));
       });
 
       // Theme should update to light when system changes
@@ -282,9 +274,7 @@ describe('useTheme', () => {
 
       // Simulate system theme change to light
       act(() => {
-        mediaQueryChangeHandler?.(
-          new MediaQueryListEvent('change', { matches: false })
-        );
+        mediaQueryChangeHandler?.(createMediaQueryEvent(false));
       });
 
       // Theme should change to light when system changes

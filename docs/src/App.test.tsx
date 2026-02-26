@@ -11,18 +11,22 @@ describe('App', () => {
   beforeEach(() => {
     // Mock scrollIntoView for testing
     scrollIntoViewMock = vi.fn();
-    global.Element.prototype.scrollIntoView = scrollIntoViewMock;
+    Element.prototype.scrollIntoView = scrollIntoViewMock as unknown as typeof Element.prototype.scrollIntoView;
     // Mock window.scrollTo
-    global.scrollTo = vi.fn();
+    window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 
     // Store original history for scrollRestoration testing
-    originalHistory = global.history;
+    originalHistory = window.history;
   });
 
   afterEach(() => {
     vi.clearAllMocks();
     // Restore original history
-    global.history = originalHistory;
+    Object.defineProperty(window, 'history', {
+      value: originalHistory,
+      writable: true,
+      configurable: true,
+    });
   });
 
   it('should render HomePage for root path', () => {
@@ -75,7 +79,7 @@ describe('App', () => {
     };
 
     // Override global history
-    Object.defineProperty(global, 'history', {
+    Object.defineProperty(window, 'history', {
       value: mockHistory,
       writable: true,
       configurable: true,

@@ -6,7 +6,7 @@ import { I18nProvider } from '../contexts/I18nContext';
 
 describe('ApiPage', () => {
   beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
@@ -317,7 +317,7 @@ describe('ApiPage', () => {
       const anchorLink = screen.getByRole('link', { name: /Link to Blok Class/ });
       fireEvent.click(anchorLink);
 
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(100);
 
       expect(pushStateSpy).toHaveBeenCalledWith(null, '', '#core');
 

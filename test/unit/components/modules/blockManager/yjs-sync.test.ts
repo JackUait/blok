@@ -613,23 +613,35 @@ describe('BlockYjsSync', () => {
 
         mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
 
-        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+        // Mock requestAnimationFrame for deterministic control over when cleanup fires
+        let scheduledRafCallback: FrameRequestCallback | undefined;
+        const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+          scheduledRafCallback = cb;
+          return 0;
+        });
 
-        // Immediately after the event, isSyncingFromYjs should be true
-        expect(yjsSync.isSyncingFromYjs).toBe(true);
+        try {
+          callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
 
-        // Wait for setData promise to resolve
-        await new Promise(resolve => setTimeout(resolve, 0));
+          // Immediately after the event, isSyncingFromYjs should be true
+          expect(yjsSync.isSyncingFromYjs).toBe(true);
 
-        // After setData resolves, isSyncingFromYjs should still be true
-        // (extended through RAF to prevent DOM mutation observers from syncing back)
-        expect(yjsSync.isSyncingFromYjs).toBe(true);
+          // Wait for setData promise to resolve (RAF cleanup is now scheduled but not fired)
+          await new Promise(resolve => setTimeout(resolve, 0));
 
-        // Wait for requestAnimationFrame to fire
-        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+          // After setData resolves, isSyncingFromYjs should still be true
+          // (cleanup deferred to RAF which hasn't fired yet)
+          expect(yjsSync.isSyncingFromYjs).toBe(true);
+          expect(scheduledRafCallback).toBeDefined();
 
-        // Now it should be false
-        expect(yjsSync.isSyncingFromYjs).toBe(false);
+          // Manually fire the RAF callback to simulate the next animation frame
+          scheduledRafCallback?.(performance.now());
+
+          // Now it should be false
+          expect(yjsSync.isSyncingFromYjs).toBe(false);
+        } finally {
+          rafSpy.mockRestore();
+        }
       });
 
       it('keeps isSyncingFromYjs true through RAF for tunes-changed path', () => {

@@ -689,7 +689,7 @@ export class PopoverDesktop extends PopoverAbstract {
         const isDefaultItem = item instanceof PopoverItemDefault;
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
         const isHidden = isDefaultItem
-          ? !matchingItems.includes(item)
+          ? !matchingItems.includes(item) || (item.name !== undefined && this.isNamePermanentlyHidden(item.name))
           : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
         item.toggleHidden(isHidden);

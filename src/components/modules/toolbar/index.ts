@@ -343,8 +343,8 @@ export class Toolbar extends Module<ToolbarNodes> {
      * a cell container, the user is hovering a cell, not the table chrome.
      */
     this.hoveredBlockIsFromTableCell =
-      target !== null && target !== undefined &&
-      target.closest('[data-blok-table-cell-blocks]') !== null;
+      (target !== null && target !== undefined && target.closest('[data-blok-table-cell-blocks]') !== null) ||
+      (target == null && unresolvedBlock?.holder.closest('[data-blok-table-cell-blocks]') !== null);
 
     const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 

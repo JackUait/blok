@@ -175,6 +175,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Names of items that have been explicitly hidden via toggleItemHiddenByName.
+   * These items must stay hidden even when filterItems would normally show them.
+   */
+  private readonly permanentlyHiddenNames = new Set<string>();
+
+  /**
    * Toggles hidden state of all items matching the given name
    * @param name - name of the items to toggle
    * @param isHidden - true to hide, false to show
@@ -183,6 +189,21 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.items
       .filter(item => item.name === name)
       .forEach(item => item.toggleHidden(isHidden));
+
+    if (isHidden) {
+      this.permanentlyHiddenNames.add(name);
+    } else {
+      this.permanentlyHiddenNames.delete(name);
+    }
+  }
+
+  /**
+   * Returns true if the given item name was explicitly hidden via toggleItemHiddenByName.
+   * Used by subclasses to prevent filter logic from un-hiding restricted items.
+   * @param name - item name to check
+   */
+  protected isNamePermanentlyHidden(name: string): boolean {
+    return this.permanentlyHiddenNames.has(name);
   }
 
   /**

@@ -365,6 +365,124 @@ describe('Toolbar module interactions', () => {
     expect(hoveredBlock).toBe(cellBlock);
   });
 
+  it('hides plus button when moveAndOpen is called with a cell block but no target (keyboard/slash path)', () => {
+    // Create DOM structure: table block containing a cell container with a cell block
+    const tableBlockHolder = document.createElement('div');
+
+    tableBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+
+    const cellBlocksContainer = document.createElement('div');
+
+    cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+    tableBlockHolder.appendChild(cellBlocksContainer);
+
+    const cellBlockHolder = document.createElement('div');
+
+    cellBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+    cellBlocksContainer.appendChild(cellBlockHolder);
+
+    const pluginsContent = document.createElement('div');
+
+    tableBlockHolder.appendChild(pluginsContent);
+
+    const tableBlock = {
+      id: 'table-block',
+      name: 'table',
+      holder: tableBlockHolder,
+      pluginsContent,
+      isEmpty: false,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+    };
+
+    const cellBlock = {
+      id: 'cell-paragraph',
+      name: 'paragraph',
+      holder: cellBlockHolder,
+      pluginsContent: document.createElement('div'),
+      isEmpty: true,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+    };
+
+    const blok = getBlok();
+
+    blok.BlockManager.currentBlock = cellBlock as unknown as typeof blok.BlockManager.currentBlock;
+    (blok.BlockManager as unknown as { getBlockByChildNode: (node: Node) => unknown }).getBlockByChildNode = vi.fn(() => tableBlock);
+
+    (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+    };
+
+    // Call moveAndOpen with the cell block but NO target argument (simulates keyboard/slash path)
+    (toolbar as unknown as { moveAndOpen: (block: unknown, target?: unknown) => void }).moveAndOpen(cellBlock);
+
+    const nodes = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
+
+    // Plus button should be hidden because the block is inside a table cell
+    expect(nodes.plusButton?.style.display).toBe('none');
+  });
+
+  it('hides plus button when moveAndOpen is called with no arguments but currentBlock is inside a table cell', () => {
+    // Create DOM: cell block inside table cell container
+    const cellBlocksContainer = document.createElement('div');
+
+    cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+
+    const cellBlockHolder = document.createElement('div');
+
+    cellBlocksContainer.appendChild(cellBlockHolder);
+
+    const tableBlockHolder = document.createElement('div');
+
+    tableBlockHolder.setAttribute('data-blok-testid', 'block-wrapper');
+    tableBlockHolder.appendChild(cellBlocksContainer);
+
+    const tableBlock = {
+      id: 'table-block',
+      name: 'table',
+      holder: tableBlockHolder,
+      pluginsContent: document.createElement('div'),
+      isEmpty: false,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+    };
+
+    const cellBlock = {
+      id: 'cell-paragraph',
+      name: 'paragraph',
+      holder: cellBlockHolder,
+      pluginsContent: document.createElement('div'),
+      isEmpty: true,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
+    };
+
+    const blok = getBlok();
+
+    // No block passed to moveAndOpen → it uses BlockManager.currentBlock
+    blok.BlockManager.currentBlock = cellBlock as unknown as typeof blok.BlockManager.currentBlock;
+    (blok.BlockManager as unknown as { getBlockByChildNode: (node: Node) => unknown }).getBlockByChildNode = vi.fn(() => tableBlock);
+
+    (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+    };
+
+    // Call moveAndOpen with NO arguments (simulates activateToolbox() from blockEvents)
+    toolbar.moveAndOpen();
+
+    const nodes = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
+
+    // Plus button should be hidden because currentBlock is inside a table cell
+    expect(nodes.plusButton?.style.display).toBe('none');
+  });
+
   /**
    * Creates a minimal stub that passes `instanceof Block` and has the
    * properties the BlockHovered handler and moveAndOpen need.

@@ -8,7 +8,7 @@ import eslintPluginImport from 'eslint-plugin-import';
 import playwright from 'eslint-plugin-playwright';
 import sonarjs from 'eslint-plugin-sonarjs';
 import jest from 'eslint-plugin-jest';
-import vitest from 'eslint-plugin-vitest';
+import vitest from '@vitest/eslint-plugin';
 import jestDom from 'eslint-plugin-jest-dom';
 import testingLibrary from 'eslint-plugin-testing-library';
 import tseslint from 'typescript-eslint';
@@ -995,7 +995,7 @@ const internalDomPlugin = {
         },
       },
       create(context) {
-        const sourceCode = context.sourceCode ?? context.getSourceCode();
+        const sourceCode = context.sourceCode;
 
         // Convert camelCase to kebab-case
         const toKebabCase = (str) => {
@@ -1346,6 +1346,8 @@ export default defineConfig(
       'vitest/valid-describe-callback': 'off', // Already handled by jest/valid-describe-callback
       'vitest/valid-expect': 'off', // Already handled by jest/valid-expect
       'vitest/valid-title': 'off', // Already handled by jest/valid-title
+      'vitest/no-conditional-expect': 'off', // Conditional expects are valid in test helpers
+      'vitest/prefer-called-exactly-once-with': 'off', // Style preference, not a bug
       // Enforce test structure best practices
       'jest/consistent-test-it': 'off', // Style-only: it() vs test() naming convention
       'jest/valid-describe-callback': 'error',
@@ -1493,6 +1495,7 @@ export default defineConfig(
       'playwright/no-nested-step': 'off', // Style-only: organizational convention
       // Code quality
       'playwright/no-unused-locators': 'warn',
+      'playwright/consistent-spacing-between-blocks': 'off', // Style-only: blank line spacing
       'playwright/expect-expect': ['error', {
         assertFunctionNames: ['expect', 'expectDepth'],
       }],
@@ -1549,6 +1552,8 @@ export default defineConfig(
       'vitest/valid-describe-callback': 'error',
       'vitest/valid-expect': 'error',
       'vitest/valid-title': 'error',
+      'vitest/no-conditional-expect': 'off', // Conditional expects are valid in test helpers
+      'vitest/prefer-called-exactly-once-with': 'off', // Style preference, not a bug
       'jest/consistent-test-it': 'off', // Style-only: it() vs test() naming convention
       'jest/valid-describe-callback': 'error',
       'jest/valid-expect': 'error',

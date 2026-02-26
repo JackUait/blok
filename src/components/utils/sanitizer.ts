@@ -34,7 +34,7 @@ import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sani
 import type { SavedData } from '../../../types/data-formats';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 
-type DeepSanitizerRule = SanitizerConfig | SanitizerRule | boolean;
+type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
 
 /**
  * Recursive type for data that can contain nested arrays

@@ -300,7 +300,7 @@ test.describe('toolbox', () => {
          */
         public save(el: HTMLElement): { text: string } {
           return {
-            // eslint-disable-next-line playwright/no-conditional-in-test
+             
             text: el.textContent ?? '',
           };
         }
@@ -417,7 +417,7 @@ test.describe('toolbox', () => {
          */
         public save(el: HTMLElement): { text: string } {
           return {
-            // eslint-disable-next-line playwright/no-conditional-in-test
+             
             text: el.textContent ?? '',
           };
         }
@@ -499,7 +499,7 @@ test.describe('toolbox', () => {
          */
         public save(el: HTMLElement): { text: string } {
           return {
-            // eslint-disable-next-line playwright/no-conditional-in-test
+             
             text: el.textContent ?? '',
           };
         }
@@ -599,7 +599,7 @@ test.describe('toolbox', () => {
          */
         public save(el: HTMLElement): { text: string } {
           return {
-            // eslint-disable-next-line playwright/no-conditional-in-test
+             
             text: el.textContent ?? '',
           };
         }
@@ -940,7 +940,7 @@ test.describe('toolbox keyboard navigation', () => {
        */
       public save(el: HTMLElement): { text: string } {
         return {
-          // eslint-disable-next-line playwright/no-conditional-in-test
+           
           text: el.textContent ?? '',
         };
       }

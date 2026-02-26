@@ -1,6 +1,8 @@
 import type { PasteEvent, PasteEventDetail } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
+import { Dom } from '../../../dom';
+import { clean } from '../../../utils/sanitizer';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PasteData } from '../types';
@@ -170,7 +172,6 @@ export abstract class BasePasteHandler implements PasteHandler {
   protected async processSingleBlock(dataToInsert: PasteData, canReplaceCurrentBlock: boolean): Promise<void> {
     const { Caret, BlockManager } = this.Blok;
     const { currentBlock } = BlockManager;
-    const { Dom } = await import('../../../dom');
     const $ = Dom;
 
     if (
@@ -200,7 +201,6 @@ export abstract class BasePasteHandler implements PasteHandler {
       return;
     }
 
-    const { clean } = await import('../../../utils/sanitizer');
     const currentToolSanitizeConfig = currentBlock.tool.baseSanitizeConfig;
 
     Caret.insertContentAtCaretPosition(

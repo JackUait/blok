@@ -98,6 +98,7 @@ const searchInputRegistry = vi.hoisted(() => ({
 
 vi.mock('../../../src/components/utils/popover/components/search-input', async (importOriginal) => {
   // Import the real matchesSearchQuery so filterItems() works in tests
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- importOriginal returns unknown, assertion needed for property access
   const actual = await importOriginal() as { matchesSearchQuery: (item: unknown, query: string) => boolean };
 
   const SearchInputEvent = {

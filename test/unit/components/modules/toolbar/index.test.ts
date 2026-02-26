@@ -407,6 +407,14 @@ describe('Toolbar module interactions', () => {
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
     };
 
+    // Focus an element inside the cell so isFocusInsideTableCell() returns true
+    const focusable = document.createElement('div');
+
+    focusable.setAttribute('contenteditable', 'true');
+    cellBlocksContainer.appendChild(focusable);
+    document.body.appendChild(tableBlockHolder);
+    focusable.focus();
+
     const blok = getBlok();
 
     blok.BlockManager.currentBlock = cellBlock as unknown as typeof blok.BlockManager.currentBlock;
@@ -424,6 +432,9 @@ describe('Toolbar module interactions', () => {
 
     // Plus button should be hidden because the block is inside a table cell
     expect(nodes.plusButton?.style.display).toBe('none');
+
+    // Clean up
+    document.body.removeChild(tableBlockHolder);
   });
 
   it('hides plus button when moveAndOpen is called with no arguments but currentBlock is inside a table cell', () => {
@@ -463,6 +474,14 @@ describe('Toolbar module interactions', () => {
       getTunes: vi.fn(() => ({ toolTunes: [{}], commonTunes: [] })),
     };
 
+    // Focus an element inside the cell so isFocusInsideTableCell() returns true
+    const focusable = document.createElement('div');
+
+    focusable.setAttribute('contenteditable', 'true');
+    cellBlocksContainer.appendChild(focusable);
+    document.body.appendChild(tableBlockHolder);
+    focusable.focus();
+
     const blok = getBlok();
 
     // No block passed to moveAndOpen → it uses BlockManager.currentBlock
@@ -481,6 +500,9 @@ describe('Toolbar module interactions', () => {
 
     // Plus button should be hidden because currentBlock is inside a table cell
     expect(nodes.plusButton?.style.display).toBe('none');
+
+    // Clean up
+    document.body.removeChild(tableBlockHolder);
   });
 
   /**

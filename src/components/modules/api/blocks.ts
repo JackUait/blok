@@ -213,9 +213,14 @@ export class BlocksAPI extends Module {
      * So we need to disable modifications observer temporarily
      */
     this.Blok.ModificationsObserver.disable();
+    this.Blok.Renderer.markRenderStart();
 
-    await this.Blok.BlockManager.clear();
-    await this.Blok.Renderer.render(data.blocks);
+    try {
+      await this.Blok.BlockManager.clear();
+      await this.Blok.Renderer.render(data.blocks);
+    } finally {
+      this.Blok.Renderer.markRenderEnd();
+    }
 
     this.Blok.ModificationsObserver.enable();
   }
@@ -226,9 +231,15 @@ export class BlocksAPI extends Module {
    * @returns {Promise<void>}
    */
   public async renderFromHTML(data: string): Promise<void> {
-    await this.Blok.BlockManager.clear();
+    this.Blok.Renderer.markRenderStart();
 
-    return this.Blok.Paste.processText(data, true);
+    try {
+      await this.Blok.BlockManager.clear();
+
+      return this.Blok.Paste.processText(data, true);
+    } finally {
+      this.Blok.Renderer.markRenderEnd();
+    }
   }
 
   /**

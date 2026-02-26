@@ -117,8 +117,14 @@ export class ReadOnly extends Module {
       return this.readOnlyEnabled;
     }
 
-    await this.Blok.BlockManager.clear();
-    await this.Blok.Renderer.render(savedBlocks.blocks);
+    this.Blok.Renderer.markRenderStart();
+
+    try {
+      await this.Blok.BlockManager.clear();
+      await this.Blok.Renderer.render(savedBlocks.blocks);
+    } finally {
+      this.Blok.Renderer.markRenderEnd();
+    }
 
     this.Blok.ModificationsObserver.enable();
 

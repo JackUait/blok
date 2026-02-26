@@ -247,6 +247,8 @@ type BlokStub = {
   };
   Renderer: {
     render: ReturnType<typeof vi.fn>;
+    markRenderStart: ReturnType<typeof vi.fn>;
+    markRenderEnd: ReturnType<typeof vi.fn>;
   };
   Paste: {
     processText: ReturnType<typeof vi.fn>;
@@ -284,6 +286,8 @@ const createBlokStub = (
     },
     Renderer: {
       render: vi.fn(async (_blocks: OutputBlockData[]) => {}) as ReturnType<typeof vi.fn>,
+      markRenderStart: vi.fn() as ReturnType<typeof vi.fn>,
+      markRenderEnd: vi.fn() as ReturnType<typeof vi.fn>,
     },
     Paste: {
       processText: vi.fn(async (_html: string, _sanitize: boolean) => {}) as ReturnType<typeof vi.fn>,

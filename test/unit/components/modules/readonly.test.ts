@@ -25,6 +25,8 @@ type ReadOnlyMocks = {
   };
   renderer: {
     render: MockInstance<(blocks: unknown[]) => Promise<void>>;
+    markRenderStart: MockInstance<() => void>;
+    markRenderEnd: MockInstance<() => void>;
   };
   toolbar: {
     toggleReadOnly: MockInstance<(state: boolean) => void>;
@@ -69,6 +71,8 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
 
   const renderer: ReadOnlyMocks['renderer'] = {
     render: vi.fn<(blocks: unknown[]) => Promise<void>>(async (_blocks) => undefined),
+    markRenderStart: vi.fn<() => void>(() => undefined),
+    markRenderEnd: vi.fn<() => void>(() => undefined),
   };
 
   const toolbar: ReadOnlyMocks['toolbar'] = {

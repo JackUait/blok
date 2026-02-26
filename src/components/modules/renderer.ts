@@ -21,6 +21,41 @@ export class Renderer extends Module {
   private detectedInputFormat: DataFormatAnalysis['format'] = 'flat';
 
   /**
+   * Promise that resolves when an in-progress render operation completes.
+   * Used by Saver to wait for render to finish before reading blocks.
+   * null when no render is in progress.
+   */
+  public pendingRender: Promise<void> | null = null;
+
+  /**
+   * Resolve function for the current pendingRender promise.
+   * Called when the render operation is done (in finally block).
+   */
+  private resolvePendingRender: (() => void) | null = null;
+
+  /**
+   * Signals that a render operation is starting.
+   * Sets pendingRender so that Saver can await it.
+   */
+  public markRenderStart(): void {
+    this.pendingRender = new Promise<void>((resolve) => {
+      this.resolvePendingRender = resolve;
+    });
+  }
+
+  /**
+   * Signals that a render operation has completed.
+   * Resolves pendingRender so that any waiting Saver call can proceed.
+   */
+  public markRenderEnd(): void {
+    if (this.resolvePendingRender !== null) {
+      this.resolvePendingRender();
+      this.resolvePendingRender = null;
+    }
+    this.pendingRender = null;
+  }
+
+  /**
    * Get the detected input format
    */
   public getDetectedInputFormat(): DataFormatAnalysis['format'] {

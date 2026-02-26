@@ -28,6 +28,27 @@ export class Module<T extends ModuleNodes = Record<string, HTMLElement>> {
   public nodes: T = {} as T;
 
   /**
+   * Flag indicating whether this module's editor has been destroyed.
+   * After destruction, modules should refuse to perform work.
+   */
+  private _isDestroyed = false;
+
+  /**
+   * Returns true if the editor owning this module has been destroyed
+   */
+  public get isDestroyed(): boolean {
+    return this._isDestroyed;
+  }
+
+  /**
+   * Mark this module as destroyed. Called by the editor's destroy() method.
+   * After this, the module should refuse to perform further work.
+   */
+  public markDestroyed(): void {
+    this._isDestroyed = true;
+  }
+
+  /**
    * Blok modules list
    * @type {BlokModules}
    */

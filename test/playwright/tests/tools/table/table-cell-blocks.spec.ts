@@ -399,6 +399,14 @@ test.describe('Block Types Inside Table Cells', () => {
 
     await tableToolboxItem.click({ force: true });
 
+    // Wait for the toolbox to close after inserting the table.
+    // This prevents the second waitForFunction from catching stale
+    // data-blok-popover-opened state from the first toolbox opening.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') === null,
+      { timeout: 3000 }
+    );
+
     // Wait for the table to appear
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 

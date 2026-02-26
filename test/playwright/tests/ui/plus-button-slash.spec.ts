@@ -558,4 +558,266 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should still have only 1 block (paragraph was replaced, not a new block added)
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
   });
+
+  test('clicking plus button on table block creates new paragraph below the table, not inside a cell', async ({ page }) => {
+    // Need to create Blok with table tool registered
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Hover over the table block to show the plus button
+    const tableBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`);
+
+    await tableBlock.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+
+    // The "/" should be in a NEW paragraph block OUTSIDE the table, not inside a cell.
+    const cellsWithSlash = page.locator('[data-blok-table-cell] [contenteditable]', { hasText: '/' });
+
+    await expect(cellsWithSlash).toHaveCount(0);
+
+    // There should be a paragraph block (outside the table) containing "/"
+    const slashParagraph = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+
+    await expect(slashParagraph).toHaveCount(1);
+  });
+
+  test('selecting a block type from toolbox after clicking plus on table creates block below the table', async ({ page }) => {
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Hover over the table block to show the plus button
+    const tableBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`);
+
+    await tableBlock.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+
+    // Type "head" to filter to heading items
+    await page.keyboard.type('head');
+
+    // Wait for filter to show heading items
+    const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
+
+    await expect(visibleItems).toHaveCount(6);
+
+    // Click on Heading 1
+    const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])', { hasText: 'Heading 1' });
+
+    await headingItem.click();
+
+    // The header block should exist and be OUTSIDE the table
+    const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`);
+
+    await expect(headerBlock).toBeVisible();
+
+    // The header should NOT be inside a table cell
+    const headerInsideTable = page.locator('[data-blok-table-cell] [data-blok-component="header"]');
+
+    await expect(headerInsideTable).toHaveCount(0);
+
+    // Verify output data: header should be a separate top-level block after the table.
+    // The table's 2x2 grid produces 4 cell paragraph blocks in the flat save output.
+    const blockTypes = await page.evaluate(() =>
+      window.blokInstance?.save().then(data => data.blocks.map(b => b.type))
+    );
+
+    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'header']);
+  });
+
+  test('clicking plus button on table block works when multiple tables exist in the article', async ({ page }) => {
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['E', 'F'], ['G', 'H']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Hover over the second table block (contains "E") to show the plus button
+    const secondTable = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="table"]`, { hasText: 'E' });
+
+    await secondTable.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    // Toolbox should be open
+    await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
+
+    // The "/" should be in a NEW paragraph block OUTSIDE any table, not inside a cell.
+    const cellsWithSlash = page.locator('[data-blok-table-cell] [contenteditable]', { hasText: '/' });
+
+    await expect(cellsWithSlash).toHaveCount(0);
+
+    // There should be a paragraph block (outside the table) containing "/"
+    const slashParagraph = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+
+    await expect(slashParagraph).toHaveCount(1);
+  });
+
+  test('clicking bottom zone below table creates new block below the table, not inside last cell', async ({ page }) => {
+    await resetBlok(page);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+
+    await page.evaluate(
+      async ({ holder }) => {
+        const TableClass = (window.Blok as unknown as Record<string, unknown>).Table;
+
+        const blok = new window.Blok({
+          holder,
+          tools: {
+            table: {
+              class: TableClass as new (...args: unknown[]) => unknown,
+            },
+          },
+          data: {
+            blocks: [
+              {
+                type: 'table',
+                data: {
+                  withHeadings: false,
+                  content: [['A', 'B'], ['C', 'D']],
+                },
+              },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      },
+      { holder: HOLDER_ID }
+    );
+
+    // Click the bottom zone below all blocks
+    const bottomZone = page.locator('[data-blok-testid="bottom-zone"]');
+
+    await bottomZone.click();
+
+    // A new paragraph block should be created outside the table
+    const allBlocks = page.locator(BLOCK_SELECTOR);
+
+    // Table (1) + 4 cell paragraphs + 1 new paragraph = 6 blocks
+    await expect(allBlocks).toHaveCount(6);
+
+    // The new paragraph should NOT be inside a table cell
+    const paragraphsInsideTable = page.locator('[data-blok-table-cell] [data-blok-component="paragraph"]');
+
+    // Only the 4 original cell paragraphs should be inside the table
+    await expect(paragraphsInsideTable).toHaveCount(4);
+
+    // Verify output data: new paragraph should be a separate top-level block after the table
+    const blockTypes = await page.evaluate(() =>
+      window.blokInstance?.save().then(data => data.blocks.map(b => b.type))
+    );
+
+    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'paragraph']);
+  });
 });

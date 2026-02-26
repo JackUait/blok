@@ -1,6 +1,6 @@
 {
   "name": "@jackuait/blok",
-  "version": "0.6.0-beta.2",
+  "version": "0.6.0-beta.14",
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "module": "dist/blok.mjs",
   "types": "./types/index.d.ts",
@@ -36,17 +36,20 @@
     }
   },
   "bin": {
+    "blok": "./bin/blok.mjs",
     "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js"
   },
   "files": [
     "dist",
     "types",
     "src",
-    "codemod"
+    "codemod",
+    "bin"
   ],
   "publishConfig": {
     "access": "public"
   },
+  "packageManager": "yarn@4.9.4",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -66,12 +69,14 @@
   "scripts": {
     "serve": "vite --no-open",
     "serve:docs": "cd docs && vite --port 8080",
-    "build": "vite build --mode production && node scripts/build-locales.mjs",
+    "build": "vite build --mode production && node scripts/build-locales.mjs && node scripts/build-cli.mjs",
+    "build:cli": "node scripts/build-cli.mjs",
     "build:test": "vite build --mode test && node scripts/build-locales.mjs test",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
     "lint:types": "tsc --noEmit",
+    "i18n:audit": "node scripts/i18n-audit.js",
     "i18n:check": "node scripts/i18n/check-translations.mjs",
     "typography:check": "node scripts/typography-finder/cli.mjs",
     "e2e": "yarn build:test && playwright test",
@@ -94,16 +99,14 @@
     "storybook:build": "storybook build --stats-json",
     "storybook:test": "vitest --project=storybook --run",
     "chromatic": "chromatic --exit-zero-on-changes",
-    "verify:package": "node scripts/verify-published-package.mjs",
-    "verify:package:local": "npm pack && node scripts/verify-published-package.mjs --local",
-    "verify:version": "node scripts/verify-version.mjs",
-    "unpublish": "node scripts/unpublish-package.mjs",
     "perf:analyze": "node scripts/analyze-performance.mjs",
     "perf:compare": "node scripts/analyze-performance.mjs --baseline",
     "perf:dashboard": "node scripts/generate-performance-dashboard.mjs",
     "e2e:validate-categories": "node scripts/validate-test-categories.mjs",
     "size": "size-limit",
     "size:why": "size-limit --why",
+    "release": "node scripts/release.mjs",
+    "release:preflight": "yarn lint && yarn test",
     "unused-css": "node scripts/unused-css-finder/cli.mjs"
   },
   "author": "JackUait",
@@ -121,8 +124,6 @@
     "@commitlint/cli": "20.1.0",
     "@commitlint/config-conventional": "20.0.0",
     "@playwright/test": "1.57.0",
-    "@semantic-release/changelog": "6.0.3",
-    "@semantic-release/git": "10.0.1",
     "@size-limit/esbuild-why": "12.0.0",
     "@size-limit/preset-small-lib": "12.0.0",
     "@storybook/addon-a11y": "10.1.11",

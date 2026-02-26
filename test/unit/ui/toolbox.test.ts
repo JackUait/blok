@@ -46,6 +46,8 @@ const mockPopoverInstance = vi.hoisted(() => ({
   off: vi.fn(),
   hasFocus: vi.fn(() => false),
   filterItems: vi.fn(),
+  toggleItemHiddenByName: vi.fn(),
+  updatePosition: vi.fn(),
 }));
 
 vi.mock('../../../src/components/dom', () => ({
@@ -71,6 +73,8 @@ vi.mock('../../../src/components/utils/popover', () => {
       public off = mockPopoverInstance.off;
       public hasFocus = mockPopoverInstance.hasFocus;
       public filterItems = mockPopoverInstance.filterItems;
+      public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
+      public updatePosition = mockPopoverInstance.updatePosition;
     },
     PopoverMobile: class MockPopoverMobile {
       public show = mockPopoverInstance.show;
@@ -81,6 +85,8 @@ vi.mock('../../../src/components/utils/popover', () => {
       public off = mockPopoverInstance.off;
       public hasFocus = mockPopoverInstance.hasFocus;
       public filterItems = mockPopoverInstance.filterItems;
+      public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
+      public updatePosition = mockPopoverInstance.updatePosition;
     },
   };
 });
@@ -802,6 +808,258 @@ describe('Toolbox', () => {
       await toolbox.toolButtonActivated('testTool', {});
 
       expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('table tool filtering inside table cells', () => {
+    it('should hide table item when opening inside a table cell', () => {
+      // Create a table tool adapter
+      const tableToolAdapter = {
+        name: 'table',
+        toolbox: {
+          title: 'Table',
+          icon: '<svg>table</svg>',
+        },
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['table', tableToolAdapter],
+      ]);
+
+      // Wrap the block holder in a table cell container
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('table', true);
+    });
+
+    it('should not hide table item when opening outside a table cell', () => {
+      const tableToolAdapter = {
+        name: 'table',
+        toolbox: {
+          title: 'Table',
+          icon: '<svg>table</svg>',
+        },
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['table', tableToolAdapter],
+      ]);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalled();
+    });
+
+    it('should not hide table item when opening outside cell after previously opening inside cell', () => {
+      const tableToolAdapter = {
+        name: 'table',
+        toolbox: {
+          title: 'Table',
+          icon: '<svg>table</svg>',
+        },
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['table', tableToolAdapter],
+      ]);
+
+      // First, wrap the block holder in a table cell container
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      // Open inside cell
+      toolbox.open();
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('table', true);
+
+      // Close
+      toolbox.close();
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('table', false);
+      mockPopoverInstance.toggleItemHiddenByName.mockClear();
+
+      // Remove holder from cell container so it's no longer inside a table cell
+      cellBlocksContainer.removeChild(mocks.blockAPI.holder);
+
+      // Open outside cell
+      toolbox.open();
+
+      // Should NOT have called toggleItemHiddenByName since we're outside a cell now
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalled();
+    });
+
+    it('should restore table item when popover closes via external trigger (e.g. Escape)', () => {
+      const tableToolAdapter = {
+        name: 'table',
+        toolbox: {
+          title: 'Table',
+          icon: '<svg>table</svg>',
+        },
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['table', tableToolAdapter],
+      ]);
+
+      // Wrap the block holder in a table cell container
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('table', true);
+
+      mockPopoverInstance.toggleItemHiddenByName.mockClear();
+
+      // Simulate popover close event (e.g. user presses Escape)
+      const closeHandler = (mockPopoverInstance.on as ReturnType<typeof vi.fn>).mock.calls.find(
+        (call): call is [string, () => void] => call[0] === PopoverEvent.Closed
+      )?.[1];
+
+      if (closeHandler) {
+        closeHandler();
+      }
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('table', false);
+    });
+
+    it('should show table item again when closing after being inside a table cell', () => {
+      const tableToolAdapter = {
+        name: 'table',
+        toolbox: {
+          title: 'Table',
+          icon: '<svg>table</svg>',
+        },
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['table', tableToolAdapter],
+      ]);
+
+      // Wrap the block holder in a table cell container
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      // Clear to track close-time calls
+      mockPopoverInstance.toggleItemHiddenByName.mockClear();
+
+      toolbox.close();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('table', false);
+    });
+
+    it('hides all header entries when opened inside table cell', () => {
+      const headerToolAdapter = {
+        name: 'header',
+        toolbox: [
+          { title: 'Heading 1', icon: '<svg>h1</svg>', name: 'header-1', data: { level: 1 } },
+          { title: 'Heading 2', icon: '<svg>h2</svg>', name: 'header-2', data: { level: 2 } },
+          { title: 'Heading 3', icon: '<svg>h3</svg>', name: 'header-3', data: { level: 3 } },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['header', headerToolAdapter],
+      ]);
+
+      // Wrap the block holder in a table cell container
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('header-1', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('header-2', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('header-3', true);
+
+      cellBlocksContainer.remove();
+    });
+
+    it('does not hide header entries when opened outside table cell', () => {
+      const headerToolAdapter = {
+        name: 'header',
+        toolbox: [
+          { title: 'Heading 1', icon: '<svg>h1</svg>', name: 'header-1', data: { level: 1 } },
+          { title: 'Heading 2', icon: '<svg>h2</svg>', name: 'header-2', data: { level: 2 } },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([
+        ['testTool', mocks.blockToolAdapter],
+        ['header', headerToolAdapter],
+      ]);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('header-1', true);
+      expect(mockPopoverInstance.toggleItemHiddenByName).not.toHaveBeenCalledWith('header-2', true);
     });
   });
 

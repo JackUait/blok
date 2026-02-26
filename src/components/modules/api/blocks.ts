@@ -1,6 +1,7 @@
 import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
+import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { Module } from '../../__module';
 import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
@@ -19,7 +20,12 @@ export class BlocksAPI extends Module {
    * @returns {Blocks}
    */
   public get methods(): Blocks {
+    const blocksAPI = this;
+
     return {
+      get isSyncingFromYjs(): boolean {
+        return blocksAPI.Blok.BlockManager.isSyncingFromYjs;
+      },
       clear: (): Promise<void> => this.clear(),
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
@@ -37,8 +43,10 @@ export class BlocksAPI extends Module {
       update: this.update,
       composeBlockData: this.composeBlockData,
       convert: this.convert,
+      setBlockParent: (blockId: string, parentId: string | null): void => this.setBlockParent(blockId, parentId),
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
       splitBlock: this.splitBlock,
+      transact: (fn: () => void): void => this.transact(fn),
     };
   }
 
@@ -114,7 +122,7 @@ export class BlocksAPI extends Module {
     const block = this.Blok.BlockManager.getBlock(element);
 
     if (block === undefined) {
-      logLabeled(`There is no block corresponding to element <${element.tagName.toLowerCase()}>`, 'warn');
+      logLabeled(`There is no block corresponding to element <${element.tagName?.toLowerCase() ?? 'unknown'}>`, 'warn');
 
       return;
     }
@@ -166,12 +174,12 @@ export class BlocksAPI extends Module {
     }
 
     /**
-     * in case of last block deletion
-     * Insert the new default empty block
+     * Note: default-block insertion when the store is empty is handled
+     * synchronously by removeBlock(block, addLastBlock=true).
+     * A redundant async check here would race with clear()/render()
+     * and could insert a spurious paragraph after the store has been
+     * repopulated by Renderer.
      */
-    if (this.Blok.BlockManager.blocks.length === 0) {
-      this.Blok.BlockManager.insert();
-    }
 
     /**
      * After Block deletion currentBlock is updated
@@ -242,7 +250,21 @@ export class BlocksAPI extends Module {
     replace?: boolean,
     id?: string
   ): BlockAPIInterface => {
-    const tool = type ?? (this.config.defaultBlock);
+    const defaultTool = type ?? (this.config.defaultBlock);
+    const tool = (() => {
+      if (!defaultTool) {
+        return defaultTool;
+      }
+
+      const targetIndex = index ?? this.Blok.BlockManager.currentBlockIndex;
+      const targetBlock = this.Blok.BlockManager.getBlockByIndex(targetIndex);
+
+      if (targetBlock !== undefined && isInsideTableCell(targetBlock) && isRestrictedInTableCell(defaultTool)) {
+        return 'paragraph';
+      }
+
+      return defaultTool;
+    })();
 
     const insertedBlock = this.Blok.BlockManager.insert({
       id,
@@ -362,6 +384,23 @@ export class BlocksAPI extends Module {
   };
 
   /**
+   * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
+   * @param blockId - id of the block to reparent
+   * @param parentId - id of the new parent block, or null for root level
+   */
+  private setBlockParent(blockId: string, parentId: string | null): void {
+    const block = this.Blok.BlockManager.getBlockById(blockId);
+
+    if (block === undefined) {
+      logLabeled('There is no block with id `' + blockId + '`', 'warn');
+
+      return;
+    }
+
+    this.Blok.BlockManager.setBlockParent(block, parentId);
+  }
+
+  /**
    * Stops mutation watching on a block at the specified index.
    * This is used to prevent spurious block-changed events during block replacement.
    * @param index - index of the block to stop watching
@@ -412,6 +451,14 @@ export class BlocksAPI extends Module {
 
     return new BlockAPI(newBlock);
   };
+
+  /**
+   * Execute a function within a transaction, grouping all block operations
+   * into a single undo entry.
+   */
+  private transact(fn: () => void): void {
+    this.Blok.BlockManager.transactForTool(fn);
+  }
 
   /**
    * Validated block index and throws an error if it's invalid

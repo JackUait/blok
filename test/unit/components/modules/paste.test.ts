@@ -10,6 +10,7 @@ import { BlokDataHandler } from '../../../../src/components/modules/paste/handle
 import { FilesHandler } from '../../../../src/components/modules/paste/handlers/files-handler';
 import { HtmlHandler } from '../../../../src/components/modules/paste/handlers/html-handler';
 import { PatternHandler } from '../../../../src/components/modules/paste/handlers/pattern-handler';
+import { TableCellsHandler } from '../../../../src/components/modules/paste/handlers/table-cells-handler';
 import { TextHandler } from '../../../../src/components/modules/paste/handlers/text-handler';
 import { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
@@ -178,11 +179,16 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
 
   pasteWithInternals.listeners = listeners.instance;
 
+  const yjsManager = {
+    stopCapturing: vi.fn(),
+  };
+
   const blokState = {
     BlockManager: blockManager,
     Caret: caret,
     Tools: tools,
     Toolbar: toolbar,
+    YjsManager: yjsManager,
     UI: {
       nodes: {
         holder,
@@ -519,6 +525,46 @@ describe('Paste module', () => {
 
       expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(input)).toBe(true);
       expect((paste as unknown as { isNativeBehaviour(element: EventTarget): boolean }).isNativeBehaviour(div)).toBe(false);
+    });
+
+    it('skips processing when event.defaultPrevented is true', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      // Set up a current block so the handler would normally proceed
+      const div = document.createElement('div');
+
+      mocks.holder.appendChild(div);
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue({
+        name: 'paragraph',
+        tool: { isDefault: true },
+        isEmpty: false,
+      });
+
+      // Register the paste listener
+      paste.toggleReadOnly(false);
+
+      // Create a paste event and call preventDefault() to simulate
+      // that another handler (e.g., table grid paste) already handled it
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer({ 'text/html': '<p>test</p>' }, {} as FileList, ['text/html']);
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      event.preventDefault();
+
+      // Dispatch the pre-prevented event
+      div.dispatchEvent(event);
+
+      // Allow any async handlers to settle
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // processDataTransfer should NOT have been called
+      expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
+      expect(mocks.Toolbar.close).not.toHaveBeenCalled();
     });
   });
 
@@ -1040,6 +1086,102 @@ describe('Paste module', () => {
   });
 
   describe('HtmlHandler', () => {
+    it('preserves Google Docs bold/italic through processDataTransfer flow', async () => {
+      const { paste, mocks } = createPaste();
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.getAllInlineToolsSanitizeConfig.mockReturnValue({ b: {}, i: {}, a: { href: true } });
+
+      await paste.prepare();
+
+      // Mock clean to strip <span> tags (simulating real sanitizer behavior)
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => {
+        return html.replace(/<\/?span[^>]*>/g, '');
+      });
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const googleDocsHtml = '<b id="docs-internal-guid-abc123"><div><span style="font-weight:700">bold text</span> and <span style="font-style:italic">italic text</span></div></b>';
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': googleDocsHtml,
+          'text/plain': 'bold text and italic text',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      expect(detail.data.innerHTML).toContain('<b>');
+      expect(detail.data.innerHTML).toContain('<i>');
+    });
+
+    it('preserves <br> tags inside table cells during sanitization', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tableTool = {
+        name: 'table',
+        pasteConfig: {
+          tags: ['TABLE', 'TR', 'TH', 'TD'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+      mocks.Tools.blockTools.set('table', tableTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'table-block' });
+
+      const html = '<table><tr><td>line one<br>line two</td></tr></table>';
+
+      await paste.processText(html, true);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      const cellContent = detail.data.querySelector('td')?.innerHTML;
+
+      expect(cellContent).toContain('<br>');
+      expect(cellContent).toContain('line one');
+      expect(cellContent).toContain('line two');
+    });
+
     it('processes HTML fragments, default block content and substituted tags', async () => {
       const { paste, mocks } = createPaste();
 
@@ -1104,6 +1246,127 @@ describe('Paste module', () => {
       expect(event3.type).toBe('tag');
       expect(mocks.BlockManager.paste.mock.calls[2].length).toBe(2);
     });
+
+    it('processes multi-table HTML as separate table blocks via processText', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tableTool = {
+        name: 'table',
+        pasteConfig: {
+          tags: ['TABLE', 'TR', 'TH', 'TD'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.blockTools.set('table', tableTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const html = '<p>Intro</p><table><tr><td>Table 1</td></tr></table><p>Middle</p><table><tr><td>Table 2</td></tr></table>';
+
+      await paste.processText(html, true);
+
+      const tableCalls = mocks.BlockManager.paste.mock.calls.filter(
+        ([tool]) => tool === 'table'
+      );
+
+      expect(tableCalls.length).toBe(2);
+
+      // Verify first table content
+      const firstTableEvent = tableCalls[0][1];
+      const firstTableData = (firstTableEvent.detail as { data: HTMLElement }).data;
+
+      expect(firstTableData.querySelector('td')?.textContent).toBe('Table 1');
+
+      // Verify second table content
+      const secondTableEvent = tableCalls[1][1];
+      const secondTableData = (secondTableEvent.detail as { data: HTMLElement }).data;
+
+      expect(secondTableData.querySelector('td')?.textContent).toBe('Table 2');
+    });
+
+    it('processes multi-table Google Docs HTML through full processDataTransfer flow', async () => {
+      const { paste, mocks } = createPaste();
+
+      const tableTool = {
+        name: 'table',
+        pasteConfig: {
+          tags: ['TABLE', 'TR', 'TH', 'TD'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.blockTools.set('table', tableTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const googleDocsHtml = [
+        '<meta charset="utf-8">',
+        '<b style="font-weight:normal;" id="docs-internal-guid-abc123">',
+        '<p dir="ltr"><span>Intro</span></p>',
+        '<div dir="ltr" align="left">',
+        '<table><tbody>',
+        '<tr><td><p><span>T1 Cell</span></p></td></tr>',
+        '</tbody></table></div>',
+        '<p dir="ltr"><span>Middle</span></p>',
+        '<div dir="ltr" align="left">',
+        '<table><tbody>',
+        '<tr><td><p><span>T2 Cell</span></p></td></tr>',
+        '</tbody></table></div>',
+        '</b>',
+      ].join('');
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': googleDocsHtml,
+          'text/plain': 'Intro\nT1 Cell\nMiddle\nT2 Cell',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      const tableCalls = mocks.BlockManager.paste.mock.calls.filter(
+        ([tool]) => tool === 'table'
+      );
+
+      expect(tableCalls.length).toBe(2);
+    });
   });
 
   describe('Handler priority system', () => {
@@ -1123,6 +1386,10 @@ describe('Paste module', () => {
       const blokHandler = handlers.find((h): h is BlokDataHandler => h instanceof BlokDataHandler);
       expect(blokHandler).toBeDefined();
 
+      // TableCellsHandler should have priority 90
+      const tableCellsHandler = handlers.find((h): h is TableCellsHandler => h instanceof TableCellsHandler);
+      expect(tableCellsHandler).toBeDefined();
+
       // FilesHandler should have priority 80
       const filesHandler = handlers.find((h): h is FilesHandler => h instanceof FilesHandler);
       expect(filesHandler).toBeDefined();
@@ -1141,10 +1408,11 @@ describe('Paste module', () => {
 
       // Verify order - highest priority first
       expect(handlers[0]).toBe(blokHandler);
-      expect(handlers[1]).toBe(filesHandler);
-      expect(handlers[2]).toBe(patternHandler);
-      expect(handlers[3]).toBe(htmlHandler);
-      expect(handlers[4]).toBe(textHandler);
+      expect(handlers[1]).toBe(tableCellsHandler);
+      expect(handlers[2]).toBe(filesHandler);
+      expect(handlers[3]).toBe(patternHandler);
+      expect(handlers[4]).toBe(htmlHandler);
+      expect(handlers[5]).toBe(textHandler);
     });
 
     it('BlokDataHandler returns priority 100 for valid JSON', () => {

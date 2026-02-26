@@ -43,6 +43,10 @@ export interface SyncHandlers {
   updateIndentation: (block: Block) => void;
   /** Called to replace a block at a specific index with a new block instance */
   replaceBlock: (index: number, newBlock: Block) => void;
+  /** Called when a block is removed during undo/redo (before DOM removal) */
+  onBlockRemoved: (block: Block, index: number) => void;
+  /** Called when a block is added during undo/redo (after insertion) */
+  onBlockAdded: (block: Block, index: number) => void;
 }
 
 /**
@@ -108,21 +112,43 @@ export class BlockYjsSync {
    * @param fn - Function to execute
    * @param options - Options for controlling the atomic operation behavior
    */
-  public withAtomicOperation<T>(fn: () => T, options?: { extendThroughRAF?: boolean }): T {
+  /**
+   * Begin an atomic operation by incrementing sync count and suppressing stop capturing.
+   *
+   * @returns cleanup function to call when operation completes
+   */
+  private beginAtomicOperation(): () => void {
     this.yjsSyncCount++;
     const operations = this.dependencies.operations;
-    const shouldExtend = options?.extendThroughRAF === true;
 
     if (operations) {
       operations.suppressStopCapturing = true;
     }
 
-    const decrementSyncCount = (): void => {
+    return (): void => {
       this.yjsSyncCount--;
       if (operations && this.yjsSyncCount === 0) {
         operations.suppressStopCapturing = false;
       }
     };
+  }
+
+  /**
+   * End an atomic operation, optionally deferring cleanup through RAF.
+   *
+   * @param cleanup - function to call to decrement sync count
+   * @param extendThroughRAF - if true, defer cleanup until after next animation frame
+   */
+  private endAtomicOperation(cleanup: () => void, extendThroughRAF: boolean): void {
+    if (extendThroughRAF) {
+      requestAnimationFrame(cleanup);
+    } else {
+      cleanup();
+    }
+  }
+
+  public withAtomicOperation<T>(fn: () => T, options?: { extendThroughRAF?: boolean }): T {
+    const cleanup = this.beginAtomicOperation();
 
     try {
       const result = fn();
@@ -130,16 +156,34 @@ export class BlockYjsSync {
       // If extendThroughRAF is true, delay decrementing yjsSyncCount until after requestAnimationFrame callbacks
       // This ensures that DOM updates scheduled by rendered() hooks don't trigger
       // block data sync to Yjs, which would create new undo entries and clear the redo stack
-      if (shouldExtend) {
-        requestAnimationFrame(decrementSyncCount);
-      } else {
-        decrementSyncCount();
-      }
+      this.endAtomicOperation(cleanup, options?.extendThroughRAF === true);
 
       return result;
     } catch (error) {
-      // If an error occurs, decrement immediately
-      decrementSyncCount();
+      cleanup();
+      throw error;
+    }
+  }
+
+  /**
+   * Async version of withAtomicOperation for operations that return promises.
+   * Keeps yjsSyncCount elevated until the async work completes, then optionally
+   * extends through RAF to cover deferred DOM callbacks.
+   *
+   * @param fn - Async function to execute
+   * @param options - Options for controlling the atomic operation behavior
+   */
+  public async withAtomicOperationAsync(
+    fn: () => Promise<void>,
+    options?: { extendThroughRAF?: boolean }
+  ): Promise<void> {
+    const cleanup = this.beginAtomicOperation();
+
+    try {
+      await fn();
+      this.endAtomicOperation(cleanup, options?.extendThroughRAF === true);
+    } catch (error) {
+      cleanup();
       throw error;
     }
   }
@@ -161,25 +205,28 @@ export class BlockYjsSync {
    * @param event - the block change event from YjsManager
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
-    const { blockId, type: changeType } = event;
-
-    if (changeType === 'update') {
-      this.handleYjsUpdate(blockId);
+    if (event.type === 'update') {
+      this.handleYjsUpdate(event.blockId);
       return;
     }
 
-    if (changeType === 'move') {
+    if (event.type === 'move') {
       this.handleYjsMove();
       return;
     }
 
-    if (changeType === 'add') {
-      this.handleYjsAdd(blockId);
+    if (event.type === 'add') {
+      this.handleYjsAdd(event.blockId);
       return;
     }
 
-    if (changeType === 'remove') {
-      this.handleYjsRemove(blockId);
+    if (event.type === 'batch-add') {
+      this.handleYjsBatchAdd(event.blockIds);
+      return;
+    }
+
+    if (event.type === 'remove') {
+      this.handleYjsRemove(event.blockId);
     }
   }
 
@@ -217,19 +264,32 @@ export class BlockYjsSync {
         bindEventsImmediately: true,
       });
 
-      // Increment counter to prevent syncing back to Yjs during undo/redo
-      this.yjsSyncCount++;
-      try {
+      // Use atomic operation with RAF extension to prevent DOM mutation observers
+      // from syncing back to Yjs after block replacement
+      this.withAtomicOperation(() => {
         this.handlers.replaceBlock(blockIndex, newBlock);
-      } finally {
-        this.yjsSyncCount--;
-      }
+      }, { extendThroughRAF: true });
     } else {
-      // Just update data
-      this.yjsSyncCount++;
-      void block.setData(data).finally(() => {
-        this.yjsSyncCount--;
-      });
+      // Update data in-place; if tool can't handle it, recreate the block.
+      // Use async atomic operation with RAF extension to keep isSyncingFromYjs
+      // true through the entire setData lifecycle + one RAF frame, preventing
+      // DOM mutation observers from writing back to Yjs and clearing the redo stack.
+      void this.withAtomicOperationAsync(async () => {
+        const success = await block.setData(data);
+
+        if (!success) {
+          const blockIndex = this.handlers.getBlockIndex(block);
+          const newBlock = this.factory.composeBlock({
+            id: block.id,
+            tool: block.name,
+            data,
+            tunes: block.preservedTunes,
+            bindEventsImmediately: true,
+          });
+
+          this.handlers.replaceBlock(blockIndex, newBlock);
+        }
+      }, { extendThroughRAF: true });
     }
   }
 
@@ -273,13 +333,89 @@ export class BlockYjsSync {
         bindEventsImmediately: true,
       });
 
-      // Insert into blocks store at correct position - caller must handle this
-      // This is a limitation - we need the blocksStore.insert method
       this.blocksStore.insert(targetIndex, block);
+
+      // Emit block-added event so listeners (e.g., TableCellBlocks) can
+      // claim the block for the correct cell during undo/redo
+      this.handlers.onBlockAdded(block, targetIndex);
 
       // Apply indentation if needed
       if (parentId !== undefined) {
         this.handlers.updateIndentation(block);
+      }
+    }, { extendThroughRAF: true });
+  }
+
+  /**
+   * Handle batch block add from Yjs (undo/redo).
+   *
+   * When multiple blocks are restored at once (e.g. a table + its cell
+   * paragraphs), we use a two-pass approach:
+   *   1. Create ALL blocks and insert them into the blocks array (no DOM).
+   *   2. Activate each block (DOM insert + RENDERED lifecycle hook).
+   *
+   * This ensures that when a parent tool's `rendered()` hook fires (pass 2),
+   * child blocks already exist in BlockManager, so helpers like
+   * `mountBlocksInCell()` can find them by ID.
+   */
+  private handleYjsBatchAdd(blockIds: string[]): void {
+    const yjsBlocks = this.dependencies.YjsManager.toJSON();
+
+    // Collect blocks to create — skip any that already exist
+    const toCreate: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; targetIndex: number }> = [];
+
+    for (const blockId of blockIds) {
+      if (this.repository.getBlockById(blockId) !== undefined) {
+        continue;
+      }
+
+      const yblock = this.dependencies.YjsManager.getBlockById(blockId);
+
+      if (yblock === undefined) {
+        continue;
+      }
+
+      const toolName = yblock.get('type') as string;
+      const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+      const parentId = yblock.get('parentId') as string | undefined;
+      const targetIndex = yjsBlocks.findIndex((b) => b.id === blockId);
+
+      if (targetIndex === -1) {
+        continue;
+      }
+
+      toCreate.push({ blockId, toolName, data, parentId: parentId ?? undefined, targetIndex });
+    }
+
+    if (toCreate.length === 0) {
+      return;
+    }
+
+    this.withAtomicOperation(() => {
+      // Pass 1 — create blocks and add to array (no DOM, no RENDERED)
+      const created: Array<{ block: Block; targetIndex: number; parentId: string | undefined }> = [];
+
+      for (const entry of toCreate) {
+        const block = this.factory.composeBlock({
+          id: entry.blockId,
+          tool: entry.toolName,
+          data: entry.data,
+          parentId: entry.parentId,
+          bindEventsImmediately: true,
+        });
+
+        this.blocksStore.addToArray(entry.targetIndex, block);
+        created.push({ block, targetIndex: entry.targetIndex, parentId: entry.parentId });
+      }
+
+      // Pass 2 — activate blocks (DOM insert + RENDERED), then emit events
+      for (const { block, targetIndex, parentId } of created) {
+        this.blocksStore.activateBlock(block);
+        this.handlers.onBlockAdded(block, targetIndex);
+
+        if (parentId !== undefined) {
+          this.handlers.updateIndentation(block);
+        }
       }
     }, { extendThroughRAF: true });
   }
@@ -300,13 +436,21 @@ export class BlockYjsSync {
       return;
     }
 
-    // Remove from DOM
-    this.blocksStore.remove(index);
+    // Keep Yjs sync state active for the full remove lifecycle so listeners
+    // and block.destroy handlers can detect undo/redo-originated removals.
+    this.withAtomicOperation(() => {
+      // Emit block-removed event BEFORE removal so listeners can inspect
+      // the block's DOM position (e.g., which table cell it's in)
+      this.handlers.onBlockRemoved(block, index);
 
-    // If all blocks removed, insert a default block
-    if (this.blocksStore.length === 0) {
-      this.handlers.insertDefaultBlock(true);
-    }
+      // Remove from DOM
+      this.blocksStore.remove(index);
+
+      // If all blocks removed, insert a default block
+      if (this.blocksStore.length === 0) {
+        this.handlers.insertDefaultBlock(true);
+      }
+    });
   }
 
   /**

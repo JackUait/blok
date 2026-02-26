@@ -41,5 +41,20 @@
   "a11y.movedDown": "Bloks pārvietots lejup uz pozīciju {position} no {total}",
   "a11y.atTop": "Bloks ir augšā, nevar pārvietot augšup",
   "a11y.atBottom": "Bloks ir apakšā, nevar pārvietot lejup",
-  "tools.paragraph.placeholder": "Rakstiet kaut ko vai nospiediet / lai izvēlētos"
+  "tools.paragraph.placeholder": "Rakstiet kaut ko vai nospiediet / lai izvēlētos",
+  "tools.table.title": "Tabula",
+  "tools.table.clearSelection": "Notīrīt",
+  "tools.table.copySelection": "Kopēt",
+  "tools.table.headerColumn": "Virsraksta kolonna",
+  "tools.table.insertColumnLeft": "Ievietot kolonnu kreisajā pusē",
+  "tools.table.insertColumnRight": "Ievietot kolonnu labajā pusē",
+  "tools.table.deleteColumn": "Dzēst",
+  "tools.table.headerRow": "Virsraksta rinda",
+  "tools.table.insertRowAbove": "Ievietot rindu augšā",
+  "tools.table.insertRowBelow": "Ievietot rindu apakšā",
+  "tools.table.deleteRow": "Dzēst",
+  "tools.table.clickToAddRow": "Noklikšķiniet, lai pievienotu jaunu rindu",
+  "tools.table.dragToAddRemoveRows": "Velciet, lai pievienotu vai noņemtu rindas",
+  "tools.table.clickToAddColumn": "Noklikšķiniet, lai pievienotu jaunu kolonnu",
+  "tools.table.dragToAddRemoveColumns": "Velciet, lai pievienotu vai noņemtu kolonnas"
 }

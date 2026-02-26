@@ -19,10 +19,10 @@ import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import type { EventsDispatcher } from '../../utils/events';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
+import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { Caret } from '../caret';
 import type { I18n } from '../i18n';
 import type { YjsManager } from '../yjs';
-
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
@@ -191,6 +191,7 @@ export class BlockOperations {
       replace = false,
       tunes,
       skipYjsSync = false,
+      appendToWorkingArea = false,
     } = options;
 
     const targetIndex = index ?? this.currentBlockIndex + (replace ? 0 : 1);
@@ -204,15 +205,33 @@ export class BlockOperations {
       this.repository.getBlockByIndex(targetIndex)?.unwatchBlockMutations();
     }
 
-    const toolName = tool ?? this.dependencies.config.defaultBlock;
+    const resolvedToolName = (() => {
+      const name = tool ?? this.dependencies.config.defaultBlock;
 
-    if (toolName === undefined) {
-      throw new Error('Could not insert Block. Tool name is not specified.');
-    }
+      if (name === undefined) {
+        throw new Error('Could not insert Block. Tool name is not specified.');
+      }
+
+      // Demote restricted tools to paragraph when inserting inside a table cell.
+      // For replace: check the block being replaced (new block takes its DOM position).
+      // For insert: check the predecessor block (new block is placed after it in the DOM).
+      // Using the block AT targetIndex for non-replace inserts is wrong because that
+      // block may be a child paragraph inside a table cell that gets displaced, while
+      // the new block actually lands at the top level.
+      const neighborBlock = replace
+        ? this.repository.getBlockByIndex(targetIndex)
+        : (this.repository.getBlockByIndex(targetIndex - 1) ?? this.repository.getBlockByIndex(targetIndex));
+
+      if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
+        return this.dependencies.config.defaultBlock ?? 'paragraph';
+      }
+
+      return name;
+    })();
 
     // Bind events immediately for user-created blocks so mutations are tracked right away
     const block = this.factory.composeBlock({
-      tool: toolName,
+      tool: resolvedToolName,
       bindEventsImmediately: true,
       ...(id !== undefined && { id }),
       ...(data !== undefined && { data }),
@@ -235,7 +254,7 @@ export class BlockOperations {
       });
     }
 
-    blocksStore.insert(targetIndex, block, replace);
+    blocksStore.insert(targetIndex, block, replace, appendToWorkingArea);
 
     /**
      * Force call of didMutated event on Block insertion
@@ -245,9 +264,11 @@ export class BlockOperations {
     });
 
     /**
-     * Sync to Yjs data layer (unless caller is handling sync separately)
+     * Sync to Yjs data layer (unless caller is handling sync separately,
+     * or we're inside an atomic operation like paste where all Yjs sync
+     * is deferred until the operation completes)
      */
-    if (!skipYjsSync) {
+    if (!skipYjsSync && !this.yjsSync.isSyncingFromYjs) {
       this.dependencies.YjsManager.addBlock({
         id: block.id,
         type: block.name,
@@ -298,7 +319,7 @@ export class BlockOperations {
   public insertAtEnd(blocksStore: BlocksStore): Block {
     this.currentBlockIndexValue = this.repository.length - 1;
 
-    return this.insert({}, blocksStore);
+    return this.insert({ appendToWorkingArea: true }, blocksStore);
   }
 
   /**
@@ -317,6 +338,15 @@ export class BlockOperations {
        */
       if (!this.repository.validateIndex(index)) {
         throw new Error('Can\'t find a Block to remove');
+      }
+
+      // Clean up parent's contentIds before removing the block
+      const parentBlock = block.parentId !== null
+        ? this.repository.getBlockById(block.parentId)
+        : undefined;
+
+      if (parentBlock !== undefined) {
+        parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
       }
 
       blocksStore.remove(index);
@@ -463,6 +493,17 @@ export class BlockOperations {
 
     if (!this.repository.validateIndex(toIndex) || !this.repository.validateIndex(fromIndex)) {
       log(`Warning during 'move' call: indices cannot be lower than 0 or greater than the amount of blocks.`, 'warn');
+
+      return;
+    }
+
+    // Check if the move would place a restricted tool inside a table cell
+    const movingBlock = this.repository.getBlockByIndex(fromIndex);
+    const neighborBlock = this.repository.getBlockByIndex(toIndex);
+
+    if (movingBlock !== undefined && neighborBlock !== undefined &&
+        isInsideTableCell(neighborBlock) && isRestrictedInTableCell(movingBlock.name)) {
+      log(`Warning during 'move' call: '${movingBlock.name}' is restricted in table cells.`, 'warn');
 
       return;
     }
@@ -765,33 +806,27 @@ export class BlockOperations {
     replace = false,
     blocksStore: BlocksStore
   ): Promise<Block> {
-    // Insert block without syncing to Yjs yet (we'll sync final state after onPaste)
-    const block = this.insert({
-      tool: toolName,
-      replace,
-      skipYjsSync: true,
-    }, blocksStore);
+    // Insert block without syncing to Yjs yet.
+    // Wrap in atomic operation so that child blocks created during rendered()
+    // (e.g., table cell paragraph blocks) also skip Yjs sync.
+    const block = this.yjsSync.withAtomicOperation(() => {
+      return this.insert({
+        tool: toolName,
+        replace,
+        skipYjsSync: true,
+      }, blocksStore);
+    });
 
-    // Suppress auto-sync during paste processing
+    // Wait for the block to be fully rendered before calling onPaste,
+    // because onPaste may change the tool's root element and needs
+    // mutation watchers to be bound first.
+    await block.ready;
+
+    // Call onPaste within atomic operation so child blocks created
+    // during cell initialization also skip Yjs sync.
     this.yjsSync.withAtomicOperation(() => {
-      /**
-       * We need to call onPaste after Block will be ready
-       * because onPaste could change tool's root element, and we need to do that after block.watchBlockMutations() bound
-       * to detect tool root element change
-       * @todo make this.insert() awaitable and remove requestIdleCallback
-       */
-      return void block.ready.then(() => {
-        block.call(BlockToolAPI.ON_PASTE, pasteEvent as unknown as Record<string, unknown>);
-
-        /**
-         * onPaste might cause the tool to replace its root element (e.g., Header changing level).
-         * Since mutation observers are set up asynchronously via requestIdleCallback,
-         * we need to manually refresh the tool element reference here.
-         */
-        block.refreshToolRootElement();
-      }).catch((e) => {
-        log(`${toolName}: onPaste callback call is failed`, 'error', e);
-      });
+      block.call(BlockToolAPI.ON_PASTE, pasteEvent as unknown as Record<string, unknown>);
+      block.refreshToolRootElement();
     });
 
     // Sync final state to Yjs as single operation

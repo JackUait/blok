@@ -70,6 +70,7 @@ const CROSS_BROWSER_TESTS = [
   '**/ui/mobile-and-readonly-coordination.spec.ts',
   '**/ui/toolbar-nested-list-positioning.spec.ts',
   '**/ui/toolbar-rubber-band-hover.spec.ts',
+  '**/ui/toolbar-always-visible.spec.ts',
   '**/ui/settings-toggler-after-drag.spec.ts',
 ] as const;
 
@@ -95,6 +96,8 @@ const LOGIC_TESTS = [
   '**/tools/inline-tool.spec.ts',
   '**/tools/list*.spec.ts',
   '**/tools/paragraph.spec.ts',
+  '**/tools/table*.spec.ts',
+  '**/tools/table/**/*.spec.ts',
   '**/tools/tools-factory.spec.ts',
   '**/tools/tools-collection.spec.ts',
 
@@ -118,6 +121,10 @@ const LOGIC_TESTS = [
   '**/ui/selection-with-link-input.spec.ts',
   '**/ui/inline-toolbar-nested-popover.spec.ts',
   '**/ui/multilingual-search.spec.ts',
+  '**/ui/table-toolbar-visibility.spec.ts',
+
+  // Seed/utility tests
+  '**/seed.spec.ts',
 ] as const;
 
 // Generate cross-browser projects programmatically

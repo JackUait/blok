@@ -990,8 +990,6 @@ __metadata:
     "@commitlint/cli": "npm:20.1.0"
     "@commitlint/config-conventional": "npm:20.0.0"
     "@playwright/test": "npm:1.57.0"
-    "@semantic-release/changelog": "npm:6.0.3"
-    "@semantic-release/git": "npm:10.0.1"
     "@size-limit/esbuild-why": "npm:12.0.0"
     "@size-limit/preset-small-lib": "npm:12.0.0"
     "@storybook/addon-a11y": "npm:10.1.11"
@@ -1037,6 +1035,7 @@ __metadata:
     yaml: "npm:^2.8.2"
     yjs: "npm:13.6.28"
   bin:
+    blok: ./bin/blok.mjs
     migrate-from-editorjs: ./codemod/migrate-editorjs-to-blok.js
   languageName: unknown
   linkType: soft
@@ -1714,20 +1713,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@semantic-release/changelog@npm:6.0.3":
-  version: 6.0.3
-  resolution: "@semantic-release/changelog@npm:6.0.3"
-  dependencies:
-    "@semantic-release/error": "npm:^3.0.0"
-    aggregate-error: "npm:^3.0.0"
-    fs-extra: "npm:^11.0.0"
-    lodash: "npm:^4.17.4"
-  peerDependencies:
-    semantic-release: ">=18.0.0"
-  checksum: 10c0/94c9c287d34fde6d4c6c574869e853dc04180b1d9e6036097d83e0d14783bf5bb8e546fdc4fac2e979d636fa170fd573eaa4265b9d332e436e4813b7aebe7728
-  languageName: node
-  linkType: hard
-
 "@semantic-release/commit-analyzer@npm:^13.0.1":
   version: 13.0.1
   resolution: "@semantic-release/commit-analyzer@npm:13.0.1"
@@ -1746,35 +1731,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@semantic-release/error@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@semantic-release/error@npm:3.0.0"
-  checksum: 10c0/51f06d11186a6efc543b44996ca1c368a77c6ed18dd823f0362188c37b7ef32f3580bd17654f594e6a72b931ebe69b44bbcb1ee16c755a1d3e44dcb652b47275
-  languageName: node
-  linkType: hard
-
 "@semantic-release/error@npm:^4.0.0":
   version: 4.0.0
   resolution: "@semantic-release/error@npm:4.0.0"
   checksum: 10c0/c97fcfbd341765f7c7430bdb32d5f04c61ee15c3eeec374823fbb157640ad03453f24e3a85241bddb29e193b69c6aab480e4d16e76adabb052c01bfbd1698c18
-  languageName: node
-  linkType: hard
-
-"@semantic-release/git@npm:10.0.1":
-  version: 10.0.1
-  resolution: "@semantic-release/git@npm:10.0.1"
-  dependencies:
-    "@semantic-release/error": "npm:^3.0.0"
-    aggregate-error: "npm:^3.0.0"
-    debug: "npm:^4.0.0"
-    dir-glob: "npm:^3.0.0"
-    execa: "npm:^5.0.0"
-    lodash: "npm:^4.17.4"
-    micromatch: "npm:^4.0.0"
-    p-reduce: "npm:^2.0.0"
-  peerDependencies:
-    semantic-release: ">=18.0.0"
-  checksum: 10c0/90077068b97ff894e5f6bea05d0c7482929d3bae64c242a1556bc85db4d8f0a52b71215300472539b95248778cdf239a3f8cbad5effaaba719a32bf347dbdd93
   languageName: node
   linkType: hard
 
@@ -2886,16 +2846,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aggregate-error@npm:^3.0.0":
-  version: 3.1.0
-  resolution: "aggregate-error@npm:3.1.0"
-  dependencies:
-    clean-stack: "npm:^2.0.0"
-    indent-string: "npm:^4.0.0"
-  checksum: 10c0/a42f67faa79e3e6687a4923050e7c9807db3848a037076f791d10e092677d65c1d2d863b7848560699f40fc0502c19f40963fb1cd1fb3d338a7423df8e45e039
-  languageName: node
-  linkType: hard
-
 "aggregate-error@npm:^5.0.0":
   version: 5.0.0
   resolution: "aggregate-error@npm:5.0.0"
@@ -3624,13 +3574,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"clean-stack@npm:^2.0.0":
-  version: 2.2.0
-  resolution: "clean-stack@npm:2.2.0"
-  checksum: 10c0/1f90262d5f6230a17e27d0c190b09d47ebe7efdd76a03b5a1127863f7b3c9aec4c3e6c8bb3a7bbf81d553d56a1fd35728f5a8ef4c63f867ac8d690109742a8c1
-  languageName: node
-  linkType: hard
-
 "clean-stack@npm:^5.2.0":
   version: 5.3.0
   resolution: "clean-stack@npm:5.3.0"
@@ -4222,7 +4165,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dir-glob@npm:^3.0.0, dir-glob@npm:^3.0.1":
+"dir-glob@npm:^3.0.1":
   version: 3.0.1
   resolution: "dir-glob@npm:3.0.1"
   dependencies:
@@ -5079,23 +5022,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"execa@npm:^5.0.0":
-  version: 5.1.1
-  resolution: "execa@npm:5.1.1"
-  dependencies:
-    cross-spawn: "npm:^7.0.3"
-    get-stream: "npm:^6.0.0"
-    human-signals: "npm:^2.1.0"
-    is-stream: "npm:^2.0.0"
-    merge-stream: "npm:^2.0.0"
-    npm-run-path: "npm:^4.0.1"
-    onetime: "npm:^5.1.2"
-    signal-exit: "npm:^3.0.3"
-    strip-final-newline: "npm:^2.0.0"
-  checksum: 10c0/c8e615235e8de4c5addf2fa4c3da3e3aa59ce975a3e83533b4f6a71750fb816a2e79610dc5f1799b6e28976c9ae86747a36a606655bf8cb414a74d8d507b304f
-  languageName: node
-  linkType: hard
-
 "execa@npm:^8.0.0":
   version: 8.0.1
   resolution: "execa@npm:8.0.1"
@@ -5938,13 +5864,6 @@ __metadata:
   version: 1.1.1
   resolution: "human-signals@npm:1.1.1"
   checksum: 10c0/18810ed239a7a5e23fb6c32d0fd4be75d7cd337a07ad59b8dbf0794cb0761e6e628349ee04c409e605fe55344716eab5d0a47a62ba2a2d0d367c89a2b4247b1e
-  languageName: node
-  linkType: hard
-
-"human-signals@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "human-signals@npm:2.1.0"
-  checksum: 10c0/695edb3edfcfe9c8b52a76926cd31b36978782062c0ed9b1192b36bebc75c4c87c82e178dfcb0ed0fc27ca59d434198aac0bd0be18f5781ded775604db22304a
   languageName: node
   linkType: hard
 
@@ -7218,7 +7137,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:^4.17.4, lodash@npm:~4.17.21":
+"lodash@npm:~4.17.21":
   version: 4.17.23
   resolution: "lodash@npm:4.17.23"
   checksum: 10c0/1264a90469f5bb95d4739c43eb6277d15b6d9e186df4ac68c3620443160fc669e2f14c11e7d8b2ccf078b81d06147c01a8ccced9aab9f9f63d50dcf8cace6bf6
@@ -7451,7 +7370,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"micromatch@npm:^4.0.0, micromatch@npm:^4.0.2, micromatch@npm:^4.0.8":
+"micromatch@npm:^4.0.2, micromatch@npm:^4.0.8":
   version: 4.0.8
   resolution: "micromatch@npm:4.0.8"
   dependencies:
@@ -7890,7 +7809,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"npm-run-path@npm:^4.0.0, npm-run-path@npm:^4.0.1":
+"npm-run-path@npm:^4.0.0":
   version: 4.0.1
   resolution: "npm-run-path@npm:4.0.1"
   dependencies:
@@ -8102,7 +8021,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"onetime@npm:^5.1.0, onetime@npm:^5.1.2":
+"onetime@npm:^5.1.0":
   version: 5.1.2
   resolution: "onetime@npm:5.1.2"
   dependencies:
@@ -8308,13 +8227,6 @@ __metadata:
   version: 7.0.4
   resolution: "p-map@npm:7.0.4"
   checksum: 10c0/a5030935d3cb2919d7e89454d1ce82141e6f9955413658b8c9403cfe379283770ed3048146b44cde168aa9e8c716505f196d5689db0ae3ce9a71521a2fef3abd
-  languageName: node
-  linkType: hard
-
-"p-reduce@npm:^2.0.0":
-  version: 2.1.0
-  resolution: "p-reduce@npm:2.1.0"
-  checksum: 10c0/27b8ff0fb044995507a06cd6357dffba0f2b98862864745972562a21885d7906ce5c794036d2aaa63ef6303158e41e19aed9f19651dfdafb38548ecec7d0de15
   languageName: node
   linkType: hard
 
@@ -9763,7 +9675,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"signal-exit@npm:^3.0.2, signal-exit@npm:^3.0.3":
+"signal-exit@npm:^3.0.2":
   version: 3.0.7
   resolution: "signal-exit@npm:3.0.7"
   checksum: 10c0/25d272fa73e146048565e08f3309d5b942c1979a6f4a58a8c59d5fa299728e9c2fcd1a759ec870863b1fd38653670240cd420dad2ad9330c71f36608a6a1c912

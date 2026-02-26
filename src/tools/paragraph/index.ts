@@ -13,13 +13,13 @@ import type {
   PasteEvent,
   ToolboxConfig,
   ConversionConfig,
-  SanitizerConfig,
+  ToolSanitizerConfig,
   PasteConfig,
 } from '../../../types';
 import { DATA_ATTR } from '../../components/constants';
 import { IconText } from '../../components/icons';
 import { stripFakeBackgroundElements } from '../../components/utils';
-import { PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { PLACEHOLDER_EMPTY_EDITOR_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 /**
@@ -239,7 +239,8 @@ export class Paragraph implements BlockTool {
     div.className = twMerge(
       this.api.styles.block,
       Paragraph.WRAPPER_CLASSES,
-      PLACEHOLDER_FOCUS_ONLY_CLASSES
+      PLACEHOLDER_FOCUS_ONLY_CLASSES,
+      PLACEHOLDER_EMPTY_EDITOR_CLASSES
     );
     div.setAttribute(DATA_ATTR.tool, 'paragraph');
     div.contentEditable = 'false';
@@ -369,10 +370,17 @@ export class Paragraph implements BlockTool {
    *
    * @returns SanitizerConfig
    */
-  public static get sanitize(): SanitizerConfig {
+  public static get sanitize(): ToolSanitizerConfig {
     return {
       text: {
         br: true,
+        img: {
+          src: true,
+          style: true,
+        },
+        p: true,
+        ul: true,
+        li: true,
       },
     };
   }

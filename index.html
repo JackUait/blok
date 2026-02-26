@@ -7,19 +7,46 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=PT+Mono&display=swap" rel="stylesheet">
   <style>
-    .toggle-text-swap {
-      font-size: 0px;
-      vertical-align: bottom;
-    }
-
-    .toggle-text-swap::before {
-      display: inline;
+    /* Prevent FOUC: body hidden until module script adds .ready */
+    body:not(.ready) { visibility: hidden !important; }
+  </style>
+  <style>
+    /* Playground tabs */
+    .playground-tab {
+      position: relative;
+      padding: 0 16px;
+      height: 50px;
+      line-height: 50px;
       font-size: 13px;
-      content: attr(data-default-text);
+      color: #999;
+      cursor: pointer;
+      transition: color 0.15s;
+      background: none;
+      border: none;
+      font-family: inherit;
+    }
+    .playground-tab:hover { color: #333; }
+    .playground-tab[aria-selected="true"] { color: #000; font-weight: 600; }
+    .playground-tab[aria-selected="true"]::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: #000;
+      border-radius: 1px;
     }
 
+    /* Dark mode tab overrides */
+    .dark-mode .playground-tab { color: #666; }
+    .dark-mode .playground-tab:hover { color: #e0e0e0; }
+    .dark-mode .playground-tab[aria-selected="true"] { color: #fff; }
+    .dark-mode .playground-tab[aria-selected="true"]::after { background: #fff; }
+
+    /* Thin mode content narrowing */
     .thin-mode .thin-mode-content {
       max-width: 500px;
       border-left-width: 1px;
@@ -30,385 +57,740 @@
       padding-left: 15px;
       padding-right: 15px;
     }
+    .dark-mode.thin-mode .thin-mode-content {
+      border-color: #333;
+    }
+
+    /* Pill toggle switch */
+    .pill-toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .pill-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    input:checked + .pill-toggle {
+      background: #e45735;
+    }
+    .dark-mode input:checked + .pill-toggle {
+      background: #e45735;
+    }
+    .dark-mode .pill-toggle {
+      background: #444;
+    }
+    input:checked + .pill-toggle::after {
+      transform: translateX(16px);
+    }
+
+    /* Dark mode page styles */
+    .dark-mode { background: #1a1a1a; color: #e0e0e0; }
+
+    /* Icon gallery */
+    .icon-gallery { padding: 40px 0 100px; }
+    .icon-group { margin-bottom: 48px; }
+    .icon-group-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #999;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 2px;
+    }
+    .icon-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 12px;
+      cursor: pointer;
+    }
+    .icon-cell .icon-preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a1a1a;
+    }
+    .icon-cell .icon-preview svg {
+      border: 1px dashed #d0d0d0;
+      border-radius: 2px;
+    }
+    .icon-cell:hover .icon-preview svg {
+      border-color: #999;
+    }
+    .icon-cell .icon-name {
+      font-size: 10px;
+      font-family: 'PT Mono', monospace;
+      color: #999;
+      text-align: center;
+      word-break: break-all;
+      transition: color 0.15s;
+    }
+
+    /* Dark mode icon gallery */
+    .dark-mode .icon-group-title { color: #666; border-bottom-color: #333; }
+    .dark-mode .icon-cell .icon-preview svg { border-color: #444; }
+    .dark-mode .icon-cell:hover .icon-preview svg { border-color: #666; }
+    .dark-mode .icon-cell .icon-preview { color: #e0e0e0; }
+    .dark-mode .icon-cell .icon-name { color: #666; }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
-<body class="font-sans text-sm leading-relaxed m-0 bg-white text-black">
-  <div class="text-base">
-    <div class="flex flex-wrap items-center h-[50px] leading-[50px] px-[30px] max-md:px-5 mb-[30px] border-b border-[#e8e8eb]">
-      <a class="font-bold text-inherit no-underline" href="https://github.com/JackUait/blok">Blok</a>
-    </div>
-    <div class="thin-mode-content max-w-content mx-auto antialiased max-md:px-5">
-      <div id="blok"></div>
-      <div class="flex items-center fixed bottom-0 left-0 right-0 bg-white rounded-t-lg border-t border-[#e8e8eb] shadow-sm text-[13px] px-4 py-2 z-[1] select-none max-md:hidden">
-        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
-          Readonly:
-          <b id="readonly-state">
-            Off
-          </b>
-          &nbsp;
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="toggleReadOnlyButton">
-            toggle
-          </button>
-        </div>
-        <div class="after:content-['|'] after:text-[#ddd] after:mx-3">
-          <button class="inline-block px-3 py-[3px] rounded-full bg-[#eff1f4] hover:bg-[#e0e4eb] transition-all duration-150 cursor-pointer text-center select-none" id="enableThinModeButton">
-            <span class="toggle-text-swap" data-default-text="Enable" data-toggled-text="Disable"></span>
-            thin mode
-          </button>
-        </div>
+<body class="m-0 bg-white text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
+  <div class="text-base transition-[margin] duration-200 ease-in-out" id="main-content">
+    <!-- Header -->
+    <div class="flex items-center h-[50px] px-[30px] max-md:px-5 border-b border-[#e8e8eb] dark-mode:border-[#333] dark-mode:bg-[#222] transition-colors duration-150">
+      <span class="font-bold text-inherit mr-6 select-none tracking-tight">Blok</span>
+      <nav role="tablist" class="flex">
+        <a class="playground-tab" role="tab" aria-selected="true" href="/editor" data-tab="editor">Editor</a>
+        <a class="playground-tab" role="tab" aria-selected="false" href="/icons" data-tab="icons">Icons</a>
+      </nav>
+      <div class="ml-auto">
+        <a href="https://github.com/JackUait/blok" target="_blank" rel="noopener noreferrer" class="text-[#999] hover:text-[#333] dark-mode:text-[#666] dark-mode:hover:text-[#e0e0e0] transition-colors" aria-label="View on GitHub">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        </a>
       </div>
+    </div>
+
+    <!-- Editor tab -->
+    <div id="tab-editor" class="mt-[30px]" role="tabpanel">
+      <div class="thin-mode-content max-w-content mx-auto antialiased max-md:px-5">
+        <div id="blok"></div>
+      </div>
+    </div>
+
+    <!-- Icons tab -->
+    <div id="tab-icons" class="hidden" role="tabpanel">
+      <div class="max-w-4xl mx-auto px-[30px] max-md:px-5 icon-gallery" id="icon-gallery"></div>
     </div>
   </div>
 
+  <!-- Settings side panel: vertical tab -->
+  <button id="settings-tab" class="fixed right-0 top-1/2 -translate-y-1/2 z-10 bg-white hover:bg-[#f7f7f8] dark-mode:bg-[#1a1a1a] dark-mode:hover:bg-[#252525] border border-r-0 border-[#e8e8eb] dark-mode:border-[#333] rounded-l px-[5px] py-3 cursor-pointer transition-all duration-150 select-none group" aria-label="Open settings panel">
+    <span class="flex flex-col items-center gap-2">
+      <svg class="text-[#bbb] group-hover:text-[#666] dark-mode:text-[#555] dark-mode:group-hover:text-[#999] transition-colors" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3"/><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M3.4 3.4l1.4 1.4M15.2 15.2l1.4 1.4M3.4 16.6l1.4-1.4M15.2 4.8l1.4-1.4"/></svg>
+      <span class="text-[9px] font-medium uppercase tracking-[0.12em] text-[#bbb] group-hover:text-[#666] dark-mode:text-[#555] dark-mode:group-hover:text-[#999] transition-colors" style="writing-mode: vertical-lr; transform: rotate(180deg); font-family: 'PT Mono', monospace;">Settings</span>
+    </span>
+  </button>
 
-  <!-- Load Tools -->
-  <!--
-    You can upload Tools to your project's directory and connect them by relative links.
+  <!-- Settings side panel: drawer -->
+  <div id="settings-panel" class="fixed right-0 top-0 bottom-0 w-[280px] bg-white dark-mode:bg-[#222] border-l border-[#e8e8eb] dark-mode:border-[#333] translate-x-full transition-transform duration-200 ease-in-out z-10 overflow-y-auto" style="transform: translateX(100%)" aria-label="Settings panel">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0] dark-mode:border-[#333] mt-[50px]">
+      <span class="text-sm font-semibold dark-mode:text-[#e0e0e0]">Settings</span>
+      <button id="settings-close" class="text-[#999] hover:text-[#333] dark-mode:hover:text-[#e0e0e0] transition-colors cursor-pointer" aria-label="Close settings panel">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
 
-    Also you can load each Tool from CDN or use NPM/Yarn packages.
-  -->
+    <!-- Modes section -->
+    <div class="px-5 py-4 border-b border-[#f0f0f0] dark-mode:border-[#333]">
+      <div class="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#999] dark-mode:text-[#666] mb-3" style="font-family: 'PT Mono', monospace;">Modes</div>
+      <div class="flex flex-col gap-3">
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-[13px] dark-mode:text-[#e0e0e0]">Readonly</span>
+          <input type="checkbox" id="toggle-readonly" class="peer sr-only">
+          <span class="pill-toggle"></span>
+        </label>
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-[13px] dark-mode:text-[#e0e0e0]">Thin mode</span>
+          <input type="checkbox" id="toggle-thin" class="peer sr-only">
+          <span class="pill-toggle"></span>
+        </label>
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-[13px] dark-mode:text-[#e0e0e0]">Dark mode</span>
+          <input type="checkbox" id="toggle-dark" class="peer sr-only">
+          <span class="pill-toggle"></span>
+        </label>
+        <label class="flex items-center justify-between cursor-pointer">
+          <span class="text-[13px] dark-mode:text-[#e0e0e0]">Autofocus</span>
+          <input type="checkbox" id="toggle-autofocus" class="peer sr-only" checked>
+          <span class="pill-toggle"></span>
+        </label>
+      </div>
+    </div>
 
-  <!-- Initialization -->
+    <!-- Tools section -->
+    <div class="px-5 py-4 border-b border-[#f0f0f0] dark-mode:border-[#333]">
+      <div class="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#999] dark-mode:text-[#666] mb-3" style="font-family: 'PT Mono', monospace;">Tools</div>
+      <div class="flex flex-col gap-3" id="tool-toggles"></div>
+    </div>
+
+    <!-- Actions section -->
+    <div class="px-5 py-4">
+      <div class="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#999] dark-mode:text-[#666] mb-3" style="font-family: 'PT Mono', monospace;">Actions</div>
+      <button id="reset-content" class="w-full text-[13px] py-2 px-4 border border-[#e8e8eb] dark-mode:border-[#444] rounded-lg text-[#666] dark-mode:text-[#999] hover:border-[#ccc] dark-mode:hover:border-[#666] hover:text-[#333] dark-mode:hover:text-[#e0e0e0] transition-colors cursor-pointer bg-transparent">
+        Reset Content
+      </button>
+    </div>
+  </div>
+
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Bold, Italic, Link } from './src/tools/index.ts';
-
-    window.Blok = Blok;
+    import { Paragraph, Header, List, Table, Bold, Italic, Link } from './src/tools/index.ts';
+    import * as Icons from './src/components/icons/index.ts';
 
     /**
-     * To initialize the Blok, create a new instance with configuration object
-     * @see docs/installation.md for mode details
+     * Playground state - drives editor configuration
      */
-    const blokConfig = {
-      /**
-       * Enable/Disable the read only mode
-       */
+    const state = {
       readOnly: false,
-
-      /**
-       * Wrapper of Blok
-       */
-      holder: 'blok',
-
-      /**
-       * Common Inline Toolbar settings
-       * - if true (or not specified), the order from 'tool' property will be used
-       * - if an array of tool names, this order will be used
-       */
-      // inlineToolbar: ['link', 'bold', 'italic'],
-      // inlineToolbar: true,
-
-      /**
-       * Tools list
-       */
+      thinMode: false,
+      darkMode: false,
+      autofocus: true,
       tools: {
-        /**
-         * Each Tool is a Plugin. Pass them via 'class' option with necessary settings {@link docs/tools.md}
-         * Tool options can be flat (no nested config: {}) - Blok extracts known keys automatically.
-         * inlineToolbar defaults to true for block tools.
-         */
-        paragraph: {
-          class: Paragraph,
-          preserveBlank: true,
-        },
-        header: {
-          class: Header,
-          placeholder: 'Header',
-        },
-        list: List,
-        // Inline tools
+        paragraph: true,
+        header: true,
+        list: true,
+        table: true,
+      },
+    };
+
+    const DEFAULT_BLOCKS = [
+      {
+        id: "zcKCF1S7X8",
+        type: "header",
+        data: {
+          text: "Blok - Block-Styled Editor",
+          level: 1
+        }
+      },
+      {
+        id: "b6ji-DvaKb",
+        type: "paragraph",
+        data: {
+          text: "Hey. Meet the new Blok. On this page you can see it in action — try to edit this text. Source code of the page contains the example of connection and configuration."
+        }
+      },
+      {
+        type: "header",
+        id: "7ItVl5biRo",
+        data: {
+          text: "Header Levels",
+          level: 2
+        }
+      },
+      {
+        id: "header-h1-example",
+        type: "header",
+        data: {
+          text: "Heading 1 - Main Title",
+          level: 1
+        }
+      },
+      {
+        id: "header-h2-example",
+        type: "header",
+        data: {
+          text: "Heading 2 - Section Title",
+          level: 2
+        }
+      },
+      {
+        id: "header-h3-example",
+        type: "header",
+        data: {
+          text: "Heading 3 - Subsection Title",
+          level: 3
+        }
+      },
+      {
+        id: "header-h4-example",
+        type: "header",
+        data: {
+          text: "Heading 4 - Component Title",
+          level: 4
+        }
+      },
+      {
+        id: "header-h5-example",
+        type: "header",
+        data: {
+          text: "Heading 5 - Minor Title",
+          level: 5
+        }
+      },
+      {
+        id: "header-h6-example",
+        type: "header",
+        data: {
+          text: "Heading 6 - Smallest Title",
+          level: 6
+        }
+      },
+      {
+        type: "header",
+        id: "QZFox1m_ul",
+        data: {
+          text: "Inline Formatting",
+          level: 2
+        }
+      },
+      {
+        id: "inline-example",
+        type: "paragraph",
+        data: {
+          text: "You can make text <b>bold</b>, <i>italic</i>, or add <a href=\"https://github.com/JackUait/blok\">links</a>. Select any text to see the inline toolbar."
+        }
+      },
+      {
+        type: "header",
+        id: "list-section-header",
+        data: {
+          text: "List Types",
+          level: 2
+        }
+      },
+      {
+        type: "header",
+        id: "unordered-list-header",
+        data: {
+          text: "Unordered List (Bulleted)",
+          level: 3
+        }
+      },
+      {
+        id: "unordered-list-1",
+        type: "list",
+        data: {
+          style: "unordered",
+          text: "First item"
+        }
+      },
+      {
+        id: "unordered-list-2",
+        type: "list",
+        data: {
+          style: "unordered",
+          text: "Second item"
+        }
+      },
+      {
+        id: "unordered-list-3",
+        type: "list",
+        data: {
+          style: "unordered",
+          text: "Third item with <b>bold text</b>"
+        }
+      },
+      {
+        type: "header",
+        id: "ordered-list-header",
+        data: {
+          text: "Ordered List (Numbered)",
+          level: 3
+        }
+      },
+      {
+        id: "ordered-list-1",
+        type: "list",
+        data: {
+          style: "ordered",
+          text: "First step"
+        }
+      },
+      {
+        id: "ordered-list-2",
+        type: "list",
+        data: {
+          style: "ordered",
+          text: "Second step"
+        }
+      },
+      {
+        id: "ordered-list-3",
+        type: "list",
+        data: {
+          style: "ordered",
+          text: "Third step"
+        }
+      },
+      {
+        type: "header",
+        id: "checklist-header",
+        data: {
+          text: "Checklist (Todo)",
+          level: 3
+        }
+      },
+      {
+        id: "checklist-1",
+        type: "list",
+        data: {
+          style: "checklist",
+          text: "Learn Blok editor",
+          checked: true
+        }
+      },
+      {
+        id: "checklist-2",
+        type: "list",
+        data: {
+          style: "checklist",
+          text: "Build something awesome"
+        }
+      },
+      {
+        id: "checklist-3",
+        type: "list",
+        data: {
+          style: "checklist",
+          text: "Share with the world"
+        }
+      },
+      {
+        type: "header",
+        id: "nested-list-header",
+        data: {
+          text: "Nested Lists",
+          level: 3
+        }
+      },
+      {
+        id: "nested-list-1",
+        type: "list",
+        data: {
+          style: "unordered",
+          text: "Main item"
+        }
+      },
+      {
+        id: "nested-list-2",
+        type: "list",
+        data: {
+          style: "unordered",
+          text: "Nested item (press Tab to indent)",
+          depth: 1
+        }
+      },
+      {
+        id: "nested-list-3",
+        type: "list",
+        data: {
+          style: "unordered",
+          text: "Double nested item",
+          depth: 2
+        }
+      },
+      {
+        id: "nested-list-4",
+        type: "list",
+        data: {
+          style: "unordered",
+          text: "Back to main level"
+        }
+      },
+      {
+        type: "header",
+        id: "table-section-header",
+        data: {
+          text: "Tables",
+          level: 2
+        }
+      },
+      {
+        id: "table-description",
+        type: "paragraph",
+        data: {
+          text: "Tables support keyboard navigation (Tab to move between cells, Enter to move down) and can be pasted from other applications."
+        }
+      },
+      {
+        id: "table-example-1",
+        type: "table",
+        data: {
+          withHeadings: true,
+          content: [
+            ["Feature", "Status", "Notes"],
+            ["Grid rendering", "✅ Complete", "Supports any size"],
+            ["Keyboard navigation", "✅ Complete", "Tab and Enter keys"],
+            ["Paste support", "✅ Complete", "HTML tables supported"],
+            ["Heading row", "✅ Complete", "Toggle in settings"]
+          ]
+        }
+      },
+      {
+        type: "header",
+        id: "simple-table-header",
+        data: {
+          text: "Simple Table (No Headers)",
+          level: 3
+        }
+      },
+      {
+        id: "table-example-2",
+        type: "table",
+        data: {
+          withHeadings: false,
+          content: [
+            ["Row 1, Cell 1", "Row 1, Cell 2"],
+            ["Row 2, Cell 1", "Row 2, Cell 2"],
+            ["Row 3, Cell 1", "Row 3, Cell 2"]
+          ]
+        }
+      },
+    ];
+
+    /**
+     * Build Blok config from current state
+     */
+    function buildConfig() {
+      const tools = {
         bold: Bold,
         italic: Italic,
         link: Link,
-      },
+      };
+      if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
+      if (state.tools.header) tools.header = { class: Header, placeholder: 'Header' };
+      if (state.tools.list) tools.list = List;
+      if (state.tools.table) tools.table = Table;
 
-      /**
-       * This Tool will be used as default
-       */
-      // defaultBlock: 'paragraph',
-
-      autofocus: true,
-
-      /**
-       * Initial Blok data
-       */
-      data: {
-        blocks: [
-          {
-            id: "zcKCF1S7X8",
-            type: "header",
-            data: {
-              text: "Blok - Block-Styled Editor",
-              level: 1
-            }
-          },
-          {
-            id: "b6ji-DvaKb",
-            type: "paragraph",
-            data: {
-              text: "Hey. Meet the new Blok. On this page you can see it in action — try to edit this text. Source code of the page contains the example of connection and configuration."
-            }
-          },
-          {
-            type: "header",
-            id: "7ItVl5biRo",
-            data: {
-              text: "Header Levels",
-              level: 2
-            }
-          },
-          {
-            id: "header-h1-example",
-            type: "header",
-            data: {
-              text: "Heading 1 - Main Title",
-              level: 1
-            }
-          },
-          {
-            id: "header-h2-example",
-            type: "header",
-            data: {
-              text: "Heading 2 - Section Title",
-              level: 2
-            }
-          },
-          {
-            id: "header-h3-example",
-            type: "header",
-            data: {
-              text: "Heading 3 - Subsection Title",
-              level: 3
-            }
-          },
-          {
-            id: "header-h4-example",
-            type: "header",
-            data: {
-              text: "Heading 4 - Component Title",
-              level: 4
-            }
-          },
-          {
-            id: "header-h5-example",
-            type: "header",
-            data: {
-              text: "Heading 5 - Minor Title",
-              level: 5
-            }
-          },
-          {
-            id: "header-h6-example",
-            type: "header",
-            data: {
-              text: "Heading 6 - Smallest Title",
-              level: 6
-            }
-          },
-          {
-            type: "header",
-            id: "QZFox1m_ul",
-            data: {
-              text: "Inline Formatting",
-              level: 2
-            }
-          },
-          {
-            id: "inline-example",
-            type: "paragraph",
-            data: {
-              text: "You can make text <b>bold</b>, <i>italic</i>, or add <a href=\"https://github.com/JackUait/blok\">links</a>. Select any text to see the inline toolbar."
-            }
-          },
-          {
-            type: "header",
-            id: "list-section-header",
-            data: {
-              text: "List Types",
-              level: 2
-            }
-          },
-          {
-            type: "header",
-            id: "unordered-list-header",
-            data: {
-              text: "Unordered List (Bulleted)",
-              level: 3
-            }
-          },
-          {
-            id: "unordered-list-1",
-            type: "list",
-            data: {
-              style: "unordered",
-              text: "First item"
-            }
-          },
-          {
-            id: "unordered-list-2",
-            type: "list",
-            data: {
-              style: "unordered",
-              text: "Second item"
-            }
-          },
-          {
-            id: "unordered-list-3",
-            type: "list",
-            data: {
-              style: "unordered",
-              text: "Third item with <b>bold text</b>"
-            }
-          },
-          {
-            type: "header",
-            id: "ordered-list-header",
-            data: {
-              text: "Ordered List (Numbered)",
-              level: 3
-            }
-          },
-          {
-            id: "ordered-list-1",
-            type: "list",
-            data: {
-              style: "ordered",
-              text: "First step"
-            }
-          },
-          {
-            id: "ordered-list-2",
-            type: "list",
-            data: {
-              style: "ordered",
-              text: "Second step"
-            }
-          },
-          {
-            id: "ordered-list-3",
-            type: "list",
-            data: {
-              style: "ordered",
-              text: "Third step"
-            }
-          },
-          {
-            type: "header",
-            id: "checklist-header",
-            data: {
-              text: "Checklist (Todo)",
-              level: 3
-            }
-          },
-          {
-            id: "checklist-1",
-            type: "list",
-            data: {
-              style: "checklist",
-              text: "Learn Blok editor",
-              checked: true
-            }
-          },
-          {
-            id: "checklist-2",
-            type: "list",
-            data: {
-              style: "checklist",
-              text: "Build something awesome"
-            }
-          },
-          {
-            id: "checklist-3",
-            type: "list",
-            data: {
-              style: "checklist",
-              text: "Share with the world"
-            }
-          },
-          {
-            type: "header",
-            id: "nested-list-header",
-            data: {
-              text: "Nested Lists",
-              level: 3
-            }
-          },
-          {
-            id: "nested-list-1",
-            type: "list",
-            data: {
-              style: "unordered",
-              text: "Main item"
-            }
-          },
-          {
-            id: "nested-list-2",
-            type: "list",
-            data: {
-              style: "unordered",
-              text: "Nested item (press Tab to indent)",
-              depth: 1
-            }
-          },
-          {
-            id: "nested-list-3",
-            type: "list",
-            data: {
-              style: "unordered",
-              text: "Double nested item",
-              depth: 2
-            }
-          },
-          {
-            id: "nested-list-4",
-            type: "list",
-            data: {
-              style: "unordered",
-              text: "Back to main level"
-            }
-          },
-        ]
-      },
-      onChange: function(api, event) {
-        console.log('something changed', event);
-      },
+      return {
+        readOnly: state.readOnly,
+        holder: 'blok',
+        tools,
+        autofocus: state.autofocus,
+        data: { blocks: structuredClone(DEFAULT_BLOCKS) },
+        onChange(api, event) {
+          console.log('something changed', event);
+        },
+      };
     }
-    /**
-    * To initialize the Blok, create a new instance with configuration object
-    * @see docs/installation.md for mode details
-    */
-    var blok = new Blok(blokConfig);
+
+    let blok = new Blok(buildConfig());
+    window.blok = blok;
 
     /**
-    * Toggle read-only button
-    */
-    const toggleReadOnlyButton = document.getElementById('toggleReadOnlyButton');
-    const readOnlyIndicator = document.getElementById('readonly-state');
+     * Reinitialize editor with current state
+     */
+    async function reinitEditor() {
+      blok.destroy();
+      blok = new Blok(buildConfig());
+      window.blok = blok;
+    }
 
     /**
-    * Toggle read-only example
-    */
-    toggleReadOnlyButton.addEventListener('click', async () => {
-      const readOnlyState = await blok.readOnly.toggle();
+     * Page routing
+     */
+    const tabs = document.querySelectorAll('[role="tab"]');
 
-      readOnlyIndicator.textContent = readOnlyState ? 'On' : 'Off';
+    function navigateTo(page) {
+      tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.tab === page ? 'true' : 'false'));
+      document.getElementById('tab-editor').classList.toggle('hidden', page !== 'editor');
+      document.getElementById('tab-icons').classList.toggle('hidden', page !== 'icons');
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = tab.dataset.tab;
+        history.pushState(null, '', `/${page}`);
+        navigateTo(page);
+      });
+    });
+
+    window.addEventListener('popstate', () => {
+      const page = window.location.pathname === '/icons' ? 'icons' : 'editor';
+      navigateTo(page);
+    });
+
+    // Initial route
+    const initialPage = window.location.pathname === '/icons' ? 'icons' : 'editor';
+    if (window.location.pathname !== '/editor' && window.location.pathname !== '/icons') {
+      history.replaceState(null, '', '/editor');
+    }
+    navigateTo(initialPage);
+
+    /**
+     * Settings panel open/close
+     */
+    const settingsTab = document.getElementById('settings-tab');
+    const settingsPanel = document.getElementById('settings-panel');
+    const settingsClose = document.getElementById('settings-close');
+    const mainContent = document.getElementById('main-content');
+
+    function openSettingsPanel() {
+      settingsPanel.style.transform = '';
+      settingsPanel.classList.remove('translate-x-full');
+      settingsTab.classList.add('hidden');
+      mainContent.style.marginRight = '280px';
+    }
+
+    function closeSettingsPanel() {
+      settingsPanel.classList.add('translate-x-full');
+      settingsTab.classList.remove('hidden');
+      mainContent.style.marginRight = '0';
+    }
+
+    function toggleSettingsPanel() {
+      if (settingsPanel.classList.contains('translate-x-full')) {
+        openSettingsPanel();
+      } else {
+        closeSettingsPanel();
+      }
+    }
+
+    settingsTab.addEventListener('click', openSettingsPanel);
+    settingsClose.addEventListener('click', closeSettingsPanel);
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+        e.preventDefault();
+        toggleSettingsPanel();
+      }
     });
 
     /**
-    * Button for enabling the 'Thin' mode
-    */
-    const enableThinModeButton = document.getElementById("enableThinModeButton");
+     * Mode toggles
+     */
+    const toggleReadonly = document.getElementById('toggle-readonly');
+    const toggleThin = document.getElementById('toggle-thin');
+    const toggleDark = document.getElementById('toggle-dark');
+    const toggleAutofocus = document.getElementById('toggle-autofocus');
 
-    enableThinModeButton.addEventListener('click', () => {
-      document.body.classList.toggle("thin-mode")
+    toggleReadonly.addEventListener('change', async () => {
+      state.readOnly = toggleReadonly.checked;
+      await blok.readOnly.toggle(state.readOnly);
+    });
 
-      blok.destroy();
+    toggleThin.addEventListener('change', () => {
+      state.thinMode = toggleThin.checked;
+      document.body.classList.toggle('thin-mode', state.thinMode);
+      reinitEditor();
+    });
 
-      blok = new Blok(blokConfig);
-    })
+    toggleDark.addEventListener('change', () => {
+      state.darkMode = toggleDark.checked;
+      document.body.classList.toggle('dark-mode', state.darkMode);
+    });
 
-    window.blok = blok;
+    toggleAutofocus.addEventListener('change', () => {
+      state.autofocus = toggleAutofocus.checked;
+    });
+
+    /**
+     * Tool toggle definitions and rendering
+     */
+    const TOOL_DEFS = [
+      { key: 'paragraph', label: 'Paragraph', icon: Icons.IconText },
+      { key: 'header', label: 'Header', icon: Icons.IconHeading },
+      { key: 'list', label: 'List', icon: Icons.IconListBulleted },
+      { key: 'table', label: 'Table', icon: Icons.IconTable },
+    ];
+
+    const toolTogglesContainer = document.getElementById('tool-toggles');
+
+    for (const tool of TOOL_DEFS) {
+      const label = document.createElement('label');
+      label.className = 'flex items-center justify-between cursor-pointer';
+      label.innerHTML = `
+        <span class="flex items-center gap-2 text-[13px] dark-mode:text-[#e0e0e0]">
+          <span class="w-5 h-5 flex items-center justify-center text-[#999] dark-mode:text-[#666]">${tool.icon}</span>
+          ${tool.label}
+        </span>
+        <input type="checkbox" id="toggle-tool-${tool.key}" class="peer sr-only" checked>
+        <span class="pill-toggle"></span>
+      `;
+      toolTogglesContainer.appendChild(label);
+    }
+
+    for (const tool of TOOL_DEFS) {
+      const checkbox = document.getElementById(`toggle-tool-${tool.key}`);
+      checkbox.addEventListener('change', () => {
+        state.tools[tool.key] = checkbox.checked;
+        reinitEditor();
+      });
+    }
+
+    /**
+     * Reset content
+     */
+    document.getElementById('reset-content').addEventListener('click', () => {
+      reinitEditor();
+    });
+
+    /**
+     * Icon gallery - group icons by category and render them
+     */
+    const iconGroups = {
+      'UI & Navigation': ['IconCross', 'IconMenu', 'IconPlus', 'IconChevronLeft', 'IconChevronRight', 'IconSearch'],
+      'Inline Formatting': ['IconBold', 'IconItalic', 'IconLink', 'IconReplace'],
+      'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable'],
+      'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight'],
+      'Utility': ['IconTrash', 'IconWarning'],
+    };
+
+    const gallery = document.getElementById('icon-gallery');
+
+    for (const [groupName, iconNames] of Object.entries(iconGroups)) {
+      const group = document.createElement('div');
+      group.className = 'icon-group';
+
+      const title = document.createElement('div');
+      title.className = 'icon-group-title';
+      title.textContent = groupName;
+      group.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'icon-grid';
+
+      for (const name of iconNames) {
+        const svg = Icons[name];
+        if (!svg) continue;
+
+        const cell = document.createElement('div');
+        cell.className = 'icon-cell';
+
+        const preview = document.createElement('div');
+        preview.className = 'icon-preview';
+        preview.innerHTML = svg;
+
+        const label = document.createElement('div');
+        label.className = 'icon-name';
+        label.textContent = name;
+
+        cell.appendChild(preview);
+        cell.appendChild(label);
+        grid.appendChild(cell);
+
+        cell.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(name);
+          const original = label.textContent;
+          label.textContent = 'Copied!';
+          label.style.color = document.body.classList.contains('dark-mode') ? '#fff' : '#000';
+          setTimeout(() => {
+            label.textContent = original;
+            label.style.color = '';
+          }, 1000);
+        });
+      }
+
+      group.appendChild(grid);
+      gallery.appendChild(group);
+    }
+
+    // Reveal page once editor is ready (Tailwind CSS is injected during Blok init)
+    blok.isReady.then(() => document.body.classList.add('ready'));
   </script>
 </body>
 </html>

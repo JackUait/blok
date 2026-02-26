@@ -169,9 +169,15 @@ export class BlockObserver {
       this.emitChange({ type: 'move', blockId, origin });
     }
 
-    // Emit pure adds
-    for (const blockId of pureAdds) {
-      this.emitChange({ type: 'add', blockId, origin });
+    // Emit pure adds — batch when there are multiple so that parent and
+    // child blocks can be registered in BlockManager before any lifecycle
+    // hooks (like Table.rendered → initializeCells) fire.
+    if (pureAdds.length === 1) {
+      this.emitChange({ type: 'add', blockId: pureAdds[0], origin });
+    }
+
+    if (pureAdds.length > 1) {
+      this.emitChange({ type: 'batch-add', blockIds: pureAdds, origin });
     }
 
     // Emit pure removes

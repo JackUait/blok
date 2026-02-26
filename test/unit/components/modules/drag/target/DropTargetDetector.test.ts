@@ -358,6 +358,119 @@ describe('DropTargetDetector', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should redirect target to table block when targeting a cell-interior block', () => {
+      const sourceBlock = createMockBlock('source', 'header');
+
+      const tableBlock = createMockBlock('table', 'table');
+
+      const cellBlock = createMockBlock('cell-paragraph');
+
+      // Build DOM: tableBlock.holder > [data-blok-table-cell-blocks] > cellBlock.holder
+      const cellBlocksContainer = document.createElement('div');
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellBlocksContainer);
+      cellBlocksContainer.appendChild(cellBlock.holder);
+
+      document.body.appendChild(tableBlock.holder);
+
+      mockBlockManager.blocks = [tableBlock, cellBlock, sourceBlock];
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === tableBlock) return 0;
+        if (block === cellBlock) return 1;
+        if (block === sourceBlock) return 2;
+        return -1;
+      });
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
+
+      vi.spyOn(cellBlock.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 200,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 100,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+
+      vi.spyOn(tableBlock.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 50,
+        bottom: 300,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 250,
+        x: 0,
+        y: 50,
+        toJSON: () => ({}),
+      });
+
+      // Target element inside cell block holder
+      const targetElement = document.createElement('div');
+      cellBlock.holder.appendChild(targetElement);
+
+      const result = detector.determineDropTarget(targetElement, 50, 170, sourceBlock);
+
+      expect(result).not.toBeNull();
+      // Should redirect to the table block, NOT the cell block
+      expect(result?.block).toBe(tableBlock);
+
+      // Clean up
+      document.body.removeChild(tableBlock.holder);
+    });
+
+    it('should allow targeting cell-interior blocks when source is also in the same cell', () => {
+      const tableBlock = createMockBlock('table', 'table');
+
+      const sourceBlock = createMockBlock('source-in-cell');
+
+      const targetBlock = createMockBlock('target-in-cell');
+
+      // Build DOM: tableBlock.holder > [data-blok-table-cell-blocks] > sourceBlock.holder + targetBlock.holder
+      const cellBlocksContainer = document.createElement('div');
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellBlocksContainer);
+      cellBlocksContainer.appendChild(sourceBlock.holder);
+      cellBlocksContainer.appendChild(targetBlock.holder);
+
+      document.body.appendChild(tableBlock.holder);
+
+      mockBlockManager.blocks = [tableBlock, sourceBlock, targetBlock];
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === tableBlock) return 0;
+        if (block === sourceBlock) return 1;
+        if (block === targetBlock) return 2;
+        return -1;
+      });
+      mockBlockManager.getBlockByIndex = vi.fn((index) => mockBlockManager.blocks[index] ?? undefined);
+
+      vi.spyOn(targetBlock.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 200,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 100,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+
+      // Target element inside the target block holder
+      const targetElement = document.createElement('div');
+      targetBlock.holder.appendChild(targetElement);
+
+      const result = detector.determineDropTarget(targetElement, 50, 170, sourceBlock);
+
+      expect(result).not.toBeNull();
+      // Should NOT redirect — source is in the same cell, so targeting the cell block is valid
+      expect(result?.block).toBe(targetBlock);
+
+      // Clean up
+      document.body.removeChild(tableBlock.holder);
+    });
   });
 
   describe('calculateTargetDepth', () => {
@@ -448,20 +561,147 @@ describe('DropTargetDetector', () => {
 
       expect(depth).toBe(0);
     });
+
+    describe('with sourceBlock (depth prediction accuracy)', () => {
+      it('should predict depth 1 when depth-1 list item is dropped after a depth-0 list item with no next block', () => {
+        // Scenario: List A (depth 0) at index 0. Dragging List B (depth 1) to bottom of A.
+        // ListDepthValidator would compute: maxAllowed = 0+1 = 1, currentDepth(1) <= 1, return 1.
+        // The indicator must match and predict depth 1.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 1);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          // dropIndex = bottom of index 0 = 1
+          // previous at index 0 = previousBlock (depth 0)
+          // next at index 1 = undefined
+          if (index === 0) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(1);
+      });
+
+      it('should predict depth 0 when depth-2 list item is dropped after paragraph and before depth-1 list', () => {
+        // Scenario: Paragraph at index 0, List C (depth 1) at index 1.
+        // Dragging List B (depth 2) to top of index 1 (between paragraph and list C).
+        // ListDepthValidator: previous is not a list → maxAllowed = 0, depth-2 capped to 0.
+        // The indicator must match and predict depth 0.
+        const previousBlock = createMockBlock('prev'); // paragraph, no depth
+        const nextBlock = createMockListBlock('next', 1);
+        const targetBlock = createMockBlock('target');
+        const sourceBlock = createMockListBlock('source', 2);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          // dropIndex = top of index 1 = 1
+          // previous at index 0 = previousBlock (paragraph)
+          // next at index 1 = nextBlock (depth 1)
+          if (index === 0) return previousBlock;
+          if (index === 1) return nextBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'top', sourceBlock);
+
+        expect(depth).toBe(0);
+      });
+
+      it('should cap depth when source depth exceeds maxAllowed', () => {
+        // Source at depth 3, but previous list item is depth 1 → max = 2
+        const previousBlock = createMockListBlock('prev', 1);
+        const targetBlock = createMockListBlock('target', 1);
+        const sourceBlock = createMockListBlock('source', 3);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(2); // maxAllowed = 1 + 1 = 2
+      });
+
+      it('should match next list item depth when deeper than capped source depth', () => {
+        // Source at depth 0, previous at depth 1, next at depth 2
+        // maxAllowed = 2, currentDepth = 0, next(2) > 0 && 2 <= 2 → match next
+        const previousBlock = createMockListBlock('prev', 1);
+        const nextBlock = createMockListBlock('next', 2);
+        const targetBlock = createMockListBlock('target', 1);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+          if (index === 2) return nextBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(2);
+      });
+
+      it('should preserve source depth when valid and no adjustments needed', () => {
+        // Source at depth 1, previous at depth 1 (maxAllowed = 2). No constraints violated.
+        const previousBlock = createMockListBlock('prev', 1);
+        const targetBlock = createMockListBlock('target', 1);
+        const sourceBlock = createMockListBlock('source', 1);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(1);
+      });
+
+      it('should not change behavior for non-list source blocks', () => {
+        // Source is a paragraph (no depth), previous is a list at depth 2
+        // Should use the neighbor-based algorithm (return 2)
+        const previousBlock = createMockListBlock('prev', 2);
+        const targetBlock = createMockBlock('target');
+        const sourceBlock = createMockBlock('source'); // paragraph
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 1);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 1) return previousBlock;
+
+          return undefined;
+        });
+
+        const depth = detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock);
+
+        expect(depth).toBe(2);
+      });
+    });
   });
 });
 
 /**
  * Helper to create a mock block
  */
-const createMockBlock = (id: string): Block => {
+const createMockBlock = (id: string, name = 'paragraph'): Block => {
   const holder = document.createElement('div');
   holder.setAttribute(DATA_ATTR.element, 'block');
 
   return {
     id,
     holder,
-    name: 'paragraph',
+    name,
     stretched: false,
   } as Block;
 };

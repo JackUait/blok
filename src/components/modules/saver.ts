@@ -12,6 +12,7 @@ import type { Block } from '../block';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
 import { sanitizeBlocks } from '../utils/sanitizer';
+import { normalizeInlineImages } from './normalizeInlineImages';
 
 type SaverValidatedData = ValidatedData & {
   tunes?: Record<string, BlockTuneData>;
@@ -75,7 +76,9 @@ export class Saver extends Module {
         this.config.sanitizer as SanitizerConfig
       );
 
-      return this.makeOutput(sanitizedData);
+      const normalizedData = normalizeInlineImages(sanitizedData);
+
+      return this.makeOutput(normalizedData);
     } catch (error: unknown) {
       this.lastSaveError = error;
 
@@ -125,7 +128,9 @@ export class Saver extends Module {
     const extractedBlocks: OutputData['blocks'] = [];
 
     allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds }) => {
-      if (!isValid) {
+      const hasParent = parentId !== undefined && parentId !== null;
+
+      if (!isValid && !hasParent) {
         log(`Block «${tool}» skipped because saved data is invalid`);
 
         return;
@@ -151,7 +156,6 @@ export class Saver extends Module {
       }
 
       const isTunesEmpty = tunes === undefined || isEmpty(tunes);
-      const hasParent = parentId !== undefined && parentId !== null;
       const hasContent = contentIds !== undefined && contentIds.length > 0;
 
       const output: OutputData['blocks'][number] = {

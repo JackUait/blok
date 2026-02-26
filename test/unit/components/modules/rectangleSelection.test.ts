@@ -30,6 +30,8 @@ type BlockManagerModuleMock = {
   blocks: BlockType[];
   getBlockByChildNode: Mock<(node: Node) => BlockType | undefined>;
   getBlockByIndex: Mock<(index: number) => BlockType | undefined>;
+  getBlockById: Mock<(id: string) => BlockType | undefined>;
+  resolveToRootBlock: Mock<(block: BlockType) => BlockType>;
   lastBlock: { holder: HTMLElement };
 };
 
@@ -92,6 +94,8 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     blocks,
     getBlockByChildNode: vi.fn<(node: Node) => BlockType | undefined>(),
     getBlockByIndex: vi.fn<(index: number) => BlockType | undefined>((index: number) => blocks[index]),
+    getBlockById: vi.fn<(id: string) => BlockType | undefined>(),
+    resolveToRootBlock: vi.fn<(block: BlockType) => BlockType>((block: BlockType) => block),
     lastBlock: {
       holder: lastBlockHolder,
     },
@@ -105,6 +109,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
       CSS: {
         blokWrapper: '',
       },
+      contentRect: blockContent.getBoundingClientRect(),
     } as unknown as BlokModules['UI'],
     Toolbar: toolbarMock as unknown as BlokModules['Toolbar'],
     InlineToolbar: inlineToolbarMock as unknown as BlokModules['InlineToolbar'],
@@ -1109,5 +1114,355 @@ describe('RectangleSelection', () => {
     // allBlocksSelected should be reset
     expect(blockSelection.allBlocksSelected).toBe(false);
     expect(internal.mousedown).toBe(true);
+  });
+
+  describe('toolbar close on horizontal bounds', () => {
+    it('does not close toolbar when click is outside content area but inside redactor', () => {
+      const {
+        rectangleSelection,
+        toolbar,
+        blokWrapper,
+        modules,
+      } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+
+        // Content area is narrower (200-600) than redactor (0-800)
+        (modules.UI as unknown as Record<string, unknown>).contentRect = {
+          top: 0,
+          bottom: 500,
+          left: 200,
+          right: 600,
+          width: 400,
+          height: 500,
+          x: 200,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      }
+
+      // Redactor is full-width (0-800)
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 500,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      const startTarget = document.createElement('div');
+      blokWrapper.appendChild(startTarget);
+      vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+      // Click at x=50, which is inside redactor (0-800) but outside content (200-600)
+      rectangleSelection.startSelection(50, 250);
+
+      expect(toolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('closes toolbar when click is within content area horizontal bounds', () => {
+      const {
+        rectangleSelection,
+        toolbar,
+        blokWrapper,
+        modules,
+      } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+
+        // Content area is 200-600
+        (modules.UI as unknown as Record<string, unknown>).contentRect = {
+          top: 0,
+          bottom: 500,
+          left: 200,
+          right: 600,
+          width: 400,
+          height: 500,
+          x: 200,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      }
+
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        bottom: 500,
+        left: 0,
+        right: 800,
+        width: 800,
+        height: 500,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      const startTarget = document.createElement('div');
+      blokWrapper.appendChild(startTarget);
+      vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+      const internal = rectangleSelection as unknown as { mousedown: boolean };
+
+      // Click at x=300, which is inside content (200-600)
+      rectangleSelection.startSelection(300, 250);
+
+      expect(toolbar.close).toHaveBeenCalled();
+      expect(internal.mousedown).toBe(true);
+    });
+  });
+
+  describe('cancelActiveSelection', () => {
+    it('clears active selection state', () => {
+      const { rectangleSelection } = createRectangleSelection();
+
+      // Start a selection
+      rectangleSelection.startSelection(100, 100, false);
+
+      // Cancel it
+      rectangleSelection.cancelActiveSelection();
+
+      expect(rectangleSelection.isRectActivated()).toBe(false);
+    });
+
+    it('is safe to call when no selection active', () => {
+      const { rectangleSelection } = createRectangleSelection();
+
+      expect(() => {
+        rectangleSelection.cancelActiveSelection();
+      }).not.toThrow();
+    });
+
+    it('clears mousedown flag', () => {
+      const { rectangleSelection } = createRectangleSelection();
+
+      rectangleSelection.startSelection(100, 100, false);
+      rectangleSelection.cancelActiveSelection();
+
+      // Verify internal state is reset by trying to start a new selection
+      rectangleSelection.startSelection(200, 200, false);
+      expect(rectangleSelection.isRectActivated()).toBe(false);
+    });
+  });
+
+  describe('genInfoForMouseSelection resolves child blocks to root blocks', () => {
+    it('returns the root block index when getBlockByChildNode returns a child block with parentId', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      const tableHolder = document.createElement('div');
+      const childHolder = document.createElement('div');
+
+      tableHolder.appendChild(blockContent);
+
+      const tableBlock = {
+        id: 'table-1',
+        holder: tableHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      const childBlock = {
+        id: 'child-1',
+        holder: childHolder,
+        parentId: 'table-1',
+      } as unknown as BlockType;
+
+      blockManager.blocks.push(tableBlock, childBlock);
+      blockManager.lastBlock = { holder: tableHolder };
+
+      // elementFromPoint hits the child block's element
+      blockManager.getBlockByChildNode.mockReturnValue(childBlock);
+      // resolveToRootBlock walks up the parentId chain and returns the table
+      blockManager.resolveToRootBlock.mockReturnValue(tableBlock);
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(childHolder);
+
+      const result = internal.genInfoForMouseSelection();
+
+      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(childBlock);
+      expect(result.index).toBe(0); // table is at index 0, not child at index 1
+
+      elementFromPointSpy.mockRestore();
+    });
+
+    it('returns the block index directly when the block has no parentId', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.appendChild(blockContent);
+
+      const rootBlock = {
+        id: 'paragraph-1',
+        holder: blockHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      blockManager.blocks.push(rootBlock);
+      blockManager.lastBlock = { holder: blockHolder };
+
+      blockManager.getBlockByChildNode.mockReturnValue(rootBlock);
+      // resolveToRootBlock returns the same block when parentId is null
+      blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(blockHolder);
+
+      const result = internal.genInfoForMouseSelection();
+
+      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(rootBlock);
+      expect(result.index).toBe(0);
+
+      elementFromPointSpy.mockRestore();
+    });
+
+    it('selects only the table block index when mouse is over a cell paragraph inside a table', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      // Set up blocks: [paragraph, table, cellParagraph1, cellParagraph2, paragraph2]
+      const paragraphHolder = document.createElement('div');
+      const tableHolder = document.createElement('div');
+      const cellParagraph1Holder = document.createElement('div');
+      const cellParagraph2Holder = document.createElement('div');
+      const paragraph2Holder = document.createElement('div');
+
+      tableHolder.appendChild(blockContent);
+
+      const paragraph = {
+        id: 'p-1',
+        holder: paragraphHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      const table = {
+        id: 'table-1',
+        holder: tableHolder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      const cellParagraph1 = {
+        id: 'cell-p-1',
+        holder: cellParagraph1Holder,
+        parentId: 'table-1',
+      } as unknown as BlockType;
+
+      const cellParagraph2 = {
+        id: 'cell-p-2',
+        holder: cellParagraph2Holder,
+        parentId: 'table-1',
+      } as unknown as BlockType;
+
+      const paragraph2 = {
+        id: 'p-2',
+        holder: paragraph2Holder,
+        parentId: null,
+      } as unknown as BlockType;
+
+      blockManager.blocks.push(paragraph, table, cellParagraph1, cellParagraph2, paragraph2);
+      blockManager.lastBlock = { holder: paragraph2Holder };
+
+      // Mouse is over cellParagraph1
+      blockManager.getBlockByChildNode.mockReturnValue(cellParagraph1);
+      // resolveToRootBlock walks cellParagraph1 → table
+      blockManager.resolveToRootBlock.mockReturnValue(table);
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(cellParagraph1Holder);
+
+      const result = internal.genInfoForMouseSelection();
+
+      // Should return the TABLE's index (1), not cellParagraph1's index (2)
+      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(cellParagraph1);
+      expect(result.index).toBe(1);
+
+      elementFromPointSpy.mockRestore();
+    });
+
+    it('returns undefined index when no element is found under cursor', () => {
+      const {
+        rectangleSelection,
+        blockManager,
+        blockContent,
+      } = createRectangleSelection();
+
+      const blockHolder = document.createElement('div');
+
+      blockHolder.appendChild(blockContent);
+      blockManager.lastBlock = { holder: blockHolder };
+
+      Object.defineProperty(document.body, 'offsetWidth', {
+        configurable: true,
+        value: 800,
+      });
+
+      const internal = rectangleSelection as unknown as {
+        mouseY: number;
+        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+      };
+
+      internal.mouseY = 300;
+
+      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
+
+      const result = internal.genInfoForMouseSelection();
+
+      expect(result.index).toBeUndefined();
+      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
+
+      elementFromPointSpy.mockRestore();
+    });
   });
 });

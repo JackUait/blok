@@ -94,6 +94,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       opened: false,
       close: vi.fn(),
       moveAndOpen: vi.fn(),
+      hideBlockActions: vi.fn(),
     } as unknown as BlokModules['Toolbar'],
     InlineToolbar: {
       opened: false,
@@ -304,6 +305,52 @@ describe('KeyboardNavigation', () => {
       expect(moveAndOpen).toHaveBeenCalled();
       // Verify default browser behavior was prevented
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('inserts block below (not above) when the current block is empty', () => {
+      const emptyBlock = createBlock({ isEmpty: true });
+      const insertedBlock = createBlock({ id: 'inserted-block' });
+      const insertDefaultBlockAtIndex = vi.fn(() => insertedBlock);
+      const split = vi.fn(() => insertedBlock);
+      const setToBlock = vi.fn();
+      const moveAndOpen = vi.fn();
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyBlock,
+          split,
+          insertDefaultBlockAtIndex,
+          currentBlockIndex: 1,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          moveAndOpen,
+        } as unknown as BlokModules['Toolbar'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      // When a block is empty, both isCaretAtStartOfInput and isCaretAtEndOfInput return true.
+      // The isEmpty guard should prevent the "insert above" branch and fall through to "insert below".
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // Block should be inserted below (currentBlockIndex + 1), not above (currentBlockIndex)
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+      expect(split).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith(insertedBlock);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
     });
   });
 
@@ -971,6 +1018,252 @@ describe('KeyboardNavigation', () => {
       keyboardNavigation.handleArrowLeftAndUp(event);
 
       expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('table cell toolbar preservation', () => {
+    /**
+     * Wraps a block's holder inside a table cell DOM structure,
+     * simulating a paragraph block rendered inside a table cell.
+     */
+    const wrapBlockInTableCell = (block: Block): void => {
+      const cellBlocks = document.createElement('div');
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.appendChild(cellBlocks);
+      cellBlocks.appendChild(block.holder);
+    };
+
+    it('does not close toolbar on ArrowRight inside table cell', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlockInTableCell(mockBlock);
+
+      const hideBlockActions = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.RIGHT,
+        key: 'ArrowRight',
+        code: 'ArrowRight',
+      });
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(hideBlockActions).not.toHaveBeenCalled();
+    });
+
+    it('does not close toolbar on ArrowLeft inside table cell', () => {
+      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlockInTableCell(mockBlock);
+
+      const hideBlockActions = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.LEFT,
+        key: 'ArrowLeft',
+        code: 'ArrowLeft',
+      });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      expect(hideBlockActions).not.toHaveBeenCalled();
+    });
+
+    it('does not close all toolbars on ArrowLeft inside table cell when toolbar is open', () => {
+      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlockInTableCell(mockBlock);
+
+      const closeAllToolbars = vi.fn();
+      const hideBlockActions = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        UI: {
+          someToolbarOpened: true,
+          closeAllToolbars,
+        } as unknown as BlokModules['UI'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.LEFT,
+        key: 'ArrowLeft',
+        code: 'ArrowLeft',
+        shiftKey: true,
+      });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      expect(closeAllToolbars).not.toHaveBeenCalled();
+    });
+
+    it('does not close toolbar on Backspace at boundary inside table cell', () => {
+      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlockInTableCell(mockBlock);
+
+      const hideBlockActions = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock: createBlock({ id: 'prev-block' }),
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.BACKSPACE,
+        key: 'Backspace',
+        code: 'Backspace',
+      });
+
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(hideBlockActions).not.toHaveBeenCalled();
+    });
+
+    it('does not close toolbar on Delete at boundary inside table cell', () => {
+      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlockInTableCell(mockBlock);
+
+      const hideBlockActions = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          nextBlock: createBlock({ id: 'next-block' }),
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.DELETE,
+        key: 'Delete',
+        code: 'Delete',
+      });
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      expect(hideBlockActions).not.toHaveBeenCalled();
+    });
+
+    it('does not close toolbar after merge inside table cell', () => {
+      const previousBlock = createBlock({ id: 'prev-block', isEmpty: false, mergeable: true });
+      Object.defineProperty(previousBlock, 'lastInput', {
+        value: document.createElement('div'),
+        writable: false,
+      });
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      wrapBlockInTableCell(mockBlock);
+
+      const hideBlockActions = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          previousBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.BACKSPACE,
+        key: 'Backspace',
+        code: 'Backspace',
+      });
+
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      expect(mergeBlocks).toHaveBeenCalledWith(previousBlock, mockBlock);
+      // The merge .then() callback should also not close toolbar for table cell blocks
+      expect(hideBlockActions).not.toHaveBeenCalled();
+    });
+
+    it('does not hide block actions on ArrowRight for regular block', () => {
+      const mockBlock = createBlock();
+      const hideBlockActions = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.RIGHT,
+        key: 'ArrowRight',
+        code: 'ArrowRight',
+      });
+
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(hideBlockActions).not.toHaveBeenCalled();
+      expect(mockBlock.holder.closest('[data-blok-table-cell-blocks]')).toBeNull();
+    });
+
+    it('does not hide block actions on ArrowLeft for regular block', () => {
+      const mockBlock = createBlock();
+      const hideBlockActions = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        Toolbar: {
+          hideBlockActions,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.LEFT,
+        key: 'ArrowLeft',
+        code: 'ArrowLeft',
+      });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      expect(hideBlockActions).not.toHaveBeenCalled();
+      expect(mockBlock.holder.closest('[data-blok-table-cell-blocks]')).toBeNull();
     });
   });
 });

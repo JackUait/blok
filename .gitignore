@@ -13,6 +13,8 @@ npm-debug.log
 yarn-error.log
 .yarn/cache
 .yarn/install-state.gz
+docs/.yarn/
+docs/node_modules/
 install-state.gz
 
 test-results
@@ -42,5 +44,20 @@ bundle-size-*.md
 performance-dashboard/
 test-results/*.json
 
-# bv (beads viewer) local config and caches
-.bv/
+
+# Playwright CLI snapshots
+.playwright-cli/
+.playwright-mcp/
+
+# Screenshots at root
+/*.png
+
+# Design plans (local only)
+docs/plans/
+
+# Git worktrees
+.worktrees/
+
+# Local run artifacts
+nohup.out
+e2e-results.log

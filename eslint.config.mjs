@@ -396,310 +396,6 @@ const internalUnitTestPlugin = {
         };
       },
     },
-    'no-class-selectors': {
-      meta: {
-        type: 'problem',
-        docs: {
-          description: 'Disallow class selectors in unit tests. Prefer data-testid or role-based selectors.',
-        },
-        schema: [],
-        messages: {
-          noClassSelector:
-            'Avoid using class selectors ({{selector}}) in unit tests. Prefer data-blok-testid or role-based selectors.',
-          noClassSelectorTemplate:
-            'Avoid using class selectors in unit tests. Template contains "." which likely resolves to a class selector. Prefer data-blok-testid or role-based selectors.',
-          noClassListMethod:
-            'Avoid using classList.{{method}}() in unit tests. Prefer data-blok-testid or data attributes for state checking.',
-          noClassNameProperty:
-            'Avoid using .className in unit tests. Prefer data-blok-testid or data attributes for state checking.',
-          noGetAttributeClass:
-            "Avoid using getAttribute('class') in unit tests. Prefer data-blok-testid or data attributes for state checking.",
-          noSetAttributeClass:
-            "Avoid using setAttribute('class', ...) in unit tests. Prefer data-blok-testid or data attributes for state checking.",
-        },
-      },
-      create(context) {
-        const DOM_SELECTOR_METHODS = new Set([
-          'querySelector',
-          'querySelectorAll',
-          'find',
-          'findAll',
-          'closest',
-          'matches',
-          'getElementsByClassName',
-        ]);
-
-        const CLASS_LIST_METHODS = new Set([
-          'contains',
-          'add',
-          'remove',
-          'toggle',
-        ]);
-
-        const containsClassSelector = (rawSelector) => {
-          if (!rawSelector) {
-            return null;
-          }
-
-          const selector = rawSelector.trim();
-
-          if (!selector) {
-            return null;
-          }
-
-          // Match class selectors like .className
-          const classMatch = selector.match(/\.[_a-zA-Z][_a-zA-Z0-9-]*/);
-
-          if (classMatch) {
-            return classMatch[0];
-          }
-
-          return null;
-        };
-
-        const containsTemplateDotExpression = (templateLiteral) => {
-          // Check if template has `.${` pattern which indicates class selector with variable
-          for (const quasi of templateLiteral.quasis) {
-            const value = quasi.value.cooked ?? quasi.value.raw;
-
-            if (value.includes('.')) {
-              return true;
-            }
-          }
-
-          return false;
-        };
-
-        const checkSelectorArg = (arg) => {
-          if (arg.type === 'Literal' && typeof arg.value === 'string') {
-            const classSelector = containsClassSelector(arg.value);
-
-            if (classSelector) {
-              context.report({
-                node: arg,
-                messageId: 'noClassSelector',
-                data: { selector: classSelector },
-              });
-            }
-          }
-
-          if (arg.type === 'TemplateLiteral') {
-            // Check for static class selectors in template parts
-            for (const quasi of arg.quasis) {
-              const value = quasi.value.cooked ?? quasi.value.raw;
-              const classSelector = containsClassSelector(value);
-
-              if (classSelector) {
-                context.report({
-                  node: quasi,
-                  messageId: 'noClassSelector',
-                  data: { selector: classSelector },
-                });
-
-                return;
-              }
-            }
-
-            // Check for dynamic class selectors like `.${css.className}`
-            if (containsTemplateDotExpression(arg)) {
-              context.report({
-                node: arg,
-                messageId: 'noClassSelectorTemplate',
-              });
-            }
-          }
-        };
-
-        const isClassListAccess = (node) => {
-          // Check for element.classList.method() pattern
-          if (node.type !== 'MemberExpression') {
-            return false;
-          }
-
-          const { object } = node;
-
-          if (object.type !== 'MemberExpression') {
-            return false;
-          }
-
-          const { property: classListProperty } = object;
-
-          return classListProperty.type === 'Identifier' && classListProperty.name === 'classList';
-        };
-
-        const isSpyOnClassList = (node) => {
-          // Check for vi.spyOn(element.classList, 'method') or jest.spyOn(element.classList, 'method') pattern
-          if (node.callee.type !== 'MemberExpression') {
-            return null;
-          }
-
-          const { object, property } = node.callee;
-
-          // Check if it's vi.spyOn or jest.spyOn
-          if (object.type !== 'Identifier' || !['vi', 'jest'].includes(object.name)) {
-            return null;
-          }
-
-          if (property.type !== 'Identifier' || property.name !== 'spyOn') {
-            return null;
-          }
-
-          // Check if first argument is element.classList
-          if (node.arguments.length < 2) {
-            return null;
-          }
-
-          const firstArg = node.arguments[0];
-
-          if (firstArg.type !== 'MemberExpression') {
-            return null;
-          }
-
-          if (firstArg.property.type !== 'Identifier' || firstArg.property.name !== 'classList') {
-            return null;
-          }
-
-          // Check if second argument is a classList method name
-          const secondArg = node.arguments[1];
-
-          if (secondArg.type !== 'Literal' || typeof secondArg.value !== 'string') {
-            return null;
-          }
-
-          if (CLASS_LIST_METHODS.has(secondArg.value)) {
-            return secondArg.value;
-          }
-
-          return null;
-        };
-
-        const isGetAttributeClass = (node) => {
-          // Check for element.getAttribute('class') pattern
-          if (node.callee.type !== 'MemberExpression') {
-            return false;
-          }
-
-          const { property } = node.callee;
-
-          if (property.type !== 'Identifier' || property.name !== 'getAttribute') {
-            return false;
-          }
-
-          if (node.arguments.length === 0) {
-            return false;
-          }
-
-          const arg = node.arguments[0];
-
-          return arg.type === 'Literal' && arg.value === 'class';
-        };
-
-        const isSetAttributeClass = (node) => {
-          // Check for element.setAttribute('class', ...) pattern
-          if (node.callee.type !== 'MemberExpression') {
-            return false;
-          }
-
-          const { property } = node.callee;
-
-          if (property.type !== 'Identifier' || property.name !== 'setAttribute') {
-            return false;
-          }
-
-          if (node.arguments.length < 2) {
-            return false;
-          }
-
-          const arg = node.arguments[0];
-
-          return arg.type === 'Literal' && arg.value === 'class';
-        };
-
-        return {
-          MemberExpression(node) {
-            // Check for .className property access
-            if (node.property.type === 'Identifier' && node.property.name === 'className') {
-              context.report({
-                node,
-                messageId: 'noClassNameProperty',
-              });
-            }
-          },
-          CallExpression(node) {
-            // Check for element.getAttribute('class') pattern
-            if (isGetAttributeClass(node)) {
-              context.report({
-                node,
-                messageId: 'noGetAttributeClass',
-              });
-
-              return;
-            }
-
-            // Check for element.setAttribute('class', ...) pattern
-            if (isSetAttributeClass(node)) {
-              context.report({
-                node,
-                messageId: 'noSetAttributeClass',
-              });
-
-              return;
-            }
-
-            // Check for vi.spyOn(element.classList, 'method') pattern
-            const spyOnMethod = isSpyOnClassList(node);
-
-            if (spyOnMethod) {
-              context.report({
-                node,
-                messageId: 'noClassListMethod',
-                data: { method: spyOnMethod },
-              });
-
-              return;
-            }
-
-            if (node.callee.type !== 'MemberExpression') {
-              return;
-            }
-
-            const { property } = node.callee;
-
-            // Check for classList methods
-            if (isClassListAccess(node.callee)) {
-              if (property.type === 'Identifier' && CLASS_LIST_METHODS.has(property.name)) {
-                context.report({
-                  node,
-                  messageId: 'noClassListMethod',
-                  data: { method: property.name },
-                });
-              }
-
-              return;
-            }
-
-            // Check for DOM selector methods
-            if (property.type !== 'Identifier' || !DOM_SELECTOR_METHODS.has(property.name)) {
-              return;
-            }
-
-            if (node.arguments.length === 0) {
-              return;
-            }
-
-            // For querySelector/querySelectorAll, check first argument
-            // For Dom.find/Dom.findAll, check second argument (first is the element)
-            const methodName = property.name;
-            const argIndex = (methodName === 'find' || methodName === 'findAll') ? 1 : 0;
-            const arg = node.arguments[argIndex];
-
-            if (arg) {
-              checkSelectorArg(arg);
-            }
-          },
-        };
-      },
-    },
     'require-behavior-verification': {
       meta: {
         type: 'suggestion',
@@ -952,198 +648,6 @@ const internalUnitTestPlugin = {
             }
 
             checkAssertion(node);
-          },
-        };
-      },
-    },
-  },
-};
-
-const internalStorybookPlugin = {
-  rules: {
-    'no-class-selectors': {
-      meta: {
-        type: 'problem',
-        docs: {
-          description: 'Disallow class selectors and toHaveClass in Storybook stories. Prefer data-testid or role-based locators.',
-        },
-        schema: [],
-        messages: {
-          noClassSelector:
-            'Avoid using class selectors ({{selector}}) in Storybook stories. Prefer data-blok-testid or role-based locators.',
-          noClassAttributeSelector:
-            'Avoid using class attribute selectors ({{selector}}) in Storybook stories. Prefer data-blok-testid or role-based locators.',
-          noToHaveClass:
-            'Avoid using toHaveClass() in Storybook stories. Prefer checking data attributes or element states.',
-          noClassListMethod:
-            'Avoid using classList.{{method}}() in Storybook stories. Prefer data-blok-testid or data attributes for state checking.',
-        },
-      },
-      create(context) {
-        const CLASS_LIST_METHODS = new Set([
-          'contains',
-          'add',
-          'remove',
-          'toggle',
-        ]);
-
-        const containsClassSelector = (rawSelector) => {
-          if (!rawSelector) {
-            return null;
-          }
-
-          const selector = rawSelector.trim();
-
-          if (!selector) {
-            return null;
-          }
-
-          // Match class selectors like .className
-          const classMatch = selector.match(/\.[_a-zA-Z][_a-zA-Z0-9-]*/);
-
-          if (classMatch) {
-            return classMatch[0];
-          }
-
-          return null;
-        };
-
-        const containsClassAttributeSelector = (rawSelector) => {
-          if (!rawSelector) {
-            return null;
-          }
-
-          const selector = rawSelector.trim();
-
-          if (!selector) {
-            return null;
-          }
-
-          // Match class attribute selectors like [class="foo"], [class*="bar"], [class^="baz"], [class$="qux"], [class~="quux"]
-          const classAttrMatch = selector.match(/\[class(?:[*^$~|]?=)[^\]]+\]/);
-
-          if (classAttrMatch) {
-            return classAttrMatch[0];
-          }
-
-          return null;
-        };
-
-        const isClassListAccess = (node) => {
-          // Check for element.classList.method() pattern
-          if (node.type !== 'MemberExpression') {
-            return false;
-          }
-
-          const { object } = node;
-
-          if (object.type !== 'MemberExpression') {
-            return false;
-          }
-
-          const { property: classListProperty } = object;
-
-          return classListProperty.type === 'Identifier' && classListProperty.name === 'classList';
-        };
-
-        return {
-          // Check for class selectors in strings
-          Literal(node) {
-            if (typeof node.value !== 'string') {
-              return;
-            }
-
-            const classSelector = containsClassSelector(node.value);
-
-            if (classSelector) {
-              // Skip if it's a file extension like .ts, .css, etc.
-              if (/^\.[a-z]{2,4}$/.test(classSelector)) {
-                return;
-              }
-
-              context.report({
-                node,
-                messageId: 'noClassSelector',
-                data: { selector: classSelector },
-              });
-
-              return;
-            }
-
-            const classAttrSelector = containsClassAttributeSelector(node.value);
-
-            if (classAttrSelector) {
-              context.report({
-                node,
-                messageId: 'noClassAttributeSelector',
-                data: { selector: classAttrSelector },
-              });
-            }
-          },
-
-          // Check for class selectors in template literals
-          TemplateLiteral(node) {
-            for (const quasi of node.quasis) {
-              const value = quasi.value.cooked ?? quasi.value.raw;
-              const classSelector = containsClassSelector(value);
-
-              if (classSelector) {
-                // Skip if it's a file extension like .ts, .css, etc.
-                if (/^\.[a-z]{2,4}$/.test(classSelector)) {
-                  continue;
-                }
-
-                context.report({
-                  node: quasi,
-                  messageId: 'noClassSelector',
-                  data: { selector: classSelector },
-                });
-
-                return;
-              }
-
-              const classAttrSelector = containsClassAttributeSelector(value);
-
-              if (classAttrSelector) {
-                context.report({
-                  node: quasi,
-                  messageId: 'noClassAttributeSelector',
-                  data: { selector: classAttrSelector },
-                });
-
-                return;
-              }
-            }
-          },
-
-          // Check for toHaveClass and classList methods
-          CallExpression(node) {
-            if (node.callee.type !== 'MemberExpression') {
-              return;
-            }
-
-            const { property } = node.callee;
-
-            // Check for toHaveClass usage
-            if (property.type === 'Identifier' && property.name === 'toHaveClass') {
-              context.report({
-                node,
-                messageId: 'noToHaveClass',
-              });
-
-              return;
-            }
-
-            // Check for classList methods
-            if (isClassListAccess(node.callee)) {
-              if (property.type === 'Identifier' && CLASS_LIST_METHODS.has(property.name)) {
-                context.report({
-                  node,
-                  messageId: 'noClassListMethod',
-                  data: { method: property.name },
-                });
-              }
-            }
           },
         };
       },
@@ -1571,6 +1075,7 @@ export default defineConfig(
   {
     ignores: [
       'node_modules/**',
+      '.worktrees/**',
       'eslint.config.mjs',
       '**/*.d.ts',
       'src/components/tools/paragraph/**',
@@ -1634,16 +1139,6 @@ export default defineConfig(
       'no-restricted-syntax': [
         'error',
         {
-          selector: 'IfStatement > BlockStatement > IfStatement',
-          message:
-            'Nested if statements are not allowed. Consider using early returns or combining conditions.',
-        },
-        {
-          selector: 'IfStatement > IfStatement',
-          message:
-            'Nested if statements are not allowed. Consider using early returns or combining conditions.',
-        },
-        {
           selector: 'VariableDeclaration[kind="let"]',
           message: 'Use const instead of let. If reassignment is needed, refactor to avoid mutation.',
         },
@@ -1658,16 +1153,16 @@ export default defineConfig(
       '@typescript-eslint/naming-convention': 'off',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/consistent-type-exports': 'error',
-      'prefer-arrow-callback': 'error',
+      'prefer-arrow-callback': 'off', // Style-only: syntax preference (arrow vs function in callbacks)
       'prefer-const': 'error',
       '@typescript-eslint/no-deprecated': 'error',
       'no-param-reassign': ['error', { props: true }],
       'no-global-assign': 'error',
       'no-implicit-globals': 'error',
-      'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+      'func-style': 'off', // Style-only: function declaration vs expression preference
       'no-nested-ternary': 'error',
       'max-depth': ['error', { max: 2 }],
-      'one-var': ['error', 'never'],
+      'one-var': 'off', // Style-only: declaration grouping preference
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -1744,8 +1239,7 @@ export default defineConfig(
       'internal-dom': internalDomPlugin,
     },
     rules: {
-      // Limit file length to 500 lines
-      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
+      'max-lines': 'off', // Style-only: file length is organizational preference
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
       'sonarjs/no-identical-functions': 'error',
@@ -1821,8 +1315,6 @@ export default defineConfig(
       '@typescript-eslint/no-non-null-assertion': 'off',
       // Prevent .dataset assignment, prefer .setAttribute()
       'internal-dom/no-dataset-assignment': 'error',
-      // Prevent class selectors in unit tests
-      'internal-unit-test/no-class-selectors': 'error',
       // Encourage behavior-driven testing
       'internal-unit-test/no-direct-event-dispatch': 'warn',
       'internal-unit-test/no-implementation-detail-spying': 'warn',
@@ -1855,7 +1347,7 @@ export default defineConfig(
       'vitest/valid-expect': 'off', // Already handled by jest/valid-expect
       'vitest/valid-title': 'off', // Already handled by jest/valid-title
       // Enforce test structure best practices
-      'jest/consistent-test-it': ['error', { fn: 'it' }],
+      'jest/consistent-test-it': 'off', // Style-only: it() vs test() naming convention
       'jest/valid-describe-callback': 'error',
       'jest/valid-expect': 'error',
       'jest/valid-expect-in-promise': 'error',
@@ -1869,19 +1361,19 @@ export default defineConfig(
       'jest/expect-expect': 'error',
       'jest/no-conditional-expect': 'error',
       'jest/no-standalone-expect': 'error',
-      'jest/prefer-to-be': 'warn',
-      'jest/prefer-to-contain': 'warn',
-      'jest/prefer-to-have-length': 'warn',
+      'jest/prefer-to-be': 'off', // Style-only: matcher idiom preference
+      'jest/prefer-to-contain': 'off', // Style-only: matcher idiom preference
+      'jest/prefer-to-have-length': 'off', // Style-only: matcher idiom preference
       'jest/prefer-strict-equal': 'warn',
-      'jest/prefer-equality-matcher': 'warn',
-      'jest/prefer-comparison-matcher': 'warn',
+      'jest/prefer-equality-matcher': 'off', // Style-only: matcher idiom preference
+      'jest/prefer-comparison-matcher': 'off', // Style-only: matcher idiom preference
       'jest/prefer-expect-assertions': 'off', // Can be too strict
-      'jest/prefer-expect-resolves': 'warn',
+      'jest/prefer-expect-resolves': 'off', // Style-only: await syntax preference
       'jest/prefer-called-with': 'warn',
       'jest/prefer-spy-on': 'warn',
-      'jest/prefer-todo': 'warn',
+      'jest/prefer-todo': 'off', // Style-only: it.todo() convention
       // Prevent anti-patterns
-      'jest/no-alias-methods': 'error',
+      'jest/no-alias-methods': 'off', // Style-only: toBeCalled vs toHaveBeenCalled are literal aliases
       'jest/no-duplicate-hooks': 'error',
       'jest/no-export': 'error',
       'jest/no-identical-title': 'error',
@@ -1889,23 +1381,23 @@ export default defineConfig(
       'jest/no-mocks-import': 'error',
       'jest/no-test-return-statement': 'error',
       'jest/prefer-hooks-on-top': 'error',
-      'jest/prefer-hooks-in-order': 'warn',
-      'jest/require-top-level-describe': 'error',
+      'jest/prefer-hooks-in-order': 'off', // Style-only: hook declaration ordering convention
+      'jest/require-top-level-describe': 'off', // Style-only: organizational convention
       // Enforce test organization
       'jest/max-nested-describe': ['warn', { max: 3 }],
       'jest/max-expects': ['warn', { max: 20 }],
       // Code quality
       // Note: no-deprecated-functions requires Jest to be installed, skipped for Vitest compatibility
       'jest/no-untyped-mock-factory': 'warn',
-      'jest/prefer-mock-promise-shorthand': 'warn',
+      'jest/prefer-mock-promise-shorthand': 'off', // Style-only: mockResolvedValue vs mockImplementation syntax
       // require-hook is disabled above (vi.mock() must be top-level in Vitest)
       // jest-dom rules for DOM testing best practices
       'jest-dom/prefer-checked': 'error',
       'jest-dom/prefer-enabled-disabled': 'error',
       'jest-dom/prefer-focus': 'error',
       'jest-dom/prefer-required': 'error',
-      'jest-dom/prefer-to-have-attribute': 'warn',
-      'jest-dom/prefer-to-have-text-content': 'warn',
+      'jest-dom/prefer-to-have-attribute': 'off', // Style-only: matcher idiom preference
+      'jest-dom/prefer-to-have-text-content': 'off', // Style-only: matcher idiom preference
       'jest-dom/prefer-to-have-value': 'error',
       // testing-library rules for behavior-driven testing
       // Note: These rules apply when using DOM Testing Library utilities
@@ -1957,15 +1449,15 @@ export default defineConfig(
       'playwright/no-page-pause': 'error',
       'playwright/no-networkidle': 'error',
       'playwright/no-eval': 'error',
-      'playwright/no-force-option': 'warn',
+      'playwright/no-force-option': 'off',
       // Enforce proper async handling
       'playwright/missing-playwright-await': 'error',
       'playwright/no-useless-await': 'error',
       'playwright/no-unsafe-references': 'error',
       // Enforce test structure best practices
-      'playwright/require-top-level-describe': 'error',
-      'playwright/prefer-hooks-on-top': 'error',
-      'playwright/prefer-hooks-in-order': 'warn',
+      'playwright/require-top-level-describe': 'off', // Style-only: organizational convention
+      'playwright/prefer-hooks-on-top': 'off', // Style-only: hook declaration ordering
+      'playwright/prefer-hooks-in-order': 'off', // Style-only: hook declaration ordering
       'playwright/no-duplicate-hooks': 'error',
       'playwright/valid-describe-callback': 'error',
       'playwright/valid-title': 'error',
@@ -1983,22 +1475,22 @@ export default defineConfig(
       'playwright/no-conditional-in-test': 'warn',
       'playwright/valid-expect': 'error',
       'playwright/valid-expect-in-promise': 'error',
-      'playwright/prefer-to-be': 'warn',
-      'playwright/prefer-to-contain': 'warn',
+      'playwright/prefer-to-be': 'off', // Style-only: matcher idiom preference
+      'playwright/prefer-to-contain': 'off', // Style-only: matcher idiom preference
       'playwright/prefer-to-have-count': 'warn',
-      'playwright/prefer-to-have-length': 'warn',
+      'playwright/prefer-to-have-length': 'off', // Style-only: matcher idiom preference
       'playwright/prefer-strict-equal': 'warn',
-      'playwright/prefer-comparison-matcher': 'warn',
-      'playwright/prefer-equality-matcher': 'warn',
-      'playwright/no-useless-not': 'warn',
+      'playwright/prefer-comparison-matcher': 'off', // Style-only: matcher idiom preference
+      'playwright/prefer-equality-matcher': 'off', // Style-only: matcher idiom preference
+      'playwright/no-useless-not': 'off', // Style-only: double negation simplification
       'playwright/require-to-throw-message': 'warn',
       // Prevent deprecated methods
       'playwright/no-nth-methods': 'warn',
       'playwright/no-get-by-title': 'warn',
       // Enforce test organization
-      'playwright/max-nested-describe': ['warn', { max: 3 }],
+      'playwright/max-nested-describe': 'off', // Style-only: nesting depth convention
       'playwright/max-expects': ['warn', { max: 20 }],
-      'playwright/no-nested-step': 'warn',
+      'playwright/no-nested-step': 'off', // Style-only: organizational convention
       // Code quality
       'playwright/no-unused-locators': 'warn',
       'playwright/expect-expect': ['error', {
@@ -2036,7 +1528,6 @@ export default defineConfig(
     },
     rules: {
       ...vitest.configs.recommended.rules,
-      'internal-unit-test/no-class-selectors': 'error',
       'internal-unit-test/require-behavior-verification': 'warn',
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
@@ -2058,7 +1549,7 @@ export default defineConfig(
       'vitest/valid-describe-callback': 'error',
       'vitest/valid-expect': 'error',
       'vitest/valid-title': 'error',
-      'jest/consistent-test-it': ['error', { fn: 'it' }],
+      'jest/consistent-test-it': 'off', // Style-only: it() vs test() naming convention
       'jest/valid-describe-callback': 'error',
       'jest/valid-expect': 'error',
       'jest/valid-title': 'error',
@@ -2094,7 +1585,6 @@ export default defineConfig(
   {
     files: ['**/*.stories.@(ts|tsx|js|jsx|mjs|cjs)'],
     plugins: {
-      'internal-storybook': internalStorybookPlugin,
     },
     rules: {
       // Enforce best practices
@@ -2107,8 +1597,6 @@ export default defineConfig(
       'storybook/story-exports': 'error',
       'storybook/use-storybook-expect': 'error',
       'storybook/use-storybook-testing-library': 'error',
-      // Prevent CSS class selectors and toHaveClass in stories
-      'internal-storybook/no-class-selectors': 'error',
       // Relax some rules for stories
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',

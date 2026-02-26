@@ -8,6 +8,12 @@ import {BlockTuneData} from '../block-tunes/block-tune-data';
  */
 export interface Blocks {
   /**
+   * Returns true when a Yjs sync operation (undo/redo) is in progress.
+   * Tools can use this to skip cleanup that would interfere with Yjs state management.
+   */
+  readonly isSyncingFromYjs: boolean;
+
+  /**
    * Remove all blocks from Blok zone
    */
   clear(): Promise<void>;
@@ -77,6 +83,14 @@ export interface Blocks {
    * @param parentId - id of the parent block
    */
   getChildren(parentId: string): BlockAPI[];
+
+  /**
+   * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
+   *
+   * @param blockId - id of the block to reparent
+   * @param parentId - id of the new parent block, or null for root level
+   */
+  setBlockParent(blockId: string, parentId: string | null): void;
 
   /**
    * Returns Blocks count
@@ -167,4 +181,14 @@ export interface Blocks {
     newBlockData: BlockToolData,
     insertIndex: number,
   ): BlockAPI;
+
+  /**
+   * Execute a function within a transaction.
+   * All block operations (insert, delete, move) within fn are grouped
+   * into a single undo entry. Prevents undo-group splitting that would
+   * make structural operations partially undoable.
+   *
+   * @param fn - The function containing block operations to group
+   */
+  transact?(fn: () => void): void;
 }

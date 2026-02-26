@@ -387,10 +387,11 @@ test.describe('header Tool', () => {
 
       const convertToOption = page.getByTestId('popover-item').filter({ hasText: 'Convert to' });
 
-      await convertToOption.click();
+      await convertToOption.dispatchEvent('mouseover');
 
       const textOption = page.locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`).filter({ hasText: 'Text' });
 
+      await expect(textOption).toBeVisible();
       await textOption.click();
 
       const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`);

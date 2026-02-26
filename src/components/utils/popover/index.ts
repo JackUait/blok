@@ -11,3 +11,4 @@ export { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 export type Popover = PopoverDesktop | PopoverMobile | PopoverInline;
 
 export { PopoverDesktop, PopoverMobile, PopoverInline };
+export { PopoverRegistry } from './popover-registry';

@@ -21,24 +21,11 @@ describe('BlockHoverController', () => {
   const createBlockHoverController = (options?: {
     blokOverrides?: Partial<BlokModules>;
     configOverrides?: Partial<BlokConfig>;
-    contentRect?: DOMRect;
   }): {
     controller: BlockHoverController;
     blok: BlokModules;
     eventsDispatcher: ModuleConfig['eventsDispatcher'];
   } => {
-    const contentRect = options?.contentRect ?? {
-      left: 100,
-      right: 700,
-      top: 0,
-      bottom: 800,
-      width: 600,
-      height: 800,
-      x: 100,
-      y: 0,
-      toJSON: () => ({}),
-    };
-
     const eventsDispatcher = {
       on: vi.fn(),
       off: vi.fn(),
@@ -58,7 +45,6 @@ describe('BlockHoverController', () => {
         ...options?.configOverrides,
       } as BlokConfig,
       eventsDispatcher: eventsDispatcher,
-      contentRectGetter: () => contentRect,
     });
 
     controller.state = blok;
@@ -277,21 +263,9 @@ describe('BlockHoverController', () => {
     });
   });
 
-  describe('extended hover zone detection (LTR)', () => {
-    it('detects block in hover zone to the left of content', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+  describe('nearest block detection (LTR)', () => {
+    it('finds nearest block when cursor is to the left of content area', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -302,9 +276,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is in hover zone (left of content by 50px, within 100px)
+      // Cursor is to the left of content, nearest block detection finds block by Y
       const event = new MouseEvent('mousemove', {
-        clientX: 50, // 100 - 50 = 50, which is in the hover zone
+        clientX: 50, // Left of content area
         clientY: 200,
         bubbles: true,
       });
@@ -315,24 +289,12 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block,
-        target: nonBlockElement,
+        target: block.holder,
       });
     });
 
-    it('does not detect block via hover zone when cursor is inside content area', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+    it('finds nearest block when cursor is inside content area but not on a block element', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -343,7 +305,7 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is inside the content area (between left and right), NOT in hover zone
+      // Cursor is inside the content area but not on a block element
       const event = new MouseEvent('mousemove', {
         clientX: 400, // Inside content area (100 < 400 < 700)
         clientY: 200,
@@ -354,24 +316,14 @@ describe('BlockHoverController', () => {
       document.dispatchEvent(event);
       vi.runAllTimers();
 
-      // Should NOT emit via hover zone (not on a block element, inside content area)
-      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
     });
 
-    it('finds correct block by Y position in hover zone', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+    it('finds correct block by Y position when cursor is outside content area', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block1 = createMockBlock('block-1', 100, 200);
       const block2 = createMockBlock('block-2', 200, 300);
@@ -383,9 +335,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
 
-      // Cursor is in hover zone and at Y position of block2
+      // Cursor is outside content area and at Y position of block2
       const event = new MouseEvent('mousemove', {
-        clientX: 50, // In hover zone
+        clientX: 50, // Outside content area
         clientY: 250, // Within block2's vertical range
         bubbles: true,
       });
@@ -396,26 +348,14 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block: block2,
-        target: nonBlockElement,
+        target: block2.holder,
       });
     });
   });
 
-  describe('extended hover zone detection (RTL)', () => {
-    it('detects block in hover zone to the right of content for RTL', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+  describe('nearest block detection (RTL)', () => {
+    it('finds nearest block when cursor is to the right of content area (RTL)', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -426,9 +366,9 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is in hover zone (right of content by 50px, within 100px)
+      // Cursor is to the right of content area, nearest block detection finds block by Y
       const event = new MouseEvent('mousemove', {
-        clientX: 750, // 700 + 50 = 750, which is in the hover zone
+        clientX: 750, // Right of content area
         clientY: 200,
         bubbles: true,
       });
@@ -439,24 +379,12 @@ describe('BlockHoverController', () => {
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
         block,
-        target: nonBlockElement,
+        target: block.holder,
       });
     });
 
-    it('does not detect block via hover zone when cursor is inside content area (RTL)', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+    it('finds nearest block when cursor is inside content area but not on a block element (RTL)', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       const block = createMockBlock('block-1', 150, 250);
       const nonBlockElement = document.createElement('div');
@@ -467,7 +395,7 @@ describe('BlockHoverController', () => {
 
       (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
 
-      // Cursor is inside the content area (between left and right), NOT in hover zone
+      // Cursor is inside the content area but not on a block element
       const event = new MouseEvent('mousemove', {
         clientX: 400, // Inside content area (100 < 400 < 700)
         clientY: 200,
@@ -478,8 +406,10 @@ describe('BlockHoverController', () => {
       document.dispatchEvent(event);
       vi.runAllTimers();
 
-      // Should NOT emit via hover zone (not on a block element, inside content area)
-      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
     });
   });
 
@@ -520,6 +450,67 @@ describe('BlockHoverController', () => {
     });
   });
 
+  describe('table cell hover', () => {
+    it('emits BlockHovered for the table block when hovering over a nested cell block', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const tableBlock = createMockBlock('table-block', 100, 400);
+
+      /**
+       * Build DOM hierarchy matching the real table structure:
+       * Table Block wrapper (data-blok-testid="block-wrapper")
+       *   └── Cell Blocks Container (data-blok-table-cell-blocks)
+       *       └── Nested Block wrapper (data-blok-testid="block-wrapper")
+       *           └── Paragraph content
+       */
+      const tableWrapper = tableBlock.holder;
+
+      tableWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableWrapper.appendChild(cellBlocksContainer);
+
+      const nestedBlockWrapper = document.createElement('div');
+
+      nestedBlockWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      cellBlocksContainer.appendChild(nestedBlockWrapper);
+
+      const paragraphContent = document.createElement('p');
+
+      paragraphContent.textContent = 'Cell text';
+      nestedBlockWrapper.appendChild(paragraphContent);
+
+      document.body.appendChild(tableWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [tableBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(tableBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 250,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: paragraphContent });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: tableBlock,
+        target: paragraphContent,
+      });
+
+      /**
+       * Verify getBlockByChildNode was called with the TABLE wrapper, not the nested one
+       */
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(tableWrapper);
+    });
+  });
+
   describe('edge cases', () => {
     it('handles MouseEvent type check', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController();
@@ -540,19 +531,7 @@ describe('BlockHoverController', () => {
     });
 
     it('handles empty blocks array', () => {
-      const { controller, blok, eventsDispatcher } = createBlockHoverController({
-        contentRect: {
-          left: 100,
-          right: 700,
-          top: 0,
-          bottom: 800,
-          width: 600,
-          height: 800,
-          x: 100,
-          y: 0,
-          toJSON: () => ({}),
-        },
-      });
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
 
       (controller as unknown as { enable: () => void }).enable();
 
@@ -572,6 +551,285 @@ describe('BlockHoverController', () => {
       vi.runAllTimers();
 
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('nearest block detection (always-visible toolbar)', () => {
+    it('finds nearest block when cursor is between two blocks vertically', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block1 = createMockBlock('block-1', 100, 200);
+      const block2 = createMockBlock('block-2', 250, 350);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
+
+      // Cursor at Y=230: block1 center=150, block2 center=300. Closer to block2.
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 230,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: block2,
+        target: block2.holder,
+      });
+    });
+
+    it('finds first block when cursor is above all blocks', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block1 = createMockBlock('block-1', 200, 300);
+      const block2 = createMockBlock('block-2', 300, 400);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
+
+      // Cursor at Y=50, above all blocks
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 50,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: block1,
+        target: block1.holder,
+      });
+    });
+
+    it('finds last block when cursor is below all blocks', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block1 = createMockBlock('block-1', 100, 200);
+      const block2 = createMockBlock('block-2', 200, 300);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block1, block2];
+
+      // Cursor at Y=500, below all blocks
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 500,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: block2,
+        target: block2.holder,
+      });
+    });
+
+    it('finds nearest block when cursor is inside content area but not on a block element', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block = createMockBlock('block-1', 150, 250);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      // Cursor inside content area but not on a block element
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 200,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+
+    it('returns single block regardless of cursor position', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block = createMockBlock('block-1', 100, 200);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      // Cursor far below the only block
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 900,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+
+    it('skips cell blocks in nearest-block detection and returns the table block instead', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      /**
+       * Build DOM hierarchy:
+       * Table block wrapper (top 100–400) contains a cell-blocks container
+       * with a cell paragraph block (top 200–250).
+       * A paragraph block (top 500–600) sits below the table.
+       *
+       * When the cursor is in the gap at Y=220 (inside the table's Y range),
+       * the cell block center (225) is closest (distance=5).
+       * Without filtering, the cell block would be returned.
+       * With filtering, the table block (center=250, dist=30) should be returned
+       * instead of the paragraph block (center=550, dist=330).
+       */
+      const tableBlock = createMockBlock('table-block', 100, 400);
+      const cellBlock = createMockBlock('cell-block', 200, 250);
+      const paragraphBlock = createMockBlock('paragraph-block', 500, 600);
+
+      /** Nest cell block's holder inside a [data-blok-table-cell-blocks] container within the table */
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellBlocksContainer);
+      cellBlocksContainer.appendChild(cellBlock.holder);
+      document.body.appendChild(tableBlock.holder);
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [tableBlock, cellBlock, paragraphBlock];
+
+      /** Cursor at Y=220 — within the table area, very close to cell block center */
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 220,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      /** Should emit the TABLE block (center=250, distance=30), not the cell block (center=225, distance=5) */
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: tableBlock,
+        target: tableBlock.holder,
+      });
+    });
+
+    it('handles case where all blocks are inside table cells gracefully', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      /**
+       * Edge case: if the ONLY blocks in BlockManager are cell blocks
+       * (shouldn't normally happen but guards against crashes).
+       */
+      const cellBlock = createMockBlock('cell-block', 100, 200);
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(cellBlock.holder);
+      document.body.appendChild(cellBlocksContainer);
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [cellBlock];
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 150,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      /** No top-level blocks available — should not emit anything */
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('deduplicates events for nearest block same as direct hover', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block = createMockBlock('block-1', 100, 200);
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      // Two mousemove events at different Y positions, both resolve to the same nearest block
+      const event1 = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 50,
+        bubbles: true,
+      });
+      Object.defineProperty(event1, 'target', { value: nonBlockElement });
+
+      const event2 = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 60,
+        bubbles: true,
+      });
+      Object.defineProperty(event2, 'target', { value: nonBlockElement });
+
+      document.dispatchEvent(event1);
+      vi.runAllTimers();
+
+      document.dispatchEvent(event2);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledTimes(1);
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
     });
   });
 });

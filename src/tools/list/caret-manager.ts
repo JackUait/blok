@@ -7,8 +7,12 @@
 import type { API } from '../../../types';
 
 /**
- * Sets caret to the content element of a block after ensuring DOM is ready.
- * Uses requestAnimationFrame to wait for the browser to process DOM updates.
+ * Sets caret to the content element of a block.
+ * Operates synchronously so subsequent keystrokes land in the correct block
+ * (deferring via requestAnimationFrame causes a race where characters typed
+ * between the block split and the next animation frame go to the wrong element).
+ * Falls back to requestAnimationFrame only when the content element is not yet
+ * available (e.g. async rendering).
  *
  * @param api - The API instance
  * @param block - BlockAPI to set caret to
@@ -19,8 +23,7 @@ export const setCaretToBlockContent = (
   block: ReturnType<API['blocks']['insert']>,
   position: 'start' | 'end' = 'end'
 ): void => {
-  // Use requestAnimationFrame to ensure DOM has been updated
-  requestAnimationFrame(() => {
+  const applyFocus = (deferred: boolean): void => {
     const holder = block.holder;
     if (!holder) return;
 
@@ -29,8 +32,10 @@ export const setCaretToBlockContent = (
     if (!(contentEl instanceof HTMLElement)) {
       // Fallback to setToBlock if no content element found
       api.caret.setToBlock(block, position);
-      // Update the caret "after" position for undo/redo since we're in requestAnimationFrame
-      api.caret.updateLastCaretAfterPosition();
+
+      if (deferred) {
+        api.caret.updateLastCaretAfterPosition();
+      }
 
       return;
     }
@@ -55,8 +60,21 @@ export const setCaretToBlockContent = (
     selection.removeAllRanges();
     selection.addRange(range);
 
-    // Update the caret "after" position for undo/redo since we moved the caret
-    // asynchronously via requestAnimationFrame after the Yjs transaction committed
-    api.caret.updateLastCaretAfterPosition();
-  });
+    if (deferred) {
+      // Update the caret "after" position for undo/redo since we moved the caret
+      // asynchronously via requestAnimationFrame after the Yjs transaction committed
+      api.caret.updateLastCaretAfterPosition();
+    }
+  };
+
+  // Try synchronous focus first — the block is already in the DOM after insert()
+  const holder = block.holder;
+  const contentEl = holder?.querySelector('[contenteditable="true"]');
+
+  if (contentEl instanceof HTMLElement) {
+    applyFocus(false);
+  } else {
+    // Content element not available yet — fall back to next frame
+    requestAnimationFrame(() => applyFocus(true));
+  }
 }

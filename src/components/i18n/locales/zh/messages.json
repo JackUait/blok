@@ -41,5 +41,20 @@
   "a11y.movedUp": "内容块已上移至第 {position} 位，共 {total} 个",
   "a11y.movedDown": "内容块已下移至第 {position} 位，共 {total} 个",
   "a11y.atTop": "内容块已在顶部，无法上移",
-  "a11y.atBottom": "内容块已在底部，无法下移"
+  "a11y.atBottom": "内容块已在底部，无法下移",
+  "tools.table.title": "表格",
+  "tools.table.clearSelection": "清除",
+  "tools.table.copySelection": "复制",
+  "tools.table.headerColumn": "标题列",
+  "tools.table.insertColumnLeft": "在左侧插入列",
+  "tools.table.insertColumnRight": "在右侧插入列",
+  "tools.table.deleteColumn": "删除",
+  "tools.table.headerRow": "标题行",
+  "tools.table.insertRowAbove": "在上方插入行",
+  "tools.table.insertRowBelow": "在下方插入行",
+  "tools.table.deleteRow": "删除",
+  "tools.table.clickToAddRow": "点击添加新行",
+  "tools.table.dragToAddRemoveRows": "拖动以添加或删除行",
+  "tools.table.clickToAddColumn": "点击添加新列",
+  "tools.table.dragToAddRemoveColumns": "拖动以添加或删除列"
 }

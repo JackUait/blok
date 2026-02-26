@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-/* eslint-disable internal-unit-test/no-class-selectors -- StyleManager's purpose is to manage CSS classes */
 
 import { StyleManager } from '../../../../src/components/block/style-manager';
 import { DATA_ATTR } from '../../../../src/components/constants';
@@ -92,11 +91,12 @@ describe('StyleManager', () => {
       expect(contentElement.className).toBe(classes);
     });
 
-    it('applies selected classes over stretched when both are true', () => {
+    it('applies both selected and stretched classes when both are true', () => {
       styleManager.updateContentState(true, true);
 
       const classes = styleManager.getContentClasses(true, true);
       expect(classes).toContain('bg-selection');
+      expect(classes).toContain('max-w-none');
       expect(contentElement.className).toBe(classes);
     });
 
@@ -129,11 +129,11 @@ describe('StyleManager', () => {
       expect(classes).toContain('max-w-none');
     });
 
-    it('returns selected classes when both selected and stretched', () => {
+    it('returns both selected and stretched classes when both are true', () => {
       const classes = styleManager.getContentClasses(true, true);
 
       expect(classes).toContain('bg-selection');
-      expect(classes).not.toContain('max-w-none');
+      expect(classes).toContain('max-w-none');
     });
 
     it('returns base classes when neither selected nor stretched', () => {
@@ -150,6 +150,11 @@ describe('StyleManager', () => {
     it('provides wrapperStyles', () => {
       expect(StyleManager.wrapperStyles).toContain('relative');
       expect(StyleManager.wrapperStyles).toContain('opacity-100');
+    });
+
+    it('wrapper styles remove bottom padding and margin on last block', () => {
+      expect(StyleManager.wrapperStyles).toContain('last:pb-0');
+      expect(StyleManager.wrapperStyles).toContain('last:mb-0');
     });
 
     it('provides contentStyles', () => {

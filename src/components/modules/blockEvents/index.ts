@@ -182,6 +182,15 @@ export class BlockEvents extends Module {
    * @param {InputEvent} event - input event
    */
   public input(event: InputEvent): void {
+    /**
+     * Ensure currentBlock is set from the input target.
+     * The debounced selectionchange handler may not have fired yet,
+     * leaving currentBlock undefined for blocks inside table cells.
+     */
+    if (event.target instanceof Node) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
     // Handle smart grouping for undo
     this.handleSmartGrouping(event);
 
@@ -219,15 +228,12 @@ export class BlockEvents extends Module {
     }
 
     /**
-     * When user type something:
-     *  - close Toolbar
-     *  - clear block highlighting
+     * When user types something, clear block highlighting.
+     * The toolbar stays visible — it should persist during typing.
      */
     if (!isPrintableKeyEvent(event)) {
       return;
     }
-
-    this.Blok.Toolbar.close();
 
     /**
      * Allow to use shortcuts with selected blocks
@@ -294,6 +300,17 @@ export class BlockEvents extends Module {
 
     if (!wasEventTriggeredInsideBlok) {
       return;
+    }
+
+    /**
+     * Eagerly update currentBlock from the event target.
+     * The debounced selectionchange handler (180ms) may not have fired yet
+     * if '/' was typed quickly after clicking into a different block (e.g. a table cell).
+     * Without this, currentBlockIndex is stale and the toolbox checks
+     * the wrong block for table-cell containment, failing to hide restricted tools.
+     */
+    if (event.target instanceof Node) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
     }
 
     const currentBlock = this.Blok.BlockManager.currentBlock;

@@ -190,6 +190,8 @@ const createMockSyncHandlers = (): SyncHandlers => ({
   insertDefaultBlock: vi.fn(() => createMockBlock()),
   updateIndentation: vi.fn(),
   replaceBlock: vi.fn(),
+  onBlockRemoved: vi.fn(),
+  onBlockAdded: vi.fn(),
 });
 
 describe('BlockYjsSync', () => {
@@ -463,6 +465,232 @@ describe('BlockYjsSync', () => {
 
         expect(block.setData).not.toHaveBeenCalled();
       });
+
+      it('recreates block when setData returns false', async () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { content: [] },
+          tunes: {},
+        });
+
+        // Override name to 'table' and setData to return false
+        (block as unknown as Record<string, unknown>).name = 'table';
+        (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([
+          createMockBlock({ id: 'block-1' }),
+          block,
+        ]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const newData = { content: [['cell1', 'cell2']] };
+        const ydata = createMockYMap(newData);
+        const yblock = createMockYMap({
+          type: 'table',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'test-block' });
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 1);
+
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+        // Wait for async setData + then chain to resolve
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 'test-block',
+            tool: 'table',
+            data: newData,
+            tunes: {},
+            bindEventsImmediately: true,
+          })
+        );
+        expect(mockHandlers.replaceBlock).toHaveBeenCalledWith(1, newBlock);
+      });
+
+      it('does not recreate block when setData returns true', async () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { text: 'old' },
+          tunes: {},
+        });
+
+        // setData returns true by default (from createMockBlock)
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'new text' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock');
+
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+        // Wait for async setData + then chain to resolve
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).not.toHaveBeenCalled();
+        expect(mockHandlers.replaceBlock).not.toHaveBeenCalled();
+      });
+
+      it('keeps isSyncingFromYjs true through RAF after setData resolves', async () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { text: 'old' },
+          tunes: {},
+        });
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'new text' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        // Mock requestAnimationFrame for deterministic control over when cleanup fires
+        let scheduledRafCallback: FrameRequestCallback | undefined;
+        const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+          scheduledRafCallback = cb;
+          return 0;
+        });
+
+        try {
+          callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+          // Immediately after the event, isSyncingFromYjs should be true
+          expect(yjsSync.isSyncingFromYjs).toBe(true);
+
+          // Wait for setData promise to resolve (RAF cleanup is now scheduled but not fired)
+          await new Promise(resolve => setTimeout(resolve, 0));
+
+          // After setData resolves, isSyncingFromYjs should still be true
+          // (cleanup deferred to RAF which hasn't fired yet)
+          expect(yjsSync.isSyncingFromYjs).toBe(true);
+          expect(scheduledRafCallback).toBeDefined();
+
+          // Manually fire the RAF callback to simulate the next animation frame
+          scheduledRafCallback?.(performance.now());
+
+          // Now it should be false
+          expect(yjsSync.isSyncingFromYjs).toBe(false);
+        } finally {
+          rafSpy.mockRestore();
+        }
+      });
+
+      it('keeps isSyncingFromYjs true through RAF for tunes-changed path', () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { text: 'old' },
+          tunes: { alignment: 'left' },
+        });
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'old' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          // Different tunes to trigger tunes-changed path
+          tunes: createMockYMap({ alignment: 'center' }),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'test-block' });
+
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'test-block', type: 'update', origin: 'undo' });
+
+        // After synchronous replaceBlock, isSyncingFromYjs should still be true
+        // (extended through RAF)
+        expect(yjsSync.isSyncingFromYjs).toBe(true);
+      });
     });
 
     describe('handleYjsMove', () => {
@@ -524,6 +752,27 @@ describe('BlockYjsSync', () => {
         );
       });
 
+      it('calls onBlockAdded handler after inserting block', () => {
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'Hello' }),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'new-block', type: 'paragraph' },
+        ]);
+
+        const newBlock = createMockBlock({ id: 'new-block' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+
+        mockHandlers.onBlockAdded = vi.fn();
+
+        callback({ blockId: 'new-block', type: 'add', origin: 'undo' });
+
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(newBlock, 0);
+      });
+
       it('does not create block if it already exists', () => {
         const existingBlock = createMockBlock({ id: 'existing' });
         repository = new BlockRepository();
@@ -547,6 +796,180 @@ describe('BlockYjsSync', () => {
         callback({ blockId: 'existing', type: 'add', origin: 'undo' });
 
         expect(composeBlockSpy).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('handleYjsBatchAdd', () => {
+      it('creates all blocks and adds to array before activating any', () => {
+        const tableBlock = createMockBlock({ id: 'table-1' });
+        const childBlock = createMockBlock({ id: 'child-1' });
+
+        const activationOrder: string[] = [];
+
+        // Track when RENDERED is called (activation) for each block
+        (tableBlock.call as ReturnType<typeof vi.fn>).mockImplementation((method: string) => {
+          if (method === 'rendered') {
+            activationOrder.push('table-1');
+            // When table's rendered() fires, child should already be in blocks array
+            const childInArray = blocksStore.blocks.some(
+              (b: Block) => b.id === 'child-1'
+            );
+            expect(childInArray).toBe(true);
+          }
+        });
+        (childBlock.call as ReturnType<typeof vi.fn>).mockImplementation((method: string) => {
+          if (method === 'rendered') {
+            activationOrder.push('child-1');
+          }
+        });
+
+        vi.spyOn(factory, 'composeBlock').mockImplementation((options) => {
+          if ((options as { id: string }).id === 'table-1') return tableBlock;
+          return childBlock;
+        });
+
+        const tableYblock = createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [] }),
+        });
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'table-1',
+        });
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'table-1') return tableYblock;
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+          { id: 'table-1', type: 'table' },
+          { id: 'child-1', type: 'paragraph', parentId: 'table-1' },
+        ]);
+
+        callback({ blockIds: ['table-1', 'child-1'], type: 'batch-add', origin: 'undo' });
+
+        // Both blocks should be in the array
+        expect(blocksStore.blocks.some((b: Block) => b.id === 'table-1')).toBe(true);
+        expect(blocksStore.blocks.some((b: Block) => b.id === 'child-1')).toBe(true);
+
+        // Table should be activated (RENDERED) before child
+        expect(activationOrder).toEqual(['table-1', 'child-1']);
+      });
+
+      it('skips blocks that already exist in the repository', () => {
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock');
+
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+        });
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+        ]);
+
+        // block-1 already exists in repository
+        callback({ blockIds: ['block-1', 'new-block'], type: 'batch-add', origin: 'undo' });
+
+        // Should only compose the new block, not the existing one
+        const composedIds = composeBlockSpy.mock.calls.map(
+          (call) => (call[0] as { id: string }).id
+        );
+        expect(composedIds).not.toContain('block-1');
+      });
+
+      it('does not insert child holders into DOM directly when parent mounts them', () => {
+        const tableBlock = createMockBlock({ id: 'table-1' });
+        const childBlock = createMockBlock({ id: 'child-1' });
+
+        // Simulate: when table's RENDERED fires, it mounts child into its DOM
+        (tableBlock.call as ReturnType<typeof vi.fn>).mockImplementation((method: string) => {
+          if (method === 'rendered') {
+            // Simulate mountBlocksInCell: parent appends child holder into its own holder
+            tableBlock.holder.appendChild(childBlock.holder);
+          }
+        });
+
+        vi.spyOn(factory, 'composeBlock').mockImplementation((options) => {
+          if ((options as { id: string }).id === 'table-1') return tableBlock;
+          return childBlock;
+        });
+
+        const tableYblock = createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [] }),
+        });
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'table-1',
+        });
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'table-1') return tableYblock;
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+          { id: 'table-1', type: 'table' },
+          { id: 'child-1', type: 'paragraph', parentId: 'table-1' },
+        ]);
+
+        callback({ blockIds: ['table-1', 'child-1'], type: 'batch-add', origin: 'undo' });
+
+        // Child should still be inside the table holder (not moved to working area)
+        expect(tableBlock.holder.contains(childBlock.holder)).toBe(true);
+      });
+
+      it('emits onBlockAdded for each block after activation', () => {
+        const tableBlock = createMockBlock({ id: 'table-1' });
+        const childBlock = createMockBlock({ id: 'child-1' });
+
+        vi.spyOn(factory, 'composeBlock').mockImplementation((options) => {
+          if ((options as { id: string }).id === 'table-1') return tableBlock;
+          return childBlock;
+        });
+
+        const tableYblock = createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [] }),
+        });
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'table-1',
+        });
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'table-1') return tableYblock;
+          if (id === 'child-1') return childYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+          { id: 'table-1', type: 'table' },
+          { id: 'child-1', type: 'paragraph', parentId: 'table-1' },
+        ]);
+
+        mockHandlers.onBlockAdded = vi.fn();
+
+        callback({ blockIds: ['table-1', 'child-1'], type: 'batch-add', origin: 'undo' });
+
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledTimes(2);
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(tableBlock, expect.any(Number));
+        expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(childBlock, expect.any(Number));
       });
     });
 
@@ -574,6 +997,35 @@ describe('BlockYjsSync', () => {
         expect(testBlocksStore.length).toBe(0);
       });
 
+      it('calls onBlockRemoved handler before removing block from store', () => {
+        const blockToRemove = createMockBlock({ id: 'to-remove' });
+        const testBlocksStore = createBlocksStore([blockToRemove]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.onBlockRemoved = vi.fn();
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+
+        expect(mockHandlers.onBlockRemoved).toHaveBeenCalledWith(blockToRemove, 0);
+      });
+
       it('inserts default block when all blocks removed', () => {
         const lastBlock = createMockBlock({ id: 'last' });
         mockHandlers.getBlockIndex = vi.fn(() => 0);
@@ -594,6 +1046,38 @@ describe('BlockYjsSync', () => {
         callback({ blockId: 'last', type: 'remove', origin: 'undo' });
 
         expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
+      });
+
+      it('keeps Yjs sync state active while removing a block', () => {
+        const syncStates: boolean[] = [];
+        const blockToRemove = createMockBlock({ id: 'to-remove' });
+        const testBlocksStore = createBlocksStore([blockToRemove]);
+
+        (blockToRemove.destroy as ReturnType<typeof vi.fn>).mockImplementation(() => {
+          syncStates.push(yjsSync.isSyncingFromYjs);
+        });
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.onBlockRemoved = vi.fn(() => {
+          syncStates.push(yjsSync.isSyncingFromYjs);
+        });
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+        yjsSync.subscribe();
+
+        callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+
+        expect(syncStates).toEqual([true, true]);
+        expect(yjsSync.isSyncingFromYjs).toBe(false);
       });
     });
   });

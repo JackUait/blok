@@ -458,6 +458,140 @@ describe('BlockOperations', () => {
 
       expect(operations.currentBlockIndexValue).toBe(3);
     });
+
+    it('demotes restricted tools to paragraph when inserting inside a table cell', () => {
+      // Create a table cell container in the DOM
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(tableCellContainer);
+
+      try {
+        // Create a block and set up the store first (push appends holder to workingArea)
+        const cellBlock = createMockBlock({ id: 'cell-block', name: 'paragraph' });
+        blocksStore = createBlocksStore([cellBlock]);
+
+        // Move the holder into the table cell container AFTER the store is created
+        // (createBlocksStore's push() would otherwise move it to the workingArea)
+        tableCellContainer.appendChild(cellBlock.holder);
+
+        repository = new BlockRepository();
+        repository.initialize(blocksStore);
+        hierarchy = new BlockHierarchy(repository);
+        operations = new BlockOperations(
+          dependencies,
+          repository,
+          factory,
+          hierarchy,
+          blockDidMutatedSpy,
+          0
+        );
+        operations.setYjsSync(yjsSync);
+
+        // Insert a 'header' tool — should be demoted to 'paragraph'
+        const newBlock = operations.insert({ tool: 'header' }, blocksStore);
+
+        expect(newBlock).toBeDefined();
+        expect(newBlock.name).toBe('paragraph');
+      } finally {
+        document.body.removeChild(tableCellContainer);
+      }
+    });
+
+    it('allows non-restricted tools to insert inside a table cell', () => {
+      // Create a table cell container in the DOM
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(tableCellContainer);
+
+      try {
+        const cellBlock = createMockBlock({ id: 'cell-block', name: 'paragraph' });
+        blocksStore = createBlocksStore([cellBlock]);
+        // Move holder into the table cell container after createBlocksStore moves it to workingArea
+        tableCellContainer.appendChild(cellBlock.holder);
+        repository = new BlockRepository();
+        repository.initialize(blocksStore);
+        hierarchy = new BlockHierarchy(repository);
+        operations = new BlockOperations(
+          dependencies,
+          repository,
+          factory,
+          hierarchy,
+          blockDidMutatedSpy,
+          0
+        );
+        operations.setYjsSync(yjsSync);
+
+        // Insert a 'paragraph' tool — should remain paragraph (not restricted)
+        const newBlock = operations.insert({ tool: 'paragraph' }, blocksStore);
+
+        expect(newBlock).toBeDefined();
+        expect(newBlock.name).toBe('paragraph');
+      } finally {
+        document.body.removeChild(tableCellContainer);
+      }
+    });
+
+    it('does not demote restricted tools when inserting after a table block whose children are inside cells', () => {
+      // Scenario: table block at index 0, child paragraph at index 1 inside a cell container.
+      // Inserting a 'table' tool after the table (targetIndex = 0 + 1 = 1) should NOT demote,
+      // because the new block is placed at the top level, not inside the table cell.
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(tableCellContainer);
+
+      try {
+        const tableBlock = createMockBlock({ id: 'table-block', name: 'table' });
+        const cellParagraph = createMockBlock({ id: 'cell-para', name: 'paragraph', parentId: 'table-block' });
+
+        blocksStore = createBlocksStore([tableBlock, cellParagraph]);
+
+        // Move the child paragraph's holder into the table cell container
+        // to simulate it being inside a table cell in the DOM
+        tableCellContainer.appendChild(cellParagraph.holder);
+
+        repository = new BlockRepository();
+        repository.initialize(blocksStore);
+        hierarchy = new BlockHierarchy(repository);
+
+        // Register 'table' tool in the factory
+        const tableAdapter = createMockBlockToolAdapter('table');
+        (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+          .dependencies.tools.set('table', tableAdapter);
+
+        operations = new BlockOperations(
+          dependencies,
+          repository,
+          factory,
+          hierarchy,
+          blockDidMutatedSpy,
+          0 // currentBlockIndex = 0 (the table block)
+        );
+        operations.setYjsSync(yjsSync);
+
+        // Insert 'table' tool — targetIndex = 0 + 1 = 1.
+        // The block at index 1 is the child paragraph inside a cell, but the
+        // new block should be placed at the top level (after the table block).
+        const newBlock = operations.insert({ tool: 'table' }, blocksStore);
+
+        expect(newBlock).toBeDefined();
+        expect(newBlock.name).toBe('table');
+      } finally {
+        document.body.removeChild(tableCellContainer);
+      }
+    });
+
+    it('allows restricted tools to insert outside table cells', () => {
+      // Register 'header' tool in the factory so it can be composed
+      const headerAdapter = createMockBlockToolAdapter('header');
+      (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+        .dependencies.tools.set('header', headerAdapter);
+
+      // No table cell container — blocks are in normal editor area
+      const newBlock = operations.insert({ tool: 'header', index: 0 }, blocksStore);
+
+      expect(newBlock).toBeDefined();
+      expect(newBlock.name).toBe('header');
+    });
   });
 
   describe('insertDefaultBlockAtIndex', () => {
@@ -923,6 +1057,81 @@ describe('BlockOperations', () => {
 
       expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
       expect(result).toBeDefined();
+    });
+
+    it('awaits block.ready before calling onPaste', async () => {
+      const callOrder: string[] = [];
+      let resolveReady: () => void;
+      const readyPromise = new Promise<void>((resolve) => {
+        resolveReady = resolve;
+      });
+
+      const mockBlock = createMockBlock();
+
+      // Override ready to be a delayed promise
+      Object.defineProperty(mockBlock, 'ready', {
+        get: () => readyPromise,
+      });
+
+      // Track when onPaste is called
+      (mockBlock.call as Mock).mockImplementation((methodName: string) => {
+        callOrder.push(methodName);
+      });
+
+      // Override factory to return our mock block
+      const originalInsert = operations.insert.bind(operations);
+
+      vi.spyOn(operations, 'insert').mockImplementation((opts, store) => {
+        originalInsert(opts, store);
+
+        return mockBlock;
+      });
+
+      const pasteEvent: PasteEvent = {
+        detail: { data: { text: 'test' } },
+      } as unknown as PasteEvent;
+
+      // Start paste (don't await yet)
+      const pastePromise = operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      // onPaste should not have been called yet (block.ready hasn't resolved)
+      expect(mockBlock.call).not.toHaveBeenCalled();
+
+      // Now resolve block.ready
+      resolveReady!();
+      await pastePromise;
+
+      // onPaste should have been called after ready resolved
+      expect(callOrder).toContain('onPaste');
+    });
+
+    it('suppresses Yjs sync for child blocks created during onPaste', async () => {
+      // Track whether isSyncingFromYjs was true during atomic operation
+      let syncingDuringAtomic = false;
+
+      (yjsSync.withAtomicOperation as Mock).mockImplementation(<T>(fn: () => T): T => {
+        // Simulate setting isSyncingFromYjs during atomic operation
+        const origValue = yjsSync.isSyncingFromYjs;
+
+        Object.defineProperty(yjsSync, 'isSyncingFromYjs', { value: true, configurable: true });
+        syncingDuringAtomic = true;
+
+        try {
+          return fn();
+        } finally {
+          Object.defineProperty(yjsSync, 'isSyncingFromYjs', { value: origValue, configurable: true });
+        }
+      });
+
+      const pasteEvent: PasteEvent = {
+        detail: { data: { text: 'test' } },
+      } as unknown as PasteEvent;
+
+      await operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      // withAtomicOperation should have been called (wrapping both insert and onPaste)
+      expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
+      expect(syncingDuringAtomic).toBe(true);
     });
   });
 

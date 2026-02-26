@@ -107,7 +107,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
         const toolTags = this.buildToolTags(tool);
 
         const structuralSanitizeConfig = this.sanitizerBuilder.getStructuralTagsConfig(content);
-        const customConfig = Object.assign({}, structuralSanitizeConfig, toolTags, tool.baseSanitizeConfig);
+        const customConfig: SanitizerConfig = { ...structuralSanitizeConfig, ...toolTags, ...tool.baseSanitizeConfig, br: {} };
         const sanitizedContent = this.sanitizeContent(content, customConfig);
 
         if (!sanitizedContent) {

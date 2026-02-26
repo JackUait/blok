@@ -1,5 +1,7 @@
+import { getRestrictedTools } from '../../tools/table/table-restrictions';
 import { Dom } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
+import { SelectionUtils } from '../selection';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
 import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
@@ -154,6 +156,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private currentContentEditable: Element | null = null;
 
   /**
+   * Whether the toolbox was opened inside a table cell.
+   * Used to restore restricted tool visibility on close.
+   */
+  private isInsideTableCell = false;
+
+  /**
    * Toolbox constructor
    * @param options - available parameters
    * @param options.api - Blok API methods
@@ -264,7 +272,31 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.api.blocks.stopBlockMutationWatching(currentBlockIndex);
 
+    const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
+
+    /**
+     * Hide restricted tools (headers, tables) when the caret is inside a table cell.
+     */
+    this.isInsideTableCell = currentBlock !== undefined
+      && currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    if (this.isInsideTableCell) {
+      this.toggleRestrictedToolsHidden(true);
+    }
+
     this.popover?.show();
+
+    /**
+     * When opening toolbox inside a table cell, position it at the caret
+     * instead of at the trigger element (which is outside the table).
+     * Must be called after show() so the popover is in the DOM.
+     */
+    if (this.isInsideTableCell && this.popover instanceof PopoverDesktop) {
+      const caretRect = SelectionUtils.rect;
+
+      this.popover.updatePosition(caretRect);
+    }
+
     this.opened = true;
     this.emit(ToolboxEvent.Opened);
     this.startListeningToBlockInput();
@@ -274,6 +306,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Close Toolbox
    */
   public close(): void {
+    if (this.isInsideTableCell) {
+      this.toggleRestrictedToolsHidden(false);
+      this.isInsideTableCell = false;
+    }
+
     this.popover?.hide();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
@@ -339,10 +376,45 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Handles popover close event
    */
   private onPopoverClose = (): void => {
+    if (this.isInsideTableCell) {
+      this.toggleRestrictedToolsHidden(false);
+      this.isInsideTableCell = false;
+    }
+
     this.stopListeningToBlockInput();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
   };
+
+  /**
+   * Toggles hidden state for all popover items belonging to restricted tools.
+   * Matches by tool registration name so that tools with custom entry names
+   * (e.g., list tool with entries named bulleted-list, numbered-list, check-list)
+   * are correctly restricted.
+   */
+  private toggleRestrictedToolsHidden(isHidden: boolean): void {
+    const restrictedTools = getRestrictedTools();
+
+    for (const tool of this.toolsToBeDisplayed) {
+      if (!restrictedTools.includes(tool.name)) {
+        continue;
+      }
+
+      const toolboxEntries = tool.toolbox;
+
+      if (!toolboxEntries) {
+        continue;
+      }
+
+      const entries = Array.isArray(toolboxEntries) ? toolboxEntries : [toolboxEntries];
+
+      for (const entry of entries) {
+        const entryName = entry.name ?? tool.name;
+
+        this.popover?.toggleItemHiddenByName(entryName, isHidden);
+      }
+    }
+  }
 
   /**
    * Returns list of tools that enables the Toolbox (by specifying the 'toolbox' getter)

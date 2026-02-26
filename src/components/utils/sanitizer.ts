@@ -30,7 +30,7 @@
 import HTMLJanitor from 'html-janitor';
 
 import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
-import type { TagConfig } from '../../../types/configs/sanitizer-config';
+import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
 
@@ -55,7 +55,7 @@ const UNSAFE_URL_ATTR_FALLBACK_PATTERN =
  */
 export const sanitizeBlocks = (
   blocksData: Array<Pick<SavedData, 'data' | 'tool'>>,
-  sanitizeConfig: SanitizerConfig | ((toolName: string) => SanitizerConfig | undefined),
+  sanitizeConfig: SanitizerConfig | ToolSanitizerConfig | ((toolName: string) => SanitizerConfig | ToolSanitizerConfig | undefined),
   globalSanitizer: SanitizerConfig = {} as SanitizerConfig
 ): Array<Pick<SavedData, 'data' | 'tool'>> => {
   return blocksData.map((block) => {
@@ -398,6 +398,27 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     }
 
     merged[tag] = cloneTagConfig(globalValue);
+  }
+
+  /**
+   * Include tags from field rules that are not present in global rules.
+   * Tool-specific sanitize configs should be able to allow tags
+   * beyond what the global config defines.
+   */
+  if (!fieldRules) {
+    return merged;
+  }
+
+  for (const tag in fieldRules) {
+    if (!Object.prototype.hasOwnProperty.call(fieldRules, tag)) {
+      continue;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(merged, tag)) {
+      continue;
+    }
+
+    merged[tag] = cloneTagConfig(fieldRules[tag]);
   }
 
   return merged;

@@ -96,7 +96,11 @@ const searchInputRegistry = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../../../src/components/utils/popover/components/search-input', () => {
+vi.mock('../../../src/components/utils/popover/components/search-input', async (importOriginal) => {
+  // Import the real matchesSearchQuery so filterItems() works in tests
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- importOriginal returns unknown, assertion needed for property access
+  const actual = await importOriginal() as { matchesSearchQuery: (item: unknown, query: string) => boolean };
+
   const SearchInputEvent = {
     Search: 'search' as const,
   };
@@ -143,6 +147,7 @@ vi.mock('../../../src/components/utils/popover/components/search-input', () => {
     ['__esModule']: true,
     SearchInput: MockSearchInput,
     SearchInputEvent,
+    matchesSearchQuery: actual.matchesSearchQuery,
   };
 });
 
@@ -780,6 +785,127 @@ describe('PopoverDesktop', () => {
 
       // Verify the parent popover is hidden after child emits ClosedOnActivate
       expect(popover.getElement()).not.toHaveAttribute('data-blok-popover-opened');
+    });
+  });
+
+  describe('size cache invalidation', () => {
+    it('recalculates size after item visibility changes via toggleItemHiddenByName', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Keep',
+            name: 'keep',
+            onActivate: vi.fn(),
+          },
+          {
+            title: 'Hideable',
+            name: 'hideable',
+            onActivate: vi.fn(),
+          },
+        ],
+      });
+
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      /** Access size to warm the cache */
+      const sizeBeforeHide = instance.size;
+
+      /** Hide an item — the cached size should be invalidated */
+      popover.toggleItemHiddenByName('hideable', true);
+
+      /** Access size again — should NOT return the stale cached value */
+      const sizeAfterHide = instance.size;
+
+      /**
+       * In jsdom offsetHeight/offsetWidth are always 0, so we can't assert actual
+       * dimension differences. Instead we verify the cache was invalidated by checking
+       * that size is re-computed (the getter re-runs its clone-measure logic).
+       * If the cache was NOT invalidated, both calls return the exact same object reference.
+       */
+      expect(sizeAfterHide).not.toBe(sizeBeforeHide);
+    });
+  });
+
+  describe('permanently hidden items are not overridden by filterItems', () => {
+    it('item hidden via toggleItemHiddenByName stays hidden after filterItems with empty query', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      // Permanently hide 'alpha' (simulating restricted tool in table cell)
+      popover.toggleItemHiddenByName('alpha', true);
+
+      // Filter with empty query – this used to un-hide all items
+      popover.filterItems('');
+
+      const alphaItem = instance.itemsDefault.find(item => item.name === 'alpha');
+      const betaItem  = instance.itemsDefault.find(item => item.name === 'beta');
+
+      expect(alphaItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
+      expect(betaItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
+    });
+
+    it('item hidden via toggleItemHiddenByName stays hidden when filterItems query matches it', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Heading 1', name: 'header-1', onActivate: vi.fn() },
+          { title: 'Paragraph', name: 'paragraph', onActivate: vi.fn() },
+        ],
+        searchable: true,
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      // Permanently hide header-1
+      popover.toggleItemHiddenByName('header-1', true);
+
+      // Filter with 'Heading' which would normally match and show header-1
+      const searchInput = getMockSearchInput();
+
+      searchInput.emitSearch({
+        query: 'Heading',
+        items: [ instance.itemsDefault.find(item => item.name === 'header-1') ],
+      });
+
+      const headerItem = instance.itemsDefault.find(item => item.name === 'header-1');
+
+      expect(headerItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
+    });
+
+    it('item becomes visible again after toggleItemHiddenByName(name, false) is called', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      // Hide permanently
+      popover.toggleItemHiddenByName('alpha', true);
+      // Filter – should stay hidden
+      popover.filterItems('');
+
+      const alphaItem = instance.itemsDefault.find(item => item.name === 'alpha');
+
+      expect(alphaItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
+
+      // Un-hide permanently
+      popover.toggleItemHiddenByName('alpha', false);
+      // Filter again – now it should be visible
+      popover.filterItems('');
+
+      expect(alphaItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
     });
   });
 });

@@ -372,6 +372,34 @@ describe('BlockManager', () => {
     })).toBe(true);
   });
 
+  it('should not move a restricted tool into a table cell', () => {
+    // Setup: block-1 (paragraph inside table cell), block-2 (header outside)
+    const cellBlock = createBlockStub({ id: 'cell-block', name: 'paragraph' });
+    const headerBlock = createBlockStub({ id: 'header-block', name: 'header' });
+    const { blockManager } = createBlockManager({
+      initialBlocks: [cellBlock, headerBlock],
+    });
+
+    // Place cellBlock's holder inside a table cell container
+    const tableCellContainer = document.createElement('div');
+    tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+    document.body.appendChild(tableCellContainer);
+    tableCellContainer.appendChild(cellBlock.holder);
+
+    blockManager.currentBlockIndex = 1;
+
+    // Try to move header block (index 1) to index 0 (next to the cell block)
+    blockManager.move(0, 1);
+
+    // The move should be rejected — header is restricted in table cells
+    // The header block should stay at its original position
+    expect(blockManager.blocks[1]).toBe(headerBlock);
+    expect(blockManager.blocks[0]).toBe(cellBlock);
+
+    // Clean up
+    document.body.removeChild(tableCellContainer);
+  });
+
   it('recreates block with merged data when updating', async () => {
     const block = createBlockStub({ id: 'block-1',
       data: { text: 'Hello' },
@@ -692,6 +720,48 @@ describe('BlockManager', () => {
     alienBlock.holder.appendChild(alienChild);
 
     expect(blockManager.setCurrentBlockByChildNode(alienChild)).toBeUndefined();
+
+    ui.nodes.wrapper.remove();
+  });
+
+  it('sets current block by a child node inside a table cell (block holder moved out of working area)', () => {
+    const { blockManager } = createBlockManager({
+      initialBlocks: [
+        createBlockStub({ id: 'table-block' }),
+        createBlockStub({ id: 'cell-block' }),
+      ],
+    });
+
+    const ui = (blockManager as unknown as { Blok: BlokModules }).Blok.UI;
+
+    ui.nodes.wrapper.setAttribute('data-blok-editor', '');
+    ui.nodes.wrapper.appendChild(ui.nodes.redactor);
+    document.body.appendChild(ui.nodes.wrapper);
+
+    const blocks = blockManager.blocks;
+
+    // Simulate table cell structure: move block holder from working area into a cell container
+    const cellContainer = document.createElement('div');
+    cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+    const cell = document.createElement('div');
+    cell.setAttribute('data-blok-table-cell', '');
+    cell.appendChild(cellContainer);
+
+    // The table block's holder contains the cell structure
+    blocks[0].holder.appendChild(cell);
+
+    // Move cell-block's holder into the cell container (out of the working area)
+    cellContainer.appendChild(blocks[1].holder);
+
+    // Create a child node inside the cell block's contenteditable
+    const childNode = document.createElement('span');
+    blocks[1].holder.appendChild(childNode);
+
+    // This should find the block even though its holder is not a direct child of working area
+    const current = blockManager.setCurrentBlockByChildNode(childNode);
+
+    expect(current).toBe(blocks[1]);
+    expect(blockManager.currentBlockIndex).toBe(1);
 
     ui.nodes.wrapper.remove();
   });

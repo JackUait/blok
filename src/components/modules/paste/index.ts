@@ -3,11 +3,13 @@ import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 
+import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
 import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
 import { HtmlHandler } from './handlers/html-handler';
 import { PatternHandler } from './handlers/pattern-handler';
+import { TableCellsHandler } from './handlers/table-cells-handler';
 import { TextHandler } from './handlers/text-handler';
 import { SanitizerConfigBuilder } from './sanitizer-config';
 import { ToolRegistry } from './tool-registry';
@@ -44,6 +46,7 @@ export class Paste extends Module {
     // Initialize handlers in priority order (higher priority first)
     this.handlers = [
       new BlokDataHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
+      new TableCellsHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new FilesHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new PatternHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
@@ -128,7 +131,8 @@ export class Paste extends Module {
     const canReplaceCurrentBlock = Boolean(
       currentBlock &&
       currentBlock.tool.isDefault &&
-      currentBlock.isEmpty
+      currentBlock.isEmpty &&
+      !currentBlock.holder?.closest('[data-blok-table-cell-blocks]')
     );
 
     const context: HandlerContext = {
@@ -175,6 +179,10 @@ export class Paste extends Module {
       return blokData;
     }
 
+    if (handler instanceof TableCellsHandler) {
+      return rawHtmlData;
+    }
+
     if (handler instanceof FilesHandler) {
       return dataTransfer;
     }
@@ -201,7 +209,8 @@ export class Paste extends Module {
       { br: {} }
     );
 
-    const cleanData = clean(rawHtmlData, customConfig);
+    const preprocessed = preprocessGoogleDocsHtml(rawHtmlData);
+    const cleanData = clean(preprocessed, customConfig);
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
 
@@ -267,6 +276,14 @@ export class Paste extends Module {
    * Check if Blok should process pasted data and pass data transfer object to handler.
    */
   private handlePasteEvent = async (event: ClipboardEvent): Promise<void> => {
+    /**
+     * If the event was already handled (e.g., by the table grid paste listener),
+     * skip processing to prevent duplicate content insertion.
+     */
+    if (event.defaultPrevented) {
+      return;
+    }
+
     const { BlockManager, Toolbar } = this.Blok;
 
     const currentBlock = BlockManager.setCurrentBlockByChildNode(event.target as HTMLElement);
@@ -288,6 +305,6 @@ export class Paste extends Module {
       await this.processDataTransfer(event.clipboardData);
     }
 
-    Toolbar.close();
+    Toolbar.moveAndOpen();
   };
 }

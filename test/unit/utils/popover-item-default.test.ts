@@ -200,6 +200,18 @@ describe('PopoverItemDefault', () => {
     expect(item.isFocused).toBe(false);
   });
 
+  it('applies destructive attribute when isDestructive is true', () => {
+    const { element } = createItem({ isDestructive: true });
+
+    expect(element).toHaveAttribute(DATA_ATTR.popoverItemDestructive, 'true');
+  });
+
+  it('does not apply destructive attribute by default', () => {
+    const { element } = createItem();
+
+    expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemDestructive);
+  });
+
   it('exposes toggle, title and disabled getters', () => {
     const toggleValue = 'group-1';
     const customTitle = 'Custom title';

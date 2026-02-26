@@ -86,6 +86,13 @@ export class Toolbar extends Module<ToolbarNodes> {
   private explicitlyClosed: boolean = false;
 
   /**
+   * Flag to track if the current hovered block was resolved from a table cell block.
+   * When true, the toolbar suppresses plus button, settings toggler, and
+   * prevents overriding the current block when the toolbox opens.
+   */
+  private hoveredBlockIsFromTableCell: boolean = false;
+
+  /**
    * Toolbox class instance
    * It will be created in requestIdleCallback so it can be null in some period of time
    */
@@ -215,9 +222,23 @@ export class Toolbar extends Module<ToolbarNodes> {
 
         /**
          * Set current block to cover the case when the Toolbar showed near hovered Block but caret is set to another Block.
+         * Skip this when:
+         * - the hovered block was resolved from a table cell
+         * - the current block's holder is nested inside a table cell container
+         *   (e.g. "/" was typed in a cell while the toolbar was already open from hover,
+         *   so hoveredBlockIsFromTableCell may be stale/false from the hover resolution)
+         *
+         * In both cases, overriding currentBlock with the resolved table block
+         * would lose the cell-paragraph context the toolbox needs to hide restricted tools.
          */
-        if (this.hoveredBlock) {
-          this.Blok.BlockManager.currentBlock = this.hoveredBlock;
+        if (this.hoveredBlock && !this.hoveredBlockIsFromTableCell) {
+          const currentBlock = this.Blok.BlockManager.currentBlock;
+          const isCurrentBlockInsideTableCell = currentBlock !== undefined
+            && currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+          if (!isCurrentBlockInsideTableCell) {
+            this.Blok.BlockManager.currentBlock = this.hoveredBlock;
+          }
         }
 
         this.toolboxInstance.open();
@@ -320,11 +341,39 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * If no one Block selected as a Current
      */
-    const targetBlock = block ?? this.Blok.BlockManager.currentBlock;
+    const unresolvedBlock = block ?? this.Blok.BlockManager.currentBlock;
 
-    if (!targetBlock) {
+    if (!unresolvedBlock) {
       return;
     }
+
+    /**
+     * Track whether the hover originated from inside a table cell.
+     *
+     * Two scenarios:
+     * 1. Called with an explicit `target` (via BlockHovered): blockHover.ts resolves
+     *    cell paragraphs up to the TABLE block before emitting the event, so
+     *    `unresolvedBlock` is always the TABLE block — its holder is at the top level.
+     *    Use the raw `target` element to detect if the pointer is inside a cell.
+     * 2. Called without args (from activateToolbox / slash menu): `unresolvedBlock`
+     *    falls back to `BlockManager.currentBlock`, which IS the cell-paragraph.
+     *    Check the block's holder directly.
+     *
+     * When this flag is true, the toolbox.open() getter preserves the cell-paragraph
+     * as currentBlock so that restricted tools (table, header) can be hidden.
+     *
+     * NOTE: This flag is NOT used for plus button / settings toggler visibility.
+     * Those are handled separately by the focusin listener (tableCellFocusHandler)
+     * which detects when the user actually clicks/focuses inside a cell.
+     */
+    const targetIsInsideCell = target instanceof Element
+      && target.closest('[data-blok-table-cell-blocks]') !== null;
+    const blockIsInsideCell =
+      unresolvedBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    this.hoveredBlockIsFromTableCell = targetIsInsideCell || blockIsInsideCell;
+
+    const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 
     /** Clean up draggable on previous block if any */
     if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
@@ -341,6 +390,25 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (!wrapper || !plusButton) {
       return;
+    }
+
+    /**
+     * Suppress toolbar buttons when the focused element is inside a table cell.
+     * The toolbar still positions itself for toolbox/slash-search purposes,
+     * but plus button and settings toggler remain hidden while a cell has focus.
+     *
+     * Note: we check focus (activeElement) not hover. On hover alone, the plus
+     * button should remain visible so the user can click it to add blocks
+     * below the table. Only when the user actually clicks/focuses inside a cell
+     * should the buttons be suppressed.
+     */
+    const focusIsInsideCell = this.isFocusInsideTableCell();
+    const displayValue = focusIsInsideCell ? 'none' : '';
+
+    plusButton.style.display = displayValue;
+
+    if (settingsToggler) {
+      settingsToggler.style.display = displayValue;
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -448,10 +516,20 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.positioner.setHoveredTarget(null); // No target for multi-block selection
     this.positioner.resetCachedPosition(); // Reset cached position when moving to a new block
 
-    const { wrapper, plusButton } = this.nodes;
+    const { wrapper, plusButton, settingsToggler } = this.nodes;
 
     if (!wrapper || !plusButton) {
       return;
+    }
+
+    /**
+     * Restore plus button and settings toggler visibility for multi-block selection,
+     * in case they were hidden for table cell blocks.
+     */
+    plusButton.style.display = '';
+
+    if (settingsToggler) {
+      settingsToggler.style.display = '';
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -467,9 +545,6 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     this.positioner.moveToY(this.nodes, toolbarY);
     targetBlockHolder.appendChild(wrapper);
-
-    /** Set up draggable on the target block using the settings toggler as drag handle */
-    const { settingsToggler } = this.nodes;
 
     if (settingsToggler && !this.Blok.ReadOnly.isEnabled) {
       targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
@@ -513,16 +588,22 @@ export class Toolbar extends Module<ToolbarNodes> {
      * to prevent toolbar from reopening on subsequent block-hovered events
      */
     this.hoveredBlock = null;
+    this.hoveredBlockIsFromTableCell = false;
     // Only set explicitlyClosed if not explicitly disabled (e.g., when called from toolbox after block insertion)
     if (options?.setExplicitlyClosed !== false) {
       this.explicitlyClosed = true;
     }
 
     /**
-     * Restore plus button visibility in case it was hidden by other interactions
+     * Restore plus button and settings toggler visibility
+     * in case they were hidden for table cell blocks
      */
     if (this.nodes.plusButton) {
       this.nodes.plusButton.style.display = '';
+    }
+
+    if (this.nodes.settingsToggler) {
+      this.nodes.settingsToggler.style.display = '';
     }
 
     /**
@@ -545,11 +626,87 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Hides the block actions (plus button and settings toggler) without
+   * closing the entire toolbar or setting explicitlyClosed.
+   * Used when the toolbar should remain positioned but its action buttons
+   * should temporarily step aside (e.g., during typing or inline toolbar use).
+   */
+  public hideBlockActions(): void {
+    this.blockActions.hide();
+  }
+
+  /**
    * Resets the explicitlyClosed flag to allow the toolbar to reopen on hover.
    * Called when drag is cancelled to re-enable hover-based toolbar opening.
    */
   public resetExplicitlyClosed(): void {
     this.explicitlyClosed = false;
+  }
+
+  /**
+   * Checks whether the currently focused element (document.activeElement) is
+   * inside a table cell container.
+   *
+   * Used to decide whether the plus button and settings toggler should be hidden.
+   * Focus-based check distinguishes click (buttons hidden) from hover (buttons visible).
+   */
+  private isFocusInsideTableCell(): boolean {
+    const active = document.activeElement;
+
+    if (!active) {
+      return false;
+    }
+
+    return active.closest('[data-blok-table-cell-blocks]') !== null;
+  }
+
+  /**
+   * Updates toolbar button visibility based on whether a table cell has focus.
+   * Hides plus button and settings toggler when focus is inside a cell;
+   * restores them when focus moves to a regular block.
+   *
+   * Called from the focusin listener so button state is updated immediately
+   * on click, without waiting for the next hover/moveAndOpen cycle.
+   */
+  private updateToolbarButtonsForTableCellFocus(): void {
+    const { plusButton, settingsToggler } = this.nodes;
+
+    if (!plusButton) {
+      return;
+    }
+
+    const focusIsInsideCell = this.isFocusInsideTableCell();
+    const displayValue = focusIsInsideCell ? 'none' : '';
+
+    plusButton.style.display = displayValue;
+
+    if (settingsToggler) {
+      settingsToggler.style.display = displayValue;
+    }
+  }
+
+  /**
+   * If the block is inside a table cell, resolve to the parent table block.
+   * This ensures the toolbar shows for the table when clicking/focusing inside cells.
+   * Uses the DOM attribute directly to avoid cross-module dependency on the table tool.
+   *
+   * @param block - the block to resolve
+   * @returns the parent table block if inside a cell, the original block otherwise
+   */
+  private resolveTableCellBlock(block: Block): Block {
+    const cellBlocksContainer = block.holder.closest('[data-blok-table-cell-blocks]');
+
+    if (!cellBlocksContainer) {
+      return block;
+    }
+
+    const tableBlockHolder = cellBlocksContainer.closest('[data-blok-testid="block-wrapper"]');
+
+    if (!tableBlockHolder) {
+      return block;
+    }
+
+    return this.Blok.BlockManager.getBlockByChildNode(tableBlockHolder) ?? block;
   }
 
   /**
@@ -778,6 +935,18 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Listen for focus changes inside the editor.
+     * When the user clicks/tabs into a table cell, hide the plus button and
+     * settings toggler. When focus moves to a regular block, restore them.
+     *
+     * This runs on every focusin event (not throttled) to ensure buttons
+     * update immediately on click — no 300ms delay.
+     */
+    this.readOnlyMutableListeners.on(this.Blok.UI.nodes.wrapper, 'focusin', () => {
+      this.updateToolbarButtonsForTableCellFocus();
+    });
+
+    /**
      * Subscribe to the 'block-hovered' event if current view is not mobile
      * @see https://github.com/codex-team/editor.js/issues/1972
      */
@@ -808,11 +977,17 @@ export class Toolbar extends Module<ToolbarNodes> {
         }
 
         /**
-         * Do not move toolbar if it was explicitly closed (e.g., after block deletion).
-         * This prevents the toolbar from reopening on subsequent block-hovered events.
+         * Do not move toolbar if it was explicitly closed and the user is still
+         * hovering the same block. When the user hovers a DIFFERENT block
+         * (or hoveredBlock is null after close()), reset the flag and allow
+         * the toolbar to reopen — this is an intentional user action.
          */
         if (this.explicitlyClosed) {
-          return;
+          if (this.hoveredBlock !== null && this.hoveredBlock === hoveredBlock) {
+            return;
+          }
+
+          this.explicitlyClosed = false;
         }
 
         /**

@@ -1,5 +1,6 @@
 import type { PasteEvent, PasteEventDetail } from '../../../../../types';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import { getRestrictedTools } from '../../../../tools/table/table-restrictions';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PasteData } from '../types';
@@ -66,6 +67,34 @@ export abstract class BasePasteHandler implements PasteHandler {
   }
 
   /**
+   * If we're inside a table cell and any pasted item uses a tool that can't
+   * be nested in table cells (e.g. table, header), redirect the insertion
+   * point to the parent table block. This prevents new block DOM elements
+   * from being placed inside the existing table's grid structure, which
+   * would corrupt the table's saved data.
+   */
+  private redirectToTableParentIfNeeded(data: PasteData[], BlockManager: BlokModules['BlockManager']): void {
+    const currentBlock = BlockManager.currentBlock;
+    const isInsideTableCell = currentBlock?.holder?.closest('[data-blok-table-cell-blocks]');
+    const restricted = new Set(getRestrictedTools());
+    const hasRestrictedTools = data.some(item => restricted.has(item.tool));
+
+    if (!isInsideTableCell || !hasRestrictedTools || currentBlock === undefined) {
+      return;
+    }
+
+    const tableBlockHolder = currentBlock.holder
+      .closest('[data-blok-tool="table"]')
+      ?.closest('[data-blok-element]') as HTMLElement | null;
+
+    if (!tableBlockHolder) {
+      return;
+    }
+
+    BlockManager.setCurrentBlockByChildNode(tableBlockHolder);
+  }
+
+  /**
    * Insert paste data as blocks.
    */
   protected async insertPasteData(
@@ -82,7 +111,19 @@ export abstract class BasePasteHandler implements PasteHandler {
     const isMultipleItems = data.length > 1;
 
     if (isMultipleItems) {
+      this.redirectToTableParentIfNeeded(data, BlockManager);
+
       for (const [index, pasteData] of data.entries()) {
+        /**
+         * Force each pasted block into its own Yjs undo entry so that
+         * Ctrl+Z removes them one at a time.
+         *
+         * paste() wraps insert() in withAtomicOperation() which suppresses
+         * the normal stopCapturing() from currentBlockIndexValue changes.
+         * Without this, consecutive addBlock() calls within the 500ms
+         * captureTimeout get merged into a single undo entry.
+         */
+        this.Blok.YjsManager.stopCapturing();
         await this.insertBlock(pasteData, index === 0 && canReplaceCurrentBlock);
       }
 

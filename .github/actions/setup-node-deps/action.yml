@@ -1,26 +1,30 @@
-name: 'Setup Node.js and Dependencies'
-description: 'Sets up Node.js and installs Yarn dependencies with caching'
+name: "Setup Node.js and Dependencies"
+description: "Sets up Node.js and installs Yarn dependencies with caching"
 
 inputs:
   node-version:
-    description: 'Node.js version to use'
+    description: "Node.js version to use"
     required: false
-    default: '24'
+    default: "24"
 
 outputs:
   cache-hit:
-    description: 'Whether the Yarn cache was hit'
+    description: "Whether the Yarn cache was hit"
     value: ${{ steps.setup-node.outputs.cache-hit }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
+    - name: Enable Corepack
+      shell: bash
+      run: corepack enable
+
     - name: Setup Node.js
       id: setup-node
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        cache: 'yarn'
+        cache: "yarn"
 
     - name: Install dependencies
       shell: bash

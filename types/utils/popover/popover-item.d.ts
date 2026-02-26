@@ -161,6 +161,12 @@ export interface PopoverItemDefaultBaseParams {
   isDisabled?: boolean;
 
   /**
+   * True if item represents a destructive action (e.g. delete).
+   * Applies red text/icon color and red-tinted hover background.
+   */
+  isDestructive?: boolean;
+
+  /**
    * True if popover should close once item is activated
    */
   closeOnActivate?: boolean;

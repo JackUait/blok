@@ -41,5 +41,20 @@
   "a11y.movedDown": "Blok presunutý nadol na pozíciu {position} z {total}",
   "a11y.atTop": "Blok je na vrchu, nedá sa presunúť nahor",
   "a11y.atBottom": "Blok je na spodku, nedá sa presunúť nadol",
-  "tools.paragraph.placeholder": "Napíšte niečo alebo stlačte / pre výber"
+  "tools.paragraph.placeholder": "Napíšte niečo alebo stlačte / pre výber",
+  "tools.table.title": "Tabuľka",
+  "tools.table.clearSelection": "Vymazať",
+  "tools.table.copySelection": "Kopírovať",
+  "tools.table.headerColumn": "Stĺpec hlavičky",
+  "tools.table.insertColumnLeft": "Vložiť stĺpec vľavo",
+  "tools.table.insertColumnRight": "Vložiť stĺpec vpravo",
+  "tools.table.deleteColumn": "Odstrániť",
+  "tools.table.headerRow": "Riadok hlavičky",
+  "tools.table.insertRowAbove": "Vložiť riadok nad",
+  "tools.table.insertRowBelow": "Vložiť riadok pod",
+  "tools.table.deleteRow": "Odstrániť",
+  "tools.table.clickToAddRow": "Kliknutím pridáte nový riadok",
+  "tools.table.dragToAddRemoveRows": "Potiahnutím pridáte alebo odoberiete riadky",
+  "tools.table.clickToAddColumn": "Kliknutím pridáte nový stĺpec",
+  "tools.table.dragToAddRemoveColumns": "Potiahnutím pridáte alebo odoberiete stĺpce"
 }

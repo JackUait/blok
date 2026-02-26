@@ -20,6 +20,7 @@ import type {
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
+import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
 
 /**
  * Test implementation of PopoverAbstract for unit testing
@@ -115,6 +116,7 @@ const patchComposedPath = <T extends Event>(event: T, path: EventTarget[]): T =>
 describe('PopoverAbstract', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    PopoverRegistry.resetForTests();
   });
 
   afterEach(() => {
@@ -196,7 +198,7 @@ describe('PopoverAbstract', () => {
         throw new Error('Expected default item element to exist');
       }
 
-      const event = patchComposedPath(new Event('click'), [ element as EventTarget ]);
+      const event = patchComposedPath(new Event('click'), [element]);
 
       expect(popover.invokeGetTargetItem(event)).toBe(defaultItem);
     });
@@ -221,7 +223,7 @@ describe('PopoverAbstract', () => {
 
       const htmlRoot = htmlItem.getElement();
 
-      const event = patchComposedPath(new Event('click'), [ htmlRoot ]);
+      const event = patchComposedPath(new Event('click'), [htmlRoot]);
 
       expect(popover.invokeGetTargetItem(event)).toBe(htmlItem);
     });
@@ -434,6 +436,79 @@ describe('PopoverAbstract', () => {
     });
   });
 
+  describe('toggleItemHiddenByName()', () => {
+    it('hides items matching the given name', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'First', name: 'first', onActivate: vi.fn() },
+          { title: 'Table', name: 'table', onActivate: vi.fn() },
+        ],
+      });
+
+      popover.toggleItemHiddenByName('table', true);
+
+      const tableItem = popover.getItemsForTests()[1] as PopoverItemDefault;
+      const element = tableItem.getElement();
+
+      expect(element).toHaveAttribute(DATA_ATTR.hidden, 'true');
+    });
+
+    it('shows items matching the given name when isHidden is false', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'First', name: 'first', onActivate: vi.fn() },
+          { title: 'Table', name: 'table', onActivate: vi.fn() },
+        ],
+      });
+
+      // Hide then show
+      popover.toggleItemHiddenByName('table', true);
+      popover.toggleItemHiddenByName('table', false);
+
+      const tableItem = popover.getItemsForTests()[1] as PopoverItemDefault;
+      const element = tableItem.getElement();
+
+      expect(element).not.toHaveAttribute(DATA_ATTR.hidden);
+    });
+
+    it('toggles all items when multiple items share the same name', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Table 1', name: 'table', onActivate: vi.fn() },
+          { title: 'Other', name: 'other', onActivate: vi.fn() },
+          { title: 'Table 2', name: 'table', onActivate: vi.fn() },
+        ],
+      });
+
+      popover.toggleItemHiddenByName('table', true);
+
+      const items = popover.getItemsForTests();
+      const table1 = (items[0] as PopoverItemDefault).getElement();
+      const other = (items[1] as PopoverItemDefault).getElement();
+      const table2 = (items[2] as PopoverItemDefault).getElement();
+
+      expect(table1).toHaveAttribute(DATA_ATTR.hidden, 'true');
+      expect(other).not.toHaveAttribute(DATA_ATTR.hidden);
+      expect(table2).toHaveAttribute(DATA_ATTR.hidden, 'true');
+    });
+
+    it('does nothing when no items match the name', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'First', name: 'first', onActivate: vi.fn() },
+        ],
+      });
+
+      // Should not throw
+      popover.toggleItemHiddenByName('nonexistent', true);
+
+      const firstItem = popover.getItemsForTests()[0] as PopoverItemDefault;
+      const element = firstItem.getElement();
+
+      expect(element).not.toHaveAttribute(DATA_ATTR.hidden);
+    });
+  });
+
   describe('event listener wiring', () => {
     it('translate DOM click events into handleItemClick calls', () => {
       const popover = createPopover();
@@ -456,6 +531,63 @@ describe('PopoverAbstract', () => {
       itemElement?.dispatchEvent(event);
 
       expect(handleItemClickSpy).toHaveBeenCalledWith(firstItem);
+    });
+  });
+
+  describe('registry integration', () => {
+    it('show() registers with registry when root popover with trigger', () => {
+      const triggerElement = document.createElement('button');
+
+      document.body.appendChild(triggerElement);
+
+      const popover = createPopover({
+        trigger: triggerElement,
+        items: createDefaultItems(),
+      });
+
+      popover.show();
+
+      expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(true);
+    });
+
+    it('show() does NOT register when nested (nestingLevel > 0)', () => {
+      const popover = createPopover({
+        nestingLevel: 1,
+        items: createDefaultItems(),
+      });
+
+      popover.show();
+
+      expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(false);
+    });
+
+    it('show() does NOT register when no trigger', () => {
+      const popover = createPopover({
+        items: createDefaultItems(),
+      });
+
+      popover.show();
+
+      expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(false);
+    });
+
+    it('hide() unregisters from registry', () => {
+      const triggerElement = document.createElement('button');
+
+      document.body.appendChild(triggerElement);
+
+      const popover = createPopover({
+        trigger: triggerElement,
+        items: createDefaultItems(),
+      });
+
+      popover.show();
+
+      expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(true);
+
+      popover.hide();
+
+      expect(PopoverRegistry.instance.hasOpenPopovers()).toBe(false);
     });
   });
 });

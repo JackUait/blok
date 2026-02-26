@@ -1,11 +1,13 @@
 /**
- * Event emitted when blocks change
+ * Event emitted when blocks change.
+ *
+ * Most events carry a single `blockId`. The `batch-add` type carries
+ * multiple IDs so that parent and child blocks can be created together
+ * before any lifecycle hooks fire.
  */
-export interface BlockChangeEvent {
-  type: 'add' | 'remove' | 'update' | 'move';
-  blockId: string;
-  origin: TransactionOrigin;
-}
+export type BlockChangeEvent =
+  | { type: 'add' | 'remove' | 'update' | 'move'; blockId: string; origin: TransactionOrigin }
+  | { type: 'batch-add'; blockIds: string[]; origin: TransactionOrigin };
 
 /**
  * Transaction origin types.

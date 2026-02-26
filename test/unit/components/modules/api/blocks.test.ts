@@ -468,6 +468,24 @@ describe('BlocksAPI', () => {
 
       logSpy.mockRestore();
     });
+
+    it('handles element without tagName property gracefully', () => {
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [] });
+      const logSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+      // Create an element-like object without tagName (simulates text node or malformed element)
+      const elementWithoutTagName = {} as HTMLElement;
+
+      blockManager.getBlock.mockReturnValueOnce(undefined);
+
+      expect(blocksApi.getBlockByElement(elementWithoutTagName)).toBeUndefined();
+      expect(logSpy).toHaveBeenCalledWith(
+        'There is no block corresponding to element <unknown>',
+        'warn'
+      );
+
+      logSpy.mockRestore();
+    });
   });
 
   describe('block ordering', () => {
@@ -498,22 +516,51 @@ describe('BlocksAPI', () => {
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('inserts default block when last block is removed', async () => {
+    it('does not insert default block from delete — removeBlock handles it', async () => {
       const block = createBlockStub({ id: 'only' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
+      blockManager.removeBlock.mockImplementationOnce(() => {
+        // Simulate removeBlock(addLastBlock=true): removes block then adds default
+        blockManager.blocks = [];
+        blockManager.currentBlock = null;
+        // In real code, removeBlock inserts a default block synchronously.
+        // The api.blocks.delete() should NOT also insert one.
+      });
+
+      await blocksApi.delete(0);
+
+      // delete() should NOT call insert — removeBlock handles the empty-store case
+      expect(blockManager.insert).not.toHaveBeenCalled();
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Toolbar.close).toHaveBeenCalled();
+    });
+
+    it('does not insert orphan block when delete microtask runs after clear repopulates store', async () => {
+      /**
+       * Regression: when table.destroy() fires void api.blocks.delete() for cell blocks,
+       * the await in delete() defers the blocks.length check to a microtask. If clear()
+       * has already repopulated the store by then, the check must not insert a default block.
+       */
+      const cellBlock = createBlockStub({ id: 'cell-para' });
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ cellBlock ] });
+
+      // Simulate removeBlock clearing the cell block
       blockManager.removeBlock.mockImplementationOnce(() => {
         blockManager.blocks = [];
         blockManager.currentBlock = null;
       });
 
-      await blocksApi.delete(0);
+      // Fire delete without awaiting (matches void this.api.blocks.delete() in deleteBlocks)
+      const deletePromise = blocksApi.delete(0);
 
-      expect(blockManager.insert).toHaveBeenCalledTimes(1);
-      expect(blockManager.blocks).toHaveLength(1);
-      expect(blockManager.blocks[0].name).toBe('paragraph');
-      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
-      expect(blok.Toolbar.close).toHaveBeenCalled();
+      // Simulate clear() + render() repopulating the store before the microtask runs
+      blockManager.blocks = [createBlockStub({ id: 'new-1' }), createBlockStub({ id: 'new-2' })];
+
+      await deletePromise;
+
+      // delete() must NOT insert a default block — the store is no longer empty
+      expect(blockManager.insert).not.toHaveBeenCalled();
     });
 
     it('logs warning when block removal throws', async () => {
@@ -804,6 +851,124 @@ describe('BlocksAPI', () => {
       expect(() => {
         blocksApi.methods.splitBlock('missing', { text: 'a' }, 'paragraph', { text: 'b' }, 1);
       }).toThrow('Block with id "missing" not found');
+    });
+  });
+
+  describe('insert with table cell restrictions', () => {
+    it('converts header to paragraph when inserting in table cell', () => {
+      const cellBlocks = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const mockBlock: BlockStub = {
+        id: 'block-1',
+        holder,
+        name: 'paragraph',
+        stretched: false,
+        data: {},
+      };
+
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock);
+      blockManager.currentBlockIndex = 0;
+
+      const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
+        id: 'new-block',
+      } as BlockStub);
+
+      blocksApi.insert('header', { text: 'Hello' }, {}, 0);
+
+      expect(insertSpy).toHaveBeenCalledWith({
+        id: undefined,
+        tool: 'paragraph',
+        data: { text: 'Hello' },
+        index: 0,
+        needToFocus: undefined,
+        replace: undefined,
+      });
+
+      cellBlocks.remove();
+    });
+
+    it('converts table to paragraph when inserting in table cell', () => {
+      const cellBlocks = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const mockBlock: BlockStub = {
+        id: 'block-1',
+        holder,
+        name: 'paragraph',
+        stretched: false,
+        data: {},
+      };
+
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock);
+      blockManager.currentBlockIndex = 0;
+
+      const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
+        id: 'new-block',
+      } as BlockStub);
+
+      blocksApi.insert('table', { content: [] }, {}, 0);
+
+      expect(insertSpy).toHaveBeenCalledWith({
+        id: undefined,
+        tool: 'paragraph',
+        data: { content: [] },
+        index: 0,
+        needToFocus: undefined,
+        replace: undefined,
+      });
+
+      cellBlocks.remove();
+    });
+
+    it('allows header insertion outside table cell', () => {
+      const holder = document.createElement('div');
+
+      document.body.appendChild(holder);
+
+      const mockBlock: BlockStub = {
+        id: 'block-1',
+        holder,
+        name: 'paragraph',
+        stretched: false,
+        data: {},
+      };
+
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blockManager.getBlockByIndex.mockReturnValue(mockBlock);
+      blockManager.currentBlockIndex = 0;
+
+      const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
+        id: 'new-block',
+      } as BlockStub);
+
+      blocksApi.insert('header', { text: 'Hello' }, {}, 0);
+
+      expect(insertSpy).toHaveBeenCalledWith({
+        id: undefined,
+        tool: 'header',
+        data: { text: 'Hello' },
+        index: 0,
+        needToFocus: undefined,
+        replace: undefined,
+      });
+
+      holder.remove();
     });
   });
 });

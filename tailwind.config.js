@@ -50,6 +50,8 @@ export default {
         'item-hover-bg': '#f8f8f8',
         'item-confirm-bg': '#e24a4a',
         'item-confirm-hover-bg': '#ce4343',
+        'item-destructive-text': '#e24a4a',
+        'item-destructive-hover-bg': 'rgba(226, 74, 74, 0.08)',
 
         // Notifier colors (from notifier/index.css)
         'notify-success-bg': '#fafffe',

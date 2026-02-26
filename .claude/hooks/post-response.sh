@@ -28,7 +28,7 @@ fi
 
 # Send notification that agent is done
 if [ "$NOTIFICATION_ENABLED" = "1" ]; then
-    osascript -e 'display notification "Agent finished - awaiting your input" with title "Claude Code" sound name "Glass"' 2>/dev/null || true
+    osascript -e 'display notification "Agent finished - awaiting your input" with title "Claude Code"' 2>/dev/null || true
     debug_log "Agent complete notification sent"
 fi
 

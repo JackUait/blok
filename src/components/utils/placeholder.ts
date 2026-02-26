@@ -57,6 +57,22 @@ export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
 ];
 
 /**
+ * Placeholder classes that show when the editor is empty (ancestor has data-blok-empty="true").
+ * Shows placeholder without requiring focus — used for initial empty-state hint.
+ * Uses data-blok-placeholder-active attribute for the placeholder text.
+ */
+export const PLACEHOLDER_EMPTY_EDITOR_CLASSES: string[] = [
+  '[[data-blok-empty=true]_&]:empty:before:pointer-events-none',
+  '[[data-blok-empty=true]_&]:empty:before:text-gray-text',
+  '[[data-blok-empty=true]_&]:empty:before:cursor-text',
+  '[[data-blok-empty=true]_&]:empty:before:content-[attr(data-blok-placeholder-active)]',
+  '[[data-blok-empty=true]_&[data-empty=true]]:before:pointer-events-none',
+  '[[data-blok-empty=true]_&[data-empty=true]]:before:text-gray-text',
+  '[[data-blok-empty=true]_&[data-empty=true]]:before:cursor-text',
+  '[[data-blok-empty=true]_&[data-empty=true]]:before:content-[attr(data-blok-placeholder-active)]',
+];
+
+/**
  * Check if an element's content is empty
  *
  * @param element - The element to check

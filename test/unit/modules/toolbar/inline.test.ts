@@ -129,6 +129,7 @@ describe('InlineToolbar', () => {
     };
     Toolbar: {
       close: ReturnType<typeof vi.fn>;
+      hideBlockActions: ReturnType<typeof vi.fn>;
     };
     I18n: {
       t: ReturnType<typeof vi.fn>;
@@ -280,6 +281,7 @@ describe('InlineToolbar', () => {
       },
       Toolbar: {
         close: vi.fn(),
+        hideBlockActions: vi.fn(),
       },
       I18n: {
         t: vi.fn((key: string) => key),
@@ -399,7 +401,7 @@ describe('InlineToolbar', () => {
       expect(inlineToolbar.opened).toBe(false);
     });
 
-    it('should open toolbar and close main toolbar when allowed', async () => {
+    it('should open toolbar and hide main toolbar block actions when allowed', async () => {
       // Mock the open method to avoid actual popover creation
       const openSpy = vi.spyOn(inlineToolbar as unknown as { open: () => Promise<void> }, 'open').mockImplementation(async () => {
         (inlineToolbar as unknown as { opened: boolean }).opened = true;
@@ -408,8 +410,8 @@ describe('InlineToolbar', () => {
       await inlineToolbar.tryToShow();
 
       expect(openSpy).toHaveBeenCalled();
-      expect(mockBlok.Toolbar.close).toHaveBeenCalled();
-      // Verify the main toolbar close was called (observable behavior on the Blok module)
+      expect(mockBlok.Toolbar.hideBlockActions).toHaveBeenCalled();
+      // Verify the main toolbar's block actions were hidden (not the whole toolbar closed)
       // and the inline toolbar opened state changed
       expect(inlineToolbar.opened).toBe(true);
     });

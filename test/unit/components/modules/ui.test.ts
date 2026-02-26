@@ -8,6 +8,7 @@ import {
 import { BlokMobileLayoutToggled } from "../../../../src/components/events";
 import * as Dom from "../../../../src/components/dom";
 import { mobileScreenBreakpoint } from "../../../../src/components/utils";
+import { SelectionUtils } from "../../../../src/components/selection/index";
 import type { BlokConfig } from "../../../../types";
 
 const fakeCssContent = ".mock-style{}";
@@ -86,6 +87,7 @@ const createBlokStub = (): UI["Blok"] => {
     },
     Caret: {
       setToBlock: vi.fn(),
+      setToTheLastBlock: vi.fn(),
       positions: {
         START: "start",
         END: "end",
@@ -161,10 +163,14 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
   ui.state = blok;
 
   if (options.attachNodes !== false) {
+    const bottomZone = document.createElement("div");
+
+    wrapper.appendChild(bottomZone);
     (ui as { nodes: UI["nodes"] }).nodes = {
       holder,
       wrapper,
       redactor,
+      bottomZone,
     };
   }
 
@@ -253,12 +259,40 @@ describe("UI module", () => {
 
       expect(nodes.redactor).toBeInstanceOf(HTMLElement);
       expect(nodes.redactor?.getAttribute("data-blok-testid")).toBe("redactor");
-      expect(nodes.redactor?.style.paddingBottom).toBe(
-        `${ui["config"].minHeight}px`,
-      );
+      // paddingBottom removed — bottom zone uses dedicated element
+      expect(nodes.redactor?.style.paddingBottom).toBe("");
+      const bottomZone = nodes.wrapper?.querySelector("[data-blok-bottom-zone]");
+      expect(bottomZone).toBeInstanceOf(HTMLElement);
 
       expect(holder.contains(nodes.wrapper)).toBe(true);
       expect(bindSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("creates bottomZone element as sibling of redactor in wrapper", () => {
+      const { ui } = createUI({ attachNodes: false });
+
+      (ui as unknown as { make: () => void }).make();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+
+      // bottomZone should exist as a child of wrapper (after redactor)
+      const bottomZone = nodes.wrapper.querySelector("[data-blok-bottom-zone]");
+      expect(bottomZone).toBeInstanceOf(HTMLElement);
+      expect(bottomZone?.getAttribute("data-blok-testid")).toBe("bottom-zone");
+
+      // bottomZone should be after redactor in DOM order
+      const children = Array.from(nodes.wrapper.children);
+      const redactorIndex = children.indexOf(nodes.redactor);
+      const bottomZoneIndex = children.indexOf(bottomZone as HTMLElement);
+      expect(bottomZoneIndex).toBeGreaterThan(redactorIndex);
+
+      // redactor should NOT have paddingBottom anymore
+      expect(nodes.redactor.style.paddingBottom).toBe("");
+
+      // bottomZone should have min-height from config
+      expect((bottomZone as HTMLElement).style.minHeight).toBe(
+        `${ui["config"].minHeight}px`,
+      );
     });
 
     it("appends styles with nonce only once", () => {
@@ -771,6 +805,122 @@ describe("UI module", () => {
       // Verify observable behavior: listeners were cleaned up
       expect(listenersRemoved.keyboard).toBe(true);
       expect(listenersRemoved.blockHover).toBe(true);
+    });
+  });
+
+  describe("bottom zone click handler", () => {
+    it("inserts a new block and opens toolbar when last block is non-empty", () => {
+      const { ui, blok, wrapper } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      wrapper.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      // Make last block non-empty and default
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+
+      // Bind the listeners (which attaches click handler to bottomZone)
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      // Simulate click
+      bottomZone.click();
+
+      expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(
+        blok.BlockManager.lastBlock
+      );
+      expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not insert when last block is empty default block", () => {
+      const { ui, blok, wrapper } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      wrapper.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: true,
+          holder: document.createElement("div"),
+        },
+      });
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.click();
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(
+        blok.BlockManager.lastBlock
+      );
+      expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not fire when block selection is active", () => {
+      const { ui, blok, wrapper } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      wrapper.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+      Object.assign(blok.BlockSelection, { anyBlockSelected: true });
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.click();
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("does not fire when selection is not collapsed", () => {
+      vi.spyOn(SelectionUtils, "isCollapsed", "get").mockReturnValue(false);
+
+      const { ui, blok, wrapper } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      wrapper.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.click();
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
     });
   });
 });

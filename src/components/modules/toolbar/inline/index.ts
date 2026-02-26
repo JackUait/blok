@@ -188,7 +188,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     await this.openingPromise;
     this.openingPromise = null;
 
-    this.Blok.Toolbar.close();
+    this.Blok.Toolbar.hideBlockActions();
   }
 
   /**

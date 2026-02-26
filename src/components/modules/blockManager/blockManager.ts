@@ -7,6 +7,7 @@
 import type { BlockToolData, OutputBlockData, PasteEvent } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
+import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { Module } from '../../__module';
@@ -14,7 +15,6 @@ import type { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
-import { Dom as $ } from '../../dom';
 import { BlockChanged } from '../../events';
 import { generateBlockId } from '../../utils';
 
@@ -144,6 +144,14 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Returns true when a Yjs sync operation (undo/redo) is in progress.
+   * Used by the Blocks API to expose sync state to tools.
+   */
+  public get isSyncingFromYjs(): boolean {
+    return this.yjsSync.isSyncingFromYjs;
+  }
+
+  /**
    * Index of current working block
    * @type {number}
    */
@@ -185,6 +193,12 @@ export class BlockManager extends Module {
    * Yjs synchronization handler
    */
   private yjsSync!: BlockYjsSync;
+
+  /**
+   * Set of parent block IDs awaiting deferred Yjs sync.
+   * Batched via queueMicrotask to avoid multiple syncs during batch operations.
+   */
+  private parentsSyncScheduled = new Set<string>();
 
   /**
    * Operations handler for state changes
@@ -261,8 +275,12 @@ export class BlockManager extends Module {
       this.bindBlockEvents.bind(this)
     );
 
-    // Initialize hierarchy
-    this.hierarchy = new BlockHierarchy(this.repository);
+    // Initialize hierarchy with callback to sync parent data to Yjs
+    this.hierarchy = new BlockHierarchy(this.repository, (parentId) => {
+      if (!this.yjsSync.isSyncingFromYjs) {
+        this.scheduleParentSync(parentId);
+      }
+    });
 
     // Initialize operations first (before yjsSync) to allow circular dependency resolution
     this.operations = new BlockOperations(
@@ -307,6 +325,12 @@ export class BlockManager extends Module {
         },
         replaceBlock: (index, newBlock) => {
           this.blocksStore.replace(index, newBlock);
+        },
+        onBlockRemoved: (block, index) => {
+          this.blockDidMutated(BlockRemovedMutationType, block, { index });
+        },
+        onBlockAdded: (block, index) => {
+          this.blockDidMutated(BlockAddedMutationType, block, { index });
         },
       },
       this.blocksStore
@@ -412,9 +436,12 @@ export class BlockManager extends Module {
    * @param index - index where to insert
    */
   public insertMany(blocks: Block[], index = 0): void {
-    this.blocksStore.insertMany(blocks, index);
-
-    // Load blocks into Yjs with 'load' origin (not tracked by undo manager)
+    // Load blocks into Yjs BEFORE adding to the store.
+    // blocksStore.insertMany() triggers rendered() on each block, which may
+    // create nested blocks (e.g., table cell paragraphs) via api.blocks.insert().
+    // Those nested inserts sync to Yjs. If fromJSON() ran after, it would wipe
+    // them (fromJSON replaces the entire Yjs array). Running fromJSON first
+    // ensures nested blocks created during rendered() persist in Yjs.
     const blockDataArray: OutputBlockData<string, Record<string, unknown>>[] = blocks.map(block => {
       const tunes = block.preservedTunes;
 
@@ -429,6 +456,8 @@ export class BlockManager extends Module {
     });
 
     this.Blok.YjsManager.fromJSON(blockDataArray);
+
+    this.blocksStore.insertMany(blocks, index);
 
     // Apply indentation for blocks with parentId (hierarchical structure)
     blocks.forEach(block => {
@@ -627,6 +656,30 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Execute a function with stopCapturing suppressed.
+   * All block operations within fn are kept in the same undo group.
+   * Used by tools that perform multi-step structural operations
+   * (e.g., table add row = multiple block inserts).
+   */
+  public transactForTool(fn: () => void): void {
+    this.Blok.YjsManager.stopCapturing();
+
+    const prevSuppress = this.operations.suppressStopCapturing;
+
+    this.operations.suppressStopCapturing = true;
+
+    try {
+      fn();
+    } finally {
+      this.operations.suppressStopCapturing = prevSuppress;
+
+      requestAnimationFrame(() => {
+        this.Blok.YjsManager.stopCapturing();
+      });
+    }
+  }
+
+  /**
    * Splits a block by updating the current block's data and inserting a new block.
    * Both operations are grouped into a single undo entry.
    */
@@ -672,6 +725,16 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Walks up the parentId chain and returns the top-level (root) block.
+   * If the block has no parent, returns it as-is.
+   * @param block - the block to resolve
+   * @returns {Block} the root ancestor block
+   */
+  public resolveToRootBlock(block: Block): Block {
+    return this.repository.resolveToRootBlock(block);
+  }
+
+  /**
    * Returns the depth (nesting level) of a block in the hierarchy.
    * @param block - the block to get depth for
    * @returns {number} - depth level (0 for root, 1 for first level children, etc.)
@@ -710,17 +773,13 @@ export class BlockManager extends Module {
    */
   public setCurrentBlockByChildNode(childNode: Node): Block | undefined {
     /**
-     * If node is Text TextNode
+     * Find the block whose holder contains this child node.
+     * Uses the blocks array (not DOM children of the working area)
+     * so that blocks inside table cells are found correctly.
      */
-    const normalizedChildNode = ($.isElement(childNode) ? childNode : childNode.parentNode) as HTMLElement | null;
+    const block = this.repository.getBlockByChildNode(childNode);
 
-    if (!normalizedChildNode) {
-      return undefined;
-    }
-
-    const firstLevelBlock = normalizedChildNode.closest(`[${DATA_ATTR.element}]`);
-
-    if (!firstLevelBlock) {
+    if (!block) {
       return undefined;
     }
 
@@ -728,7 +787,7 @@ export class BlockManager extends Module {
      * Support multiple Blok instances,
      * by checking whether the found block belongs to the current instance
      */
-    const blokWrapper = firstLevelBlock.closest(`[${DATA_ATTR.editor}]`);
+    const blokWrapper = block.holder.closest(`[${DATA_ATTR.editor}]`);
     const wrapper = this.Blok.UI.nodes.wrapper;
     const isBlockBelongsToCurrentInstance = blokWrapper?.isEqualNode(wrapper);
 
@@ -736,23 +795,11 @@ export class BlockManager extends Module {
       return undefined;
     }
 
-    /**
-     * Update current Block's index
-     */
-    if (!(firstLevelBlock instanceof HTMLElement)) {
-      return undefined;
-    }
+    this.currentBlockIndex = this.repository.getBlockIndex(block);
 
-    this.currentBlockIndex = this.blocksStore.nodes.indexOf(firstLevelBlock);
+    block.updateCurrentInput();
 
-    /**
-     * Update current block active input
-     */
-    const currentBlock = this.currentBlock;
-
-    currentBlock?.updateCurrentInput();
-
-    return currentBlock;
+    return block;
   }
 
   /**
@@ -931,6 +978,33 @@ export class BlockManager extends Module {
     }
 
     return block;
+  }
+
+  /**
+   * Schedule a deferred sync of a parent block's data to Yjs.
+   * Uses queueMicrotask to batch multiple parent changes (e.g. when initializing
+   * all cells in a new table row) into a single flush.
+   */
+  private scheduleParentSync(parentId: string): void {
+    if (this.parentsSyncScheduled.size === 0) {
+      queueMicrotask(() => this.flushParentSyncs());
+    }
+    this.parentsSyncScheduled.add(parentId);
+  }
+
+  /**
+   * Flush all scheduled parent syncs to Yjs.
+   * Called from the microtask scheduled by scheduleParentSync.
+   */
+  private flushParentSyncs(): void {
+    for (const parentId of this.parentsSyncScheduled) {
+      const parent = this.repository.getBlockById(parentId);
+
+      if (parent !== undefined) {
+        void this.syncBlockDataToYjs(parent);
+      }
+    }
+    this.parentsSyncScheduled.clear();
   }
 
   /**

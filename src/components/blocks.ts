@@ -125,14 +125,10 @@ export class Blocks {
     const block = this.blocks.splice(fromIndex, 1)[0];
 
     if (!skipDOM) {
-      // manipulate DOM
-      const prevIndex = toIndex - 1;
-      const previousBlockIndex = Math.max(0, prevIndex);
-      const previousBlock = this.blocks[previousBlockIndex];
+      const previousBlockIndex = Math.max(0, toIndex - 1);
+      const position: InsertPosition = toIndex > 0 ? 'afterend' : 'beforebegin';
 
-      const position = toIndex > 0 ? 'afterend' : 'beforebegin';
-
-      this.insertToDOM(block, position, previousBlock);
+      this.moveHolderInDOM(block, this.blocks[previousBlockIndex].holder, position);
     }
 
     // move in array
@@ -151,7 +147,7 @@ export class Blocks {
    * @param {Block} block — Block to insert
    * @param {boolean} replace — it true, replace block on given index
    */
-  public insert(index: number, block: Block, replace = false): void {
+  public insert(index: number, block: Block, replace = false, appendToWorkingArea = false): void {
     if (!this.length) {
       this.push(block);
 
@@ -165,17 +161,34 @@ export class Blocks {
 
       /**
        * Call REMOVED lifecycle hook first, then destroy to unsubscribe from
-       * mutation events, then remove DOM element. This prevents spurious
-       * 'block-changed' events from being fired when the DOM element is removed.
+       * mutation events. Use replaceWith() to swap DOM elements in-place,
+       * preserving the replaced block's exact DOM position. This prevents
+       * the new block from being misplaced when the previous block in the
+       * array is nested inside another element (e.g., a table cell).
        */
       blockToReplace.call(BlockToolAPI.REMOVED);
       blockToReplace.destroy();
-      blockToReplace.holder.remove();
+      blockToReplace.holder.replaceWith(block.holder);
+
+      this.blocks.splice(insertIndex, 1, block);
+      block.call(BlockToolAPI.RENDERED);
+
+      return;
     }
 
-    const deleteCount = replace ? 1 : 0;
+    this.blocks.splice(insertIndex, 0, block);
 
-    this.blocks.splice(insertIndex, deleteCount, block);
+    /**
+     * When appendToWorkingArea is true, always append to the working area
+     * as a direct child. This prevents blocks from being placed inside
+     * nested containers (e.g., table cells) when the previous block in
+     * the flat array happens to be nested.
+     */
+    if (appendToWorkingArea) {
+      this.insertToDOM(block);
+
+      return;
+    }
 
     if (insertIndex > 0) {
       const previousBlock = this.blocks[insertIndex - 1];
@@ -321,18 +334,122 @@ export class Blocks {
   }
 
   /**
+   * Add a block to the internal array at the given index WITHOUT inserting
+   * its holder into the DOM. Use {@link activateBlock} later to place it
+   * into the DOM and fire the RENDERED lifecycle hook.
+   *
+   * This is used during batch-add (undo of hierarchical blocks) so that all
+   * blocks exist in the array before any lifecycle hooks run.
+   */
+  public addToArray(index: number, block: Block): void {
+    const insertIndex = index > this.length ? this.length : index;
+
+    this.blocks.splice(insertIndex, 0, block);
+  }
+
+  /**
+   * Activate a block that was previously added via {@link addToArray}.
+   *
+   * If the block's holder already has a parent element (e.g. a parent tool's
+   * `rendered()` moved it into a cell container), only the RENDERED
+   * lifecycle hook is called. Otherwise the holder is positioned in the
+   * working area relative to the adjacent block in the array.
+   */
+  public activateBlock(block: Block): void {
+    if (block.holder.parentElement !== null) {
+      block.call(BlockToolAPI.RENDERED);
+
+      return;
+    }
+
+    const index = this.blocks.indexOf(block);
+
+    if (index > 0) {
+      const previousBlock = this.blocks[index - 1];
+
+      this.insertToDOM(block, 'afterend', previousBlock);
+
+      return;
+    }
+
+    // At index 0: find the first subsequent block whose holder is already
+    // in the DOM and insert before it, matching the insert() method logic.
+    const nextMounted = this.blocks.slice(index + 1).find(
+      (b) => b.holder.parentElement !== null
+    );
+
+    if (nextMounted) {
+      this.insertToDOM(block, 'beforebegin', nextMounted);
+
+      return;
+    }
+
+    this.insertToDOM(block);
+  }
+
+  /**
    * Insert new Block into DOM
    * @param {Block} block - Block to insert
    * @param {InsertPosition} position — insert position (if set, will use insertAdjacentElement)
    * @param {Block} target — Block related to position
    */
   private insertToDOM(block: Block, position?: InsertPosition, target?: Block): void {
-    if (position && target !== undefined) {
-      target.holder.insertAdjacentElement(position, block.holder);
+    if (!position || target === undefined) {
+      this.workingArea.appendChild(block.holder);
+      block.call(BlockToolAPI.RENDERED);
+
+      return;
+    }
+
+    const referenceNode = this.findWorkingAreaChild(target.holder);
+
+    if (referenceNode !== null) {
+      referenceNode.insertAdjacentElement(position, block.holder);
     } else {
       this.workingArea.appendChild(block.holder);
     }
 
     block.call(BlockToolAPI.RENDERED);
+  }
+
+  /**
+   * Walk from an element up to find the ancestor that is a direct child of workingArea.
+   * If the element itself is a direct child, returns the element.
+   * Returns null if the element is not inside workingArea.
+   *
+   * @param element - Starting element to walk up from
+   * @returns Direct child of workingArea, or null
+   */
+  /**
+   * Move a block's holder in the DOM relative to a reference element.
+   * If the reference is nested inside a container (e.g. a table cell),
+   * walks up to find the workingArea-level ancestor and inserts relative to that.
+   *
+   * @param block - Block whose holder to move
+   * @param referenceHolder - The reference element to position relative to
+   * @param position - Where to insert relative to the reference
+   */
+  private moveHolderInDOM(block: Block, referenceHolder: Element, position: InsertPosition): void {
+    const referenceNode = this.findWorkingAreaChild(referenceHolder);
+
+    if (referenceNode !== null) {
+      referenceNode.insertAdjacentElement(position, block.holder);
+    } else {
+      this.workingArea.appendChild(block.holder);
+    }
+
+    block.call(BlockToolAPI.RENDERED);
+  }
+
+  private findWorkingAreaChild(element: Element): Element | null {
+    if (element.parentElement === this.workingArea) {
+      return element;
+    }
+
+    if (element.parentElement === null) {
+      return null;
+    }
+
+    return this.findWorkingAreaChild(element.parentElement);
   }
 }

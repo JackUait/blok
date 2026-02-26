@@ -3,6 +3,9 @@ import * as Y from 'yjs';
 import { BlockObserver } from '../../../../../src/components/modules/yjs/block-observer';
 import type { BlockChangeEvent } from '../../../../../src/components/modules/yjs/types';
 
+type SingleBlockEvent = Extract<BlockChangeEvent, { blockId: string }>;
+type BatchBlockEvent = Extract<BlockChangeEvent, { blockIds: string[] }>;
+
 const createBlockObserver = (): BlockObserver => {
   return new BlockObserver();
 };
@@ -78,7 +81,7 @@ describe('BlockObserver', () => {
         yblocks.push([yblock]);
       }, 'local');
 
-      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
       expect(event.type).toBe('add');
       expect(event.blockId).toBe('b1');
@@ -103,7 +106,7 @@ describe('BlockObserver', () => {
         yblocks.delete(0);
       }, 'local');
 
-      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
       expect(event.type).toBe('remove');
       expect(event.blockId).toBe('b1');
@@ -143,7 +146,7 @@ describe('BlockObserver', () => {
         yblocks.insert(1, [newYblock]);
       }, 'local');
 
-      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
       expect(event.type).toBe('move');
       expect(event.blockId).toBe('b1');
@@ -171,7 +174,7 @@ describe('BlockObserver', () => {
         ydata.set('text', 'Updated');
       }, 'local');
 
-      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
       expect(event.type).toBe('update');
       expect(event.blockId).toBe('b1');
@@ -261,8 +264,8 @@ describe('BlockObserver', () => {
       expect(yblocks.get(0)?.get('id')).toBe('b1');
 
       // Verify both callbacks received the same event data
-      const event1 = callback1.mock.calls[0]?.[0] as BlockChangeEvent;
-      const event2 = callback2.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event1 = callback1.mock.calls[0]?.[0] as SingleBlockEvent;
+      const event2 = callback2.mock.calls[0]?.[0] as SingleBlockEvent;
       expect(event1.type).toBe('add');
       expect(event2.type).toBe('add');
       expect(event1.blockId).toBe('b1');
@@ -299,8 +302,8 @@ describe('BlockObserver', () => {
       expect(callback3).toHaveBeenCalled();
 
       // Verify the remaining callbacks received the correct event data
-      const event2 = callback2.mock.calls[0]?.[0] as BlockChangeEvent;
-      const event3 = callback3.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event2 = callback2.mock.calls[0]?.[0] as SingleBlockEvent;
+      const event3 = callback3.mock.calls[0]?.[0] as SingleBlockEvent;
       expect(event2.type).toBe('add');
       expect(event3.type).toBe('add');
       expect(event2.blockId).toBe('b1');
@@ -339,7 +342,7 @@ describe('BlockObserver', () => {
 
       const moveEvent = callback.mock.calls.find(
         (call) => (call[0] as BlockChangeEvent)?.type === 'move'
-      )?.[0] as BlockChangeEvent;
+      )?.[0] as SingleBlockEvent;
 
       expect(moveEvent).toBeDefined();
       expect(moveEvent.type).toBe('move');
@@ -464,7 +467,7 @@ describe('BlockObserver', () => {
         ytunes.set('alignment', 'center');
       }, 'local');
 
-      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
       expect(event.type).toBe('update');
       expect(event.blockId).toBe('b1');
     });
@@ -493,8 +496,60 @@ describe('BlockObserver', () => {
         ydata.set('text', 'Updated');
       }, 'local');
 
-      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
       expect(event.blockId).toBe('b1');
+    });
+  });
+
+  describe('batch-add events', () => {
+    it('emits batch-add when multiple blocks are added in a single transaction', () => {
+      const callback = vi.fn();
+      observer.onBlocksChanged(callback);
+
+      ydoc.transact(() => {
+        const table = new Y.Map<unknown>();
+        table.set('id', 'table-1');
+        table.set('type', 'table');
+        table.set('data', new Y.Map<unknown>());
+
+        const child1 = new Y.Map<unknown>();
+        child1.set('id', 'child-1');
+        child1.set('type', 'paragraph');
+        child1.set('data', new Y.Map<unknown>());
+        child1.set('parentId', 'table-1');
+
+        const child2 = new Y.Map<unknown>();
+        child2.set('id', 'child-2');
+        child2.set('type', 'paragraph');
+        child2.set('data', new Y.Map<unknown>());
+        child2.set('parentId', 'table-1');
+
+        yblocks.push([table, child1, child2]);
+      }, 'local');
+
+      // Should emit a single batch-add event instead of individual add events
+      expect(callback).toHaveBeenCalledTimes(1);
+      const event = callback.mock.calls[0]?.[0] as BatchBlockEvent;
+      expect(event.type).toBe('batch-add');
+      expect(event.blockIds).toEqual(['table-1', 'child-1', 'child-2']);
+    });
+
+    it('emits regular add for a single block', () => {
+      const callback = vi.fn();
+      observer.onBlocksChanged(callback);
+
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'single-1');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
+      expect(event.type).toBe('add');
+      expect(event.blockId).toBe('single-1');
     });
   });
 
@@ -555,7 +610,7 @@ describe('BlockObserver', () => {
 
       // Verify the event was emitted with correct data
       expect(callback).toHaveBeenCalled();
-      const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
       expect(event.type).toBe('remove');
       expect(event.blockId).toBe('b1');
     });
@@ -603,7 +658,12 @@ describe('BlockObserver', () => {
       expect(eventTypes.every((type) => type === 'add')).toBe(true);
 
       // Verify specific events contain correct block IDs
-      const blockIds = callback.mock.calls.map((call) => (call[0] as BlockChangeEvent).blockId);
+      const blockIds = callback.mock.calls.map((call) => {
+        const event = call[0] as BlockChangeEvent;
+
+        return event.type === 'batch-add' ? event.blockIds : [event.blockId];
+      }).flat();
+
       for (let i = 0; i < 10; i++) {
         expect(blockIds).toContain(`b${i}`);
       }

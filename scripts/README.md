@@ -85,55 +85,6 @@ open performance-dashboard/index.html
 - Test count over time
 - Slowest tests table
 
-## Package Verification
-
-### [`verify-published-package.mjs`](./verify-published-package.mjs)
-
-Verifies a published or local package is correctly built and functional.
-
-**Usage:**
-```bash
-# Verify published package
-yarn verify:package
-
-# Verify local build
-yarn verify:package:local
-
-# Verify specific version
-node scripts/verify-published-package.mjs --version 0.4.1 --verbose
-```
-
-**Checks:**
-- Package structure and files
-- Type definitions
-- Bundle sizes (reference values)
-- Import/require functionality
-- Exports configuration
-
-### [`verify-version.mjs`](./verify-version.mjs)
-
-Verifies version consistency across package files.
-
-**Usage:**
-```bash
-yarn verify:version
-```
-
-## Publishing
-
-### [`unpublish-package.mjs`](./unpublish-package.mjs)
-
-Safely unpublishes a package version from npm (used by rollback automation).
-
-**Usage:**
-```bash
-# Interactive mode
-yarn unpublish
-
-# Direct unpublish (dangerous!)
-node scripts/unpublish-package.mjs --version 0.4.1 --force
-```
-
 ## Internationalization
 
 ### [`i18n/check-translations.mjs`](./i18n/check-translations.mjs)
@@ -152,20 +103,8 @@ scripts/
 ├── README.md                           # This file
 ├── analyze-performance.mjs            # Performance metrics analyzer
 ├── generate-performance-dashboard.mjs # Performance dashboard generator
-├── verify-published-package.mjs       # Package verification
-├── verify-version.mjs                 # Version consistency check
-├── unpublish-package.mjs              # Package unpublishing
-├── i18n/
-│   └── check-translations.mjs         # Translation checker
-└── verify-package/
-    ├── checks/                        # Package verification checks
-    │   ├── bundle-size.mjs           # Bundle size check
-    │   ├── exports.mjs               # Export configuration check
-    │   ├── imports.mjs               # Import functionality check
-    │   ├── package-structure.mjs     # File structure check
-    │   └── types.mjs                 # Type definition check
-    ├── fixtures/                      # Test fixtures
-    └── utils/                         # Shared utilities
+└── i18n/
+    └── check-translations.mjs         # Translation checker
 ```
 
 ## CI/CD Integration
@@ -184,8 +123,7 @@ These scripts are integrated into GitHub Actions workflows:
   - Generates historical dashboard
 
 - **Release workflow** ([`.github/workflows/release.yml`](../.github/workflows/release.yml))
-  - Verifies package before/after publish
-  - Handles automatic rollback on failure
+  - Publishes to npm and creates GitHub release on tag push
 
 - **Bundle size check** ([`.github/workflows/size-limit.yml`](../.github/workflows/size-limit.yml))
   - Runs on PRs
@@ -197,14 +135,6 @@ These scripts are integrated into GitHub Actions workflows:
 All scripts are ES modules (`.mjs`) and can be imported for programmatic use.
 
 ## Troubleshooting
-
-### "Package not found"
-
-Make sure to build before verifying:
-```bash
-yarn build
-yarn verify:package:local
-```
 
 ### "Failed to download artifact"
 

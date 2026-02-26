@@ -55,12 +55,6 @@ type CSSTooltipClasses = {
   tooltip: string | string[];
   tooltipContent: string | string[];
   tooltipShown: string | string[];
-  placement: {
-    left: string | string[];
-    bottom: string | string[];
-    right: string | string[];
-    top: string | string[];
-  };
 };
 
 /**
@@ -79,9 +73,7 @@ class Tooltip {
         'absolute z-overlay top-0 left-0',
         'bg-tooltip-bg opacity-0',
         'select-none pointer-events-none',
-        'transition-[opacity,transform] duration-[50ms,70ms] ease-in',
         'rounded-lg shadow-tooltip',
-        'will-change-[opacity,top,left]',
         'before:content-[\'\'] before:absolute before:inset-0 before:bg-tooltip-bg before:-z-10 before:rounded-lg',
         'mobile:hidden'
       ).split(' '),
@@ -90,13 +82,7 @@ class Tooltip {
         'text-tooltip-font text-xs text-center',
         'tracking-[0.02em] leading-[1em]'
       ).split(' '),
-      tooltipShown: ['opacity-100', 'transform-none'],
-      placement: {
-        left: ['-translate-x-[5px]'],
-        bottom: ['translate-y-[5px]'],
-        right: ['translate-x-[5px]'],
-        top: ['-translate-y-[5px]'],
-      },
+      tooltipShown: ['opacity-100'],
     };
   }
 
@@ -193,7 +179,7 @@ class Tooltip {
       marginLeft: 0,
       marginRight: 0,
       marginBottom: 0,
-      delay: 70,
+      delay: 0,
     };
     const showingOptions = Object.assign(basicOptions, options);
 
@@ -207,11 +193,6 @@ class Tooltip {
     if (!this.nodes.wrapper) {
       return;
     }
-
-    // Flatten the placement classes (each can be a string or array) before removing
-    const placementClasses = Object.values(this.CSS.placement).flatMap(cls => Array.isArray(cls) ? cls : [cls]);
-
-    this.nodes.wrapper.classList.remove(...placementClasses);
 
     switch (showingOptions.placement) {
       case 'top':
@@ -503,9 +484,6 @@ class Tooltip {
       return;
     }
 
-    const classes = Array.isArray(this.CSS.placement[place]) ? this.CSS.placement[place] : [this.CSS.placement[place]];
-
-    this.nodes.wrapper.classList.add(...classes);
     this.nodes.wrapper.setAttribute('data-blok-placement', place);
 
     this.nodes.wrapper.style.left = `${left}px`;

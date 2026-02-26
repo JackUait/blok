@@ -41,5 +41,20 @@
   "a11y.movedUp": "Το μπλοκ μετακινήθηκε πάνω, θέση {position} από {total}",
   "a11y.movedDown": "Το μπλοκ μετακινήθηκε κάτω, θέση {position} από {total}",
   "a11y.atTop": "Το μπλοκ είναι στην κορυφή",
-  "a11y.atBottom": "Το μπλοκ είναι στο κάτω μέρος"
+  "a11y.atBottom": "Το μπλοκ είναι στο κάτω μέρος",
+  "tools.table.title": "Πίνακας",
+  "tools.table.clearSelection": "Καθαρισμός",
+  "tools.table.copySelection": "Αντιγραφή",
+  "tools.table.headerColumn": "Στήλη επικεφαλίδας",
+  "tools.table.insertColumnLeft": "Εισαγωγή στήλης αριστερά",
+  "tools.table.insertColumnRight": "Εισαγωγή στήλης δεξιά",
+  "tools.table.deleteColumn": "Διαγραφή",
+  "tools.table.headerRow": "Γραμμή επικεφαλίδας",
+  "tools.table.insertRowAbove": "Εισαγωγή γραμμής πάνω",
+  "tools.table.insertRowBelow": "Εισαγωγή γραμμής κάτω",
+  "tools.table.deleteRow": "Διαγραφή",
+  "tools.table.clickToAddRow": "Κλικ για προσθήκη γραμμής",
+  "tools.table.dragToAddRemoveRows": "Σύρετε για προσθήκη ή αφαίρεση γραμμών",
+  "tools.table.clickToAddColumn": "Κλικ για προσθήκη στήλης",
+  "tools.table.dragToAddRemoveColumns": "Σύρετε για προσθήκη ή αφαίρεση στηλών"
 }

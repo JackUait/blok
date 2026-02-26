@@ -7,6 +7,7 @@ import { PopoverItemDefault, PopoverItemSeparator, PopoverItemType } from './com
 import type { PopoverItem, PopoverItemRenderParamsMap , PopoverItemParams } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchInput } from './components/search-input';
+import { PopoverRegistry } from './popover-registry';
 import { css } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
@@ -124,6 +125,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (this.search !== undefined) {
       this.search.focus();
     }
+
+    const { trigger } = this.params;
+    const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;
+
+    if (isRootWithTrigger) {
+      PopoverRegistry.instance.register(this, trigger);
+    }
   }
 
   /**
@@ -141,6 +149,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (this.search !== undefined) {
       this.search.clear();
     }
+
+    PopoverRegistry.instance.unregister(this);
 
     this.emit(PopoverEvent.Closed);
   }
@@ -162,6 +172,38 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public filterItems(_query: string): void {
     // No-op in base class. PopoverDesktop overrides this.
+  }
+
+  /**
+   * Names of items that have been explicitly hidden via toggleItemHiddenByName.
+   * These items must stay hidden even when filterItems would normally show them.
+   */
+  private readonly permanentlyHiddenNames = new Set<string>();
+
+  /**
+   * Toggles hidden state of all items matching the given name
+   * @param name - name of the items to toggle
+   * @param isHidden - true to hide, false to show
+   */
+  public toggleItemHiddenByName(name: string, isHidden: boolean): void {
+    this.items
+      .filter(item => item.name === name)
+      .forEach(item => item.toggleHidden(isHidden));
+
+    if (isHidden) {
+      this.permanentlyHiddenNames.add(name);
+    } else {
+      this.permanentlyHiddenNames.delete(name);
+    }
+  }
+
+  /**
+   * Returns true if the given item name was explicitly hidden via toggleItemHiddenByName.
+   * Used by subclasses to prevent filter logic from un-hiding restricted items.
+   * @param name - item name to check
+   */
+  protected isNamePermanentlyHidden(name: string): boolean {
+    return this.permanentlyHiddenNames.has(name);
   }
 
   /**
@@ -403,7 +445,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     popover.setAttribute('data-blok-testid', 'popover');
 
     // Set CSS variables
-    popover.style.setProperty('--width', this.params.width ?? '280px');
+    popover.style.setProperty('--width', this.params.width ?? 'auto');
     popover.style.setProperty('--item-padding', '3px');
     popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
     popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');

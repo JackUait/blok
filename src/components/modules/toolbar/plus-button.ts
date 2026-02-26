@@ -90,10 +90,10 @@ export class PlusButtonHandler {
     const plusButton = $.make('div', [
       twJoin(
         // Base toolbox-button styles
-        'text-dark cursor-pointer w-toolbox-btn h-toolbox-btn rounded-[7px] inline-flex justify-center items-center select-none',
+        'text-text-secondary cursor-pointer w-6 h-6 rounded-[5px] inline-flex justify-center items-center select-none',
         'shrink-0',
         // SVG sizing
-        '[&_svg]:h-6 [&_svg]:w-6',
+        '[&_svg]:h-[22px] [&_svg]:w-[22px]',
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light',
         // Keep hover background when toolbox is open
@@ -173,11 +173,32 @@ export class PlusButtonHandler {
     const hoveredBlockIndex = hoveredBlock !== null
       ? BlockManager.getBlockIndex(hoveredBlock)
       : BlockManager.currentBlockIndex;
-    const insertIndex = insertAbove ? hoveredBlockIndex : hoveredBlockIndex + 1;
+    const baseInsertIndex = insertAbove ? hoveredBlockIndex : hoveredBlockIndex + 1;
+
+    // When inserting below, skip past any blocks nested inside another block's
+    // DOM (e.g. paragraph blocks inside table cells). The block array may
+    // interleave nested blocks from multiple parents, so check whether each
+    // block's holder lives inside any block-wrapper ancestor rather than only
+    // the hovered block's holder.
+    const blocksAfterInsert = BlockManager.blocks.slice(baseInsertIndex);
+    const isNested = (block: Block): boolean =>
+      block.holder.parentElement?.closest('[data-blok-testid="block-wrapper"]') !== null;
+    const firstNonNestedOffset = !insertAbove && hoveredBlock && blocksAfterInsert.length > 0
+      ? blocksAfterInsert.findIndex((block) => !isNested(block))
+      : 0;
+    const insertIndex = baseInsertIndex + (firstNonNestedOffset === -1 ? blocksAfterInsert.length : firstNonNestedOffset);
 
     const targetBlock = isEmptyParagraph || startsWithSlash
       ? hoveredBlock
       : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
+
+    // The DOM insertion may place the new block's holder inside a nested
+    // container (e.g. a table cell) because the previous block in the array
+    // is inside another block's DOM. Move the holder to be a sibling after
+    // the hovered block so it becomes a top-level block.
+    if (targetBlock !== hoveredBlock && isNested(targetBlock)) {
+      hoveredBlock?.holder.after(targetBlock.holder);
+    }
 
     // Insert "/" or position caret after existing one
     if (startsWithSlash) {

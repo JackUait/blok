@@ -44,6 +44,33 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
+   * Check if the current block is inside a table cell.
+   * Used to prevent closing the toolbar when the user navigates
+   * within a table — closing it makes the toolbar permanently
+   * disappear because the hover controller deduplicates by block id
+   * and all cells resolve to the same parent table block.
+   */
+  private get isCurrentBlockInsideTableCell(): boolean {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+
+    return Boolean(currentBlock?.holder?.closest('[data-blok-table-cell-blocks]'));
+  }
+
+  /**
+   * Fully close the toolbar if the current block is NOT inside a table cell.
+   * Used for destructive operations (Backspace, Delete, merge) where the
+   * toolbar should be dismissed — unlike arrow navigation where
+   * hideBlockActions() is preferred to allow reopening.
+   */
+  private closeToolbarIfNotInTableCell(): void {
+    if (this.isCurrentBlockInsideTableCell) {
+      return;
+    }
+
+    this.Blok.Toolbar.close();
+  }
+
+  /**
    * Tab pressed inside a Block.
    * @param event - keydown event
    */
@@ -132,7 +159,7 @@ export class KeyboardNavigation extends BlockEventComposer {
    */
   private createBlockOnEnter(currentBlock: Block): Block {
     // Case 1: Caret at start - insert block above
-    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia) {
+    if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && (currentBlock.parentId === null || !currentBlock.isEmpty)) {
       this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
 
       // Force new undo group so typing in the new block is separate from block creation
@@ -186,7 +213,8 @@ export class KeyboardNavigation extends BlockEventComposer {
      * All the cases below have custom behaviour, so we don't need a native one
      */
     event.preventDefault();
-    this.Blok.Toolbar.close();
+
+    this.closeToolbarIfNotInTableCell();
 
     const isFirstInputFocused = currentBlock.currentInput === currentBlock.firstInput;
 
@@ -273,7 +301,8 @@ export class KeyboardNavigation extends BlockEventComposer {
      * All the cases below have custom behaviour, so we don't need a native one
      */
     event.preventDefault();
-    this.Blok.Toolbar.close();
+
+    this.closeToolbarIfNotInTableCell();
 
     const isLastInputFocused = currentBlock.currentInput === currentBlock.lastInput;
 
@@ -316,7 +345,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       const newCurrentBlock = BlockManager.currentBlock;
 
       newCurrentBlock && Caret.setToBlock(newCurrentBlock, Caret.positions.START);
-      this.Blok.Toolbar.close();
+      this.closeToolbarIfNotInTableCell();
 
       return;
     }
@@ -340,7 +369,7 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @param blockToMerge - what Block we want to merge
    */
   private mergeBlocks(targetBlock: Block, blockToMerge: Block): void {
-    const { BlockManager, Toolbar } = this.Blok;
+    const { BlockManager } = this.Blok;
 
     if (targetBlock.lastInput === undefined) {
       return;
@@ -351,7 +380,7 @@ export class KeyboardNavigation extends BlockEventComposer {
     BlockManager
       .mergeBlocks(targetBlock, blockToMerge)
       .then(() => {
-        Toolbar.close();
+        this.closeToolbarIfNotInTableCell();
       })
       .catch(() => {
         // Error handling for mergeBlocks
@@ -391,9 +420,10 @@ export class KeyboardNavigation extends BlockEventComposer {
     /**
      * Close Toolbar when user moves cursor, but keep toolbars open if the user
      * is extending selection with the Shift key so inline interactions remain available.
+     * Skip closing when inside a table cell — the toolbar belongs to the parent
+     * table block and the hover controller won't re-emit BlockHovered for it.
      */
-    if (!event.shiftKey) {
-      this.Blok.Toolbar.close();
+    if (!event.shiftKey && !this.isCurrentBlockInsideTableCell) {
       this.Blok.InlineToolbar.close();
     }
 
@@ -477,6 +507,11 @@ export class KeyboardNavigation extends BlockEventComposer {
        */
       event.preventDefault();
 
+      /**
+       * Reopen the toolbar at the new block position after navigation
+       */
+      this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
+
       return;
     }
 
@@ -526,15 +561,16 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
-    if (toolbarOpened) {
+    if (toolbarOpened && !this.isCurrentBlockInsideTableCell) {
       this.Blok.UI.closeAllToolbars();
     }
 
     /**
      * Close Toolbar when user moves cursor, but preserve it for Shift-based selection changes.
+     * Skip closing when inside a table cell — the toolbar belongs to the parent
+     * table block and the hover controller won't re-emit BlockHovered for it.
      */
-    if (!event.shiftKey) {
-      this.Blok.Toolbar.close();
+    if (!event.shiftKey && !this.isCurrentBlockInsideTableCell) {
       this.Blok.InlineToolbar.close();
     }
 
@@ -604,6 +640,11 @@ export class KeyboardNavigation extends BlockEventComposer {
        * Default behaviour moves cursor by 1 character, we need to prevent it
        */
       event.preventDefault();
+
+      /**
+       * Reopen the toolbar at the new block position after navigation
+       */
+      this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
 
       return;
     }

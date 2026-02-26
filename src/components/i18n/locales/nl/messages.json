@@ -41,5 +41,20 @@
   "a11y.movedUp": "Blok omhoog verplaatst naar positie {position} van {total}",
   "a11y.movedDown": "Blok omlaag verplaatst naar positie {position} van {total}",
   "a11y.atTop": "Blok staat bovenaan, kan niet hoger",
-  "a11y.atBottom": "Blok staat onderaan, kan niet lager"
+  "a11y.atBottom": "Blok staat onderaan, kan niet lager",
+  "tools.table.title": "Tabel",
+  "tools.table.clearSelection": "Wissen",
+  "tools.table.copySelection": "Kopiëren",
+  "tools.table.headerColumn": "Kolomkop",
+  "tools.table.insertColumnLeft": "Kolom links invoegen",
+  "tools.table.insertColumnRight": "Kolom rechts invoegen",
+  "tools.table.deleteColumn": "Verwijderen",
+  "tools.table.headerRow": "Rijkop",
+  "tools.table.insertRowAbove": "Rij erboven invoegen",
+  "tools.table.insertRowBelow": "Rij eronder invoegen",
+  "tools.table.deleteRow": "Verwijderen",
+  "tools.table.clickToAddRow": "Klik om een nieuwe rij toe te voegen",
+  "tools.table.dragToAddRemoveRows": "Sleep om rijen toe te voegen of te verwijderen",
+  "tools.table.clickToAddColumn": "Klik om een nieuwe kolom toe te voegen",
+  "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen"
 }

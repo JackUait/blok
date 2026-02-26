@@ -1,5 +1,6 @@
 import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
 import type { SavedData } from '../../../types/data-formats';
+import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../types/tools';
 
 import type { Block } from './index';
@@ -59,6 +60,22 @@ const BlockAPIConstructor = function BlockAPI(
      */
     get selected(): boolean {
       return block.selected;
+    },
+
+    /**
+     * Last successfully extracted block tool data (synchronous)
+     * @returns {BlockToolData}
+     */
+    get preservedData(): BlockToolData {
+      return block.preservedData;
+    },
+
+    /**
+     * Last successfully extracted tune data (synchronous)
+     * @returns {{ [name: string]: BlockTuneData }}
+     */
+    get preservedTunes(): { [name: string]: BlockTuneData } {
+      return block.preservedTunes;
     },
 
     /**

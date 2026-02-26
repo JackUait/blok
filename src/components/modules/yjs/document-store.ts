@@ -2,6 +2,7 @@ import * as Y from 'yjs';
 
 import type { YBlockSerializer, YjsOutputBlockData } from './serializer';
 import type { TransactionOrigin } from './types';
+import { equals } from '../../utils/object';
 
 // Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
 type DocumentStoreBlockData = YjsOutputBlockData;
@@ -67,7 +68,7 @@ export class DocumentStore {
     const yblock = this.serializer.outputDataToYBlock(blockData);
 
     this.transact(() => {
-      const insertIndex = index ?? this.yblocks.length;
+      const insertIndex = Math.max(0, Math.min(index ?? this.yblocks.length, this.yblocks.length));
       this.yblocks.insert(insertIndex, [yblock]);
     }, 'local');
 
@@ -121,10 +122,11 @@ export class DocumentStore {
 
       this.yblocks.delete(fromIndex, 1);
 
-      // toIndex is the final position. Since we just deleted from fromIndex,
-      // the array is now shorter. The insertion index equals toIndex because
-      // Y.Array.insert(n, [item]) places item at index n, shifting others right.
-      this.yblocks.insert(toIndex, [this.serializer.outputDataToYBlock(blockData)]);
+      // Clamp toIndex to valid range after deletion shortened the array.
+      // An out-of-bounds toIndex means the caller had stale state — clamp
+      // to array bounds rather than letting Yjs throw "Length exceeded!".
+      const clampedToIndex = Math.max(0, Math.min(toIndex, this.yblocks.length));
+      this.yblocks.insert(clampedToIndex, [this.serializer.outputDataToYBlock(blockData)]);
     }, transactionOrigin);
   }
 
@@ -161,8 +163,9 @@ export class DocumentStore {
 
     // Skip if value hasn't changed - this prevents creating unnecessary undo entries
     // when block data is synced after mutations that don't actually change data
-    // (e.g., marker updates in list items during undo/redo)
-    if (currentValue === value) {
+    // (e.g., marker updates in list items during undo/redo, or table content
+    // arrays that are reference-different but structurally identical)
+    if (equals(currentValue, value)) {
       return;
     }
 

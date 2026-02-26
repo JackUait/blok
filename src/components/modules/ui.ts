@@ -30,6 +30,7 @@ interface UINodes extends Record<string, unknown> {
   holder: HTMLElement;
   wrapper: HTMLElement;
   redactor: HTMLElement;
+  bottomZone: HTMLElement;
 }
 
 /**
@@ -191,12 +192,11 @@ export class UI extends Module<UINodes> {
     this.selectionController.setWrapperElement(this.nodes.wrapper);
 
     /**
-     * Block hover controller needs content rect getter
+     * Block hover controller detects hover over blocks and finds nearest block
      */
     this.blockHoverController = new BlockHoverController({
       config: this.config,
       eventsDispatcher: this.eventsDispatcher,
-      contentRectGetter: () => this.contentRect,
     });
     this.blockHoverController.state = this.Blok;
 
@@ -452,11 +452,15 @@ export class UI extends Module<UINodes> {
     }
 
     /**
-     * Set customizable bottom zone height
+     * Create dedicated bottom zone element
      */
-    this.nodes.redactor.style.paddingBottom = this.config.minHeight + 'px';
+    this.nodes.bottomZone = $.make('div', ['cursor-text']);
+    this.nodes.bottomZone.setAttribute('data-blok-bottom-zone', '');
+    this.nodes.bottomZone.setAttribute('data-blok-testid', 'bottom-zone');
+    this.nodes.bottomZone.style.minHeight = this.config.minHeight + 'px';
 
     this.nodes.wrapper.appendChild(this.nodes.redactor);
+    this.nodes.wrapper.appendChild(this.nodes.bottomZone);
     this.nodes.holder.appendChild(this.nodes.wrapper);
 
     this.bindReadOnlyInsensitiveListeners();
@@ -541,7 +545,16 @@ export class UI extends Module<UINodes> {
    */
   private bindReadOnlySensitiveListeners(): void {
     /**
-     * Redactor click handler for bottom zone clicks
+     * Bottom zone click handler — creates new block when clicking below last block
+     */
+    this.readOnlyMutableListeners.on(this.nodes.bottomZone, 'click', (event: Event) => {
+      if (event instanceof MouseEvent) {
+        this.bottomZoneClicked(event);
+      }
+    }, false);
+
+    /**
+     * Redactor click handler for Ctrl+click anchor navigation
      */
     this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: Event) => {
       if (event instanceof MouseEvent) {
@@ -610,29 +623,48 @@ export class UI extends Module<UINodes> {
   }
 
   /**
-   * All clicks on the redactor zone
-   * @param {MouseEvent} event - click event
-   * @description
-   * - By clicks on the Blok's bottom zone:
-   *      - if last Block is empty, set a Caret to this
-   *      - otherwise, add a new empty Block and set a Caret to that
+   * Handle click on the bottom zone element below the last block.
+   * Creates a new default block if needed, focuses the last block, and opens the toolbar.
    */
-  private redactorClicked(event: MouseEvent): void {
+  private bottomZoneClicked(event: MouseEvent): void {
     if (!Selection.isCollapsed) {
       return;
     }
 
+    const { BlockSelection, BlockManager, Caret, Toolbar } = this.Blok;
+
+    if (BlockSelection.anyBlockSelected) {
+      return;
+    }
+
+    if (!BlockManager.lastBlock) {
+      return;
+    }
+
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+
     /**
-     * case when user clicks on anchor element
-     * if it is clicked via ctrl key, then we open new window with url
+     * Insert a default-block at the bottom if:
+     * - last-block is not a default-block (Text)
+     * - Or, default-block is not empty
      */
+    if (!BlockManager.lastBlock.tool.isDefault || !BlockManager.lastBlock.isEmpty) {
+      BlockManager.insertAtEnd();
+    }
+
+    Caret.setToTheLastBlock();
+    Toolbar.moveAndOpen(BlockManager.lastBlock);
+  }
+
+  /**
+   * Handle Ctrl+click on anchor elements to open in new tab
+   */
+  private redactorClicked(event: MouseEvent): void {
     const element = event.target as Element;
     const ctrlKey = event.metaKey || event.ctrlKey;
-    const shouldOpenAnchorInNewTab = $.isAnchor(element) && ctrlKey;
 
-    if (!shouldOpenAnchorInNewTab) {
-      this.processBottomZoneClick(event);
-
+    if (!$.isAnchor(element) || !ctrlKey) {
       return;
     }
 
@@ -648,60 +680,6 @@ export class UI extends Module<UINodes> {
     const validUrl = getValidUrl(href);
 
     openTab(validUrl);
-  }
-
-  /**
-   * Check if user clicks on the Blok's bottom zone:
-   * - set caret to the last block
-   * - or add new empty block
-   * @param event - click event
-   */
-  private processBottomZoneClick(event: MouseEvent): void {
-    const lastBlock = this.Blok.BlockManager.getBlockByIndex(-1);
-
-    if (lastBlock === undefined) {
-      return;
-    }
-
-    const lastBlockBottomCoord = $.offset(lastBlock.holder).bottom;
-    const clickedCoord = event.pageY;
-    const { BlockSelection } = this.Blok;
-    const isClickedBottom = event.target instanceof Element &&
-      event.target.isEqualNode(this.nodes.redactor) &&
-      /**
-       * If there is cross block selection started, target will be equal to redactor so we need additional check
-       */
-      !BlockSelection.anyBlockSelected &&
-
-      /**
-       * Prevent caret jumping (to last block) when clicking between blocks
-       */
-      lastBlockBottomCoord < clickedCoord;
-
-    if (!isClickedBottom) {
-      return;
-    }
-
-    event.stopImmediatePropagation();
-    event.stopPropagation();
-
-    const { BlockManager, Caret, Toolbar } = this.Blok;
-
-    /**
-     * Insert a default-block at the bottom if:
-     * - last-block is not a default-block (Text)
-     *   to prevent unnecessary tree-walking on Tools with many nodes (for ex. Table)
-     * - Or, default-block is not empty
-     */
-    if (!BlockManager.lastBlock?.tool.isDefault || !BlockManager.lastBlock?.isEmpty) {
-      BlockManager.insertAtEnd();
-    }
-
-    /**
-     * Set the caret and toolbar to empty Block
-     */
-    Caret.setToTheLastBlock();
-    Toolbar.moveAndOpen(BlockManager.lastBlock);
   }
 
   /**

@@ -44,6 +44,25 @@ describe('DragPreview', () => {
 
       expect(dragPreview.exists()).toBe(true);
     });
+
+    it('should set explicit width on clone to preserve percentage-based layouts', () => {
+      const contentElement = document.createElement('div');
+
+      // Content element has NO inline width — width comes from CSS class (max-w-content)
+      contentElement.innerHTML = '<div><div style="display:flex"><div style="width:50%">A</div><div style="width:50%">B</div></div></div>';
+
+      // Mock getBoundingClientRect to simulate the computed width from CSS
+      vi.spyOn(contentElement, 'getBoundingClientRect').mockReturnValue({
+        width: 650, height: 100, left: 0, top: 0, right: 650, bottom: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      const preview = dragPreview.createSingle(contentElement, false);
+      const clone = preview.firstElementChild as HTMLElement;
+
+      // Clone must have an explicit width so percentage-based children have a sizing reference
+      // inside the position:fixed preview container
+      expect(clone.style.width).toBe('650px');
+    });
   });
 
   describe('createMulti', () => {

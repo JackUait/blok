@@ -32,6 +32,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     Toolbar: {
       opened: false,
       close: vi.fn(),
+      hideBlockActions: vi.fn(),
       moveAndOpen: vi.fn(),
       toolbox: {
         open: vi.fn(),
@@ -333,6 +334,7 @@ describe('BlockEvents', () => {
       const blockEvents = createBlockEvents({
         BlockManager: {
           currentBlock,
+          setCurrentBlockByChildNode: vi.fn(),
         } as unknown as BlokModules['BlockManager'],
         UI: {
           nodes: {
@@ -344,6 +346,7 @@ describe('BlockEvents', () => {
         } as unknown as BlokModules['Caret'],
         Toolbar: {
           opened: false,
+          hideBlockActions: vi.fn(),
           moveAndOpen,
           toolbox: {
             open: toolboxOpen,
@@ -397,6 +400,100 @@ describe('BlockEvents', () => {
     });
   });
 
+  describe('beforeKeydownProcessing', () => {
+    it('does not close or hide toolbar when typing a printable key in a regular block', () => {
+      const closeSpy = vi.fn();
+      const hideBlockActionsSpy = vi.fn();
+      const holder = document.createElement('div');
+      const currentBlock = { holder } as unknown as Block;
+
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          opened: true,
+          close: closeSpy,
+          hideBlockActions: hideBlockActionsSpy,
+          toolbox: { open: vi.fn() },
+        } as unknown as BlokModules['Toolbar'],
+        BlockManager: {
+          currentBlock,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createKeyboardEvent({ key: 'a', keyCode: 65 });
+
+      blockEvents.beforeKeydownProcessing(event);
+
+      expect(closeSpy).not.toHaveBeenCalled();
+      expect(hideBlockActionsSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not hide block actions or close Toolbar when typing inside a table cell', () => {
+      const closeSpy = vi.fn();
+      const hideBlockActionsSpy = vi.fn();
+
+      // Build a DOM hierarchy that includes a table cell container
+      const tableCellBlocks = document.createElement('div');
+      tableCellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+      tableCellBlocks.appendChild(holder);
+
+      const currentBlock = { holder } as unknown as Block;
+
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          opened: true,
+          close: closeSpy,
+          hideBlockActions: hideBlockActionsSpy,
+          toolbox: { open: vi.fn() },
+        } as unknown as BlokModules['Toolbar'],
+        BlockManager: {
+          currentBlock,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createKeyboardEvent({ key: 'a', keyCode: 65 });
+
+      blockEvents.beforeKeydownProcessing(event);
+
+      expect(closeSpy).not.toHaveBeenCalled();
+      expect(hideBlockActionsSpy).not.toHaveBeenCalled();
+    });
+
+    it('still clears block selection when typing in a table cell', () => {
+      const clearSelectionSpy = vi.fn();
+
+      const tableCellBlocks = document.createElement('div');
+      tableCellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+      tableCellBlocks.appendChild(holder);
+
+      const currentBlock = { holder } as unknown as Block;
+
+      const blockEvents = createBlockEvents({
+        Toolbar: {
+          opened: true,
+          close: vi.fn(),
+          toolbox: { open: vi.fn() },
+        } as unknown as BlokModules['Toolbar'],
+        BlockManager: {
+          currentBlock,
+        } as unknown as BlokModules['BlockManager'],
+        BlockSelection: {
+          anyBlockSelected: false,
+          clearSelection: clearSelectionSpy,
+          copySelectedBlocks: vi.fn(() => Promise.resolve()),
+          selectedBlocks: [],
+        } as unknown as BlokModules['BlockSelection'],
+      });
+
+      const event = createKeyboardEvent({ key: 'a', keyCode: 65 });
+
+      blockEvents.beforeKeydownProcessing(event);
+
+      expect(clearSelectionSpy).toHaveBeenCalledWith(event);
+    });
+  });
+
   describe('input', () => {
     const createInputEvent = (options: Partial<InputEvent> = {}): InputEvent => {
       return {
@@ -425,6 +522,22 @@ describe('BlockEvents', () => {
       const event = createInputEvent({ inputType: 'deleteContentBackward' });
 
       expect(() => blockEvents.input(event)).not.toThrow();
+    });
+
+    it('sets current block from event target before processing shortcuts', () => {
+      const setCurrentBlockByChildNode = vi.fn();
+      const target = document.createElement('div');
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          setCurrentBlockByChildNode,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createInputEvent({ target } as unknown as Partial<InputEvent>);
+
+      blockEvents.input(event);
+
+      expect(setCurrentBlockByChildNode).toHaveBeenCalledWith(target);
     });
 
     describe('smart grouping', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Paragraph, type ParagraphConfig, type ParagraphData } from '../../../src/tools/paragraph';
 import type { API, BlockToolConstructorOptions } from '../../../types';
+import { sanitizeBlocks } from '../../../src/components/utils/sanitizer';
 
 const createMockAPI = (): API => ({
   styles: {
@@ -51,6 +52,14 @@ describe('Paragraph Tool - Custom Configurations', () => {
 
     it('uses DEFAULT_PLACEHOLDER static value when config is undefined', () => {
       expect(Paragraph.DEFAULT_PLACEHOLDER).toBe('tools.paragraph.placeholder');
+    });
+
+    it('includes empty-editor placeholder classes on rendered element', () => {
+      const options = createParagraphOptions({}, {});
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.getAttribute('class')).toContain('data-blok-empty');
     });
   });
 
@@ -336,7 +345,83 @@ describe('Paragraph Tool - Custom Configurations', () => {
     });
 
     it('has correct sanitize config', () => {
-      expect(Paragraph.sanitize).toEqual({ text: { br: true } });
+      expect(Paragraph.sanitize).toEqual({
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+          p: true,
+          ul: true,
+          li: true,
+        },
+      });
+    });
+  });
+
+  describe('save and sanitize preserves rich HTML in paragraph text', () => {
+    it('preserves img tags through render → save → sanitize pipeline', () => {
+      const imgHtml = '<img src="https://example.com/photo.jpg" style="width: 100%;"><br>';
+      const options = createParagraphOptions({ text: imgHtml });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const savedData = paragraph.save(element);
+
+      const sanitized = sanitizeBlocks(
+        [{ tool: 'paragraph', data: savedData }],
+        Paragraph.sanitize,
+        {}
+      );
+
+      const text = sanitized[0].data.text as string;
+
+      expect(text).toContain('<img');
+      expect(text).toContain('src="https://example.com/photo.jpg"');
+      expect(text).toContain('style="width: 100%;"');
+    });
+
+    it('preserves block-level HTML (p, ul, li) and strips span through render → save → sanitize pipeline', () => {
+      const richHtml = '<p>Utiliza:</p><ul><li>separadores <span style="font-size: 1rem;">gastronorm</span></li><li>recipientes</li></ul>';
+      const options = createParagraphOptions({ text: richHtml });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const savedData = paragraph.save(element);
+
+      const sanitized = sanitizeBlocks(
+        [{ tool: 'paragraph', data: savedData }],
+        Paragraph.sanitize,
+        {}
+      );
+
+      const text = sanitized[0].data.text as string;
+
+      expect(text).toContain('<p>');
+      expect(text).toContain('<ul>');
+      expect(text).toContain('<li>');
+      expect(text).not.toContain('<span');
+      expect(text).toContain('gastronorm');
+    });
+
+    it('strips disallowed tags (script, div, iframe) through render → save → sanitize pipeline', () => {
+      const unsafeHtml = '<p>Safe</p><script>alert(1)</script><div>Text</div><iframe src="x"></iframe>';
+      const options = createParagraphOptions({ text: unsafeHtml });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const savedData = paragraph.save(element);
+
+      const sanitized = sanitizeBlocks(
+        [{ tool: 'paragraph', data: savedData }],
+        Paragraph.sanitize,
+        {}
+      );
+
+      const text = sanitized[0].data.text as string;
+
+      expect(text).toContain('<p>');
+      expect(text).not.toContain('<script');
+      expect(text).not.toContain('<div');
+      expect(text).not.toContain('<iframe');
     });
   });
 });

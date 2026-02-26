@@ -206,6 +206,9 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.isDisabled) {
       root.setAttribute(DATA_ATTR.disabled, 'true');
     }
+    if ('isDestructive' in params && params.isDestructive) {
+      root.setAttribute(DATA_ATTR.popoverItemDestructive, 'true');
+    }
     if (this.isActive) {
       root.setAttribute(DATA_ATTR.popoverItemActive, 'true');
     }
@@ -254,7 +257,9 @@ export class PopoverItemDefault extends PopoverItem {
     if (title !== undefined) {
       const titleEl = document.createElement('div');
 
-      titleEl.className = 'mr-auto truncate text-sm font-medium leading-5';
+      titleEl.className = params.secondaryLabel
+        ? 'flex-grow truncate text-sm font-medium leading-5'
+        : 'mr-auto truncate text-sm font-medium leading-5';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       titleEl.textContent = title;
@@ -267,7 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'whitespace-nowrap pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
+      secondaryEl.className = 'min-w-[3.5rem] text-right whitespace-nowrap pl-3 pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;
@@ -321,6 +326,8 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
+      // Asymmetric padding: pr-8 for visual balance, pr-2 when secondary label occupies right edge
+      !isInline && !isNestedInline && (this.params.secondaryLabel ? 'pl-2 pr-2' : 'pl-2 pr-8'),
       isInline && cssInline.item,
       isNestedInline && cssNestedInline.item,
       this.params.isDisabled && css.itemDisabled
@@ -335,7 +342,7 @@ export class PopoverItemDefault extends PopoverItem {
       css.icon,
       isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
-      iconWithGap && 'mr-2',
+      iconWithGap && 'mr-3',
       iconWithGap && isInline && 'shadow-none bg-transparent !mr-0',
       iconWithGap && isNestedInline && '!mr-2',
       isWobbling && 'animate-wobble'

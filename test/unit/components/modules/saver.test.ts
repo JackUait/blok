@@ -8,6 +8,10 @@ import type { SavedData } from '../../../../types/data-formats';
 import * as sanitizer from '../../../../src/components/utils/sanitizer';
 import * as utils from '../../../../src/components/utils';
 
+vi.mock('../../../../src/components/utils/id-generator', () => ({
+  generateBlockId: vi.fn(() => 'mock-id'),
+}));
+
 type BlockSaveResult = SavedData & { tunes?: Record<string, unknown> };
 
 interface BlockMock {
@@ -23,6 +27,8 @@ interface BlockMockOptions {
   data: SavedData['data'];
   tunes?: Record<string, unknown>;
   isValid?: boolean;
+  parentId?: string | null;
+  contentIds?: string[];
 }
 
 interface CreateSaverOptions {
@@ -47,6 +53,8 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
   const block = {
     save: saveMock,
     validate: validateMock,
+    parentId: options.parentId ?? null,
+    contentIds: options.contentIds ?? [],
   } as unknown as Block;
 
   return {
@@ -251,6 +259,148 @@ describe('Saver module', () => {
     expect(logSpy).toHaveBeenCalledWith('Block «quote» skipped because saved data is invalid');
   });
 
+  it('preserves invalid child blocks that have a parentId', async () => {
+    const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const tableBlock = createBlockMock({
+      id: 'table-1',
+      tool: 'table',
+      data: { content: [[{ blocks: ['cell-text', 'cell-empty'] }]] },
+      contentIds: ['cell-text', 'cell-empty'],
+    });
+
+    const cellTextBlock = createBlockMock({
+      id: 'cell-text',
+      tool: 'paragraph',
+      data: { text: 'Hello' },
+      parentId: 'table-1',
+    });
+
+    const cellEmptyBlock = createBlockMock({
+      id: 'cell-empty',
+      tool: 'paragraph',
+      data: { text: '' },
+      isValid: false,
+      parentId: 'table-1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [tableBlock.block, cellTextBlock.block, cellEmptyBlock.block],
+      toolSanitizeConfigs: {
+        table: {},
+        paragraph: {},
+      },
+    });
+
+    const result = await saver.save();
+
+    // The empty paragraph with parentId should be preserved, not dropped
+    const blockIds = result?.blocks.map(b => b.id);
+
+    expect(blockIds).toContain('cell-empty');
+    expect(result?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'cell-empty',
+          type: 'paragraph',
+          data: { text: '' },
+          parent: 'table-1',
+        }),
+      ])
+    );
+
+    // Invalid blocks WITHOUT a parent should still be skipped
+    expect(logSpy).not.toHaveBeenCalledWith('Block «paragraph» skipped because saved data is invalid');
+  });
+
+  it('still skips invalid blocks that have no parentId', async () => {
+    const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const invalidOrphanBlock = createBlockMock({
+      id: 'orphan',
+      tool: 'paragraph',
+      data: { text: '' },
+      isValid: false,
+    });
+
+    const validBlock = createBlockMock({
+      id: 'valid',
+      tool: 'paragraph',
+      data: { text: 'Keep me' },
+    });
+
+    const { saver } = createSaver({
+      blocks: [invalidOrphanBlock.block, validBlock.block],
+      toolSanitizeConfigs: {
+        paragraph: {},
+      },
+    });
+
+    const result = await saver.save();
+
+    const blockIds = result?.blocks.map(b => b.id);
+
+    expect(blockIds).not.toContain('orphan');
+    expect(blockIds).toContain('valid');
+    expect(logSpy).toHaveBeenCalledWith('Block «paragraph» skipped because saved data is invalid');
+  });
+
+  it('preserves image blocks inside table cells when they have parentId', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const tableBlock = createBlockMock({
+      id: 'table-1',
+      tool: 'table',
+      data: { content: [[{ blocks: ['image-1', 'cell-1-1'] }]] },
+      contentIds: ['image-1', 'cell-1-1'],
+    });
+
+    const imageBlock = createBlockMock({
+      id: 'image-1',
+      tool: 'image',
+      data: { url: 'https://example.com/photo.jpg' },
+      parentId: 'table-1',
+    });
+
+    const paragraphBlock = createBlockMock({
+      id: 'cell-1-1',
+      tool: 'paragraph',
+      data: { text: 'Caption text' },
+      parentId: 'table-1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [tableBlock.block, imageBlock.block, paragraphBlock.block],
+      toolSanitizeConfigs: {
+        table: {},
+        image: {},
+        paragraph: {},
+      },
+    });
+
+    const result = await saver.save();
+
+    const blockIds = result?.blocks.map(b => b.id);
+
+    // Image block must be preserved — it has parentId pointing to the table
+    expect(blockIds).toContain('image-1');
+    expect(blockIds).toContain('cell-1-1');
+    expect(blockIds).toContain('table-1');
+
+    expect(result?.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'image-1',
+          type: 'image',
+          data: { url: 'https://example.com/photo.jpg' },
+          parent: 'table-1',
+        }),
+      ])
+    );
+  });
+
   it('logs a labeled error when saving fails', async () => {
     const error = new Error('save failed');
     const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
@@ -271,6 +421,63 @@ describe('Saver module', () => {
     await expect(saver.save()).resolves.toBeUndefined();
     expect(logLabeledSpy).toHaveBeenCalledWith('Saving failed due to the Error %o', 'error', error);
     expect(sanitizeBlocksSpy).not.toHaveBeenCalled();
+  });
+
+  it('normalizes inline images in table cell paragraphs during save', async () => {
+    vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+
+    const { generateBlockId } = await import('../../../../src/components/utils/id-generator');
+    vi.mocked(generateBlockId).mockReturnValue('img-norm-1');
+
+    const tableBlock = createBlockMock({
+      id: 'table-1',
+      tool: 'table',
+      data: { content: [[{ blocks: ['para-1'] }]] },
+      contentIds: ['para-1'],
+    });
+
+    const paragraphBlock = createBlockMock({
+      id: 'para-1',
+      tool: 'paragraph',
+      data: { text: '<p><img src="https://example.com/photo.jpg" style="width: 100%;"><br></p>' },
+      parentId: 'table-1',
+    });
+
+    const { saver } = createSaver({
+      blocks: [tableBlock.block, paragraphBlock.block],
+      toolSanitizeConfigs: {
+        table: {},
+        paragraph: {},
+        image: {},
+      },
+    });
+
+    const result = await saver.save();
+
+    // Should contain 3 blocks: table, image, paragraph
+    expect(result?.blocks).toHaveLength(3);
+
+    // Image block should be extracted
+    const imageOutputBlock = result?.blocks.find(b => b.type === 'image');
+    expect(imageOutputBlock).toEqual(expect.objectContaining({
+      id: 'img-norm-1',
+      type: 'image',
+      data: { url: 'https://example.com/photo.jpg' },
+      parent: 'table-1',
+    }));
+
+    // Paragraph should no longer contain <img>
+    const paraOutputBlock = result?.blocks.find(b => b.id === 'para-1');
+    expect((paraOutputBlock?.data as { text: string }).text).not.toContain('<img');
+
+    // Table cell content should reference the new image block before the paragraph
+    const tableOutputBlock = result?.blocks.find(b => b.id === 'table-1');
+    const cellBlocks = (tableOutputBlock?.data as { content: Array<Array<{ blocks: string[] }>> }).content[0][0].blocks;
+    expect(cellBlocks[0]).toBe('img-norm-1');
+    expect(cellBlocks[1]).toBe('para-1');
+
+    // Table content field should include new image block ID
+    expect(tableOutputBlock?.content).toContain('img-norm-1');
   });
 });
 

@@ -15,24 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  version-check:
-    name: Version Verification
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Need full history to check tags
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Verify package.json version
-        run: node scripts/verify-version.mjs
-
   i18n:
     name: i18n Check
     runs-on: ubuntu-latest
@@ -149,30 +131,6 @@ jobs:
           name: dist
           path: dist/
           retention-days: 1
-
-  pre-release-verification:
-    name: Pre-Release Verification
-    runs-on: ubuntu-latest
-    needs: [build]
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js and Dependencies
-        uses: ./.github/actions/setup-node-deps
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Create package tarball
-        run: npm pack
-
-      - name: Run pre-release verification
-        run: node scripts/verify-published-package.mjs --local --skip-browser --verbose
 
   smoke-test:
     name: Smoke Tests

@@ -212,7 +212,7 @@ test.describe('placeholders', () => {
     await expectPlaceholderContent(paragraph, 'none');
   });
 
-  test('hides placeholder when paragraph is blurred (unfocused)', async ({ page }) => {
+  test('keeps placeholder visible when paragraph is blurred in empty editor', async ({ page }) => {
     await createBlok(page, { placeholder: PLACEHOLDER_TEXT, autofocus: true });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
@@ -224,31 +224,31 @@ test.describe('placeholders', () => {
     // Blur the paragraph by clicking outside of it
     await page.mouse.click(10, 10);
 
-    // Placeholder should be hidden when blurred
-    await expectPlaceholderContent(paragraph, 'none');
+    // In an empty editor, placeholder remains visible even when blurred
+    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
   });
 
-  test('shows placeholder only when empty paragraph receives focus', async ({ page }) => {
+  test('shows placeholder in empty editor regardless of focus state', async ({ page }) => {
     await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
     await expect(paragraph).toBeVisible();
 
-    // Placeholder should be hidden initially (not focused)
-    await expectPlaceholderContent(paragraph, 'none');
+    // In an empty editor, placeholder is visible even without focus
+    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
 
     // Click to focus
     await paragraph.click();
 
-    // Placeholder should now be visible
+    // Placeholder should still be visible when focused
     await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
 
     // Blur by clicking outside
     await page.mouse.click(10, 10);
 
-    // Placeholder should be hidden again
-    await expectPlaceholderContent(paragraph, 'none');
+    // In an empty editor, placeholder remains visible after blur
+    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
   });
 });
 

@@ -139,6 +139,18 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Toggles hidden state of all items matching the given name.
+   * Invalidates the cached size so the next access re-measures the popover.
+   * @param name - name of the items to toggle
+   * @param isHidden - true to hide, false to show
+   */
+  public override toggleItemHiddenByName(name: string, isHidden: boolean): void {
+    super.toggleItemHiddenByName(name, isHidden);
+
+    this._size = undefined;
+  }
+
+  /**
    * Scroll position inside items container of the popover
    */
   public get scrollTop(): number {
@@ -218,30 +230,49 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Updates the popover position dynamically.
+   * Used when the trigger position changes or when positioning at caret location.
+   * @param position - new DOMRect position for the popover
+   */
+  public updatePosition(position: DOMRect): void {
+    this.params.position = position;
+
+    // Recalculate and apply position if already shown
+    if (this.nodes.popover.hasAttribute('data-blok-popover-opened')) {
+      const { top, left } = this.calculatePosition();
+
+      this.nodes.popover.style.top = `${top}px`;
+      this.nodes.popover.style.left = `${left}px`;
+    }
+  }
+
+  /**
    * Calculates position for the popover
    */
   private calculatePosition(): { top: number; left: number } {
-    if (!this.trigger) {
+    // Use provided position if available, otherwise fall back to trigger element
+    const rect = this.params.position ?? this.trigger?.getBoundingClientRect();
+
+    if (!rect) {
       return {
         top: 0,
         left: 0,
       };
     }
 
-    const triggerRect = this.trigger.getBoundingClientRect();
     const popoverRect = this.size;
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const offset = 8;
 
-    const initialTop = triggerRect.bottom + offset + window.scrollY;
-    const shouldFlipTop = (triggerRect.bottom + offset + popoverRect.height > windowHeight + window.scrollY) &&
-      (triggerRect.top - offset - popoverRect.height > window.scrollY);
-    const top = shouldFlipTop ? triggerRect.top - offset - popoverRect.height + window.scrollY : initialTop;
+    const initialTop = rect.bottom + offset + window.scrollY;
+    const shouldFlipTop = (rect.bottom + offset + popoverRect.height > windowHeight + window.scrollY) &&
+      (rect.top - offset - popoverRect.height > window.scrollY);
+    const top = shouldFlipTop ? rect.top - offset - popoverRect.height + window.scrollY : initialTop;
 
-    const initialLeft = triggerRect.left + window.scrollX;
+    const initialLeft = rect.left + window.scrollX;
     const shouldFlipLeft = initialLeft + popoverRect.width > windowWidth + window.scrollX;
-    const left = shouldFlipLeft ? Math.max(0, triggerRect.right - popoverRect.width + window.scrollX) : initialLeft;
+    const left = shouldFlipLeft ? Math.max(0, rect.right - popoverRect.width + window.scrollX) : initialLeft;
 
     return {
       top,
@@ -658,7 +689,7 @@ export class PopoverDesktop extends PopoverAbstract {
         const isDefaultItem = item instanceof PopoverItemDefault;
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
         const isHidden = isDefaultItem
-          ? !matchingItems.includes(item)
+          ? !matchingItems.includes(item) || (item.name !== undefined && this.isNamePermanentlyHidden(item.name))
           : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
         item.toggleHidden(isHidden);

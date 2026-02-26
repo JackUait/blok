@@ -35,15 +35,34 @@ export const createRedactorTouchHandler = (
     /**
      * Select clicked Block as Current
      */
-    try {
-      deps.Blok.BlockManager.setCurrentBlockByChildNode(clickedNode);
-    } catch (_e) {
-      /**
-       * If clicked outside first-level Blocks and it is not RectSelection, set Caret to the last empty Block
-       */
-      if (!deps.Blok.RectangleSelection.isRectActivated()) {
-        deps.Blok.Caret.setToTheLastBlock();
-      }
+    const block = deps.Blok.BlockManager.setCurrentBlockByChildNode(clickedNode);
+
+    /**
+     * If clicked outside first-level Blocks and it is not RectSelection, set Caret to the last empty Block
+     */
+    if (!block && !deps.Blok.RectangleSelection.isRectActivated()) {
+      deps.Blok.Caret.setToTheLastBlock();
+    }
+
+    /**
+     * If the click landed below the last block's content area (in the holder padding zone),
+     * create/focus a new paragraph instead of keeping the block selected.
+     */
+    const isBelowLastBlock = block !== undefined
+      && block === deps.Blok.BlockManager.lastBlock
+      && isClickBelowLastBlockContent(block.holder, event);
+
+    if (isBelowLastBlock && !deps.Blok.ReadOnly.isEnabled) {
+      deps.Blok.Caret.setToTheLastBlock();
+      deps.Blok.Toolbar.moveAndOpen(deps.Blok.BlockManager.lastBlock);
+
+      return;
+    }
+
+    if (isBelowLastBlock) {
+      deps.Blok.Caret.setToTheLastBlock();
+
+      return;
     }
 
     /**
@@ -51,7 +70,19 @@ export const createRedactorTouchHandler = (
      * (used for showing Block Settings toggler after opening and closing Inline Toolbar)
      */
     if (!deps.Blok.ReadOnly.isEnabled && !deps.Blok.Toolbar.contains(initialTarget)) {
-      deps.Blok.Toolbar.moveAndOpen(undefined, clickedNode);
+      /**
+       * When the clicked node is inside a table cell, resolve to the parent table block
+       * so moveAndOpen receives the table block (not undefined / the inner cell paragraph).
+       * Without this, moveAndOpen falls back to currentBlock (the cell paragraph), detects
+       * it's inside a table cell, and hides the plus button and settings toggler.
+       */
+      const tableCellContainer = clickedNode.closest?.('[data-blok-table-cell-blocks]');
+      const tableBlockWrapper = tableCellContainer?.closest('[data-blok-testid="block-wrapper"]');
+      const resolvedBlock = tableBlockWrapper
+        ? deps.Blok.BlockManager.getBlockByChildNode(tableBlockWrapper)
+        : undefined;
+
+      deps.Blok.Toolbar.moveAndOpen(resolvedBlock, clickedNode);
     }
   };
 }
@@ -93,3 +124,45 @@ export const getClickedNode = (
 
   return initialTarget;
 }
+
+/**
+ * Extracts the clientY coordinate from a mouse or touch event
+ *
+ * @param event - The event to extract clientY from
+ * @returns The clientY value, or null if not available
+ */
+const getClientY = (event: Event): number | null => {
+  if (event instanceof MouseEvent) {
+    return event.clientY;
+  }
+
+  if (event instanceof TouchEvent && event.touches.length > 0) {
+    return event.touches[0].clientY;
+  }
+
+  return null;
+}
+
+/**
+ * Checks whether a click event landed below a block's content area.
+ * Used to detect clicks in the holder padding zone below the last block.
+ *
+ * @param blockHolder - The block's holder element
+ * @param event - The mouse or touch event
+ * @returns True if the click was below the block content's bottom edge
+ */
+const isClickBelowLastBlockContent = (
+  blockHolder: HTMLElement,
+  event: Event
+): boolean => {
+  const clientY = getClientY(event);
+
+  if (clientY === null) {
+    return false;
+  }
+
+  const contentEl = blockHolder.querySelector('[data-blok-element-content]');
+  const contentRect = contentEl?.getBoundingClientRect();
+
+  return contentRect !== undefined && clientY > contentRect.bottom;
+};

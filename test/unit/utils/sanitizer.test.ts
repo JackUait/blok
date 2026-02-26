@@ -590,6 +590,170 @@ describe('sanitizer', () => {
     });
   });
 
+  describe('img tag preservation in paragraph sanitize config', () => {
+    it('should preserve img tags with src when paragraph config includes img', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<img src="https://media.dodostatic.net/image/photo.jpg" style="width: 100%;"><br>',
+          },
+        },
+      ];
+
+      /**
+       * Simulates the effective paragraph sanitize config after BlockToolAdapter merges
+       * the paragraph's own rules with inline tool rules.
+       * The paragraph tool must include img in its sanitize config for this to work.
+       */
+      const paragraphSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+        } as unknown as SanitizerRule,
+      };
+
+      const result = sanitizeBlocks(blocksData, paragraphSanitizeConfig, {});
+
+      expect(result[0].data.text).toContain('<img');
+      expect(result[0].data.text).toContain('src="https://media.dodostatic.net/image/photo.jpg"');
+    });
+
+    it('should strip img tags when paragraph config does NOT include img', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<img src="https://example.com/photo.jpg"><br>',
+          },
+        },
+      ];
+
+      const paragraphSanitizeConfigWithoutImg: SanitizerConfig = {
+        text: {
+          br: true,
+        } as unknown as SanitizerRule,
+      };
+
+      const result = sanitizeBlocks(blocksData, paragraphSanitizeConfigWithoutImg, {});
+
+      expect(result[0].data.text).not.toContain('<img');
+      expect(result[0].data.text).toContain('<br>');
+    });
+
+    it('should preserve block-level HTML tags (p, ul, li) and strip span when paragraph config excludes span', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<p>Utiliza:</p><ul><li>separadores <span style="font-size: 1rem;">gastronorm,</span></li><li>recipientes gastronorm</li></ul><p>Los ingredientes deben estar cubiertos.</p>',
+          },
+        },
+      ];
+
+      const paragraphSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+          p: true,
+          ul: true,
+          li: true,
+        } as unknown as SanitizerRule,
+      };
+
+      const result = sanitizeBlocks(blocksData, paragraphSanitizeConfig, {});
+
+      expect(result[0].data.text).toContain('<p>');
+      expect(result[0].data.text).toContain('<ul>');
+      expect(result[0].data.text).toContain('<li>');
+      expect(result[0].data.text).not.toContain('<span');
+      expect(result[0].data.text).toContain('gastronorm,');
+    });
+  });
+
+  describe('tool-specific tags with non-empty global sanitizer', () => {
+    it('should preserve tool-specific tags not present in global sanitizer config', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<p><img src="https://example.com/photo.jpg" style="width: 100%;"><br></p>',
+          },
+        },
+      ];
+
+      /**
+       * Tool config includes img and p tags.
+       */
+      const toolSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          img: {
+            src: true,
+            style: true,
+          },
+          p: true,
+        } as unknown as SanitizerRule,
+      };
+
+      /**
+       * Global sanitizer only includes br and strong — does NOT include img or p.
+       * Tool-specific tags should still be preserved.
+       */
+      const globalSanitizer: SanitizerConfig = {
+        br: true,
+        strong: {},
+      };
+
+      const result = sanitizeBlocks(blocksData, toolSanitizeConfig, globalSanitizer);
+
+      expect(result[0].data.text).toContain('<img');
+      expect(result[0].data.text).toContain('src="https://example.com/photo.jpg"');
+      expect(result[0].data.text).toContain('<p>');
+      expect(result[0].data.text).toContain('<br>');
+    });
+
+    it('should preserve ul, li from tool config and strip span when global config lacks them', () => {
+      const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [
+        {
+          tool: 'paragraph',
+          data: {
+            text: '<p>Utiliza:</p><ul><li>separadores <span style="font-size: 1rem;">gastronorm</span></li></ul>',
+          },
+        },
+      ];
+
+      const toolSanitizeConfig: SanitizerConfig = {
+        text: {
+          br: true,
+          p: true,
+          ul: true,
+          li: true,
+        } as unknown as SanitizerRule,
+      };
+
+      const globalSanitizer: SanitizerConfig = {
+        br: true,
+        b: {},
+        i: {},
+      };
+
+      const result = sanitizeBlocks(blocksData, toolSanitizeConfig, globalSanitizer);
+
+      expect(result[0].data.text).toContain('<p>');
+      expect(result[0].data.text).toContain('<ul>');
+      expect(result[0].data.text).toContain('<li>');
+      expect(result[0].data.text).not.toContain('<span');
+      expect(result[0].data.text).toContain('gastronorm');
+    });
+  });
+
   describe('stripUnsafeUrls edge cases', () => {
     it('should strip javascript: URLs with single quotes', () => {
       const blocksData: Array<Pick<SavedData, 'data' | 'tool'>> = [

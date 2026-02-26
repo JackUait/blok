@@ -36,6 +36,7 @@ const createMockBlockAPI = () => ({
  */
 const createMockAPIMethods = (): APIInterface => ({
   blocks: {
+    isSyncingFromYjs: false,
     clear: vi.fn().mockResolvedValue(undefined),
     render: vi.fn().mockResolvedValue(undefined),
     renderFromHTML: vi.fn().mockResolvedValue(undefined),
@@ -55,6 +56,7 @@ const createMockAPIMethods = (): APIInterface => ({
     convert: vi.fn().mockResolvedValue(createMockBlockAPI()),
     stopBlockMutationWatching: vi.fn(),
     splitBlock: vi.fn().mockReturnValue(createMockBlockAPI()),
+    setBlockParent: vi.fn(),
   },
   caret: {
     setToFirstBlock: vi.fn(() => false),
@@ -147,6 +149,7 @@ const createMockAPIMethods = (): APIInterface => ({
       redactor: document.createElement('div'),
     },
   },
+  rectangleSelection: {} as APIInterface['rectangleSelection'],
 });
 
 /**

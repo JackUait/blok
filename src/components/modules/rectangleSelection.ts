@@ -140,11 +140,14 @@ export class RectangleSelection extends Module {
     const pointerX = pageX - scrollLeft;
 
     /**
-     * Check if pointer is within editor's horizontal bounds.
+     * Check if pointer is within the content area's horizontal bounds.
      * This determines whether we should close the toolbar when starting selection.
-     * Clicks outside the horizontal bounds (to the left or right) should NOT close the toolbar.
+     * Clicks outside the content area (to the left or right, in the margin/toolbar zone)
+     * should NOT close the toolbar. Uses UI.contentRect which queries the first block's
+     * content element and caches the result.
      */
-    const withinEditorHorizontally = pointerX >= editorRect.left && pointerX <= editorRect.right;
+    const contentRect = this.Blok.UI.contentRect;
+    const withinEditorHorizontally = pointerX >= contentRect.left && pointerX <= contentRect.right;
 
     const elemWhereSelectionStart = document.elementFromPoint(pageX - scrollLeft, pointerY);
 
@@ -222,6 +225,19 @@ export class RectangleSelection extends Module {
    */
   public clearSelection(): void {
     this.isRectSelectionActivated = false;
+  }
+
+  /**
+   * Cancel active rectangle selection.
+   * Used when another selection system (e.g., table cell selection) takes priority.
+   */
+  public cancelActiveSelection(): void {
+    if (!this.mousedown && !this.isRectSelectionActivated) {
+      return;
+    }
+
+    this.clearSelection();
+    this.endSelection();
   }
 
   /**
@@ -595,9 +611,12 @@ export class RectangleSelection extends Module {
       };
     }
     const blockInCurrentPos = this.Blok.BlockManager.getBlockByChildNode(elementUnderMouse);
+    const rootBlock = blockInCurrentPos !== undefined
+      ? this.Blok.BlockManager.resolveToRootBlock(blockInCurrentPos)
+      : undefined;
 
-    const index = blockInCurrentPos !== undefined
-      ? this.Blok.BlockManager.blocks.findIndex((block) => block.holder === blockInCurrentPos.holder)
+    const index = rootBlock !== undefined
+      ? this.Blok.BlockManager.blocks.findIndex((block) => block.holder === rootBlock.holder)
       : undefined;
 
     return {

@@ -23,6 +23,7 @@
 export { Paragraph } from './paragraph';
 export { Header } from './header';
 export { ListItem as List } from './list';
+export { Table } from './table';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
@@ -36,6 +37,7 @@ export const defaultBlockTools = {
   paragraph: { preserveBlank: true },
   header: {},
   list: {},
+  table: {},
 } as const;
 
 export const defaultInlineTools = {

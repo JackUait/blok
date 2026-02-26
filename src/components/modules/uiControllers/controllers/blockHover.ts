@@ -5,20 +5,15 @@ import { throttle } from '../../../utils';
 import { Controller } from './_base';
 
 /**
- * BlockHoverController detects when user hovers over blocks, including extended hover zone.
+ * BlockHoverController detects when user hovers over blocks or finds nearest block.
  *
  * Responsibilities:
  * - Listen to mousemove events (throttled)
- * - Find block by element hit or extended zone
+ * - Find block by element hit or nearest by Y distance
  * - Emit BlockHovered events
  * - Track last hovered block to avoid duplicate events
  */
 export class BlockHoverController extends Controller {
-  /**
-   * Getter function for content rect
-   */
-  private contentRectGetter: () => DOMRect;
-
   /**
    * Used to not emit the same block multiple times to the 'block-hovered' event on every mousemove.
    * Stores block ID to ensure consistent comparison regardless of how the block was detected.
@@ -42,10 +37,8 @@ export class BlockHoverController extends Controller {
   constructor(options: {
     config: Controller['config'];
     eventsDispatcher: Controller['eventsDispatcher'];
-    contentRectGetter: () => DOMRect;
   }) {
     super(options);
-    this.contentRectGetter = options.contentRectGetter;
   }
 
   /**
@@ -71,38 +64,23 @@ export class BlockHoverController extends Controller {
         return;
       }
 
-      const hoveredBlockElement = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
+      const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**
-       * If no block element found directly, try the extended hover zone
+       * If the hovered block is inside a table cell, resolve to the table block instead.
+       * Without this, the toolbar hides itself for nested cell blocks and the table's
+       * block tune settings become inaccessible.
        */
-      const zoneBlock = !hoveredBlockElement
-        ? this.findBlockInHoverZone(event.clientX, event.clientY)
-        : null;
+      const hoveredBlockElement = closestBlockWrapper?.closest('[data-blok-table-cell-blocks]')
+        ? closestBlockWrapper.closest('[data-blok-table-cell-blocks]')?.closest('[data-blok-testid="block-wrapper"]') ?? null
+        : closestBlockWrapper;
 
-      if (zoneBlock !== null && this.blockHoveredState.lastHoveredBlockId !== zoneBlock.id) {
-        /**
-         * Emit the event but DON'T set lastHoveredBlockId for hover zone events.
-         * This allows the event to be emitted again when the mouse enters the actual block element,
-         * which is important for proper toolbar positioning after cross-block selection.
-         */
-        this.eventsDispatcher.emit(BlockHovered, {
-          block: zoneBlock,
-          target: zoneBlock.holder,
-        });
-      }
-
-      if (zoneBlock !== null) {
-        return;
-      }
-
+      /**
+       * If no block element found directly, find the nearest block by Y distance
+       */
       if (!hoveredBlockElement) {
-        /**
-         * When no block is found (mouse left the editor area), reset the hover state.
-         * This allows hover events to be emitted again when re-entering a block,
-         * which is important after cross-block selection completes.
-         */
-        this.blockHoveredState.lastHoveredBlockId = null;
+        this.emitNearestBlockHovered(event.clientY);
+
         return;
       }
 
@@ -134,9 +112,8 @@ export class BlockHoverController extends Controller {
     );
 
     /**
-     * Listen on document to detect hover in the extended zone
-     * which is outside the wrapper's bounds.
-     * We filter events to only process those over the editor or in the hover zone.
+     * Listen on document to detect hover anywhere on the page.
+     * When cursor is not directly on a block, finds the nearest block by Y distance.
      */
     this.readOnlyMutableListeners.on(document, 'mousemove', (event: Event) => {
       throttledHandleBlockHovered(event);
@@ -146,38 +123,63 @@ export class BlockHoverController extends Controller {
   }
 
   /**
-   * Finds a block by vertical position when cursor is in the hover zone.
-   * The hover zone extends indefinitely on both sides of the content (left and right),
-   * allowing the toolbar to follow hover anywhere outside the content area horizontally.
-   * @param clientX - Cursor X position
+   * Finds and emits a BlockHovered event for the nearest block by Y distance.
+   * Deduplicates by lastHoveredBlockId to avoid redundant events.
    * @param clientY - Cursor Y position
-   * @returns Block at the vertical position, or null if not in hover zone or no block found
    */
-  private findBlockInHoverZone(clientX: number, clientY: number): Block | null {
-    const contentRect = this.contentRectGetter();
+  private emitNearestBlockHovered(clientY: number): void {
+    const nearestBlock = this.findNearestBlock(clientY);
 
-    /**
-     * Check if cursor is outside the content area horizontally (either left OR right side).
-     * The zone extends indefinitely on both sides, not limited to HOVER_ZONE_SIZE.
-     */
-    const isInHoverZone = clientX < contentRect.left || clientX > contentRect.right;
+    if (nearestBlock === null || this.blockHoveredState.lastHoveredBlockId === nearestBlock.id) {
+      return;
+    }
 
-    if (!isInHoverZone) {
+    this.blockHoveredState.lastHoveredBlockId = nearestBlock.id;
+
+    this.eventsDispatcher.emit(BlockHovered, {
+      block: nearestBlock,
+      target: nearestBlock.holder,
+    });
+  }
+
+  /**
+   * Finds the nearest block by vertical distance to cursor position.
+   * Returns the block whose vertical center is closest to the cursor Y position.
+   * If cursor is above all blocks, returns the first block.
+   * If cursor is below all blocks, returns the last block.
+   * @param clientY - Cursor Y position
+   * @returns Nearest block, or null if no blocks exist
+   */
+  private findNearestBlock(clientY: number): Block | null {
+    const blocks = this.Blok.BlockManager.blocks;
+
+    if (blocks.length === 0) {
       return null;
     }
 
     /**
-     * Find block by Y position
+     * Filter out blocks whose holders are inside a table cell container.
+     * Cell blocks should not participate in nearest-block detection —
+     * the parent table block should be found instead.
+     * This matches the direct-hit path which also resolves cell blocks to their parent table block.
      */
-    for (const block of this.Blok.BlockManager.blocks) {
-      const rect = block.holder.getBoundingClientRect();
+    const topLevelBlocks = blocks.filter(block =>
+      block.holder.closest('[data-blok-table-cell-blocks]') === null
+    );
 
-      if (clientY >= rect.top && clientY <= rect.bottom) {
-        return block;
-      }
+    if (topLevelBlocks.length === 0) {
+      return null;
     }
 
-    return null;
+    const result = topLevelBlocks.reduce<{ block: Block; distance: number }>((nearest, block) => {
+      const rect = block.holder.getBoundingClientRect();
+      const centerY = (rect.top + rect.bottom) / 2;
+      const distance = Math.abs(clientY - centerY);
+
+      return distance < nearest.distance ? { block, distance } : nearest;
+    }, { block: topLevelBlocks[0], distance: Infinity });
+
+    return result.block;
   }
 
   /**

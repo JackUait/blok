@@ -269,12 +269,20 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
-    const relatedBlock = BlockManager.getBlockByChildNode(mouseEvent.relatedTarget as Node) || this.lastSelectedBlock;
-    const targetBlock = BlockManager.getBlockByChildNode(mouseEvent.target as Node);
+    const rawRelatedBlock = BlockManager.getBlockByChildNode(mouseEvent.relatedTarget as Node) || this.lastSelectedBlock;
+    const rawTargetBlock = BlockManager.getBlockByChildNode(mouseEvent.target as Node);
 
-    if (!relatedBlock || !targetBlock) {
+    if (!rawRelatedBlock || !rawTargetBlock) {
       return;
     }
+
+    /**
+     * Resolve child blocks (e.g. paragraphs inside table cells) to their root parent.
+     * Without this, dragging across a table would select individual cell blocks
+     * from the flat blocks array instead of treating the table as a single unit.
+     */
+    const relatedBlock = BlockManager.resolveToRootBlock(rawRelatedBlock);
+    const targetBlock = BlockManager.resolveToRootBlock(rawTargetBlock);
 
     if (targetBlock === relatedBlock) {
       return;

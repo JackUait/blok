@@ -41,5 +41,20 @@
   "a11y.movedDown": "ບລັອກຍ້າຍລົງໄປຕຳແໜ່ງ {position} ຈາກ {total}",
   "a11y.atTop": "ບລັອກຢູ່ເທິງສຸດ, ບໍ່ສາມາດຍ້າຍຂຶ້ນໄດ້",
   "a11y.atBottom": "ບລັອກຢູ່ລຸ່ມສຸດ, ບໍ່ສາມາດຍ້າຍລົງໄດ້",
-  "tools.paragraph.placeholder": "ຂียນບາງອย່າງ ຫຼື ກົດ / ເພdelay"
+  "tools.paragraph.placeholder": "ຂຽນບາງສິ່ງ ຫຼື ກົດ / ເພື່ອເລືອກເຄື່ອງມື",
+  "tools.table.title": "ຕາຕະລາງ",
+  "tools.table.clearSelection": "ລ້າງ",
+  "tools.table.copySelection": "ສຳເນົາ",
+  "tools.table.headerColumn": "ຖັນຫົວຂໍ້",
+  "tools.table.insertColumnLeft": "ແຊກຖັນຊ້າຍ",
+  "tools.table.insertColumnRight": "ແຊກຖັນຂວາ",
+  "tools.table.deleteColumn": "ລຶບ",
+  "tools.table.headerRow": "ແຖວຫົວຂໍ້",
+  "tools.table.insertRowAbove": "ແຊກແຖວເທິງ",
+  "tools.table.insertRowBelow": "ແຊກແຖວລຸ່ມ",
+  "tools.table.deleteRow": "ລຶບ",
+  "tools.table.clickToAddRow": "ຄລິກເພື່ອເພີ່ມແຖວໃໝ່",
+  "tools.table.dragToAddRemoveRows": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບແຖວ",
+  "tools.table.clickToAddColumn": "ຄລິກເພື່ອເພີ່ມຖັນໃໝ່",
+  "tools.table.dragToAddRemoveColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບຖັນ"
 }

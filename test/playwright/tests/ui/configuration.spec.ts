@@ -12,7 +12,6 @@ import {
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
-const REDACTOR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="redactor"]`;
 const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]';
 const FAILING_TOOL_SOURCE = `
   class FailingTool {
@@ -392,33 +391,25 @@ test.describe('blok configuration options', () => {
       },
     });
 
-    const paddingBottom = await page.evaluate(({ selector }) => {
-      const redactor = document.querySelector(selector);
+    const minHeight = await page.evaluate(() => {
+      const bottomZone = document.querySelector('[data-blok-bottom-zone]');
 
-      if (!(redactor instanceof HTMLElement)) {
-        return null;
-      }
+      return (bottomZone as HTMLElement)?.style.minHeight ?? '';
+    });
 
-      return redactor.style.paddingBottom ?? null;
-    }, { selector: REDACTOR_SELECTOR });
-
-    expect(paddingBottom).toBe('180px');
+    expect(minHeight).toBe('180px');
   });
 
   test('uses default minHeight when option is omitted', async ({ page }) => {
     await createBlok(page);
 
-    const paddingBottom = await page.evaluate(({ selector }) => {
-      const redactor = document.querySelector(selector);
+    const minHeight = await page.evaluate(() => {
+      const bottomZone = document.querySelector('[data-blok-bottom-zone]');
 
-      if (!(redactor instanceof HTMLElement)) {
-        return null;
-      }
+      return (bottomZone as HTMLElement)?.style.minHeight ?? '';
+    });
 
-      return redactor.style.paddingBottom ?? null;
-    }, { selector: REDACTOR_SELECTOR });
-
-    expect(paddingBottom).toBe('300px');
+    expect(minHeight).toBe('300px');
   });
 
   test('respects logLevel configuration', async ({ page }) => {

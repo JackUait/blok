@@ -153,7 +153,18 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const { BlockManager, Tools } = this.Blok;
     const currentBlock = BlockManager.currentBlock;
 
-    if (!currentBlock?.tool.isDefault) {
+    if (!currentBlock) {
+      return false;
+    }
+
+    // Check if inside table cell
+    const isInsideTableCell = currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    if (isInsideTableCell) {
+      return false; // Don't convert to header
+    }
+
+    if (!currentBlock.tool.isDefault) {
       return false;
     }
 

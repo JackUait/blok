@@ -60,6 +60,13 @@ vi.mock('../../src/components/core', () => {
         saver: {
           save: vi.fn(),
         },
+        rectangleSelection: {
+          cancelActiveSelection: vi.fn(),
+          isRectActivated: vi.fn(),
+          clearSelection: vi.fn(),
+          startSelection: vi.fn(),
+          endSelection: vi.fn(),
+        },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'],
     EventsAPI: {
@@ -75,6 +82,13 @@ vi.mock('../../src/components/core', () => {
     } as unknown as BlokModules['Toolbar'],
     BlockSettings: {} as unknown as BlokModules['BlockSettings'],
     InlineToolbar: {} as unknown as BlokModules['InlineToolbar'],
+    RectangleSelection: {
+      cancelActiveSelection: vi.fn(),
+      isRectActivated: vi.fn(),
+      clearSelection: vi.fn(),
+      startSelection: vi.fn(),
+      endSelection: vi.fn(),
+    } as unknown as BlokModules['RectangleSelection'],
   });
 
   const mockModuleInstances = createMockModuleInstances();
@@ -176,6 +190,13 @@ describe('Blok', () => {
         saver: {
           save: vi.fn(),
         },
+        rectangleSelection: {
+          cancelActiveSelection: vi.fn(),
+          isRectActivated: vi.fn(),
+          clearSelection: vi.fn(),
+          startSelection: vi.fn(),
+          endSelection: vi.fn(),
+        },
       } as unknown as BlokModules['API']['methods'],
     } as unknown as BlokModules['API'];
     mocks.mockModuleInstances.EventsAPI = {
@@ -191,6 +212,13 @@ describe('Blok', () => {
     } as unknown as BlokModules['Toolbar'];
     mocks.mockModuleInstances.BlockSettings = {} as unknown as BlokModules['BlockSettings'];
     mocks.mockModuleInstances.InlineToolbar = {} as unknown as BlokModules['InlineToolbar'];
+    mocks.mockModuleInstances.RectangleSelection = {
+      cancelActiveSelection: vi.fn(),
+      isRectActivated: vi.fn(),
+      clearSelection: vi.fn(),
+      startSelection: vi.fn(),
+      endSelection: vi.fn(),
+    } as unknown as BlokModules['RectangleSelection'];
   });
 
   afterEach(() => {
@@ -644,6 +672,42 @@ describe('Blok', () => {
       expect(descriptor?.enumerable).toBe(false);
       expect(descriptor?.configurable).toBe(true);
       expect(descriptor?.writable).toBe(false);
+    });
+  });
+
+  describe('API exposure', () => {
+    it('should expose rectangleSelection API', async () => {
+      const holder = document.createElement('div');
+      const defaultTools = {};
+
+      const blok = new Blok({
+        holder: holder,
+        tools: defaultTools,
+      });
+
+      await blok.isReady;
+
+      // Get the actual Core instance that was created
+      const coreModule = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+      const lastCall = coreModule.lastInstance?.();
+      const instances = lastCall?.moduleInstances;
+
+      if (!instances || !lastCall) {
+        throw new Error('Core instance not found');
+      }
+
+      // Access the API from the blok instance
+      const api = instances.API?.methods;
+
+      expect(api).toBeDefined();
+      expect(api?.rectangleSelection).toBeDefined();
+      expect(typeof api?.rectangleSelection.cancelActiveSelection).toBe('function');
+      expect(typeof api?.rectangleSelection.isRectActivated).toBe('function');
+      expect(typeof api?.rectangleSelection.clearSelection).toBe('function');
+      expect(typeof api?.rectangleSelection.startSelection).toBe('function');
+      expect(typeof api?.rectangleSelection.endSelection).toBe('function');
     });
   });
 

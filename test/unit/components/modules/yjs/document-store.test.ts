@@ -58,6 +58,29 @@ describe('DocumentStore', () => {
 
       expect(yblock.get('id')).toBe('block1');
     });
+
+    it('clamps index to array length when index exceeds bounds', () => {
+      store.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'First' } });
+
+      // Index 99 exceeds array length of 1 — should clamp to end
+      store.addBlock({ id: 'block2', type: 'paragraph', data: { text: 'Second' } }, 99);
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(2);
+      expect(result[1].id).toBe('block2');
+    });
+
+    it('clamps negative index to zero', () => {
+      store.addBlock({ id: 'block1', type: 'paragraph', data: { text: 'First' } });
+
+      store.addBlock({ id: 'block2', type: 'paragraph', data: { text: 'Second' } }, -5);
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('block2');
+    });
   });
 
   describe('removeBlock', () => {
@@ -120,6 +143,56 @@ describe('DocumentStore', () => {
 
       expect(store.toJSON()[0].id).toBe('block1');
     });
+
+    it('clamps toIndex when it exceeds array length after delete', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+        { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
+      ]);
+
+      // toIndex 3 was valid before delete, but after deleting block1
+      // the array is length 2, so insert at index 3 would exceed bounds.
+      // Should clamp to index 2 (end of array).
+      store.moveBlock('block1', 3, 'local');
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(3);
+      // block1 should be at the end
+      expect(result[2].id).toBe('block1');
+    });
+
+    it('handles moving last block to position beyond bounds', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+      ]);
+
+      // Moving block2 (at index 1) to index 2:
+      // After delete, array is length 1, index 2 exceeds bounds.
+      // Should clamp to index 1 (end).
+      store.moveBlock('block2', 2, 'local');
+
+      const result = store.toJSON();
+
+      expect(result).toHaveLength(2);
+      expect(result[1].id).toBe('block2');
+    });
+
+    it('clamps negative toIndex to zero', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
+        { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
+      ]);
+
+      store.moveBlock('block3', -1, 'local');
+
+      const result = store.toJSON();
+
+      expect(result[0].id).toBe('block3');
+    });
   });
 
   describe('updateBlockData', () => {
@@ -161,6 +234,76 @@ describe('DocumentStore', () => {
 
       // Value should still be there
       expect(store.toJSON()[0].data.text).toBe('Hello');
+    });
+
+    it('skips update when array value is deeply equal but reference-different', () => {
+      const originalContent = [
+        [{ blocks: ['p1', 'p2'] }, { blocks: ['p3'] }],
+        [{ blocks: ['p4'] }, { blocks: ['p5', 'p6'] }],
+      ];
+
+      store.fromJSON([{ id: 'block1', type: 'table', data: { content: originalContent } }]);
+
+      // Create a Y.UndoManager to track whether new undo entries are created
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Update with a deeply-equal but reference-different array
+      const newContent = [
+        [{ blocks: ['p1', 'p2'] }, { blocks: ['p3'] }],
+        [{ blocks: ['p4'] }, { blocks: ['p5', 'p6'] }],
+      ];
+
+      store.updateBlockData('block1', 'content', newContent);
+
+      // No new undo entry should be created — the value hasn't semantically changed
+      expect(undoManager.undoStack.length).toBe(initialStackLength);
+
+      // Data should still be intact
+      expect(store.toJSON()[0].data.content).toEqual(originalContent);
+
+      undoManager.destroy();
+    });
+
+    it('skips update when simple array value is deeply equal but reference-different', () => {
+      store.fromJSON([{ id: 'block1', type: 'table', data: { colWidths: [100, 200, 150] } }]);
+
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Update with deeply-equal but new reference
+      store.updateBlockData('block1', 'colWidths', [100, 200, 150]);
+
+      expect(undoManager.undoStack.length).toBe(initialStackLength);
+
+      undoManager.destroy();
+    });
+
+    it('still updates when array value has actually changed', () => {
+      store.fromJSON([{ id: 'block1', type: 'table', data: { content: [{ blocks: ['p1'] }] } }]);
+
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Update with a different value
+      store.updateBlockData('block1', 'content', [{ blocks: ['p1', 'p2'] }]);
+
+      // Should create a new undo entry
+      expect(undoManager.undoStack.length).toBe(initialStackLength + 1);
+
+      // Data should reflect the change
+      expect(store.toJSON()[0].data.content).toEqual([{ blocks: ['p1', 'p2'] }]);
+
+      undoManager.destroy();
     });
   });
 

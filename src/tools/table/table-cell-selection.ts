@@ -21,8 +21,8 @@ const PILL_IDLE_SIZE = 4;
 
 const PILL_CLASSES = [
   'absolute',
-  'z-[3]',
-  'rounded',
+  'z-3',
+  'rounded-sm',
   'select-none',
   'transition-[opacity,background-color,width]',
   'duration-150',

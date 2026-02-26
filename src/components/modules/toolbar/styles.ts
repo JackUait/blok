@@ -24,7 +24,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       // Mobile styles
       'mobile:right-auto',
       // RTL styles
-      'group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*theme(width.toolbox-btn))]',
+      'group-data-[blok-rtl=true]:right-auto group-data-[blok-rtl=true]:left-[calc(-1*(var(--width-toolbox-btn)))]',
       'mobile:group-data-[blok-rtl=true]:ml-0 mobile:group-data-[blok-rtl=true]:mr-auto mobile:group-data-[blok-rtl=true]:pr-0 mobile:group-data-[blok-rtl=true]:pl-[10px]'
     ),
     actionsOpened: 'opacity-100',
@@ -40,14 +40,14 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       // Keep hover background when toolbox is opened
       'group-data-[blok-toolbox-opened=true]:bg-bg-light',
       // Mobile styles (static positioning with overlay-pane appearance)
-      'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+      'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
       'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
       // RTL styles
-      'group-data-[blok-rtl=true]:right-[calc(-1*theme(width.toolbox-btn))] group-data-[blok-rtl=true]:left-auto',
+      'group-data-[blok-rtl=true]:right-[calc(-1*(var(--width-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto',
       // Narrow mode (not-mobile)
       'not-mobile:group-data-[blok-narrow=true]:left-[5px]',
       // Narrow mode RTL (not-mobile)
-      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-0 not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:right-[5px]'
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:left-0 not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:right-[5px]'
     ),
     plusButtonShortcutKey: 'text-white',
     /**
@@ -64,12 +64,12 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       // Hover (can-hover)
       'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
       // When toolbox is opened, use pointer cursor on hover
-      'group-data-[blok-toolbox-opened=true]:can-hover:hover:cursor-pointer',
+      'can-hover:hover:group-data-[blok-toolbox-opened=true]:cursor-pointer',
       // When block settings is opened, show hover background and pointer cursor
       'group-data-[blok-block-settings-opened=true]:bg-bg-light',
-      'group-data-[blok-block-settings-opened=true]:can-hover:hover:cursor-pointer',
+      'can-hover:hover:group-data-[blok-block-settings-opened=true]:cursor-pointer',
       // Mobile styles (static positioning with overlay-pane appearance)
-      'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+      'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
       'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
       // Not-mobile styles
       'not-mobile:w-6'

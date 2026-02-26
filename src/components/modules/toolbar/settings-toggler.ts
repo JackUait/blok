@@ -121,12 +121,12 @@ export class SettingsTogglerHandler {
         // Hover (can-hover)
         'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
         // When toolbox is opened, use pointer cursor on hover
-        'group-data-[blok-toolbox-opened=true]:can-hover:hover:cursor-pointer',
+        'can-hover:hover:group-data-[blok-toolbox-opened=true]:cursor-pointer',
         // When block settings is opened, show hover background and pointer cursor
         'group-data-[blok-block-settings-opened=true]:bg-bg-light',
-        'group-data-[blok-block-settings-opened=true]:can-hover:hover:cursor-pointer',
+        'can-hover:hover:group-data-[blok-block-settings-opened=true]:cursor-pointer',
         // Mobile styles (static positioning with overlay-pane appearance)
-        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-[2]',
+        'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile'
       ),
       'group-data-[blok-dragging=true]:cursor-grabbing',

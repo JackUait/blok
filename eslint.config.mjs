@@ -97,7 +97,7 @@ const internalUnitTestPlugin = {
           'change',
           'submit',
           'focus',
-          'blur',
+          'blur-sm',
         ]);
 
         const getEventNameFromNewExpression = (node) => {
@@ -691,7 +691,7 @@ const internalPlaywrightPlugin = {
           'change',
           'submit',
           'focus',
-          'blur',
+          'blur-sm',
         ]);
 
         const getEventNameFromNewExpression = (node) => {

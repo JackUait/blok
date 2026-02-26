@@ -195,7 +195,7 @@ export class FakeBackgroundShadows {
   /**
    * Calculates bottom extension for a line, accounting for gap to next line
    * The bottom extension fills the gap up to where the next line's top extension begins
-   * This prevents overlap: line N's bottom shadow meets line N+1's top shadow exactly
+   * This prevents overlap: line N's bottom shadow-sm meets line N+1's top shadow exactly
    * @param baseExtension - the base extension value
    * @param isLastLine - whether this is the last line
    * @param lineGroups - grouped line rectangles

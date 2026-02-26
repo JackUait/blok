@@ -97,7 +97,7 @@ describe('TableGrid', () => {
       expect(cell).toHaveClass('cursor-text');
     });
 
-    it('creates cells with flex-shrink 0 so they do not compress when table overflows', () => {
+    it('creates cells with shrink 0 so they do not compress when table overflows', () => {
       const grid = new TableGrid({ readOnly: false });
       const element = grid.createGrid(2, 3);
 

@@ -78,7 +78,7 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   { pattern: /^gap-(.+)$/, getGroup: () => 'gap' },
 
   // Border radius: rounded-*
-  { pattern: /^rounded(-.*)?$/, getGroup: () => 'rounded' },
+  { pattern: /^rounded(-.*)?$/, getGroup: () => 'rounded-sm' },
 
   // Visibility: visible, invisible
   { pattern: /^(visible|invisible)$/, getGroup: () => 'visibility' },
@@ -114,13 +114,13 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   { pattern: /^leading-(.+)$/, getGroup: () => 'leading' },
 
   // Outline: outline-*
-  { pattern: /^outline(-.*)?$/, getGroup: () => 'outline' },
+  { pattern: /^outline(-.*)?$/, getGroup: () => 'outline-solid' },
 
   // Border: border-*
   { pattern: /^border(-.*)?$/, getGroup: () => 'border' },
 
   // Shadow: shadow-*
-  { pattern: /^shadow(-.*)?$/, getGroup: () => 'shadow' },
+  { pattern: /^shadow(-.*)?$/, getGroup: () => 'shadow-sm' },
 ];
 
 /**

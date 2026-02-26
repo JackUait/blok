@@ -258,7 +258,7 @@ export class PopoverItemDefault extends PopoverItem {
       const titleEl = document.createElement('div');
 
       titleEl.className = params.secondaryLabel
-        ? 'flex-grow truncate text-sm font-medium leading-5'
+        ? 'grow truncate text-sm font-medium leading-5'
         : 'mr-auto truncate text-sm font-medium leading-5';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
@@ -272,7 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'min-w-[3.5rem] text-right whitespace-nowrap pl-3 pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
+      secondaryEl.className = 'min-w-14 text-right whitespace-nowrap pl-3 pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;
@@ -343,8 +343,8 @@ export class PopoverItemDefault extends PopoverItem {
       isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
       iconWithGap && 'mr-3',
-      iconWithGap && isInline && 'shadow-none bg-transparent !mr-0',
-      iconWithGap && isNestedInline && '!mr-2',
+      iconWithGap && isInline && 'shadow-none bg-transparent mr-0!',
+      iconWithGap && isNestedInline && 'mr-2!',
       isWobbling && 'animate-wobble'
     );
   }
@@ -384,10 +384,10 @@ export class PopoverItemDefault extends PopoverItem {
 
     if (isHidden) {
       this.nodes.root.setAttribute(DATA_ATTR.hidden, 'true');
-      this.nodes.root.classList.add('!hidden');
+      this.nodes.root.classList.add('hidden!');
     } else {
       this.nodes.root.removeAttribute(DATA_ATTR.hidden);
-      this.nodes.root.classList.remove('!hidden');
+      this.nodes.root.classList.remove('hidden!');
     }
   }
 
@@ -402,10 +402,10 @@ export class PopoverItemDefault extends PopoverItem {
 
     if (isFocused) {
       this.nodes.root.setAttribute(DATA_ATTR.focused, 'true');
-      this.nodes.root.classList.add('!bg-item-focus-bg');
+      this.nodes.root.classList.add('bg-item-focus-bg!');
     } else {
       this.nodes.root.removeAttribute(DATA_ATTR.focused);
-      this.nodes.root.classList.remove('!bg-item-focus-bg');
+      this.nodes.root.classList.remove('bg-item-focus-bg!');
     }
   }
 
@@ -488,7 +488,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     this.nodes.root.removeAttribute(DATA_ATTR.popoverItemConfirmation);
-    this.nodes.root.classList.remove('!bg-item-confirm-bg', '!text-white');
+    this.nodes.root.classList.remove('bg-item-confirm-bg!', 'text-white!');
 
     this.restoreOriginalIcon();
     this.restoreOriginalTitle();
@@ -504,7 +504,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     this.nodes.root.setAttribute(DATA_ATTR.popoverItemConfirmation, 'true');
-    this.nodes.root.classList.add('!bg-item-confirm-bg', '!text-white');
+    this.nodes.root.classList.add('bg-item-confirm-bg!', 'text-white!');
 
     this.updateIcon(params.icon);
     this.updateTitle(params);

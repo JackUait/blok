@@ -200,7 +200,7 @@ export class Paragraph implements BlockTool {
    */
   private static readonly WRAPPER_CLASSES = [
     'leading-[1.6em]',
-    'outline-none',
+    'outline-hidden',
     'mt-[2px]',
     'mb-px',
     '[&>p:first-of-type]:mt-0',

@@ -10,7 +10,7 @@ const TOGGLE_ROW_CLASSES = [
   'border-none',
   'bg-transparent',
   'rounded-md',
-  'p-[var(--item-padding)]',
+  'p-(--item-padding)',
   'text-text-primary',
   'mb-px',
   'cursor-pointer',
@@ -59,7 +59,7 @@ const THUMB_CLASSES = [
   'h-4',
   'rounded-full',
   'bg-white',
-  'shadow-sm',
+  'shadow-xs',
   'transition-[left]',
   'duration-200',
 ];

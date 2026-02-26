@@ -121,7 +121,7 @@ describe('FakeBackgroundShadows', () => {
       expect(boxShadow).toContain('-');
     });
 
-    it('does not apply shadow when extension is zero', () => {
+    it('does not apply shadow-sm when extension is zero', () => {
       const parent = createParentWithLineHeight('16px');
       const wrapper = createSpan();
 
@@ -195,7 +195,7 @@ describe('FakeBackgroundShadows', () => {
       expect(span2.style.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
     });
 
-    it('applies multi-line box shadow to each span', () => {
+    it('applies multi-line box shadow-sm to each span', () => {
       const span1 = createSpan('First');
       const span2 = createSpan('Second');
 
@@ -337,7 +337,7 @@ describe('FakeBackgroundShadows', () => {
     });
   });
 
-  describe('box shadow values', () => {
+  describe('box shadow-sm values', () => {
     it('uses rgba(0, 0, 0, 0.08) for background color', () => {
       const parent = createParentWithLineHeight('24px');
       const wrapper = createSpan();
@@ -351,7 +351,7 @@ describe('FakeBackgroundShadows', () => {
       expect(wrapper.style.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
     });
 
-    it('creates inset shadow for background effect', () => {
+    it('creates inset shadow-sm for background effect', () => {
       const parent = createParentWithLineHeight('24px');
       const wrapper = createSpan();
 

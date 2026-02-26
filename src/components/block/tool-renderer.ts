@@ -240,10 +240,10 @@ export class ToolRenderer {
       'empty:before:text-gray-text',
       'empty:before:cursor-text',
       'empty:before:content-[attr(data-blok-placeholder)]',
-      '[&[data-blok-empty=true]]:before:pointer-events-none',
-      '[&[data-blok-empty=true]]:before:text-gray-text',
-      '[&[data-blok-empty=true]]:before:cursor-text',
-      '[&[data-blok-empty=true]]:before:content-[attr(data-blok-placeholder)]',
+      'data-[blok-empty=true]:before:pointer-events-none',
+      'data-[blok-empty=true]:before:text-gray-text',
+      'data-[blok-empty=true]:before:cursor-text',
+      'data-[blok-empty=true]:before:content-[attr(data-blok-placeholder)]',
     ];
 
     if (placeholderText.length > 0) {

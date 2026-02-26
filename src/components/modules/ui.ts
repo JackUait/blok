@@ -414,15 +414,15 @@ export class UI extends Module<UINodes> {
       'group',
       'relative',
       'box-border',
-      'z-[1]',
-      '[&[data-blok-dragging=true]]:cursor-grabbing',
+      'z-1',
+      'data-[blok-dragging=true]:cursor-grabbing',
       // SVG defaults
       '[&_svg]:max-h-full',
       '[&_path]:stroke-current',
       // Native selection color
       '[&_::selection]:bg-selection-inline',
       // Hide placeholder when toolbox is opened
-      '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:!opacity-0',
+      '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:opacity-0!',
       ...(this.isRtl ? [ '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, BLOK_INTERFACE_VALUE);
@@ -433,10 +433,10 @@ export class UI extends Module<UINodes> {
     }
     this.nodes.redactor = $.make('div', [
       // Narrow mode: add right margin on non-mobile screens
-      'not-mobile:group-data-[blok-narrow=true]:mr-[theme(spacing.narrow-mode-right-padding)]',
+      'not-mobile:group-data-[blok-narrow=true]:mr-(--spacing-narrow-mode-right-padding)',
       // RTL narrow mode: add left margin instead
-      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:ml-[theme(spacing.narrow-mode-right-padding)]',
-      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:mr-0',
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:ml-(--spacing-narrow-mode-right-padding)',
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:mr-0',
       // Firefox empty contenteditable fix
       '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
     ]);

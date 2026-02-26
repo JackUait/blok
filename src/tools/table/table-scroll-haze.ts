@@ -21,19 +21,19 @@ const HAZE_CLASSES = [
   'opacity-0',
   'transition-opacity',
   'duration-150',
-  'z-[1]',
+  'z-1',
 ];
 
 const LEFT_HAZE_CLASSES = [
   'left-0',
-  'bg-gradient-to-r',
+  'bg-linear-to-r',
   'from-white/80',
   'to-transparent',
 ];
 
 const RIGHT_HAZE_CLASSES = [
   'right-5',
-  'bg-gradient-to-l',
+  'bg-linear-to-l',
   'from-white/80',
   'to-transparent',
 ];

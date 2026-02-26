@@ -351,7 +351,7 @@ export const ConfirmationState: Story = {
         deleteButton.setAttribute('data-blok-popover-item-confirmation', 'true');
         deleteButton.setAttribute('data-blok-popover-item-no-hover', 'true');
         deleteButton.setAttribute('data-blok-popover-item-no-focus', 'true');
-        deleteButton.classList.add('!bg-item-confirm-bg', '!text-white');
+        deleteButton.classList.add('bg-item-confirm-bg!', 'text-white!');
       }
 
       await waitFor(

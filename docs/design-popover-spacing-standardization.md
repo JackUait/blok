@@ -42,7 +42,7 @@ Users reported that the Clear and Delete buttons in table popovers have unbalanc
 **Base styles** (`src/components/utils/popover/components/popover-item/popover-item-default/popover-item-default.const.ts`):
 
 ```typescript
-item: 'px-2 py-[var(--item-padding)] ...'  // px-2 = 8px horizontal padding
+item: 'px-2 py-(--item-padding) ...'  // px-2 = 8px horizontal padding
 icon: 'w-[26px] h-[26px] ...'              // 26×26px icon container
 ```
 
@@ -53,7 +53,7 @@ iconWithGap && 'mr-2',  // mr-2 = 8px right margin
 
 **Title** (line 260):
 ```typescript
-'mr-auto truncate text-sm font-medium leading-5'  // mr-auto = flex-grow
+'mr-auto truncate text-sm font-medium leading-5'  // mr-auto = grow
 ```
 
 ### Visual Balance Issue
@@ -112,10 +112,10 @@ iconWithGap && 'mr-3',
 **Change** (line 13):
 ```typescript
 // Before:
-item: '... px-2 py-[var(--item-padding)] ...',
+item: '... px-2 py-(--item-padding) ...',
 
 // After:
-item: '... pl-2 pr-8 py-[var(--item-padding)] ...',
+item: '... pl-2 pr-8 py-(--item-padding) ...',
 ```
 
 **Affected contexts**: All popover items with `iconWithGap: true` (default):
@@ -125,8 +125,8 @@ item: '... pl-2 pr-8 py-[var(--item-padding)] ...',
 - Table cell selection items
 
 **Exceptions preserved**:
-- Inline toolbar: Still uses `!mr-0` override (icon-only layout)
-- Nested inline: Still uses `!mr-2` override for specific nested contexts
+- Inline toolbar: Still uses `mr-0!` override (icon-only layout)
+- Nested inline: Still uses `mr-2!` override for specific nested contexts
 
 ### Secondary Improvements (Future Consideration)
 

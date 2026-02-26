@@ -35,7 +35,7 @@ export class DragPreview {
     const toolElement = clone.firstElementChild as HTMLElement | null;
 
     if (toolElement) {
-      toolElement.className = twMerge(toolElement.className, '!m-0');
+      toolElement.className = twMerge(toolElement.className, 'm-0!');
     }
 
     preview.appendChild(clone);
@@ -108,7 +108,7 @@ export class DragPreview {
       const toolElement = clone.firstElementChild as HTMLElement | null;
 
       if (toolElement) {
-        toolElement.className = twMerge(toolElement.className, '!m-0');
+        toolElement.className = twMerge(toolElement.className, 'm-0!');
       }
 
       // Position with cumulative offset

@@ -17,7 +17,7 @@ const CELL_CLASSES = [
   'py-1',
   'px-2',
   'min-h-[2em]',
-  'outline-none',
+  'outline-hidden',
   'leading-normal',
   'text-sm',
   'cursor-text',

@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 

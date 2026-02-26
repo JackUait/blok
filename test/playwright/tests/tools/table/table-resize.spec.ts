@@ -457,6 +457,6 @@ test.describe('Column Resizing', () => {
       return firstRow.map((cell) => cell.style.width?.includes('px') ?? false);
     });
 
-    expect(firstRowPixelWidths).toEqual([true, true]);
+    expect(firstRowPixelWidths).toStrictEqual([true, true]);
   });
 });

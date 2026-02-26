@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 // spec: Combined Heading Row and Column
 // seed: test/playwright/tests/tools/table/table-rendering.spec.ts
 

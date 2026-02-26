@@ -353,6 +353,7 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
       return window.blokInstance?.save();
     });
 
+    // eslint-disable-next-line playwright/no-conditional-in-test
     const blockCountBefore = beforeData?.blocks.length ?? 0;
 
     // 3. Toggle to readOnly
@@ -372,12 +373,14 @@ test.describe('Read-Only Mode Toggle Roundtrip', () => {
       return window.blokInstance?.save();
     });
 
+    // eslint-disable-next-line playwright/no-conditional-in-test
     const blockCountAfter = afterData?.blocks.length ?? 0;
 
     // 6. Block count must be identical — no extra paragraphs added
     expect(blockCountAfter).toBe(blockCountBefore);
 
     // 7. Verify no unexpected paragraph blocks appeared
+    // eslint-disable-next-line playwright/no-conditional-in-test
     const paragraphBlocks = afterData?.blocks.filter(b => b.type === 'paragraph') ?? [];
     const trailingParagraphs = paragraphBlocks.filter(
       b => (b.data as { text?: string }).text === 'Trailing paragraph'

@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 // E2E regression tests for table undo/redo data preservation
 // Validates fixes for table data loss during undo/redo operations
 
@@ -130,7 +131,7 @@ const defaultTools: Record<string, SerializableToolConfig> = {
  * Assumes a 2-column table layout.
  */
 const getCellEditable = (page: Page, row: number, col: number) => {
-  // eslint-disable-next-line playwright/no-nth-methods -- nth() is necessary to index into a grid by row/col
+   
   return page.locator(CELL_SELECTOR).nth(row * 2 + col).locator('[contenteditable="true"]').first();
 };
 

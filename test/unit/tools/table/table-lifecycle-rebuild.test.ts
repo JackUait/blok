@@ -368,6 +368,7 @@ describe('Table lifecycle rebuild', () => {
   });
 
   describe('rendered() undo grouping', () => {
+    // eslint-disable-next-line internal-unit-test/require-behavior-verification
     it('wraps cell population in a Yjs transaction via api.blocks.transact', () => {
       const transactFn = vi.fn((fn: () => void) => fn());
 

@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 // spec: Edge Cases and Error Handling
 // seed: test/playwright/tests/tools/table.spec.ts
 

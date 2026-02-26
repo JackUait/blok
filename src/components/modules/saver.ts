@@ -41,10 +41,52 @@ export class Saver extends Module {
   private lastSaveError?: unknown;
 
   /**
-   * Composes new chain of Promises to fire them alternatelly
+   * Stores the in-flight save promise for deduplication.
+   * If a save is already in progress, subsequent calls return the same promise.
+   */
+  private pendingSave: Promise<OutputData | undefined> | null = null;
+
+  /**
+   * Composes new chain of Promises to fire them alternatelly.
+   * Deduplicates concurrent calls — if a save is already in-flight, returns the same promise.
    * @returns {OutputData | undefined}
    */
   public async save(): Promise<OutputData | undefined> {
+    if (this.isDestroyed) {
+      return undefined;
+    }
+
+    if (this.pendingSave !== null) {
+      return this.pendingSave;
+    }
+
+    this.pendingSave = this.doSave();
+
+    try {
+      return await this.pendingSave;
+    } finally {
+      this.pendingSave = null;
+    }
+  }
+
+  /**
+   * Internal save implementation.
+   * Waits for any pending render to complete before reading blocks.
+   * @returns {OutputData | undefined}
+   */
+  private async doSave(): Promise<OutputData | undefined> {
+    // Wait for any in-progress render to complete before reading blocks
+    const pendingRender = this.Blok.Renderer?.pendingRender;
+
+    if (pendingRender !== null && pendingRender !== undefined) {
+      await pendingRender;
+    }
+
+    // Check again after awaiting — editor may have been destroyed during the wait
+    if (this.isDestroyed) {
+      return undefined;
+    }
+
     const { BlockManager, Tools } = this.Blok;
     const blocks = BlockManager.blocks;
 
@@ -77,6 +119,11 @@ export class Saver extends Module {
       );
 
       const normalizedData = normalizeInlineImages(sanitizedData);
+
+      // Check destruction one more time after async block.save() operations
+      if (this.isDestroyed) {
+        return undefined;
+      }
 
       return this.makeOutput(normalizedData);
     } catch (error: unknown) {

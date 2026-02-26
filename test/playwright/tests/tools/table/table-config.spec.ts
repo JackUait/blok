@@ -142,7 +142,7 @@ test.describe('Table Configuration Options', () => {
     // 3. Type '/' to open the slash menu
     await page.keyboard.type('/');
 
-    // 4. Wait for the toolbox popover to open via DOM attribute, then force-click the 'Table' entry
+    // 4. Wait for the toolbox popover to open via DOM attribute, then click the 'Table' entry
     await page.waitForFunction(
       () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') !== null,
       { timeout: 3000 }
@@ -150,7 +150,14 @@ test.describe('Table Configuration Options', () => {
 
     const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
 
-    await tableToolboxItem.click({ force: true });
+    await tableToolboxItem.click();
+
+    // Wait for the toolbox to close after inserting the table.
+    // This prevents stale popover state from interfering with subsequent assertions.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') === null,
+      { timeout: 3000 }
+    );
 
     // 5. Wait for the table block to appear in the editor
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
@@ -185,7 +192,7 @@ test.describe('Table Configuration Options', () => {
     // 3. Type '/' to open the slash menu
     await page.keyboard.type('/');
 
-    // 4. Wait for the toolbox popover to open via DOM attribute, then force-click the 'Table' entry
+    // 4. Wait for the toolbox popover to open via DOM attribute, then click the 'Table' entry
     await page.waitForFunction(
       () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') !== null,
       { timeout: 3000 }
@@ -193,7 +200,16 @@ test.describe('Table Configuration Options', () => {
 
     const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
 
-    await tableToolboxItem.click({ force: true });
+    await tableToolboxItem.click();
+
+    // Wait for the toolbox to close after inserting the table.
+    // On CI, force-clicking the toolbox item can silently fail if the popover's
+    // click handler hasn't fully initialized. Using a regular click + close-wait
+    // ensures the insertion actually triggered.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') === null,
+      { timeout: 3000 }
+    );
 
     // 5. Wait for the table block to appear in the editor
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
@@ -247,7 +263,13 @@ test.describe('Table Configuration Options', () => {
 
     const tableToolboxItem = page.locator('[data-blok-item-name="table"]');
 
-    await tableToolboxItem.click({ force: true });
+    await tableToolboxItem.click();
+
+    // Wait for the toolbox to close after inserting the table
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') === null,
+      { timeout: 3000 }
+    );
 
     // 4. Wait for the table to appear and click into the first cell
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();

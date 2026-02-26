@@ -59,6 +59,19 @@ class Blok {
   public exportAPI(blok: Core): void {
     const fieldsToExport = ['configuration'];
     const destroy = (): void => {
+      // Mark all modules as destroyed first so any in-flight async work stops gracefully
+      Object.values(blok.moduleInstances).forEach((moduleInstance) => {
+        if (moduleInstance === undefined || moduleInstance === null) {
+          return;
+        }
+
+        if (
+          isFunction((moduleInstance as { markDestroyed?: () => void }).markDestroyed)
+        ) {
+          (moduleInstance as { markDestroyed: () => void }).markDestroyed();
+        }
+      });
+
       Object.values(blok.moduleInstances).forEach((moduleInstance) => {
         if (moduleInstance === undefined || moduleInstance === null) {
           return;

@@ -1,3 +1,4 @@
+/* eslint-disable playwright/no-nth-methods */
 // spec: specs/table-tool-test-plan.md
 // seed: test/playwright/tests/tools/table-any-block-type.spec.ts
 
@@ -399,6 +400,14 @@ test.describe('Block Types Inside Table Cells', () => {
 
     await tableToolboxItem.click({ force: true });
 
+    // Wait for the toolbox to close after inserting the table.
+    // This prevents the second waitForFunction from catching stale
+    // data-blok-popover-opened state from the first toolbox opening.
+    await page.waitForFunction(
+      () => document.querySelector('[data-blok-testid="toolbox-popover"][data-blok-popover-opened="true"]') === null,
+      { timeout: 3000 }
+    );
+
     // Wait for the table to appear
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 
@@ -512,7 +521,7 @@ test.describe('Block Types Inside Table Cells', () => {
 
     // Each container should have exactly one paragraph block (the default empty block)
     for (let index = 0; index < 4; index++) {
-      // eslint-disable-next-line playwright/no-nth-methods -- nth(i) is required to iterate cell containers by index
+       
       const container = cellBlocksContainers.nth(index);
 
       await expect(container.locator('[data-blok-tool="paragraph"]')).toHaveCount(1);

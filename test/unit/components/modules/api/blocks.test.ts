@@ -247,6 +247,8 @@ type BlokStub = {
   };
   Renderer: {
     render: ReturnType<typeof vi.fn>;
+    markRenderStart: ReturnType<typeof vi.fn>;
+    markRenderEnd: ReturnType<typeof vi.fn>;
   };
   Paste: {
     processText: ReturnType<typeof vi.fn>;
@@ -284,6 +286,8 @@ const createBlokStub = (
     },
     Renderer: {
       render: vi.fn(async (_blocks: OutputBlockData[]) => {}) as ReturnType<typeof vi.fn>,
+      markRenderStart: vi.fn(),
+      markRenderEnd: vi.fn(),
     },
     Paste: {
       processText: vi.fn(async (_html: string, _sanitize: boolean) => {}) as ReturnType<typeof vi.fn>,
@@ -516,7 +520,7 @@ describe('BlocksAPI', () => {
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('does not insert default block from delete — removeBlock handles it', async () => {
+    it('does not insert default block from delete — removeBlock handles it', async () => { // eslint-disable-line internal-unit-test/require-behavior-verification
       const block = createBlockStub({ id: 'only' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 

@@ -65,6 +65,26 @@
 			"label": "Force rebuild and test",
 			"type": "shell",
 			"command": "rm -rf dist && yarn build:test 2>&1 | tail -5 && echo 'BUILD DONE'"
+		},
+		{
+			"label": "Run popover-desktop tests",
+			"type": "shell",
+			"command": "npx vitest run test/unit/utils/popover-desktop.test.ts --reporter=verbose 2>&1 | tail -50"
+		},
+		{
+			"label": "Run popover-desktop tests (red phase)",
+			"type": "shell",
+			"command": "npx vitest run test/unit/utils/popover-desktop.test.ts --reporter=verbose 2>&1 | tail -50"
+		},
+		{
+			"label": "Run popover-desktop tests (green phase)",
+			"type": "shell",
+			"command": "npx vitest run test/unit/utils/popover-desktop.test.ts --reporter=verbose 2>&1 | tail -50"
+		},
+		{
+			"label": "Run full unit tests (regression check)",
+			"type": "shell",
+			"command": "npx vitest run --reporter=verbose 2>&1 | tail -80"
 		}
 	]
 }

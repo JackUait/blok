@@ -1,7 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconMarker } from '../../../../src/components/icons';
 import { MarkerInlineTool } from '../../../../src/components/inline-tools/inline-tool-marker';
+import { COLOR_PRESETS } from '../../../../src/components/shared/color-presets';
 import type { PopoverItemHtmlParams } from '../../../../types/utils/popover';
+
+/**
+ * Convert a hex color string to the rgb() format that CSSOM produces
+ */
+function hexToRgb(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 const createMockApi = () => ({
   toolbar: {},
@@ -151,6 +163,80 @@ describe('MarkerInlineTool', () => {
       expect(mark).not.toBeNull();
       expect(mark?.style.backgroundColor).toBe('rgb(251, 236, 221)');
     });
+
+    it('only colors the selected portion when selection is a subset of an existing mark', () => {
+      container.innerHTML = '<mark style="color: #d44c47">Hello World</mark>';
+
+      const markEl = container.querySelector('mark');
+
+      if (!markEl?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const textNode = markEl.firstChild;
+      const range = document.createRange();
+
+      // Select only "World" (offset 6..11)
+      range.setStart(textNode, 6);
+      range.setEnd(textNode, 11);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.applyColor('color', '#448361');
+
+      const marks = container.querySelectorAll('mark');
+
+      // Should have two marks: "Hello " in original red, "World" in new green
+      expect(marks.length).toBe(2);
+      expect(marks[0].textContent).toBe('Hello ');
+      expect(marks[0].style.color).toBe('rgb(212, 76, 71)');
+      expect(marks[1].textContent).toBe('World');
+      expect(marks[1].style.color).toBe('rgb(68, 131, 97)');
+    });
+
+    it('only colors the selected portion for background-color mode', () => {
+      container.innerHTML = '<mark style="background-color: #fbecdd">Hello World</mark>';
+
+      const markEl = container.querySelector('mark');
+
+      if (!markEl?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const textNode = markEl.firstChild;
+      const range = document.createRange();
+
+      // Select only "Hello" (offset 0..5)
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.applyColor('background-color', '#e7f3f8');
+
+      const marks = container.querySelectorAll('mark');
+
+      // "Hello" with new color, " World" with original color
+      expect(marks.length).toBe(2);
+      expect(marks[0].textContent).toBe('Hello');
+      expect(marks[0].style.backgroundColor).toBe('rgb(231, 243, 248)');
+      expect(marks[1].textContent).toBe(' World');
+      expect(marks[1].style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
   });
 
   describe('removeColor', () => {
@@ -257,6 +343,379 @@ describe('MarkerInlineTool', () => {
 
       expect(swatch).not.toBeNull();
       expect(swatch?.style.backgroundColor).toBe('rgb(253, 235, 236)');
+    });
+  });
+
+  describe('text + background color combinations', () => {
+    /**
+     * Select the entire text content of a mark element inside the container
+     */
+    function selectMarkContents(mark: HTMLElement): void {
+      const range = document.createRange();
+
+      range.selectNodeContents(mark);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    /**
+     * Select a text range within a node by character offsets
+     */
+    function selectTextRange(node: Node, start: number, end: number): void {
+      const range = document.createRange();
+
+      range.setStart(node, start);
+      range.setEnd(node, end);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    it('applies background color to text that already has text color', () => {
+      container.innerHTML = '<mark style="color: #d44c47">hello</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectMarkContents(mark);
+      tool.applyColor('background-color', '#e7f3f8');
+
+      const updatedMark = container.querySelector('mark');
+
+      expect(updatedMark).not.toBeNull();
+      expect(container.querySelectorAll('mark').length).toBe(1);
+      expect(updatedMark?.style.color).toBe('rgb(212, 76, 71)');
+      expect(updatedMark?.style.backgroundColor).toBe('rgb(231, 243, 248)');
+    });
+
+    it('applies text color to text that already has background color', () => {
+      container.innerHTML = '<mark style="background-color: #fbecdd">hello</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectMarkContents(mark);
+      tool.applyColor('color', '#448361');
+
+      const updatedMark = container.querySelector('mark');
+
+      expect(updatedMark).not.toBeNull();
+      expect(container.querySelectorAll('mark').length).toBe(1);
+      expect(updatedMark?.style.color).toBe('rgb(68, 131, 97)');
+      expect(updatedMark?.style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
+
+    it('changes text color while preserving existing background color', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">hello</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectMarkContents(mark);
+      tool.applyColor('color', '#337ea9');
+
+      const updatedMark = container.querySelector('mark');
+
+      expect(updatedMark).not.toBeNull();
+      expect(updatedMark?.style.color).toBe('rgb(51, 126, 169)');
+      expect(updatedMark?.style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
+
+    it('changes background color while preserving existing text color', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">hello</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectMarkContents(mark);
+      tool.applyColor('background-color', '#f6f3f9');
+
+      const updatedMark = container.querySelector('mark');
+
+      expect(updatedMark).not.toBeNull();
+      expect(updatedMark?.style.color).toBe('rgb(212, 76, 71)');
+      expect(updatedMark?.style.backgroundColor).toBe('rgb(246, 243, 249)');
+    });
+
+    it('preserves background color when splitting mark with new text color on partial selection', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">Hello World</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectTextRange(mark.firstChild, 6, 11);
+      tool.applyColor('color', '#448361');
+
+      const marks = container.querySelectorAll('mark');
+
+      expect(marks.length).toBe(2);
+
+      // "Hello " keeps original text color + background
+      expect(marks[0].textContent).toBe('Hello ');
+      expect(marks[0].style.color).toBe('rgb(212, 76, 71)');
+      expect(marks[0].style.backgroundColor).toBe('rgb(251, 236, 221)');
+
+      // "World" gets new text color, keeps original background
+      expect(marks[1].textContent).toBe('World');
+      expect(marks[1].style.color).toBe('rgb(68, 131, 97)');
+      expect(marks[1].style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
+
+    it('preserves text color when splitting mark with new background on partial selection', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">Hello World</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectTextRange(mark.firstChild, 6, 11);
+      tool.applyColor('background-color', '#e7f3f8');
+
+      const marks = container.querySelectorAll('mark');
+
+      expect(marks.length).toBe(2);
+
+      // "Hello " keeps original text color + background
+      expect(marks[0].textContent).toBe('Hello ');
+      expect(marks[0].style.color).toBe('rgb(212, 76, 71)');
+      expect(marks[0].style.backgroundColor).toBe('rgb(251, 236, 221)');
+
+      // "World" keeps original text color, gets new background
+      expect(marks[1].textContent).toBe('World');
+      expect(marks[1].style.color).toBe('rgb(212, 76, 71)');
+      expect(marks[1].style.backgroundColor).toBe('rgb(231, 243, 248)');
+    });
+
+    it('splits into three segments preserving both styles on before and after portions', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">Hello World End</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      // Select "World" (offset 6..11)
+      selectTextRange(mark.firstChild, 6, 11);
+      tool.applyColor('color', '#448361');
+
+      const marks = container.querySelectorAll('mark');
+
+      expect(marks.length).toBe(3);
+
+      // "Hello " — original styles
+      expect(marks[0].textContent).toBe('Hello ');
+      expect(marks[0].style.color).toBe('rgb(212, 76, 71)');
+      expect(marks[0].style.backgroundColor).toBe('rgb(251, 236, 221)');
+
+      // "World" — new text color, original background
+      expect(marks[1].textContent).toBe('World');
+      expect(marks[1].style.color).toBe('rgb(68, 131, 97)');
+      expect(marks[1].style.backgroundColor).toBe('rgb(251, 236, 221)');
+
+      // " End" — original styles
+      expect(marks[2].textContent).toBe(' End');
+      expect(marks[2].style.color).toBe('rgb(212, 76, 71)');
+      expect(marks[2].style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
+
+    it('removes background color from combined mark keeping only text color', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">both</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectMarkContents(mark);
+      tool.removeColor('background-color');
+
+      const updatedMark = container.querySelector('mark');
+
+      expect(updatedMark).not.toBeNull();
+      expect(updatedMark?.style.color).toBe('rgb(212, 76, 71)');
+      expect(updatedMark?.style.backgroundColor).toBe('');
+    });
+
+    it('unwraps mark completely when both colors are removed sequentially', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">both</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectMarkContents(mark);
+      tool.removeColor('color');
+
+      // After removing text color, mark should still exist with background
+      expect(container.querySelector('mark')).not.toBeNull();
+
+      // Select the mark contents again for the second removal
+      const remainingMark = container.querySelector('mark');
+
+      if (!remainingMark) {
+        throw new Error('Expected mark to still be present after removing one color');
+      }
+
+      selectMarkContents(remainingMark);
+      tool.removeColor('background-color');
+
+      // Mark should be fully unwrapped now
+      expect(container.querySelector('mark')).toBeNull();
+      expect(container.textContent).toBe('both');
+    });
+
+    it('applies text color then background via sequential applyColor calls on plain text', () => {
+      container.innerHTML = 'hello';
+
+      const textNode = container.firstChild;
+
+      if (!textNode) {
+        throw new Error('Test setup failed: no text node');
+      }
+
+      // First: apply text color
+      selectTextRange(textNode, 0, 5);
+      tool.applyColor('color', '#d44c47');
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Expected mark to be created');
+      }
+
+      // Second: apply background color to the same mark
+      selectMarkContents(mark);
+      tool.applyColor('background-color', '#e7f3f8');
+
+      const finalMark = container.querySelector('mark');
+
+      expect(finalMark).not.toBeNull();
+      expect(container.querySelectorAll('mark').length).toBe(1);
+      expect(finalMark?.style.color).toBe('rgb(212, 76, 71)');
+      expect(finalMark?.style.backgroundColor).toBe('rgb(231, 243, 248)');
+      expect(finalMark?.textContent).toBe('hello');
+    });
+
+    it('applies background then text color via sequential applyColor calls on plain text', () => {
+      container.innerHTML = 'hello';
+
+      const textNode = container.firstChild;
+
+      if (!textNode) {
+        throw new Error('Test setup failed: no text node');
+      }
+
+      // First: apply background color
+      selectTextRange(textNode, 0, 5);
+      tool.applyColor('background-color', '#fdebec');
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Expected mark to be created');
+      }
+
+      // Second: apply text color to the same mark
+      selectMarkContents(mark);
+      tool.applyColor('color', '#9065b0');
+
+      const finalMark = container.querySelector('mark');
+
+      expect(finalMark).not.toBeNull();
+      expect(container.querySelectorAll('mark').length).toBe(1);
+      expect(finalMark?.style.color).toBe('rgb(144, 101, 176)');
+      expect(finalMark?.style.backgroundColor).toBe('rgb(253, 235, 236)');
+      expect(finalMark?.textContent).toBe('hello');
+    });
+
+    it('isActive returns true when caret is inside a mark with both color and background', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">colored</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      selectTextRange(mark.firstChild, 2, 2);
+
+      const config = tool.render();
+      const isActive = typeof config.isActive === 'function' ? config.isActive() : false;
+
+      expect(isActive).toBe(true);
+    });
+
+    describe('all preset combinations', () => {
+      const combinationMatrix = COLOR_PRESETS.flatMap((textPreset) =>
+        COLOR_PRESETS.map((bgPreset) => ({
+          textName: textPreset.name,
+          textHex: textPreset.text,
+          bgName: bgPreset.name,
+          bgHex: bgPreset.bg,
+        }))
+      );
+
+      it.each(combinationMatrix)(
+        'combines $textName text color with $bgName background',
+        ({ textHex, bgHex }) => {
+          container.innerHTML = `<mark style="color: ${textHex}; background-color: ${bgHex}">test</mark>`;
+
+          const mark = container.querySelector('mark');
+
+          if (!mark) {
+            throw new Error('Test setup failed: mark element not found');
+          }
+
+          selectMarkContents(mark);
+
+          // Verify both styles coexist on the mark element
+          expect(mark.style.color).toBe(hexToRgb(textHex));
+          expect(mark.style.backgroundColor).toBe(hexToRgb(bgHex));
+
+          // Apply a fresh text color — background should be preserved
+          tool.applyColor('color', textHex);
+
+          const updatedMark = container.querySelector('mark');
+
+          expect(updatedMark).not.toBeNull();
+          expect(updatedMark?.style.color).toBe(hexToRgb(textHex));
+          expect(updatedMark?.style.backgroundColor).toBe(hexToRgb(bgHex));
+        }
+      );
     });
   });
 });

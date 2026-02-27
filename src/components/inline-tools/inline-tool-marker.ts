@@ -177,7 +177,28 @@ export class MarkerInlineTool implements InlineTool {
     const existingMark = this.findContainingMark(range);
 
     if (existingMark) {
-      existingMark.style.setProperty(mode, value);
+      /**
+       * If the selection covers the entire mark content, update in-place
+       */
+      const markRange = document.createRange();
+
+      markRange.selectNodeContents(existingMark);
+
+      const coversAll =
+        range.compareBoundaryPoints(Range.START_TO_START, markRange) <= 0 &&
+        range.compareBoundaryPoints(Range.END_TO_END, markRange) >= 0;
+
+      if (coversAll) {
+        existingMark.style.setProperty(mode, value);
+
+        return;
+      }
+
+      /**
+       * Partial selection: split the mark around the selection
+       * so the new color applies only to the selected text
+       */
+      this.splitMarkAroundRange(existingMark, range, mode, value);
 
       return;
     }
@@ -470,6 +491,75 @@ export class MarkerInlineTool implements InlineTool {
       if (!hasOtherStyle) {
         this.unwrapElement(mark);
       }
+    }
+  }
+
+  /**
+   * Split a mark element around a range so only the selected portion gets the new style.
+   * Produces up to three segments: before (original style), selected (new style), after (original style).
+   * @param mark - The existing mark element to split
+   * @param range - The selection range within the mark
+   * @param mode - The style property to set on the selected portion
+   * @param value - The CSS value for the style property
+   */
+  private splitMarkAroundRange(mark: HTMLElement, range: Range, mode: ColorMode, value: string): void {
+    const parent = mark.parentNode;
+
+    if (!parent) {
+      return;
+    }
+
+    const beforeRange = document.createRange();
+
+    beforeRange.setStart(mark, 0);
+    beforeRange.setEnd(range.startContainer, range.startOffset);
+
+    const afterRange = document.createRange();
+
+    afterRange.setStart(range.endContainer, range.endOffset);
+    afterRange.setEnd(mark, mark.childNodes.length);
+
+    const beforeContents = beforeRange.extractContents();
+    const selectedContents = range.extractContents();
+    const afterContents = afterRange.extractContents();
+
+    const newMark = document.createElement('mark');
+
+    newMark.style.cssText = mark.style.cssText;
+    newMark.style.setProperty(mode, value);
+    newMark.appendChild(selectedContents);
+
+    const fragment = document.createDocumentFragment();
+
+    if (beforeContents.textContent) {
+      const beforeMark = document.createElement('mark');
+
+      beforeMark.style.cssText = mark.style.cssText;
+      beforeMark.appendChild(beforeContents);
+      fragment.appendChild(beforeMark);
+    }
+
+    fragment.appendChild(newMark);
+
+    if (afterContents.textContent) {
+      const afterMark = document.createElement('mark');
+
+      afterMark.style.cssText = mark.style.cssText;
+      afterMark.appendChild(afterContents);
+      fragment.appendChild(afterMark);
+    }
+
+    parent.replaceChild(fragment, mark);
+
+    const selection = window.getSelection();
+
+    if (selection) {
+      selection.removeAllRanges();
+
+      const newRange = document.createRange();
+
+      newRange.selectNodeContents(newMark);
+      selection.addRange(newRange);
     }
   }
 

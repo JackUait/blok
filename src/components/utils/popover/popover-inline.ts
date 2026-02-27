@@ -7,6 +7,7 @@ import type { PopoverItem } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemType , css as popoverItemCls } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import { PopoverDesktop } from './popover-desktop';
+import { PopoverRegistry } from './popover-registry';
 import { css, cssInline, CSSVariables, getNestedLevelAttrValue } from './popover.const';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -65,6 +66,9 @@ export class PopoverInline extends PopoverDesktop {
       );
       this.nodes.popoverContainer.style.height = '';
     }
+
+    // Unregister from PopoverRegistry (from abstract)
+    PopoverRegistry.instance.unregister(this);
 
     // Emit closed event (from abstract)
     this.emit(PopoverEvent.Closed);

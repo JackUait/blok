@@ -567,7 +567,7 @@ export class TableCellSelection {
             element: pickerElement,
           }],
           isFlippable: false,
-          width: 'auto',
+          width: '12.5rem',
         },
       });
     }

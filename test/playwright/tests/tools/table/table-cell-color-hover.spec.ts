@@ -274,11 +274,8 @@ test.describe('Cell color picker hover behavior', () => {
 
     await expect(colorPicker).toBeVisible();
 
-    // Click outside the popover to close the entire popover tree
-    const farCell = getCell(page, 2, 2);
-    const farCellBox = assertBoundingBox(await farCell.boundingBox(), 'far cell [2,2]');
-
-    await page.mouse.click(farCellBox.x + farCellBox.width / 2, farCellBox.y + farCellBox.height / 2);
+    // Press Escape to close the entire popover tree
+    await page.keyboard.press('Escape');
 
     // Both parent and nested popover should be closed
     await expect(colorPicker).not.toBeVisible();

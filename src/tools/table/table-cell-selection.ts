@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { IconCopy, IconCross, IconMarker } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
-import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
+import { PopoverInline, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
 import { CELL_ATTR, ROW_ATTR } from './table-core';
@@ -80,7 +80,7 @@ export class TableCellSelection {
   private selectedCells: HTMLElement[] = [];
   private overlay: HTMLElement | null = null;
   private pill: HTMLElement | null = null;
-  private pillPopover: PopoverDesktop | null = null;
+  private pillPopover: PopoverInline | null = null;
 
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
@@ -583,7 +583,7 @@ export class TableCellSelection {
       },
     ];
 
-    this.pillPopover = new PopoverDesktop({
+    this.pillPopover = new PopoverInline({
       items,
       trigger: this.pill,
       flippable: true,

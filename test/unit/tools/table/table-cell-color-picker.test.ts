@@ -31,7 +31,7 @@ describe('createCellColorPicker', () => {
 
     const bgTab = element.querySelector('[data-blok-testid="cell-color-tab-backgroundColor"]');
 
-    expect(bgTab?.getAttribute('data-blok-active')).toBe('');
+    expect(bgTab?.className).toContain('font-medium');
   });
 
   it('renders 9 swatches', () => {
@@ -68,11 +68,11 @@ describe('createCellColorPicker', () => {
 
     textTab?.click();
 
-    expect(textTab?.getAttribute('data-blok-active')).toBe('');
+    expect(textTab?.className).toContain('font-medium');
 
     const bgTab = element.querySelector('[data-blok-testid="cell-color-tab-backgroundColor"]');
 
-    expect(bgTab?.hasAttribute('data-blok-active')).toBe(false);
+    expect(bgTab?.className).not.toContain('font-medium');
   });
 
   it('clicking swatch in text mode calls onColorSelect with text color and textColor mode', () => {
@@ -129,6 +129,30 @@ describe('createCellColorPicker', () => {
     const defaultBtn = element.querySelector('[data-blok-testid="cell-color-default-btn"]');
 
     expect(defaultBtn).toBeTruthy();
+  });
+
+  it('swatches always display "A" text in both modes', () => {
+    const { element } = createCellColorPicker({
+      i18n: mockI18n,
+      onColorSelect: vi.fn(),
+    });
+
+    const swatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-"]'));
+
+    for (const swatch of swatches) {
+      expect(swatch.textContent).toBe('A');
+    }
+
+    // Switch to text mode
+    const textTab = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-tab-textColor"]');
+
+    textTab?.click();
+
+    const textSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-"]'));
+
+    for (const swatch of textSwatches) {
+      expect(swatch.textContent).toBe('A');
+    }
   });
 
   it('swatches show background color in background mode', () => {

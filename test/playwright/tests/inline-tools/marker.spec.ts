@@ -138,7 +138,7 @@ const openMarkerPicker = async (page: Page): Promise<void> => {
   await expect(markerButton).toBeVisible();
   await markerButton.click();
 
-  const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+  const picker = page.locator('[data-blok-testid="marker-picker"]');
 
   await expect(picker).toBeVisible();
 };
@@ -353,7 +353,7 @@ test.describe('inline tool marker', () => {
     await redSwatch.click();
 
     // Verify the color picker is still visible after clicking
-    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+    const picker = page.locator('[data-blok-testid="marker-picker"]');
 
     await expect(picker).toBeVisible();
   });
@@ -380,7 +380,7 @@ test.describe('inline tool marker', () => {
     await redSwatch.click();
 
     // Picker should still be open
-    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+    const picker = page.locator('[data-blok-testid="marker-picker"]');
 
     await expect(picker).toBeVisible();
 
@@ -443,7 +443,7 @@ test.describe('inline tool marker', () => {
 
     await redSwatch.click();
 
-    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+    const picker = page.locator('[data-blok-testid="marker-picker"]');
 
     await expect(picker).toBeVisible();
 
@@ -482,7 +482,7 @@ test.describe('inline tool marker', () => {
     await page.keyboard.press(`${modifierKey}+Shift+h`);
 
     // Verify the color picker popover is visible
-    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+    const picker = page.locator('[data-blok-testid="marker-picker"]');
 
     await expect(picker).toBeVisible();
   });
@@ -508,7 +508,7 @@ test.describe('inline tool marker', () => {
     await defaultBtn.click();
 
     // Picker should still be visible even though mark was fully unwrapped
-    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+    const picker = page.locator('[data-blok-testid="marker-picker"]');
 
     await expect(picker).toBeVisible();
   });

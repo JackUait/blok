@@ -6,7 +6,7 @@
 <body>
   <script type="module">
     import { Blok, DATA_ATTR, version } from '/dist/blok.mjs?_v=1';
-    import { Header, Paragraph, List, Table, Bold, Italic, Link, Convert } from '/dist/tools.mjs?_v=1';
+    import { Header, Paragraph, List, Table, Bold, Italic, Link, Convert, Marker } from '/dist/tools.mjs?_v=1';
 
     // Create default tools configuration (mimics pre-modular behavior)
     // Block tools with inlineToolbar enabled
@@ -31,6 +31,7 @@
       bold: { class: Bold },
       italic: { class: Italic },
       link: { class: Link },
+      marker: { class: Marker },
       convertTo: { class: Convert },
     };
 
@@ -62,6 +63,7 @@
     window.BlokItalic = Italic;
     window.BlokLink = Link;
     window.BlokConvert = Convert;
+    window.BlokMarker = Marker;
     window.BlokDataAttr = DATA_ATTR;
     window.BlokVersion = version;
     window.defaultTools = defaultTools;
@@ -78,6 +80,7 @@
     BlokWithDefaults.Italic = Italic;
     BlokWithDefaults.Link = Link;
     BlokWithDefaults.Convert = Convert;
+    BlokWithDefaults.Marker = Marker;
   </script>
   <h1>Blok test page</h1>
 </body>

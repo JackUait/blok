@@ -17,8 +17,14 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   // Min-width: min-w-* classes conflict with each other
   { pattern: /^min-w-(.+)$/, getGroup: () => 'min-w' },
 
+  // Max-height: max-h-* classes conflict with each other
+  { pattern: /^max-h-(.+)$/, getGroup: () => 'max-h' },
+
   // Height: h-* classes conflict with each other
   { pattern: /^h-(.+)$/, getGroup: () => 'h' },
+
+  // Min-height: min-h-* classes conflict with each other
+  { pattern: /^min-h-(.+)$/, getGroup: () => 'min-h' },
 
   // Display: block, inline-block, flex, hidden, etc.
   { pattern: /^(block|inline-block|inline|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root|list-item)$/, getGroup: () => 'display' },
@@ -116,8 +122,14 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   // Outline: outline-*
   { pattern: /^outline(-.*)?$/, getGroup: () => 'outline-solid' },
 
-  // Border: border-*
-  { pattern: /^border(-.*)?$/, getGroup: () => 'border' },
+  // Border width/style: border, border-0, border-none
+  { pattern: /^border(?:-(?:none|0))?$/, getGroup: () => 'border-w' },
+
+  // Border side width: border-{t,r,b,l}(-{suffix})?
+  { pattern: /^border-([trlb])(?:-|$)/, getGroup: (m) => `border-${m[1]}` },
+
+  // Border color: everything else with border- prefix
+  { pattern: /^border-.+$/, getGroup: () => 'border-color' },
 
   // Shadow: shadow-*
   { pattern: /^shadow(-.*)?$/, getGroup: () => 'shadow-sm' },

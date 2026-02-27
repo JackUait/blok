@@ -263,7 +263,7 @@ test.describe('Cell color picker hover behavior', () => {
     expect(cellBg).toBeTruthy();
   });
 
-  test('color picker closes when mouse moves away from Color item and picker', async ({ page }) => {
+  test('color picker closes when the parent popover closes', async ({ page }) => {
     await create3x3TableWithContent(page);
 
     await selectSingleCell(page, 0, 0);
@@ -274,14 +274,13 @@ test.describe('Cell color picker hover behavior', () => {
 
     await expect(colorPicker).toBeVisible();
 
-    // Move mouse away from both the Color item and the color picker
-    // Move to the Copy item which is above
-    const copyItem = page.getByText('Copy');
-    const copyBox = assertBoundingBox(await copyItem.boundingBox(), 'Copy item');
+    // Click outside the popover to close the entire popover tree
+    const farCell = getCell(page, 2, 2);
+    const farCellBox = assertBoundingBox(await farCell.boundingBox(), 'far cell [2,2]');
 
-    await page.mouse.move(copyBox.x + copyBox.width / 2, copyBox.y + copyBox.height / 2);
+    await page.mouse.click(farCellBox.x + farCellBox.width / 2, farCellBox.y + farCellBox.height / 2);
 
-    // Color picker should no longer be visible
+    // Both parent and nested popover should be closed
     await expect(colorPicker).not.toBeVisible();
   });
 

@@ -566,7 +566,6 @@ export class TableCellSelection {
             type: PopoverItemType.Html,
             element: pickerElement,
           }],
-          hideChevron: true,
           isFlippable: false,
           width: 'auto',
         },
@@ -574,6 +573,7 @@ export class TableCellSelection {
     }
 
     const items: PopoverItemParams[] = [
+      ...colorPickerItems,
       {
         icon: IconCopy,
         title: this.i18n.t('tools.table.copySelection'),
@@ -583,7 +583,6 @@ export class TableCellSelection {
           this.onCopyViaButton?.([...this.selectedCells]);
         },
       },
-      ...colorPickerItems,
       {
         icon: IconCross,
         title: this.i18n.t('tools.table.clearSelection'),

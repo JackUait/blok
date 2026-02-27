@@ -375,11 +375,11 @@ export class MarkerInlineTool implements InlineTool {
    */
   private updateSwatchAppearance(btn: HTMLButtonElement, preset: ColorPreset): void {
     if (this.colorMode === 'color') {
-      btn.style.color = preset.text;
-      btn.style.backgroundColor = '';
+      btn.style.setProperty('color', preset.text);
+      btn.style.setProperty('background-color', '');
     } else {
-      btn.style.color = '';
-      btn.style.backgroundColor = preset.bg;
+      btn.style.setProperty('color', '');
+      btn.style.setProperty('background-color', preset.bg);
     }
   }
 

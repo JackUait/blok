@@ -1433,6 +1433,153 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('single-cell click selection', () => {
+    /**
+     * Simulate a click on a cell (pointerdown + pointerup without drag to another cell).
+     */
+    const simulateClick = (grid: HTMLElement, row: number, col: number): void => {
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      const downEvent = new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      });
+
+      cell.dispatchEvent(downEvent);
+
+      const upEvent = new PointerEvent('pointerup', {
+        bubbles: true,
+      });
+
+      document.dispatchEvent(upEvent);
+    };
+
+    it('marks the clicked cell as selected', () => {
+      simulateClick(grid, 1, 1);
+
+      const cell = grid.querySelectorAll(`[${ROW_ATTR}]`)[1]
+        ?.querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+      expect(cell.hasAttribute(SELECTED_ATTR)).toBe(true);
+    });
+
+    it('selects only one cell', () => {
+      simulateClick(grid, 1, 1);
+
+      const selectedCells = grid.querySelectorAll(`[${SELECTED_ATTR}]`);
+
+      expect(selectedCells).toHaveLength(1);
+    });
+
+    it('creates an overlay for single-cell selection', () => {
+      simulateClick(grid, 0, 0);
+
+      const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`);
+
+      expect(overlay).not.toBeNull();
+    });
+
+    it('creates a pill for single-cell selection', () => {
+      simulateClick(grid, 0, 0);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`);
+
+      expect(pill).not.toBeNull();
+    });
+
+    it('fires onSelectionActiveChange with true on click', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      simulateClick(grid, 1, 2);
+
+      expect(callback).toHaveBeenCalledWith(true);
+    });
+
+    it('clears previous single-cell selection when clicking a different cell', () => {
+      simulateClick(grid, 0, 0);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+
+      // Click a different cell — should clear old and select new
+      simulateClick(grid, 1, 1);
+
+      const selectedCells = grid.querySelectorAll(`[${SELECTED_ATTR}]`);
+
+      expect(selectedCells).toHaveLength(1);
+
+      const newCell = grid.querySelectorAll(`[${ROW_ATTR}]`)[1]
+        ?.querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+      expect(newCell.hasAttribute(SELECTED_ATTR)).toBe(true);
+    });
+
+    it('clears single-cell selection on click-away', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      simulateClick(grid, 0, 0);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+
+      callback.mockClear();
+
+      // Click away (document pointerdown outside grid)
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      document.dispatchEvent(clearEvent);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+      expect(callback).toHaveBeenCalledWith(false);
+    });
+
+    it('does not create selection when clicking grip elements', () => {
+      // Add a grip attribute to a cell's child
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[0]?.querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+      const grip = document.createElement('div');
+
+      grip.setAttribute('data-blok-table-grip', '');
+      cell.appendChild(grip);
+
+      const gripRect = cell.getBoundingClientRect();
+
+      const downEvent = new PointerEvent('pointerdown', {
+        clientX: gripRect.left + 5,
+        clientY: gripRect.top + 5,
+        bubbles: true,
+        button: 0,
+      });
+
+      grip.dispatchEvent(downEvent);
+
+      const upEvent = new PointerEvent('pointerup', { bubbles: true });
+
+      document.dispatchEvent(upEvent);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+    });
+  });
+
   describe('isPopoverOpen guard', () => {
     it('does not clear selection when isPopoverOpen returns true', () => {
       const callback = vi.fn();

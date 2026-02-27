@@ -283,6 +283,14 @@ export class TableCellSelection {
       // before this pointerup, so there is no risk of the current
       // interaction's pointerdown triggering the clear handler.
       document.addEventListener('pointerdown', this.boundClearSelection);
+    } else if (this.anchorCell) {
+      // Single click without drag — select the clicked cell
+      this.showProgrammaticSelection(
+        this.anchorCell.row,
+        this.anchorCell.col,
+        this.anchorCell.row,
+        this.anchorCell.col,
+      );
     }
 
     this.isSelecting = false;

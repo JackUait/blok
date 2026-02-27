@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconMarker } from '../../../../src/components/icons';
 import { MarkerInlineTool } from '../../../../src/components/inline-tools/inline-tool-marker';
+import type { PopoverItemChildren, PopoverItemHtmlParams } from '../../../../types/utils/popover';
 
 const createMockApi = () => ({
   toolbar: {},
@@ -210,6 +211,52 @@ describe('MarkerInlineTool', () => {
       expect(mark).not.toBeNull();
       expect(mark?.style.color).toBe('');
       expect(mark?.style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
+  });
+
+  describe('picker swatch appearance', () => {
+    /**
+     * Extract the picker HTMLElement from the rendered menu config
+     */
+    function getPickerElement(): HTMLElement {
+      const config = tool.render();
+
+      if (!('children' in config) || config.children === undefined) {
+        throw new Error('Expected config with children');
+      }
+
+      const children = config.children as PopoverItemChildren;
+      const items = children.items ?? [];
+      const firstItem = items[0] as PopoverItemHtmlParams;
+
+      return firstItem.element;
+    }
+
+    it('renders text-mode swatches with a visible background', () => {
+      const picker = getPickerElement();
+      const swatch = picker.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="marker-swatch-red"]'
+      );
+
+      expect(swatch).not.toBeNull();
+      expect(swatch?.style.backgroundColor).not.toBe('');
+    });
+
+    it('renders background-mode swatches with their preset background color', () => {
+      const picker = getPickerElement();
+
+      const bgTab = picker.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="marker-tab-background-color"]'
+      );
+
+      bgTab?.click();
+
+      const swatch = picker.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="marker-swatch-red"]'
+      );
+
+      expect(swatch).not.toBeNull();
+      expect(swatch?.style.backgroundColor).toBe('rgb(253, 235, 236)');
     });
   });
 });

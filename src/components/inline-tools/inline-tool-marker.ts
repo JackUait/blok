@@ -43,7 +43,12 @@ interface ColorPreset {
 /**
  * Base Tailwind classes shared by tab buttons
  */
-const TAB_BASE_CLASSES = 'flex-1 py-1 text-xs text-center rounded cursor-pointer border-none';
+const TAB_BASE_CLASSES = 'flex-1 py-1.5 text-xs text-center rounded-md cursor-pointer border-none transition-colors';
+
+/**
+ * Neutral background for text-mode swatches so they render as visible buttons
+ */
+const SWATCH_NEUTRAL_BG = '#f7f7f5';
 
 const COLOR_PRESETS: ColorPreset[] = [
   { name: 'gray', text: '#787774', bg: '#f1f1ef' },
@@ -258,7 +263,7 @@ export class MarkerInlineTool implements InlineTool {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-testid', 'marker-color-picker');
-    wrapper.className = 'flex flex-col gap-1.5 p-2 w-[200px]';
+    wrapper.className = 'flex flex-col gap-2 p-2';
 
     /**
      * Tab row
@@ -295,7 +300,7 @@ export class MarkerInlineTool implements InlineTool {
     const grid = document.createElement('div');
 
     grid.setAttribute('data-blok-testid', 'marker-color-grid');
-    grid.className = 'grid grid-cols-5 gap-1';
+    grid.className = 'grid grid-cols-5 gap-1.5';
 
     for (const preset of COLOR_PRESETS) {
       const swatch = this.createSwatch(preset);
@@ -310,8 +315,9 @@ export class MarkerInlineTool implements InlineTool {
 
     defaultBtn.setAttribute('data-blok-testid', 'marker-default-btn');
     defaultBtn.className = twMerge(
-      'w-full py-1 text-xs text-center rounded cursor-pointer',
-      'bg-transparent border-none hover:bg-item-hover-bg'
+      'w-full py-1.5 text-xs text-center rounded-md cursor-pointer',
+      'bg-transparent border-none hover:bg-item-hover-bg',
+      'mt-0.5 transition-colors'
     );
     defaultBtn.textContent = this.i18n.t('tools.marker.default');
     defaultBtn.addEventListener('click', () => {
@@ -341,7 +347,7 @@ export class MarkerInlineTool implements InlineTool {
     btn.setAttribute('data-blok-testid', testId);
     btn.className = twMerge(
       TAB_BASE_CLASSES,
-      active ? 'bg-item-hover-bg font-medium' : 'bg-transparent'
+      active ? 'bg-item-hover-bg font-medium' : 'bg-transparent hover:bg-item-hover-bg/50'
     );
     btn.textContent = this.i18n.t(i18nKey);
 
@@ -357,8 +363,9 @@ export class MarkerInlineTool implements InlineTool {
 
     btn.setAttribute('data-blok-testid', `marker-swatch-${preset.name}`);
     btn.className = twMerge(
-      'w-8 h-8 rounded cursor-pointer border-none',
-      'flex items-center justify-center text-sm font-medium'
+      'w-8 h-8 rounded-md cursor-pointer border-none',
+      'flex items-center justify-center text-sm font-semibold',
+      'transition-shadow ring-inset hover:ring-2 hover:ring-black/10'
     );
     btn.textContent = 'A';
     this.updateSwatchAppearance(btn, preset);
@@ -381,7 +388,7 @@ export class MarkerInlineTool implements InlineTool {
   private updateSwatchAppearance(btn: HTMLButtonElement, preset: ColorPreset): void {
     if (this.colorMode === 'color') {
       btn.style.setProperty('color', preset.text);
-      btn.style.setProperty('background-color', '');
+      btn.style.setProperty('background-color', SWATCH_NEUTRAL_BG);
     } else {
       btn.style.setProperty('color', '');
       btn.style.setProperty('background-color', preset.bg);
@@ -399,12 +406,12 @@ export class MarkerInlineTool implements InlineTool {
 
     this.tabButtons.color.className = twMerge(
       TAB_BASE_CLASSES,
-      isColorMode ? 'bg-item-hover-bg font-medium' : 'bg-transparent'
+      isColorMode ? 'bg-item-hover-bg font-medium' : 'bg-transparent hover:bg-item-hover-bg/50'
     );
 
     this.tabButtons.background.className = twMerge(
       TAB_BASE_CLASSES,
-      isColorMode ? 'bg-transparent' : 'bg-item-hover-bg font-medium'
+      isColorMode ? 'bg-transparent hover:bg-item-hover-bg/50' : 'bg-item-hover-bg font-medium'
     );
 
     /**

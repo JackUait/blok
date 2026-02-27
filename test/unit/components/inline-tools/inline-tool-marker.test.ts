@@ -133,6 +133,68 @@ describe('MarkerInlineTool', () => {
       expect(mark?.textContent).toBe('hello');
     });
 
+    it('sets transparent background when applying text color to prevent default mark yellow', () => {
+      container.innerHTML = 'hello world';
+
+      const textNode = container.firstChild;
+
+      if (!textNode) {
+        throw new Error('Test setup failed: no text node');
+      }
+
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.applyColor('color', '#d44c47');
+
+      const mark = container.querySelector('mark');
+
+      expect(mark).not.toBeNull();
+      expect(mark?.style.backgroundColor).toBe('transparent');
+    });
+
+    it('adds transparent background when updating text color on existing mark without background', () => {
+      container.innerHTML = '<mark style="color: #d44c47">hello</mark>';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(mark);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.applyColor('color', '#448361');
+
+      const updatedMark = container.querySelector('mark');
+
+      expect(updatedMark).not.toBeNull();
+      expect(updatedMark?.style.color).toBe('rgb(68, 131, 97)');
+      expect(updatedMark?.style.backgroundColor).toBe('transparent');
+    });
+
     it('wraps selected text with mark for background color', () => {
       container.innerHTML = 'hello world';
 
@@ -162,6 +224,34 @@ describe('MarkerInlineTool', () => {
 
       expect(mark).not.toBeNull();
       expect(mark?.style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
+
+    it('sets transparent bg on nested marks that keep text color when applying new background', () => {
+      container.innerHTML =
+        '<mark style="background-color: #fbecdd; color: #d44c47">Hello</mark>' +
+        ' ' +
+        '<mark style="background-color: #e7f3f8">World</mark>';
+
+      const range = document.createRange();
+
+      range.setStart(container, 0);
+      range.setEnd(container, container.childNodes.length);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.applyColor('background-color', '#f6f3f9');
+
+      const innerMark = container.querySelector('mark mark');
+
+      expect(innerMark).not.toBeNull();
+      expect(innerMark?.style.backgroundColor).toBe('transparent');
     });
 
     it('only colors the selected portion when selection is a subset of an existing mark', () => {
@@ -197,8 +287,10 @@ describe('MarkerInlineTool', () => {
       expect(marks.length).toBe(2);
       expect(marks[0].textContent).toBe('Hello ');
       expect(marks[0].style.color).toBe('rgb(212, 76, 71)');
+      expect(marks[0].style.backgroundColor).toBe('transparent');
       expect(marks[1].textContent).toBe('World');
       expect(marks[1].style.color).toBe('rgb(68, 131, 97)');
+      expect(marks[1].style.backgroundColor).toBe('transparent');
     });
 
     it('only colors the selected portion for background-color mode', () => {
@@ -549,7 +641,7 @@ describe('MarkerInlineTool', () => {
       expect(marks[2].style.backgroundColor).toBe('rgb(251, 236, 221)');
     });
 
-    it('removes background color from combined mark keeping only text color', () => {
+    it('removes background color from combined mark keeping only text color with transparent bg', () => {
       container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">both</mark>';
 
       const mark = container.querySelector('mark');
@@ -565,7 +657,7 @@ describe('MarkerInlineTool', () => {
 
       expect(updatedMark).not.toBeNull();
       expect(updatedMark?.style.color).toBe('rgb(212, 76, 71)');
-      expect(updatedMark?.style.backgroundColor).toBe('');
+      expect(updatedMark?.style.backgroundColor).toBe('transparent');
     });
 
     it('unwraps mark completely when both colors are removed sequentially', () => {

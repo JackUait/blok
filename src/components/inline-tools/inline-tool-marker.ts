@@ -190,6 +190,7 @@ export class MarkerInlineTool implements InlineTool {
 
       if (coversAll) {
         existingMark.style.setProperty(mode, value);
+        this.ensureTransparentBg(existingMark);
 
         return;
       }
@@ -211,6 +212,7 @@ export class MarkerInlineTool implements InlineTool {
     const mark = document.createElement('mark');
 
     mark.style.setProperty(mode, value);
+    this.ensureTransparentBg(mark);
     mark.appendChild(range.extractContents());
     range.insertNode(mark);
 
@@ -248,6 +250,8 @@ export class MarkerInlineTool implements InlineTool {
 
       if (!hasOtherStyle) {
         this.unwrapElement(mark);
+      } else {
+        this.ensureTransparentBg(mark);
       }
     }
   }
@@ -490,6 +494,8 @@ export class MarkerInlineTool implements InlineTool {
 
       if (!hasOtherStyle) {
         this.unwrapElement(mark);
+      } else {
+        this.ensureTransparentBg(mark);
       }
     }
   }
@@ -527,6 +533,7 @@ export class MarkerInlineTool implements InlineTool {
 
     newMark.style.cssText = mark.style.cssText;
     newMark.style.setProperty(mode, value);
+    this.ensureTransparentBg(newMark);
     newMark.appendChild(selectedContents);
 
     const fragment = document.createDocumentFragment();
@@ -535,6 +542,7 @@ export class MarkerInlineTool implements InlineTool {
       const beforeMark = document.createElement('mark');
 
       beforeMark.style.cssText = mark.style.cssText;
+      this.ensureTransparentBg(beforeMark);
       beforeMark.appendChild(beforeContents);
       fragment.appendChild(beforeMark);
     }
@@ -545,6 +553,7 @@ export class MarkerInlineTool implements InlineTool {
       const afterMark = document.createElement('mark');
 
       afterMark.style.cssText = mark.style.cssText;
+      this.ensureTransparentBg(afterMark);
       afterMark.appendChild(afterContents);
       fragment.appendChild(afterMark);
     }
@@ -579,5 +588,19 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     parent.removeChild(element);
+  }
+
+  /**
+   * Ensure a mark with text color has an explicit transparent background
+   * to override the browser's default yellow <mark> background.
+   * @param mark - The mark element to check
+   */
+  private ensureTransparentBg(mark: HTMLElement): void {
+    if (
+      mark.style.getPropertyValue('color') &&
+      !mark.style.getPropertyValue('background-color')
+    ) {
+      mark.style.setProperty('background-color', 'transparent');
+    }
   }
 }

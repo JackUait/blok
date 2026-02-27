@@ -1831,5 +1831,44 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('native dragstart prevention', () => {
+    it('prevents dragstart on grid during a pointer drag', () => {
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const startCell = rows[0].querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+      const endCell = rows[1].querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+      const startRect = startCell.getBoundingClientRect();
+
+      // pointerdown to begin interaction
+      startCell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: startRect.left + 5,
+        clientY: startRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+
+      // Fire dragstart on the grid (simulates browser native drag behavior)
+      const dragEvent = new Event('dragstart', { bubbles: true, cancelable: true });
+      const wasPrevented = !startCell.dispatchEvent(dragEvent);
+
+      expect(wasPrevented).toBe(true);
+
+      // Clean up: fire pointerup
+      elementFromPointTarget = endCell;
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    });
+
+    it('allows dragstart when no cell drag is in progress', () => {
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[0].querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+
+      // Fire dragstart without any prior pointerdown
+      const dragEvent = new Event('dragstart', { bubbles: true, cancelable: true });
+      const wasPrevented = !cell.dispatchEvent(dragEvent);
+
+      expect(wasPrevented).toBe(false);
+    });
+  });
+
 });
 

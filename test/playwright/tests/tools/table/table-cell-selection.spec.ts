@@ -452,7 +452,48 @@ test.describe('Cell Selection', () => {
     expect(afterBox.width).toBeCloseTo(initialWidth, 0);
   });
 
-  test('Small pointer movement within a single cell does not trigger cell selection', async ({ page }) => {
+  test('Selection persists while extending drag across more cells', async ({ page }) => {
+    // Regression: dragging across more cells should keep the blue selection visible
+    await create3x3TableWithContent(page);
+
+    const startCell = getCell(page, 0, 0);
+    const midCell = getCell(page, 1, 1);
+    const endCell = getCell(page, 2, 2);
+
+    const startBox = assertBoundingBox(await startCell.boundingBox(), 'cell [0,0]');
+    const midBox = assertBoundingBox(await midCell.boundingBox(), 'cell [1,1]');
+    const endBox = assertBoundingBox(await endCell.boundingBox(), 'cell [2,2]');
+
+    const selected = page.locator('[data-blok-table-cell-selected]');
+    const overlay = page.locator('[data-blok-table-selection-overlay]');
+
+    // Mouse down on cell (0,0)
+    await page.mouse.move(startBox.x + startBox.width / 2, startBox.y + startBox.height / 2);
+    await page.mouse.down();
+
+    // Drag to cell (1,1) — should cross cell boundary and activate selection
+    await page.mouse.move(midBox.x + midBox.width / 2, midBox.y + midBox.height / 2, { steps: 5 });
+
+    // Selection should be visible during drag (before mouse up)
+    await expect(selected).toHaveCount(4);
+    await expect(overlay).toBeVisible();
+
+    // Continue dragging to cell (2,2) — selection should extend, not disappear
+    await page.mouse.move(endBox.x + endBox.width / 2, endBox.y + endBox.height / 2, { steps: 5 });
+
+    // All 9 cells (3x3) should now be selected
+    await expect(selected).toHaveCount(9);
+    await expect(overlay).toBeVisible();
+
+    // Release mouse
+    await page.mouse.up();
+
+    // Selection should persist after mouse up
+    await expect(selected).toHaveCount(9);
+    await expect(overlay).toBeVisible();
+  });
+
+  test('Small pointer movement within a single cell does not trigger multi-cell selection', async ({ page }) => {
     // 1. Initialize editor with a 3x3 table with content
     await create3x3TableWithContent(page);
 
@@ -463,15 +504,16 @@ test.describe('Cell Selection', () => {
     const centerX = box.x + box.width / 2;
     const centerY = box.y + box.height / 2;
 
-    // 3. Mouse down at center, move +5px (below the 10px drag threshold), mouse up
+    // 3. Mouse down at center, move +5px (within the same cell), mouse up
     await page.mouse.move(centerX, centerY);
     await page.mouse.down();
     await page.mouse.move(centerX + 5, centerY + 5);
     await page.mouse.up();
 
-    // 4. Verify no cells have the selected attribute
+    // 4. Single-click within one cell creates a single-cell selection (not multi-cell)
     const selected = page.locator('[data-blok-table-cell-selected]');
 
-    await expect(selected).toHaveCount(0);
+    await expect(selected).toHaveCount(1);
+    await expect(getCell(page, 0, 0)).toHaveAttribute('data-blok-table-cell-selected', '');
   });
 });

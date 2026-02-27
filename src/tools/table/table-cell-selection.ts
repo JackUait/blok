@@ -107,6 +107,7 @@ export class TableCellSelection {
   private boundKeyDown: (e: KeyboardEvent) => void;
   private boundCopyHandler: (e: ClipboardEvent) => void;
   private boundCutHandler: (e: ClipboardEvent) => void;
+  private boundPreventDragStart: (e: Event) => void;
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
@@ -130,8 +131,10 @@ export class TableCellSelection {
     this.boundKeyDown = this.handleKeyDown.bind(this);
     this.boundCopyHandler = this.handleCopy.bind(this);
     this.boundCutHandler = this.handleCut.bind(this);
+    this.boundPreventDragStart = this.handleDragStart.bind(this);
 
     this.grid.addEventListener('pointerdown', this.boundPointerDown);
+    this.grid.addEventListener('dragstart', this.boundPreventDragStart);
     document.addEventListener('keydown', this.boundKeyDown);
     document.addEventListener('copy', this.boundCopyHandler);
     document.addEventListener('cut', this.boundCutHandler);
@@ -141,6 +144,7 @@ export class TableCellSelection {
     this.destroyPillPopover();
     this.clearSelection();
     this.grid.removeEventListener('pointerdown', this.boundPointerDown);
+    this.grid.removeEventListener('dragstart', this.boundPreventDragStart);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointerdown', this.boundClearSelection);
@@ -183,6 +187,18 @@ export class TableCellSelection {
    */
   public clearActiveSelection(): void {
     this.clearSelection();
+  }
+
+  /**
+   * Prevent native drag-and-drop while a cell selection drag is in progress.
+   * Without this, the browser can fire dragstart on contenteditable cells
+   * during a pointer drag, which suppresses pointermove events and breaks
+   * the cell selection.
+   */
+  private handleDragStart(e: Event): void {
+    if (this.anchorCell) {
+      e.preventDefault();
+    }
   }
 
   private handlePointerDown(e: PointerEvent): void {

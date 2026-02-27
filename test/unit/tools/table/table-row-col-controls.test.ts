@@ -925,6 +925,93 @@ describe('TableRowColControls', () => {
       // Other grips should be hidden
       expect(otherGrip.style.display).toBe('none');
     });
+
+    it('grip stays visible after refresh() is called while popover is open', async () => {
+      grid = createGrid(2, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 2,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+      });
+
+      const colGripsBefore = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const firstGrip = colGripsBefore[0];
+
+      // Click the first column grip to open popover
+      firstGrip.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 50,
+        clientY: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Wait for popover to open
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      });
+
+      // Verify grip is active before refresh
+      expect(isGripVisible(firstGrip)).toBe(true);
+
+      // Simulate what handleRowColAction does: call refresh() while popover is open.
+      // This is triggered by heading toggle click in the real app.
+      controls.refresh();
+
+      // After refresh(), new grips are created. The grip at index 0 should
+      // still be visible with active classes since the popover is still open.
+      const colGripsAfter = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const newFirstGrip = colGripsAfter[0];
+
+      expect(newFirstGrip).not.toBe(firstGrip); // Must be a new DOM element
+      expect(isGripVisible(newFirstGrip)).toBe(true);
+      expect(newFirstGrip.className).toContain('bg-blue-500');
+      expect(newFirstGrip.className).toContain('opacity-100');
+    });
+
+    it('grip stays visible when setGripsDisplay(false) then setGripsDisplay(true) is called during onGripClick', async () => {
+      grid = createGrid(3, 3);
+      controls = new TableRowColControls({
+        grid,
+        getColumnCount: () => 3,
+        getRowCount: () => 3,
+        isHeadingRow: () => false,
+        isHeadingColumn: () => false,
+        onAction: vi.fn(),
+        i18n: mockI18n,
+        onGripClick: () => {
+          // Simulate the real index.ts flow:
+          // onSelectionActiveChange(true) → setGripsDisplay(false)
+          controls.setGripsDisplay(false);
+          // onSelectionRangeChange → setGripsDisplay(true)
+          controls.setGripsDisplay(true);
+        },
+      });
+
+      const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
+      const activeGrip = colGrips[1];
+
+      // Click the grip to open popover
+      activeGrip.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 150,
+        clientY: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Wait for popover to open
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
+      });
+
+      // The grip must still be visible (active classes, not hidden)
+      expect(activeGrip.style.display).not.toBe('none');
+      expect(isGripVisible(activeGrip)).toBe(true);
+      expect(activeGrip.className).toContain('opacity-100');
+    });
   });
 
   describe('grip entry animation', () => {

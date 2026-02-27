@@ -148,11 +148,35 @@ export class TableRowColControls {
   }
 
   /**
-   * Recreate grips after structural changes (row/column add/delete/move)
+   * Recreate grips after structural changes (row/column add/delete/move).
+   * Preserves the active grip state when a popover is open so the grip
+   * remains visible after being recreated.
    */
   public refresh(): void {
+    const popoverGripInfo = this.popoverState.grip
+      ? this.detectGripType(this.popoverState.grip)
+      : null;
+
     this.destroyGrips();
     this.createGrips();
+
+    if (popoverGripInfo) {
+      const newGrip = popoverGripInfo.type === 'col'
+        ? this.colGrips[popoverGripInfo.index]
+        : this.rowGrips[popoverGripInfo.index];
+
+      if (newGrip) {
+        this.popoverState.grip = newGrip;
+        this.hideAllGripsExcept(newGrip);
+        this.applyActiveClasses(newGrip);
+
+        if (popoverGripInfo.type === 'col') {
+          newGrip.style.height = `${GRIP_HOVER_SIZE}px`;
+        } else {
+          newGrip.style.width = `${GRIP_HOVER_SIZE}px`;
+        }
+      }
+    }
   }
 
   /**

@@ -143,6 +143,19 @@ const openMarkerPicker = async (page: Page): Promise<void> => {
   await expect(picker).toBeVisible();
 };
 
+/**
+ * Get the correct modifier key based on the browser's user agent.
+ * WebKit always uses a macOS-style user agent, so it expects Meta regardless of host OS.
+ * @param page - The Playwright page object
+ */
+const getModifierKey = async (page: Page): Promise<'Meta' | 'Control'> => {
+  const isMac = await page.evaluate(() => {
+    return navigator.userAgent.toLowerCase().includes('mac');
+  });
+
+  return isMac ? 'Meta' : 'Control';
+};
+
 test.describe('inline tool marker', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -439,6 +452,39 @@ test.describe('inline tool marker', () => {
 
     // Picker should be closed now
     await expect(picker).not.toBeVisible();
+  });
+
+  test('opens color picker with CMD+SHIFT+H keyboard shortcut', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Shortcut color text',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'Shortcut');
+
+    const markerButton = page.locator(MARKER_BUTTON_SELECTOR);
+
+    // Wait for toolbar to appear first (ensures shortcuts are registered)
+    await expect(markerButton).toBeVisible();
+
+    // Re-select text since toolbar appearance might affect selection
+    await selectText(paragraph, 'Shortcut');
+
+    const modifierKey = await getModifierKey(page);
+
+    // Press CMD+SHIFT+H to open marker color picker
+    await page.keyboard.press(`${modifierKey}+Shift+h`);
+
+    // Verify the color picker popover is visible
+    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+
+    await expect(picker).toBeVisible();
   });
 
   test('keeps color picker open after clicking Default button', async ({ page }) => {

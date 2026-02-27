@@ -62,6 +62,11 @@ export class MarkerInlineTool implements InlineTool {
   public static titleKey = 'marker';
 
   /**
+   * Keyboard shortcut to open the marker color picker
+   */
+  public static shortcut = 'CMD+SHIFT+H';
+
+  /**
    * Sanitizer Rule — preserve <mark> tags with style attribute
    */
   public static get sanitize(): SanitizerConfig {

@@ -212,6 +212,19 @@ describe('PopoverItemDefault', () => {
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemDestructive);
   });
 
+  it('uses reduced right padding when item has children with visible chevron', () => {
+    const { element } = createItem({
+      children: {
+        items: [
+          { title: 'Child item', onActivate: vi.fn() },
+        ],
+      },
+    });
+
+    expect(element.className).toContain('pr-2');
+    expect(element.className).not.toContain('pr-8');
+  });
+
   it('exposes toggle, title and disabled getters', () => {
     const toggleValue = 'group-1';
     const customTitle = 'Custom title';

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconMarker } from '../../../../src/components/icons';
 import { MarkerInlineTool } from '../../../../src/components/inline-tools/inline-tool-marker';
-import type { PopoverItemChildren, PopoverItemHtmlParams } from '../../../../types/utils/popover';
+import type { PopoverItemHtmlParams } from '../../../../types/utils/popover';
 
 const createMockApi = () => ({
   toolbar: {},
@@ -225,7 +225,7 @@ describe('MarkerInlineTool', () => {
         throw new Error('Expected config with children');
       }
 
-      const children = config.children as PopoverItemChildren;
+      const children = config.children;
       const items = children.items ?? [];
       const firstItem = items[0] as PopoverItemHtmlParams;
 

@@ -401,6 +401,32 @@ export const updateHeadingStyles = (gridEl: HTMLElement | null, withHeadings: bo
   }
 };
 
+export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[][]): void => {
+  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+
+  content.forEach((rowContent, r) => {
+    if (r >= rows.length) {
+      return;
+    }
+
+    const cells = rows[r].querySelectorAll(`[${CELL_ATTR}]`);
+
+    rowContent.forEach((cellContent, c) => {
+      if (c >= cells.length) {
+        return;
+      }
+
+      const el = cells[c] as HTMLElement;
+
+      if (isCellWithBlocks(cellContent) && cellContent.color) {
+        el.style.backgroundColor = cellContent.color;
+      } else {
+        el.style.backgroundColor = '';
+      }
+    });
+  });
+};
+
 export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadingColumn: boolean): void => {
   if (!gridEl) {
     return;

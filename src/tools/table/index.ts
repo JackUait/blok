@@ -23,12 +23,14 @@ import {
 import { TableCellSelection } from './table-cell-selection';
 import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
 import {
+  applyCellColors,
   applyPixelWidths,
   computeHalfAvgWidth,
   computeInitialColWidth,
   enableScrollOverflow,
   getBlockIdsInColumn,
   getBlockIdsInRow,
+  getCellPosition,
   isColumnEmpty,
   isRowEmpty,
   mountCellBlocksReadOnly,
@@ -397,6 +399,7 @@ export class Table implements BlockTool {
     }
 
     this.initSubsystems(gridEl);
+    applyCellColors(gridEl, this.model.snapshot().content);
 
     if (this.isNewTable) {
       const firstEditable = gridEl.querySelector<HTMLElement>('[contenteditable="true"]');
@@ -516,6 +519,7 @@ export class Table implements BlockTool {
     }
 
     this.initSubsystems(gridEl);
+    applyCellColors(gridEl, this.model.snapshot().content);
   }
 
   public onPaste(event: HTMLPasteEvent): void {
@@ -1020,6 +1024,25 @@ export class Table implements BlockTool {
     ]);
   }
 
+  private handleCellColorChange(cells: HTMLElement[], color: string | null): void {
+    const gridEl = this.gridElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    for (const cell of cells) {
+      const coord = getCellPosition(gridEl, cell);
+
+      if (!coord) {
+        continue;
+      }
+
+      this.model.setCellColor(coord.row, coord.col, color ?? undefined);
+      cell.style.backgroundColor = color ?? '';
+    }
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
   ): Array<{ row: number; col: number; blocks: ClipboardBlockData[] }> {
@@ -1127,6 +1150,9 @@ export class Table implements BlockTool {
       },
       onCopyViaButton: (cells) => {
         this.handleCellCopyViaButton(cells);
+      },
+      onColorChange: (cells, color) => {
+        this.handleCellColorChange(cells, color);
       },
     });
   }

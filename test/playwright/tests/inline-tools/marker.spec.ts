@@ -215,6 +215,9 @@ test.describe('inline tool marker', () => {
       { selector: PARAGRAPH_SELECTOR }
     );
 
+    // Close the picker by clicking outside, which removes fake background spans
+    await page.mouse.click(10, 10);
+
     const html = await paragraph.innerHTML();
 
     expect(html).toMatch(/<mark style="color:[^"]+">Color<\/mark>/);
@@ -263,6 +266,9 @@ test.describe('inline tool marker', () => {
       { selector: PARAGRAPH_SELECTOR }
     );
 
+    // Close the picker by clicking outside, which removes fake background spans
+    await page.mouse.click(10, 10);
+
     const html = await paragraph.innerHTML();
 
     expect(html).toMatch(/<mark style="background-color:[^"]+">Highlight<\/mark>/);
@@ -310,6 +316,155 @@ test.describe('inline tool marker', () => {
 
     expect(html).not.toContain('<mark');
     expect(html).toContain('Colored text');
+  });
+
+  test('keeps color picker open after selecting a swatch color', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Keep picker open',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'Keep picker');
+
+    await openMarkerPicker(page);
+
+    // Click a color swatch
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+
+    await redSwatch.click();
+
+    // Verify the color picker is still visible after clicking
+    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+
+    await expect(picker).toBeVisible();
+  });
+
+  test('allows applying both text and background color without reopening picker', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Dual color text',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'Dual color');
+
+    await openMarkerPicker(page);
+
+    // Step 1: Apply text color (red)
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+
+    await redSwatch.click();
+
+    // Picker should still be open
+    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+
+    await expect(picker).toBeVisible();
+
+    // Step 2: Switch to background tab
+    const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
+
+    await bgTab.click();
+
+    // Step 3: Apply background color (yellow)
+    const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-yellow"]');
+
+    await yellowSwatch.click();
+
+    // Picker should still be open
+    await expect(picker).toBeVisible();
+
+    // Verify the mark has both text AND background color
+    await page.waitForFunction(
+      ({ selector }) => {
+        const el = document.querySelector(selector);
+
+        if (!el) {
+          return false;
+        }
+
+        const mark = el.querySelector('mark');
+
+        return Boolean(mark && mark.style.color && mark.style.backgroundColor && mark.style.backgroundColor !== 'transparent');
+      },
+      { selector: PARAGRAPH_SELECTOR }
+    );
+
+    // Close the picker to clean up fake background spans before checking HTML
+    await page.mouse.click(10, 10);
+
+    const html = await paragraph.innerHTML();
+
+    // Should have both color and background-color on the same mark
+    expect(html).toMatch(/<mark[^>]*style="[^"]*color:[^"]*background-color:[^"]*"[^>]*>/);
+  });
+
+  test('closes color picker when clicking outside the inline toolbar', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Click outside to close',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'Click outside');
+
+    await openMarkerPicker(page);
+
+    // Apply a color — picker should stay open
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+
+    await redSwatch.click();
+
+    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+
+    await expect(picker).toBeVisible();
+
+    // Click outside the inline toolbar (on the page body, away from everything)
+    await page.mouse.click(10, 10);
+
+    // Picker should be closed now
+    await expect(picker).not.toBeVisible();
+  });
+
+  test('keeps color picker open after clicking Default button', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: '<mark style="color: rgb(212, 76, 71);">Default test</mark> rest',
+        },
+      },
+    ]);
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await selectText(paragraph, 'Default test');
+
+    await openMarkerPicker(page);
+
+    const defaultBtn = page.locator('[data-blok-testid="marker-default-btn"]');
+
+    await defaultBtn.click();
+
+    // Picker should still be visible even though mark was fully unwrapped
+    const picker = page.locator('[data-blok-testid="marker-color-picker"]');
+
+    await expect(picker).toBeVisible();
   });
 });
 

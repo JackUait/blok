@@ -392,6 +392,100 @@ describe('MarkerInlineTool', () => {
     });
   });
 
+  describe('picker stays open after color selection', () => {
+    /**
+     * Helper to extract the picker element from a tool's rendered menu config
+     */
+    function getPickerElement(markerTool: MarkerInlineTool): HTMLElement {
+      const config = markerTool.render();
+
+      if (!('children' in config) || config.children === undefined) {
+        throw new Error('Expected config with children');
+      }
+
+      const items = config.children.items ?? [];
+
+      return (items[0] as PopoverItemHtmlParams).element;
+    }
+
+    it('does not call inlineToolbar.close when a swatch is clicked', () => {
+      container.innerHTML = 'hello world';
+
+      const textNode = container.firstChild;
+
+      if (!textNode) {
+        throw new Error('Test setup failed: no text node');
+      }
+
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const api = createMockApi();
+      const toolWithApi = new MarkerInlineTool({ api: api as never, config: undefined });
+      const picker = getPickerElement(toolWithApi);
+      const swatch = picker.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="marker-swatch-red"]'
+      );
+
+      if (!swatch) {
+        throw new Error('Test setup failed: red swatch not found');
+      }
+
+      swatch.click();
+
+      expect(api.inlineToolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('does not call inlineToolbar.close when Default button is clicked', () => {
+      container.innerHTML = '<mark style="color: #d44c47">colored</mark>';
+
+      const markEl = container.querySelector('mark');
+
+      if (!markEl) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(markEl);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      const api = createMockApi();
+      const toolWithApi = new MarkerInlineTool({ api: api as never, config: undefined });
+      const picker = getPickerElement(toolWithApi);
+      const defaultBtn = picker.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="marker-default-btn"]'
+      );
+
+      if (!defaultBtn) {
+        throw new Error('Test setup failed: default button not found');
+      }
+
+      defaultBtn.click();
+
+      expect(api.inlineToolbar.close).not.toHaveBeenCalled();
+    });
+  });
+
   describe('picker swatch appearance', () => {
     /**
      * Extract the picker HTMLElement from the rendered menu config

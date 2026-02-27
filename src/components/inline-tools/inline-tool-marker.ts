@@ -240,6 +240,16 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     const range = selection.getRangeAt(0);
+
+    /**
+     * Capture range anchors before DOM mutations so we can restore the selection
+     * after marks are unwrapped (browsers may collapse selection on DOM changes)
+     */
+    const startContainer = range.startContainer;
+    const startOffset = range.startOffset;
+    const endContainer = range.endContainer;
+    const endOffset = range.endOffset;
+
     const markAncestors = collectFormattingAncestors(range, isMarkTag);
 
     for (const mark of markAncestors) {
@@ -253,6 +263,25 @@ export class MarkerInlineTool implements InlineTool {
       } else {
         this.ensureTransparentBg(mark);
       }
+    }
+
+    /**
+     * Re-establish the selection after DOM mutations.
+     * When the range was anchored to text nodes (moved, not cloned by unwrapElement),
+     * the original anchors remain valid. When the range was anchored to the mark
+     * element itself (e.g. via selectNodeContents), the node is now detached
+     * and setStart/setEnd will throw — in that case the browser's own
+     * selection adjustment is sufficient.
+     */
+    try {
+      const restoredRange = document.createRange();
+
+      restoredRange.setStart(startContainer, startOffset);
+      restoredRange.setEnd(endContainer, endOffset);
+      selection.removeAllRanges();
+      selection.addRange(restoredRange);
+    } catch {
+      /* Range anchors were invalidated by DOM mutation — browser selection is used as-is */
     }
   }
 
@@ -325,7 +354,8 @@ export class MarkerInlineTool implements InlineTool {
     defaultBtn.textContent = this.i18n.t('tools.marker.default');
     defaultBtn.addEventListener('click', () => {
       this.removeColor(this.colorMode);
-      this.inlineToolbar.close();
+      this.selection.setFakeBackground();
+      this.selection.save();
     });
 
     wrapper.appendChild(tabRow);
@@ -377,7 +407,8 @@ export class MarkerInlineTool implements InlineTool {
       const value = this.colorMode === 'color' ? preset.text : preset.bg;
 
       this.applyColor(this.colorMode, value);
-      this.inlineToolbar.close();
+      this.selection.setFakeBackground();
+      this.selection.save();
     });
 
     return btn;

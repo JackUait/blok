@@ -1139,6 +1139,10 @@ export class Table implements BlockTool {
         this.addControls?.setInteractive(!hasSelection);
         this.rowColControls?.setGripsDisplay(!hasSelection);
       },
+      onSelectionRangeChange: () => {
+        // Selection finalized — restore grips so hover works normally
+        this.rowColControls?.setGripsDisplay(true);
+      },
       onClearContent: (cells) => {
         if (!this.cellBlocks) {
           return;

@@ -1733,5 +1733,103 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('onSelectionRangeChange callback', () => {
+    it('fires with range when drag selection completes', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      simulateDrag(grid, 0, 1, 2, 2);
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 0,
+        maxRow: 2,
+        minCol: 1,
+        maxCol: 2,
+      });
+    });
+
+    it('fires with range for single-cell click selection', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      // Single click on cell (1,1) — pointerdown + pointerup without drag
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[1]?.querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+      const rect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: rect.left + 5,
+        clientY: rect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 1,
+        maxCol: 1,
+      });
+    });
+
+    it('fires with range for programmatic selectRow', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      selection.selectRow(1);
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 2,
+      });
+    });
+
+    it('fires with range for programmatic selectColumn', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      selection.selectColumn(2);
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 0,
+        maxRow: 2,
+        minCol: 2,
+        maxCol: 2,
+      });
+    });
+  });
+
 });
 

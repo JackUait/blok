@@ -36,6 +36,13 @@ const PILL_CLASSES = [
   'bg-blue-500',
 ];
 
+export interface SelectionRange {
+  minRow: number;
+  maxRow: number;
+  minCol: number;
+  maxCol: number;
+}
+
 interface CellCoord {
   row: number;
   col: number;
@@ -59,6 +66,7 @@ interface CellSelectionOptions {
   grid: HTMLElement;
   rectangleSelection?: { cancelActiveSelection: () => void };
   onSelectionActiveChange?: (hasSelection: boolean) => void;
+  onSelectionRangeChange?: (range: SelectionRange) => void;
   onClearContent?: (cells: HTMLElement[]) => void;
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
@@ -87,7 +95,9 @@ export class TableCellSelection {
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
   private onColorChange: ((cells: HTMLElement[], color: string | null, mode: CellColorMode) => void) | undefined;
+  private onSelectionRangeChange: ((range: SelectionRange) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
+  private lastPaintedRange: SelectionRange | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -107,6 +117,7 @@ export class TableCellSelection {
     this.onCut = options.onCut;
     this.onCopyViaButton = options.onCopyViaButton;
     this.onColorChange = options.onColorChange;
+    this.onSelectionRangeChange = options.onSelectionRangeChange;
     this.isPopoverOpen = options.isPopoverOpen;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
@@ -283,6 +294,10 @@ export class TableCellSelection {
       this.grid.style.userSelect = '';
       this.hasSelection = true;
 
+      if (this.lastPaintedRange) {
+        this.onSelectionRangeChange?.(this.lastPaintedRange);
+      }
+
       // Listen for next pointerdown anywhere to clear selection.
       // Register synchronously — pointerdown for the drag already fired
       // before this pointerup, so there is no risk of the current
@@ -371,6 +386,7 @@ export class TableCellSelection {
 
     this.restoreModifiedCells();
     this.hasSelection = false;
+    this.lastPaintedRange = null;
 
     if (hadSelection) {
       this.onSelectionActiveChange?.(false);
@@ -409,6 +425,11 @@ export class TableCellSelection {
     this.paintSelection();
     this.hasSelection = true;
     this.onSelectionActiveChange?.(true);
+
+    if (this.lastPaintedRange) {
+      this.onSelectionRangeChange?.(this.lastPaintedRange);
+    }
+
     this.anchorCell = null;
     this.extentCell = null;
 
@@ -434,6 +455,8 @@ export class TableCellSelection {
     const maxRow = Math.max(this.anchorCell.row, this.extentCell.row);
     const minCol = Math.min(this.anchorCell.col, this.extentCell.col);
     const maxCol = Math.max(this.anchorCell.col, this.extentCell.col);
+
+    this.lastPaintedRange = { minRow, maxRow, minCol, maxCol };
 
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
 

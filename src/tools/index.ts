@@ -4,7 +4,7 @@
  *
  * @example
  * // Import specific tools
- * import { Paragraph, Header, List, Bold, Italic, Link } from '@jackuait/blok/tools';
+ * import { Paragraph, Header, List, Bold, Italic, Link, Marker } from '@jackuait/blok/tools';
  *
  * // Use in Blok configuration (flat config style)
  * new Blok({
@@ -30,6 +30,7 @@ export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-b
 export { ItalicInlineTool as Italic } from '../components/inline-tools/inline-tool-italic';
 export { LinkInlineTool as Link } from '../components/inline-tools/inline-tool-link';
 export { ConvertInlineTool as Convert } from '../components/inline-tools/inline-tool-convert';
+export { MarkerInlineTool as Marker } from '../components/inline-tools/inline-tool-marker';
 
 // Default tools configuration for convenience
 // Note: inlineToolbar defaults to true, so it doesn't need to be specified
@@ -44,4 +45,5 @@ export const defaultInlineTools = {
   bold: {},
   italic: {},
   link: {},
+  marker: {},
 } as const;

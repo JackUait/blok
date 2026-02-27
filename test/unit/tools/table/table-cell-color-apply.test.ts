@@ -57,4 +57,50 @@ describe('applyCellColors', () => {
 
     expect(cell.style.backgroundColor).toBe('');
   });
+
+  it('applies text color to cells with textColor in content', () => {
+    const grid = createTestGrid(2, 2);
+    const content = [
+      [{ blocks: [], textColor: '#787774' }, { blocks: [] }],
+      [{ blocks: [] }, { blocks: [], textColor: '#d9730d' }],
+    ];
+
+    applyCellColors(grid, content);
+
+    const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const cell00 = rows[0].querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+    const cell01 = rows[0].querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+    const cell10 = rows[1].querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+    const cell11 = rows[1].querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+    expect(cell00.style.color).toBeTruthy();
+    expect(cell01.style.color).toBe('');
+    expect(cell10.style.color).toBe('');
+    expect(cell11.style.color).toBeTruthy();
+  });
+
+  it('clears text color from cells without textColor', () => {
+    const grid = createTestGrid(1, 1);
+    const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+
+    cell.style.color = '#787774';
+
+    applyCellColors(grid, [[{ blocks: [] }]]);
+
+    expect(cell.style.color).toBe('');
+  });
+
+  it('applies both color and textColor together', () => {
+    const grid = createTestGrid(1, 1);
+    const content = [
+      [{ blocks: [], color: '#fbecdd', textColor: '#d9730d' }],
+    ];
+
+    applyCellColors(grid, content);
+
+    const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+
+    expect(cell.style.backgroundColor).toBeTruthy();
+    expect(cell.style.color).toBeTruthy();
+  });
 });

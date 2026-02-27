@@ -25,6 +25,7 @@ let lastPopoverArgs: MockPopoverArgs | null = null;
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverInline: class MockPopoverInline {
+    private el = document.createElement('div');
     constructor(args: MockPopoverArgs) {
       lastPopoverArgs = args;
     }
@@ -32,6 +33,9 @@ vi.mock('../../../../src/components/utils/popover', () => ({
     destroy = mockPopoverDestroy;
     on(_event: string, _handler: () => void): void {
       // no-op for tests
+    }
+    getElement(): HTMLElement {
+      return this.el;
     }
   },
   PopoverItemType: {

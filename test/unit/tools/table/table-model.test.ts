@@ -1305,6 +1305,92 @@ describe('TableModel', () => {
     });
   });
 
+  describe('text color', () => {
+    it('snapshot omits textColor when not set', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'] }]],
+      }));
+
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).textColor).toBeUndefined();
+    });
+
+    it('setCellTextColor sets text color on a cell', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'] }, { blocks: ['b2'] }]],
+      });
+      const model = new TableModel(data);
+
+      model.setCellTextColor(0, 0, '#787774');
+
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).textColor).toBe('#787774');
+      expect((snap.content[0][1] as CellContent).textColor).toBeUndefined();
+    });
+
+    it('setCellTextColor with undefined removes text color', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'], textColor: '#787774' }]],
+      });
+      const model = new TableModel(data);
+
+      model.setCellTextColor(0, 0, undefined);
+
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).textColor).toBeUndefined();
+    });
+
+    it('setCellTextColor is no-op for out-of-bounds', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(5, 5, '#787774');
+
+      expect(model.snapshot().content[0][0]).toEqual({ blocks: [] });
+    });
+
+    it('getCellTextColor returns text color for a cell', () => {
+      const data = makeData({
+        content: [[{ blocks: [], textColor: '#d9730d' }]],
+      });
+      const model = new TableModel(data);
+
+      expect(model.getCellTextColor(0, 0)).toBe('#d9730d');
+    });
+
+    it('getCellTextColor returns undefined when no text color set', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('text color survives replaceAll (undo/redo)', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: [], textColor: '#d9730d' }]],
+      }));
+
+      const snap = model.snapshot();
+
+      model.replaceAll(snap);
+
+      expect(model.getCellTextColor(0, 0)).toBe('#d9730d');
+    });
+
+    it('snapshot includes textColor when set', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], textColor: '#787774', color: '#f1f1ef' }]],
+      }));
+
+      const snap = model.snapshot();
+      const cell = snap.content[0][0] as CellContent;
+
+      expect(cell.textColor).toBe('#787774');
+      expect(cell.color).toBe('#f1f1ef');
+    });
+  });
+
   // ─── Model invariants ────────────────────────────────────────────
 
   describe('model invariants', () => {

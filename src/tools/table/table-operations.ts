@@ -423,6 +423,12 @@ export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[
       } else {
         el.style.backgroundColor = '';
       }
+
+      if (isCellWithBlocks(cellContent) && cellContent.textColor) {
+        el.style.color = cellContent.textColor;
+      } else {
+        el.style.color = '';
+      }
     });
   });
 };

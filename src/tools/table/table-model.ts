@@ -83,6 +83,10 @@ export class TableModel {
             cell.color = c.color;
           }
 
+          if (c.textColor !== undefined) {
+            cell.textColor = c.textColor;
+          }
+
           return cell;
         })
       ),
@@ -204,6 +208,32 @@ export class TableModel {
     }
 
     return this.contentGrid[row][col].color;
+  }
+
+  /**
+   * Set the text color for a cell. Pass undefined to remove.
+   */
+  setCellTextColor(row: number, col: number, color: string | undefined): void {
+    if (!this.isInBounds(row, col)) {
+      return;
+    }
+
+    if (color === undefined) {
+      delete this.contentGrid[row][col].textColor;
+    } else {
+      this.contentGrid[row][col].textColor = color;
+    }
+  }
+
+  /**
+   * Get the text color for a cell, or undefined if none set.
+   */
+  getCellTextColor(row: number, col: number): string | undefined {
+    if (!this.isInBounds(row, col)) {
+      return undefined;
+    }
+
+    return this.contentGrid[row][col].textColor;
   }
 
   // ─── Row operations ─────────────────────────────────────────────
@@ -495,6 +525,10 @@ export class TableModel {
 
       if (cell.color !== undefined) {
         normalized.color = cell.color;
+      }
+
+      if (cell.textColor !== undefined) {
+        normalized.textColor = cell.textColor;
       }
 
       return normalized;

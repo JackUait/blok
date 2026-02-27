@@ -20,6 +20,7 @@ import {
   parseClipboardHtml,
   parseGenericHtmlTable,
 } from './table-cell-clipboard';
+import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
 import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
 import {
@@ -1024,7 +1025,7 @@ export class Table implements BlockTool {
     ]);
   }
 
-  private handleCellColorChange(cells: HTMLElement[], color: string | null): void {
+  private handleCellColorChange(cells: HTMLElement[], color: string | null, mode: CellColorMode): void {
     const gridEl = this.gridElement;
 
     if (!gridEl) {
@@ -1038,8 +1039,13 @@ export class Table implements BlockTool {
         continue;
       }
 
-      this.model.setCellColor(coord.row, coord.col, color ?? undefined);
-      cell.style.backgroundColor = color ?? '';
+      if (mode === 'backgroundColor') {
+        this.model.setCellColor(coord.row, coord.col, color ?? undefined);
+        cell.style.backgroundColor = color ?? '';
+      } else {
+        this.model.setCellTextColor(coord.row, coord.col, color ?? undefined);
+        cell.style.color = color ?? '';
+      }
     }
   }
 
@@ -1151,8 +1157,8 @@ export class Table implements BlockTool {
       onCopyViaButton: (cells) => {
         this.handleCellCopyViaButton(cells);
       },
-      onColorChange: (cells, color) => {
-        this.handleCellColorChange(cells, color);
+      onColorChange: (cells, color, mode) => {
+        this.handleCellColorChange(cells, color, mode);
       },
     });
   }

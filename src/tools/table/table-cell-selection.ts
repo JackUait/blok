@@ -6,6 +6,7 @@ import { twMerge } from '../../components/utils/tw';
 
 import { CELL_ATTR, ROW_ATTR } from './table-core';
 import { createCellColorPicker } from './table-cell-color-picker';
+import type { CellColorMode } from './table-cell-color-picker';
 import { createGripDotsSvg } from './table-grip-visuals';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -62,7 +63,7 @@ interface CellSelectionOptions {
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton?: (cells: HTMLElement[]) => void;
-  onColorChange?: (cells: HTMLElement[], color: string | null) => void;
+  onColorChange?: (cells: HTMLElement[], color: string | null, mode: CellColorMode) => void;
   isPopoverOpen?: () => boolean;
   i18n: I18n;
 }
@@ -85,7 +86,7 @@ export class TableCellSelection {
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
-  private onColorChange: ((cells: HTMLElement[], color: string | null) => void) | undefined;
+  private onColorChange: ((cells: HTMLElement[], color: string | null, mode: CellColorMode) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
 
   private boundPointerDown: (e: PointerEvent) => void;
@@ -564,8 +565,8 @@ export class TableCellSelection {
             type: PopoverItemType.Html as const,
             element: createCellColorPicker({
               i18n: this.i18n,
-              onColorSelect: (color: string | null): void => {
-                this.onColorChange?.([...this.selectedCells], color);
+              onColorSelect: (color: string | null, mode: CellColorMode): void => {
+                this.onColorChange?.([...this.selectedCells], color, mode);
               },
             }).element,
           }],
@@ -600,6 +601,30 @@ export class TableCellSelection {
     });
 
     this.pillPopover.show();
+
+    this.applyVerticalLayout(this.pillPopover.getElement());
+  }
+
+  /**
+   * Overrides PopoverInline's default horizontal layout to display items vertically.
+   */
+  private applyVerticalLayout(popoverEl: HTMLElement): void {
+    const container = popoverEl.querySelector<HTMLElement>('[data-blok-popover-container]');
+
+    if (container) {
+      container.classList.remove('flex-row', 'min-w-max', 'w-max');
+      container.classList.add('flex-col');
+      container.style.height = 'auto';
+    }
+
+    const items = popoverEl.querySelector<HTMLElement>('[data-blok-popover-items]');
+
+    if (items) {
+      items.classList.add('flex-col');
+    }
+
+    popoverEl.style.width = 'auto';
+    popoverEl.style.height = 'auto';
   }
 
   private expandPill(): void {

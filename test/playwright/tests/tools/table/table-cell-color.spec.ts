@@ -256,6 +256,16 @@ const clickSwatch = async (page: Page, name: string): Promise<void> => {
   await swatch.click({ force: true });
 };
 
+/**
+ * Helper to switch to a specific tab in the color picker.
+ */
+const switchColorTab = async (page: Page, mode: 'textColor' | 'backgroundColor'): Promise<void> => {
+  const tab = page.locator(`[data-blok-testid="cell-color-tab-${mode}"]`);
+
+  await expect(tab).toBeVisible();
+  await tab.click();
+};
+
 test.describe('Cell Background Color', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -407,5 +417,170 @@ test.describe('Cell Background Color', () => {
 
       expect(cellBg, `cell [${row},${col}] should NOT have background color`).toBe('');
     }
+  });
+});
+
+test.describe('Cell Text Color', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+  });
+
+  test.afterEach(async ({ page }) => {
+    await resetBlok(page);
+  });
+
+  test('applies text color to a single cell via text tab', async ({ page }) => {
+    await create3x3TableWithContent(page);
+
+    // Select cell (0,0)
+    await selectSingleCell(page, 0, 0);
+
+    const pill = page.locator('[data-blok-table-selection-pill]');
+
+    await expect(pill).toBeAttached();
+
+    // Open color picker and switch to Text tab
+    await openColorPicker(page);
+    await switchColorTab(page, 'textColor');
+
+    // Click the orange swatch
+    await clickSwatch(page, 'orange');
+
+    // Verify cell (0,0) has a non-empty color style
+    const cellColor = await getCell(page, 0, 0).evaluate(
+      (el) => (el as HTMLElement).style.color
+    );
+
+    expect(cellColor).toBeTruthy();
+    expect(cellColor.length).toBeGreaterThan(0);
+  });
+
+  test('text color persists in saved data', async ({ page }) => {
+    await create3x3TableWithContent(page);
+
+    // Select cell (0,0)
+    await selectSingleCell(page, 0, 0);
+
+    const pill = page.locator('[data-blok-table-selection-pill]');
+
+    await expect(pill).toBeAttached();
+
+    // Open color picker, switch to Text tab, pick orange
+    await openColorPicker(page);
+    await switchColorTab(page, 'textColor');
+    await clickSwatch(page, 'orange');
+
+    // Save and verify textColor field
+    const savedData = await page.evaluate(async () => {
+      if (!window.blokInstance) {
+        throw new Error('blokInstance is not initialized');
+      }
+
+      return window.blokInstance.save();
+    });
+
+    const tableBlock = savedData.blocks[0];
+
+    expect(tableBlock.type).toBe('table');
+
+    const content = (tableBlock.data as { content: Array<Array<{ textColor?: string }>> }).content;
+    const firstCell = content[0][0];
+
+    expect(firstCell).toHaveProperty('textColor');
+    expect(firstCell.textColor).toBeTruthy();
+  });
+
+  test('default button removes text color', async ({ page }) => {
+    await create3x3TableWithContent(page);
+
+    // Apply text color to cell (0,0)
+    await selectSingleCell(page, 0, 0);
+
+    const pill = page.locator('[data-blok-table-selection-pill]');
+
+    await expect(pill).toBeAttached();
+    await openColorPicker(page);
+    await switchColorTab(page, 'textColor');
+    await clickSwatch(page, 'orange');
+
+    // Verify color is set
+    const cellColorBefore = await getCell(page, 0, 0).evaluate(
+      (el) => (el as HTMLElement).style.color
+    );
+
+    expect(cellColorBefore).toBeTruthy();
+
+    // Re-select cell (0,0)
+    await selectSingleCell(page, 0, 0);
+    await expect(pill).toBeAttached();
+
+    // Open picker, switch to text tab, click Default
+    await openColorPicker(page);
+    await switchColorTab(page, 'textColor');
+
+    const defaultBtn = page.locator('[data-blok-testid="cell-color-default-btn"]');
+
+    await expect(defaultBtn).toBeVisible();
+    await defaultBtn.click();
+
+    // Verify color is cleared
+    const cellColorAfter = await getCell(page, 0, 0).evaluate(
+      (el) => (el as HTMLElement).style.color
+    );
+
+    expect(cellColorAfter).toBe('');
+  });
+
+  test('applies both text and background color to same cell', async ({ page }) => {
+    await create3x3TableWithContent(page);
+
+    // Apply background color first
+    await selectSingleCell(page, 0, 0);
+
+    const pill = page.locator('[data-blok-table-selection-pill]');
+
+    await expect(pill).toBeAttached();
+    await openColorPicker(page);
+    await clickSwatch(page, 'orange');
+
+    // Re-select and apply text color
+    await selectSingleCell(page, 0, 0);
+    await expect(pill).toBeAttached();
+    await openColorPicker(page);
+    await switchColorTab(page, 'textColor');
+    await clickSwatch(page, 'blue');
+
+    // Verify both styles are set
+    const styles = await getCell(page, 0, 0).evaluate(
+      (el) => ({
+        backgroundColor: (el as HTMLElement).style.backgroundColor,
+        color: (el as HTMLElement).style.color,
+      })
+    );
+
+    expect(styles.backgroundColor).toBeTruthy();
+    expect(styles.color).toBeTruthy();
+
+    // Verify saved data has both fields
+    const savedData = await page.evaluate(async () => {
+      if (!window.blokInstance) {
+        throw new Error('blokInstance is not initialized');
+      }
+
+      return window.blokInstance.save();
+    });
+
+    const content = (savedData.blocks[0].data as {
+      content: Array<Array<{ color?: string; textColor?: string }>>;
+    }).content;
+    const firstCell = content[0][0];
+
+    expect(firstCell.color).toBeTruthy();
+    expect(firstCell.textColor).toBeTruthy();
   });
 });

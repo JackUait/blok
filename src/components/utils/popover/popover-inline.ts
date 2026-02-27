@@ -311,7 +311,16 @@ export class PopoverInline extends PopoverDesktop {
 
     // Apply level-1 specific positioning styles
     if (nestedPopover.nestingLevel === 1 && nestedContainer instanceof HTMLElement) {
-      nestedContainer.className = twMerge(nestedContainer.className, 'left-0');
+      // Position near the trigger item, clamped to stay within the toolbar bounds
+      const itemEl = item.getElement();
+      const triggerLeft = itemEl ? itemEl.offsetLeft + this.offsetLeft : 0;
+      const nestedWidth = nestedPopover.size.width;
+      const toolbarWidth = this.nodes.popoverContainer.offsetWidth;
+      const maxLeft = Math.max(0, toolbarWidth - nestedWidth);
+      const left = Math.max(0, Math.min(triggerLeft, maxLeft));
+
+      nestedContainer.style.left = `${left}px`;
+
       // Set top position based on height
       const topOffset = isMobileScreen() ? 'calc(var(--height-mobile) + 3px)' : 'calc(var(--height) + 3px)';
       nestedContainer.style.top = topOffset;

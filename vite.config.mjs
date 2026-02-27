@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 
+import tailwindcss from '@tailwindcss/vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import license from 'rollup-plugin-license';
 
@@ -99,6 +100,7 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
+      tailwindcss(),
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (outputChunk) => {
           // Only inject CSS into the main blok bundle, not locales or tools

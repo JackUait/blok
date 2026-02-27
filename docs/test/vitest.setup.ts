@@ -10,8 +10,10 @@ configure({ testIdAttribute: 'data-blok-testid' });
 expect.extend(matchers);
 
 // Mock window.matchMedia for responsive components
+// jsdom 28+ has native matchMedia — configurable: true allows per-test overrides
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
+  configurable: true,
   value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,

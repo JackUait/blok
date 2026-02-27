@@ -307,7 +307,7 @@ describe('Typography Scanner', () => {
 
   describe('False positive detection - CSS classes', () => {
     it('should not flag Tailwind !important modifier', () => {
-      const code = `const classes = 'shadow-none bg-transparent !mr-0';`;
+      const code = `const classes = 'shadow-none bg-transparent mr-0!';`;
       const result = findTypographyIssues(code);
       expect(result.issues).toHaveLength(0);
     });

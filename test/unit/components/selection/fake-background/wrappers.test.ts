@@ -343,7 +343,7 @@ describe('FakeBackgroundWrappers', () => {
   });
 
   describe('splitMultiLineWrapper', () => {
-    it('applies box shadow to single-line wrapper', () => {
+    it('applies box shadow-sm to single-line wrapper', () => {
       const container = createContentEditable('Single line');
       const textNode = container.firstChild as Text;
 

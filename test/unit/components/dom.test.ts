@@ -35,14 +35,14 @@ describe('Dom helper utilities', () => {
 
     it('handles Tailwind arbitrary value class names without throwing', () => {
       /**
-       * Tailwind CSS arbitrary values like py-[theme(spacing.2)] contain parentheses
+       * Tailwind CSS arbitrary values like py-2 contain parentheses
        * which are invalid for classList.add(). The Dom.make() should handle these gracefully.
        */
       const tailwindClasses = [
-        'py-[theme(spacing.2)]',
+        'py-2',
         'w-[calc(100%-2rem)]',
         'bg-[#1da1f2]',
-        'text-[length:var(--font-size)]',
+        'text-(length:--font-size)',
         'valid-class',
         'another-valid',
       ];
@@ -78,11 +78,11 @@ describe('Dom helper utilities', () => {
     });
 
     it('handles mixed valid and invalid class names', () => {
-      const element = Dom.make('div', ['valid-class', 'py-[theme(spacing.2)]', 'another-valid', 'w-[calc(100%)]']);
+      const element = Dom.make('div', ['valid-class', 'py-2', 'another-valid', 'w-[calc(100%)]']);
 
       expect(element.classList.contains('valid-class')).toBe(true);
       expect(element.classList.contains('another-valid')).toBe(true);
-      expect(element.className.includes('py-[theme(spacing.2)]')).toBe(true);
+      expect(element.className.includes('py-2')).toBe(true);
       expect(element.className.includes('w-[calc(100%)]')).toBe(true);
     });
 

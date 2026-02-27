@@ -266,10 +266,10 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    */
   private make(): void {
     this.nodes.wrapper = $.make('div', twMerge(
-      'absolute top-0 left-0 z-[3] opacity-100 visible',
-      'transition-opacity duration-[250ms] ease-out',
+      'absolute top-0 left-0 z-3 opacity-100 visible',
+      'transition-opacity duration-250 ease-out',
       'will-change-[opacity,left,top]',
-      '[&_[hidden]]:!hidden'
+      '**:[[hidden]]:hidden!'
     ));
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, INLINE_TOOLBAR_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Search } from './Search';
 
@@ -119,14 +119,12 @@ describe('Search', () => {
       // Search for 'blocks' - should return results from different modules
       fireEvent.change(input, { target: { value: 'blocks' } });
 
-      // Wait for debounced search
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Find all module headers
-      const moduleHeaders = screen.getAllByTestId('search-module-header');
-
-      // Should have at least one module header
-      expect(moduleHeaders.length).toBeGreaterThan(0);
+      // Wait for debounced search results to render
+      const moduleHeaders = await waitFor(() => {
+        const headers = screen.getAllByTestId('search-module-header');
+        expect(headers.length).toBeGreaterThan(0);
+        return headers;
+      });
 
       // Each header should have a module title
       moduleHeaders.forEach(header => {
@@ -147,11 +145,14 @@ describe('Search', () => {
       // Search for 'api' - should return results from multiple modules
       fireEvent.change(input, { target: { value: 'api' } });
 
-      // Wait for debounced search
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for debounced search results to render
+      const moduleHeaders = await waitFor(() => {
+        const headers = screen.getAllByTestId('search-module-header');
+        expect(headers.length).toBeGreaterThan(0);
+        return headers;
+      });
 
       // Get module headers in order
-      const moduleHeaders = screen.getAllByTestId('search-module-header');
       const moduleTitles = moduleHeaders.map(h => h.textContent?.trim()).filter(Boolean);
 
       // Module headers should be grouped (no duplicates)
@@ -171,14 +172,12 @@ describe('Search', () => {
       // Search for 'save' - should find results
       fireEvent.change(input, { target: { value: 'save' } });
 
-      // Wait for debounced search
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Find module headers
-      const moduleHeaders = screen.getAllByTestId('search-module-header');
-
-      // Should have at least one module header with results following it
-      expect(moduleHeaders.length).toBeGreaterThan(0);
+      // Wait for debounced search results to render
+      const moduleHeaders = await waitFor(() => {
+        const headers = screen.getAllByTestId('search-module-header');
+        expect(headers.length).toBeGreaterThan(0);
+        return headers;
+      });
 
       // Verify that the first module header has visible text content
       expect(moduleHeaders[0]).toHaveTextContent(/.+/);

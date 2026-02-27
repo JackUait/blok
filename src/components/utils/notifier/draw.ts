@@ -4,19 +4,19 @@ import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } f
 
 export const CSS = {
   wrapper: twJoin(
-    'fixed z-[2] bottom-5 left-5',
+    'fixed z-2 bottom-5 left-5',
     'font-[-apple-system,BlinkMacSystemFont,"Segoe_UI","Roboto","Oxygen","Ubuntu","Cantarell","Fira_Sans","Droid_Sans","Helvetica_Neue",sans-serif]'
   ),
   notification: twJoin(
     'relative w-[230px] mt-[15px] py-[13px] px-4',
-    'bg-white shadow-[0_11px_17px_0_rgba(23,32,61,0.13)] rounded-[5px]',
-    'text-sm leading-[1.4em] break-words',
+    'bg-white shadow-notify rounded-[5px]',
+    'text-sm leading-[1.4em] wrap-break-word',
     'before:content-[""] before:absolute before:block before:top-0 before:left-0',
     'before:w-[3px] before:h-[calc(100%-6px)] before:m-[3px] before:rounded-[5px] before:bg-transparent'
   ),
   crossBtn: twJoin(
     'absolute top-[7px] right-[15px] w-2.5 h-2.5 p-[5px] opacity-55 cursor-pointer',
-    'before:content-[""] before:absolute before:left-[9px] before:top-[5px] before:h-3 before:w-0.5 before:bg-[#575d67] before:rotate-[-45deg]',
+    'before:content-[""] before:absolute before:left-[9px] before:top-[5px] before:h-3 before:w-0.5 before:bg-[#575d67] before:-rotate-45',
     'after:content-[""] after:absolute after:left-[9px] after:top-[5px] after:h-3 after:w-0.5 after:bg-[#575d67] after:rotate-45',
     'hover:opacity-100'
   ),
@@ -26,16 +26,16 @@ export const CSS = {
   cancelBtn: 'bg-[#f2f5f7] shadow-[0_2px_1px_0_rgba(16,19,29,0)] text-[#656b7c] hover:bg-[#e9ecee]',
   input: twJoin(
     'max-w-[130px] py-[5px] px-2.5 bg-[#f7f7f7] border-0 rounded-[3px]',
-    'text-[13px] text-[#656b7c] outline-none',
+    'text-[13px] text-[#656b7c] outline-hidden',
     'placeholder:text-[#656b7c] focus:placeholder:text-[rgba(101,107,124,0.3)]'
   ),
   successNotification: twJoin(
-    '!bg-[#fafffe]',
-    'before:!bg-[#41ffb1]'
+    'bg-[#fafffe]!',
+    'before:bg-[#41ffb1]!'
   ),
   errorNotification: twJoin(
-    '!bg-[#fffbfb]',
-    'before:!bg-[#fb5d5d]'
+    'bg-[#fffbfb]!',
+    'before:bg-[#fb5d5d]!'
   ),
 };
 

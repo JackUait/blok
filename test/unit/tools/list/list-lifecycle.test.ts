@@ -325,7 +325,7 @@ describe('list-lifecycle', () => {
     // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
     const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
     expect(listItem?.className).not.toContain('pt-[2px]');
-    expect(listItem?.className).not.toContain('pb-[1px]');
+    expect(listItem?.className).not.toContain('pb-px');
     expect(listItem?.className).not.toContain('py-0.5');
   });
 
@@ -345,7 +345,7 @@ describe('list-lifecycle', () => {
     // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
     const checklistItem = result.querySelector('[role="listitem"]') as HTMLElement;
     expect(checklistItem?.className).not.toContain('pt-[2px]');
-    expect(checklistItem?.className).not.toContain('pb-[1px]');
+    expect(checklistItem?.className).not.toContain('pb-px');
     expect(checklistItem?.className).not.toContain('py-0.5');
   });
 });

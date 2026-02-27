@@ -114,7 +114,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // Update DOM state
     this.nodes.popover.setAttribute(DATA_ATTR.popoverOpened, 'true');
-    this.nodes.popoverContainer.classList.add(...css.popoverContainerOpened.split(' '));
+    this.nodes.popoverContainer.className = twMerge(
+      this.nodes.popoverContainer.className,
+      css.popoverContainerOpened
+    );
 
     /**
      * Refresh active states for all items.
@@ -142,7 +145,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpened);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
-    this.nodes.popoverContainer.classList.remove(...css.popoverContainerOpened.split(' '));
+    this.nodes.popoverContainer.className = css.popoverContainer;
 
     this.itemsDefault.forEach(item => item.reset());
 

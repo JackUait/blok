@@ -146,7 +146,7 @@ export class Header implements BlockTool {
   /**
    * Base styles for all header levels
    */
-  private static readonly BASE_STYLES = 'py-[3px] px-[2px] m-0 !leading-[1.3] outline-none [&_p]:!p-0 [&_p]:!m-0 [&_div]:!p-0 [&_div]:!m-0';
+  private static readonly BASE_STYLES = 'py-[3px] px-[2px] m-0 leading-[1.3]! outline-hidden [&_p]:p-0! [&_p]:m-0! [&_div]:p-0! [&_div]:m-0!';
 
   /**
    * Styles

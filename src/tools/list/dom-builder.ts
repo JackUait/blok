@@ -176,7 +176,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
 
   // Create content container
   const contentContainer = document.createElement('div');
-  contentContainer.className = twMerge('flex-1 min-w-0 outline-none', ...PLACEHOLDER_CLASSES);
+  contentContainer.className = twMerge('flex-1 min-w-0 outline-hidden', ...PLACEHOLDER_CLASSES);
   contentContainer.setAttribute('data-blok-testid', LIST_TEST_IDS.contentContainer);
   contentContainer.contentEditable = context.readOnly ? 'false' : 'true';
   contentContainer.innerHTML = data.text;
@@ -224,7 +224,7 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
 
   const content = document.createElement('div');
   content.className = twMerge(
-    'flex-1 outline-none leading-[1.6em]',
+    'flex-1 outline-hidden leading-[1.6em]',
     data.checked ? 'line-through opacity-60' : '',
     ...PLACEHOLDER_CLASSES
   );
@@ -251,7 +251,7 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
  */
 export const createMarker = (style: ListItemStyle, depth: number): HTMLElement => {
   const marker = document.createElement('span');
-  marker.className = 'flex-shrink-0 select-none';
+  marker.className = 'shrink-0 select-none';
   marker.setAttribute('aria-hidden', 'true');
   marker.contentEditable = 'false';
 

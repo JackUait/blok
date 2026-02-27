@@ -90,19 +90,19 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    */
   public show(): void {
     this.nodes.overlay.removeAttribute(DATA_ATTR.overlayHidden);
-    this.nodes.overlay.className = twMerge(css.popoverOverlay, 'fixed inset-0 block visible z-[3] opacity-50 transition-opacity duration-[120ms] ease-in will-change-[opacity]');
+    this.nodes.overlay.className = twMerge(css.popoverOverlay, 'fixed inset-0 block visible z-3 opacity-50 transition-opacity duration-120 ease-in will-change-[opacity]');
 
     super.show();
 
     // Apply mobile opened state classes AFTER super.show() to override base class styles
-    // For mobile, we use max-h-none instead of max-h-[var(--max-height)] since mobile popovers
+    // For mobile, we use max-h-none instead of max-h-(--max-height) since mobile popovers
     // should expand to fit their content
-    // Use z-[4] to ensure container is above the overlay (z-[3])
+    // Use z-4 to ensure container is above the overlay (z-[3])
     this.nodes.popoverContainer.className = twMerge(
       css.popoverContainer,
       css.popoverContainerMobile,
       css.popoverContainerOpened,
-      'max-h-none z-[4] animate-[panelShowingMobile_250ms_ease]'
+      'max-h-none z-4 animate-[panelShowingMobile_250ms_ease]'
     );
 
     this.scrollLocker.lock();

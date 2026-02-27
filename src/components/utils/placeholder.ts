@@ -19,10 +19,10 @@ export const PLACEHOLDER_CLASSES: string[] = [
   'empty:before:text-gray-text',
   'empty:before:cursor-text',
   'empty:before:content-[attr(data-placeholder)]',
-  '[&[data-blok-empty=true]]:before:pointer-events-none',
-  '[&[data-blok-empty=true]]:before:text-gray-text',
-  '[&[data-blok-empty=true]]:before:cursor-text',
-  '[&[data-blok-empty=true]]:before:content-[attr(data-placeholder)]',
+  'data-[blok-empty=true]:before:pointer-events-none',
+  'data-[blok-empty=true]:before:text-gray-text',
+  'data-[blok-empty=true]:before:cursor-text',
+  'data-[blok-empty=true]:before:content-[attr(data-placeholder)]',
 ];
 
 /**
@@ -34,10 +34,10 @@ export const PLACEHOLDER_ACTIVE_CLASSES: string[] = [
   'empty:before:text-gray-text',
   'empty:before:cursor-text',
   'empty:before:content-[attr(data-blok-placeholder-active)]',
-  '[&[data-empty=true]]:before:pointer-events-none',
-  '[&[data-empty=true]]:before:text-gray-text',
-  '[&[data-empty=true]]:before:cursor-text',
-  '[&[data-empty=true]]:before:content-[attr(data-blok-placeholder-active)]',
+  'data-[empty=true]:before:pointer-events-none',
+  'data-[empty=true]:before:text-gray-text',
+  'data-[empty=true]:before:cursor-text',
+  'data-[empty=true]:before:content-[attr(data-blok-placeholder-active)]',
 ];
 
 /**
@@ -62,10 +62,10 @@ export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
  * Uses data-blok-placeholder-active attribute for the placeholder text.
  */
 export const PLACEHOLDER_EMPTY_EDITOR_CLASSES: string[] = [
-  '[[data-blok-empty=true]_&]:empty:before:pointer-events-none',
-  '[[data-blok-empty=true]_&]:empty:before:text-gray-text',
-  '[[data-blok-empty=true]_&]:empty:before:cursor-text',
-  '[[data-blok-empty=true]_&]:empty:before:content-[attr(data-blok-placeholder-active)]',
+  'empty:in-data-[blok-empty=true]:before:pointer-events-none',
+  'empty:in-data-[blok-empty=true]:before:text-gray-text',
+  'empty:in-data-[blok-empty=true]:before:cursor-text',
+  'empty:in-data-[blok-empty=true]:before:content-[attr(data-blok-placeholder-active)]',
   '[[data-blok-empty=true]_&[data-empty=true]]:before:pointer-events-none',
   '[[data-blok-empty=true]_&[data-empty=true]]:before:text-gray-text',
   '[[data-blok-empty=true]_&[data-empty=true]]:before:cursor-text',

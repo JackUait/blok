@@ -21,7 +21,7 @@ export const DRAG_CONFIG = {
  * Styles for the drag preview element
  */
 export const PREVIEW_STYLES = {
-  base: 'fixed pointer-events-none z-[10000] opacity-80 transition-none',
+  base: 'fixed pointer-events-none z-10000 opacity-80 transition-none',
   content: 'relative mx-auto max-w-content',
 } as const;
 

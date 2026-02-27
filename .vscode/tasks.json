@@ -85,6 +85,26 @@
 			"label": "Run full unit tests (regression check)",
 			"type": "shell",
 			"command": "npx vitest run --reporter=verbose 2>&1 | tail -80"
+		},
+		{
+			"label": "TSC Type Check",
+			"type": "shell",
+			"command": "cd /Users/jackuait/Packages/blok && npx tsc --noEmit 2>&1; echo \"TSC_EXIT=$?\""
+		},
+		{
+			"label": "ESLint Verify",
+			"type": "shell",
+			"command": "npx eslint . 2>&1 | tail -60; echo ESLINT_EXIT=$?"
+		},
+		{
+			"label": "ESLint Check",
+			"type": "shell",
+			"command": "npx eslint . 2>&1 | tail -60; echo ESLINT_EXIT=$?"
+		},
+		{
+			"label": "TSC noEmit check",
+			"type": "shell",
+			"command": "cd /Users/jackuait/Packages/blok && npx tsc --noEmit 2>&1; echo \"TSC_EXIT=$?\""
 		}
 	]
 }

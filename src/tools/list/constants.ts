@@ -12,12 +12,12 @@ export const INDENT_PER_LEVEL = 24;
  *
  * Matches paragraph spacing: py-[3px] from blok-block + mt-[2px] mb-px
  */
-export const BASE_STYLES = 'outline-none py-[3px] mt-[2px] mb-px';
+export const BASE_STYLES = 'outline-hidden py-[3px] mt-[2px] mb-px';
 
 /**
  * Styles for standard list items (unordered, ordered)
  */
-export const ITEM_STYLES = 'outline-none pl-0.5 leading-[1.6em]';
+export const ITEM_STYLES = 'outline-hidden pl-0.5 leading-[1.6em]';
 
 /**
  * Styles for checklist items

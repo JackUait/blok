@@ -6,7 +6,7 @@
     "declaration": false,
     "module": "esnext",
     "moduleResolution": "bundler", // This resolution strategy handles package.json exports and is suitable for modern bundlers
-    "lib": ["dom", "es2017", "es2018", "es2019"],
+    "lib": ["dom", "es2017", "es2018", "es2019", "es2022"],
     "allowJs": true,
 
     // allows to import .json files for i18n

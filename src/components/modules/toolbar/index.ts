@@ -769,12 +769,12 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
       this.CSS.actions,
       // Narrow mode positioning on non-mobile screens
-      'not-mobile:group-data-[blok-narrow=true]:right-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      'not-mobile:group-data-[blok-narrow=true]:right-[calc(-1*(var(--spacing-narrow-mode-right-padding))-5px)]',
       // RTL narrow mode: use left positioning instead
-      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:right-auto',
-      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-[calc(-1*theme(spacing.narrow-mode-right-padding)-5px)]',
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:right-auto',
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:left-[calc(-1*(var(--spacing-narrow-mode-right-padding))-5px)]',
       // RTL narrow mode additional left offset
-      'not-mobile:group-data-[blok-narrow=true]:group-data-[blok-rtl=true]:left-[-5px]',
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:left-[-5px]',
     ]);
 
     this.nodes.content = content;

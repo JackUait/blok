@@ -501,8 +501,8 @@ describe('Caret module', () => {
     });
   });
 
-  describe('shadow caret helpers', () => {
-    it('creates and removes shadow caret element', () => {
+  describe('shadow-sm caret helpers', () => {
+    it('creates and removes shadow-sm caret element', () => {
       const { caret } = createCaret();
       const container = createContentEditable('text');
 

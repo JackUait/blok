@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeToggle } from './ThemeToggle';
 
-const mockToggleTheme = vi.fn();
+const { mockToggleTheme } = vi.hoisted(() => ({
+  mockToggleTheme: vi.fn(),
+}));
 
 vi.mock('@/hooks/useTheme', () => ({
   useTheme: vi.fn(() => ({

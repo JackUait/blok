@@ -1,59 +1,221 @@
 /* Tailwind CSS - must be first */
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import 'tailwindcss';
+
+/*
+  Exclude non-source directories from Tailwind's automatic content detection.
+  Without this, Tailwind v4 scans all non-gitignored files (including docs/,
+  test/, .claude/) and picks up false class candidates from code examples,
+  test fixtures, and markdown — generating dead CSS in the production bundle.
+*/
+@source not "../../docs";
+@source not "../../test";
+@source not "../../.claude";
+@source not "../../scripts";
+@source not "../../.storybook";
+
+@custom-variant mobile (@media (max-width: 650px));
+@custom-variant not-mobile (@media (min-width: 651px));
+@custom-variant can-hover (@media (hover: hover));
+
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+
+@theme {
+  /* Z-index */
+  --z-index-overlay: 999;
+
+  /* Colors */
+  --color-selection: #e1f2ff;
+  --color-selection-inline: #d4ecff;
+  --color-selection-highlight: rgba(46, 170, 220, 0.2);
+  --color-bg-light: #eff2f5;
+  --color-gray-text: #707684;
+  --color-dark: #1d202b;
+  --color-active-icon: #388ae5;
+  --color-link: #388ae5;
+  --color-line-gray: #eff0f1;
+  --color-tooltip-bg: #1d202b;
+  --color-tooltip-font: #cdd1e0;
+  --color-icon-active-bg: rgba(56, 138, 229, 0.1);
+  --color-icon-active-text: #388ae5;
+  --color-text-primary: black;
+  --color-text-secondary: #707684;
+  --color-popover-border: #eff0f1;
+  --color-popover-shadow: rgba(13, 20, 33, 0.1);
+  --color-popover-bg: #ffffff;
+  --color-popover-border-icon: rgb(201 201 204 / 48%);
+  --color-popover-border-icon-disabled: #eff0f1;
+  --color-item-focus-bg: rgba(34, 186, 255, 0.08);
+  --color-item-focus-shadow: rgba(7, 161, 227, 0.08);
+  --color-item-hover-bg: #f8f8f8;
+  --color-item-confirm-bg: #e24a4a;
+  --color-item-confirm-hover-bg: #ce4343;
+  --color-item-destructive-text: #e24a4a;
+  --color-item-destructive-hover-bg: rgba(226, 74, 74, 0.08);
+  --color-notify-success-bg: #fafffe;
+  --color-notify-success-bar: #41ffb1;
+  --color-notify-error-bg: #fffbfb;
+  --color-notify-error-bar: #fb5d5d;
+  --color-notify-btn-cancel-bg: #f2f5f7;
+  --color-notify-btn-cancel-text: #656b7c;
+  --color-notify-btn-confirm-bg: #34c992;
+
+  /* Spacing (also powers w-*, h-*, min-w-*, min-h-*, size-*) */
+  --spacing-content-width: 650px;
+  --spacing-narrow-mode-right-padding: 50px;
+  --spacing-toolbox-btn: 26px;
+  --spacing-toolbox-btn-mobile: 36px;
+  --spacing-icon: 20px;
+  --spacing-icon-mobile: 28px;
+  --spacing-block-padding-vertical: 0.4em;
+
+  /* Max-width */
+  --max-width-content: 650px;
+
+  /* Font family */
+  --font-mono: 'PT Mono', 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+
+  /* Box shadows */
+  --shadow-overlay-pane: 0 3px 15px -3px rgba(13, 20, 33, 0.13);
+  --shadow-tool-icon: 0 0 0 1px #eff0f1;
+  --shadow-tooltip: 0 8px 12px 0 rgba(29, 32, 43, 0.17), 0 4px 5px -3px rgba(5, 6, 12, 0.49);
+  --shadow-notify: 0 11px 17px 0 rgba(23, 32, 61, 0.13);
+  --shadow-button-focused: inset 0 0 0 1px rgba(7, 161, 227, 0.08);
+  --shadow-input: inset 0 1px 2px 0 rgba(35, 44, 72, 0.06);
+  --shadow-button-base: 0 2px 2px 0 rgba(18, 30, 57, 0.04);
+  --shadow-button-base-hover: 0 1px 3px 0 rgba(18, 30, 57, 0.08);
+  --shadow-demo-btn: 0 22px 18px -4px rgba(137, 207, 255, 0.77);
+  --shadow-demo-btn-hover: 0 20px 15px -4px rgba(137, 207, 255, 0.77);
+  --shadow-demo-btn-primary: 0 7px 8px -4px rgba(137, 207, 255, 0.77);
+  --shadow-demo-dark-btn: 0 24px 18px -14px rgba(4, 154, 255, 0.24);
+
+  /* Animations */
+  --animate-fade-in: fade-in 300ms ease forwards;
+  --animate-bounce-in: bounceIn 0.75s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+  --animate-selection-bounce: selectionBounce 0.75s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+  --animate-button-clicked: buttonClicked 0.75s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+  --animate-panel-showing: panelShowing 100ms ease;
+  --animate-panel-showing-mobile: panelShowingMobile 250ms ease;
+  --animate-wobble: wobble 400ms;
+  --animate-rotation: rotation 1.2s infinite linear;
+  --animate-notify-bounce-in: notifyBounceIn 600ms 1;
+
+  /* Keyframes */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes bounceIn {
+    0% { transform: scale3d(0.9, 0.9, 0.9); }
+    20% { transform: scale3d(1.03, 1.03, 1.03); }
+    60%, 100% { transform: scale3d(1, 1, 1); }
+  }
+
+  @keyframes selectionBounce {
+    0%, 100% { transform: scale3d(1, 1, 1); }
+    50% { transform: scale3d(1.01, 1.01, 1.01); }
+    70% { transform: scale3d(1, 1, 1); }
+  }
+
+  @keyframes buttonClicked {
+    0% { transform: scale3d(0.95, 0.95, 0.95); }
+    60% { transform: scale3d(1.02, 1.02, 1.02); }
+    80%, 100% { transform: scale3d(1, 1, 1); }
+  }
+
+  @keyframes panelShowing {
+    from { opacity: 0; transform: translateY(-8px) scale(0.9); }
+    70% { opacity: 1; transform: translateY(2px); }
+    to { transform: translateY(0); }
+  }
+
+  @keyframes panelShowingMobile {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    70% { opacity: 1; transform: translateY(-4px); }
+    to { transform: translateY(0); }
+  }
+
+  @keyframes wobble {
+    from { transform: translate3d(0, 0, 0); }
+    15% { transform: translate3d(-9%, 0, 0); }
+    30% { transform: translate3d(9%, 0, 0); }
+    45% { transform: translate3d(-4%, 0, 0); }
+    60% { transform: translate3d(4%, 0, 0); }
+    75% { transform: translate3d(-1%, 0, 0); }
+    to { transform: translate3d(0, 0, 0); }
+  }
+
+  @keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes notifyBounceIn {
+    0% { opacity: 0; transform: scale(0.3); }
+    50% { opacity: 1; transform: scale(1.05); }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /**
  * Component classes for the Styles API.
  * These single-class names can be safely used with classList.add() by external plugins.
  * Each class bundles multiple Tailwind utilities using @apply.
  */
-@layer components {
+@utility blok-block {
   /* Base Blok styles - applied to block tool wrappers */
-  .blok-block {
-    @apply py-[3px] px-[2px] [&::-webkit-input-placeholder]:!leading-normal;
-  }
-
+  @apply py-[3px] px-[2px] [&::-webkit-input-placeholder]:leading-normal!;
+}
+@utility blok-inline-tool-button {
   /* Inline Tools styles */
-  .blok-inline-tool-button {
-    @apply flex justify-center items-center border-0 rounded h-full p-0 w-7 bg-transparent cursor-pointer leading-normal text-black;
-  }
-
-  .blok-inline-tool-button--active {
-    @apply bg-icon-active-bg text-icon-active-text;
-  }
-
+  @apply flex justify-center items-center border-0 rounded-sm h-full p-0 w-7 bg-transparent cursor-pointer leading-normal text-black;
+}
+@utility blok-inline-tool-button--active {
+  @apply bg-icon-active-bg text-icon-active-text;
+}
+@utility blok-input {
   /* Input element styles */
-  .blok-input {
-    @apply w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-none shadow-input [&[data-blok-placeholder]]:before:!static [&[data-blok-placeholder]]:before:inline-block [&[data-blok-placeholder]]:before:w-0 [&[data-blok-placeholder]]:before:whitespace-nowrap [&[data-blok-placeholder]]:before:pointer-events-none;
-  }
-
+  @apply w-full rounded-[3px] border border-line-gray px-3 py-2.5 outline-hidden shadow-input data-blok-placeholder:before:static! data-blok-placeholder:before:inline-block data-blok-placeholder:before:w-0 data-blok-placeholder:before:whitespace-nowrap data-blok-placeholder:before:pointer-events-none;
+}
+@utility blok-loader {
   /* Loader styles with spinning animation */
-  .blok-loader {
-    @apply relative border border-line-gray before:absolute before:left-1/2 before:top-1/2 before:w-[18px] before:h-[18px] before:rounded-full before:content-[''] before:-ml-[11px] before:-mt-[11px] before:border-2 before:border-line-gray before:border-l-active-icon before:animate-rotation;
-  }
-
+  @apply relative border border-line-gray before:absolute before:left-1/2 before:top-1/2 before:w-[18px] before:h-[18px] before:rounded-full before:content-[''] before:-ml-[11px] before:-mt-[11px] before:border-2 before:border-line-gray before:border-l-active-icon before:animate-rotation;
+}
+@utility blok-button {
   /* Button styles */
-  .blok-button {
-    @apply p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white text-center cursor-pointer text-gray-text shadow-button-base hover:bg-[#fbfcfe] hover:shadow-button-base-hover [&_svg]:h-5 [&_svg]:mr-[0.2em] [&_svg]:-mt-0.5;
-  }
-
+  @apply p-[13px] rounded-[3px] border border-line-gray text-[14.9px] bg-white text-center cursor-pointer text-gray-text shadow-button-base hover:bg-[#fbfcfe] hover:shadow-button-base-hover [&_svg]:h-5 [&_svg]:mr-[0.2em] [&_svg]:-mt-0.5;
+}
+@utility blok-settings-button {
   /* Settings button styles */
-  .blok-settings-button {
-    @apply inline-flex items-center justify-center rounded-[3px] cursor-pointer border-0 outline-none bg-transparent align-bottom text-inherit m-0 min-w-toolbox-btn min-h-toolbox-btn [&_svg]:w-auto [&_svg]:h-auto mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile mobile:rounded-lg mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile can-hover:hover:bg-bg-light;
-  }
-
-  .blok-settings-button--active {
-    @apply text-active-icon;
-  }
-
-  .blok-settings-button--focused {
-    @apply shadow-button-focused bg-item-focus-bg;
-  }
-
-  .blok-settings-button--focused-animated {
-    @apply animate-button-clicked;
-  }
+  @apply inline-flex items-center justify-center rounded-[3px] cursor-pointer border-0 outline-hidden bg-transparent align-bottom text-inherit m-0 min-w-toolbox-btn min-h-toolbox-btn [&_svg]:w-auto [&_svg]:h-auto mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile mobile:rounded-lg mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile can-hover:hover:bg-bg-light;
+}
+@utility blok-settings-button--active {
+  @apply text-active-icon;
+}
+@utility blok-settings-button--focused {
+  @apply shadow-button-focused bg-item-focus-bg;
+}
+@utility blok-settings-button--focused-animated {
+  @apply animate-button-clicked;
 }
 
 /**
@@ -84,7 +246,7 @@
 }
 
 [data-drop-indicator]::before {
-  @apply content-[''] absolute w-full max-w-content h-1.5 rounded-sm bg-[#d4e3fc] pointer-events-none z-10;
+  @apply content-[''] absolute w-full max-w-content h-1.5 rounded-xs bg-[#d4e3fc] pointer-events-none z-10;
   left: 50%;
   margin-left: calc(var(--drop-indicator-depth, 0) * 12px);
   max-width: calc(650px - var(--drop-indicator-depth, 0) * 24px);

@@ -897,7 +897,15 @@ export class Table implements BlockTool {
       updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
       this.initResize(gridEl);
       this.addControls?.syncRowButtonWidth();
-      this.rowColControls?.refresh();
+
+      // Heading toggles don't change grid structure (no rows/columns
+      // added/removed/moved), so grips don't need to be recreated.
+      // Skipping refresh() keeps the popover's trigger element intact.
+      const isHeadingToggle = action.type === 'toggle-heading' || action.type === 'toggle-heading-column';
+
+      if (!isHeadingToggle) {
+        this.rowColControls?.refresh();
+      }
 
       if (!result.moveSelection) {
         return;

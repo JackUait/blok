@@ -40,6 +40,11 @@ interface ColorPreset {
 /**
  * Color presets for the picker
  */
+/**
+ * Base Tailwind classes shared by tab buttons
+ */
+const TAB_BASE_CLASSES = 'flex-1 py-1 text-xs text-center rounded cursor-pointer border-none';
+
 const COLOR_PRESETS: ColorPreset[] = [
   { name: 'gray', text: '#787774', bg: '#f1f1ef' },
   { name: 'brown', text: '#9f6b53', bg: '#f4eeee' },
@@ -335,7 +340,7 @@ export class MarkerInlineTool implements InlineTool {
 
     btn.setAttribute('data-blok-testid', testId);
     btn.className = twMerge(
-      'flex-1 py-1 text-xs text-center rounded cursor-pointer border-none',
+      TAB_BASE_CLASSES,
       active ? 'bg-item-hover-bg font-medium' : 'bg-transparent'
     );
     btn.textContent = this.i18n.t(i18nKey);
@@ -393,12 +398,12 @@ export class MarkerInlineTool implements InlineTool {
     const isColorMode = mode === 'color';
 
     this.tabButtons.color.className = twMerge(
-      'flex-1 py-1 text-xs text-center rounded cursor-pointer border-none',
+      TAB_BASE_CLASSES,
       isColorMode ? 'bg-item-hover-bg font-medium' : 'bg-transparent'
     );
 
     this.tabButtons.background.className = twMerge(
-      'flex-1 py-1 text-xs text-center rounded cursor-pointer border-none',
+      TAB_BASE_CLASSES,
       isColorMode ? 'bg-transparent' : 'bg-item-hover-bg font-medium'
     );
 
@@ -469,16 +474,6 @@ export class MarkerInlineTool implements InlineTool {
    * @param mode - The style property to remove
    */
   private removeNestedMarkStyle(range: Range, mode: ColorMode): void {
-    const contents = range.cloneContents();
-    const marks = contents.querySelectorAll('mark');
-
-    if (marks.length === 0) {
-      return;
-    }
-
-    /**
-     * Collect real mark ancestors in the live DOM
-     */
     const liveMarks = collectFormattingAncestors(range, isMarkTag);
 
     for (const mark of liveMarks) {

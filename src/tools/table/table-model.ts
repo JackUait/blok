@@ -76,7 +76,15 @@ export class TableModel {
       withHeadingColumn: this.withHeadingColumnValue,
       stretched: this.stretchedValue,
       content: this.contentGrid.map(row =>
-        row.map(c => ({ blocks: [...c.blocks] }))
+        row.map(c => {
+          const cell: CellContent = { blocks: [...c.blocks] };
+
+          if (c.color !== undefined) {
+            cell.color = c.color;
+          }
+
+          return cell;
+        })
       ),
     };
 
@@ -170,6 +178,32 @@ export class TableModel {
     }
 
     return [...this.contentGrid[row][col].blocks];
+  }
+
+  /**
+   * Set the background color for a cell. Pass undefined to remove.
+   */
+  setCellColor(row: number, col: number, color: string | undefined): void {
+    if (!this.isInBounds(row, col)) {
+      return;
+    }
+
+    if (color === undefined) {
+      delete this.contentGrid[row][col].color;
+    } else {
+      this.contentGrid[row][col].color = color;
+    }
+  }
+
+  /**
+   * Get the background color for a cell, or undefined if none set.
+   */
+  getCellColor(row: number, col: number): string | undefined {
+    if (!this.isInBounds(row, col)) {
+      return undefined;
+    }
+
+    return this.contentGrid[row][col].color;
   }
 
   // ─── Row operations ─────────────────────────────────────────────
@@ -457,7 +491,13 @@ export class TableModel {
    */
   private normalizeCell(cell: LegacyCellContent): CellContent {
     if (isCellWithBlocks(cell)) {
-      return { blocks: [...cell.blocks] };
+      const normalized: CellContent = { blocks: [...cell.blocks] };
+
+      if (cell.color !== undefined) {
+        normalized.color = cell.color;
+      }
+
+      return normalized;
     }
 
     return { blocks: [] };

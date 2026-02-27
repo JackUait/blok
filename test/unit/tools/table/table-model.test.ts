@@ -1172,6 +1172,139 @@ describe('TableModel', () => {
     });
   });
 
+  // ─── Cell color ─────────────────────────────────────────────────
+
+  describe('cell color', () => {
+    it('preserves color field through snapshot', () => {
+      const data = makeData({
+        content: [
+          [{ blocks: ['b1'], color: '#fbecdd' }, { blocks: ['b2'] }],
+        ],
+      });
+
+      const model = new TableModel(data);
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).color).toBe('#fbecdd');
+      expect((snap.content[0][1] as CellContent).color).toBeUndefined();
+    });
+
+    it('setCellColor sets color on a cell', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'] }, { blocks: ['b2'] }]],
+      });
+      const model = new TableModel(data);
+
+      model.setCellColor(0, 0, '#f1f1ef');
+
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).color).toBe('#f1f1ef');
+      expect((snap.content[0][1] as CellContent).color).toBeUndefined();
+    });
+
+    it('setCellColor with undefined removes color', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'], color: '#f1f1ef' }]],
+      });
+      const model = new TableModel(data);
+
+      model.setCellColor(0, 0, undefined);
+
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).color).toBeUndefined();
+    });
+
+    it('setCellColor is no-op for out-of-bounds', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(5, 5, '#f1f1ef');
+
+      expect(model.snapshot().content[0][0]).toEqual({ blocks: [] });
+    });
+
+    it('getCellColor returns color for a cell', () => {
+      const data = makeData({
+        content: [[{ blocks: [], color: '#fbecdd' }]],
+      });
+      const model = new TableModel(data);
+
+      expect(model.getCellColor(0, 0)).toBe('#fbecdd');
+    });
+
+    it('getCellColor returns undefined when no color set', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('color survives replaceAll (undo/redo)', () => {
+      const data = makeData({
+        content: [[{ blocks: ['b1'], color: '#fbecdd' }]],
+      });
+      const model = new TableModel(data);
+      const snap = model.snapshot();
+
+      model.replaceAll(snap);
+
+      expect(model.getCellColor(0, 0)).toBe('#fbecdd');
+    });
+
+    it('addRow creates cells without color', () => {
+      const data = makeData({
+        content: [[{ blocks: [], color: '#f1f1ef' }]],
+      });
+      const model = new TableModel(data);
+
+      model.addRow();
+
+      expect(model.getCellColor(1, 0)).toBeUndefined();
+      expect(model.getCellColor(0, 0)).toBe('#f1f1ef');
+    });
+
+    it('addColumn creates cells without color', () => {
+      const data = makeData({
+        content: [[{ blocks: [], color: '#f1f1ef' }]],
+      });
+      const model = new TableModel(data);
+
+      model.addColumn();
+
+      expect(model.getCellColor(0, 1)).toBeUndefined();
+      expect(model.getCellColor(0, 0)).toBe('#f1f1ef');
+    });
+
+    it('moveRow preserves cell colors', () => {
+      const data = makeData({
+        content: [
+          [{ blocks: [], color: '#f1f1ef' }],
+          [{ blocks: [] }],
+        ],
+      });
+      const model = new TableModel(data);
+
+      model.moveRow(0, 1);
+
+      expect(model.getCellColor(1, 0)).toBe('#f1f1ef');
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('moveColumn preserves cell colors', () => {
+      const data = makeData({
+        content: [
+          [{ blocks: [], color: '#f1f1ef' }, { blocks: [] }],
+        ],
+      });
+      const model = new TableModel(data);
+
+      model.moveColumn(0, 1);
+
+      expect(model.getCellColor(0, 1)).toBe('#f1f1ef');
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+  });
+
   // ─── Model invariants ────────────────────────────────────────────
 
   describe('model invariants', () => {

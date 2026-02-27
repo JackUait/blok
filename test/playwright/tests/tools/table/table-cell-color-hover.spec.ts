@@ -284,6 +284,29 @@ test.describe('Cell color picker hover behavior', () => {
     await expect(colorPicker).not.toBeVisible();
   });
 
+  test('color picker is positioned to the right of the parent popover', async ({ page }) => {
+    await create3x3TableWithContent(page);
+
+    await selectSingleCell(page, 0, 0);
+    await openPillPopover(page);
+    await hoverColorItem(page);
+
+    const colorPicker = page.locator('[data-blok-testid="cell-color-picker"]');
+
+    await expect(colorPicker).toBeVisible();
+
+    // Get the parent popover container (the one with Copy item, not the nested color picker)
+    const parentContainer = page.locator('[data-blok-popover-container]').filter({ has: page.getByText('Copy') });
+    const parentBox = assertBoundingBox(await parentContainer.boundingBox(), 'parent popover');
+
+    // Get the color picker bounding box
+    const pickerBox = assertBoundingBox(await colorPicker.boundingBox(), 'color picker');
+
+    // The color picker should be positioned to the right of the parent popover
+    // Allow small overlap (nested-popover-overlap is 4px)
+    expect(pickerBox.x).toBeGreaterThanOrEqual(parentBox.x + parentBox.width - 10);
+  });
+
   test('color picker stays visible when mouse moves from Color item to picker', async ({ page }) => {
     await create3x3TableWithContent(page);
 

@@ -493,8 +493,8 @@ export class PopoverDesktop extends PopoverAbstract {
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
-    // Get parent width - use computed width if --width is 'auto'
-    const parentWidth = this.params.width === 'auto'
+    // Get parent width - use computed width if --width resolves to 'auto'
+    const parentWidth = this.params.width === undefined || this.params.width === 'auto'
       ? `${this.nodes.popoverContainer.offsetWidth}px`
       : 'var(--width)';
 

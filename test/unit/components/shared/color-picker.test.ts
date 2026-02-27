@@ -31,7 +31,7 @@ describe('createColorPicker', () => {
     expect(tabs[1].getAttribute('data-blok-testid')).toBe('test-tab-bg');
   });
 
-  it('renders 9 color swatches', () => {
+  it('renders all color swatches', () => {
     const picker = createColorPicker(createOptions());
     const swatches = picker.querySelectorAll('[data-blok-testid^="test-swatch-"]');
 
@@ -153,6 +153,38 @@ describe('createColorPicker', () => {
     );
 
     expect(swatch?.style.backgroundColor).toBeTruthy();
+  });
+
+  it('teal swatch click calls onColorSelect with teal text color', () => {
+    const onColorSelect = vi.fn();
+    const picker = createColorPicker(createOptions({ onColorSelect }));
+
+    const swatch = picker.querySelector<HTMLElement>(
+      '[data-blok-testid="test-swatch-teal"]'
+    );
+
+    expect(swatch).not.toBeNull();
+    swatch?.click();
+
+    expect(onColorSelect).toHaveBeenCalledWith('#2b9a8f', 'text');
+  });
+
+  it('teal swatch click in bg mode calls onColorSelect with teal bg color', () => {
+    const onColorSelect = vi.fn();
+    const picker = createColorPicker(createOptions({ onColorSelect }));
+
+    const bgTab = picker.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
+
+    bgTab?.click();
+
+    const swatch = picker.querySelector<HTMLElement>(
+      '[data-blok-testid="test-swatch-teal"]'
+    );
+
+    expect(swatch).not.toBeNull();
+    swatch?.click();
+
+    expect(onColorSelect).toHaveBeenCalledWith('#e4f5f3', 'bg');
   });
 
   it('uses testIdPrefix for all test IDs', () => {

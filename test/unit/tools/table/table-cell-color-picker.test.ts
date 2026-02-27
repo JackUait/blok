@@ -34,7 +34,7 @@ describe('createCellColorPicker', () => {
     expect(bgTab?.className).toContain('font-medium');
   });
 
-  it('renders 9 swatches', () => {
+  it('renders all color swatches', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
@@ -42,7 +42,7 @@ describe('createCellColorPicker', () => {
 
     const swatches = element.querySelectorAll('[data-blok-testid^="cell-color-swatch-"]');
 
-    expect(swatches).toHaveLength(9);
+    expect(swatches).toHaveLength(COLOR_PRESETS.length);
   });
 
   it('clicking swatch in background mode calls onColorSelect with bg color and backgroundColor mode', () => {

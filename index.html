@@ -246,7 +246,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Bold, Italic, Link } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Bold, Italic, Link, Marker } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -558,6 +558,7 @@
         bold: Bold,
         italic: Italic,
         link: Link,
+        marker: Marker,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
       if (state.tools.header) tools.header = { class: Header, placeholder: 'Header' };
@@ -733,7 +734,7 @@
      */
     const iconGroups = {
       'UI & Navigation': ['IconCross', 'IconMenu', 'IconPlus', 'IconChevronLeft', 'IconChevronRight', 'IconSearch'],
-      'Inline Formatting': ['IconBold', 'IconItalic', 'IconLink', 'IconReplace'],
+      'Inline Formatting': ['IconBold', 'IconItalic', 'IconLink', 'IconMarker', 'IconReplace'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
       'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight'],

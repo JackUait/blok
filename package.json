@@ -170,23 +170,6 @@
     "nanoid": "5.1.6",
     "yjs": "13.6.29"
   },
-  "size-limit": [
-    {
-      "name": "Minimum (core only)",
-      "path": "src/variants/blok-minimum.ts",
-      "limit": "300 KB"
-    },
-    {
-      "name": "Normal (with tools)",
-      "path": "src/blok.ts",
-      "limit": "300 KB"
-    },
-    {
-      "name": "Maximum (all locales)",
-      "path": "src/variants/blok-maximum.ts",
-      "limit": "300 KB"
-    }
-  ],
   "resolutions": {
     "@typescript-eslint/utils": "8.56.1"
   }

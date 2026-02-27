@@ -298,6 +298,39 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(element.contentEditable).toBe('false');
     });
 
+    it('does not show placeholder in read-only mode', () => {
+      const options: BlockToolConstructorOptions<ParagraphData, ParagraphConfig> = {
+        ...createParagraphOptions({}, {}),
+        readOnly: true,
+      };
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.hasAttribute('data-blok-placeholder-active')).toBe(false);
+    });
+
+    it('preserves empty paragraphs with a line break in read-only mode', () => {
+      const options: BlockToolConstructorOptions<ParagraphData, ParagraphConfig> = {
+        ...createParagraphOptions({ text: '' }, {}),
+        readOnly: true,
+      };
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.innerHTML).toBe('<br>');
+    });
+
+    it('does not add extra line break to non-empty paragraphs in read-only mode', () => {
+      const options: BlockToolConstructorOptions<ParagraphData, ParagraphConfig> = {
+        ...createParagraphOptions({ text: 'Hello' }, {}),
+        readOnly: true,
+      };
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.innerHTML).toBe('Hello');
+    });
+
     it('is editable when not in read-only mode', () => {
       const options = createParagraphOptions(
         { text: 'Test' },

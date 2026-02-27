@@ -256,14 +256,14 @@ export class Paragraph implements BlockTool {
 
     if (this._data.text) {
       div.innerHTML = this._data.text;
+    } else if (this.readOnly) {
+      div.innerHTML = '<br>';
     }
 
     if (!this.readOnly) {
       div.contentEditable = 'true';
       div.addEventListener('keyup', this.onKeyUp);
       setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
-    } else {
-      div.setAttribute('data-blok-placeholder-active', this.api.i18n.t(this._placeholder));
     }
 
     return div;

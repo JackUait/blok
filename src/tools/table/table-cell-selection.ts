@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { IconCopy, IconCross, IconMarker } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
-import { PopoverInline } from '../../components/utils/popover';
+import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
 import { CELL_ATTR, ROW_ATTR } from './table-core';
@@ -81,9 +81,7 @@ export class TableCellSelection {
   private selectedCells: HTMLElement[] = [];
   private overlay: HTMLElement | null = null;
   private pill: HTMLElement | null = null;
-  private pillPopover: PopoverInline | null = null;
-  private colorPickerWrapper: HTMLElement | null = null;
-  private colorPickerHideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private pillPopover: PopoverDesktop | null = null;
 
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
@@ -549,6 +547,32 @@ export class TableCellSelection {
 
     const copyShortcut = MODIFIER_KEY === 'Meta' ? '⌘C' : 'Ctrl+C';
 
+    const colorPickerItems: PopoverItemParams[] = [];
+
+    if (this.onColorChange !== undefined) {
+      const { element: pickerElement } = createCellColorPicker({
+        i18n: this.i18n,
+        onColorSelect: (color: string | null, mode: CellColorMode): void => {
+          this.onColorChange?.([...this.selectedCells], color, mode);
+        },
+      });
+
+      colorPickerItems.push({
+        icon: IconMarker,
+        title: this.i18n.t('tools.table.cellColor'),
+        name: 'cellColor',
+        children: {
+          items: [{
+            type: PopoverItemType.Html,
+            element: pickerElement,
+          }],
+          hideChevron: true,
+          isFlippable: false,
+          width: 'auto',
+        },
+      });
+    }
+
     const items: PopoverItemParams[] = [
       {
         icon: IconCopy,
@@ -559,14 +583,7 @@ export class TableCellSelection {
           this.onCopyViaButton?.([...this.selectedCells]);
         },
       },
-      ...(this.onColorChange !== undefined ? [{
-        icon: IconMarker,
-        title: this.i18n.t('tools.table.cellColor'),
-        name: 'cellColor',
-        onActivate: (): void => {
-          // Color picker opens via hover; click is intentionally a no-op
-        },
-      }] satisfies PopoverItemParams[] : []),
+      ...colorPickerItems,
       {
         icon: IconCross,
         title: this.i18n.t('tools.table.clearSelection'),
@@ -579,7 +596,7 @@ export class TableCellSelection {
       },
     ];
 
-    this.pillPopover = new PopoverInline({
+    this.pillPopover = new PopoverDesktop({
       items,
       trigger: this.pill,
       flippable: true,
@@ -596,101 +613,6 @@ export class TableCellSelection {
     });
 
     this.pillPopover.show();
-
-    this.applyVerticalLayout(this.pillPopover.getElement());
-
-    if (this.onColorChange !== undefined) {
-      this.setupColorPickerHover(this.pillPopover.getElement());
-    }
-  }
-
-  /**
-   * Overrides PopoverInline's default horizontal layout to display items vertically.
-   */
-  private applyVerticalLayout(popoverEl: HTMLElement): void {
-    const container = popoverEl.querySelector<HTMLElement>('[data-blok-popover-container]');
-
-    if (container) {
-      container.classList.remove('flex-row', 'min-w-max', 'w-max');
-      container.classList.add('flex-col');
-      container.style.height = 'auto';
-    }
-
-    const items = popoverEl.querySelector<HTMLElement>('[data-blok-popover-items]');
-
-    if (items) {
-      items.classList.add('flex-col');
-    }
-
-    popoverEl.style.width = 'auto';
-    popoverEl.style.height = 'auto';
-  }
-
-  /**
-   * Attaches hover listeners to the Color item so the color picker
-   * appears to the right of the pill popover on mouseenter.
-   */
-  private setupColorPickerHover(popoverEl: HTMLElement): void {
-    const colorItemEl = popoverEl.querySelector<HTMLElement>('[data-blok-item-name="cellColor"]');
-
-    if (!colorItemEl) {
-      return;
-    }
-
-    const { element: pickerElement } = createCellColorPicker({
-      i18n: this.i18n,
-      onColorSelect: (color: string | null, mode: CellColorMode): void => {
-        this.onColorChange?.([...this.selectedCells], color, mode);
-      },
-    });
-
-    const wrapper = document.createElement('div');
-
-    wrapper.setAttribute('data-blok-table-color-picker-wrapper', '');
-    wrapper.className = twMerge(
-      'absolute',
-      'z-4',
-      'min-w-max',
-      'bg-popover-bg',
-      'rounded-lg',
-      'shadow-[0_3px_15px_-3px_var(--color-popover-shadow)]',
-      'border',
-      'border-popover-border',
-      'p-1',
-    );
-    wrapper.style.display = 'none';
-    wrapper.appendChild(pickerElement);
-
-    const container = popoverEl.querySelector<HTMLElement>('[data-blok-popover-container]');
-
-    if (container) {
-      wrapper.style.left = `${container.offsetWidth}px`;
-      wrapper.style.top = '0px';
-    }
-
-    popoverEl.appendChild(wrapper);
-    this.colorPickerWrapper = wrapper;
-
-    const showPicker = (): void => {
-      if (this.colorPickerHideTimeout !== null) {
-        clearTimeout(this.colorPickerHideTimeout);
-        this.colorPickerHideTimeout = null;
-      }
-
-      wrapper.style.display = '';
-    };
-
-    const hidePicker = (): void => {
-      this.colorPickerHideTimeout = setTimeout(() => {
-        wrapper.style.display = 'none';
-        this.colorPickerHideTimeout = null;
-      }, 100);
-    };
-
-    colorItemEl.addEventListener('mouseenter', showPicker);
-    colorItemEl.addEventListener('mouseleave', hidePicker);
-    wrapper.addEventListener('mouseenter', showPicker);
-    wrapper.addEventListener('mouseleave', hidePicker);
   }
 
   private expandPill(): void {
@@ -724,16 +646,6 @@ export class TableCellSelection {
   }
 
   private destroyPillPopover(): void {
-    if (this.colorPickerHideTimeout !== null) {
-      clearTimeout(this.colorPickerHideTimeout);
-      this.colorPickerHideTimeout = null;
-    }
-
-    if (this.colorPickerWrapper !== null) {
-      this.colorPickerWrapper.remove();
-      this.colorPickerWrapper = null;
-    }
-
     if (this.pillPopover !== null) {
       const popover = this.pillPopover;
 

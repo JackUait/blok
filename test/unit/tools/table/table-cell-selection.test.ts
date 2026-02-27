@@ -24,7 +24,7 @@ const mockPopoverDestroy = vi.fn();
 let lastPopoverArgs: MockPopoverArgs | null = null;
 
 vi.mock('../../../../src/components/utils/popover', () => ({
-  PopoverInline: class MockPopoverInline {
+  PopoverDesktop: class MockPopoverDesktop {
     private el = document.createElement('div');
     constructor(args: MockPopoverArgs) {
       lastPopoverArgs = args;

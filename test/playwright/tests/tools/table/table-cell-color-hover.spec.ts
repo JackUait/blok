@@ -218,7 +218,7 @@ test.describe('Cell color picker hover behavior', () => {
     await expect(colorPicker).toBeVisible();
   });
 
-  test('color picker is positioned to the right of the pill popover', async ({ page }) => {
+  test('color picker is rendered inside a nested popover', async ({ page }) => {
     await create3x3TableWithContent(page);
 
     await selectSingleCell(page, 0, 0);
@@ -229,13 +229,13 @@ test.describe('Cell color picker hover behavior', () => {
 
     await expect(colorPicker).toBeVisible();
 
-    // Get bounding boxes
-    const pillPopover = page.locator('[data-blok-popover-container]').first();
-    const popoverBox = assertBoundingBox(await pillPopover.boundingBox(), 'pill popover');
-    const pickerBox = assertBoundingBox(await colorPicker.boundingBox(), 'color picker');
+    // The color picker should be inside a proper nested popover (data-blok-nested="true")
+    const nestedPopover = page.locator('[data-blok-nested="true"]');
 
-    // The color picker's left edge should be at or to the right of the pill popover's right edge
-    expect(pickerBox.x).toBeGreaterThanOrEqual(popoverBox.x + popoverBox.width - 4);
+    await expect(nestedPopover).toBeAttached();
+
+    // The color picker should be contained within the nested popover
+    await expect(nestedPopover.locator('[data-blok-testid="cell-color-picker"]')).toBeVisible();
   });
 
   test('hovering a swatch in the color picker applies color', async ({ page }) => {

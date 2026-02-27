@@ -221,7 +221,8 @@ const selectSingleCell = async (page: Page, row: number, col: number): Promise<v
 };
 
 /**
- * Helper to open the pill popover and navigate to the Color sub-popover.
+ * Helper to open the pill popover and hover over the Color item
+ * to reveal the color picker to its right.
  * Returns once the color picker is visible.
  */
 const openColorPicker = async (page: Page): Promise<void> => {
@@ -232,13 +233,16 @@ const openColorPicker = async (page: Page): Promise<void> => {
   await expect(pill).toBeVisible();
   await pill.click();
 
-  // Click the "Color" item in the pill popover
+  // Hover the "Color" item to reveal the color picker
   const colorItem = page.getByText('Color');
 
   await expect(colorItem).toBeVisible();
-  await colorItem.click();
 
-  // Wait for the nested color picker popover to appear
+  const colorBox = assertBoundingBox(await colorItem.boundingBox(), 'Color item');
+
+  await page.mouse.move(colorBox.x + colorBox.width / 2, colorBox.y + colorBox.height / 2);
+
+  // Wait for the color picker to appear to the right
   const colorPicker = page.locator('[data-blok-testid="cell-color-picker"]');
 
   await expect(colorPicker).toBeVisible();

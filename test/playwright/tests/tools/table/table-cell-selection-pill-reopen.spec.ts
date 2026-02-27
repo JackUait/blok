@@ -283,7 +283,10 @@ test.describe('Pill popover reopens for different cell', () => {
     const colorItem = page.getByText('Color');
 
     await expect(colorItem).toBeVisible();
-    await colorItem.click();
+
+    const colorBox = assertBoundingBox(await colorItem.boundingBox(), 'Color item');
+
+    await page.mouse.move(colorBox.x + colorBox.width / 2, colorBox.y + colorBox.height / 2);
 
     const swatch = page.locator('[data-blok-testid="cell-color-swatch-orange"]');
 
@@ -305,7 +308,7 @@ test.describe('Pill popover reopens for different cell', () => {
   test('opens pill popover after closing color picker with outside click then selecting adjacent cell', async ({ page }) => {
     await create3x3TableWithContent(page);
 
-    // 1. Select cell (0,0) and open color picker
+    // 1. Select cell (0,0) and open color picker via hover
     await selectSingleCell(page, 0, 0);
     await expect(page.locator('[data-blok-table-selection-pill]')).toBeAttached();
     await openPillPopover(page);
@@ -313,7 +316,10 @@ test.describe('Pill popover reopens for different cell', () => {
     const colorItem = page.getByText('Color');
 
     await expect(colorItem).toBeVisible();
-    await colorItem.click();
+
+    const colorBox = assertBoundingBox(await colorItem.boundingBox(), 'Color item');
+
+    await page.mouse.move(colorBox.x + colorBox.width / 2, colorBox.y + colorBox.height / 2);
 
     const colorPicker = page.locator('[data-blok-testid="cell-color-picker"]');
 
@@ -369,7 +375,7 @@ test.describe('Pill popover reopens for different cell', () => {
   test('opens pill popover for adjacent cell after color picker was open on neighboring cell', async ({ page }) => {
     await create3x3TableWithContent(page);
 
-    // 1. Select cell (0,0) and open color picker (nested popover)
+    // 1. Select cell (0,0) and open color picker via hover
     await selectSingleCell(page, 0, 0);
     await expect(page.locator('[data-blok-table-selection-pill]')).toBeAttached();
     await openPillPopover(page);
@@ -377,13 +383,16 @@ test.describe('Pill popover reopens for different cell', () => {
     const colorItem = page.getByText('Color');
 
     await expect(colorItem).toBeVisible();
-    await colorItem.click();
+
+    const colorBox = assertBoundingBox(await colorItem.boundingBox(), 'Color item');
+
+    await page.mouse.move(colorBox.x + colorBox.width / 2, colorBox.y + colorBox.height / 2);
 
     const colorPicker = page.locator('[data-blok-testid="cell-color-picker"]');
 
     await expect(colorPicker).toBeVisible();
 
-    // Pick a color while nested popover is open
+    // Pick a color while color picker is visible
     const swatch = page.locator('[data-blok-testid="cell-color-swatch-orange"]');
 
     await expect(swatch).toBeVisible();

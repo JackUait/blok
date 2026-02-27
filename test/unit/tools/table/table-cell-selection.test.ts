@@ -34,12 +34,23 @@ vi.mock('../../../../src/components/utils/popover', () => ({
       // no-op for tests
     }
   },
+  PopoverItemType: {
+    Default: 'default',
+    Separator: 'separator',
+    Html: 'html',
+  },
 }));
 
 vi.mock('@/types/utils/popover/popover-event', () => ({
   PopoverEvent: {
     Closed: 'closed',
   },
+}));
+
+const mockColorPickerElement = document.createElement('div');
+
+vi.mock('../../../../src/tools/table/table-cell-color-picker', () => ({
+  createCellColorPicker: () => ({ element: mockColorPickerElement }),
 }));
 
 import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
@@ -1577,6 +1588,61 @@ describe('TableCellSelection', () => {
       document.dispatchEvent(upEvent);
 
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+    });
+  });
+
+  describe('pill popover color item', () => {
+    it('includes a Color item in the pill popover when onColorChange is provided', () => {
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onColorChange: vi.fn(),
+      });
+
+      // Trigger single-cell click to create selection with pill
+      const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Open pill popover
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // Check that popover items include a Color entry
+      expect(lastPopoverArgs?.items?.some((item: MockPopoverItem) => item.title === 'tools.table.cellColor')).toBe(true);
+    });
+
+    it('does not include a Color item when onColorChange is not provided', () => {
+      // default selection has no onColorChange
+
+      // Trigger single-cell click to create selection with pill
+      const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Open pill popover
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // Check that popover items do NOT include a Color entry
+      expect(lastPopoverArgs?.items?.some((item: MockPopoverItem) => item.title === 'tools.table.cellColor')).toBe(false);
     });
   });
 

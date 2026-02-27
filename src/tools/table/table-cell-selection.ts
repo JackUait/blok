@@ -1,10 +1,11 @@
 import type { I18n } from '../../../types/api';
-import { IconCopy, IconCross } from '../../components/icons';
+import { IconCopy, IconCross, IconMarker } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
-import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
 import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { createCellColorPicker } from './table-cell-color-picker';
 import { createGripDotsSvg } from './table-grip-visuals';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -61,6 +62,7 @@ interface CellSelectionOptions {
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton?: (cells: HTMLElement[]) => void;
+  onColorChange?: (cells: HTMLElement[], color: string | null) => void;
   isPopoverOpen?: () => boolean;
   i18n: I18n;
 }
@@ -83,6 +85,7 @@ export class TableCellSelection {
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
+  private onColorChange: ((cells: HTMLElement[], color: string | null) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
 
   private boundPointerDown: (e: PointerEvent) => void;
@@ -102,6 +105,7 @@ export class TableCellSelection {
     this.onCopy = options.onCopy;
     this.onCut = options.onCut;
     this.onCopyViaButton = options.onCopyViaButton;
+    this.onColorChange = options.onColorChange;
     this.isPopoverOpen = options.isPopoverOpen;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
@@ -552,6 +556,21 @@ export class TableCellSelection {
           this.onCopyViaButton?.([...this.selectedCells]);
         },
       },
+      ...(this.onColorChange !== undefined ? [{
+        icon: IconMarker,
+        title: this.i18n.t('tools.table.cellColor'),
+        children: {
+          items: [{
+            type: PopoverItemType.Html as const,
+            element: createCellColorPicker({
+              i18n: this.i18n,
+              onColorSelect: (color: string | null): void => {
+                this.onColorChange?.([...this.selectedCells], color);
+              },
+            }).element,
+          }],
+        },
+      }] satisfies PopoverItemParams[] : []),
       {
         icon: IconCross,
         title: this.i18n.t('tools.table.clearSelection'),

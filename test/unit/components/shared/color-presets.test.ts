@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { COLOR_PRESETS } from '../../../../src/components/shared/color-presets';
-import type { ColorPreset } from '../../../../src/components/shared/color-presets';
 
 describe('COLOR_PRESETS', () => {
   it('exports 9 color presets', () => {

@@ -1,4 +1,3 @@
-/* eslint-disable playwright/no-nth-methods */
 // spec: Cell Background Color via Pill Popover
 // seed: test/playwright/tests/tools/table/table-cell-selection-pill.spec.ts
 

@@ -79,7 +79,7 @@ describe('preprocessGoogleDocsHtml', () => {
     const html = '<span style="color: rgb(255, 0, 0)">red text</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<mark style="color: rgb(255, 0, 0); background-color: transparent;">red text</mark>');
+    expect(result).toContain('<mark style="color: #d44c47; background-color: transparent;">red text</mark>');
     expect(result).not.toContain('<span');
   });
 
@@ -87,7 +87,7 @@ describe('preprocessGoogleDocsHtml', () => {
     const html = '<span style="background-color: rgb(255, 255, 0)">highlighted text</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<mark style="background-color: rgb(255, 255, 0);">highlighted text</mark>');
+    expect(result).toContain('<mark style="background-color: #fbf3db;">highlighted text</mark>');
     expect(result).not.toContain('<span');
   });
 
@@ -95,21 +95,21 @@ describe('preprocessGoogleDocsHtml', () => {
     const html = '<span style="font-weight: 700; color: rgb(255, 0, 0)">bold red</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<b><mark style="color: rgb(255, 0, 0); background-color: transparent;">bold red</mark></b>');
+    expect(result).toContain('<b><mark style="color: #d44c47; background-color: transparent;">bold red</mark></b>');
   });
 
   it('converts span with italic and color to <i> wrapping <mark>', () => {
     const html = '<span style="font-style: italic; color: rgb(0, 0, 255)">italic blue</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<i><mark style="color: rgb(0, 0, 255); background-color: transparent;">italic blue</mark></i>');
+    expect(result).toContain('<i><mark style="color: #337ea9; background-color: transparent;">italic blue</mark></i>');
   });
 
   it('converts span with bold, italic, and color to nested <b><i><mark>', () => {
     const html = '<span style="font-weight: 700; font-style: italic; color: rgb(0, 128, 0)">bold italic green</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<b><i><mark style="color: rgb(0, 128, 0); background-color: transparent;">bold italic green</mark></i></b>');
+    expect(result).toContain('<b><i><mark style="color: #448361; background-color: transparent;">bold italic green</mark></i></b>');
   });
 
   it('does not create <mark> for default black text color', () => {
@@ -123,16 +123,16 @@ describe('preprocessGoogleDocsHtml', () => {
     const html = '<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">colored highlighted</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<mark style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0);">colored highlighted</mark>');
+    expect(result).toContain('<mark style="color: #d44c47; background-color: #fbf3db;">colored highlighted</mark>');
   });
 
   it('does not confuse background-color with color in regex', () => {
     const html = '<span style="background-color: rgb(255, 255, 0)">only bg</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    // Should have background-color but NOT color
-    expect(result).toContain('background-color: rgb(255, 255, 0)');
-    expect(result).not.toMatch(/[^-]color: rgb/);
+    // Should have background-color but NOT a standalone color property
+    expect(result).toContain('background-color: #fbf3db');
+    expect(result).not.toMatch(/[^-]color: #(?!fbf3db)/);
   });
 
   it('handles empty string', () => {
@@ -408,7 +408,7 @@ describe('preprocessGoogleDocsHtml', () => {
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark');
-      expect(result).toContain('background-color: #ffff00');
+      expect(result).toContain('background-color: #fbf3db');
       // Should NOT include the default black color in the mark style
       expect(result).not.toMatch(/[^-]color:\s*#000000/);
     });
@@ -426,7 +426,7 @@ describe('preprocessGoogleDocsHtml', () => {
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<b><mark');
-      expect(result).toContain('background-color: #ffff00');
+      expect(result).toContain('background-color: #fbf3db');
       // Should NOT include the default black color
       expect(result).not.toMatch(/[^-]color:\s*#000000/);
     });
@@ -450,7 +450,7 @@ describe('preprocessGoogleDocsHtml', () => {
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark');
-      expect(result).toContain('color: #666666');
+      expect(result).toContain('color: #787774');
       expect(result).toContain('background-color: transparent');
     });
 
@@ -465,7 +465,7 @@ describe('preprocessGoogleDocsHtml', () => {
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark');
-      expect(result).toContain('color: #666666');
+      expect(result).toContain('color: #787774');
       expect(result).toContain('background-color: transparent');
     });
 
@@ -473,8 +473,52 @@ describe('preprocessGoogleDocsHtml', () => {
       const html = '<span style="color:#666666;background-color:#ffff00">colored highlighted</span>';
       const result = preprocessGoogleDocsHtml(html);
 
-      expect(result).toContain('background-color: #ffff00');
+      expect(result).toContain('background-color:');
       expect(result).not.toContain('background-color: transparent');
+    });
+  });
+
+  describe('Google Docs color mapping to Blok presets', () => {
+    it('maps Google Docs pure red text color to Blok red preset', () => {
+      const html = '<span style="color:#ff0000">red text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark style="color: #d44c47; background-color: transparent;">red text</mark>');
+    });
+
+    it('maps Google Docs pure blue text color to Blok blue preset', () => {
+      const html = '<span style="color:#0000ff">blue text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark style="color: #337ea9; background-color: transparent;">blue text</mark>');
+    });
+
+    it('maps Google Docs yellow background to Blok yellow bg preset', () => {
+      const html = '<span style="background-color:#ffff00">highlighted</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark style="background-color: #fbf3db;">highlighted</mark>');
+    });
+
+    it('maps both text color and bg color to presets simultaneously', () => {
+      const html = '<span style="color:#ff0000;background-color:#ffff00">both</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark style="color: #d44c47; background-color: #fbf3db;">both</mark>');
+    });
+
+    it('maps Google Docs light red bg (#f4cccc) to Blok red bg preset', () => {
+      const html = '<span style="background-color:#f4cccc">light red bg</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark style="background-color: #fdebec;">light red bg</mark>');
+    });
+
+    it('maps rgb() format colors to presets', () => {
+      const html = '<span style="color:rgb(255, 0, 0)">red rgb</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark style="color: #d44c47; background-color: transparent;">red rgb</mark>');
     });
   });
 });

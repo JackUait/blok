@@ -1,3 +1,5 @@
+import { mapToNearestPresetColor } from '../../utils/color-mapping';
+
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
  *
@@ -84,9 +86,12 @@ function convertGoogleDocsStyles(wrapper: HTMLElement): void {
       continue;
     }
 
+    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
+    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+
     const colorStyles = [
-      hasColor ? `color: ${color}` : '',
-      hasBgColor ? `background-color: ${bgColor}` : (hasColor ? 'background-color: transparent' : ''),
+      hasColor ? `color: ${mappedColor}` : '',
+      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
     ].filter(Boolean).join('; ');
 
     const inner = colorStyles

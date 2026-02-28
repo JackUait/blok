@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import type { SanitizerConfig } from '../../../../types';
+import type { SanitizerConfig, SanitizerRule } from '../../../../types';
 import type { ListItemData, ListItemStyle } from '../../../../src/tools/list/types';
 import {
   getListSanitizeConfig,
   getListPasteConfig,
   getListConversionConfig,
 } from '../../../../src/tools/list/static-configs';
+import { MarkerInlineTool } from '../../../../src/components/inline-tools/inline-tool-marker';
+import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
 
 /**
  * Type guard to check if a value is a SanitizerConfig (object)
@@ -95,11 +97,11 @@ describe('static-configs', () => {
       }
     });
 
-    it('allows mark tags for highlights', () => {
+    it('does not include mark entry so marker inline tool sanitizer is not overridden', () => {
       const config = getListSanitizeConfig();
 
       if (isSanitizerConfig(config.text)) {
-        expect(config.text.mark).toBe(true);
+        expect(config.text.mark).toBeUndefined();
       } else {
         throw new Error('Expected text to be a SanitizerConfig');
       }
@@ -113,7 +115,6 @@ describe('static-configs', () => {
         expect(config.text.br).toBe(true);
         expect(config.text.b).toBe(true);
         expect(config.text.i).toBe(true);
-        expect(config.text.mark).toBe(true);
       } else {
         throw new Error('Expected text to be a SanitizerConfig');
       }
@@ -268,6 +269,52 @@ describe('static-configs', () => {
       } else {
         throw new Error('Expected import to be a function');
       }
+    });
+  });
+
+  describe('getListSanitizeConfig — mark style preservation after merge', () => {
+    it('should not override marker inline tool function-based sanitizer during Object.assign merge', () => {
+      const listConfig = getListSanitizeConfig();
+      const markerConfig = MarkerInlineTool.sanitize;
+
+      /**
+       * Simulate what BlockToolAdapter.sanitizeConfig does:
+       *   Object.assign({}, baseConfig, rule)
+       *
+       * baseConfig = inline tools' sanitize configs (includes marker's function-based mark rule)
+       * rule = the list tool's text field config (includes mark: true if bug exists)
+       *
+       * If the list config has `mark: true`, it overwrites the marker's function,
+       * and sanitizeBlocks' internal cloneTagConfig(true) converts it to
+       * preserveExistingAttributesRule which strips `style`.
+       */
+      const baseConfig: SanitizerConfig = { ...markerConfig };
+      const listTextRule = listConfig.text as SanitizerConfig;
+      const mergedSanitizeConfig: SanitizerConfig = {
+        text: Object.assign({}, baseConfig, listTextRule) as unknown as SanitizerRule,
+      };
+
+      const blocksData = [
+        {
+          tool: 'list',
+          data: {
+            text: '<mark style="color: red; background-color: transparent">colored text</mark>',
+          },
+        },
+      ];
+
+      const result = sanitizeBlocks(blocksData, mergedSanitizeConfig, {});
+
+      /**
+       * The style attribute must survive sanitization.
+       * Before the fix, mark: true overwrites the function sanitizer,
+       * and the style attribute is stripped by preserveExistingAttributesRule.
+       */
+      const sanitizedText = result[0].data.text as string;
+
+      expect(sanitizedText).toContain('style=');
+      expect(sanitizedText).toContain('color');
+      expect(sanitizedText).toContain('colored text');
     });
   });
 });

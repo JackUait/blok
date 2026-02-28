@@ -2,6 +2,39 @@ import type { CellContent, LegacyCellContent, TableData } from './types';
 import { isCellWithBlocks } from './types';
 
 /**
+ * Validate that a string is a safe CSS color value.
+ *
+ * Accepts:
+ * - 3/4/6/8-digit hex: #rgb, #rgba, #rrggbb, #rrggbbaa
+ * - rgb/rgba: rgb(r, g, b) / rgba(r, g, b, a)
+ * - hsl/hsla: hsl(h, s%, l%) / hsla(h, s%, l%, a)
+ * - The keyword "transparent"
+ */
+const isValidCssColor = (value: string): boolean => {
+  // Hex: #rgb, #rgba, #rrggbb, #rrggbbaa
+  if (/^#[0-9a-f]{3,4}$/i.test(value) || /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value)) {
+    return true;
+  }
+
+  // rgb/rgba
+  if (/^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+\s*)?\)$/i.test(value)) {
+    return true;
+  }
+
+  // hsl/hsla
+  if (/^hsla?\(\s*[\d.]+\s*,\s*[\d.]+%\s*,\s*[\d.]+%\s*(,\s*[\d.]+\s*)?\)$/i.test(value)) {
+    return true;
+  }
+
+  // Keywords
+  if (value === 'transparent') {
+    return true;
+  }
+
+  return false;
+};
+
+/**
  * Pure data model for table state.
  *
  * Holds the 2D grid of cells, column widths, and metadata flags.
@@ -76,7 +109,19 @@ export class TableModel {
       withHeadingColumn: this.withHeadingColumnValue,
       stretched: this.stretchedValue,
       content: this.contentGrid.map(row =>
-        row.map(c => ({ blocks: [...c.blocks] }))
+        row.map(c => {
+          const cell: CellContent = { blocks: [...c.blocks] };
+
+          if (c.color !== undefined) {
+            cell.color = c.color;
+          }
+
+          if (c.textColor !== undefined) {
+            cell.textColor = c.textColor;
+          }
+
+          return cell;
+        })
       ),
     };
 
@@ -170,6 +215,58 @@ export class TableModel {
     }
 
     return [...this.contentGrid[row][col].blocks];
+  }
+
+  /**
+   * Set the background color for a cell. Pass undefined to remove.
+   */
+  setCellColor(row: number, col: number, color: string | undefined): void {
+    if (!this.isInBounds(row, col)) {
+      return;
+    }
+
+    if (color === undefined) {
+      delete this.contentGrid[row][col].color;
+    } else if (isValidCssColor(color)) {
+      this.contentGrid[row][col].color = color;
+    }
+  }
+
+  /**
+   * Get the background color for a cell, or undefined if none set.
+   */
+  getCellColor(row: number, col: number): string | undefined {
+    if (!this.isInBounds(row, col)) {
+      return undefined;
+    }
+
+    return this.contentGrid[row][col].color;
+  }
+
+  /**
+   * Set the text color for a cell. Pass undefined to remove.
+   */
+  setCellTextColor(row: number, col: number, color: string | undefined): void {
+    if (!this.isInBounds(row, col)) {
+      return;
+    }
+
+    if (color === undefined) {
+      delete this.contentGrid[row][col].textColor;
+    } else if (isValidCssColor(color)) {
+      this.contentGrid[row][col].textColor = color;
+    }
+  }
+
+  /**
+   * Get the text color for a cell, or undefined if none set.
+   */
+  getCellTextColor(row: number, col: number): string | undefined {
+    if (!this.isInBounds(row, col)) {
+      return undefined;
+    }
+
+    return this.contentGrid[row][col].textColor;
   }
 
   // ─── Row operations ─────────────────────────────────────────────
@@ -457,7 +554,17 @@ export class TableModel {
    */
   private normalizeCell(cell: LegacyCellContent): CellContent {
     if (isCellWithBlocks(cell)) {
-      return { blocks: [...cell.blocks] };
+      const normalized: CellContent = { blocks: [...cell.blocks] };
+
+      if (cell.color !== undefined && isValidCssColor(cell.color)) {
+        normalized.color = cell.color;
+      }
+
+      if (cell.textColor !== undefined && isValidCssColor(cell.textColor)) {
+        normalized.textColor = cell.textColor;
+      }
+
+      return normalized;
     }
 
     return { blocks: [] };

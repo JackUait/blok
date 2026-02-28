@@ -9,6 +9,7 @@ import type {
 import type { ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconTable } from '../../components/icons';
+import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
@@ -19,16 +20,20 @@ import {
   buildClipboardPlainText,
   parseClipboardHtml,
   parseGenericHtmlTable,
+  isDefaultBlack,
 } from './table-cell-clipboard';
+import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
 import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
 import {
+  applyCellColors,
   applyPixelWidths,
   computeHalfAvgWidth,
   computeInitialColWidth,
   enableScrollOverflow,
   getBlockIdsInColumn,
   getBlockIdsInRow,
+  getCellPosition,
   isColumnEmpty,
   isRowEmpty,
   mountCellBlocksReadOnly,
@@ -357,7 +362,7 @@ export class Table implements BlockTool {
 
     if (this.readOnly) {
       mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
-      this.initReadOnlyCellSelection(gridEl);
+      applyCellColors(gridEl, this.model.snapshot().content);
       this.initScrollHaze();
 
       return;
@@ -397,6 +402,7 @@ export class Table implements BlockTool {
     }
 
     this.initSubsystems(gridEl);
+    applyCellColors(gridEl, this.model.snapshot().content);
 
     if (this.isNewTable) {
       const firstEditable = gridEl.querySelector<HTMLElement>('[contenteditable="true"]');
@@ -465,7 +471,13 @@ export class Table implements BlockTool {
 
     const gridEl = this.gridElement;
 
-    if (this.readOnly || !gridEl) {
+    if (!gridEl) {
+      return;
+    }
+
+    if (this.readOnly) {
+      applyCellColors(gridEl, this.model.snapshot().content);
+
       return;
     }
 
@@ -516,23 +528,44 @@ export class Table implements BlockTool {
     }
 
     this.initSubsystems(gridEl);
+    applyCellColors(gridEl, this.model.snapshot().content);
   }
 
   public onPaste(event: HTMLPasteEvent): void {
     const content = event.detail.data;
     const rows = content.querySelectorAll('tr');
     const tableContent: string[][] = [];
+    const cellColors: Array<Array<{ color?: string; textColor?: string }>> = [];
 
     rows.forEach(row => {
       const cells = row.querySelectorAll('td, th');
       const rowData: string[] = [];
+      const rowColors: Array<{ color?: string; textColor?: string }> = [];
 
       cells.forEach(cell => {
         rowData.push(cell.innerHTML);
+
+        const style = cell.getAttribute('style') ?? '';
+        const entry: { color?: string; textColor?: string } = {};
+
+        const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+        if (bgMatch?.[1]) {
+          entry.color = mapToNearestPresetColor(bgMatch[1].trim(), 'bg');
+        }
+
+        const textMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+
+        if (textMatch?.[1] && !isDefaultBlack(textMatch[1].trim())) {
+          entry.textColor = mapToNearestPresetColor(textMatch[1].trim(), 'text');
+        }
+
+        rowColors.push(entry);
       });
 
       if (rowData.length > 0) {
         tableContent.push(rowData);
+        cellColors.push(rowColors);
       }
     });
 
@@ -572,9 +605,23 @@ export class Table implements BlockTool {
           content: pasteContent,
         });
         this.initialContent = null;
+
+        // Apply cell colors extracted from td/th style attributes
+        cellColors.forEach((rowColors, r) => {
+          rowColors.forEach((colors, c) => {
+            if (colors.color !== undefined) {
+              this.model.setCellColor(r, c, colors.color);
+            }
+
+            if (colors.textColor !== undefined) {
+              this.model.setCellTextColor(r, c, colors.textColor);
+            }
+          });
+        });
       }, true);
 
       this.initSubsystems(gridEl);
+      applyCellColors(gridEl, this.model.snapshot().content);
     }
   }
 
@@ -892,7 +939,15 @@ export class Table implements BlockTool {
       updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
       this.initResize(gridEl);
       this.addControls?.syncRowButtonWidth();
-      this.rowColControls?.refresh();
+
+      // Heading toggles don't change grid structure (no rows/columns
+      // added/removed/moved), so grips don't need to be recreated.
+      // Skipping refresh() keeps the popover's trigger element intact.
+      const isHeadingToggle = action.type === 'toggle-heading' || action.type === 'toggle-heading-column';
+
+      if (!isHeadingToggle) {
+        this.rowColControls?.refresh();
+      }
 
       if (!result.moveSelection) {
         return;
@@ -1020,9 +1075,33 @@ export class Table implements BlockTool {
     ]);
   }
 
+  private handleCellColorChange(cells: HTMLElement[], color: string | null, mode: CellColorMode): void {
+    const gridEl = this.gridElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    for (const cell of cells) {
+      const coord = getCellPosition(gridEl, cell);
+
+      if (!coord) {
+        continue;
+      }
+
+      if (mode === 'backgroundColor') {
+        this.model.setCellColor(coord.row, coord.col, color ?? undefined);
+        cell.style.backgroundColor = color ?? '';
+      } else {
+        this.model.setCellTextColor(coord.row, coord.col, color ?? undefined);
+        cell.style.color = color ?? '';
+      }
+    }
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
-  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[] }> {
+  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string }> {
     const gridEl = this.gridElement;
 
     if (!gridEl) {
@@ -1087,7 +1166,16 @@ export class Table implements BlockTool {
         });
       }
 
-      return { row: rowIndex, col: colIndex, blocks };
+      const color = this.model.getCellColor(rowIndex, colIndex);
+      const textColor = this.model.getCellTextColor(rowIndex, colIndex);
+
+      return {
+        row: rowIndex,
+        col: colIndex,
+        blocks,
+        ...(color !== undefined ? { color } : {}),
+        ...(textColor !== undefined ? { textColor } : {}),
+      };
     }).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
   }
 
@@ -1110,6 +1198,10 @@ export class Table implements BlockTool {
         this.addControls?.setInteractive(!hasSelection);
         this.rowColControls?.setGripsDisplay(!hasSelection);
       },
+      onSelectionRangeChange: () => {
+        // Selection finalized — restore grips so hover works normally
+        this.rowColControls?.setGripsDisplay(true);
+      },
       onClearContent: (cells) => {
         if (!this.cellBlocks) {
           return;
@@ -1118,6 +1210,25 @@ export class Table implements BlockTool {
         const blockIds = this.cellBlocks.getBlockIdsFromCells(cells);
 
         this.cellBlocks.deleteBlocks(blockIds);
+
+        const gridEl = this.gridElement;
+
+        if (!gridEl) {
+          return;
+        }
+
+        for (const cell of cells) {
+          const coord = getCellPosition(gridEl, cell);
+
+          if (!coord) {
+            continue;
+          }
+
+          this.model.setCellColor(coord.row, coord.col, undefined);
+          this.model.setCellTextColor(coord.row, coord.col, undefined);
+          cell.style.backgroundColor = '';
+          cell.style.color = '';
+        }
       },
       onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);
@@ -1128,23 +1239,8 @@ export class Table implements BlockTool {
       onCopyViaButton: (cells) => {
         this.handleCellCopyViaButton(cells);
       },
-    });
-  }
-
-  private initReadOnlyCellSelection(gridEl: HTMLElement): void {
-    this.cellSelection?.destroy();
-
-    const rectangleSelection = this.api.rectangleSelection;
-
-    this.cellSelection = new TableCellSelection({
-      grid: gridEl,
-      rectangleSelection,
-      i18n: this.api.i18n,
-      onCopy: (cells, clipboardData) => {
-        this.handleCellCopy(cells, clipboardData);
-      },
-      onCopyViaButton: (cells) => {
-        this.handleCellCopyViaButton(cells);
+      onColorChange: (cells, color, mode) => {
+        this.handleCellColorChange(cells, color, mode);
       },
     });
   }
@@ -1246,12 +1342,24 @@ export class Table implements BlockTool {
           const cell = cells[startCol + c] as HTMLElement | undefined;
 
           if (cell) {
-            this.pasteCellPayload(cell, payload.cells[r][c]);
+            const cellPayload = payload.cells[r][c];
+
+            this.pasteCellPayload(cell, cellPayload);
 
             // Sync pasted block IDs to model
             const blockIds = this.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
 
             this.model.setCellBlocks(startRow + r, startCol + c, blockIds);
+
+            // Restore cell colors from clipboard
+            const destRow = startRow + r;
+            const destCol = startCol + c;
+
+            this.model.setCellColor(destRow, destCol, cellPayload.color);
+            cell.style.backgroundColor = cellPayload.color ?? '';
+
+            this.model.setCellTextColor(destRow, destCol, cellPayload.textColor);
+            cell.style.color = cellPayload.textColor ?? '';
           }
         });
       });

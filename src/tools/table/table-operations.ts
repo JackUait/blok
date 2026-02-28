@@ -282,10 +282,8 @@ export const mountCellBlocksReadOnly = (
 
       if (!isCellWithBlocks(cellContent)) {
         // Read-only render path must not mutate block state.
-        // Render legacy content as plain text in-place.
-        const legacyText = typeof cellContent === 'string' ? cellContent : '';
-
-        container.textContent = legacyText;
+        // Render legacy content (plain string) in-place.
+        container.textContent = cellContent;
 
         return;
       }
@@ -399,6 +397,38 @@ export const updateHeadingStyles = (gridEl: HTMLElement | null, withHeadings: bo
   if (withHeadings && rows.length > 0) {
     rows[0].setAttribute('data-blok-table-heading', '');
   }
+};
+
+export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[][]): void => {
+  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+
+  content.forEach((rowContent, r) => {
+    if (r >= rows.length) {
+      return;
+    }
+
+    const cells = rows[r].querySelectorAll(`[${CELL_ATTR}]`);
+
+    rowContent.forEach((cellContent, c) => {
+      if (c >= cells.length) {
+        return;
+      }
+
+      const el = cells[c] as HTMLElement;
+
+      if (isCellWithBlocks(cellContent) && cellContent.color) {
+        el.style.backgroundColor = cellContent.color;
+      } else {
+        el.style.backgroundColor = '';
+      }
+
+      if (isCellWithBlocks(cellContent) && cellContent.textColor) {
+        el.style.color = cellContent.textColor;
+      } else {
+        el.style.color = '';
+      }
+    });
+  });
 };
 
 export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadingColumn: boolean): void => {

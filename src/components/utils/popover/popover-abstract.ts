@@ -350,7 +350,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * This is useful for items that determine their active state dynamically (e.g., inline tools).
    * @param item - popover item to refresh
    */
-  private refreshItemActiveState(item: PopoverItem): void {
+  protected refreshItemActiveState(item: PopoverItem): void {
     if (!(item instanceof PopoverItemDefault)) {
       return;
     }

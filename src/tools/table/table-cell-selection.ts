@@ -1,10 +1,12 @@
 import type { I18n } from '../../../types/api';
-import { IconCopy, IconCross } from '../../components/icons';
+import { IconCopy, IconCross, IconMarker } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
-import { PopoverDesktop } from '../../components/utils/popover';
+import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
 import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { createCellColorPicker } from './table-cell-color-picker';
+import type { CellColorMode } from './table-cell-color-picker';
 import { createGripDotsSvg } from './table-grip-visuals';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -34,6 +36,13 @@ const PILL_CLASSES = [
   'bg-blue-500',
 ];
 
+export interface SelectionRange {
+  minRow: number;
+  maxRow: number;
+  minCol: number;
+  maxCol: number;
+}
+
 interface CellCoord {
   row: number;
   col: number;
@@ -57,10 +66,12 @@ interface CellSelectionOptions {
   grid: HTMLElement;
   rectangleSelection?: { cancelActiveSelection: () => void };
   onSelectionActiveChange?: (hasSelection: boolean) => void;
+  onSelectionRangeChange?: (range: SelectionRange) => void;
   onClearContent?: (cells: HTMLElement[]) => void;
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton?: (cells: HTMLElement[]) => void;
+  onColorChange?: (cells: HTMLElement[], color: string | null, mode: CellColorMode) => void;
   isPopoverOpen?: () => boolean;
   i18n: I18n;
 }
@@ -79,11 +90,15 @@ export class TableCellSelection {
   private overlay: HTMLElement | null = null;
   private pill: HTMLElement | null = null;
   private pillPopover: PopoverDesktop | null = null;
+  private resizeObserver: ResizeObserver | null = null;
 
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
+  private onColorChange: ((cells: HTMLElement[], color: string | null, mode: CellColorMode) => void) | undefined;
+  private onSelectionRangeChange: ((range: SelectionRange) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
+  private lastPaintedRange: SelectionRange | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -93,6 +108,7 @@ export class TableCellSelection {
   private boundKeyDown: (e: KeyboardEvent) => void;
   private boundCopyHandler: (e: ClipboardEvent) => void;
   private boundCutHandler: (e: ClipboardEvent) => void;
+  private boundPreventDragStart: (e: Event) => void;
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
@@ -102,6 +118,8 @@ export class TableCellSelection {
     this.onCopy = options.onCopy;
     this.onCut = options.onCut;
     this.onCopyViaButton = options.onCopyViaButton;
+    this.onColorChange = options.onColorChange;
+    this.onSelectionRangeChange = options.onSelectionRangeChange;
     this.isPopoverOpen = options.isPopoverOpen;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
@@ -114,8 +132,10 @@ export class TableCellSelection {
     this.boundKeyDown = this.handleKeyDown.bind(this);
     this.boundCopyHandler = this.handleCopy.bind(this);
     this.boundCutHandler = this.handleCut.bind(this);
+    this.boundPreventDragStart = this.handleDragStart.bind(this);
 
     this.grid.addEventListener('pointerdown', this.boundPointerDown);
+    this.grid.addEventListener('dragstart', this.boundPreventDragStart);
     document.addEventListener('keydown', this.boundKeyDown);
     document.addEventListener('copy', this.boundCopyHandler);
     document.addEventListener('cut', this.boundCutHandler);
@@ -123,8 +143,10 @@ export class TableCellSelection {
 
   public destroy(): void {
     this.destroyPillPopover();
+    this.disconnectResizeObserver();
     this.clearSelection();
     this.grid.removeEventListener('pointerdown', this.boundPointerDown);
+    this.grid.removeEventListener('dragstart', this.boundPreventDragStart);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointerdown', this.boundClearSelection);
@@ -167,6 +189,18 @@ export class TableCellSelection {
    */
   public clearActiveSelection(): void {
     this.clearSelection();
+  }
+
+  /**
+   * Prevent native drag-and-drop while a cell selection drag is in progress.
+   * Without this, the browser can fire dragstart on contenteditable cells
+   * during a pointer drag, which suppresses pointermove events and breaks
+   * the cell selection.
+   */
+  private handleDragStart(e: Event): void {
+    if (this.anchorCell) {
+      e.preventDefault();
+    }
   }
 
   private handlePointerDown(e: PointerEvent): void {
@@ -278,6 +312,10 @@ export class TableCellSelection {
       this.grid.style.userSelect = '';
       this.hasSelection = true;
 
+      if (this.lastPaintedRange) {
+        this.onSelectionRangeChange?.(this.lastPaintedRange);
+      }
+
       // Listen for next pointerdown anywhere to clear selection.
       // Register synchronously — pointerdown for the drag already fired
       // before this pointerup, so there is no risk of the current
@@ -305,17 +343,15 @@ export class TableCellSelection {
       return;
     }
 
-    // Don't clear while the pill popover is open — the user may be
+    // Don't clear when clicking inside an open popover — the user may be
     // clicking a popover item whose pointerdown bubbles to the document.
-    if (this.pillPopover !== null) {
+    // Popovers render on document.body and carry `data-blok-popover-opened`.
+    if (target instanceof HTMLElement && target.closest('[data-blok-popover-opened]') !== null) {
       return;
     }
 
-    // Don't clear while a grip popover is open — clicking a popover
-    // action fires pointerdown before the click handler that performs
-    // the action and re-establishes the selection.
-    if (this.isPopoverOpen?.()) {
-      return;
+    if (this.pillPopover !== null) {
+      this.destroyPillPopover();
     }
 
     document.removeEventListener('pointerdown', this.boundClearSelection);
@@ -330,6 +366,12 @@ export class TableCellSelection {
 
     // Check for Delete or Backspace
     if (e.key !== 'Delete' && e.key !== 'Backspace') {
+      return;
+    }
+
+    // For single-cell selections, let the browser handle Delete/Backspace
+    // as normal character-level editing in the contenteditable cell.
+    if (this.selectedCells.length <= 1) {
       return;
     }
 
@@ -366,6 +408,7 @@ export class TableCellSelection {
 
     this.restoreModifiedCells();
     this.hasSelection = false;
+    this.lastPaintedRange = null;
 
     if (hadSelection) {
       this.onSelectionActiveChange?.(false);
@@ -374,6 +417,7 @@ export class TableCellSelection {
 
   private restoreModifiedCells(): void {
     this.destroyPillPopover();
+    this.disconnectResizeObserver();
 
     this.selectedCells.forEach(cell => {
       cell.removeAttribute(SELECTED_ATTR);
@@ -404,6 +448,11 @@ export class TableCellSelection {
     this.paintSelection();
     this.hasSelection = true;
     this.onSelectionActiveChange?.(true);
+
+    if (this.lastPaintedRange) {
+      this.onSelectionRangeChange?.(this.lastPaintedRange);
+    }
+
     this.anchorCell = null;
     this.extentCell = null;
 
@@ -429,6 +478,8 @@ export class TableCellSelection {
     const maxRow = Math.max(this.anchorCell.row, this.extentCell.row);
     const minCol = Math.min(this.anchorCell.col, this.extentCell.col);
     const maxCol = Math.max(this.anchorCell.col, this.extentCell.col);
+
+    this.lastPaintedRange = { minRow, maxRow, minCol, maxCol };
 
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
 
@@ -492,6 +543,78 @@ export class TableCellSelection {
     // Position at center of the 2px right border; translate(-50%,-50%) handles centering
     this.pill.style.left = `${left + width - 1}px`;
     this.pill.style.top = `${top + height / 2}px`;
+
+    this.observeCellResizes();
+  }
+
+  /**
+   * Recalculate overlay and pill positions from the last painted range.
+   * Called by the ResizeObserver when selected cells change size.
+   */
+  private repositionOverlay(): void {
+    const range = this.lastPaintedRange;
+
+    if (!range || !this.overlay) {
+      return;
+    }
+
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const firstCell = rows[range.minRow]?.querySelectorAll(`[${CELL_ATTR}]`)[range.minCol] as HTMLElement | undefined;
+    const lastCell = rows[range.maxRow]?.querySelectorAll(`[${CELL_ATTR}]`)[range.maxCol] as HTMLElement | undefined;
+
+    if (!firstCell || !lastCell) {
+      return;
+    }
+
+    const gridRect = this.grid.getBoundingClientRect();
+    const firstRect = firstCell.getBoundingClientRect();
+    const lastRect = lastCell.getBoundingClientRect();
+
+    const gridStyle = getComputedStyle(this.grid);
+    const borderTop = parseFloat(gridStyle.borderTopWidth) || 0;
+    const borderLeft = parseFloat(gridStyle.borderLeftWidth) || 0;
+
+    const width = lastRect.right - firstRect.left + 1;
+    const height = lastRect.bottom - firstRect.top + 1;
+    const top = firstRect.top - gridRect.top - borderTop - 1;
+    const left = firstRect.left - gridRect.left - borderLeft - 1;
+
+    this.overlay.style.top = `${top}px`;
+    this.overlay.style.left = `${left}px`;
+    this.overlay.style.width = `${width}px`;
+    this.overlay.style.height = `${height}px`;
+
+    if (this.pill) {
+      this.pill.style.left = `${left + width - 1}px`;
+      this.pill.style.top = `${top + height / 2}px`;
+    }
+  }
+
+  /**
+   * Start observing selected cells for size changes so the overlay
+   * stays in sync when cell content grows or shrinks.
+   */
+  private observeCellResizes(): void {
+    this.disconnectResizeObserver();
+
+    if (this.selectedCells.length === 0) {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.repositionOverlay();
+    });
+
+    for (const cell of this.selectedCells) {
+      this.resizeObserver.observe(cell);
+    }
+  }
+
+  private disconnectResizeObserver(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
   }
 
   private createPill(): HTMLElement {
@@ -542,7 +665,33 @@ export class TableCellSelection {
 
     const copyShortcut = MODIFIER_KEY === 'Meta' ? '⌘C' : 'Ctrl+C';
 
+    const colorPickerItems: PopoverItemParams[] = [];
+
+    if (this.onColorChange !== undefined) {
+      const { element: pickerElement } = createCellColorPicker({
+        i18n: this.i18n,
+        onColorSelect: (color: string | null, mode: CellColorMode): void => {
+          this.onColorChange?.([...this.selectedCells], color, mode);
+        },
+      });
+
+      colorPickerItems.push({
+        icon: IconMarker,
+        title: this.i18n.t('tools.table.cellColor'),
+        name: 'cellColor',
+        children: {
+          items: [{
+            type: PopoverItemType.Html,
+            element: pickerElement,
+          }],
+          isFlippable: false,
+          width: '12.5rem',
+        },
+      });
+    }
+
     const items: PopoverItemParams[] = [
+      ...colorPickerItems,
       {
         icon: IconCopy,
         title: this.i18n.t('tools.table.copySelection'),

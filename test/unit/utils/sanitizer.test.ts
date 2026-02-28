@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../../src/components/utils/sanitizer';
+import { MarkerInlineTool } from '../../../src/components/inline-tools/inline-tool-marker';
 import type { SanitizerConfig, SanitizerRule } from '../../../types';
 import type { SavedData } from '../../../types/data-formats';
 
@@ -1106,6 +1107,73 @@ describe('sanitizer', () => {
       expect(data.title).not.toContain('<span>');
       expect(data.content).not.toContain('<strong>');
       expect(data.content).toContain('<span>');
+    });
+  });
+
+  describe('MarkerInlineTool.sanitize — mark style CSS property filtering', () => {
+    /**
+     * Helper: get the MarkerInlineTool sanitize config.
+     * Uses the real config that flows through the sanitizer pipeline.
+     */
+    const getMarkerSanitize = (): SanitizerConfig => {
+      return MarkerInlineTool.sanitize;
+    };
+
+    it('should strip dangerous CSS properties from mark style, keeping only color', () => {
+      const markerSanitize = getMarkerSanitize();
+      const taintString = '<mark style="color: red; position: fixed; z-index: 9999;">text</mark>';
+
+      const result = clean(taintString, markerSanitize);
+
+      expect(result).toContain('color');
+      expect(result).not.toContain('position');
+      expect(result).not.toContain('z-index');
+    });
+
+    it('should keep both color and background-color on mark while stripping others', () => {
+      const markerSanitize = getMarkerSanitize();
+      const taintString = '<mark style="color: red; background-color: yellow; width: 100vw;">text</mark>';
+
+      const result = clean(taintString, markerSanitize);
+
+      expect(result).toContain('color');
+      expect(result).toContain('background-color');
+      expect(result).not.toContain('width');
+    });
+
+    it('should remove style attribute entirely when no allowed CSS properties remain', () => {
+      const markerSanitize = getMarkerSanitize();
+      const taintString = '<mark style="position: fixed; z-index: 9999; width: 100vw; height: 100vh;">text</mark>';
+
+      const result = clean(taintString, markerSanitize);
+
+      expect(result).toContain('<mark');
+      expect(result).not.toContain('position');
+      expect(result).not.toContain('z-index');
+      expect(result).not.toContain('width');
+      expect(result).not.toContain('height');
+    });
+
+    it('should strip the full overlay attack vector from pasted mark HTML', () => {
+      const markerSanitize = getMarkerSanitize();
+      const taintString = '<mark style="position:fixed; z-index:9999; width:100vw; height:100vh; background:red">click me</mark>';
+
+      const result = clean(taintString, markerSanitize);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('click me');
+      expect(result).not.toContain('position');
+      expect(result).not.toContain('z-index');
+      expect(result).not.toContain('100vw');
+      expect(result).not.toContain('100vh');
+
+      /**
+       * The CSS shorthand `background: red` is decomposed by the browser's
+       * CSSOM into `background-color: red` (plus other longhand defaults).
+       * Since `background-color` IS in the allow-list, it correctly survives.
+       * Only the dangerous layout/overlay properties are stripped.
+       */
+      expect(result).toContain('background-color');
     });
   });
 

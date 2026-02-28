@@ -65,6 +65,9 @@ export class BlockSelection extends Module {
       b: {},
       i: {},
       u: {},
+      mark: {
+        style: true,
+      },
     };
 
     return composeSanitizerConfig(this.config.sanitizer as SanitizerConfig, baseConfig);

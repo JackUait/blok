@@ -21,7 +21,6 @@ export const getListSanitizeConfig = (): ToolSanitizerConfig => ({
     },
     b: true,
     i: true,
-    mark: true,
   },
 });
 

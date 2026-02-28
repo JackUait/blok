@@ -19,20 +19,33 @@ interface MockPopoverArgs {
   flippable?: boolean;
 }
 
-const mockPopoverShow = vi.fn();
-const mockPopoverDestroy = vi.fn();
 let lastPopoverArgs: MockPopoverArgs | null = null;
 
 vi.mock('../../../../src/components/utils/popover', () => ({
   PopoverDesktop: class MockPopoverDesktop {
+    private el = document.createElement('div');
     constructor(args: MockPopoverArgs) {
       lastPopoverArgs = args;
     }
-    show = mockPopoverShow;
-    destroy = mockPopoverDestroy;
+    show(): void {
+      this.el.setAttribute('data-blok-popover-opened', 'true');
+      document.body.appendChild(this.el);
+    }
+    destroy(): void {
+      this.el.removeAttribute('data-blok-popover-opened');
+      this.el.remove();
+    }
     on(_event: string, _handler: () => void): void {
       // no-op for tests
     }
+    getElement(): HTMLElement {
+      return this.el;
+    }
+  },
+  PopoverItemType: {
+    Default: 'default',
+    Separator: 'separator',
+    Html: 'html',
   },
 }));
 
@@ -40,6 +53,12 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
   PopoverEvent: {
     Closed: 'closed',
   },
+}));
+
+const mockColorPickerElement = document.createElement('div');
+
+vi.mock('../../../../src/tools/table/table-cell-color-picker', () => ({
+  createCellColorPicker: () => ({ element: mockColorPickerElement }),
 }));
 
 import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
@@ -653,7 +672,7 @@ describe('TableCellSelection', () => {
       expect(lastPopoverArgs?.items?.[0]?.secondaryLabel).toMatch(/[⌘C]|Ctrl\+C/);
       expect(lastPopoverArgs?.items?.[1]?.title).toBe('Clear');
       expect(lastPopoverArgs?.items?.[1]?.secondaryLabel).toBe('Del');
-      expect(mockPopoverShow).toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
     });
 
     it('fires onCopyViaButton with selected cells when Copy action activates', () => {
@@ -766,9 +785,11 @@ describe('TableCellSelection', () => {
 
       // Simulate the real browser flow: clicking a popover item fires pointerdown
       // on the document before the click/onActivate handler runs.
-      // The popover is rendered outside the pill, so this pointerdown would
-      // normally trigger handleClearSelection and empty selectedCells.
-      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      // The popover is rendered on document.body with [data-blok-popover-opened],
+      // so clicks inside it should NOT trigger selection clearing.
+      const popoverEl = document.querySelector('[data-blok-popover-opened]') as HTMLElement;
+
+      popoverEl.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
 
       const items = lastPopoverArgs?.items;
 
@@ -779,6 +800,45 @@ describe('TableCellSelection', () => {
 
       expect(onClearContent).toHaveBeenCalledTimes(1);
       expect(onClearContent.mock.calls[0][0]).toHaveLength(4);
+    });
+
+    it('clears selection when clicking outside the grid while pill popover is open', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      // Open the pill popover
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      callback.mockClear();
+
+      // Click outside the grid (not inside the popover)
+      const outsideEl = document.createElement('div');
+
+      document.body.appendChild(outsideEl);
+
+      outsideEl.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      vi.useRealTimers();
+
+      // Selection should clear — click was outside the grid and outside any popover
+      expect(callback).toHaveBeenCalledWith(false);
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+
+      outsideEl.remove();
     });
 
     it('clears selection after Clear action fires', () => {
@@ -1221,6 +1281,53 @@ describe('TableCellSelection', () => {
       // Verify onClearContent NOT called
       expect(onClearContent).not.toHaveBeenCalled();
     });
+
+    it('does not intercept Delete/Backspace for single-cell selection', () => {
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onClearContent,
+      });
+
+      // Select a single cell (column 0 of row 0 only)
+      selection.selectColumn(0);
+
+      // selectColumn selects all rows — instead use programmatic single-cell click
+      selection.clearActiveSelection();
+
+      // Simulate a single-cell click on cell (0,0)
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[0]?.querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Verify the cell is selected
+      expect(cell.hasAttribute(SELECTED_ATTR)).toBe(true);
+
+      // Dispatch Delete key
+      const deleteEvent = new KeyboardEvent('keydown', {
+        key: 'Delete',
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = vi.spyOn(deleteEvent, 'preventDefault');
+
+      document.dispatchEvent(deleteEvent);
+
+      // Verify onClearContent NOT called (normal text editing should handle it)
+      expect(onClearContent).not.toHaveBeenCalled();
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('copy/cut event handling', () => {
@@ -1580,8 +1687,63 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('pill popover color item', () => {
+    it('includes a Color item in the pill popover when onColorChange is provided', () => {
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onColorChange: vi.fn(),
+      });
+
+      // Trigger single-cell click to create selection with pill
+      const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Open pill popover
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // Check that popover items include a Color entry
+      expect(lastPopoverArgs?.items?.some((item: MockPopoverItem) => item.title === 'tools.table.cellColor')).toBe(true);
+    });
+
+    it('does not include a Color item when onColorChange is not provided', () => {
+      // default selection has no onColorChange
+
+      // Trigger single-cell click to create selection with pill
+      const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Open pill popover
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      // Check that popover items do NOT include a Color entry
+      expect(lastPopoverArgs?.items?.some((item: MockPopoverItem) => item.title === 'tools.table.cellColor')).toBe(false);
+    });
+  });
+
   describe('isPopoverOpen guard', () => {
-    it('does not clear selection when isPopoverOpen returns true', () => {
+    it('does not clear selection when clicking inside an open popover', () => {
       const callback = vi.fn();
       const isPopoverOpen = vi.fn().mockReturnValue(true);
 
@@ -1597,18 +1759,65 @@ describe('TableCellSelection', () => {
 
       callback.mockClear();
 
-      // Simulate a pointerdown on the document (e.g. clicking a grip popover action item).
+      // Create a mock popover element on document.body with [data-blok-popover-opened]
+      const popoverEl = document.createElement('div');
+
+      popoverEl.setAttribute('data-blok-popover-opened', 'true');
+
+      const popoverItem = document.createElement('button');
+
+      popoverEl.appendChild(popoverItem);
+      document.body.appendChild(popoverEl);
+
+      // Simulate a pointerdown on a popover item (e.g. clicking a grip popover action).
       // boundClearSelection is registered synchronously by showProgrammaticSelection.
       const clearEvent = new PointerEvent('pointerdown', {
         bubbles: true,
         button: 0,
       });
 
-      document.dispatchEvent(clearEvent);
+      popoverItem.dispatchEvent(clearEvent);
 
-      // Selection must remain because the grip popover is open
+      // Selection must remain because the click is inside an open popover
       expect(callback).not.toHaveBeenCalledWith(false);
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(3);
+
+      popoverEl.remove();
+    });
+
+    it('clears selection when clicking outside the grid while grip popover is open', () => {
+      const callback = vi.fn();
+      const isPopoverOpen = vi.fn().mockReturnValue(true);
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+        isPopoverOpen,
+      });
+
+      selection.selectColumn(1);
+
+      callback.mockClear();
+
+      // Simulate a pointerdown on the document body (outside the grid and any popover).
+      const outsideEl = document.createElement('div');
+
+      document.body.appendChild(outsideEl);
+
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      outsideEl.dispatchEvent(clearEvent);
+
+      // Selection should clear — click was outside the grid and outside any popover
+      expect(callback).toHaveBeenCalledWith(false);
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+
+      outsideEl.remove();
     });
 
     it('clears selection when isPopoverOpen returns false', () => {
@@ -1660,6 +1869,235 @@ describe('TableCellSelection', () => {
       document.dispatchEvent(clearEvent);
 
       expect(callback).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('onSelectionRangeChange callback', () => {
+    it('fires with range when drag selection completes', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      simulateDrag(grid, 0, 1, 2, 2);
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 0,
+        maxRow: 2,
+        minCol: 1,
+        maxCol: 2,
+      });
+    });
+
+    it('fires with range for single-cell click selection', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      // Single click on cell (1,1) — pointerdown + pointerup without drag
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[1]?.querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+      const rect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: rect.left + 5,
+        clientY: rect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 1,
+        maxCol: 1,
+      });
+    });
+
+    it('fires with range for programmatic selectRow', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      selection.selectRow(1);
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 1,
+        maxRow: 1,
+        minCol: 0,
+        maxCol: 2,
+      });
+    });
+
+    it('fires with range for programmatic selectColumn', () => {
+      selection.destroy();
+
+      const rangeCallback = vi.fn();
+
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionRangeChange: rangeCallback,
+      });
+
+      selection.selectColumn(2);
+
+      expect(rangeCallback).toHaveBeenCalledWith({
+        minRow: 0,
+        maxRow: 2,
+        minCol: 2,
+        maxCol: 2,
+      });
+    });
+  });
+
+  describe('native dragstart prevention', () => {
+    it('prevents dragstart on grid during a pointer drag', () => {
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const startCell = rows[0].querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+      const endCell = rows[1].querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+      const startRect = startCell.getBoundingClientRect();
+
+      // pointerdown to begin interaction
+      startCell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: startRect.left + 5,
+        clientY: startRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+
+      // Fire dragstart on the grid (simulates browser native drag behavior)
+      const dragEvent = new Event('dragstart', { bubbles: true, cancelable: true });
+      const wasPrevented = !startCell.dispatchEvent(dragEvent);
+
+      expect(wasPrevented).toBe(true);
+
+      // Clean up: fire pointerup
+      elementFromPointTarget = endCell;
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    });
+
+    it('allows dragstart when no cell drag is in progress', () => {
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[0].querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+
+      // Fire dragstart without any prior pointerdown
+      const dragEvent = new Event('dragstart', { bubbles: true, cancelable: true });
+      const wasPrevented = !cell.dispatchEvent(dragEvent);
+
+      expect(wasPrevented).toBe(false);
+    });
+  });
+
+  describe('resize observer', () => {
+    let resizeCallbacks: ResizeObserverCallback[];
+    let observedElements: Element[];
+    let disconnectCalls: number;
+    let OriginalResizeObserver: typeof ResizeObserver;
+
+    beforeEach(() => {
+      resizeCallbacks = [];
+      observedElements = [];
+      disconnectCalls = 0;
+      OriginalResizeObserver = window.ResizeObserver;
+
+      window.ResizeObserver = class MockResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallbacks.push(callback);
+        }
+        observe(el: Element): void { observedElements.push(el); }
+        unobserve(): void { /* no-op */ }
+        disconnect(): void { disconnectCalls++; }
+      } as unknown as typeof ResizeObserver;
+
+      // Re-create selection with the mocked ResizeObserver
+      selection.destroy();
+      grid.remove();
+      grid = createGrid(3, 3);
+      mockBoundingRects(grid);
+      selection = new TableCellSelection({ grid, i18n: mockI18n });
+    });
+
+    afterEach(() => {
+      window.ResizeObserver = OriginalResizeObserver;
+    });
+
+    it('observes selected cells after drag selection', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      // 4 cells selected (2x2) should be observed
+      expect(observedElements).toHaveLength(4);
+    });
+
+    it('disconnects observer when selection is cleared', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+      expect(disconnectCalls).toBe(0);
+
+      // Click outside to clear selection
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      expect(disconnectCalls).toBeGreaterThan(0);
+    });
+
+    it('repositions overlay when resize observer fires', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`) as HTMLElement;
+
+      expect(overlay).not.toBeNull();
+
+      const initialHeight = overlay.style.height;
+
+      // Simulate cell height growth by updating mock rects
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[1].querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+      vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+        top: 50,
+        left: 110,
+        bottom: 110, // was 90, now 110 (grew by 20px)
+        right: 210,
+        width: 100,
+        height: 60,
+        x: 110,
+        y: 50,
+        toJSON: () => ({}),
+      });
+
+      // Fire the resize observer callback
+      const callback = resizeCallbacks[resizeCallbacks.length - 1];
+
+      callback([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+
+      expect(overlay.style.height).not.toBe(initialHeight);
+    });
+
+    it('disconnects observer on destroy', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      selection.destroy();
+
+      expect(disconnectCalls).toBeGreaterThan(0);
     });
   });
 

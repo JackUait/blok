@@ -480,7 +480,7 @@ test.describe('Read-Only Mode', () => {
     }
   });
 
-  test('Cell selection is available in read-only mode for copy operations', async ({ page }) => {
+  test('Cell selection is not available in read-only mode', async ({ page }) => {
     // 1. Initialize a 3x3 table with content ['A1'..'C3']
     await createBlok(page, {
       tools: defaultTools,
@@ -527,9 +527,12 @@ test.describe('Read-Only Mode', () => {
     await page.mouse.move(endX, endY, { steps: 10 });
     await page.mouse.up();
 
-    // 5. Verify 4 cells have [data-blok-table-cell-selected] attribute
+    // 5. Verify NO cells have [data-blok-table-cell-selected] attribute
     const selected = page.locator('[data-blok-table-cell-selected]');
 
-    await expect(selected).toHaveCount(4);
+    await expect(selected).toHaveCount(0);
+
+    // No selection overlay should appear
+    await expect(page.locator('[data-blok-table-selection-overlay]')).toHaveCount(0);
   });
 });

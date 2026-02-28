@@ -1,8 +1,28 @@
+import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { ClipboardBlockData, TableCellsClipboard } from './types';
+import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { clean } from '../../components/utils/sanitizer';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
 const DATA_ATTR = 'data-blok-table-cells';
+
+/**
+ * Resolve the background-color style value for clipboard markup.
+ * When the cell has an explicit background, use it; when it only has a text
+ * color, force a transparent background so the mark element doesn't inherit
+ * an unwanted default; otherwise return an empty string (no style needed).
+ */
+function resolveBackgroundStyle(hasBgColor: boolean, hasColor: boolean, mappedBg: string): string {
+  if (hasBgColor) {
+    return `background-color: ${mappedBg}`;
+  }
+
+  if (hasColor) {
+    return 'background-color: transparent';
+  }
+
+  return '';
+}
 
 /**
  * Entry describing one cell to be serialized for the clipboard.
@@ -11,6 +31,8 @@ interface CellEntry {
   row: number;
   col: number;
   blocks: ClipboardBlockData[];
+  color?: string;
+  textColor?: string;
 }
 
 /**
@@ -34,8 +56,8 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
   const cols = maxCol - minCol + 1;
 
   // Pre-fill with empty cells
-  const cells: Array<Array<{ blocks: ClipboardBlockData[] }>> = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ blocks: [] }))
+  const cells: TableCellsClipboard['cells'] = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ blocks: [] as ClipboardBlockData[] }))
   );
 
   for (const entry of entries) {
@@ -43,6 +65,14 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
     const c = entry.col - minCol;
 
     cells[r][c] = { blocks: entry.blocks };
+
+    if (entry.color !== undefined) {
+      cells[r][c].color = entry.color;
+    }
+
+    if (entry.textColor !== undefined) {
+      cells[r][c].textColor = entry.textColor;
+    }
   }
 
   return { rows, cols, cells };
@@ -88,7 +118,14 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
         .map((cell) => {
           const text = cell.blocks.map(extractBlockText).join(' ');
 
-          return `<td>${text}</td>`;
+          const styles = [
+            cell.color ? `background-color: ${cell.color}` : '',
+            cell.textColor ? `color: ${cell.textColor}` : '',
+          ].filter(Boolean).join('; ');
+
+          const styleAttr = styles ? ` style="${styles}"` : '';
+
+          return `<td${styleAttr}>${text}</td>`;
         })
         .join('');
 
@@ -114,16 +151,48 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
 }
 
 /**
- * Sanitizer config for cell content: allows bold, italic, line breaks, and links.
+ * CSS properties allowed on <mark> elements inside table cells.
+ * Matches MarkerInlineTool.ALLOWED_STYLE_PROPS.
  */
-const CELL_SANITIZE_CONFIG = {
+const ALLOWED_MARK_STYLE_PROPS = new Set(['color', 'background-color']);
+
+/**
+ * Sanitizer config for cell content: allows bold, italic, line breaks, links,
+ * and color markers (<mark> with color/background-color styles only).
+ */
+const CELL_SANITIZE_CONFIG: SanitizerConfig = {
   b: true,
   strong: true,
   i: true,
   em: true,
   br: true,
   a: { href: true },
-} as const;
+  mark: (node: Element): { [attr: string]: boolean | string } => {
+    const el = node as HTMLElement;
+    const style = el.style;
+
+    const props = Array.from({ length: style.length }, (_, i) => style.item(i));
+
+    for (const prop of props) {
+      if (!ALLOWED_MARK_STYLE_PROPS.has(prop)) {
+        style.removeProperty(prop);
+      }
+    }
+
+    return style.length > 0 ? { style: true } : {};
+  },
+};
+
+/**
+ * Check whether a CSS color value is the default black text color.
+ * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
+ * Spans with only this color should not be converted to `<mark>`.
+ */
+export function isDefaultBlack(color: string): boolean {
+  const normalized = color.replace(/\s/g, '');
+
+  return normalized === 'rgb(0,0,0)' || normalized === '#000000';
+}
 
 /**
  * Extract HTML content from a `<td>`/`<th>` element, converting Google Docs
@@ -131,8 +200,10 @@ const CELL_SANITIZE_CONFIG = {
  *
  * - `<span style="font-weight:700">` or `font-weight:bold` → `<b>`
  * - `<span style="font-style:italic">` → `<i>`
+ * - `<span style="color:...">` → `<mark style="color: ...">`
+ * - `<span style="background-color:...">` → `<mark style="background-color: ...">`
  * - `<p>` boundaries → `<br>` line breaks
- * - Everything else stripped except `<b>`, `<strong>`, `<i>`, `<em>`, `<br>`, `<a href>`
+ * - Everything else stripped except `<b>`, `<strong>`, `<i>`, `<em>`, `<br>`, `<a href>`, `<mark style>`
  */
 function sanitizeCellHtml(td: Element): string {
   const clone = td.cloneNode(true) as HTMLElement;
@@ -143,15 +214,69 @@ function sanitizeCellHtml(td: Element): string {
     const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
     const isItalic = /font-style\s*:\s*italic/i.test(style);
 
-    if (!isBold && !isItalic) {
+    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+    const color = colorMatch?.[1]?.trim();
+    const bgColor = bgMatch?.[1]?.trim();
+
+    const hasColor = color !== undefined && !isDefaultBlack(color);
+    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent';
+
+    if (!isBold && !isItalic && !hasColor && !hasBgColor) {
       continue;
     }
 
+    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
+    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+
+    const colorStyles = [
+      hasColor ? `color: ${mappedColor}` : '',
+      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
+    ].filter(Boolean).join('; ');
+
     const inner = span.innerHTML;
-    const italic = isItalic ? `<i>${inner}</i>` : inner;
+    const marked = colorStyles
+      ? `<mark style="${colorStyles};">${inner}</mark>`
+      : inner;
+
+    const italic = isItalic ? `<i>${marked}</i>` : marked;
     const wrapped = isBold ? `<b>${italic}</b>` : italic;
 
     span.replaceWith(document.createRange().createContextualFragment(wrapped));
+  }
+
+  // Move color/background-color from <a> tags into <mark> wrappers.
+  // The sanitizer only allows href on <a>, so inline color styles would be lost.
+  for (const anchor of Array.from(clone.querySelectorAll('a[style]'))) {
+    const style = anchor.getAttribute('style') ?? '';
+
+    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+    const color = colorMatch?.[1]?.trim();
+    const bgColor = bgMatch?.[1]?.trim();
+
+    const hasColor = color !== undefined && !isDefaultBlack(color) && color !== 'inherit';
+    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent' && bgColor !== 'inherit';
+
+    if (!hasColor && !hasBgColor) {
+      continue;
+    }
+
+    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
+    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+
+    const colorStyles = [
+      hasColor ? `color: ${mappedColor}` : '',
+      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
+    ].filter(Boolean).join('; ');
+
+    const el = anchor as HTMLElement;
+
+    el.innerHTML = `<mark style="${colorStyles};">${el.innerHTML}</mark>`;
+    el.style.removeProperty('color');
+    el.style.removeProperty('background-color');
   }
 
   // Convert <p> boundaries to <br> line breaks
@@ -201,11 +326,13 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     return null;
   }
 
-  const cellGrid: Array<Array<{ blocks: ClipboardBlockData[] }>> = [];
+  type CellPayload = TableCellsClipboard['cells'][number][number];
+
+  const cellGrid: CellPayload[][] = [];
 
   rows.forEach((row) => {
     const tds = row.querySelectorAll('td, th');
-    const rowCells: Array<{ blocks: ClipboardBlockData[] }> = [];
+    const rowCells: CellPayload[] = [];
 
     tds.forEach((td) => {
       const text = sanitizeCellHtml(td);
@@ -214,7 +341,23 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
         ? segments.map(s => ({ tool: 'paragraph' as const, data: { text: s } }))
         : [{ tool: 'paragraph' as const, data: { text: '' } }];
 
-      rowCells.push({ blocks });
+      const cell: CellPayload = { blocks };
+
+      // Extract cell-level colors from td/th style attribute
+      const tdStyle = td.getAttribute('style') ?? '';
+      const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+      if (cellBgMatch?.[1]) {
+        cell.color = mapToNearestPresetColor(cellBgMatch[1].trim(), 'bg');
+      }
+
+      const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+      if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
+        cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
+      }
+
+      rowCells.push(cell);
     });
 
     cellGrid.push(rowCells);

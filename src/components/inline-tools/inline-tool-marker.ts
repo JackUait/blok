@@ -8,12 +8,13 @@ import type { MenuConfig } from '../../../types/tools';
 import { IconMarker } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
-import { twMerge } from '../utils/tw';
 import { isMarkTag, findMarkElement } from './utils/marker-dom-utils';
 import {
   isRangeFormatted,
   collectFormattingAncestors,
 } from './utils/formatting-range-utils';
+import { createColorPicker } from '../shared/color-picker';
+import type { ColorPickerHandle } from '../shared/color-picker';
 
 /**
  * Color mode type — either text color or background color
@@ -27,40 +28,6 @@ const OPPOSITE_MODE: Record<ColorMode, ColorMode> = {
   'color': 'background-color',
   'background-color': 'color',
 };
-
-/**
- * Color preset for a swatch
- */
-interface ColorPreset {
-  name: string;
-  text: string;
-  bg: string;
-}
-
-/**
- * Color presets for the picker
- */
-/**
- * Base Tailwind classes shared by tab buttons
- */
-const TAB_BASE_CLASSES = 'flex-1 py-1.5 text-xs text-center rounded-md cursor-pointer border-none transition-colors';
-
-/**
- * Neutral background for text-mode swatches so they render as visible buttons
- */
-const SWATCH_NEUTRAL_BG = '#f7f7f5';
-
-const COLOR_PRESETS: ColorPreset[] = [
-  { name: 'gray', text: '#787774', bg: '#f1f1ef' },
-  { name: 'brown', text: '#9f6b53', bg: '#f4eeee' },
-  { name: 'orange', text: '#d9730d', bg: '#fbecdd' },
-  { name: 'yellow', text: '#cb9b00', bg: '#fbf3db' },
-  { name: 'green', text: '#448361', bg: '#edf3ec' },
-  { name: 'blue', text: '#337ea9', bg: '#e7f3f8' },
-  { name: 'purple', text: '#9065b0', bg: '#f6f3f9' },
-  { name: 'pink', text: '#c14c8a', bg: '#f9f0f5' },
-  { name: 'red', text: '#d44c47', bg: '#fdebec' },
-];
 
 /**
  * Marker Color Inline Tool
@@ -84,11 +51,43 @@ export class MarkerInlineTool implements InlineTool {
   public static titleKey = 'marker';
 
   /**
-   * Sanitizer Rule — preserve <mark> tags with style attribute
+   * Keyboard shortcut to open the marker color picker
+   */
+  public static shortcut = 'CMD+SHIFT+H';
+
+  /**
+   * CSS properties allowed on <mark> elements.
+   * All other properties are stripped during sanitization to prevent
+   * style-based attacks (e.g. position:fixed overlays via pasted HTML).
+   */
+  private static readonly ALLOWED_STYLE_PROPS = new Set(['color', 'background-color']);
+
+  /**
+   * Sanitizer Rule — preserve <mark> tags with only color-related style properties.
+   *
+   * Uses a function-based rule so HTMLJanitor calls it with the live DOM node,
+   * allowing in-place filtering of CSS properties before the node is serialized.
    */
   public static get sanitize(): SanitizerConfig {
     return {
-      mark: { style: true },
+      mark: (node: Element): { [attr: string]: boolean | string } => {
+        const el = node as HTMLElement;
+        const style = el.style;
+
+        /**
+         * Collect property names first, then remove disallowed ones.
+         * This avoids mutating the CSSStyleDeclaration while iterating its indices.
+         */
+        const props = Array.from({ length: style.length }, (_, i) => style.item(i));
+
+        for (const prop of props) {
+          if (!MarkerInlineTool.ALLOWED_STYLE_PROPS.has(prop)) {
+            style.removeProperty(prop);
+          }
+        }
+
+        return style.length > 0 ? { style: true } : {};
+      },
     } as SanitizerConfig;
   }
 
@@ -108,19 +107,14 @@ export class MarkerInlineTool implements InlineTool {
   private selection: SelectionUtils;
 
   /**
-   * Currently active color mode tab
+   * Currently active color mode, updated by the shared picker via callback
    */
   private colorMode: ColorMode = 'color';
 
   /**
-   * The picker UI element
+   * The color picker handle with element and control methods
    */
-  private pickerElement: HTMLDivElement;
-
-  /**
-   * Tab buttons for toggling mode
-   */
-  private tabButtons: { color: HTMLButtonElement; background: HTMLButtonElement };
+  private picker: ColorPickerHandle;
 
   /**
    * @param options - Inline tool constructor options with API
@@ -130,10 +124,26 @@ export class MarkerInlineTool implements InlineTool {
     this.inlineToolbar = api.inlineToolbar;
     this.selection = new SelectionUtils();
 
-    const { picker, tabs } = this.createPickerElement();
+    this.picker = createColorPicker({
+      i18n: this.i18n,
+      testIdPrefix: 'marker',
+      defaultModeIndex: 0,
+      modes: [
+        { key: 'color', labelKey: 'tools.marker.textColor', presetField: 'text' },
+        { key: 'background-color', labelKey: 'tools.marker.background', presetField: 'bg' },
+      ],
+      onColorSelect: (color, modeKey) => {
+        this.colorMode = modeKey as ColorMode;
 
-    this.pickerElement = picker;
-    this.tabButtons = tabs;
+        if (color !== null) {
+          this.applyColor(this.colorMode, color);
+        } else {
+          this.removeColor(this.colorMode);
+        }
+        this.selection.setFakeBackground();
+        this.selection.save();
+      },
+    });
   }
 
   /**
@@ -160,7 +170,7 @@ export class MarkerInlineTool implements InlineTool {
         items: [
           {
             type: PopoverItemType.Html,
-            element: this.pickerElement,
+            element: this.picker.element,
           },
         ],
         onOpen: () => {
@@ -199,10 +209,38 @@ export class MarkerInlineTool implements InlineTool {
     const existingMark = this.findContainingMark(range);
 
     if (existingMark) {
-      existingMark.style.setProperty(mode, value);
+      /**
+       * If the selection covers the entire mark content, update in-place
+       */
+      const markRange = document.createRange();
+
+      markRange.selectNodeContents(existingMark);
+
+      const coversAll =
+        range.compareBoundaryPoints(Range.START_TO_START, markRange) <= 0 &&
+        range.compareBoundaryPoints(Range.END_TO_END, markRange) >= 0;
+
+      if (coversAll) {
+        existingMark.style.setProperty(mode, value);
+        this.ensureTransparentBg(existingMark);
+
+        return;
+      }
+
+      /**
+       * Partial selection: split the mark around the selection
+       * so the new color applies only to the selected text
+       */
+      this.splitMarkAroundRange(existingMark, range, mode, value);
 
       return;
     }
+
+    /**
+     * Split any marks that extend beyond the selection boundaries
+     * so removeNestedMarkStyle only processes the portion within the range
+     */
+    this.splitMarksAtBoundaries(range);
 
     /**
      * Remove any nested marks with the same mode before wrapping
@@ -212,6 +250,7 @@ export class MarkerInlineTool implements InlineTool {
     const mark = document.createElement('mark');
 
     mark.style.setProperty(mode, value);
+    this.ensureTransparentBg(mark);
     mark.appendChild(range.extractContents());
     range.insertNode(mark);
 
@@ -239,199 +278,87 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     const range = selection.getRangeAt(0);
+
+    /**
+     * Capture range anchors before DOM mutations so we can restore the selection
+     * after marks are unwrapped (browsers may collapse selection on DOM changes)
+     */
+    const startContainer = range.startContainer;
+    const startOffset = range.startOffset;
+    const endContainer = range.endContainer;
+    const endOffset = range.endOffset;
+
+    /**
+     * Also capture the selected text and a surviving parent node so we
+     * can fall back to offset-based restoration when anchors become stale.
+     * The commonAncestorContainer may itself be the mark element being removed,
+     * so walk up to find a parent that will survive the unwrap.
+     */
+    const selectedText = range.toString();
+    const ancestor = range.commonAncestorContainer;
+    const ancestorEl = ancestor.nodeType === Node.ELEMENT_NODE
+      ? ancestor as HTMLElement
+      : ancestor.parentElement;
+    const survivingParent = ancestorEl?.closest('mark')
+      ? ancestorEl.closest('mark')?.parentElement ?? ancestorEl
+      : ancestorEl;
+
     const markAncestors = collectFormattingAncestors(range, isMarkTag);
 
     for (const mark of markAncestors) {
       mark.style.removeProperty(mode);
 
       const oppositeMode = OPPOSITE_MODE[mode];
-      const hasOtherStyle = mark.style.getPropertyValue(oppositeMode) !== '';
+      const oppositeValue = mark.style.getPropertyValue(oppositeMode);
+      const hasOtherStyle = oppositeValue !== '' && oppositeValue !== 'transparent';
 
       if (!hasOtherStyle) {
         this.unwrapElement(mark);
+      } else {
+        this.ensureTransparentBg(mark);
       }
     }
-  }
-
-  /**
-   * Create the color picker UI element with tabs, swatches, and default button
-   */
-  private createPickerElement(): {
-    picker: HTMLDivElement;
-    tabs: { color: HTMLButtonElement; background: HTMLButtonElement };
-  } {
-    const wrapper = document.createElement('div');
-
-    wrapper.setAttribute('data-blok-testid', 'marker-color-picker');
-    wrapper.className = 'flex flex-col gap-2 p-2';
 
     /**
-     * Tab row
+     * Re-establish the selection after DOM mutations.
+     * When the range was anchored to text nodes (moved, not cloned by unwrapElement),
+     * the original anchors remain valid. When the range was anchored to the mark
+     * element itself (e.g. via selectNodeContents), the node is now detached.
+     * Check connectivity before attempting restoration; fall back to text-offset
+     * restoration when anchors are stale.
      */
-    const tabRow = document.createElement('div');
+    const startConnected = startContainer.isConnected;
+    const endConnected = endContainer.isConnected;
 
-    tabRow.className = 'flex gap-0.5 mb-0.5';
+    if (startConnected && endConnected) {
+      try {
+        const restoredRange = document.createRange();
 
-    const colorTab = this.createTab(
-      'tools.marker.textColor',
-      'marker-tab-color',
-      true
-    );
-    const bgTab = this.createTab(
-      'tools.marker.background',
-      'marker-tab-background-color',
-      false
-    );
-
-    colorTab.addEventListener('click', () => {
-      this.switchMode('color');
-    });
-
-    bgTab.addEventListener('click', () => {
-      this.switchMode('background-color');
-    });
-
-    tabRow.appendChild(colorTab);
-    tabRow.appendChild(bgTab);
-
-    /**
-     * Color grid
-     */
-    const grid = document.createElement('div');
-
-    grid.setAttribute('data-blok-testid', 'marker-color-grid');
-    grid.className = 'grid grid-cols-5 gap-1.5';
-
-    for (const preset of COLOR_PRESETS) {
-      const swatch = this.createSwatch(preset);
-
-      grid.appendChild(swatch);
-    }
-
-    /**
-     * Default button
-     */
-    const defaultBtn = document.createElement('button');
-
-    defaultBtn.setAttribute('data-blok-testid', 'marker-default-btn');
-    defaultBtn.className = twMerge(
-      'w-full py-1.5 text-xs text-center rounded-md cursor-pointer',
-      'bg-transparent border-none hover:bg-item-hover-bg',
-      'mt-0.5 transition-colors'
-    );
-    defaultBtn.textContent = this.i18n.t('tools.marker.default');
-    defaultBtn.addEventListener('click', () => {
-      this.removeColor(this.colorMode);
-      this.inlineToolbar.close();
-    });
-
-    wrapper.appendChild(tabRow);
-    wrapper.appendChild(grid);
-    wrapper.appendChild(defaultBtn);
-
-    return {
-      picker: wrapper,
-      tabs: { color: colorTab, background: bgTab },
-    };
-  }
-
-  /**
-   * Create a tab button
-   * @param i18nKey - Translation key for button text
-   * @param testId - data-blok-testid value
-   * @param active - Whether this tab is initially active
-   */
-  private createTab(i18nKey: string, testId: string, active: boolean): HTMLButtonElement {
-    const btn = document.createElement('button');
-
-    btn.setAttribute('data-blok-testid', testId);
-    btn.className = twMerge(
-      TAB_BASE_CLASSES,
-      active ? 'bg-item-hover-bg font-medium' : 'bg-transparent hover:bg-item-hover-bg/50'
-    );
-    btn.textContent = this.i18n.t(i18nKey);
-
-    return btn;
-  }
-
-  /**
-   * Create a color swatch button
-   * @param preset - Color preset to render
-   */
-  private createSwatch(preset: ColorPreset): HTMLButtonElement {
-    const btn = document.createElement('button');
-
-    btn.setAttribute('data-blok-testid', `marker-swatch-${preset.name}`);
-    btn.className = twMerge(
-      'w-8 h-8 rounded-md cursor-pointer border-none',
-      'flex items-center justify-center text-sm font-semibold',
-      'transition-shadow ring-inset hover:ring-2 hover:ring-black/10'
-    );
-    btn.textContent = 'A';
-    this.updateSwatchAppearance(btn, preset);
-
-    btn.addEventListener('click', () => {
-      const value = this.colorMode === 'color' ? preset.text : preset.bg;
-
-      this.applyColor(this.colorMode, value);
-      this.inlineToolbar.close();
-    });
-
-    return btn;
-  }
-
-  /**
-   * Update swatch button appearance based on current color mode
-   * @param btn - Swatch button element
-   * @param preset - Color preset
-   */
-  private updateSwatchAppearance(btn: HTMLButtonElement, preset: ColorPreset): void {
-    if (this.colorMode === 'color') {
-      btn.style.setProperty('color', preset.text);
-      btn.style.setProperty('background-color', SWATCH_NEUTRAL_BG);
+        restoredRange.setStart(startContainer, startOffset);
+        restoredRange.setEnd(endContainer, endOffset);
+        selection.removeAllRanges();
+        selection.addRange(restoredRange);
+      } catch {
+        this.restoreSelectionByText(selection, survivingParent, selectedText);
+      }
     } else {
-      btn.style.setProperty('color', '');
-      btn.style.setProperty('background-color', preset.bg);
+      this.restoreSelectionByText(selection, survivingParent, selectedText);
     }
   }
 
   /**
-   * Switch between text color and background color modes
-   * @param mode - The color mode to switch to
-   */
-  private switchMode(mode: ColorMode): void {
-    this.colorMode = mode;
-
-    const isColorMode = mode === 'color';
-
-    this.tabButtons.color.className = twMerge(
-      TAB_BASE_CLASSES,
-      isColorMode ? 'bg-item-hover-bg font-medium' : 'bg-transparent hover:bg-item-hover-bg/50'
-    );
-
-    this.tabButtons.background.className = twMerge(
-      TAB_BASE_CLASSES,
-      isColorMode ? 'bg-transparent hover:bg-item-hover-bg/50' : 'bg-item-hover-bg font-medium'
-    );
-
-    /**
-     * Update all swatches to reflect the current mode
-     */
-    for (const preset of COLOR_PRESETS) {
-      const swatch = this.pickerElement.querySelector<HTMLButtonElement>(
-        `[data-blok-testid="marker-swatch-${preset.name}"]`
-      );
-
-      if (swatch) {
-        this.updateSwatchAppearance(swatch, preset);
-      }
-    }
-  }
-
-  /**
-   * Called when the picker popover opens — save selection for later restoration
+   * Called when the picker popover opens — save selection, reset tab state,
+   * and detect the current selection's color to highlight the active swatch.
    */
   private onPickerOpen(): void {
+    this.picker.reset();
+
+    const activeColor = this.detectSelectionColor();
+
+    if (activeColor) {
+      this.picker.setActiveColor(activeColor.value, activeColor.mode);
+    }
+
     this.selection.setFakeBackground();
     this.selection.save();
   }
@@ -447,6 +374,39 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     this.selection.clearSaved();
+  }
+
+  /**
+   * Detect the color of the current selection's mark element.
+   * Returns the first color mode found (text color preferred over background).
+   */
+  private detectSelectionColor(): { value: string; mode: string } | null {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    const mark = findMarkElement(range.startContainer);
+
+    if (!mark) {
+      return null;
+    }
+
+    const textColor = mark.style.getPropertyValue('color');
+
+    if (textColor && textColor !== 'transparent') {
+      return { value: textColor, mode: 'color' };
+    }
+
+    const bgColor = mark.style.getPropertyValue('background-color');
+
+    if (bgColor && bgColor !== 'transparent') {
+      return { value: bgColor, mode: 'background-color' };
+    }
+
+    return null;
   }
 
   /**
@@ -487,12 +447,260 @@ export class MarkerInlineTool implements InlineTool {
       mark.style.removeProperty(mode);
 
       const oppositeMode = OPPOSITE_MODE[mode];
-      const hasOtherStyle = mark.style.getPropertyValue(oppositeMode) !== '';
+      const oppositeValue = mark.style.getPropertyValue(oppositeMode);
+      const hasOtherStyle = oppositeValue !== '' && oppositeValue !== 'transparent';
 
       if (!hasOtherStyle) {
         this.unwrapElement(mark);
+      } else {
+        this.ensureTransparentBg(mark);
       }
     }
+  }
+
+  /**
+   * Split a mark element around a range so only the selected portion gets the new style.
+   * Produces up to three segments: before (original style), selected (new style), after (original style).
+   * @param mark - The existing mark element to split
+   * @param range - The selection range within the mark
+   * @param mode - The style property to set on the selected portion
+   * @param value - The CSS value for the style property
+   */
+  private splitMarkAroundRange(mark: HTMLElement, range: Range, mode: ColorMode, value: string): void {
+    const parent = mark.parentNode;
+
+    if (!parent) {
+      return;
+    }
+
+    const beforeRange = document.createRange();
+
+    beforeRange.setStart(mark, 0);
+    beforeRange.setEnd(range.startContainer, range.startOffset);
+
+    const afterRange = document.createRange();
+
+    afterRange.setStart(range.endContainer, range.endOffset);
+    afterRange.setEnd(mark, mark.childNodes.length);
+
+    const beforeContents = beforeRange.extractContents();
+    const selectedContents = range.extractContents();
+    const afterContents = afterRange.extractContents();
+
+    const newMark = document.createElement('mark');
+
+    newMark.style.cssText = mark.style.cssText;
+    newMark.style.setProperty(mode, value);
+    this.ensureTransparentBg(newMark);
+    newMark.appendChild(selectedContents);
+
+    const fragment = document.createDocumentFragment();
+
+    if (beforeContents.textContent) {
+      const beforeMark = document.createElement('mark');
+
+      beforeMark.style.cssText = mark.style.cssText;
+      this.ensureTransparentBg(beforeMark);
+      beforeMark.appendChild(beforeContents);
+      fragment.appendChild(beforeMark);
+    }
+
+    fragment.appendChild(newMark);
+
+    if (afterContents.textContent) {
+      const afterMark = document.createElement('mark');
+
+      afterMark.style.cssText = mark.style.cssText;
+      this.ensureTransparentBg(afterMark);
+      afterMark.appendChild(afterContents);
+      fragment.appendChild(afterMark);
+    }
+
+    parent.replaceChild(fragment, mark);
+
+    const selection = window.getSelection();
+
+    if (selection) {
+      selection.removeAllRanges();
+
+      const newRange = document.createRange();
+
+      newRange.selectNodeContents(newMark);
+      selection.addRange(newRange);
+    }
+  }
+
+  /**
+   * Split mark elements at range boundaries so that marks extending
+   * beyond the selection are separated into inside/outside portions.
+   * This preserves mark styling on text outside the selection range.
+   * @param range - The selection range
+   */
+  private splitMarksAtBoundaries(range: Range): void {
+    const marks = collectFormattingAncestors(range, isMarkTag);
+
+    for (const mark of marks) {
+      const markRange = document.createRange();
+
+      markRange.selectNodeContents(mark);
+
+      const rangeStartsBeforeMark = range.compareBoundaryPoints(Range.START_TO_START, markRange) <= 0;
+      const rangeEndsAfterMark = range.compareBoundaryPoints(Range.END_TO_END, markRange) >= 0;
+
+      if (rangeStartsBeforeMark && rangeEndsAfterMark) {
+        /**
+         * Range fully contains the mark — no split needed
+         */
+        continue;
+      }
+
+      if (!mark.parentNode) {
+        continue;
+      }
+
+      /**
+       * Split at the end boundary first (to avoid invalidating start offsets)
+       */
+      if (!rangeEndsAfterMark) {
+        this.extractTrailingMark(mark, range.endContainer, range.endOffset);
+      }
+
+      /**
+       * Split at the start boundary
+       */
+      if (!rangeStartsBeforeMark) {
+        this.extractLeadingMark(mark, range.startContainer, range.startOffset);
+      }
+    }
+  }
+
+  /**
+   * Extract content after a boundary point from a mark into a new sibling mark.
+   * @param mark - The mark to split
+   * @param boundaryNode - The node at the boundary
+   * @param boundaryOffset - The offset at the boundary
+   */
+  private extractTrailingMark(mark: HTMLElement, boundaryNode: Node, boundaryOffset: number): void {
+    const trailingRange = document.createRange();
+
+    trailingRange.setStart(boundaryNode, boundaryOffset);
+    trailingRange.setEnd(mark, mark.childNodes.length);
+
+    const contents = trailingRange.extractContents();
+
+    if (!contents.textContent) {
+      return;
+    }
+
+    const trailingMark = document.createElement('mark');
+
+    trailingMark.style.cssText = mark.style.cssText;
+    trailingMark.appendChild(contents);
+    mark.after(trailingMark);
+  }
+
+  /**
+   * Extract content before a boundary point from a mark into a new sibling mark.
+   * @param mark - The mark to split
+   * @param boundaryNode - The node at the boundary
+   * @param boundaryOffset - The offset at the boundary
+   */
+  private extractLeadingMark(mark: HTMLElement, boundaryNode: Node, boundaryOffset: number): void {
+    const leadingRange = document.createRange();
+
+    leadingRange.setStart(mark, 0);
+    leadingRange.setEnd(boundaryNode, boundaryOffset);
+
+    const contents = leadingRange.extractContents();
+
+    if (!contents.textContent) {
+      return;
+    }
+
+    const leadingMark = document.createElement('mark');
+
+    leadingMark.style.cssText = mark.style.cssText;
+    leadingMark.appendChild(contents);
+    mark.before(leadingMark);
+  }
+
+  /**
+   * Restore selection by finding the selected text within a surviving parent.
+   * Used as a fallback when range anchors become stale after DOM mutations.
+   * @param selection - The window selection to restore
+   * @param parent - A parent element that survived the DOM mutation
+   * @param text - The text content that was selected before mutation
+   */
+  private restoreSelectionByText(
+    selection: Selection,
+    parent: HTMLElement | null,
+    text: string
+  ): void {
+    if (!parent || text.length === 0) {
+      return;
+    }
+
+    const fullText = parent.textContent ?? '';
+    const startIdx = fullText.indexOf(text);
+
+    if (startIdx === -1) {
+      return;
+    }
+
+    const endIdx = startIdx + text.length;
+
+    /**
+     * Walk text nodes to find the nodes and offsets corresponding
+     * to the character positions in the parent's textContent
+     */
+    const { startNode, startNodeOffset, endNode, endNodeOffset } = this.findTextBoundaries(parent, startIdx, endIdx);
+
+    if (startNode && endNode) {
+      const restoredRange = document.createRange();
+
+      restoredRange.setStart(startNode, startNodeOffset);
+      restoredRange.setEnd(endNode, endNodeOffset);
+      selection.removeAllRanges();
+      selection.addRange(restoredRange);
+    }
+  }
+
+  /**
+   * Walk text nodes within a parent to find the nodes and offsets
+   * corresponding to character positions in the parent's textContent.
+   * @param parent - The parent element to walk
+   * @param startIdx - The start character index
+   * @param endIdx - The end character index
+   * @returns An object with the start/end nodes and their offsets
+   */
+  private findTextBoundaries(
+    parent: HTMLElement,
+    startIdx: number,
+    endIdx: number
+  ): { startNode: Text | null; startNodeOffset: number; endNode: Text | null; endNodeOffset: number } {
+    const walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
+    const result = { startNode: null as Text | null, startNodeOffset: 0, endNode: null as Text | null, endNodeOffset: 0 };
+    const charCounter = { value: 0 };
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const nodeLength = node.textContent?.length ?? 0;
+
+      if (result.startNode === null && charCounter.value + nodeLength > startIdx) {
+        result.startNode = node;
+        result.startNodeOffset = startIdx - charCounter.value;
+      }
+
+      if (charCounter.value + nodeLength >= endIdx) {
+        result.endNode = node;
+        result.endNodeOffset = endIdx - charCounter.value;
+        break;
+      }
+
+      charCounter.value += nodeLength;
+    }
+
+    return result;
   }
 
   /**
@@ -511,5 +719,19 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     parent.removeChild(element);
+  }
+
+  /**
+   * Ensure a mark with text color has an explicit transparent background
+   * to override the browser's default yellow <mark> background.
+   * @param mark - The mark element to check
+   */
+  private ensureTransparentBg(mark: HTMLElement): void {
+    if (
+      mark.style.getPropertyValue('color') &&
+      !mark.style.getPropertyValue('background-color')
+    ) {
+      mark.style.setProperty('background-color', 'transparent');
+    }
   }
 }

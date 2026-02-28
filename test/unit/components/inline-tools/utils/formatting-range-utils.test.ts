@@ -114,6 +114,51 @@ describe('formatting-range-utils', () => {
 
       expect(result).toBe(strong);
     });
+
+    it('stops traversal at boundary and does not find matching ancestor above it (bug #11)', () => {
+      // Structure: <mark><div class="boundary"><span>text</span></div></mark>
+      // With the boundary set to the div, findFormattingAncestor should NOT
+      // find the <mark> above it.
+      const container = document.createElement('div');
+      container.innerHTML = '<mark><div id="boundary"><span>text</span></div></mark>';
+      document.body.appendChild(container);
+
+      const boundary = container.querySelector('#boundary');
+      const span = container.querySelector('span');
+
+      if (!boundary || !span?.firstChild) {
+        throw new Error('Test setup failed: elements not found');
+      }
+
+      const isMark = (el: Element) => el.tagName === 'MARK';
+
+      const result = findFormattingAncestor(span.firstChild, isMark, boundary);
+
+      expect(result).toBeNull();
+    });
+
+    it('still finds matching ancestor below boundary when boundary is provided (bug #11)', () => {
+      // Structure: <div id="boundary"><mark><span>text</span></mark></div>
+      // With the boundary set to the outer div, findFormattingAncestor should
+      // find the <mark> that is BELOW the boundary.
+      const container = document.createElement('div');
+      container.innerHTML = '<div id="boundary"><mark><span>text</span></mark></div>';
+      document.body.appendChild(container);
+
+      const boundary = container.querySelector('#boundary');
+      const span = container.querySelector('span');
+
+      if (!boundary || !span?.firstChild) {
+        throw new Error('Test setup failed: elements not found');
+      }
+
+      const isMark = (el: Element) => el.tagName === 'MARK';
+
+      const result = findFormattingAncestor(span.firstChild, isMark, boundary);
+
+      expect(result).not.toBeNull();
+      expect(result?.tagName).toBe('MARK');
+    });
   });
 
   describe('hasFormattingAncestor', () => {

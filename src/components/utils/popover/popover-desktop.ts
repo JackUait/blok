@@ -465,6 +465,17 @@ export class PopoverDesktop extends PopoverAbstract {
     // Apply nested popover positioning (moved from popover.css)
     this.applyNestedPopoverPositioning(nestedPopoverEl);
 
+    /**
+     * Refresh trigger item's active state after any click inside the nested popover.
+     * This handles the case where a child action (e.g. color swatch click) changes
+     * the trigger tool's active state but the parent popover is not aware of it.
+     */
+    this.listeners.on(nestedPopoverEl, 'click', () => {
+      if (this.nestedPopoverTriggerItem !== null) {
+        this.refreshItemActiveState(this.nestedPopoverTriggerItem);
+      }
+    });
+
     this.nestedPopover.show();
     this.flipper?.deactivate();
 
@@ -493,8 +504,8 @@ export class PopoverDesktop extends PopoverAbstract {
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
-    // Get parent width - use computed width if --width is 'auto'
-    const parentWidth = this.params.width === 'auto'
+    // Get parent width - use computed width if --width resolves to 'auto'
+    const parentWidth = this.params.width === undefined || this.params.width === 'auto'
       ? `${this.nodes.popoverContainer.offsetWidth}px`
       : 'var(--width)';
 

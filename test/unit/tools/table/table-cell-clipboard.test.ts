@@ -761,5 +761,101 @@ describe('table-cell-clipboard', () => {
 
       expect(markCount).toBe(1);
     });
+
+    // -------------------------------------------------------------------------
+    // Bug #7: parseGenericHtmlTable ignores <td> text color
+    // -------------------------------------------------------------------------
+
+    it('should extract cell text color from td style as cell textColor', () => {
+      const html = '<table><tr><td style="color: rgb(255, 0, 0)">red text cell</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.cells[0][0].textColor).toBe('#d44c47');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('red text cell');
+    });
+
+    it('should extract both color and background-color from td style', () => {
+      const html = '<table><tr><td style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">red on yellow</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.cells[0][0].textColor).toBe('#d44c47');
+      expect(result?.cells[0][0].color).toBe('#fbf3db');
+    });
+
+    it('should not set textColor when td has no color style', () => {
+      const html = '<table><tr><td>plain cell</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBeUndefined();
+    });
+
+    it('should extract text color from th style as cell textColor', () => {
+      const html = '<table><tr><th style="color: rgb(0, 0, 255)">blue header</th></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBe('#337ea9');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Bug #13: buildClipboardHtml omits colors from <td> elements
+  // ---------------------------------------------------------------------------
+  describe('buildClipboardHtml — cell color styles', () => {
+    it('should include background-color style on td when cell has color', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'colored' } }], color: '#fbecdd' }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<td style="');
+      expect(html).toContain('background-color: #fbecdd');
+    });
+
+    it('should include color style on td when cell has textColor', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'colored' } }], textColor: '#d44c47' }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<td style="');
+      expect(html).toContain('color: #d44c47');
+    });
+
+    it('should include both color and background-color on td when both are present', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'paragraph', data: { text: 'both' } }],
+          color: '#fbf3db',
+          textColor: '#d44c47',
+        }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('background-color: #fbf3db');
+      expect(html).toContain('color: #d44c47');
+    });
+
+    it('should not add style attribute on td when cell has no colors', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'plain' } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<td>plain</td>');
+    });
   });
 });

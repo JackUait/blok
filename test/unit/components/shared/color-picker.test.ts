@@ -23,8 +23,8 @@ const createOptions = (overrides: Partial<ColorPickerOptions> = {}): ColorPicker
 
 describe('createColorPicker', () => {
   it('renders two tab buttons', () => {
-    const picker = createColorPicker(createOptions());
-    const tabs = picker.querySelectorAll('[data-blok-testid^="test-tab-"]');
+    const { element } = createColorPicker(createOptions());
+    const tabs = element.querySelectorAll('[data-blok-testid^="test-tab-"]');
 
     expect(tabs).toHaveLength(2);
     expect(tabs[0].getAttribute('data-blok-testid')).toBe('test-tab-text');
@@ -32,44 +32,44 @@ describe('createColorPicker', () => {
   });
 
   it('renders all color swatches', () => {
-    const picker = createColorPicker(createOptions());
-    const swatches = picker.querySelectorAll('[data-blok-testid^="test-swatch-"]');
+    const { element } = createColorPicker(createOptions());
+    const swatches = element.querySelectorAll('[data-blok-testid^="test-swatch-"]');
 
     expect(swatches).toHaveLength(COLOR_PRESETS.length);
   });
 
   it('renders a default button', () => {
-    const picker = createColorPicker(createOptions());
-    const defaultBtn = picker.querySelector('[data-blok-testid="test-default-btn"]');
+    const { element } = createColorPicker(createOptions());
+    const defaultBtn = element.querySelector('[data-blok-testid="test-default-btn"]');
 
     expect(defaultBtn).not.toBeNull();
   });
 
   it('first mode is active by default (defaultModeIndex=0)', () => {
-    const picker = createColorPicker(createOptions());
-    const firstTab = picker.querySelector('[data-blok-testid="test-tab-text"]');
-    const secondTab = picker.querySelector('[data-blok-testid="test-tab-bg"]');
+    const { element } = createColorPicker(createOptions());
+    const firstTab = element.querySelector('[data-blok-testid="test-tab-text"]');
+    const secondTab = element.querySelector('[data-blok-testid="test-tab-bg"]');
 
     expect(firstTab?.className).toContain('font-medium');
     expect(secondTab?.className).not.toContain('font-medium');
   });
 
   it('respects defaultModeIndex=1', () => {
-    const picker = createColorPicker(createOptions({ defaultModeIndex: 1 }));
-    const firstTab = picker.querySelector('[data-blok-testid="test-tab-text"]');
-    const secondTab = picker.querySelector('[data-blok-testid="test-tab-bg"]');
+    const { element } = createColorPicker(createOptions({ defaultModeIndex: 1 }));
+    const firstTab = element.querySelector('[data-blok-testid="test-tab-text"]');
+    const secondTab = element.querySelector('[data-blok-testid="test-tab-bg"]');
 
     expect(firstTab?.className).not.toContain('font-medium');
     expect(secondTab?.className).toContain('font-medium');
   });
 
   it('switching tabs updates active state', () => {
-    const picker = createColorPicker(createOptions());
-    const secondTab = picker.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
+    const { element } = createColorPicker(createOptions());
+    const secondTab = element.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
 
     secondTab?.click();
 
-    const firstTab = picker.querySelector('[data-blok-testid="test-tab-text"]');
+    const firstTab = element.querySelector('[data-blok-testid="test-tab-text"]');
 
     expect(firstTab?.className).not.toContain('font-medium');
     expect(secondTab?.className).toContain('font-medium');
@@ -77,9 +77,9 @@ describe('createColorPicker', () => {
 
   it('swatch click calls onColorSelect with color and mode key', () => {
     const onColorSelect = vi.fn();
-    const picker = createColorPicker(createOptions({ onColorSelect }));
+    const { element } = createColorPicker(createOptions({ onColorSelect }));
 
-    const swatch = picker.querySelector<HTMLElement>(
+    const swatch = element.querySelector<HTMLElement>(
       `[data-blok-testid="test-swatch-${COLOR_PRESETS[0].name}"]`
     );
 
@@ -90,13 +90,13 @@ describe('createColorPicker', () => {
 
   it('swatch click in second mode calls onColorSelect with bg color', () => {
     const onColorSelect = vi.fn();
-    const picker = createColorPicker(createOptions({ onColorSelect }));
+    const { element } = createColorPicker(createOptions({ onColorSelect }));
 
-    const bgTab = picker.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
+    const bgTab = element.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
 
     bgTab?.click();
 
-    const swatch = picker.querySelector<HTMLElement>(
+    const swatch = element.querySelector<HTMLElement>(
       `[data-blok-testid="test-swatch-${COLOR_PRESETS[0].name}"]`
     );
 
@@ -107,9 +107,9 @@ describe('createColorPicker', () => {
 
   it('default button calls onColorSelect with null and current mode key', () => {
     const onColorSelect = vi.fn();
-    const picker = createColorPicker(createOptions({ onColorSelect }));
+    const { element } = createColorPicker(createOptions({ onColorSelect }));
 
-    const defaultBtn = picker.querySelector<HTMLElement>('[data-blok-testid="test-default-btn"]');
+    const defaultBtn = element.querySelector<HTMLElement>('[data-blok-testid="test-default-btn"]');
 
     defaultBtn?.click();
 
@@ -117,19 +117,19 @@ describe('createColorPicker', () => {
   });
 
   it('all swatches display "A" text in both modes', () => {
-    const picker = createColorPicker(createOptions());
+    const { element } = createColorPicker(createOptions());
 
-    const bgSwatches = Array.from(picker.querySelectorAll('[data-blok-testid^="test-swatch-"]'));
+    const bgSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-"]'));
 
     for (const swatch of bgSwatches) {
       expect(swatch.textContent).toBe('A');
     }
 
-    const bgTab = picker.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
+    const bgTab = element.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
 
     bgTab?.click();
 
-    const textSwatches = Array.from(picker.querySelectorAll('[data-blok-testid^="test-swatch-"]'));
+    const textSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-"]'));
 
     for (const swatch of textSwatches) {
       expect(swatch.textContent).toBe('A');
@@ -137,8 +137,8 @@ describe('createColorPicker', () => {
   });
 
   it('text-mode swatches have a neutral background', () => {
-    const picker = createColorPicker(createOptions());
-    const swatch = picker.querySelector<HTMLElement>(
+    const { element } = createColorPicker(createOptions());
+    const swatch = element.querySelector<HTMLElement>(
       `[data-blok-testid="test-swatch-${COLOR_PRESETS[0].name}"]`
     );
 
@@ -147,8 +147,8 @@ describe('createColorPicker', () => {
   });
 
   it('bg-mode swatches show preset background color', () => {
-    const picker = createColorPicker(createOptions({ defaultModeIndex: 1 }));
-    const swatch = picker.querySelector<HTMLElement>(
+    const { element } = createColorPicker(createOptions({ defaultModeIndex: 1 }));
+    const swatch = element.querySelector<HTMLElement>(
       `[data-blok-testid="test-swatch-${COLOR_PRESETS[0].name}"]`
     );
 
@@ -157,9 +157,9 @@ describe('createColorPicker', () => {
 
   it('teal swatch click calls onColorSelect with teal text color', () => {
     const onColorSelect = vi.fn();
-    const picker = createColorPicker(createOptions({ onColorSelect }));
+    const { element } = createColorPicker(createOptions({ onColorSelect }));
 
-    const swatch = picker.querySelector<HTMLElement>(
+    const swatch = element.querySelector<HTMLElement>(
       '[data-blok-testid="test-swatch-teal"]'
     );
 
@@ -171,13 +171,13 @@ describe('createColorPicker', () => {
 
   it('teal swatch click in bg mode calls onColorSelect with teal bg color', () => {
     const onColorSelect = vi.fn();
-    const picker = createColorPicker(createOptions({ onColorSelect }));
+    const { element } = createColorPicker(createOptions({ onColorSelect }));
 
-    const bgTab = picker.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
+    const bgTab = element.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
 
     bgTab?.click();
 
-    const swatch = picker.querySelector<HTMLElement>(
+    const swatch = element.querySelector<HTMLElement>(
       '[data-blok-testid="test-swatch-teal"]'
     );
 
@@ -187,13 +187,84 @@ describe('createColorPicker', () => {
     expect(onColorSelect).toHaveBeenCalledWith('#e4f5f3', 'bg');
   });
 
-  it('uses testIdPrefix for all test IDs', () => {
-    const picker = createColorPicker(createOptions({ testIdPrefix: 'custom' }));
+  describe('active color indicator (bug #4)', () => {
+    it('returns an object with setActiveColor method', () => {
+      const handle = createColorPicker(createOptions());
 
-    expect(picker.getAttribute('data-blok-testid')).toBe('custom-picker');
-    expect(picker.querySelector('[data-blok-testid="custom-tab-text"]')).not.toBeNull();
-    expect(picker.querySelector('[data-blok-testid="custom-grid"]')).not.toBeNull();
-    expect(picker.querySelector('[data-blok-testid="custom-default-btn"]')).not.toBeNull();
-    expect(picker.querySelector(`[data-blok-testid="custom-swatch-${COLOR_PRESETS[0].name}"]`)).not.toBeNull();
+      expect(handle).toHaveProperty('setActiveColor');
+      expect(typeof handle.setActiveColor).toBe('function');
+    });
+
+    it('highlights the matching swatch with a ring when setActiveColor is called', () => {
+      const { element, setActiveColor } = createColorPicker(createOptions());
+
+      setActiveColor(COLOR_PRESETS[0].text, 'text');
+
+      const activeSwatch = element.querySelector<HTMLElement>(
+        `[data-blok-testid="test-swatch-${COLOR_PRESETS[0].name}"]`
+      );
+
+      expect(activeSwatch?.className).toContain('ring-black/30');
+    });
+
+    it('does not highlight non-matching swatches', () => {
+      const { element, setActiveColor } = createColorPicker(createOptions());
+
+      setActiveColor(COLOR_PRESETS[0].text, 'text');
+
+      const inactiveSwatch = element.querySelector<HTMLElement>(
+        `[data-blok-testid="test-swatch-${COLOR_PRESETS[1].name}"]`
+      );
+
+      expect(inactiveSwatch?.className).not.toContain('ring-black/30');
+    });
+
+    it('clears active indicator when setActiveColor is called with null', () => {
+      const { element, setActiveColor } = createColorPicker(createOptions());
+
+      setActiveColor(COLOR_PRESETS[0].text, 'text');
+      setActiveColor(null, 'text');
+
+      const swatch = element.querySelector<HTMLElement>(
+        `[data-blok-testid="test-swatch-${COLOR_PRESETS[0].name}"]`
+      );
+
+      expect(swatch?.className).not.toContain('ring-black/30');
+    });
+  });
+
+  describe('tab state reset on reopen (bug #11)', () => {
+    it('returns an object with a reset method', () => {
+      const handle = createColorPicker(createOptions());
+
+      expect(handle).toHaveProperty('reset');
+      expect(typeof handle.reset).toBe('function');
+    });
+
+    it('resets tab to defaultModeIndex when reset is called after switching tabs', () => {
+      const { element, reset } = createColorPicker(createOptions());
+
+      const bgTab = element.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
+
+      bgTab?.click();
+      expect(bgTab?.className).toContain('font-medium');
+
+      reset();
+
+      const textTab = element.querySelector('[data-blok-testid="test-tab-text"]');
+
+      expect(textTab?.className).toContain('font-medium');
+      expect(bgTab?.className).not.toContain('font-medium');
+    });
+  });
+
+  it('uses testIdPrefix for all test IDs', () => {
+    const { element } = createColorPicker(createOptions({ testIdPrefix: 'custom' }));
+
+    expect(element.getAttribute('data-blok-testid')).toBe('custom-picker');
+    expect(element.querySelector('[data-blok-testid="custom-tab-text"]')).not.toBeNull();
+    expect(element.querySelector('[data-blok-testid="custom-grid"]')).not.toBeNull();
+    expect(element.querySelector('[data-blok-testid="custom-default-btn"]')).not.toBeNull();
+    expect(element.querySelector(`[data-blok-testid="custom-swatch-${COLOR_PRESETS[0].name}"]`)).not.toBeNull();
   });
 });

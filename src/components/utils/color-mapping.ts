@@ -1,16 +1,86 @@
 import { COLOR_PRESETS } from '../shared/color-presets';
 
 /**
- * Parse a CSS color string (hex or rgb()) to an [R, G, B] tuple.
+ * Convert an HSL color (H in degrees, S and L as 0-100 percentages) to an RGB tuple.
+ */
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const sNorm = s / 100;
+  const lNorm = l / 100;
+
+  if (sNorm === 0) {
+    const gray = Math.round(lNorm * 255);
+
+    return [gray, gray, gray];
+  }
+
+  const wrapHue = (t: number): number => {
+    if (t < 0) {
+      return t + 1;
+    }
+
+    if (t > 1) {
+      return t - 1;
+    }
+
+    return t;
+  };
+
+  const hueToChannel = (p: number, q: number, t: number): number => {
+    const wrapped = wrapHue(t);
+
+    if (wrapped < 1 / 6) {
+      return p + (q - p) * 6 * wrapped;
+    }
+
+    if (wrapped < 1 / 2) {
+      return q;
+    }
+
+    if (wrapped < 2 / 3) {
+      return p + (q - p) * (2 / 3 - wrapped) * 6;
+    }
+
+    return p;
+  };
+
+  const q = lNorm < 0.5 ? lNorm * (1 + sNorm) : lNorm + sNorm - lNorm * sNorm;
+  const p = 2 * lNorm - q;
+  const hNorm = h / 360;
+
+  return [
+    Math.round(hueToChannel(p, q, hNorm + 1 / 3) * 255),
+    Math.round(hueToChannel(p, q, hNorm) * 255),
+    Math.round(hueToChannel(p, q, hNorm - 1 / 3) * 255),
+  ];
+}
+
+/**
+ * Parse a CSS color string to an [R, G, B] tuple.
+ *
+ * Supported formats:
+ * - `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`
+ * - `rgb(r, g, b)`, `rgba(r, g, b, a)`
+ * - `hsl(h, s%, l%)`, `hsla(h, s%, l%, a)`
+ *
+ * Alpha values are ignored since only RGB is needed for distance calculation.
  * Returns null if the string cannot be parsed.
  */
 export function parseColor(cssColor: string): [number, number, number] | null {
+  /* 6-digit hex: #rrggbb */
   const hex6 = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(cssColor);
 
   if (hex6) {
     return [parseInt(hex6[1], 16), parseInt(hex6[2], 16), parseInt(hex6[3], 16)];
   }
 
+  /* 8-digit hex: #rrggbbaa (alpha ignored) */
+  const hex8 = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})[0-9a-f]{2}$/i.exec(cssColor);
+
+  if (hex8) {
+    return [parseInt(hex8[1], 16), parseInt(hex8[2], 16), parseInt(hex8[3], 16)];
+  }
+
+  /* 3-digit hex: #rgb */
   const hex3 = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(cssColor);
 
   if (hex3) {
@@ -21,10 +91,29 @@ export function parseColor(cssColor: string): [number, number, number] | null {
     ];
   }
 
-  const rgb = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(cssColor);
+  /* 4-digit hex: #rgba (alpha ignored) */
+  const hex4 = /^#([0-9a-f])([0-9a-f])([0-9a-f])[0-9a-f]$/i.exec(cssColor);
 
-  if (rgb) {
-    return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  if (hex4) {
+    return [
+      parseInt(hex4[1] + hex4[1], 16),
+      parseInt(hex4[2] + hex4[2], 16),
+      parseInt(hex4[3] + hex4[3], 16),
+    ];
+  }
+
+  /* rgb() and rgba() — alpha component is optional and ignored */
+  const rgba = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+\s*)?\)$/i.exec(cssColor);
+
+  if (rgba) {
+    return [Number(rgba[1]), Number(rgba[2]), Number(rgba[3])];
+  }
+
+  /* hsl() and hsla() — alpha component is optional and ignored */
+  const hsla = /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*[\d.]+\s*)?\)$/i.exec(cssColor);
+
+  if (hsla) {
+    return hslToRgb(Number(hsla[1]), Number(hsla[2]), Number(hsla[3]));
   }
 
   return null;

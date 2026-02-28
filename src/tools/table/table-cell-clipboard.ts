@@ -100,7 +100,14 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
         .map((cell) => {
           const text = cell.blocks.map(extractBlockText).join(' ');
 
-          return `<td>${text}</td>`;
+          const styles = [
+            cell.color ? `background-color: ${cell.color}` : '',
+            cell.textColor ? `color: ${cell.textColor}` : '',
+          ].filter(Boolean).join('; ');
+
+          const styleAttr = styles ? ` style="${styles}"` : '';
+
+          return `<td${styleAttr}>${text}</td>`;
         })
         .join('');
 
@@ -318,12 +325,18 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
 
       const cell: CellPayload = { blocks };
 
-      // Extract cell-level background color from td/th style attribute
+      // Extract cell-level colors from td/th style attribute
       const tdStyle = td.getAttribute('style') ?? '';
       const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
 
       if (cellBgMatch?.[1]) {
         cell.color = mapToNearestPresetColor(cellBgMatch[1].trim(), 'bg');
+      }
+
+      const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+      if (cellTextColorMatch?.[1]) {
+        cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
       }
 
       rowCells.push(cell);

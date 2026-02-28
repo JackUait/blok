@@ -26,6 +26,62 @@ describe('parseColor', () => {
     expect(parseColor('')).toBeNull();
   });
 
+  it('parses rgba() ignoring alpha', () => {
+    expect(parseColor('rgba(255, 0, 0, 0.5)')).toEqual([255, 0, 0]);
+  });
+
+  it('parses rgba() without spaces', () => {
+    expect(parseColor('rgba(128,64,32,0.8)')).toEqual([128, 64, 32]);
+  });
+
+  it('parses rgba() with alpha 1', () => {
+    expect(parseColor('rgba(0, 128, 255, 1)')).toEqual([0, 128, 255]);
+  });
+
+  it('parses hsl() converting to RGB', () => {
+    expect(parseColor('hsl(0, 100%, 50%)')).toEqual([255, 0, 0]);
+  });
+
+  it('parses hsl() for green', () => {
+    expect(parseColor('hsl(120, 100%, 50%)')).toEqual([0, 255, 0]);
+  });
+
+  it('parses hsl() for blue', () => {
+    expect(parseColor('hsl(240, 100%, 50%)')).toEqual([0, 0, 255]);
+  });
+
+  it('parses hsl() for achromatic white', () => {
+    expect(parseColor('hsl(0, 0%, 100%)')).toEqual([255, 255, 255]);
+  });
+
+  it('parses hsl() for achromatic black', () => {
+    expect(parseColor('hsl(0, 0%, 0%)')).toEqual([0, 0, 0]);
+  });
+
+  it('parses hsla() ignoring alpha', () => {
+    expect(parseColor('hsla(0, 100%, 50%, 0.8)')).toEqual([255, 0, 0]);
+  });
+
+  it('parses hsla() for cyan', () => {
+    expect(parseColor('hsla(180, 100%, 50%, 0.5)')).toEqual([0, 255, 255]);
+  });
+
+  it('parses 8-digit hex ignoring alpha', () => {
+    expect(parseColor('#ff000080')).toEqual([255, 0, 0]);
+  });
+
+  it('parses 8-digit hex with full alpha', () => {
+    expect(parseColor('#00ff00ff')).toEqual([0, 255, 0]);
+  });
+
+  it('parses 4-digit hex ignoring alpha', () => {
+    expect(parseColor('#f008')).toEqual([255, 0, 0]);
+  });
+
+  it('parses 4-digit hex for green with alpha', () => {
+    expect(parseColor('#0f0f')).toEqual([0, 255, 0]);
+  });
+
   it('parses uppercase hex', () => {
     expect(parseColor('#FF0000')).toEqual([255, 0, 0]);
   });
@@ -116,5 +172,25 @@ describe('mapToNearestPresetColor', () => {
 
   it('maps Google Docs light yellow bg (#fff2cc) to Blok yellow bg', () => {
     expect(mapToNearestPresetColor('#fff2cc', 'bg')).toBe('#fbf3db');
+  });
+
+  it('maps rgba red to Blok red text preset', () => {
+    expect(mapToNearestPresetColor('rgba(255, 0, 0, 0.5)', 'text')).toBe('#d44c47');
+  });
+
+  it('maps hsla red to Blok red text preset', () => {
+    expect(mapToNearestPresetColor('hsla(0, 100%, 50%, 0.8)', 'text')).toBe('#d44c47');
+  });
+
+  it('maps hsl red to Blok red text preset', () => {
+    expect(mapToNearestPresetColor('hsl(0, 100%, 50%)', 'text')).toBe('#d44c47');
+  });
+
+  it('maps 8-digit hex red to Blok red bg preset', () => {
+    expect(mapToNearestPresetColor('#ff000080', 'bg')).toBe('#fdebec');
+  });
+
+  it('maps 4-digit hex red to Blok red bg preset', () => {
+    expect(mapToNearestPresetColor('#f008', 'bg')).toBe('#fdebec');
   });
 });

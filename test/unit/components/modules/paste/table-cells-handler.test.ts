@@ -199,5 +199,112 @@ describe('TableCellsHandler', () => {
 
       expect(callArgs.replace).toBe(false);
     });
+
+    // -------------------------------------------------------------------------
+    // Bug #8: TableCellsHandler drops colors when pasting outside table
+    // -------------------------------------------------------------------------
+
+    it('should preserve cell color in content when pasting colored cells', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Red BG' } }], color: '#fdebec' },
+            { blocks: [{ tool: 'paragraph', data: { text: 'Plain' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const cell0 = callArgs.data.content[0][0];
+
+      expect(typeof cell0).toBe('object');
+      expect((cell0 as { color?: string }).color).toBe('#fdebec');
+    });
+
+    it('should preserve cell textColor in content when pasting colored cells', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Red text' } }], textColor: '#d44c47' },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const cell0 = callArgs.data.content[0][0];
+
+      expect(typeof cell0).toBe('object');
+      expect((cell0 as { textColor?: string }).textColor).toBe('#d44c47');
+    });
+
+    it('should preserve both color and textColor in content when pasting cells with both', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            {
+              blocks: [{ tool: 'paragraph', data: { text: 'Both' } }],
+              color: '#fbf3db',
+              textColor: '#d44c47',
+            },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const cell0 = callArgs.data.content[0][0];
+
+      expect(typeof cell0).toBe('object');
+      expect((cell0 as { color?: string; textColor?: string }).color).toBe('#fbf3db');
+      expect((cell0 as { color?: string; textColor?: string }).textColor).toBe('#d44c47');
+    });
+
+    it('should use plain string for cells without color properties', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Plain' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      expect(callArgs.data.content[0][0]).toBe('Plain');
+    });
   });
 });

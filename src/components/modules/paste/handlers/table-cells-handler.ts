@@ -1,5 +1,6 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { parseClipboardHtml } from '../../../../tools/table/table-cell-clipboard';
+import type { CellContent, LegacyCellContent } from '../../../../tools/table/types';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext } from '../types';
@@ -50,17 +51,36 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
     const { BlockManager, Caret } = this.Blok;
 
     // Build table content from the clipboard payload.
-    // Store cell text as string content — the Table tool will create proper
-    // blocks during its rendered() lifecycle when it migrates string cells to block cells.
-    const content = payload.cells.map(row =>
+    // When a cell has color or textColor, use a CellContent object to preserve
+    // the colors — the Table tool will create paragraph blocks during its
+    // rendered() lifecycle. For cells without colors, store plain text strings
+    // which the Table tool migrates to blocks normally.
+    const content: LegacyCellContent[][] = payload.cells.map(row =>
       row.map(cell => {
-        if (cell.blocks.length === 0) {
-          return '';
+        const text = cell.blocks.length === 0
+          ? ''
+          : cell.blocks
+            .map(b => (typeof b.data.text === 'string' ? b.data.text : ''))
+            .join(' ');
+
+        const hasColor = cell.color !== undefined;
+        const hasTextColor = cell.textColor !== undefined;
+
+        if (!hasColor && !hasTextColor) {
+          return text;
         }
 
-        return cell.blocks
-          .map(b => (typeof b.data.text === 'string' ? b.data.text : ''))
-          .join(' ');
+        const cellContent: CellContent = { blocks: [] };
+
+        if (hasColor) {
+          cellContent.color = cell.color;
+        }
+
+        if (hasTextColor) {
+          cellContent.textColor = cell.textColor;
+        }
+
+        return cellContent;
       }),
     );
 

@@ -14,6 +14,7 @@ import {
   collectFormattingAncestors,
 } from './utils/formatting-range-utils';
 import { createColorPicker } from '../shared/color-picker';
+import type { ColorPickerHandle } from '../shared/color-picker';
 
 /**
  * Color mode type — either text color or background color
@@ -111,9 +112,9 @@ export class MarkerInlineTool implements InlineTool {
   private colorMode: ColorMode = 'color';
 
   /**
-   * The picker UI element
+   * The color picker handle with element and control methods
    */
-  private pickerElement: HTMLDivElement;
+  private picker: ColorPickerHandle;
 
   /**
    * @param options - Inline tool constructor options with API
@@ -123,7 +124,7 @@ export class MarkerInlineTool implements InlineTool {
     this.inlineToolbar = api.inlineToolbar;
     this.selection = new SelectionUtils();
 
-    this.pickerElement = createColorPicker({
+    this.picker = createColorPicker({
       i18n: this.i18n,
       testIdPrefix: 'marker',
       defaultModeIndex: 0,
@@ -169,7 +170,7 @@ export class MarkerInlineTool implements InlineTool {
         items: [
           {
             type: PopoverItemType.Html,
-            element: this.pickerElement,
+            element: this.picker.element,
           },
         ],
         onOpen: () => {
@@ -234,6 +235,12 @@ export class MarkerInlineTool implements InlineTool {
 
       return;
     }
+
+    /**
+     * Split any marks that extend beyond the selection boundaries
+     * so removeNestedMarkStyle only processes the portion within the range
+     */
+    this.splitMarksAtBoundaries(range);
 
     /**
      * Remove any nested marks with the same mode before wrapping
@@ -318,9 +325,18 @@ export class MarkerInlineTool implements InlineTool {
   }
 
   /**
-   * Called when the picker popover opens — save selection for later restoration
+   * Called when the picker popover opens — save selection, reset tab state,
+   * and detect the current selection's color to highlight the active swatch.
    */
   private onPickerOpen(): void {
+    this.picker.reset();
+
+    const activeColor = this.detectSelectionColor();
+
+    if (activeColor) {
+      this.picker.setActiveColor(activeColor.value, activeColor.mode);
+    }
+
     this.selection.setFakeBackground();
     this.selection.save();
   }
@@ -336,6 +352,39 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     this.selection.clearSaved();
+  }
+
+  /**
+   * Detect the color of the current selection's mark element.
+   * Returns the first color mode found (text color preferred over background).
+   */
+  private detectSelectionColor(): { value: string; mode: string } | null {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    const mark = findMarkElement(range.startContainer);
+
+    if (!mark) {
+      return null;
+    }
+
+    const textColor = mark.style.getPropertyValue('color');
+
+    if (textColor && textColor !== 'transparent') {
+      return { value: textColor, mode: 'color' };
+    }
+
+    const bgColor = mark.style.getPropertyValue('background-color');
+
+    if (bgColor && bgColor !== 'transparent') {
+      return { value: bgColor, mode: 'background-color' };
+    }
+
+    return null;
   }
 
   /**
@@ -457,6 +506,100 @@ export class MarkerInlineTool implements InlineTool {
       newRange.selectNodeContents(newMark);
       selection.addRange(newRange);
     }
+  }
+
+  /**
+   * Split mark elements at range boundaries so that marks extending
+   * beyond the selection are separated into inside/outside portions.
+   * This preserves mark styling on text outside the selection range.
+   * @param range - The selection range
+   */
+  private splitMarksAtBoundaries(range: Range): void {
+    const marks = collectFormattingAncestors(range, isMarkTag);
+
+    for (const mark of marks) {
+      const markRange = document.createRange();
+
+      markRange.selectNodeContents(mark);
+
+      const rangeStartsBeforeMark = range.compareBoundaryPoints(Range.START_TO_START, markRange) <= 0;
+      const rangeEndsAfterMark = range.compareBoundaryPoints(Range.END_TO_END, markRange) >= 0;
+
+      if (rangeStartsBeforeMark && rangeEndsAfterMark) {
+        /**
+         * Range fully contains the mark — no split needed
+         */
+        continue;
+      }
+
+      if (!mark.parentNode) {
+        continue;
+      }
+
+      /**
+       * Split at the end boundary first (to avoid invalidating start offsets)
+       */
+      if (!rangeEndsAfterMark) {
+        this.extractTrailingMark(mark, range.endContainer, range.endOffset);
+      }
+
+      /**
+       * Split at the start boundary
+       */
+      if (!rangeStartsBeforeMark) {
+        this.extractLeadingMark(mark, range.startContainer, range.startOffset);
+      }
+    }
+  }
+
+  /**
+   * Extract content after a boundary point from a mark into a new sibling mark.
+   * @param mark - The mark to split
+   * @param boundaryNode - The node at the boundary
+   * @param boundaryOffset - The offset at the boundary
+   */
+  private extractTrailingMark(mark: HTMLElement, boundaryNode: Node, boundaryOffset: number): void {
+    const trailingRange = document.createRange();
+
+    trailingRange.setStart(boundaryNode, boundaryOffset);
+    trailingRange.setEnd(mark, mark.childNodes.length);
+
+    const contents = trailingRange.extractContents();
+
+    if (!contents.textContent) {
+      return;
+    }
+
+    const trailingMark = document.createElement('mark');
+
+    trailingMark.style.cssText = mark.style.cssText;
+    trailingMark.appendChild(contents);
+    mark.after(trailingMark);
+  }
+
+  /**
+   * Extract content before a boundary point from a mark into a new sibling mark.
+   * @param mark - The mark to split
+   * @param boundaryNode - The node at the boundary
+   * @param boundaryOffset - The offset at the boundary
+   */
+  private extractLeadingMark(mark: HTMLElement, boundaryNode: Node, boundaryOffset: number): void {
+    const leadingRange = document.createRange();
+
+    leadingRange.setStart(mark, 0);
+    leadingRange.setEnd(boundaryNode, boundaryOffset);
+
+    const contents = leadingRange.extractContents();
+
+    if (!contents.textContent) {
+      return;
+    }
+
+    const leadingMark = document.createElement('mark');
+
+    leadingMark.style.cssText = mark.style.cssText;
+    leadingMark.appendChild(contents);
+    mark.before(leadingMark);
   }
 
   /**

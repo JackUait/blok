@@ -23,6 +23,25 @@ export interface ColorPickerOptions {
 }
 
 /**
+ * Handle returned by createColorPicker with the DOM element and control methods
+ */
+export interface ColorPickerHandle {
+  element: HTMLDivElement;
+  /**
+   * Set the currently active color for visual indication on the matching swatch.
+   * Pass null to clear any active indicator.
+   * @param color - CSS color value or null to clear
+   * @param modeKey - The mode key (e.g. 'color', 'background-color') to match the correct preset field
+   */
+  setActiveColor: (color: string | null, modeKey: string) => void;
+  /**
+   * Reset the picker state (tab index) back to defaultModeIndex.
+   * Call this when the picker is reopened to ensure consistent initial state.
+   */
+  reset: () => void;
+}
+
+/**
  * Base Tailwind classes shared by tab buttons
  */
 const TAB_BASE_CLASSES = 'flex-1 py-1.5 text-xs text-center rounded-md cursor-pointer border-none transition-colors';
@@ -38,9 +57,10 @@ const SWATCH_NEUTRAL_BG = '#f7f7f5';
  *
  * Shared between the marker inline tool and the table cell color popover.
  */
-export function createColorPicker(options: ColorPickerOptions): HTMLDivElement {
+export function createColorPicker(options: ColorPickerOptions): ColorPickerHandle {
   const { i18n, modes, testIdPrefix, onColorSelect } = options;
-  const state = { modeIndex: options.defaultModeIndex ?? 0 };
+  const defaultModeIndex = options.defaultModeIndex ?? 0;
+  const state = { modeIndex: defaultModeIndex, activeColor: null as string | null };
 
   const wrapper = document.createElement('div');
 
@@ -94,12 +114,15 @@ export function createColorPicker(options: ColorPickerOptions): HTMLDivElement {
 
     for (const preset of COLOR_PRESETS) {
       const swatch = document.createElement('button');
+      const swatchColor = currentMode.presetField === 'text' ? preset.text : preset.bg;
+      const isActive = state.activeColor !== null && swatchColor === state.activeColor;
 
       swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${preset.name}`);
       swatch.className = twMerge(
         'w-8 h-8 rounded-md cursor-pointer border-none',
         'flex items-center justify-center text-sm font-semibold',
-        'transition-shadow ring-inset hover:ring-2 hover:ring-black/10'
+        'transition-shadow ring-inset hover:ring-2 hover:ring-black/10',
+        isActive && 'ring-2 ring-black/30'
       );
       swatch.textContent = 'A';
 
@@ -112,9 +135,7 @@ export function createColorPicker(options: ColorPickerOptions): HTMLDivElement {
       }
 
       swatch.addEventListener('click', () => {
-        const color = currentMode.presetField === 'text' ? preset.text : preset.bg;
-
-        onColorSelect(color, currentMode.key);
+        onColorSelect(swatchColor, currentMode.key);
       });
       grid.appendChild(swatch);
     }
@@ -146,5 +167,17 @@ export function createColorPicker(options: ColorPickerOptions): HTMLDivElement {
   wrapper.appendChild(grid);
   wrapper.appendChild(defaultBtn);
 
-  return wrapper;
+  return {
+    element: wrapper,
+    setActiveColor: (color: string | null, _modeKey: string) => {
+      state.activeColor = color;
+      renderSwatches();
+    },
+    reset: () => {
+      state.modeIndex = defaultModeIndex;
+      state.activeColor = null;
+      updateTabs();
+      renderSwatches();
+    },
+  };
 }

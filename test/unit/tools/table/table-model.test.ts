@@ -1733,4 +1733,182 @@ describe('TableModel', () => {
       expect(model.snapshot().colWidths).toHaveLength(3);
     });
   });
+
+  // ─── Named CSS colors are intentionally rejected (defense in depth) ──
+
+  describe('named CSS color rejection (intentional)', () => {
+    it('setCellColor rejects named color "red"', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'red');
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellColor rejects named color "blue"', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'blue');
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellColor rejects named color "cornflowerblue"', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'cornflowerblue');
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellTextColor rejects named color "red"', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'red');
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellTextColor rejects named color "blue"', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'blue');
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellTextColor rejects named color "cornflowerblue"', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'cornflowerblue');
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('rejection is a silent no-op — no error thrown, no color set', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: ['b1'] }]] }));
+
+      expect(() => model.setCellColor(0, 0, 'red')).not.toThrow();
+      expect(() => model.setCellTextColor(0, 0, 'blue')).not.toThrow();
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('rejection does not overwrite an existing valid color', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: [], color: '#ff0000', textColor: '#00ff00' }]],
+      }));
+
+      model.setCellColor(0, 0, 'red');
+      model.setCellTextColor(0, 0, 'green');
+
+      expect(model.getCellColor(0, 0)).toBe('#ff0000');
+      expect(model.getCellTextColor(0, 0)).toBe('#00ff00');
+    });
+
+    it('accepted formats still work alongside named color rejection', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: [] }], [{ blocks: [] }], [{ blocks: [] }], [{ blocks: [] }], [{ blocks: [] }], [{ blocks: [] }]],
+      }));
+
+      model.setCellColor(0, 0, '#ff0000');
+      model.setCellColor(1, 0, 'rgb(255, 0, 0)');
+      model.setCellColor(2, 0, 'rgba(255, 0, 0, 0.5)');
+      model.setCellColor(3, 0, 'hsl(120, 50%, 50%)');
+      model.setCellColor(4, 0, 'hsla(120, 50%, 50%, 0.8)');
+      model.setCellColor(5, 0, 'transparent');
+
+      expect(model.getCellColor(0, 0)).toBe('#ff0000');
+      expect(model.getCellColor(1, 0)).toBe('rgb(255, 0, 0)');
+      expect(model.getCellColor(2, 0)).toBe('rgba(255, 0, 0, 0.5)');
+      expect(model.getCellColor(3, 0)).toBe('hsl(120, 50%, 50%)');
+      expect(model.getCellColor(4, 0)).toBe('hsla(120, 50%, 50%, 0.8)');
+      expect(model.getCellColor(5, 0)).toBe('transparent');
+    });
+  });
+
+  // ─── Clear content preserves cell colors (matches Excel/Sheets) ──────
+
+  describe('clear content preserves cell colors (intentional)', () => {
+    it('removing all blocks from a cell preserves its background color', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1', 'b2'], color: '#f1f1ef' }]],
+      }));
+
+      model.removeBlockFromCell(0, 0, 'b1');
+      model.removeBlockFromCell(0, 0, 'b2');
+
+      expect(model.getCellBlocks(0, 0)).toEqual([]);
+      expect(model.getCellColor(0, 0)).toBe('#f1f1ef');
+    });
+
+    it('removing all blocks from a cell preserves its text color', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], textColor: '#d9730d' }]],
+      }));
+
+      model.removeBlockFromCell(0, 0, 'b1');
+
+      expect(model.getCellBlocks(0, 0)).toEqual([]);
+      expect(model.getCellTextColor(0, 0)).toBe('#d9730d');
+    });
+
+    it('removing all blocks preserves both background and text color', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], color: '#fbecdd', textColor: '#787774' }]],
+      }));
+
+      model.removeBlockFromCell(0, 0, 'b1');
+
+      expect(model.getCellBlocks(0, 0)).toEqual([]);
+      expect(model.getCellColor(0, 0)).toBe('#fbecdd');
+      expect(model.getCellTextColor(0, 0)).toBe('#787774');
+    });
+
+    it('setCellBlocks to empty array preserves cell colors', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1', 'b2'], color: '#e8deee', textColor: '#9065b0' }]],
+      }));
+
+      model.setCellBlocks(0, 0, []);
+
+      expect(model.getCellBlocks(0, 0)).toEqual([]);
+      expect(model.getCellColor(0, 0)).toBe('#e8deee');
+      expect(model.getCellTextColor(0, 0)).toBe('#9065b0');
+    });
+
+    it('clearing multiple cells preserves colors independently', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [
+            { blocks: ['b1'], color: '#f1f1ef', textColor: '#787774' },
+            { blocks: ['b2'], color: '#fbecdd', textColor: '#d9730d' },
+          ],
+        ],
+      }));
+
+      model.removeBlockFromCell(0, 0, 'b1');
+      model.removeBlockFromCell(0, 1, 'b2');
+
+      expect(model.getCellBlocks(0, 0)).toEqual([]);
+      expect(model.getCellBlocks(0, 1)).toEqual([]);
+      expect(model.getCellColor(0, 0)).toBe('#f1f1ef');
+      expect(model.getCellTextColor(0, 0)).toBe('#787774');
+      expect(model.getCellColor(0, 1)).toBe('#fbecdd');
+      expect(model.getCellTextColor(0, 1)).toBe('#d9730d');
+    });
+
+    it('adding new blocks after clearing still preserves colors', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], color: '#f1f1ef', textColor: '#787774' }]],
+      }));
+
+      model.removeBlockFromCell(0, 0, 'b1');
+      model.addBlockToCell(0, 0, 'new-block');
+
+      expect(model.getCellBlocks(0, 0)).toEqual(['new-block']);
+      expect(model.getCellColor(0, 0)).toBe('#f1f1ef');
+      expect(model.getCellTextColor(0, 0)).toBe('#787774');
+    });
+  });
 });

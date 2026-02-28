@@ -73,6 +73,163 @@ const firePasteEvent = (table: Table, element: HTMLElement): void => {
   table.onPaste(event);
 };
 
+describe('Table onPaste cell colors', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('preserves background-color from td style attributes after paste', () => {
+    const options = createTableOptions({
+      content: [['A', 'B']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    // Paste a table where td elements have background-color styles
+    const pasteHtml = [
+      '<tr>',
+      '<td style="background-color: #fbecdd">Orange cell</td>',
+      '<td>Plain cell</td>',
+      '</tr>',
+      '<tr>',
+      '<td style="background-color: #fdebec">Red cell</td>',
+      '<td style="background-color: #e7f3f8">Blue cell</td>',
+      '</tr>',
+    ].join('');
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    // Cell [0][0] should have orange background
+    expect(saved.content[0][0]).toMatchObject({ color: '#fbecdd' });
+    // Cell [0][1] should have no color
+    expect(saved.content[0][1]).not.toHaveProperty('color');
+    // Cell [1][0] should have red background
+    expect(saved.content[1][0]).toMatchObject({ color: '#fdebec' });
+    // Cell [1][1] should have blue background
+    expect(saved.content[1][1]).toMatchObject({ color: '#e7f3f8' });
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
+  it('preserves text color from td style attributes after paste', () => {
+    const options = createTableOptions({
+      content: [['A']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    // Paste a table where td elements have color (text) styles
+    const pasteHtml = [
+      '<tr>',
+      '<td style="color: #d44c47">Red text cell</td>',
+      '<td>Normal cell</td>',
+      '</tr>',
+    ].join('');
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    // Cell [0][0] should have red text color
+    expect(saved.content[0][0]).toMatchObject({ textColor: '#d44c47' });
+    // Cell [0][1] should have no textColor
+    expect(saved.content[0][1]).not.toHaveProperty('textColor');
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
+  it('preserves both background-color and text color from td style attributes', () => {
+    const options = createTableOptions({
+      content: [['A']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    // Paste a table where td has both background-color and color
+    const pasteHtml = [
+      '<tr>',
+      '<td style="background-color: #fbecdd; color: #d44c47">Styled cell</td>',
+      '</tr>',
+    ].join('');
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    expect(saved.content[0][0]).toMatchObject({
+      color: '#fbecdd',
+      textColor: '#d44c47',
+    });
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
+  it('maps non-preset colors to nearest preset on paste', () => {
+    const options = createTableOptions({
+      content: [['A']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    // Use a color that is close to orange bg (#fbecdd) but not exact
+    // rgb(250, 230, 210) is very close to orange bg preset
+    const pasteHtml = [
+      '<tr>',
+      '<td style="background-color: rgb(250, 230, 210)">Approx orange</td>',
+      '</tr>',
+    ].join('');
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    // Should map to closest preset bg color (orange: #fbecdd)
+    expect(saved.content[0][0]).toHaveProperty('color');
+    // The mapped color should be a valid preset hex color
+    expect(saved.content[0][0].color).toMatch(/^#[0-9a-f]{6}$/i);
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+});
+
 describe('Table onPaste metadata reset', () => {
   beforeEach(() => {
     vi.clearAllMocks();

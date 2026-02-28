@@ -850,6 +850,99 @@ describe('MarkerInlineTool', () => {
       expect(container.textContent).toBe('hello');
     });
 
+    it('preserves mark styling on text outside selection when applying color across mark boundary (bug #3)', () => {
+      // Bug #3: When selection spans from inside a <mark> into unmarked text,
+      // removeNestedMarkStyle unwraps the ENTIRE mark (including text outside the selection),
+      // causing that text to lose its color.
+      container.innerHTML = '<mark style="color: #d44c47; background-color: transparent">Hello World</mark> end';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      // Select "World end" — crosses from inside the mark into unmarked text
+      const range = document.createRange();
+
+      range.setStart(mark.firstChild, 6); // "World" starts at offset 6
+      range.setEnd(container.lastChild!, 4); // " end" is 4 chars
+
+      const sel = window.getSelection();
+
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+
+      tool.applyColor('color', '#448361');
+
+      // "Hello " should still be wrapped in a mark with its original red color
+      const marks = container.querySelectorAll('mark');
+      const helloMark = Array.from(marks).find((m) => m.textContent?.trim() === 'Hello');
+
+      expect(helloMark).not.toBeUndefined();
+      expect(helloMark?.style.color).toBe('rgb(212, 76, 71)');
+    });
+
+    it('preserves background-color on text outside selection when applying across mark boundary (bug #3)', () => {
+      container.innerHTML = '<mark style="background-color: #fbecdd">Hello World</mark> end';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      // Select "World end"
+      const range = document.createRange();
+
+      range.setStart(mark.firstChild, 6);
+      range.setEnd(container.lastChild!, 4);
+
+      const sel = window.getSelection();
+
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+
+      tool.applyColor('background-color', '#e7f3f8');
+
+      // "Hello " should still have its original background color mark
+      const marks = container.querySelectorAll('mark');
+      const helloMark = Array.from(marks).find((m) => m.textContent?.trim() === 'Hello');
+
+      expect(helloMark).not.toBeUndefined();
+      expect(helloMark?.style.backgroundColor).toBe('rgb(251, 236, 221)');
+    });
+
+    it('preserves mark on text before selection when selection starts inside mark and extends past it (bug #3)', () => {
+      container.innerHTML = 'start <mark style="color: #337ea9; background-color: transparent">colored text</mark> end';
+
+      const mark = container.querySelector('mark');
+
+      if (!mark?.firstChild) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      // Select "text end" — from inside mark into unmarked text
+      const range = document.createRange();
+
+      range.setStart(mark.firstChild, 8); // "text" starts at offset 8 in "colored text"
+      range.setEnd(container.lastChild!, 4);
+
+      const sel = window.getSelection();
+
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+
+      tool.applyColor('color', '#d44c47');
+
+      // "colored " should still be in a mark with its original blue color
+      const marks = container.querySelectorAll('mark');
+      const coloredMark = Array.from(marks).find((m) => m.textContent?.includes('colored'));
+
+      expect(coloredMark).not.toBeUndefined();
+      expect(coloredMark?.style.color).toBe('rgb(51, 126, 169)');
+    });
+
     it('does not create nested marks when applying color across two marks with transparent bg (bug #10)', () => {
       // Bug #10: When selection spans two marks that each have background-color: transparent,
       // removeNestedMarkStyle should unwrap them instead of leaving nested marks.
@@ -881,11 +974,30 @@ describe('MarkerInlineTool', () => {
 
       expect(nestedMarks.length).toBe(0);
 
-      // The new mark wraps the selected portion with the new color
+      // The selected portion gets the new color, while text outside the
+      // selection ("He" and "ld") preserves its original mark color
       const allMarks = container.querySelectorAll('mark');
+      const greenMark = Array.from(allMarks).find(
+        (m) => m.style.color === 'rgb(68, 131, 97)'
+      );
 
-      expect(allMarks.length).toBe(1);
-      expect(allMarks[0].style.color).toBe('rgb(68, 131, 97)');
+      expect(greenMark).not.toBeUndefined();
+
+      // "He" keeps its original red color
+      const redMark = Array.from(allMarks).find(
+        (m) => m.style.color === 'rgb(212, 76, 71)'
+      );
+
+      expect(redMark).not.toBeUndefined();
+      expect(redMark?.textContent).toBe('He');
+
+      // "ld" keeps its original blue color
+      const blueMark = Array.from(allMarks).find(
+        (m) => m.style.color === 'rgb(51, 126, 169)'
+      );
+
+      expect(blueMark).not.toBeUndefined();
+      expect(blueMark?.textContent).toBe('ld');
     });
 
     it('unwraps mark completely when both colors are removed sequentially', () => {

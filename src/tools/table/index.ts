@@ -9,6 +9,7 @@ import type {
 import type { ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconTable } from '../../components/icons';
+import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableAddControls } from './table-add-controls';
@@ -533,17 +534,37 @@ export class Table implements BlockTool {
     const content = event.detail.data;
     const rows = content.querySelectorAll('tr');
     const tableContent: string[][] = [];
+    const cellColors: Array<Array<{ color?: string; textColor?: string }>> = [];
 
     rows.forEach(row => {
       const cells = row.querySelectorAll('td, th');
       const rowData: string[] = [];
+      const rowColors: Array<{ color?: string; textColor?: string }> = [];
 
       cells.forEach(cell => {
         rowData.push(cell.innerHTML);
+
+        const style = cell.getAttribute('style') ?? '';
+        const entry: { color?: string; textColor?: string } = {};
+
+        const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+        if (bgMatch?.[1]) {
+          entry.color = mapToNearestPresetColor(bgMatch[1].trim(), 'bg');
+        }
+
+        const textMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+
+        if (textMatch?.[1]) {
+          entry.textColor = mapToNearestPresetColor(textMatch[1].trim(), 'text');
+        }
+
+        rowColors.push(entry);
       });
 
       if (rowData.length > 0) {
         tableContent.push(rowData);
+        cellColors.push(rowColors);
       }
     });
 
@@ -583,9 +604,23 @@ export class Table implements BlockTool {
           content: pasteContent,
         });
         this.initialContent = null;
+
+        // Apply cell colors extracted from td/th style attributes
+        cellColors.forEach((rowColors, r) => {
+          rowColors.forEach((colors, c) => {
+            if (colors.color !== undefined) {
+              this.model.setCellColor(r, c, colors.color);
+            }
+
+            if (colors.textColor !== undefined) {
+              this.model.setCellTextColor(r, c, colors.textColor);
+            }
+          });
+        });
       }, true);
 
       this.initSubsystems(gridEl);
+      applyCellColors(gridEl, this.model.snapshot().content);
     }
   }
 

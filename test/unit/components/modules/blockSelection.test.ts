@@ -10,6 +10,7 @@ import { Shortcuts } from '../../../../src/components/utils/shortcuts';
 import * as utils from '../../../../src/components/utils';
 import type { SanitizerConfig } from '../../../../types/configs';
 import type { Block } from '../../../../src/components/block';
+import { clean } from '../../../../src/components/utils/sanitizer';
 
 type ModuleOverrides = Partial<BlokModules>;
 
@@ -454,6 +455,29 @@ describe('BlockSelection', () => {
         href: true,
         rel: 'nofollow',
       });
+    });
+
+    it('preserves mark elements with style attribute during sanitization', () => {
+      const { blockSelection } = createBlockSelection();
+      const config = (blockSelection as unknown as { sanitizerConfig: SanitizerConfig }).sanitizerConfig;
+
+      const html = '<p>Some <mark style="color: #d44c47">colored</mark> text</p>';
+      const result = clean(html, config);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('style="color: #d44c47"');
+      expect(result).toBe('<p>Some <mark style="color: #d44c47">colored</mark> text</p>');
+    });
+
+    it('preserves mark elements with background-color style during sanitization', () => {
+      const { blockSelection } = createBlockSelection();
+      const config = (blockSelection as unknown as { sanitizerConfig: SanitizerConfig }).sanitizerConfig;
+
+      const html = '<p>Some <mark style="background-color: #ffd43b">highlighted</mark> text</p>';
+      const result = clean(html, config);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('style="background-color: #ffd43b"');
     });
   });
 

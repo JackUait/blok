@@ -17,7 +17,7 @@ interface CellColorPickerResult {
  * Thin wrapper around the shared color picker component.
  */
 export const createCellColorPicker = (options: CellColorPickerOptions): CellColorPickerResult => {
-  const element = createColorPicker({
+  const handle = createColorPicker({
     i18n: options.i18n,
     testIdPrefix: 'cell-color',
     defaultModeIndex: 1,
@@ -30,5 +30,5 @@ export const createCellColorPicker = (options: CellColorPickerOptions): CellColo
     },
   });
 
-  return { element };
+  return { element: handle.element };
 };

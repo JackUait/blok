@@ -289,8 +289,19 @@ export class TableCellBlocks {
           ? this.mountBlocksInCell(container, referencedBlockIds)
           : [];
 
+        const cellColorProps: Pick<CellContent, 'color' | 'textColor'> = {};
+
+        if (isCellWithBlocks(cellContent)) {
+          if (cellContent.color !== undefined) {
+            cellColorProps.color = cellContent.color;
+          }
+          if (cellContent.textColor !== undefined) {
+            cellColorProps.textColor = cellContent.textColor;
+          }
+        }
+
         if (mountedIds.length > 0) {
-          normalizedRow.push({ blocks: referencedBlockIds ?? mountedIds });
+          normalizedRow.push({ blocks: referencedBlockIds ?? mountedIds, ...cellColorProps });
         } else {
           const text = typeof cellContent === 'string' ? cellContent : '';
           const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
@@ -309,6 +320,7 @@ export class TableCellBlocks {
             blocks: referencedBlockIds === null
               ? ids
               : [...referencedBlockIds, ...ids],
+            ...cellColorProps,
           });
         }
 

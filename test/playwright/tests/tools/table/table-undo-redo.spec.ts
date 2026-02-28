@@ -163,6 +163,100 @@ const saveBlok = async (page: Page): Promise<OutputData> => {
   });
 };
 
+/**
+ * Assert a bounding box is non-null and return it with narrowed type.
+ */
+const assertBoundingBox = (
+  box: { x: number; y: number; width: number; height: number } | null,
+  label: string
+): { x: number; y: number; width: number; height: number } => {
+  expect(box, `${label} should have a bounding box`).toBeTruthy();
+
+  return box as { x: number; y: number; width: number; height: number };
+};
+
+/**
+ * Returns a locator for a specific cell in the table grid.
+ */
+const getCell = (page: Page, row: number, col: number) =>
+  page
+    .locator(`${TABLE_SELECTOR} >> [data-blok-table-row] >> nth=${row}`)
+    .locator(`[data-blok-table-cell] >> nth=${col}`);
+
+/**
+ * Select multiple cells by dragging from start to end cell.
+ */
+const selectCells = async (
+  page: Page,
+  startRow: number,
+  startCol: number,
+  endRow: number,
+  endCol: number
+): Promise<void> => {
+  const startCell = getCell(page, startRow, startCol);
+  const endCell = getCell(page, endRow, endCol);
+
+  const startBox = assertBoundingBox(await startCell.boundingBox(), `cell [${startRow},${startCol}]`);
+  const endBox = assertBoundingBox(await endCell.boundingBox(), `cell [${endRow},${endCol}]`);
+
+  const isSingleColumn = startCol === endCol;
+  const startX = isSingleColumn ? startBox.x + 5 : startBox.x + startBox.width / 2;
+  const startY = startBox.y + startBox.height / 2;
+  const endX = isSingleColumn ? endBox.x + 5 : endBox.x + endBox.width / 2;
+  const endY = endBox.y + endBox.height / 2;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY, { steps: 10 });
+  await page.mouse.up();
+};
+
+/**
+ * Hover over the selection pill to expand it.
+ */
+const hoverPill = async (page: Page): Promise<void> => {
+  const pill = page.locator('[data-blok-table-selection-pill]');
+
+  await expect(pill).toBeAttached();
+  const pillBox = assertBoundingBox(await pill.boundingBox(), 'selection pill');
+
+  await page.mouse.move(pillBox.x + pillBox.width / 2, pillBox.y + pillBox.height / 2);
+};
+
+/**
+ * Open the pill popover and hover over the Color item to reveal the color picker.
+ */
+const openColorPicker = async (page: Page): Promise<void> => {
+  await hoverPill(page);
+
+  const pill = page.locator('[data-blok-table-selection-pill]');
+
+  await expect(pill).toBeVisible();
+  await pill.click();
+
+  const colorItem = page.getByText('Color');
+
+  await expect(colorItem).toBeVisible();
+
+  const colorBox = assertBoundingBox(await colorItem.boundingBox(), 'Color item');
+
+  await page.mouse.move(colorBox.x + colorBox.width / 2, colorBox.y + colorBox.height / 2);
+
+  const colorPicker = page.locator('[data-blok-testid="cell-color-picker"]');
+
+  await expect(colorPicker).toBeVisible();
+};
+
+/**
+ * Click a color swatch by name inside the color picker.
+ */
+const clickSwatch = async (page: Page, name: string): Promise<void> => {
+  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${name}"]`);
+
+  await expect(swatch).toBeVisible();
+  await swatch.click({ force: true });
+};
+
 test.describe('Table Undo/Redo', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -483,5 +577,87 @@ test.describe('Table Undo/Redo', () => {
 
     expect(content).toHaveLength(3);
     expect(content[0]).toHaveLength(3);
+  });
+
+  test('Undo after multi-cell color change restores all cell colors in single undo', async ({ page }) => {
+    // Regression: handleCellColorChange was not wrapped in runTransactedStructuralOp,
+    // so multi-cell color changes could create multiple undo entries instead of one.
+
+    // 1. Create a 2x2 table with known content
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Alpha', 'Beta'], ['Gamma', 'Delta']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Verify no cells have background color initially
+    const cell00 = getCell(page, 0, 0);
+    const cell01 = getCell(page, 0, 1);
+
+    const cell00BgBefore = await cell00.evaluate((el) => (el as HTMLElement).style.backgroundColor);
+    const cell01BgBefore = await cell01.evaluate((el) => (el as HTMLElement).style.backgroundColor);
+
+    expect(cell00BgBefore).toBe('');
+    expect(cell01BgBefore).toBe('');
+
+    // 3. Select both cells in row 0 via drag
+    await selectCells(page, 0, 0, 0, 1);
+
+    // 4. Open color picker and apply orange to both cells
+    await openColorPicker(page);
+    await clickSwatch(page, 'orange');
+
+    // Click outside to close the popover
+    await page.mouse.click(10, 10);
+
+    // 5. Verify both cells now have a background color
+    const cell00BgAfter = await cell00.evaluate((el) => (el as HTMLElement).style.backgroundColor);
+    const cell01BgAfter = await cell01.evaluate((el) => (el as HTMLElement).style.backgroundColor);
+
+    expect(cell00BgAfter, 'Cell (0,0) should have backgroundColor after color change').toBeTruthy();
+    expect(cell01BgAfter, 'Cell (0,1) should have backgroundColor after color change').toBeTruthy();
+
+    // 6. Wait for Yjs capture timeout
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 7. Undo once — both cells should revert in a single undo step
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // 8. Verify both cells have no background color after single undo
+    const cell00BgUndo = await cell00.evaluate((el) => (el as HTMLElement).style.backgroundColor);
+    const cell01BgUndo = await cell01.evaluate((el) => (el as HTMLElement).style.backgroundColor);
+
+    expect(cell00BgUndo, 'Cell (0,0) should have no backgroundColor after undo').toBe('');
+    expect(cell01BgUndo, 'Cell (0,1) should have no backgroundColor after undo').toBe('');
+
+    // 9. Save and verify no color data in saved content
+    const savedData = await saveBlok(page);
+    const tableBlock = savedData.blocks.find((b: { type: string }) => b.type === 'table');
+
+    expect(tableBlock).toBeDefined();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const content = tableBlock?.data.content as { blocks: string[]; color?: string }[][];
+
+    expect(content).toHaveLength(2);
+    expect(content[0]).toHaveLength(2);
+
+    // Neither cell should have a color property after undo
+    expect(content[0][0].color, 'Cell (0,0) saved data should have no color after undo').toBeUndefined();
+    expect(content[0][1].color, 'Cell (0,1) saved data should have no color after undo').toBeUndefined();
   });
 });

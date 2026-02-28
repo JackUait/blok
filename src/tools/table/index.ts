@@ -1082,21 +1082,23 @@ export class Table implements BlockTool {
       return;
     }
 
-    for (const cell of cells) {
-      const coord = getCellPosition(gridEl, cell);
+    this.runTransactedStructuralOp(() => {
+      for (const cell of cells) {
+        const coord = getCellPosition(gridEl, cell);
 
-      if (!coord) {
-        continue;
-      }
+        if (!coord) {
+          continue;
+        }
 
-      if (mode === 'backgroundColor') {
-        this.model.setCellColor(coord.row, coord.col, color ?? undefined);
-        cell.style.backgroundColor = color ?? '';
-      } else {
-        this.model.setCellTextColor(coord.row, coord.col, color ?? undefined);
-        cell.style.color = color ?? '';
+        if (mode === 'backgroundColor') {
+          this.model.setCellColor(coord.row, coord.col, color ?? undefined);
+          cell.style.backgroundColor = color ?? '';
+        } else {
+          this.model.setCellTextColor(coord.row, coord.col, color ?? undefined);
+          cell.style.color = color ?? '';
+        }
       }
-    }
+    });
   }
 
   private collectCellBlockData(

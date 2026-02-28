@@ -1082,21 +1082,23 @@ export class Table implements BlockTool {
       return;
     }
 
-    for (const cell of cells) {
-      const coord = getCellPosition(gridEl, cell);
+    this.runTransactedStructuralOp(() => {
+      for (const cell of cells) {
+        const coord = getCellPosition(gridEl, cell);
 
-      if (!coord) {
-        continue;
-      }
+        if (!coord) {
+          continue;
+        }
 
-      if (mode === 'backgroundColor') {
-        this.model.setCellColor(coord.row, coord.col, color ?? undefined);
-        cell.style.backgroundColor = color ?? '';
-      } else {
-        this.model.setCellTextColor(coord.row, coord.col, color ?? undefined);
-        cell.style.color = color ?? '';
+        if (mode === 'backgroundColor') {
+          this.model.setCellColor(coord.row, coord.col, color ?? undefined);
+          cell.style.backgroundColor = color ?? '';
+        } else {
+          this.model.setCellTextColor(coord.row, coord.col, color ?? undefined);
+          cell.style.color = color ?? '';
+        }
       }
-    }
+    });
   }
 
   private collectCellBlockData(
@@ -1203,32 +1205,36 @@ export class Table implements BlockTool {
         this.rowColControls?.setGripsDisplay(true);
       },
       onClearContent: (cells) => {
-        if (!this.cellBlocks) {
+        const cellBlocks = this.cellBlocks;
+
+        if (!cellBlocks) {
           return;
         }
 
-        const blockIds = this.cellBlocks.getBlockIdsFromCells(cells);
+        this.runTransactedStructuralOp(() => {
+          const blockIds = cellBlocks.getBlockIdsFromCells(cells);
 
-        this.cellBlocks.deleteBlocks(blockIds);
+          cellBlocks.deleteBlocks(blockIds);
 
-        const gridEl = this.gridElement;
+          const gridEl = this.gridElement;
 
-        if (!gridEl) {
-          return;
-        }
-
-        for (const cell of cells) {
-          const coord = getCellPosition(gridEl, cell);
-
-          if (!coord) {
-            continue;
+          if (!gridEl) {
+            return;
           }
 
-          this.model.setCellColor(coord.row, coord.col, undefined);
-          this.model.setCellTextColor(coord.row, coord.col, undefined);
-          cell.style.backgroundColor = '';
-          cell.style.color = '';
-        }
+          for (const cell of cells) {
+            const coord = getCellPosition(gridEl, cell);
+
+            if (!coord) {
+              continue;
+            }
+
+            this.model.setCellColor(coord.row, coord.col, undefined);
+            this.model.setCellTextColor(coord.row, coord.col, undefined);
+            cell.style.backgroundColor = '';
+            cell.style.color = '';
+          }
+        });
       },
       onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);

@@ -750,5 +750,16 @@ describe('table-cell-clipboard', () => {
       expect(text).toContain('background-color:');
       expect(text).toContain('Link text');
     });
+
+    it('does not create inner mark for anchor with only color:inherit in table cell', () => {
+      const html = '<table><tr><td><span style="color:#1155cc;background-color:#a64d79;"><a href="https://example.com" style="color:inherit;">Link text</a></span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const text = result?.cells[0][0].blocks[0].data.text ?? '';
+      const markCount = (text.match(/<mark/g) || []).length;
+
+      expect(markCount).toBe(1);
+    });
   });
 });

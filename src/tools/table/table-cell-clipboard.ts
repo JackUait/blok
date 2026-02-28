@@ -232,8 +232,8 @@ function sanitizeCellHtml(td: Element): string {
     const color = colorMatch?.[1]?.trim();
     const bgColor = bgMatch?.[1]?.trim();
 
-    const hasColor = color !== undefined && !isDefaultBlack(color);
-    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent';
+    const hasColor = color !== undefined && !isDefaultBlack(color) && color !== 'inherit';
+    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent' && bgColor !== 'inherit';
 
     if (!hasColor && !hasBgColor) {
       continue;

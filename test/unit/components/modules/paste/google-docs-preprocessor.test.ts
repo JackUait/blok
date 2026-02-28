@@ -536,6 +536,85 @@ describe('preprocessGoogleDocsHtml', () => {
       expect(result).toContain('Link text');
     });
 
+    it('preserves background when span has color+bg and anchor has color:inherit (realistic clipboard)', () => {
+      // Realistic Google Docs clipboard HTML: <span> with color+bg wraps <a> with color:inherit
+      const html = [
+        '<b id="docs-internal-guid-abc123">',
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#1155cc;background-color:#a64d79;',
+        'font-weight:400;font-style:normal;text-decoration:underline;">',
+        '<a href="https://youtube.com" style="text-decoration:inherit;color:inherit;">',
+        'link with background and color</a>',
+        '</span>',
+        '</b>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      // The outer mark should have the mapped background color
+      expect(result).toContain('<mark');
+      expect(result).toContain('background-color:');
+      expect(result).toContain('<a href="https://youtube.com"');
+      expect(result).toContain('link with background and color');
+    });
+
+    it('does not create inner mark for anchor with only color:inherit', () => {
+      // After convertGoogleDocsStyles, the anchor has color:inherit.
+      // convertAnchorColorStyles should NOT create a redundant inner mark for inherit.
+      const html = [
+        '<span style="color:#1155cc;background-color:#a64d79;">',
+        '<a href="https://example.com" style="color:inherit;">Link text</a>',
+        '</span>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      // Should have exactly ONE mark (the outer one from the span conversion)
+      const markCount = (result.match(/<mark/g) || []).length;
+
+      expect(markCount).toBe(1);
+    });
+
+    it('preserves background after full sanitization (preprocess + clean)', () => {
+      // End-to-end test: preprocessor + sanitizer with realistic config
+      const html = [
+        '<span style="color:#1155cc;background-color:#a64d79;">',
+        '<a href="https://example.com" style="color:inherit;">Link text</a>',
+        '</span>',
+      ].join('');
+
+      const preprocessed = preprocessGoogleDocsHtml(html);
+
+      // Sanitize with realistic config (mark + a allowed)
+      const sanitizerConfig = {
+        a: { href: true },
+        mark: (node: Element): { [attr: string]: boolean | string } => {
+          const el = node as HTMLElement;
+          const style = el.style;
+          const props = Array.from({ length: style.length }, (_, i) => style.item(i));
+          const allowed = new Set(['color', 'background-color']);
+
+          for (const prop of props) {
+            if (!allowed.has(prop)) {
+              style.removeProperty(prop);
+            }
+          }
+
+          return style.length > 0 ? { style: true } : {};
+        },
+        b: true,
+        i: true,
+        br: {},
+      };
+
+      const result = clean(preprocessed, sanitizerConfig);
+
+      // Background must survive sanitization
+      expect(result).toContain('background-color:');
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Link text');
+    });
+
     it('handles emoji span with background + link span with background in same paragraph', () => {
       const html = [
         '<p dir="ltr">',

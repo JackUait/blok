@@ -72,12 +72,12 @@ describe('mapToNearestPresetColor', () => {
     expect(mapToNearestPresetColor('#9900ff', 'text')).toBe('#9065b0');
   });
 
-  it('maps Google Docs gray (#999999) text to nearest preset (purple)', () => {
-    expect(mapToNearestPresetColor('#999999', 'text')).toBe('#9065b0');
+  it('maps Google Docs gray (#999999) text to Blok gray', () => {
+    expect(mapToNearestPresetColor('#999999', 'text')).toBe('#787774');
   });
 
-  it('maps Google Docs orange (#ff9900) text to nearest preset (yellow)', () => {
-    expect(mapToNearestPresetColor('#ff9900', 'text')).toBe('#cb9b00');
+  it('maps Google Docs orange (#ff9900) text to Blok orange', () => {
+    expect(mapToNearestPresetColor('#ff9900', 'text')).toBe('#d9730d');
   });
 
   it('handles rgb() format input', () => {
@@ -88,8 +88,8 @@ describe('mapToNearestPresetColor', () => {
     expect(mapToNearestPresetColor('not-a-color', 'text')).toBe('not-a-color');
   });
 
-  it('maps black (#000000) text to nearest preset (green)', () => {
-    expect(mapToNearestPresetColor('#000000', 'text')).toBe('#448361');
+  it('maps black (#000000) text to Blok gray', () => {
+    expect(mapToNearestPresetColor('#000000', 'text')).toBe('#787774');
   });
 
   it('maps white (#ffffff) bg to nearest bg preset', () => {
@@ -98,20 +98,20 @@ describe('mapToNearestPresetColor', () => {
     expect(result).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  it('maps Google Docs light red bg (#f4cccc) to nearest bg preset (orange)', () => {
-    expect(mapToNearestPresetColor('#f4cccc', 'bg')).toBe('#fbecdd');
+  it('maps Google Docs light red bg (#f4cccc) to Blok red bg', () => {
+    expect(mapToNearestPresetColor('#f4cccc', 'bg')).toBe('#fdebec');
   });
 
   it('maps Google Docs light green bg (#d9ead3) to Blok green bg', () => {
     expect(mapToNearestPresetColor('#d9ead3', 'bg')).toBe('#edf3ec');
   });
 
-  it('maps Google Docs light blue bg (#cfe2f3) to nearest bg preset (teal)', () => {
-    expect(mapToNearestPresetColor('#cfe2f3', 'bg')).toBe('#e4f5f3');
+  it('maps Google Docs light blue bg (#cfe2f3) to Blok blue bg', () => {
+    expect(mapToNearestPresetColor('#cfe2f3', 'bg')).toBe('#e7f3f8');
   });
 
-  it('maps Google Docs light purple bg (#d9d2e9) to nearest bg preset (teal)', () => {
-    expect(mapToNearestPresetColor('#d9d2e9', 'bg')).toBe('#e4f5f3');
+  it('maps Google Docs light purple bg (#d9d2e9) to Blok purple bg', () => {
+    expect(mapToNearestPresetColor('#d9d2e9', 'bg')).toBe('#f6f3f9');
   });
 
   it('maps Google Docs light yellow bg (#fff2cc) to Blok yellow bg', () => {

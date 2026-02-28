@@ -1,3 +1,5 @@
+import { COLOR_PRESETS } from '../shared/color-presets';
+
 /**
  * Parse a CSS color string (hex or rgb()) to an [R, G, B] tuple.
  * Returns null if the string cannot be parsed.
@@ -26,4 +28,43 @@ export function parseColor(cssColor: string): [number, number, number] | null {
   }
 
   return null;
+}
+
+/**
+ * Map an arbitrary CSS color to the nearest Blok preset color.
+ *
+ * @param cssColor - CSS color string (hex or rgb)
+ * @param mode - 'text' for text color presets, 'bg' for background presets
+ * @returns the nearest preset hex color, or the input unchanged if unparseable
+ */
+export function mapToNearestPresetColor(cssColor: string, mode: 'text' | 'bg'): string {
+  const rgb = parseColor(cssColor);
+
+  if (rgb === null) {
+    return cssColor;
+  }
+
+  let bestColor = cssColor;
+  let bestDistance = Infinity;
+
+  for (const preset of COLOR_PRESETS) {
+    const presetHex = preset[mode];
+    const presetRgb = parseColor(presetHex);
+
+    if (presetRgb === null) {
+      continue;
+    }
+
+    const distance =
+      (rgb[0] - presetRgb[0]) ** 2 +
+      (rgb[1] - presetRgb[1]) ** 2 +
+      (rgb[2] - presetRgb[2]) ** 2;
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestColor = presetHex;
+    }
+  }
+
+  return bestColor;
 }

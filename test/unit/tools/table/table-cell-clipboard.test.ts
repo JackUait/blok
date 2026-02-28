@@ -738,5 +738,17 @@ describe('table-cell-clipboard', () => {
       expect(result).not.toBeNull();
       expect(result?.cells[0][0].color).toBe('#fbf3db');
     });
+
+    it('preserves background-color on <a> tag inside table cell', () => {
+      const html = '<table><tr><td><a href="https://example.com" style="background-color:#fce5cd;">Link text</a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const text = result?.cells[0][0].blocks[0].data.text ?? '';
+
+      expect(text).toContain('<mark');
+      expect(text).toContain('background-color:');
+      expect(text).toContain('Link text');
+    });
   });
 });

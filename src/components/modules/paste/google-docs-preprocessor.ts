@@ -103,6 +103,49 @@ function convertGoogleDocsStyles(wrapper: HTMLElement): void {
 
     span.replaceWith(document.createRange().createContextualFragment(wrapped));
   }
+
+  convertAnchorColorStyles(wrapper);
+}
+
+/**
+ * Convert color/background-color styles on `<a>` elements to `<mark>` tags.
+ *
+ * Google Docs sometimes puts background-color directly on the `<a>` element.
+ * The sanitizer only allows `href`/`target`/`rel` on `<a>`, so inline styles
+ * are stripped — losing the background.  This moves color styles into a
+ * `<mark>` wrapping the link content before sanitization runs.
+ */
+function convertAnchorColorStyles(wrapper: HTMLElement): void {
+  for (const anchor of Array.from(wrapper.querySelectorAll('a[style]'))) {
+    const style = anchor.getAttribute('style') ?? '';
+
+    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+    const color = colorMatch?.[1]?.trim();
+    const bgColor = bgMatch?.[1]?.trim();
+
+    const hasColor = color !== undefined && !isDefaultBlack(color);
+    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent';
+
+    if (!hasColor && !hasBgColor) {
+      continue;
+    }
+
+    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
+    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+
+    const colorStyles = [
+      hasColor ? `color: ${mappedColor}` : '',
+      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
+    ].filter(Boolean).join('; ');
+
+    const el = anchor as HTMLElement;
+
+    el.innerHTML = `<mark style="${colorStyles};">${el.innerHTML}</mark>`;
+    el.style.removeProperty('color');
+    el.style.removeProperty('background-color');
+  }
 }
 
 /**

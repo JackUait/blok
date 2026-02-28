@@ -478,6 +478,85 @@ describe('preprocessGoogleDocsHtml', () => {
     });
   });
 
+  describe('highlighted links from Google Docs', () => {
+    it('preserves background-color on link wrapped in highlighted span (a > span structure)', () => {
+      const html = [
+        '<a href="https://example.com" style="text-decoration:none;">',
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#1155cc;background-color:#fce5cd;',
+        'text-decoration:underline;">Link text</span>',
+        '</a>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('background-color:');
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Link text');
+    });
+
+    it('preserves background-color on span wrapping a link (span > a structure)', () => {
+      const html = [
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#000000;background-color:#fce5cd;">',
+        '<a href="https://example.com">Link text</a>',
+        '</span>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('background-color:');
+      expect(result).toContain('Link text');
+    });
+
+    it('maps highlighted link background color to Blok preset', () => {
+      const html = [
+        '<a href="https://example.com" style="text-decoration:none;">',
+        '<span style="color:#1155cc;background-color:#fce5cd;">Link text</span>',
+        '</a>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      // #fce5cd (Google Docs light orange/peach) maps to Blok orange bg preset
+      expect(result).toContain('background-color: #fbecdd');
+    });
+
+    it('preserves background-color when it is on the <a> tag itself', () => {
+      // Google Docs sometimes puts background-color directly on the <a> element
+      const html = '<a href="https://example.com" style="background-color:#fce5cd;text-decoration:none;">Link text</a>';
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      // The background should be preserved as a <mark> wrapping the link content
+      expect(result).toContain('<mark');
+      expect(result).toContain('background-color:');
+      expect(result).toContain('Link text');
+    });
+
+    it('handles emoji span with background + link span with background in same paragraph', () => {
+      const html = [
+        '<p dir="ltr">',
+        '<span style="color:#000000;background-color:#fce5cd;">🔗 </span>',
+        '<a href="https://example.com" style="text-decoration:none;">',
+        '<span style="color:#1155cc;background-color:#fce5cd;text-decoration:underline;">Link text</span>',
+        '</a>',
+        '</p>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      // Emoji span should get mark with background
+      expect(result).toContain('<mark');
+      expect(result).toContain('background-color:');
+      // Link should be preserved
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Link text');
+    });
+  });
+
   describe('Google Docs color mapping to Blok presets', () => {
     it('maps Google Docs pure red text color to Blok red preset', () => {
       const html = '<span style="color:#ff0000">red text</span>';

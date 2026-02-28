@@ -221,6 +221,39 @@ function sanitizeCellHtml(td: Element): string {
     span.replaceWith(document.createRange().createContextualFragment(wrapped));
   }
 
+  // Move color/background-color from <a> tags into <mark> wrappers.
+  // The sanitizer only allows href on <a>, so inline color styles would be lost.
+  for (const anchor of Array.from(clone.querySelectorAll('a[style]'))) {
+    const style = anchor.getAttribute('style') ?? '';
+
+    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+    const color = colorMatch?.[1]?.trim();
+    const bgColor = bgMatch?.[1]?.trim();
+
+    const hasColor = color !== undefined && !isDefaultBlack(color);
+    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent';
+
+    if (!hasColor && !hasBgColor) {
+      continue;
+    }
+
+    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
+    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+
+    const colorStyles = [
+      hasColor ? `color: ${mappedColor}` : '',
+      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
+    ].filter(Boolean).join('; ');
+
+    const el = anchor as HTMLElement;
+
+    el.innerHTML = `<mark style="${colorStyles};">${el.innerHTML}</mark>`;
+    el.style.removeProperty('color');
+    el.style.removeProperty('background-color');
+  }
+
   // Convert <p> boundaries to <br> line breaks
   for (const p of Array.from(clone.querySelectorAll('p'))) {
     const fragment = document.createRange().createContextualFragment(p.innerHTML + '<br>');

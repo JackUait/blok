@@ -54,13 +54,85 @@ describe('preprocessGoogleDocsHtml', () => {
     expect(result).toBe('<p>regular paragraph</p>');
   });
 
-  it('ignores spans without bold or italic styles', () => {
+  it('converts color-only span to <mark> without <b> or <i>', () => {
     const html = '<span style="color:red">red text</span>';
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('red text');
     expect(result).not.toContain('<b>');
     expect(result).not.toContain('<i>');
+    expect(result).toContain('<mark');
+    expect(result).toContain('style="color: red;"');
+  });
+
+  it('ignores spans without bold, italic, or color styles', () => {
+    const html = '<span style="font-size:14pt">sized text</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('sized text');
+    expect(result).not.toContain('<b>');
+    expect(result).not.toContain('<i>');
+    expect(result).not.toContain('<mark');
+  });
+
+  it('converts span with rgb color to <mark> with color style', () => {
+    const html = '<span style="color: rgb(255, 0, 0)">red text</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<mark style="color: rgb(255, 0, 0);">red text</mark>');
+    expect(result).not.toContain('<span');
+  });
+
+  it('converts span with background-color to <mark> with background-color style', () => {
+    const html = '<span style="background-color: rgb(255, 255, 0)">highlighted text</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<mark style="background-color: rgb(255, 255, 0);">highlighted text</mark>');
+    expect(result).not.toContain('<span');
+  });
+
+  it('converts span with bold and color to <b> wrapping <mark>', () => {
+    const html = '<span style="font-weight: 700; color: rgb(255, 0, 0)">bold red</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<b><mark style="color: rgb(255, 0, 0);">bold red</mark></b>');
+  });
+
+  it('converts span with italic and color to <i> wrapping <mark>', () => {
+    const html = '<span style="font-style: italic; color: rgb(0, 0, 255)">italic blue</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<i><mark style="color: rgb(0, 0, 255);">italic blue</mark></i>');
+  });
+
+  it('converts span with bold, italic, and color to nested <b><i><mark>', () => {
+    const html = '<span style="font-weight: 700; font-style: italic; color: rgb(0, 128, 0)">bold italic green</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<b><i><mark style="color: rgb(0, 128, 0);">bold italic green</mark></i></b>');
+  });
+
+  it('does not create <mark> for default black text color', () => {
+    const html = '<span style="color: rgb(0, 0, 0)">normal text</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).not.toContain('<mark');
+  });
+
+  it('converts span with both color and background-color to <mark> with both styles', () => {
+    const html = '<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">colored highlighted</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<mark style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0);">colored highlighted</mark>');
+  });
+
+  it('does not confuse background-color with color in regex', () => {
+    const html = '<span style="background-color: rgb(255, 255, 0)">only bg</span>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    // Should have background-color but NOT color
+    expect(result).toContain('background-color: rgb(255, 255, 0)');
+    expect(result).not.toMatch(/[^-]color: rgb/);
   });
 
   it('handles empty string', () => {

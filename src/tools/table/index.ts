@@ -361,7 +361,6 @@ export class Table implements BlockTool {
     if (this.readOnly) {
       mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
       applyCellColors(gridEl, this.model.snapshot().content);
-      this.initReadOnlyCellSelection(gridEl);
       this.initScrollHaze();
 
       return;
@@ -1187,24 +1186,6 @@ export class Table implements BlockTool {
       },
       onColorChange: (cells, color, mode) => {
         this.handleCellColorChange(cells, color, mode);
-      },
-    });
-  }
-
-  private initReadOnlyCellSelection(gridEl: HTMLElement): void {
-    this.cellSelection?.destroy();
-
-    const rectangleSelection = this.api.rectangleSelection;
-
-    this.cellSelection = new TableCellSelection({
-      grid: gridEl,
-      rectangleSelection,
-      i18n: this.api.i18n,
-      onCopy: (cells, clipboardData) => {
-        this.handleCellCopy(cells, clipboardData);
-      },
-      onCopyViaButton: (cells) => {
-        this.handleCellCopyViaButton(cells);
       },
     });
   }

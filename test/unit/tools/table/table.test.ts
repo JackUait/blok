@@ -3800,311 +3800,46 @@ describe('Table Tool', () => {
     });
   });
 
-  describe('read-only cell selection and copy', () => {
-    /** Stub for elementFromPoint that returns the target cell */
-    let elementFromPointTarget: Element | null = null;
-
-    beforeEach(() => {
-      vi.clearAllMocks();
-      elementFromPointTarget = null;
-
-      // jsdom doesn't define elementFromPoint; provide a stub
-      document.elementFromPoint = (_x: number, _y: number) => elementFromPointTarget;
-    });
-
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    /**
-     * Helper to create a ClipboardEvent-like object that works in jsdom.
-     * jsdom doesn't support DataTransfer in ClipboardEvent constructor,
-     * so we create a plain Event and add clipboardData manually.
-     */
-    const createClipboardEvent = (type: 'copy' | 'cut' | 'paste'): {
-      event: ClipboardEvent;
-      clipboardData: { setData: ReturnType<typeof vi.fn>; getData: ReturnType<typeof vi.fn> };
-      preventDefaultSpy: ReturnType<typeof vi.fn>;
-    } => {
-      const event = new Event(type, { bubbles: true, cancelable: true }) as ClipboardEvent;
-      const clipboardData = { setData: vi.fn(), getData: vi.fn() };
-      const preventDefaultSpy = vi.fn();
-
-      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
-      Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy });
-
-      return { event, clipboardData, preventDefaultSpy };
-    };
-
-    /**
-     * Create a read-only table with blocks registered in the API,
-     * mimicking what happens when the editor renders in read-only mode.
-     */
-    const createReadOnlyTable = (
-      content: string[][],
-    ): {
-      table: Table;
-      element: HTMLElement;
-      mockApi: API;
-    } => {
-      let insertCallCount = 0;
-      const blockIndexMap = new Map<string, number>();
-      const blockDataMap = new Map<string, { name: string; preservedData: Record<string, unknown>; preservedTunes: Record<string, unknown> }>();
-
-      const mockInsert = vi.fn().mockImplementation((type?: string, data?: Record<string, unknown>) => {
-        insertCallCount++;
-        const blockId = `ro-block-${insertCallCount}`;
-        const holder = document.createElement('div');
-
-        holder.setAttribute('data-blok-id', blockId);
-        blockIndexMap.set(blockId, insertCallCount - 1);
-        blockDataMap.set(blockId, {
-          name: type ?? 'paragraph',
-          preservedData: data ?? {},
-          preservedTunes: {},
-        });
-
-        return { id: blockId, holder };
-      });
-
-      const mockApi = createMockAPI({
-        blocks: {
-          insert: mockInsert,
-          delete: vi.fn(),
-          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
-          getBlocksCount: vi.fn().mockReturnValue(0),
-          getBlockIndex: vi.fn().mockImplementation((id: string) => blockIndexMap.get(id)),
-          getBlockByIndex: vi.fn().mockImplementation((index: number) => {
-            for (const [id, idx] of blockIndexMap.entries()) {
-              if (idx === index) {
-                const meta = blockDataMap.get(id);
-
-                return {
-                  id,
-                  name: meta?.name ?? 'paragraph',
-                  preservedData: meta?.preservedData ?? {},
-                  preservedTunes: meta?.preservedTunes ?? {},
-                };
-              }
-            }
-
-            return undefined;
-          }),
-          setBlockParent: vi.fn(),
-        },
-        rectangleSelection: {
-          cancelActiveSelection: vi.fn(),
-        },
-      } as never);
-
-      const tableOptions: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: {
-          withHeadings: false,
-          withHeadingColumn: false,
-          content,
-        },
+  describe('read-only mode does not initialize cell selection', () => {
+    it('does not set position:relative on the grid (no TableCellSelection)', () => {
+      const content = [['Hello', 'World']];
+      const tableOptions = {
+        data: { withHeadings: false, withHeadingColumn: false, content },
         config: {},
-        api: mockApi,
+        api: createMockAPI({ rectangleSelection: { cancelActiveSelection: vi.fn() } } as never),
         readOnly: true,
-        block: { id: 'table-readonly-copy' } as never,
+        block: { id: 'table-ro-no-sel' } as never,
       };
-
       const table = new Table(tableOptions);
       const element = table.render();
 
       document.body.appendChild(element);
       table.rendered();
 
-      return { table, element, mockApi };
-    };
-
-    /**
-     * Simulate a pointer drag from one cell to another within a grid.
-     * Sets up elementFromPoint to return the target cell so that
-     * TableCellSelection.handlePointerMove resolves the correct cell.
-     */
-    const simulateCellDrag = (
-      gridEl: HTMLElement,
-      fromCol: number,
-      toCol: number,
-    ): void => {
-      const rows = gridEl.querySelectorAll('[data-blok-table-row]');
-      const startRow = rows[0];
-
-      if (!startRow) {
-        return;
-      }
-
-      const startCell = startRow.querySelectorAll('[data-blok-table-cell]')[fromCol] as HTMLElement;
-      const endCell = startRow.querySelectorAll('[data-blok-table-cell]')[toCol] as HTMLElement;
-
-      if (!startCell || !endCell) {
-        return;
-      }
-
-      startCell.setPointerCapture = vi.fn();
-      startCell.releasePointerCapture = vi.fn();
-
-      // Set the elementFromPoint target before dispatching move events
-      elementFromPointTarget = endCell;
-
-      // Pointerdown on start cell
-      const downEvent = new PointerEvent('pointerdown', {
-        clientX: 50,
-        clientY: 20,
-        pointerId: 1,
-        bubbles: true,
-        button: 0,
-      });
-
-      Object.defineProperty(downEvent, 'target', { value: startCell, configurable: true });
-      gridEl.dispatchEvent(downEvent);
-
-      // Pointermove to end cell
-      document.dispatchEvent(new PointerEvent('pointermove', {
-        clientX: 150,
-        clientY: 20,
-        pointerId: 1,
-        bubbles: true,
-      }));
-
-      // Pointerup
-      document.dispatchEvent(new PointerEvent('pointerup', {
-        clientX: 150,
-        clientY: 20,
-        pointerId: 1,
-        bubbles: true,
-      }));
-    };
-
-    it('initializes cell selection in read-only mode', () => {
-      const { element, table } = createReadOnlyTable([['Hello', 'World']]);
       const gridEl = element.firstElementChild as HTMLElement;
 
-      // Cell selection sets position: relative on the grid element
-      expect(gridEl.style.position).toBe('relative');
+      expect(gridEl.style.position).not.toBe('relative');
 
       document.body.removeChild(element);
       table.destroy();
     });
 
-    it('supports copy from selected cells in read-only mode', () => {
-      const { element, table } = createReadOnlyTable([['CopyMe', 'CopyToo']]);
-      const gridEl = element.firstElementChild as HTMLElement;
-
-      expect(gridEl).toHaveTextContent('CopyMe');
-      expect(gridEl).toHaveTextContent('CopyToo');
-
-      // Select cells via pointer drag
-      simulateCellDrag(gridEl, 0, 1);
-
-      // Now trigger a copy event
-      const { event: copyEvent, clipboardData } = createClipboardEvent('copy');
-
-      document.dispatchEvent(copyEvent);
-
-      // If selection was active, clipboard data should have been set
-      const calls = clipboardData.setData.mock.calls as Array<[string, string]>;
-      const htmlCalls = calls.filter(
-        (c) => c[0] === 'text/html'
-      );
-      const textCalls = calls.filter(
-        (c) => c[0] === 'text/plain'
-      );
-
-      expect(htmlCalls.length).toBeGreaterThanOrEqual(1);
-      expect(textCalls.length).toBeGreaterThanOrEqual(1);
-
-      // Verify the clipboard content contains the cell text
-      const plainText = textCalls[0][1];
-
-      expect(plainText).toContain('CopyMe');
-      expect(plainText).toContain('CopyToo');
-
-      document.body.removeChild(element);
-      table.destroy();
-    });
-
-    it('does not support cut in read-only mode', () => {
-      const { element, table } = createReadOnlyTable([['NoCut', 'Blocked']]);
-      const gridEl = element.firstElementChild as HTMLElement;
-
-      // Select cells via pointer drag
-      simulateCellDrag(gridEl, 0, 1);
-
-      // Trigger a cut event
-      const { event: cutEvent, clipboardData } = createClipboardEvent('cut');
-
-      document.dispatchEvent(cutEvent);
-
-      // Cut handler should NOT set data on clipboard (no onCut callback wired)
-      // The cut event is intercepted by TableCellSelection.handleCut,
-      // which calls this.onCut if it exists. In read-only mode, onCut is not provided,
-      // so clipboardData.setData should NOT be called with any cell data.
-      const cutCalls = clipboardData.setData.mock.calls as Array<[string, string]>;
-      const htmlCalls = cutCalls.filter(
-        (c) => c[0] === 'text/html'
-      );
-
-      expect(htmlCalls.length).toBe(0);
-
-      document.body.removeChild(element);
-      table.destroy();
-    });
-
-    it('does not support paste in read-only mode', () => {
-      const { element, table } = createReadOnlyTable([['A', 'B']]);
-      const gridEl = element.firstElementChild as HTMLElement;
-
-      // Verify no paste listener is registered by dispatching a paste event
-      const payload: TableCellsClipboard = {
-        rows: 1,
-        cols: 1,
-        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'should not paste' } }] }]],
+    it('cleans up without error on destroy in read-only mode', () => {
+      const content = [['A', 'B']];
+      const tableOptions = {
+        data: { withHeadings: false, withHeadingColumn: false, content },
+        config: {},
+        api: createMockAPI({ rectangleSelection: { cancelActiveSelection: vi.fn() } } as never),
+        readOnly: true,
+        block: { id: 'table-ro-destroy' } as never,
       };
-      const html = buildClipboardHtml(payload);
+      const table = new Table(tableOptions);
+      const element = table.render();
 
-      const { event: pasteEvent, clipboardData, preventDefaultSpy } = createClipboardEvent('paste');
+      document.body.appendChild(element);
+      table.rendered();
 
-      clipboardData.getData.mockReturnValue(html);
-
-      gridEl.dispatchEvent(pasteEvent);
-
-      // Should NOT prevent default — no paste handler in read-only mode
-      expect(preventDefaultSpy).not.toHaveBeenCalled();
-
-      document.body.removeChild(element);
-      table.destroy();
-    });
-
-    it('does not clear content on Delete/Backspace in read-only mode', () => {
-      const { element, table } = createReadOnlyTable([['Keep', 'This']]);
-      const gridEl = element.firstElementChild as HTMLElement;
-
-      // Select cells via pointer drag
-      simulateCellDrag(gridEl, 0, 1);
-
-      const textBefore = gridEl.textContent;
-
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Cell selection listens on document for keydown; no user-event alternative for document-level listeners
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
-
-      const textAfter = gridEl.textContent;
-
-      // Content should not be cleared (no onClearContent callback)
-      expect(textAfter).toBe(textBefore);
-
-      document.body.removeChild(element);
-      table.destroy();
-    });
-
-    it('cleans up cell selection on destroy in read-only mode', () => {
-      const { element, table } = createReadOnlyTable([['A', 'B']]);
-
-      // destroy should not throw
-      expect(() => {
-        table.destroy();
-      }).not.toThrow();
+      expect(() => table.destroy()).not.toThrow();
 
       document.body.removeChild(element);
     });

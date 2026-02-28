@@ -90,6 +90,7 @@ export class TableCellSelection {
   private overlay: HTMLElement | null = null;
   private pill: HTMLElement | null = null;
   private pillPopover: PopoverDesktop | null = null;
+  private resizeObserver: ResizeObserver | null = null;
 
   private onCopy: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
@@ -142,6 +143,7 @@ export class TableCellSelection {
 
   public destroy(): void {
     this.destroyPillPopover();
+    this.disconnectResizeObserver();
     this.clearSelection();
     this.grid.removeEventListener('pointerdown', this.boundPointerDown);
     this.grid.removeEventListener('dragstart', this.boundPreventDragStart);
@@ -409,6 +411,7 @@ export class TableCellSelection {
 
   private restoreModifiedCells(): void {
     this.destroyPillPopover();
+    this.disconnectResizeObserver();
 
     this.selectedCells.forEach(cell => {
       cell.removeAttribute(SELECTED_ATTR);
@@ -534,6 +537,78 @@ export class TableCellSelection {
     // Position at center of the 2px right border; translate(-50%,-50%) handles centering
     this.pill.style.left = `${left + width - 1}px`;
     this.pill.style.top = `${top + height / 2}px`;
+
+    this.observeCellResizes();
+  }
+
+  /**
+   * Recalculate overlay and pill positions from the last painted range.
+   * Called by the ResizeObserver when selected cells change size.
+   */
+  private repositionOverlay(): void {
+    const range = this.lastPaintedRange;
+
+    if (!range || !this.overlay) {
+      return;
+    }
+
+    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
+    const firstCell = rows[range.minRow]?.querySelectorAll(`[${CELL_ATTR}]`)[range.minCol] as HTMLElement | undefined;
+    const lastCell = rows[range.maxRow]?.querySelectorAll(`[${CELL_ATTR}]`)[range.maxCol] as HTMLElement | undefined;
+
+    if (!firstCell || !lastCell) {
+      return;
+    }
+
+    const gridRect = this.grid.getBoundingClientRect();
+    const firstRect = firstCell.getBoundingClientRect();
+    const lastRect = lastCell.getBoundingClientRect();
+
+    const gridStyle = getComputedStyle(this.grid);
+    const borderTop = parseFloat(gridStyle.borderTopWidth) || 0;
+    const borderLeft = parseFloat(gridStyle.borderLeftWidth) || 0;
+
+    const width = lastRect.right - firstRect.left + 1;
+    const height = lastRect.bottom - firstRect.top + 1;
+    const top = firstRect.top - gridRect.top - borderTop - 1;
+    const left = firstRect.left - gridRect.left - borderLeft - 1;
+
+    this.overlay.style.top = `${top}px`;
+    this.overlay.style.left = `${left}px`;
+    this.overlay.style.width = `${width}px`;
+    this.overlay.style.height = `${height}px`;
+
+    if (this.pill) {
+      this.pill.style.left = `${left + width - 1}px`;
+      this.pill.style.top = `${top + height / 2}px`;
+    }
+  }
+
+  /**
+   * Start observing selected cells for size changes so the overlay
+   * stays in sync when cell content grows or shrinks.
+   */
+  private observeCellResizes(): void {
+    this.disconnectResizeObserver();
+
+    if (this.selectedCells.length === 0) {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.repositionOverlay();
+    });
+
+    for (const cell of this.selectedCells) {
+      this.resizeObserver.observe(cell);
+    }
+  }
+
+  private disconnectResizeObserver(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
   }
 
   private createPill(): HTMLElement {

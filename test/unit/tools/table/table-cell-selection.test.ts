@@ -1962,5 +1962,97 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('resize observer', () => {
+    let resizeCallbacks: ResizeObserverCallback[];
+    let observedElements: Element[];
+    let disconnectCalls: number;
+    let OriginalResizeObserver: typeof ResizeObserver;
+
+    beforeEach(() => {
+      resizeCallbacks = [];
+      observedElements = [];
+      disconnectCalls = 0;
+      OriginalResizeObserver = window.ResizeObserver;
+
+      window.ResizeObserver = class MockResizeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallbacks.push(callback);
+        }
+        observe(el: Element): void { observedElements.push(el); }
+        unobserve(): void { /* no-op */ }
+        disconnect(): void { disconnectCalls++; }
+      } as unknown as typeof ResizeObserver;
+
+      // Re-create selection with the mocked ResizeObserver
+      selection.destroy();
+      grid.remove();
+      grid = createGrid(3, 3);
+      mockBoundingRects(grid);
+      selection = new TableCellSelection({ grid, i18n: mockI18n });
+    });
+
+    afterEach(() => {
+      window.ResizeObserver = OriginalResizeObserver;
+    });
+
+    it('observes selected cells after drag selection', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      // 4 cells selected (2x2) should be observed
+      expect(observedElements).toHaveLength(4);
+    });
+
+    it('disconnects observer when selection is cleared', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+      expect(disconnectCalls).toBe(0);
+
+      // Click outside to clear selection
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      expect(disconnectCalls).toBeGreaterThan(0);
+    });
+
+    it('repositions overlay when resize observer fires', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const overlay = grid.querySelector(`[${OVERLAY_ATTR}]`) as HTMLElement;
+
+      expect(overlay).not.toBeNull();
+
+      const initialHeight = overlay.style.height;
+
+      // Simulate cell height growth by updating mock rects
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[1].querySelectorAll(`[${CELL_ATTR}]`)[1] as HTMLElement;
+
+      vi.spyOn(cell, 'getBoundingClientRect').mockReturnValue({
+        top: 50,
+        left: 110,
+        bottom: 110, // was 90, now 110 (grew by 20px)
+        right: 210,
+        width: 100,
+        height: 60,
+        x: 110,
+        y: 50,
+        toJSON: () => ({}),
+      });
+
+      // Fire the resize observer callback
+      const callback = resizeCallbacks[resizeCallbacks.length - 1];
+
+      callback([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+
+      expect(overlay.style.height).not.toBe(initialHeight);
+    });
+
+    it('disconnects observer on destroy', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      selection.destroy();
+
+      expect(disconnectCalls).toBeGreaterThan(0);
+    });
+  });
+
 });
 

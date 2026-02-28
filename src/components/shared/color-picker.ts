@@ -111,12 +111,12 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   });
 
   const updateTabs = (): void => {
-    tabButtons.forEach((tab, index) => {
-      tab.className = twMerge(
+    for (const [index, button] of tabButtons.entries()) {
+      button.className = twMerge(
         TAB_BASE_CLASSES,
         index === state.modeIndex ? 'bg-item-hover-bg font-medium' : 'bg-transparent hover:bg-item-hover-bg/50'
       );
-    });
+    }
   };
 
   /**

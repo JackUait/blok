@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
+import { isCellWithBlocks } from '../../../../src/tools/table/types';
 import type { TableData, TableConfig } from '../../../../src/tools/table/types';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
@@ -221,9 +222,16 @@ describe('Table onPaste cell colors', () => {
     const saved = table.save(pastedElement);
 
     // Should map to closest preset bg color (orange: #fbecdd)
-    expect(saved.content[0][0]).toHaveProperty('color');
+    const cell = saved.content[0][0];
+
+    expect(isCellWithBlocks(cell)).toBe(true);
+
+    if (!isCellWithBlocks(cell)) {
+      return;
+    }
+
     // The mapped color should be a valid preset hex color
-    expect(saved.content[0][0].color).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(cell.color).toMatch(/^#[0-9a-f]{6}$/i);
 
     element.parentNode?.removeChild(element);
     pastedElement.parentNode?.removeChild(pastedElement);

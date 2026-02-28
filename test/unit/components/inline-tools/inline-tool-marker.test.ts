@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconMarker } from '../../../../src/components/icons';
 import { MarkerInlineTool } from '../../../../src/components/inline-tools/inline-tool-marker';
 import { COLOR_PRESETS } from '../../../../src/components/shared/color-presets';
-import type { PopoverItemHtmlParams } from '../../../../types/utils/popover';
+import type { PopoverItemDefaultBaseParams, PopoverItemHtmlParams } from '../../../../types/utils/popover';
 
 /**
  * Convert a hex color string to the rgb() format that CSSOM produces
@@ -64,7 +64,7 @@ describe('MarkerInlineTool', () => {
     it('returns false when no selection', () => {
       vi.spyOn(window, 'getSelection').mockReturnValue(null);
 
-      const config = tool.render();
+      const config = tool.render() as PopoverItemDefaultBaseParams;
       const isActive = typeof config.isActive === 'function' ? config.isActive() : false;
 
       expect(isActive).toBe(false);
@@ -94,7 +94,7 @@ describe('MarkerInlineTool', () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      const config = tool.render();
+      const config = tool.render() as PopoverItemDefaultBaseParams;
       const isActive = typeof config.isActive === 'function' ? config.isActive() : false;
 
       expect(isActive).toBe(true);
@@ -249,7 +249,7 @@ describe('MarkerInlineTool', () => {
 
       tool.applyColor('background-color', '#f6f3f9');
 
-      const innerMark = container.querySelector('mark mark');
+      const innerMark = container.querySelector<HTMLElement>('mark mark');
 
       expect(innerMark).not.toBeNull();
       expect(innerMark?.style.backgroundColor).toBe('transparent');
@@ -1142,7 +1142,7 @@ describe('MarkerInlineTool', () => {
 
       selectTextRange(mark.firstChild, 2, 2);
 
-      const config = tool.render();
+      const config = tool.render() as PopoverItemDefaultBaseParams;
       const isActive = typeof config.isActive === 'function' ? config.isActive() : false;
 
       expect(isActive).toBe(true);

@@ -756,7 +756,8 @@ describe('table-cell-clipboard', () => {
       const result = parseGenericHtmlTable(html);
 
       expect(result).not.toBeNull();
-      const text = result?.cells[0][0].blocks[0].data.text ?? '';
+      const rawText = result?.cells[0][0].blocks[0].data.text;
+      const text = typeof rawText === 'string' ? rawText : '';
       const markCount = (text.match(/<mark/g) || []).length;
 
       expect(markCount).toBe(1);

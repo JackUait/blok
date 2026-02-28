@@ -531,9 +531,9 @@ test.describe('inline tool marker', () => {
 
     await expect(markerButton).toBeVisible();
 
-    const isActive = await markerButton.getAttribute('data-blok-popover-item-active');
+    const isActive = markerButton;
 
-    expect(isActive).toBe('true');
+    await expect(isActive).toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
   test('marker button is not active when selection contains no mark ancestor', async ({ page }) => {
@@ -554,9 +554,9 @@ test.describe('inline tool marker', () => {
 
     await expect(markerButton).toBeVisible();
 
-    const isActive = await markerButton.getAttribute('data-blok-popover-item-active');
+    const isActive = markerButton;
 
-    expect(isActive).not.toBe('true');
+    await expect(isActive).not.toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
   test('color picker grid renders exactly 10 swatch buttons', async ({ page }) => {
@@ -579,9 +579,9 @@ test.describe('inline tool marker', () => {
 
     await expect(grid).toBeVisible();
 
-    const swatchCount = await grid.locator('button').count();
+    const swatchCount = grid.getByRole('button');
 
-    expect(swatchCount).toBe(10);
+    await expect(swatchCount).toHaveCount(10);
   });
 
   test('color picker contains two tabs labeled Text and Background', async ({ page }) => {
@@ -705,10 +705,10 @@ test.describe('inline tool marker', () => {
       return window.blokInstance?.save();
     });
 
-    const paragraphBlock = savedData?.blocks[0];
+    const paragraphData = savedData?.blocks[0]?.data as { text: string } | undefined;
 
-    expect(paragraphBlock?.data.text).toContain('<mark');
-    expect(paragraphBlock?.data.text).toMatch(/color:/);
+    expect(paragraphData?.text).toContain('<mark');
+    expect(paragraphData?.text).toMatch(/color:/);
   });
 
   test('background color is preserved in blok.save() output', async ({ page }) => {
@@ -744,10 +744,10 @@ test.describe('inline tool marker', () => {
       return window.blokInstance?.save();
     });
 
-    const paragraphBlock = savedData?.blocks[0];
+    const paragraphData = savedData?.blocks[0]?.data as { text: string } | undefined;
 
-    expect(paragraphBlock?.data.text).toContain('<mark');
-    expect(paragraphBlock?.data.text).toMatch(/background-color:/);
+    expect(paragraphData?.text).toContain('<mark');
+    expect(paragraphData?.text).toMatch(/background-color:/);
   });
 
   test('both text and background colors are preserved in blok.save() output', async ({ page }) => {
@@ -787,11 +787,11 @@ test.describe('inline tool marker', () => {
       return window.blokInstance?.save();
     });
 
-    const paragraphBlock = savedData?.blocks[0];
+    const paragraphData = savedData?.blocks[0]?.data as { text: string } | undefined;
 
-    expect(paragraphBlock?.data.text).toContain('<mark');
-    expect(paragraphBlock?.data.text).toMatch(/color:/);
-    expect(paragraphBlock?.data.text).toMatch(/background-color:/);
+    expect(paragraphData?.text).toContain('<mark');
+    expect(paragraphData?.text).toMatch(/color:/);
+    expect(paragraphData?.text).toMatch(/background-color:/);
   });
 
   test('text can be both bold and color-marked simultaneously', async ({ page }) => {

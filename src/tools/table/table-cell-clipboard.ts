@@ -7,6 +7,24 @@ import { clean } from '../../components/utils/sanitizer';
 const DATA_ATTR = 'data-blok-table-cells';
 
 /**
+ * Resolve the background-color style value for clipboard markup.
+ * When the cell has an explicit background, use it; when it only has a text
+ * color, force a transparent background so the mark element doesn't inherit
+ * an unwanted default; otherwise return an empty string (no style needed).
+ */
+function resolveBackgroundStyle(hasBgColor: boolean, hasColor: boolean, mappedBg: string): string {
+  if (hasBgColor) {
+    return `background-color: ${mappedBg}`;
+  }
+
+  if (hasColor) {
+    return 'background-color: transparent';
+  }
+
+  return '';
+}
+
+/**
  * Entry describing one cell to be serialized for the clipboard.
  */
 interface CellEntry {
@@ -214,7 +232,7 @@ function sanitizeCellHtml(td: Element): string {
 
     const colorStyles = [
       hasColor ? `color: ${mappedColor}` : '',
-      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
+      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
     ].filter(Boolean).join('; ');
 
     const inner = span.innerHTML;
@@ -251,7 +269,7 @@ function sanitizeCellHtml(td: Element): string {
 
     const colorStyles = [
       hasColor ? `color: ${mappedColor}` : '',
-      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
+      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
     ].filter(Boolean).join('; ');
 
     const el = anchor as HTMLElement;

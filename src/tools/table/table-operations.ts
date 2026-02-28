@@ -282,12 +282,8 @@ export const mountCellBlocksReadOnly = (
 
       if (!isCellWithBlocks(cellContent)) {
         // Read-only render path must not mutate block state.
-        // Render legacy content as plain text in-place.
-        const legacyText = typeof cellContent === 'string'
-          ? cellContent
-          : (cellContent.text ?? '');
-
-        container.textContent = legacyText;
+        // Render legacy content (plain string) in-place.
+        container.textContent = cellContent;
 
         return;
       }

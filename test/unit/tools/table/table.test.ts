@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import { buildClipboardHtml } from '../../../../src/tools/table/table-cell-clipboard';
-import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
+import type { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
 import { updateHeadingStyles } from '../../../../src/tools/table/table-operations';
 import { clearAdditionalRestrictedTools, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
 import type { TableData, TableConfig, TableCellsClipboard } from '../../../../src/tools/table/types';

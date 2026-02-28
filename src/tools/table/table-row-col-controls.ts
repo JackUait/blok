@@ -160,22 +160,26 @@ export class TableRowColControls {
     this.destroyGrips();
     this.createGrips();
 
-    if (popoverGripInfo) {
-      const newGrip = popoverGripInfo.type === 'col'
-        ? this.colGrips[popoverGripInfo.index]
-        : this.rowGrips[popoverGripInfo.index];
+    if (!popoverGripInfo) {
+      return;
+    }
 
-      if (newGrip) {
-        this.popoverState.grip = newGrip;
-        this.hideAllGripsExcept(newGrip);
-        this.applyActiveClasses(newGrip);
+    const newGrip = popoverGripInfo.type === 'col'
+      ? this.colGrips[popoverGripInfo.index]
+      : this.rowGrips[popoverGripInfo.index];
 
-        if (popoverGripInfo.type === 'col') {
-          newGrip.style.height = `${GRIP_HOVER_SIZE}px`;
-        } else {
-          newGrip.style.width = `${GRIP_HOVER_SIZE}px`;
-        }
-      }
+    if (!newGrip) {
+      return;
+    }
+
+    this.popoverState.grip = newGrip;
+    this.hideAllGripsExcept(newGrip);
+    this.applyActiveClasses(newGrip);
+
+    if (popoverGripInfo.type === 'col') {
+      newGrip.style.height = `${GRIP_HOVER_SIZE}px`;
+    } else {
+      newGrip.style.width = `${GRIP_HOVER_SIZE}px`;
     }
   }
 

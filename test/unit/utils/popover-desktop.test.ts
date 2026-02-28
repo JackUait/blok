@@ -955,7 +955,7 @@ describe('PopoverDesktop', () => {
        */
       isActiveFn.mockReturnValue(true);
 
-      swatchBtn.dispatchEvent(new Event('click', { bubbles: true }));
+      swatchBtn.click();
 
       expect(triggerItem.getElement()?.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(true);
 
@@ -964,7 +964,7 @@ describe('PopoverDesktop', () => {
        */
       isActiveFn.mockReturnValue(false);
 
-      swatchBtn.dispatchEvent(new Event('click', { bubbles: true }));
+      swatchBtn.click();
 
       expect(triggerItem.getElement()?.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(false);
     });

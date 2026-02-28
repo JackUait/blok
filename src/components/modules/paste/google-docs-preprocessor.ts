@@ -47,6 +47,25 @@ function unwrapGoogleDocsContent(wrapper: HTMLElement): void {
 }
 
 /**
+ * Determine the background-color style declaration for a Google Docs element.
+ *
+ * When a background color is present, it is mapped to the nearest preset.
+ * When only a foreground color is present, an explicit `transparent` background
+ * is returned so the mark element doesn't inherit an unwanted background.
+ */
+function resolveBackgroundStyle(hasBgColor: boolean, hasColor: boolean, mappedBg: string): string {
+  if (hasBgColor) {
+    return `background-color: ${mappedBg}`;
+  }
+
+  if (hasColor) {
+    return 'background-color: transparent';
+  }
+
+  return '';
+}
+
+/**
  * Check whether a CSS color value is the default black text color.
  * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
  * Spans with only this color should not be converted to `<mark>`.
@@ -91,7 +110,7 @@ function convertGoogleDocsStyles(wrapper: HTMLElement): void {
 
     const colorStyles = [
       hasColor ? `color: ${mappedColor}` : '',
-      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
+      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
     ].filter(Boolean).join('; ');
 
     const inner = colorStyles
@@ -137,7 +156,7 @@ function convertAnchorColorStyles(wrapper: HTMLElement): void {
 
     const colorStyles = [
       hasColor ? `color: ${mappedColor}` : '',
-      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
+      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
     ].filter(Boolean).join('; ');
 
     const el = anchor as HTMLElement;

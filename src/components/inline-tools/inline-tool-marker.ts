@@ -653,30 +653,7 @@ export class MarkerInlineTool implements InlineTool {
      * Walk text nodes to find the nodes and offsets corresponding
      * to the character positions in the parent's textContent
      */
-    const walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
-    let charCount = 0;
-    let startNode: Text | null = null;
-    let startNodeOffset = 0;
-    let endNode: Text | null = null;
-    let endNodeOffset = 0;
-
-    while (walker.nextNode()) {
-      const node = walker.currentNode as Text;
-      const nodeLength = node.textContent?.length ?? 0;
-
-      if (!startNode && charCount + nodeLength > startIdx) {
-        startNode = node;
-        startNodeOffset = startIdx - charCount;
-      }
-
-      if (charCount + nodeLength >= endIdx) {
-        endNode = node;
-        endNodeOffset = endIdx - charCount;
-        break;
-      }
-
-      charCount += nodeLength;
-    }
+    const { startNode, startNodeOffset, endNode, endNodeOffset } = this.findTextBoundaries(parent, startIdx, endIdx);
 
     if (startNode && endNode) {
       const restoredRange = document.createRange();
@@ -686,6 +663,44 @@ export class MarkerInlineTool implements InlineTool {
       selection.removeAllRanges();
       selection.addRange(restoredRange);
     }
+  }
+
+  /**
+   * Walk text nodes within a parent to find the nodes and offsets
+   * corresponding to character positions in the parent's textContent.
+   * @param parent - The parent element to walk
+   * @param startIdx - The start character index
+   * @param endIdx - The end character index
+   * @returns An object with the start/end nodes and their offsets
+   */
+  private findTextBoundaries(
+    parent: HTMLElement,
+    startIdx: number,
+    endIdx: number
+  ): { startNode: Text | null; startNodeOffset: number; endNode: Text | null; endNodeOffset: number } {
+    const walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
+    const result = { startNode: null as Text | null, startNodeOffset: 0, endNode: null as Text | null, endNodeOffset: 0 };
+    const charCounter = { value: 0 };
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const nodeLength = node.textContent?.length ?? 0;
+
+      if (result.startNode === null && charCounter.value + nodeLength > startIdx) {
+        result.startNode = node;
+        result.startNodeOffset = startIdx - charCounter.value;
+      }
+
+      if (charCounter.value + nodeLength >= endIdx) {
+        result.endNode = node;
+        result.endNodeOffset = endIdx - charCounter.value;
+        break;
+      }
+
+      charCounter.value += nodeLength;
+    }
+
+    return result;
   }
 
   /**

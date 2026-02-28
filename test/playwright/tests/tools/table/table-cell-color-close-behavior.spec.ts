@@ -298,15 +298,11 @@ test.describe('Color Picker Closing Behavior', () => {
     // 2. Press Escape to close the popover tree without selecting a swatch
     await page.keyboard.press('Escape');
 
-    // Close remaining popovers if still open
-    const isColorVisible = await page.getByText('Copy').isVisible().catch(() => false);
-
-    if (isColorVisible) {
-      await page.keyboard.press('Escape');
-    }
-
     // expect: The color picker is no longer visible
     await expect(colorPicker).not.toBeVisible();
+
+    // expect: The parent pill popover is also closed (entire tree closes on one Escape)
+    await expect(page.getByText('Copy')).not.toBeVisible();
 
     // Inspect cell (0,0)'s backgroundColor and color styles
     const styles = await getCell(page, 0, 0).evaluate(
@@ -336,18 +332,18 @@ test.describe('Color Picker Closing Behavior', () => {
     expect(tableBlock.type).toBe('table');
 
     const content = (tableBlock.data as {
-      content: Array<Array<string | { color?: string; textColor?: string }>>;
+      content: Array<Array<{ blocks: string[]; color?: string; textColor?: string }>>;
     }).content;
     const firstCell = content[0][0];
 
-    if (typeof firstCell === 'object' && firstCell !== null) {
-      // expect: content[0][0] has no 'color' property or its value is null/undefined
-      expect(firstCell.color ?? null).toBeNull();
+    // expect: content[0][0] is an object with blocks (table snapshot always returns CellContent objects)
+    expect(firstCell).toHaveProperty('blocks');
 
-      // expect: content[0][0] has no 'textColor' property or its value is null/undefined
-      expect(firstCell.textColor ?? null).toBeNull();
-    }
-    // If firstCell is a string, that means no color was applied, which is also correct
+    // expect: content[0][0] has no 'color' property (no background color was applied)
+    expect(firstCell).not.toHaveProperty('color');
+
+    // expect: content[0][0] has no 'textColor' property (no text color was applied)
+    expect(firstCell).not.toHaveProperty('textColor');
   });
 
   test('Pill popover closes when user starts a new drag selection over different cells', async ({ page }) => {

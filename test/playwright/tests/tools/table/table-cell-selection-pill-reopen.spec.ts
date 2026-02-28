@@ -398,27 +398,12 @@ test.describe('Pill popover reopens for different cell', () => {
     await expect(swatch).toBeVisible();
     await swatch.click({ force: true });
 
-    // 2. Try to click on the adjacent cell (0,1) — could be under the popover
-    //    Use force:true to bypass Playwright's actionability checks if popover covers it
-    const cellB = getCell(page, 0, 1);
-    const cellBBox = assertBoundingBox(await cellB.boundingBox(), 'cell [0,1]');
+    // 2. Dismiss any remaining popover by clicking outside the table
+    await page.mouse.click(10, 10);
+    await expect(page.getByText('Copy')).not.toBeVisible();
 
-    await page.mouse.click(cellBBox.x + 5, cellBBox.y + cellBBox.height / 2);
-
-    // 3. Check if cell (0,1) got selected (has pill)
-    //    If the popover was covering cell (0,1), the click went to the popover
-    //    and the cell wasn't selected. In that case, close the popover first.
-    const popoverStillVisible = await page.getByText('Copy').isVisible().catch(() => false);
-
-    if (popoverStillVisible) {
-      // Popover is still open (was covering the cell) — close it by clicking outside
-      await page.mouse.click(10, 10);
-      await expect(page.getByText('Copy')).not.toBeVisible();
-
-      // Now select cell (0,1) again
-      await selectSingleCell(page, 0, 1);
-    }
-
+    // 3. Select the adjacent cell (0,1)
+    await selectSingleCell(page, 0, 1);
     await expect(page.locator('[data-blok-table-selection-pill]')).toBeAttached();
 
     // 4. Open pill popover for cell (0,1)

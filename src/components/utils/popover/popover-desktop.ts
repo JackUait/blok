@@ -465,6 +465,17 @@ export class PopoverDesktop extends PopoverAbstract {
     // Apply nested popover positioning (moved from popover.css)
     this.applyNestedPopoverPositioning(nestedPopoverEl);
 
+    /**
+     * Refresh trigger item's active state after any click inside the nested popover.
+     * This handles the case where a child action (e.g. color swatch click) changes
+     * the trigger tool's active state but the parent popover is not aware of it.
+     */
+    this.listeners.on(nestedPopoverEl, 'click', () => {
+      if (this.nestedPopoverTriggerItem !== null) {
+        this.refreshItemActiveState(this.nestedPopoverTriggerItem);
+      }
+    });
+
     this.nestedPopover.show();
     this.flipper?.deactivate();
 

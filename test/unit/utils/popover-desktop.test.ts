@@ -908,4 +908,65 @@ describe('PopoverDesktop', () => {
       expect(alphaItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
     });
   });
+
+  describe('nested popover trigger item refresh', () => {
+    it('refreshes trigger item active state after click inside nested popover', () => {
+      const isActiveFn = vi.fn(() => false);
+      const swatchBtn = document.createElement('button');
+
+      swatchBtn.setAttribute('data-blok-testid', 'color-swatch');
+
+      const htmlContainer = document.createElement('div');
+
+      htmlContainer.appendChild(swatchBtn);
+
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Marker',
+            name: 'marker',
+            icon: '<svg></svg>',
+            isActive: isActiveFn,
+            children: {
+              items: [
+                {
+                  type: PopoverItemType.Html,
+                  element: htmlContainer,
+                },
+              ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const triggerItem = instance.itemsDefault[0];
+
+      /**
+       * showNestedItems sets nestedPopoverTriggerItem then calls showNestedPopoverForItem
+       */
+      instance.nestedPopoverTriggerItem = triggerItem;
+      instance.showNestedPopoverForItem(triggerItem);
+
+      expect(triggerItem.getElement()?.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(false);
+
+      /**
+       * Simulate: after the swatch click handler runs, isActive returns true
+       * (color was applied to the DOM by the tool's onColorSelect callback)
+       */
+      isActiveFn.mockReturnValue(true);
+
+      swatchBtn.dispatchEvent(new Event('click', { bubbles: true }));
+
+      expect(triggerItem.getElement()?.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(true);
+
+      /**
+       * Simulate: default button clicked removes color, isActive returns false
+       */
+      isActiveFn.mockReturnValue(false);
+
+      swatchBtn.dispatchEvent(new Event('click', { bubbles: true }));
+
+      expect(triggerItem.getElement()?.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(false);
+    });
+  });
 });

@@ -2556,7 +2556,7 @@ test.describe('table tool', () => {
       expect(overlayBox.height).toBeLessThan(expectedHeight + 5);
     });
 
-    test('clicking a single cell does not create a selection', async ({ page }) => {
+    test('clicking a single cell creates a single-cell selection', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -2582,7 +2582,7 @@ test.describe('table tool', () => {
 
       const selected = page.locator('[data-blok-table-cell-selected]');
 
-      await expect(selected).toHaveCount(0);
+      await expect(selected).toHaveCount(1);
     });
 
     test('edge selection overlay covers only selected cells, not entire grid border', async ({ page }) => {

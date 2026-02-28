@@ -1281,6 +1281,53 @@ describe('TableCellSelection', () => {
       // Verify onClearContent NOT called
       expect(onClearContent).not.toHaveBeenCalled();
     });
+
+    it('does not intercept Delete/Backspace for single-cell selection', () => {
+      const onClearContent = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onClearContent,
+      });
+
+      // Select a single cell (column 0 of row 0 only)
+      selection.selectColumn(0);
+
+      // selectColumn selects all rows — instead use programmatic single-cell click
+      selection.clearActiveSelection();
+
+      // Simulate a single-cell click on cell (0,0)
+      const rows = grid.querySelectorAll(`[${ROW_ATTR}]`);
+      const cell = rows[0]?.querySelectorAll(`[${CELL_ATTR}]`)[0] as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      // Verify the cell is selected
+      expect(cell.hasAttribute(SELECTED_ATTR)).toBe(true);
+
+      // Dispatch Delete key
+      const deleteEvent = new KeyboardEvent('keydown', {
+        key: 'Delete',
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = vi.spyOn(deleteEvent, 'preventDefault');
+
+      document.dispatchEvent(deleteEvent);
+
+      // Verify onClearContent NOT called (normal text editing should handle it)
+      expect(onClearContent).not.toHaveBeenCalled();
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('copy/cut event handling', () => {

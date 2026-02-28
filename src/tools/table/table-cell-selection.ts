@@ -369,6 +369,12 @@ export class TableCellSelection {
       return;
     }
 
+    // For single-cell selections, let the browser handle Delete/Backspace
+    // as normal character-level editing in the contenteditable cell.
+    if (this.selectedCells.length <= 1) {
+      return;
+    }
+
     // Prevent default behavior
     e.preventDefault();
 

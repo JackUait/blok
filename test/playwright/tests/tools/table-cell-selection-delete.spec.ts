@@ -262,13 +262,14 @@ test.describe('table cell selection — delete key', () => {
   test('delete key does not interfere with normal text editing in single cell', async ({ page }) => {
     await create3x3TableWithContent(page);
 
-    // Click into a single cell (no selection)
+    // Click into a single cell (single-cell selection is created but does not
+    // interfere with normal character-level editing)
     await getCellEditable(page, 0, 0).click();
 
-    // Verify no cells are selected
+    // Verify one cell is selected (single-click creates a single-cell selection)
     const selected = page.locator('[data-blok-table-cell-selected]');
 
-    await expect(selected).toHaveCount(0);
+    await expect(selected).toHaveCount(1);
 
     // Position cursor at the end and delete backward (normal text editing)
     await page.keyboard.press('End');

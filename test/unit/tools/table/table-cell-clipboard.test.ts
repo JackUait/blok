@@ -550,5 +550,109 @@ describe('table-cell-clipboard', () => {
 
       expect(result?.cells[0][0].blocks[0].data.text).toBe('plain text');
     });
+
+    // -------------------------------------------------------------------------
+    // Google Docs color import — inline text colors
+    // -------------------------------------------------------------------------
+
+    it('should convert color span to <mark> with color style in cell content', () => {
+      const html = '<table><tr><td><span style="color: rgb(255, 0, 0)">red text</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="color: rgb(255, 0, 0);">red text</mark>');
+    });
+
+    it('should convert background-color span to <mark> with background-color style in cell content', () => {
+      const html = '<table><tr><td><span style="background-color: rgb(255, 255, 0)">highlighted</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="background-color: rgb(255, 255, 0);">highlighted</mark>');
+    });
+
+    it('should convert bold+color span to nested <b><mark> in cell content', () => {
+      const html = '<table><tr><td><span style="font-weight:700; color: rgb(255, 0, 0)">bold red</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b><mark style="color: rgb(255, 0, 0);">bold red</mark></b>');
+    });
+
+    it('should not create <mark> for default black text color in cell content', () => {
+      const html = '<table><tr><td><span style="color: rgb(0, 0, 0)">normal text</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).not.toContain('<mark');
+    });
+
+    it('should convert span with both color and background-color to <mark> with both styles', () => {
+      const html = '<table><tr><td><span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">colored highlighted</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe(
+        '<mark style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0);">colored highlighted</mark>'
+      );
+    });
+
+    it('should convert italic+color span to nested <i><mark> in cell content', () => {
+      const html = '<table><tr><td><span style="font-style:italic; color: rgb(0, 0, 255)">italic blue</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<i><mark style="color: rgb(0, 0, 255);">italic blue</mark></i>');
+    });
+
+    // -------------------------------------------------------------------------
+    // Google Docs color import — cell-level background color
+    // -------------------------------------------------------------------------
+
+    it('should extract cell background-color from td style as cell color', () => {
+      const html = '<table><tr><td style="background-color: rgb(255, 0, 0)">red cell</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBe('rgb(255, 0, 0)');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('red cell');
+    });
+
+    it('should not set color property when td has no background-color', () => {
+      const html = '<table><tr><td>plain cell</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBeUndefined();
+    });
+
+    it('should extract cell background-color from th style as cell color', () => {
+      const html = '<table><tr><th style="background-color: rgb(0, 128, 255)">blue header</th></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBe('rgb(0, 128, 255)');
+    });
+
+    it('should handle both cell background-color and inline text color together', () => {
+      const html = '<table><tr><td style="background-color: rgb(255, 255, 0)"><span style="color: rgb(255, 0, 0)">red on yellow</span></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBe('rgb(255, 255, 0)');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="color: rgb(255, 0, 0);">red on yellow</mark>');
+    });
+
+    it('should extract cell background-color from realistic Google Docs table HTML', () => {
+      const html = `
+        <table style="border:none;border-collapse:collapse;">
+          <tbody>
+            <tr>
+              <td style="border:solid #000 0.5pt;padding:5pt;background-color:#ff0000;">
+                <p dir="ltr"><span style="color: rgb(255, 255, 255); font-weight:700">White bold on red</span></p>
+              </td>
+              <td style="border:solid #000 0.5pt;padding:5pt;">
+                <p dir="ltr"><span>Normal cell</span></p>
+              </td>
+            </tr>
+          </tbody>
+        </table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].color).toBe('#ff0000');
+      expect(result?.cells[0][0].blocks[0].data.text).toContain('<b>');
+      expect(result?.cells[0][0].blocks[0].data.text).toContain('<mark');
+      expect(result?.cells[0][1].color).toBeUndefined();
+    });
   });
 });

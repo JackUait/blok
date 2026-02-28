@@ -1,3 +1,4 @@
+import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { ClipboardBlockData, TableCellsClipboard } from './types';
 import { clean } from '../../components/utils/sanitizer';
 
@@ -124,16 +125,43 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
 }
 
 /**
- * Sanitizer config for cell content: allows bold, italic, line breaks, and links.
+ * CSS properties allowed on <mark> elements inside table cells.
+ * Matches MarkerInlineTool.ALLOWED_STYLE_PROPS.
  */
-const CELL_SANITIZE_CONFIG = {
+const ALLOWED_MARK_STYLE_PROPS = new Set(['color', 'background-color']);
+
+/**
+ * Sanitizer config for cell content: allows bold, italic, line breaks, links,
+ * and color markers (<mark> with color/background-color styles only).
+ */
+const CELL_SANITIZE_CONFIG: SanitizerConfig = {
   b: true,
   strong: true,
   i: true,
   em: true,
   br: true,
   a: { href: true },
-} as const;
+  mark: (node: Element): { [attr: string]: boolean | string } => {
+    const el = node as HTMLElement;
+    const style = el.style;
+
+    const props = Array.from({ length: style.length }, (_, i) => style.item(i));
+
+    for (const prop of props) {
+      if (!ALLOWED_MARK_STYLE_PROPS.has(prop)) {
+        style.removeProperty(prop);
+      }
+    }
+
+    return style.length > 0 ? { style: true } : {};
+  },
+};
+
+/**
+ * Default/black color value that Google Docs sets on all text.
+ * Spans with only this color should not be converted to `<mark>`.
+ */
+const DEFAULT_BLACK = 'rgb(0, 0, 0)';
 
 /**
  * Extract HTML content from a `<td>`/`<th>` element, converting Google Docs
@@ -141,8 +169,10 @@ const CELL_SANITIZE_CONFIG = {
  *
  * - `<span style="font-weight:700">` or `font-weight:bold` → `<b>`
  * - `<span style="font-style:italic">` → `<i>`
+ * - `<span style="color:...">` → `<mark style="color: ...">`
+ * - `<span style="background-color:...">` → `<mark style="background-color: ...">`
  * - `<p>` boundaries → `<br>` line breaks
- * - Everything else stripped except `<b>`, `<strong>`, `<i>`, `<em>`, `<br>`, `<a href>`
+ * - Everything else stripped except `<b>`, `<strong>`, `<i>`, `<em>`, `<br>`, `<a href>`, `<mark style>`
  */
 function sanitizeCellHtml(td: Element): string {
   const clone = td.cloneNode(true) as HTMLElement;
@@ -153,12 +183,30 @@ function sanitizeCellHtml(td: Element): string {
     const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
     const isItalic = /font-style\s*:\s*italic/i.test(style);
 
-    if (!isBold && !isItalic) {
+    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+    const color = colorMatch?.[1]?.trim();
+    const bgColor = bgMatch?.[1]?.trim();
+
+    const hasColor = color !== undefined && color !== DEFAULT_BLACK;
+    const hasBgColor = bgColor !== undefined;
+
+    if (!isBold && !isItalic && !hasColor && !hasBgColor) {
       continue;
     }
 
+    const colorStyles = [
+      hasColor ? `color: ${color}` : '',
+      hasBgColor ? `background-color: ${bgColor}` : '',
+    ].filter(Boolean).join('; ');
+
     const inner = span.innerHTML;
-    const italic = isItalic ? `<i>${inner}</i>` : inner;
+    const marked = colorStyles
+      ? `<mark style="${colorStyles};">${inner}</mark>`
+      : inner;
+
+    const italic = isItalic ? `<i>${marked}</i>` : marked;
     const wrapped = isBold ? `<b>${italic}</b>` : italic;
 
     span.replaceWith(document.createRange().createContextualFragment(wrapped));
@@ -211,11 +259,13 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     return null;
   }
 
-  const cellGrid: Array<Array<{ blocks: ClipboardBlockData[] }>> = [];
+  type CellPayload = TableCellsClipboard['cells'][number][number];
+
+  const cellGrid: CellPayload[][] = [];
 
   rows.forEach((row) => {
     const tds = row.querySelectorAll('td, th');
-    const rowCells: Array<{ blocks: ClipboardBlockData[] }> = [];
+    const rowCells: CellPayload[] = [];
 
     tds.forEach((td) => {
       const text = sanitizeCellHtml(td);
@@ -224,7 +274,17 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
         ? segments.map(s => ({ tool: 'paragraph' as const, data: { text: s } }))
         : [{ tool: 'paragraph' as const, data: { text: '' } }];
 
-      rowCells.push({ blocks });
+      const cell: CellPayload = { blocks };
+
+      // Extract cell-level background color from td/th style attribute
+      const tdStyle = td.getAttribute('style') ?? '';
+      const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+      if (cellBgMatch?.[1]) {
+        cell.color = cellBgMatch[1].trim();
+      }
+
+      rowCells.push(cell);
     });
 
     cellGrid.push(rowCells);

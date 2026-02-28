@@ -95,6 +95,49 @@ describe('table-cell-clipboard', () => {
       expect(result.cols).toBe(0);
       expect(result.cells).toEqual([]);
     });
+
+    it('should preserve color and textColor from entries', () => {
+      const entries = [
+        { row: 0, col: 0, blocks: [{ tool: 'paragraph', data: { text: 'A' } }], color: '#ff0000', textColor: '#ffffff' },
+        { row: 0, col: 1, blocks: [{ tool: 'paragraph', data: { text: 'B' } }], color: '#00ff00' },
+        { row: 1, col: 0, blocks: [{ tool: 'paragraph', data: { text: 'C' } }], textColor: '#0000ff' },
+        { row: 1, col: 1, blocks: [{ tool: 'paragraph', data: { text: 'D' } }] },
+      ];
+
+      const result = serializeCellsToClipboard(entries);
+
+      expect(result.cells[0][0]).toEqual({
+        blocks: [{ tool: 'paragraph', data: { text: 'A' } }],
+        color: '#ff0000',
+        textColor: '#ffffff',
+      });
+      expect(result.cells[0][1]).toEqual({
+        blocks: [{ tool: 'paragraph', data: { text: 'B' } }],
+        color: '#00ff00',
+      });
+      expect(result.cells[1][0]).toEqual({
+        blocks: [{ tool: 'paragraph', data: { text: 'C' } }],
+        textColor: '#0000ff',
+      });
+      // No color or textColor — should not have the keys
+      expect(result.cells[1][1]).toEqual({
+        blocks: [{ tool: 'paragraph', data: { text: 'D' } }],
+      });
+    });
+
+    it('should not include color/textColor keys when they are undefined', () => {
+      const entries = [
+        { row: 0, col: 0, blocks: [{ tool: 'paragraph', data: { text: 'X' } }], color: undefined, textColor: undefined },
+      ];
+
+      const result = serializeCellsToClipboard(entries);
+
+      expect(result.cells[0][0]).toEqual({
+        blocks: [{ tool: 'paragraph', data: { text: 'X' } }],
+      });
+      expect('color' in result.cells[0][0]).toBe(false);
+      expect('textColor' in result.cells[0][0]).toBe(false);
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -266,6 +309,28 @@ describe('table-cell-clipboard', () => {
             },
             { blocks: [{ tool: 'paragraph', data: { text: 'F' } }] },
             { blocks: [{ tool: 'list', data: { items: ['x', 'y'] } }] },
+          ],
+        ],
+      };
+
+      const html = buildClipboardHtml(payload);
+      const result = parseClipboardHtml(html);
+
+      expect(result).toEqual(payload);
+    });
+
+    it('should roundtrip color and textColor through HTML clipboard', () => {
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'A' } }], color: '#ff0000', textColor: '#ffffff' },
+            { blocks: [{ tool: 'paragraph', data: { text: 'B' } }], color: '#00ff00' },
+          ],
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'C' } }], textColor: '#0000ff' },
+            { blocks: [{ tool: 'paragraph', data: { text: 'D' } }] },
           ],
         ],
       };

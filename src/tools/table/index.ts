@@ -1066,7 +1066,7 @@ export class Table implements BlockTool {
 
   private collectCellBlockData(
     cells: HTMLElement[],
-  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[] }> {
+  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string }> {
     const gridEl = this.gridElement;
 
     if (!gridEl) {
@@ -1131,7 +1131,16 @@ export class Table implements BlockTool {
         });
       }
 
-      return { row: rowIndex, col: colIndex, blocks };
+      const color = this.model.getCellColor(rowIndex, colIndex);
+      const textColor = this.model.getCellTextColor(rowIndex, colIndex);
+
+      return {
+        row: rowIndex,
+        col: colIndex,
+        blocks,
+        ...(color !== undefined ? { color } : {}),
+        ...(textColor !== undefined ? { textColor } : {}),
+      };
     }).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
   }
 
@@ -1297,12 +1306,24 @@ export class Table implements BlockTool {
           const cell = cells[startCol + c] as HTMLElement | undefined;
 
           if (cell) {
-            this.pasteCellPayload(cell, payload.cells[r][c]);
+            const cellPayload = payload.cells[r][c];
+
+            this.pasteCellPayload(cell, cellPayload);
 
             // Sync pasted block IDs to model
             const blockIds = this.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
 
             this.model.setCellBlocks(startRow + r, startCol + c, blockIds);
+
+            // Restore cell colors from clipboard
+            const destRow = startRow + r;
+            const destCol = startCol + c;
+
+            this.model.setCellColor(destRow, destCol, cellPayload.color);
+            cell.style.backgroundColor = cellPayload.color ?? '';
+
+            this.model.setCellTextColor(destRow, destCol, cellPayload.textColor);
+            cell.style.color = cellPayload.textColor ?? '';
           }
         });
       });

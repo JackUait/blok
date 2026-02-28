@@ -73,5 +73,5 @@ export interface ClipboardBlockData {
 export interface TableCellsClipboard {
   rows: number;
   cols: number;
-  cells: Array<Array<{ blocks: ClipboardBlockData[] }>>;
+  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string }>>;
 }

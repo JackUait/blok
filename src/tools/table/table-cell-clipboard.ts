@@ -11,6 +11,8 @@ interface CellEntry {
   row: number;
   col: number;
   blocks: ClipboardBlockData[];
+  color?: string;
+  textColor?: string;
 }
 
 /**
@@ -34,8 +36,8 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
   const cols = maxCol - minCol + 1;
 
   // Pre-fill with empty cells
-  const cells: Array<Array<{ blocks: ClipboardBlockData[] }>> = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ blocks: [] }))
+  const cells: TableCellsClipboard['cells'] = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ blocks: [] as ClipboardBlockData[] }))
   );
 
   for (const entry of entries) {
@@ -43,6 +45,14 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
     const c = entry.col - minCol;
 
     cells[r][c] = { blocks: entry.blocks };
+
+    if (entry.color !== undefined) {
+      cells[r][c].color = entry.color;
+    }
+
+    if (entry.textColor !== undefined) {
+      cells[r][c].textColor = entry.textColor;
+    }
   }
 
   return { rows, cols, cells };

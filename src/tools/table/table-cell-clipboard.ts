@@ -1,5 +1,6 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { ClipboardBlockData, TableCellsClipboard } from './types';
+import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { clean } from '../../components/utils/sanitizer';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
@@ -201,9 +202,12 @@ function sanitizeCellHtml(td: Element): string {
       continue;
     }
 
+    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
+    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+
     const colorStyles = [
-      hasColor ? `color: ${color}` : '',
-      hasBgColor ? `background-color: ${bgColor}` : (hasColor ? 'background-color: transparent' : ''),
+      hasColor ? `color: ${mappedColor}` : '',
+      hasBgColor ? `background-color: ${mappedBg}` : (hasColor ? 'background-color: transparent' : ''),
     ].filter(Boolean).join('; ');
 
     const inner = span.innerHTML;
@@ -286,7 +290,7 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
       const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
 
       if (cellBgMatch?.[1]) {
-        cell.color = cellBgMatch[1].trim();
+        cell.color = mapToNearestPresetColor(cellBgMatch[1].trim(), 'bg');
       }
 
       rowCells.push(cell);

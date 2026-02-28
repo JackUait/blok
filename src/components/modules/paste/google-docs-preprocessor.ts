@@ -79,20 +79,14 @@ function convertGoogleDocsStyles(wrapper: HTMLElement): void {
       continue;
     }
 
-    let inner = span.innerHTML;
+    const colorStyles = [
+      hasColor ? `color: ${color}` : '',
+      hasBgColor ? `background-color: ${bgColor}` : '',
+    ].filter(Boolean).join('; ');
 
-    if (hasColor || hasBgColor) {
-      const styles: string[] = [];
-
-      if (hasColor) {
-        styles.push(`color: ${color}`);
-      }
-      if (hasBgColor) {
-        styles.push(`background-color: ${bgColor}`);
-      }
-
-      inner = `<mark style="${styles.join('; ')};">${inner}</mark>`;
-    }
+    const inner = colorStyles
+      ? `<mark style="${colorStyles};">${span.innerHTML}</mark>`
+      : span.innerHTML;
 
     const italic = isItalic ? `<i>${inner}</i>` : inner;
     const wrapped = isBold ? `<b>${italic}</b>` : italic;

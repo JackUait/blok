@@ -62,7 +62,7 @@ describe('preprocessGoogleDocsHtml', () => {
     expect(result).not.toContain('<b>');
     expect(result).not.toContain('<i>');
     expect(result).toContain('<mark');
-    expect(result).toContain('style="color: red;"');
+    expect(result).toContain('style="color: red; background-color: transparent;"');
   });
 
   it('ignores spans without bold, italic, or color styles', () => {
@@ -79,7 +79,7 @@ describe('preprocessGoogleDocsHtml', () => {
     const html = '<span style="color: rgb(255, 0, 0)">red text</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<mark style="color: rgb(255, 0, 0);">red text</mark>');
+    expect(result).toContain('<mark style="color: rgb(255, 0, 0); background-color: transparent;">red text</mark>');
     expect(result).not.toContain('<span');
   });
 
@@ -95,21 +95,21 @@ describe('preprocessGoogleDocsHtml', () => {
     const html = '<span style="font-weight: 700; color: rgb(255, 0, 0)">bold red</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<b><mark style="color: rgb(255, 0, 0);">bold red</mark></b>');
+    expect(result).toContain('<b><mark style="color: rgb(255, 0, 0); background-color: transparent;">bold red</mark></b>');
   });
 
   it('converts span with italic and color to <i> wrapping <mark>', () => {
     const html = '<span style="font-style: italic; color: rgb(0, 0, 255)">italic blue</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<i><mark style="color: rgb(0, 0, 255);">italic blue</mark></i>');
+    expect(result).toContain('<i><mark style="color: rgb(0, 0, 255); background-color: transparent;">italic blue</mark></i>');
   });
 
   it('converts span with bold, italic, and color to nested <b><i><mark>', () => {
     const html = '<span style="font-weight: 700; font-style: italic; color: rgb(0, 128, 0)">bold italic green</span>';
     const result = preprocessGoogleDocsHtml(html);
 
-    expect(result).toContain('<b><i><mark style="color: rgb(0, 128, 0);">bold italic green</mark></i></b>');
+    expect(result).toContain('<b><i><mark style="color: rgb(0, 128, 0); background-color: transparent;">bold italic green</mark></i></b>');
   });
 
   it('does not create <mark> for default black text color', () => {
@@ -337,5 +337,144 @@ describe('preprocessGoogleDocsHtml', () => {
     // Content between tables preserved
     expect(sanitized).toContain('Middle section');
     expect(sanitized).toContain('Text between tables');
+  });
+
+  describe('realistic Google Docs clipboard HTML', () => {
+    /**
+     * Google Docs includes ALL CSS properties on every <span>, including
+     * background-color:transparent for non-highlighted text and color:#000000
+     * for default black text. The preprocessor must not create <mark> elements
+     * for these default/transparent values.
+     */
+
+    it('does not create <mark> for transparent background-color', () => {
+      const html = '<span style="background-color:transparent">plain text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+      expect(result).toContain('plain text');
+    });
+
+    it('does not create <mark> for hex default black color #000000', () => {
+      const html = '<span style="color:#000000">black text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+      expect(result).toContain('black text');
+    });
+
+    it('does not create <mark> for spans with only default black + transparent (realistic Google Docs)', () => {
+      const html = [
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#000000;background-color:transparent;',
+        'font-weight:400;font-style:normal;font-variant:normal;',
+        'text-decoration:none;vertical-align:baseline;',
+        'white-space:pre;white-space:pre-wrap;">',
+        'normal text</span>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+      expect(result).toContain('normal text');
+    });
+
+    it('creates <b> without <mark> for bold text with default colors (realistic Google Docs)', () => {
+      const html = [
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#000000;background-color:transparent;',
+        'font-weight:700;font-style:normal;font-variant:normal;',
+        'text-decoration:none;vertical-align:baseline;',
+        'white-space:pre;white-space:pre-wrap;">',
+        'bold text</span>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<b>bold text</b>');
+      expect(result).not.toContain('<mark');
+    });
+
+    it('creates <mark> with background-color for highlighted text (realistic Google Docs)', () => {
+      const html = [
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#000000;background-color:#ffff00;',
+        'font-weight:400;font-style:normal;font-variant:normal;',
+        'text-decoration:none;vertical-align:baseline;',
+        'white-space:pre;white-space:pre-wrap;">',
+        'highlighted text</span>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('background-color: #ffff00');
+      // Should NOT include the default black color in the mark style
+      expect(result).not.toMatch(/[^-]color:\s*#000000/);
+    });
+
+    it('creates <b> wrapping <mark> for bold highlighted text (realistic Google Docs)', () => {
+      const html = [
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#000000;background-color:#ffff00;',
+        'font-weight:700;font-style:normal;font-variant:normal;',
+        'text-decoration:none;vertical-align:baseline;',
+        'white-space:pre;white-space:pre-wrap;">',
+        'bold highlighted</span>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<b><mark');
+      expect(result).toContain('background-color: #ffff00');
+      // Should NOT include the default black color
+      expect(result).not.toMatch(/[^-]color:\s*#000000/);
+    });
+
+    it('does not create <mark> for default black rgb(0, 0, 0) with spaces', () => {
+      const html = '<span style="color: rgb(0, 0, 0)">black text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('does not create <mark> for default black rgb(0,0,0) without spaces', () => {
+      const html = '<span style="color: rgb(0,0,0)">black text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('adds background-color:transparent to mark with only text color to prevent browser default yellow', () => {
+      const html = '<span style="color:#666666">gray text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('color: #666666');
+      expect(result).toContain('background-color: transparent');
+    });
+
+    it('adds background-color:transparent for non-black text color in realistic Google Docs span', () => {
+      const html = [
+        '<span style="font-size:11pt;font-family:Arial,sans-serif;',
+        'color:#666666;background-color:transparent;',
+        'font-weight:400;font-style:normal;">',
+        'gray text</span>',
+      ].join('');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('color: #666666');
+      expect(result).toContain('background-color: transparent');
+    });
+
+    it('does not add extra transparent bg when real background-color exists', () => {
+      const html = '<span style="color:#666666;background-color:#ffff00">colored highlighted</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('background-color: #ffff00');
+      expect(result).not.toContain('background-color: transparent');
+    });
   });
 });

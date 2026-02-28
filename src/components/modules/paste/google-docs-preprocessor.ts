@@ -45,10 +45,15 @@ function unwrapGoogleDocsContent(wrapper: HTMLElement): void {
 }
 
 /**
- * Default/black color value that Google Docs sets on all text.
+ * Check whether a CSS color value is the default black text color.
+ * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
  * Spans with only this color should not be converted to `<mark>`.
  */
-const DEFAULT_BLACK = 'rgb(0, 0, 0)';
+function isDefaultBlack(color: string): boolean {
+  const normalized = color.replace(/\s/g, '');
+
+  return normalized === 'rgb(0,0,0)' || normalized === '#000000';
+}
 
 /**
  * Convert Google Docs style-based `<span>` elements to semantic HTML tags.
@@ -72,8 +77,8 @@ function convertGoogleDocsStyles(wrapper: HTMLElement): void {
     const color = colorMatch?.[1]?.trim();
     const bgColor = bgMatch?.[1]?.trim();
 
-    const hasColor = color !== undefined && color !== DEFAULT_BLACK;
-    const hasBgColor = bgColor !== undefined;
+    const hasColor = color !== undefined && !isDefaultBlack(color);
+    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent';
 
     if (!isBold && !isItalic && !hasColor && !hasBgColor) {
       continue;
@@ -81,7 +86,7 @@ function convertGoogleDocsStyles(wrapper: HTMLElement): void {
 
     const colorStyles = [
       hasColor ? `color: ${color}` : '',
-      hasBgColor ? `background-color: ${bgColor}` : '',
+      hasBgColor ? `background-color: ${bgColor}` : (hasColor ? 'background-color: transparent' : ''),
     ].filter(Boolean).join('; ');
 
     const inner = colorStyles

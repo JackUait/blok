@@ -559,7 +559,7 @@ describe('table-cell-clipboard', () => {
       const html = '<table><tr><td><span style="color: rgb(255, 0, 0)">red text</span></td></tr></table>';
       const result = parseGenericHtmlTable(html);
 
-      expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="color: rgb(255, 0, 0);">red text</mark>');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="color: rgb(255, 0, 0); background-color: transparent;">red text</mark>');
     });
 
     it('should convert background-color span to <mark> with background-color style in cell content', () => {
@@ -573,7 +573,7 @@ describe('table-cell-clipboard', () => {
       const html = '<table><tr><td><span style="font-weight:700; color: rgb(255, 0, 0)">bold red</span></td></tr></table>';
       const result = parseGenericHtmlTable(html);
 
-      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b><mark style="color: rgb(255, 0, 0);">bold red</mark></b>');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b><mark style="color: rgb(255, 0, 0); background-color: transparent;">bold red</mark></b>');
     });
 
     it('should not create <mark> for default black text color in cell content', () => {
@@ -596,7 +596,7 @@ describe('table-cell-clipboard', () => {
       const html = '<table><tr><td><span style="font-style:italic; color: rgb(0, 0, 255)">italic blue</span></td></tr></table>';
       const result = parseGenericHtmlTable(html);
 
-      expect(result?.cells[0][0].blocks[0].data.text).toBe('<i><mark style="color: rgb(0, 0, 255);">italic blue</mark></i>');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<i><mark style="color: rgb(0, 0, 255); background-color: transparent;">italic blue</mark></i>');
     });
 
     // -------------------------------------------------------------------------
@@ -630,7 +630,7 @@ describe('table-cell-clipboard', () => {
       const result = parseGenericHtmlTable(html);
 
       expect(result?.cells[0][0].color).toBe('rgb(255, 255, 0)');
-      expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="color: rgb(255, 0, 0);">red on yellow</mark>');
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<mark style="color: rgb(255, 0, 0); background-color: transparent;">red on yellow</mark>');
     });
 
     it('should extract cell background-color from realistic Google Docs table HTML', () => {
@@ -653,6 +653,50 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].blocks[0].data.text).toContain('<b>');
       expect(result?.cells[0][0].blocks[0].data.text).toContain('<mark');
       expect(result?.cells[0][1].color).toBeUndefined();
+    });
+
+    it('does not create <mark> for transparent background-color in cell spans (realistic Google Docs)', () => {
+      const html = `<table><tbody>
+        <tr><td><p><span style="font-size:11pt;font-family:Arial,sans-serif;color:#000000;background-color:transparent;font-weight:400;">plain text</span></p></td></tr>
+      </tbody></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('plain text');
+      expect(result?.cells[0][0].blocks[0].data.text).not.toContain('<mark');
+    });
+
+    it('does not create <mark> for hex default black in cell spans (realistic Google Docs)', () => {
+      const html = `<table><tbody>
+        <tr><td><p><span style="font-size:11pt;color:#000000;background-color:transparent;font-weight:700;">bold only</span></p></td></tr>
+      </tbody></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<b>bold only</b>');
+      expect(result?.cells[0][0].blocks[0].data.text).not.toContain('<mark');
+    });
+
+    it('creates <mark> for actual highlight in cell spans (realistic Google Docs)', () => {
+      const html = `<table><tbody>
+        <tr><td><p><span style="font-size:11pt;color:#000000;background-color:#ffff00;font-weight:400;">highlighted</span></p></td></tr>
+      </tbody></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].blocks[0].data.text).toContain('<mark');
+      expect(result?.cells[0][0].blocks[0].data.text).toContain('background-color');
+      expect(result?.cells[0][0].blocks[0].data.text).not.toMatch(/[^-]color:\s*#000000/);
+    });
+
+    it('adds background-color:transparent for text-color-only mark in cell to prevent browser default yellow', () => {
+      const html = `<table><tbody>
+        <tr><td><p><span style="font-size:11pt;color:#666666;background-color:transparent;font-weight:400;">gray text</span></p></td></tr>
+      </tbody></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      const text = result?.cells[0][0].blocks[0].data.text ?? '';
+
+      expect(text).toContain('<mark');
+      expect(text).toContain('color: #666666');
+      expect(text).toContain('background-color: transparent');
     });
   });
 });

@@ -20,6 +20,7 @@ import {
   buildClipboardPlainText,
   parseClipboardHtml,
   parseGenericHtmlTable,
+  isDefaultBlack,
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
@@ -555,7 +556,7 @@ export class Table implements BlockTool {
 
         const textMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
 
-        if (textMatch?.[1]) {
+        if (textMatch?.[1] && !isDefaultBlack(textMatch[1].trim())) {
           entry.textColor = mapToNearestPresetColor(textMatch[1].trim(), 'text');
         }
 
@@ -1209,6 +1210,25 @@ export class Table implements BlockTool {
         const blockIds = this.cellBlocks.getBlockIdsFromCells(cells);
 
         this.cellBlocks.deleteBlocks(blockIds);
+
+        const gridEl = this.gridElement;
+
+        if (!gridEl) {
+          return;
+        }
+
+        for (const cell of cells) {
+          const coord = getCellPosition(gridEl, cell);
+
+          if (!coord) {
+            continue;
+          }
+
+          this.model.setCellColor(coord.row, coord.col, undefined);
+          this.model.setCellTextColor(coord.row, coord.col, undefined);
+          cell.style.backgroundColor = '';
+          cell.style.color = '';
+        }
       },
       onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);

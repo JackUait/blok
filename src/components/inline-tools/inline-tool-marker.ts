@@ -288,6 +288,21 @@ export class MarkerInlineTool implements InlineTool {
     const endContainer = range.endContainer;
     const endOffset = range.endOffset;
 
+    /**
+     * Also capture the selected text and a surviving parent node so we
+     * can fall back to offset-based restoration when anchors become stale.
+     * The commonAncestorContainer may itself be the mark element being removed,
+     * so walk up to find a parent that will survive the unwrap.
+     */
+    const selectedText = range.toString();
+    const ancestor = range.commonAncestorContainer;
+    const ancestorEl = ancestor.nodeType === Node.ELEMENT_NODE
+      ? ancestor as HTMLElement
+      : ancestor.parentElement;
+    const survivingParent = ancestorEl?.closest('mark')
+      ? ancestorEl.closest('mark')?.parentElement ?? ancestorEl
+      : ancestorEl;
+
     const markAncestors = collectFormattingAncestors(range, isMarkTag);
 
     for (const mark of markAncestors) {
@@ -308,19 +323,26 @@ export class MarkerInlineTool implements InlineTool {
      * Re-establish the selection after DOM mutations.
      * When the range was anchored to text nodes (moved, not cloned by unwrapElement),
      * the original anchors remain valid. When the range was anchored to the mark
-     * element itself (e.g. via selectNodeContents), the node is now detached
-     * and setStart/setEnd will throw — in that case the browser's own
-     * selection adjustment is sufficient.
+     * element itself (e.g. via selectNodeContents), the node is now detached.
+     * Check connectivity before attempting restoration; fall back to text-offset
+     * restoration when anchors are stale.
      */
-    try {
-      const restoredRange = document.createRange();
+    const startConnected = startContainer.isConnected;
+    const endConnected = endContainer.isConnected;
 
-      restoredRange.setStart(startContainer, startOffset);
-      restoredRange.setEnd(endContainer, endOffset);
-      selection.removeAllRanges();
-      selection.addRange(restoredRange);
-    } catch {
-      /* Range anchors were invalidated by DOM mutation — browser selection is used as-is */
+    if (startConnected && endConnected) {
+      try {
+        const restoredRange = document.createRange();
+
+        restoredRange.setStart(startContainer, startOffset);
+        restoredRange.setEnd(endContainer, endOffset);
+        selection.removeAllRanges();
+        selection.addRange(restoredRange);
+      } catch {
+        this.restoreSelectionByText(selection, survivingParent, selectedText);
+      }
+    } else {
+      this.restoreSelectionByText(selection, survivingParent, selectedText);
     }
   }
 
@@ -600,6 +622,70 @@ export class MarkerInlineTool implements InlineTool {
     leadingMark.style.cssText = mark.style.cssText;
     leadingMark.appendChild(contents);
     mark.before(leadingMark);
+  }
+
+  /**
+   * Restore selection by finding the selected text within a surviving parent.
+   * Used as a fallback when range anchors become stale after DOM mutations.
+   * @param selection - The window selection to restore
+   * @param parent - A parent element that survived the DOM mutation
+   * @param text - The text content that was selected before mutation
+   */
+  private restoreSelectionByText(
+    selection: Selection,
+    parent: HTMLElement | null,
+    text: string
+  ): void {
+    if (!parent || text.length === 0) {
+      return;
+    }
+
+    const fullText = parent.textContent ?? '';
+    const startIdx = fullText.indexOf(text);
+
+    if (startIdx === -1) {
+      return;
+    }
+
+    const endIdx = startIdx + text.length;
+
+    /**
+     * Walk text nodes to find the nodes and offsets corresponding
+     * to the character positions in the parent's textContent
+     */
+    const walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
+    let charCount = 0;
+    let startNode: Text | null = null;
+    let startNodeOffset = 0;
+    let endNode: Text | null = null;
+    let endNodeOffset = 0;
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const nodeLength = node.textContent?.length ?? 0;
+
+      if (!startNode && charCount + nodeLength > startIdx) {
+        startNode = node;
+        startNodeOffset = startIdx - charCount;
+      }
+
+      if (charCount + nodeLength >= endIdx) {
+        endNode = node;
+        endNodeOffset = endIdx - charCount;
+        break;
+      }
+
+      charCount += nodeLength;
+    }
+
+    if (startNode && endNode) {
+      const restoredRange = document.createRange();
+
+      restoredRange.setStart(startNode, startNodeOffset);
+      restoredRange.setEnd(endNode, endNodeOffset);
+      selection.removeAllRanges();
+      selection.addRange(restoredRange);
+    }
   }
 
   /**

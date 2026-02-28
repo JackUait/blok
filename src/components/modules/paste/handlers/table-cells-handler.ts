@@ -70,7 +70,7 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
           return text;
         }
 
-        const cellContent: CellContent = { blocks: [] };
+        const cellContent: CellContent = { blocks: [], text };
 
         if (hasColor) {
           cellContent.color = cell.color;

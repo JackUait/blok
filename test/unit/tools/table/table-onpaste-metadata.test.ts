@@ -228,6 +228,76 @@ describe('Table onPaste cell colors', () => {
     element.parentNode?.removeChild(element);
     pastedElement.parentNode?.removeChild(pastedElement);
   });
+
+  // ---------------------------------------------------------------------------
+  // Bug #3: default black text color on <td> should be ignored in onPaste
+  // ---------------------------------------------------------------------------
+
+  it('does not assign textColor when td has default black color rgb(0, 0, 0)', () => {
+    const options = createTableOptions({
+      content: [['A']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    const pasteHtml = [
+      '<tr>',
+      '<td style="color: rgb(0, 0, 0)">Normal text</td>',
+      '<td style="color: #d44c47">Red text</td>',
+      '</tr>',
+    ].join('');
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    // Cell [0][0] should NOT have textColor (default black ignored)
+    expect(saved.content[0][0]).not.toHaveProperty('textColor');
+    // Cell [0][1] SHOULD have textColor (non-black)
+    expect(saved.content[0][1]).toMatchObject({ textColor: '#d44c47' });
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
+  it('does not assign textColor when td has default black color #000000', () => {
+    const options = createTableOptions({
+      content: [['A']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    const pasteHtml = [
+      '<tr>',
+      '<td style="color: #000000">Normal text</td>',
+      '</tr>',
+    ].join('');
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    expect(saved.content[0][0]).not.toHaveProperty('textColor');
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
 });
 
 describe('Table onPaste metadata reset', () => {

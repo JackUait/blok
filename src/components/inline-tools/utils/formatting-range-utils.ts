@@ -44,12 +44,15 @@ export const createRangeTextWalker = (range: Range): TreeWalker => {
  * Find first ancestor element matching the predicate
  * @param node - The node to start searching from
  * @param predicate - Function to test elements
+ * @param boundary - Optional node that stops the upward traversal.
+ *                   When reached, the search returns null instead of continuing.
  */
 export const findFormattingAncestor = (
   node: Node | null,
-  predicate: (element: Element) => boolean
+  predicate: (element: Element) => boolean,
+  boundary?: Node
 ): HTMLElement | null => {
-  if (!node) {
+  if (!node || node === boundary) {
     return null;
   }
 
@@ -57,7 +60,7 @@ export const findFormattingAncestor = (
     return node as HTMLElement;
   }
 
-  return findFormattingAncestor(node.parentNode, predicate);
+  return findFormattingAncestor(node.parentNode, predicate, boundary);
 };
 
 /**

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Table } from '../../../../src/tools/table';
 import { buildClipboardHtml } from '../../../../src/tools/table/table-cell-clipboard';
+import { TableCellSelection } from '../../../../src/tools/table/table-cell-selection';
 import { updateHeadingStyles } from '../../../../src/tools/table/table-operations';
 import { clearAdditionalRestrictedTools, isRestrictedInTableCell } from '../../../../src/tools/table/table-restrictions';
 import type { TableData, TableConfig, TableCellsClipboard } from '../../../../src/tools/table/types';
@@ -4169,6 +4170,81 @@ describe('Table Tool', () => {
       // Cell blocks should NOT be deleted during Yjs-driven removal
       expect(mockDelete).not.toHaveBeenCalled();
 
+      document.body.removeChild(element);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Bug #5: onClearContent should clear cell colors from model and DOM
+  // ---------------------------------------------------------------------------
+  describe('onClearContent clears cell colors', () => {
+    it('removes cell colors from model and DOM when cells are cleared via Delete key', () => {
+      const options = createTableOptions({
+        content: [
+          [
+            { blocks: ['block-a'], color: '#fbecdd', textColor: '#d44c47' },
+            { blocks: ['block-b'], color: '#e7f3f8' },
+          ],
+          [
+            { blocks: ['block-c'], textColor: '#787774' },
+            { blocks: ['block-d'] },
+          ],
+        ],
+      });
+      const table = new Table(options);
+
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Verify colors are set in the model before clearing
+      const savedBefore = table.save(element);
+
+      expect(isCellWithBlocks(savedBefore.content[0][0]) && savedBefore.content[0][0].color).toBe('#fbecdd');
+      expect(isCellWithBlocks(savedBefore.content[0][0]) && savedBefore.content[0][0].textColor).toBe('#d44c47');
+      expect(isCellWithBlocks(savedBefore.content[0][1]) && savedBefore.content[0][1].color).toBe('#e7f3f8');
+      expect(isCellWithBlocks(savedBefore.content[1][0]) && savedBefore.content[1][0].textColor).toBe('#787774');
+
+      // Access the cell selection to programmatically select a row, then press Delete
+      const tableInternal = table as unknown as { cellSelection: TableCellSelection };
+
+      tableInternal.cellSelection.selectRow(0);
+
+      // Dispatch Delete key from a cell so event.target has getAttribute
+      // (avoids Flipper's shouldSkipTarget error in jsdom when target is document)
+      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const deleteEvent = new KeyboardEvent('keydown', {
+        key: 'Delete',
+        bubbles: true,
+        cancelable: true,
+      });
+
+      firstCell.dispatchEvent(deleteEvent);
+
+      // After clearing, row 0 cells should have no colors in model
+      const savedAfter = table.save(element);
+      const cell00 = savedAfter.content[0][0];
+      const cell01 = savedAfter.content[0][1];
+
+      expect(isCellWithBlocks(cell00) && cell00.color).toBeUndefined();
+      expect(isCellWithBlocks(cell00) && cell00.textColor).toBeUndefined();
+      expect(isCellWithBlocks(cell01) && cell01.color).toBeUndefined();
+
+      // Row 1 should be unaffected
+      const cell10 = savedAfter.content[1][0];
+
+      expect(isCellWithBlocks(cell10) && cell10.textColor).toBe('#787774');
+
+      // DOM styles should also be cleared for row 0 cells
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+      const row0Cells = rows[0].querySelectorAll('[data-blok-table-cell]');
+
+      expect((row0Cells[0] as HTMLElement).style.backgroundColor).toBe('');
+      expect((row0Cells[0] as HTMLElement).style.color).toBe('');
+      expect((row0Cells[1] as HTMLElement).style.backgroundColor).toBe('');
+
+      table.destroy();
       document.body.removeChild(element);
     });
   });

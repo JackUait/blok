@@ -1,6 +1,26 @@
 import type { I18n } from '../../../types/api';
+import { parseColor } from '../utils/color-mapping';
 import { twMerge } from '../utils/tw';
 import { COLOR_PRESETS } from './color-presets';
+
+/**
+ * Compare two CSS color strings for equality by their parsed RGB tuples.
+ * Handles hex vs rgb() format mismatches (e.g. '#d44c47' vs 'rgb(212, 76, 71)').
+ */
+function colorsEqual(a: string, b: string): boolean {
+  if (a === b) {
+    return true;
+  }
+
+  const rgbA = parseColor(a);
+  const rgbB = parseColor(b);
+
+  if (rgbA === null || rgbB === null) {
+    return false;
+  }
+
+  return rgbA[0] === rgbB[0] && rgbA[1] === rgbB[1] && rgbA[2] === rgbB[2];
+}
 
 /**
  * Describes one tab in the color picker (e.g. "Text" or "Background")
@@ -115,7 +135,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     for (const preset of COLOR_PRESETS) {
       const swatch = document.createElement('button');
       const swatchColor = currentMode.presetField === 'text' ? preset.text : preset.bg;
-      const isActive = state.activeColor !== null && swatchColor === state.activeColor;
+      const isActive = state.activeColor !== null && colorsEqual(swatchColor, state.activeColor);
 
       swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${preset.name}`);
       swatch.className = twMerge(
@@ -169,8 +189,16 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
 
   return {
     element: wrapper,
-    setActiveColor: (color: string | null, _modeKey: string) => {
+    setActiveColor: (color: string | null, modeKey: string) => {
       state.activeColor = color;
+
+      const matchingIndex = modes.findIndex((m) => m.key === modeKey);
+
+      if (matchingIndex !== -1) {
+        state.modeIndex = matchingIndex;
+        updateTabs();
+      }
+
       renderSwatches();
     },
     reset: () => {

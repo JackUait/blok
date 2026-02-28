@@ -285,6 +285,121 @@ describe('TableCellsHandler', () => {
       expect((cell0 as { color?: string; textColor?: string }).textColor).toBe('#d44c47');
     });
 
+    // -------------------------------------------------------------------------
+    // Bug #2: TableCellsHandler discards text for colored cells when pasting
+    // outside a table
+    // -------------------------------------------------------------------------
+
+    it('should preserve text content in colored cells with background color', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Red BG' } }], color: '#fdebec' },
+            { blocks: [{ tool: 'paragraph', data: { text: 'Plain' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const cell0 = callArgs.data.content[0][0] as { blocks: string[]; text?: string; color?: string };
+
+      // Text must not be lost just because the cell has a color
+      expect(cell0.text).toBe('Red BG');
+    });
+
+    it('should preserve text content in cells with text color', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Red text' } }], textColor: '#d44c47' },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const cell0 = callArgs.data.content[0][0] as { blocks: string[]; text?: string; textColor?: string };
+
+      expect(cell0.text).toBe('Red text');
+    });
+
+    it('should preserve text content in cells with both color and textColor', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            {
+              blocks: [{ tool: 'paragraph', data: { text: 'Both colors' } }],
+              color: '#fbf3db',
+              textColor: '#d44c47',
+            },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const cell0 = callArgs.data.content[0][0] as { blocks: string[]; text?: string; color?: string; textColor?: string };
+
+      expect(cell0.text).toBe('Both colors');
+      expect(cell0.color).toBe('#fbf3db');
+      expect(cell0.textColor).toBe('#d44c47');
+    });
+
+    it('should join text from multiple blocks in colored cells', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            {
+              blocks: [
+                { tool: 'paragraph', data: { text: 'Line 1' } },
+                { tool: 'paragraph', data: { text: 'Line 2' } },
+              ],
+              color: '#fdebec',
+            },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const cell0 = callArgs.data.content[0][0] as { blocks: string[]; text?: string };
+
+      expect(cell0.text).toBe('Line 1 Line 2');
+    });
+
     it('should use plain string for cells without color properties', async () => {
       const payload: TableCellsClipboard = {
         rows: 1,

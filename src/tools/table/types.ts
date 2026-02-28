@@ -4,7 +4,7 @@ import type { BlockToolData } from '../../../types';
  * Cell content always contains block IDs.
  * Every cell in the table is represented as an array of block references.
  */
-export type CellContent = { blocks: string[]; color?: string; textColor?: string };
+export type CellContent = { blocks: string[]; color?: string; textColor?: string; text?: string };
 
 /**
  * Legacy cell content type for migration from string-based cells.

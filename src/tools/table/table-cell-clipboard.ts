@@ -170,7 +170,7 @@ const CELL_SANITIZE_CONFIG: SanitizerConfig = {
  * Google Docs uses different formats: `rgb(0, 0, 0)`, `rgb(0,0,0)`, or `#000000`.
  * Spans with only this color should not be converted to `<mark>`.
  */
-function isDefaultBlack(color: string): boolean {
+export function isDefaultBlack(color: string): boolean {
   const normalized = color.replace(/\s/g, '');
 
   return normalized === 'rgb(0,0,0)' || normalized === '#000000';
@@ -335,7 +335,7 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
 
       const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
 
-      if (cellTextColorMatch?.[1]) {
+      if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
         cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
       }
 

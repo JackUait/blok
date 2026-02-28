@@ -797,6 +797,42 @@ describe('table-cell-clipboard', () => {
 
       expect(result?.cells[0][0].textColor).toBe('#337ea9');
     });
+
+    // -------------------------------------------------------------------------
+    // Bug #3: default black text color on <td> should be ignored
+    // -------------------------------------------------------------------------
+
+    it('should not set textColor when td has default black rgb(0, 0, 0)', () => {
+      const html = '<table><tr><td style="color: rgb(0, 0, 0)">normal text</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBeUndefined();
+    });
+
+    it('should not set textColor when td has default black #000000', () => {
+      const html = '<table><tr><td style="color: #000000">normal text</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBeUndefined();
+    });
+
+    it('should not set textColor when td has black with extra spaces rgb(0,0,0)', () => {
+      const html = '<table><tr><td style="color: rgb(0,0,0)">normal text</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBeUndefined();
+    });
+
+    it('should still extract non-black text color from td alongside default-black filtering', () => {
+      const html = `<table><tr>
+        <td style="color: rgb(0, 0, 0)">black text</td>
+        <td style="color: rgb(255, 0, 0)">red text</td>
+      </tr></table>`;
+      const result = parseGenericHtmlTable(html);
+
+      expect(result?.cells[0][0].textColor).toBeUndefined();
+      expect(result?.cells[0][1].textColor).toBe('#d44c47');
+    });
   });
 
   // ---------------------------------------------------------------------------

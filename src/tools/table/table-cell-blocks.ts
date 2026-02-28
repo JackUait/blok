@@ -303,7 +303,9 @@ export class TableCellBlocks {
         if (mountedIds.length > 0) {
           normalizedRow.push({ blocks: referencedBlockIds ?? mountedIds, ...cellColorProps });
         } else {
-          const text = typeof cellContent === 'string' ? cellContent : '';
+          const text = typeof cellContent === 'string'
+            ? cellContent
+            : (cellContent.text ?? '');
           const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
           const textsToInsert = segments.length > 0 ? segments : [text];
           const ids: string[] = [];

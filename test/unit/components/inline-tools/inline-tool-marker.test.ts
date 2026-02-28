@@ -456,6 +456,43 @@ describe('MarkerInlineTool', () => {
       expect(mark?.style.color).toBe('');
       expect(mark?.style.backgroundColor).toBe('rgb(251, 236, 221)');
     });
+
+    it('restores a non-collapsed selection after unwrapping a mark (bug #10)', () => {
+      container.innerHTML = '<mark style="color: #d44c47">colored text</mark>';
+
+      const markEl = container.querySelector('mark');
+
+      if (!markEl) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(markEl);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.removeColor('color');
+
+      // After removing color, the mark is unwrapped.
+      // The selection should still cover the text "colored text" (not collapsed).
+      const sel = window.getSelection();
+
+      expect(sel).not.toBeNull();
+      expect(sel?.rangeCount).toBeGreaterThan(0);
+
+      const restoredRange = sel?.getRangeAt(0);
+
+      expect(restoredRange?.collapsed).toBe(false);
+      expect(restoredRange?.toString()).toBe('colored text');
+    });
   });
 
   describe('picker stays open after color selection', () => {

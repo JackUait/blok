@@ -360,6 +360,7 @@ export class Table implements BlockTool {
 
     if (this.readOnly) {
       mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
+      applyCellColors(gridEl, this.model.snapshot().content);
       this.initReadOnlyCellSelection(gridEl);
       this.initScrollHaze();
 
@@ -469,7 +470,13 @@ export class Table implements BlockTool {
 
     const gridEl = this.gridElement;
 
-    if (this.readOnly || !gridEl) {
+    if (!gridEl) {
+      return;
+    }
+
+    if (this.readOnly) {
+      applyCellColors(gridEl, this.model.snapshot().content);
+
       return;
     }
 

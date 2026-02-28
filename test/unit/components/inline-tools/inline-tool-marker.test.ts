@@ -820,6 +820,74 @@ describe('MarkerInlineTool', () => {
       expect(updatedMark?.style.backgroundColor).toBe('transparent');
     });
 
+    it('unwraps mark when removing text color leaves only transparent background (bug #3)', () => {
+      // Bug #3: ensureTransparentBg adds background-color: transparent when only text color
+      // is set. Removing text color should unwrap the mark, not leave an orphaned
+      // <mark style="background-color: transparent">.
+      container.innerHTML = 'hello';
+
+      const textNode = container.firstChild;
+
+      if (!textNode) {
+        throw new Error('Test setup failed: no text node');
+      }
+
+      // Apply only text color — ensureTransparentBg will add background-color: transparent
+      selectTextRange(textNode, 0, 5);
+      tool.applyColor('color', '#d44c47');
+
+      const mark = container.querySelector('mark');
+
+      expect(mark).not.toBeNull();
+      expect(mark?.style.color).toBe('rgb(212, 76, 71)');
+      expect(mark?.style.backgroundColor).toBe('transparent');
+
+      // Now remove text color — mark should be fully unwrapped
+      selectMarkContents(mark!);
+      tool.removeColor('color');
+
+      expect(container.querySelector('mark')).toBeNull();
+      expect(container.textContent).toBe('hello');
+    });
+
+    it('does not create nested marks when applying color across two marks with transparent bg (bug #10)', () => {
+      // Bug #10: When selection spans two marks that each have background-color: transparent,
+      // removeNestedMarkStyle should unwrap them instead of leaving nested marks.
+      container.innerHTML = '<mark style="color: #d44c47; background-color: transparent">Hello</mark> <mark style="color: #337ea9; background-color: transparent">World</mark>';
+
+      const marks = container.querySelectorAll('mark');
+
+      if (marks.length < 2 || !marks[0].firstChild || !marks[1].firstChild) {
+        throw new Error('Test setup failed: expected 2 mark elements');
+      }
+
+      // Select across both marks: "llo Wor"
+      const range = document.createRange();
+
+      range.setStart(marks[0].firstChild, 2);
+      range.setEnd(marks[1].firstChild, 3);
+
+      const sel = window.getSelection();
+
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+
+      // Apply new color across both marks
+      tool.applyColor('color', '#448361');
+
+      // Should NOT have nested marks — the inner marks with only transparent bg
+      // should have been unwrapped by removeNestedMarkStyle
+      const nestedMarks = container.querySelectorAll('mark mark');
+
+      expect(nestedMarks.length).toBe(0);
+
+      // The new mark wraps the selected portion with the new color
+      const allMarks = container.querySelectorAll('mark');
+
+      expect(allMarks.length).toBe(1);
+      expect(allMarks[0].style.color).toBe('rgb(68, 131, 97)');
+    });
+
     it('unwraps mark completely when both colors are removed sequentially', () => {
       container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">both</mark>';
 

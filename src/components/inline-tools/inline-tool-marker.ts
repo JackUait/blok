@@ -55,11 +55,38 @@ export class MarkerInlineTool implements InlineTool {
   public static shortcut = 'CMD+SHIFT+H';
 
   /**
-   * Sanitizer Rule — preserve <mark> tags with style attribute
+   * CSS properties allowed on <mark> elements.
+   * All other properties are stripped during sanitization to prevent
+   * style-based attacks (e.g. position:fixed overlays via pasted HTML).
+   */
+  private static readonly ALLOWED_STYLE_PROPS = new Set(['color', 'background-color']);
+
+  /**
+   * Sanitizer Rule — preserve <mark> tags with only color-related style properties.
+   *
+   * Uses a function-based rule so HTMLJanitor calls it with the live DOM node,
+   * allowing in-place filtering of CSS properties before the node is serialized.
    */
   public static get sanitize(): SanitizerConfig {
     return {
-      mark: { style: true },
+      mark: (node: Element): { [attr: string]: boolean | string } => {
+        const el = node as HTMLElement;
+        const style = el.style;
+
+        /**
+         * Collect property names first, then remove disallowed ones.
+         * This avoids mutating the CSSStyleDeclaration while iterating its indices.
+         */
+        const props = Array.from({ length: style.length }, (_, i) => style.item(i));
+
+        for (const prop of props) {
+          if (!MarkerInlineTool.ALLOWED_STYLE_PROPS.has(prop)) {
+            style.removeProperty(prop);
+          }
+        }
+
+        return style.length > 0 ? { style: true } : {};
+      },
     } as SanitizerConfig;
   }
 
@@ -260,7 +287,8 @@ export class MarkerInlineTool implements InlineTool {
       mark.style.removeProperty(mode);
 
       const oppositeMode = OPPOSITE_MODE[mode];
-      const hasOtherStyle = mark.style.getPropertyValue(oppositeMode) !== '';
+      const oppositeValue = mark.style.getPropertyValue(oppositeMode);
+      const hasOtherStyle = oppositeValue !== '' && oppositeValue !== 'transparent';
 
       if (!hasOtherStyle) {
         this.unwrapElement(mark);
@@ -348,7 +376,8 @@ export class MarkerInlineTool implements InlineTool {
       mark.style.removeProperty(mode);
 
       const oppositeMode = OPPOSITE_MODE[mode];
-      const hasOtherStyle = mark.style.getPropertyValue(oppositeMode) !== '';
+      const oppositeValue = mark.style.getPropertyValue(oppositeMode);
+      const hasOtherStyle = oppositeValue !== '' && oppositeValue !== 'transparent';
 
       if (!hasOtherStyle) {
         this.unwrapElement(mark);

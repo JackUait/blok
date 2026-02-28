@@ -47,7 +47,8 @@ describe('MarkerInlineTool', () => {
     expect(MarkerInlineTool.isInline).toBe(true);
     expect(MarkerInlineTool.title).toBe('Color');
     expect(MarkerInlineTool.titleKey).toBe('marker');
-    expect(MarkerInlineTool.sanitize).toStrictEqual({ mark: { style: true } });
+    expect(MarkerInlineTool.sanitize).toHaveProperty('mark');
+    expect(typeof MarkerInlineTool.sanitize.mark).toBe('function');
   });
 
   it('renders menu config with marker icon and children', () => {
@@ -254,6 +255,43 @@ describe('MarkerInlineTool', () => {
       expect(innerMark?.style.backgroundColor).toBe('transparent');
     });
 
+    it('unwraps nested marks with only transparent background when applying new color across them', () => {
+      container.innerHTML =
+        '<mark style="color: #d44c47; background-color: transparent">Hello</mark>' +
+        ' ' +
+        '<mark style="color: #448361; background-color: transparent">World</mark>';
+
+      const range = document.createRange();
+
+      range.setStart(container, 0);
+      range.setEnd(container, container.childNodes.length);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.applyColor('color', '#337ea9');
+
+      /**
+       * After applying a new text color across the selection, the inner marks
+       * that had only color + transparent bg should be unwrapped (not nested),
+       * leaving a single outer mark with the new color.
+       */
+      const nestedMark = container.querySelector('mark mark');
+
+      expect(nestedMark).toBeNull();
+
+      const outerMark = container.querySelector('mark');
+
+      expect(outerMark).not.toBeNull();
+      expect(outerMark?.style.color).toBe('rgb(51, 126, 169)');
+    });
+
     it('only colors the selected portion when selection is a subset of an existing mark', () => {
       container.innerHTML = '<mark style="color: #d44c47">Hello World</mark>';
 
@@ -334,6 +372,34 @@ describe('MarkerInlineTool', () => {
   describe('removeColor', () => {
     it('removes mark element when clearing the only style property', () => {
       container.innerHTML = '<mark style="color: #d44c47">colored</mark> text';
+
+      const markEl = container.querySelector('mark');
+
+      if (!markEl) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(markEl);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.removeColor('color');
+
+      expect(container.querySelector('mark')).toBeNull();
+      expect(container.textContent).toBe('colored text');
+    });
+
+    it('unwraps mark when removing text color leaves only transparent background', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: transparent">colored</mark> text';
 
       const markEl = container.querySelector('mark');
 

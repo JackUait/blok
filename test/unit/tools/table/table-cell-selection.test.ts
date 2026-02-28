@@ -19,8 +19,6 @@ interface MockPopoverArgs {
   flippable?: boolean;
 }
 
-const mockPopoverShow = vi.fn();
-const mockPopoverDestroy = vi.fn();
 let lastPopoverArgs: MockPopoverArgs | null = null;
 
 vi.mock('../../../../src/components/utils/popover', () => ({
@@ -29,8 +27,14 @@ vi.mock('../../../../src/components/utils/popover', () => ({
     constructor(args: MockPopoverArgs) {
       lastPopoverArgs = args;
     }
-    show = mockPopoverShow;
-    destroy = mockPopoverDestroy;
+    show(): void {
+      this.el.setAttribute('data-blok-popover-opened', 'true');
+      document.body.appendChild(this.el);
+    }
+    destroy(): void {
+      this.el.removeAttribute('data-blok-popover-opened');
+      this.el.remove();
+    }
     on(_event: string, _handler: () => void): void {
       // no-op for tests
     }
@@ -668,7 +672,7 @@ describe('TableCellSelection', () => {
       expect(lastPopoverArgs?.items?.[0]?.secondaryLabel).toMatch(/[⌘C]|Ctrl\+C/);
       expect(lastPopoverArgs?.items?.[1]?.title).toBe('Clear');
       expect(lastPopoverArgs?.items?.[1]?.secondaryLabel).toBe('Del');
-      expect(mockPopoverShow).toHaveBeenCalled();
+      expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
     });
 
     it('fires onCopyViaButton with selected cells when Copy action activates', () => {
@@ -781,9 +785,11 @@ describe('TableCellSelection', () => {
 
       // Simulate the real browser flow: clicking a popover item fires pointerdown
       // on the document before the click/onActivate handler runs.
-      // The popover is rendered outside the pill, so this pointerdown would
-      // normally trigger handleClearSelection and empty selectedCells.
-      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+      // The popover is rendered on document.body with [data-blok-popover-opened],
+      // so clicks inside it should NOT trigger selection clearing.
+      const popoverEl = document.querySelector('[data-blok-popover-opened]') as HTMLElement;
+
+      popoverEl.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
 
       const items = lastPopoverArgs?.items;
 
@@ -794,6 +800,45 @@ describe('TableCellSelection', () => {
 
       expect(onClearContent).toHaveBeenCalledTimes(1);
       expect(onClearContent.mock.calls[0][0]).toHaveLength(4);
+    });
+
+    it('clears selection when clicking outside the grid while pill popover is open', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      vi.useFakeTimers();
+
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      vi.runAllTimers();
+
+      // Open the pill popover
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      callback.mockClear();
+
+      // Click outside the grid (not inside the popover)
+      const outsideEl = document.createElement('div');
+
+      document.body.appendChild(outsideEl);
+
+      outsideEl.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
+
+      vi.useRealTimers();
+
+      // Selection should clear — click was outside the grid and outside any popover
+      expect(callback).toHaveBeenCalledWith(false);
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+
+      outsideEl.remove();
     });
 
     it('clears selection after Clear action fires', () => {
@@ -1651,7 +1696,7 @@ describe('TableCellSelection', () => {
   });
 
   describe('isPopoverOpen guard', () => {
-    it('does not clear selection when isPopoverOpen returns true', () => {
+    it('does not clear selection when clicking inside an open popover', () => {
       const callback = vi.fn();
       const isPopoverOpen = vi.fn().mockReturnValue(true);
 
@@ -1667,18 +1712,65 @@ describe('TableCellSelection', () => {
 
       callback.mockClear();
 
-      // Simulate a pointerdown on the document (e.g. clicking a grip popover action item).
+      // Create a mock popover element on document.body with [data-blok-popover-opened]
+      const popoverEl = document.createElement('div');
+
+      popoverEl.setAttribute('data-blok-popover-opened', 'true');
+
+      const popoverItem = document.createElement('button');
+
+      popoverEl.appendChild(popoverItem);
+      document.body.appendChild(popoverEl);
+
+      // Simulate a pointerdown on a popover item (e.g. clicking a grip popover action).
       // boundClearSelection is registered synchronously by showProgrammaticSelection.
       const clearEvent = new PointerEvent('pointerdown', {
         bubbles: true,
         button: 0,
       });
 
-      document.dispatchEvent(clearEvent);
+      popoverItem.dispatchEvent(clearEvent);
 
-      // Selection must remain because the grip popover is open
+      // Selection must remain because the click is inside an open popover
       expect(callback).not.toHaveBeenCalledWith(false);
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(3);
+
+      popoverEl.remove();
+    });
+
+    it('clears selection when clicking outside the grid while grip popover is open', () => {
+      const callback = vi.fn();
+      const isPopoverOpen = vi.fn().mockReturnValue(true);
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+        isPopoverOpen,
+      });
+
+      selection.selectColumn(1);
+
+      callback.mockClear();
+
+      // Simulate a pointerdown on the document body (outside the grid and any popover).
+      const outsideEl = document.createElement('div');
+
+      document.body.appendChild(outsideEl);
+
+      const clearEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      });
+
+      outsideEl.dispatchEvent(clearEvent);
+
+      // Selection should clear — click was outside the grid and outside any popover
+      expect(callback).toHaveBeenCalledWith(false);
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
+
+      outsideEl.remove();
     });
 
     it('clears selection when isPopoverOpen returns false', () => {

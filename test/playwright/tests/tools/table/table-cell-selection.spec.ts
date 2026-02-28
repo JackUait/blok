@@ -493,6 +493,105 @@ test.describe('Cell Selection', () => {
     await expect(overlay).toBeVisible();
   });
 
+  test('Single-cell click selection is cleared when clicking outside the table', async ({ page }) => {
+    // 1. Initialize editor with a paragraph block above a 3x3 table
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: { text: 'Outside target' },
+          },
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A1', 'B1', 'C1'],
+                ['A2', 'B2', 'C2'],
+                ['A3', 'B3', 'C3'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // 2. Single-click cell (1,1) to create a one-cell selection
+    const cell = getCell(page, 1, 1);
+    const box = assertBoundingBox(await cell.boundingBox(), 'cell [1,1]');
+
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+    const selected = page.locator('[data-blok-table-cell-selected]');
+
+    await expect(selected).toHaveCount(1);
+
+    // 3. Click outside the table (on the paragraph block)
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`).filter({ hasText: 'Outside target' });
+
+    await paragraph.click();
+
+    // 4. Verify the single-cell selection is cleared
+    await expect(selected).toHaveCount(0);
+  });
+
+  test('Selection is cleared with a single click outside after opening the pill popover', async ({ page }) => {
+    // Regression: pill popover being open would block the clear handler,
+    // requiring a second click outside to dismiss the selection.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: { text: 'Outside target' },
+          },
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A1', 'B1', 'C1'],
+                ['A2', 'B2', 'C2'],
+                ['A3', 'B3', 'C3'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // 1. Drag to select a range of cells
+    await selectCells(page, 0, 0, 1, 1);
+
+    const selected = page.locator('[data-blok-table-cell-selected]');
+
+    await expect(selected).toHaveCount(4);
+
+    // 2. Open the pill popover by clicking the selection pill
+    const pill = page.locator('[data-blok-table-selection-pill]');
+    const pillBox = assertBoundingBox(await pill.boundingBox(), 'pill');
+
+    await page.mouse.click(pillBox.x + pillBox.width / 2, pillBox.y + pillBox.height / 2);
+
+    // Wait for the popover to appear
+    await expect(page.locator('[data-blok-popover]')).toBeAttached();
+
+    // 3. Click outside the table (on the paragraph block)
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`).filter({ hasText: 'Outside target' });
+
+    await paragraph.click();
+
+    // 4. Verify the selection is cleared with a single click
+    await expect(selected).toHaveCount(0);
+  });
+
   test('Small pointer movement within a single cell does not trigger multi-cell selection', async ({ page }) => {
     // 1. Initialize editor with a 3x3 table with content
     await create3x3TableWithContent(page);

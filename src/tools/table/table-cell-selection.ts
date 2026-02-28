@@ -341,17 +341,15 @@ export class TableCellSelection {
       return;
     }
 
-    // Don't clear while the pill popover is open — the user may be
+    // Don't clear when clicking inside an open popover — the user may be
     // clicking a popover item whose pointerdown bubbles to the document.
-    if (this.pillPopover !== null) {
+    // Popovers render on document.body and carry `data-blok-popover-opened`.
+    if (target instanceof HTMLElement && target.closest('[data-blok-popover-opened]') !== null) {
       return;
     }
 
-    // Don't clear while a grip popover is open — clicking a popover
-    // action fires pointerdown before the click handler that performs
-    // the action and re-establishes the selection.
-    if (this.isPopoverOpen?.()) {
-      return;
+    if (this.pillPopover !== null) {
+      this.destroyPillPopover();
     }
 
     document.removeEventListener('pointerdown', this.boundClearSelection);

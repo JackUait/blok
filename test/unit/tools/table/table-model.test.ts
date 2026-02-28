@@ -1303,6 +1303,110 @@ describe('TableModel', () => {
       expect(model.getCellColor(0, 1)).toBe('#f1f1ef');
       expect(model.getCellColor(0, 0)).toBeUndefined();
     });
+
+    it('setCellColor accepts valid 6-digit hex color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, '#ff0000');
+
+      expect(model.getCellColor(0, 0)).toBe('#ff0000');
+    });
+
+    it('setCellColor accepts valid 3-digit hex color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, '#f00');
+
+      expect(model.getCellColor(0, 0)).toBe('#f00');
+    });
+
+    it('setCellColor accepts valid rgb() color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'rgb(255, 0, 0)');
+
+      expect(model.getCellColor(0, 0)).toBe('rgb(255, 0, 0)');
+    });
+
+    it('setCellColor accepts valid rgba() color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'rgba(255, 0, 0, 0.5)');
+
+      expect(model.getCellColor(0, 0)).toBe('rgba(255, 0, 0, 0.5)');
+    });
+
+    it('setCellColor accepts valid hsl() color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'hsl(120, 50%, 50%)');
+
+      expect(model.getCellColor(0, 0)).toBe('hsl(120, 50%, 50%)');
+    });
+
+    it('setCellColor accepts valid hsla() color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'hsla(120, 50%, 50%, 0.8)');
+
+      expect(model.getCellColor(0, 0)).toBe('hsla(120, 50%, 50%, 0.8)');
+    });
+
+    it('setCellColor accepts transparent', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'transparent');
+
+      expect(model.getCellColor(0, 0)).toBe('transparent');
+    });
+
+    it('setCellColor rejects invalid value', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'not-a-color');
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellColor rejects CSS injection attempt', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'red; position: fixed');
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellColor rejects empty string', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, '');
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellColor rejects hex without hash', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, 'ff0000');
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellColor accepts 8-digit hex color (with alpha)', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, '#ff000080');
+
+      expect(model.getCellColor(0, 0)).toBe('#ff000080');
+    });
+
+    it('setCellColor accepts 4-digit hex color (with alpha)', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellColor(0, 0, '#f008');
+
+      expect(model.getCellColor(0, 0)).toBe('#f008');
+    });
   });
 
   describe('text color', () => {
@@ -1388,6 +1492,115 @@ describe('TableModel', () => {
 
       expect(cell.textColor).toBe('#787774');
       expect(cell.color).toBe('#f1f1ef');
+    });
+
+    it('setCellTextColor accepts valid 6-digit hex color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, '#ff0000');
+
+      expect(model.getCellTextColor(0, 0)).toBe('#ff0000');
+    });
+
+    it('setCellTextColor accepts valid rgb() color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'rgb(255, 0, 0)');
+
+      expect(model.getCellTextColor(0, 0)).toBe('rgb(255, 0, 0)');
+    });
+
+    it('setCellTextColor accepts valid hsl() color', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'hsl(120, 50%, 50%)');
+
+      expect(model.getCellTextColor(0, 0)).toBe('hsl(120, 50%, 50%)');
+    });
+
+    it('setCellTextColor accepts transparent', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'transparent');
+
+      expect(model.getCellTextColor(0, 0)).toBe('transparent');
+    });
+
+    it('setCellTextColor rejects invalid value', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'not-a-color');
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellTextColor rejects CSS injection attempt', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, 'red; position: fixed');
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('setCellTextColor rejects empty string', () => {
+      const model = new TableModel(makeData({ content: [[{ blocks: [] }]] }));
+
+      model.setCellTextColor(0, 0, '');
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+  });
+
+  // ─── normalizeCell color validation ─────────────────────────────
+
+  describe('normalizeCell color validation', () => {
+    it('strips invalid color from loaded data', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], color: 'not-a-color' }]],
+      }));
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+    });
+
+    it('strips invalid textColor from loaded data', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], textColor: 'javascript:alert(1)' }]],
+      }));
+
+      expect(model.getCellTextColor(0, 0)).toBeUndefined();
+    });
+
+    it('preserves valid color in loaded data', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], color: '#f1f1ef' }]],
+      }));
+
+      expect(model.getCellColor(0, 0)).toBe('#f1f1ef');
+    });
+
+    it('preserves valid textColor in loaded data', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], textColor: '#787774' }]],
+      }));
+
+      expect(model.getCellTextColor(0, 0)).toBe('#787774');
+    });
+
+    it('strips invalid color but preserves valid textColor', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], color: 'bad', textColor: '#787774' }]],
+      }));
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
+      expect(model.getCellTextColor(0, 0)).toBe('#787774');
+    });
+
+    it('strips CSS injection from color in loaded data', () => {
+      const model = new TableModel(makeData({
+        content: [[{ blocks: ['b1'], color: '#fff; background-image: url(evil)' }]],
+      }));
+
+      expect(model.getCellColor(0, 0)).toBeUndefined();
     });
   });
 

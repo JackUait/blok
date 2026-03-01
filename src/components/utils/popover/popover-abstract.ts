@@ -454,6 +454,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');
     popover.style.setProperty('--popover-left', '0');
     popover.style.setProperty('--nested-popover-overlap', '0.25rem');
+    popover.style.setProperty('--max-height', '400px');
 
     // Create popover container
     const popoverContainer = document.createElement('div');

@@ -345,6 +345,50 @@ export const ColorWithItalic: Story = {
   },
 };
 
+/**
+ * Linked text rendered with each of the 10 text-color presets.
+ * Verifies that marker styles compose correctly with link formatting.
+ */
+export const ColorWithLink: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: [
+        {
+          id: 'link-colors-1',
+          type: 'paragraph',
+          data: {
+            text: PRESETS.map(
+              (p) => textMark(p.text, `<a href="#">Link ${p.name}</a>`)
+            ).join(' '),
+          },
+        },
+      ],
+    },
+  },
+};
+
+/**
+ * Ten paragraphs showing colored text within plain surrounding text.
+ * Verifies visual rendering when only a word mid-sentence is colored.
+ */
+export const PartialTextColor: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: PRESETS.map((p) => ({
+        id: `partial-${p.name}`,
+        type: 'paragraph',
+        data: {
+          text: `The word ${textMark(p.text, p.name)} appears mid-sentence with surrounding plain text.`,
+        },
+      })),
+    },
+  },
+};
+
 // ---------------------------------------------------------------------------
 //  PICKER UI — Interaction stories with play functions
 // ---------------------------------------------------------------------------
@@ -401,6 +445,58 @@ export const PickerBackgroundTab: Story = {
           const grid = document.querySelector(MARKER_GRID_SELECTOR);
 
           expect(grid?.querySelectorAll('button')?.length).toBe(10);
+        },
+        TIMEOUT_ACTION
+      );
+    });
+  },
+};
+
+/**
+ * Opens the marker picker and verifies the "Default" reset button is visible.
+ */
+export const PickerDefaultButton: Story = {
+  args: {
+    data: pickerData,
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Open marker picker and verify default button', async () => {
+      await openMarkerPicker(canvasElement);
+
+      await waitFor(
+        () => {
+          const defaultBtn = document.querySelector('[data-blok-testid="marker-default-btn"]');
+
+          expect(defaultBtn).toBeInTheDocument();
+        },
+        TIMEOUT_ACTION
+      );
+    });
+  },
+};
+
+/**
+ * Opens the marker picker on uncolored text and verifies no swatch
+ * has an active ring indicator.
+ */
+export const PickerNoActiveSwatch: Story = {
+  args: {
+    data: pickerData,
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Open marker picker and verify no active swatch', async () => {
+      await openMarkerPicker(canvasElement);
+
+      await waitFor(
+        () => {
+          const grid = document.querySelector(MARKER_GRID_SELECTOR);
+          const swatches = grid?.querySelectorAll('button');
+
+          expect(swatches?.length).toBe(10);
+
+          swatches?.forEach((swatch) => {
+            expect(swatch.className).not.toContain('ring-black/30');
+          });
         },
         TIMEOUT_ACTION
       );

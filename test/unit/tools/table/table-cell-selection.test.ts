@@ -1631,6 +1631,44 @@ describe('TableCellSelection', () => {
       expect(newCell.hasAttribute(SELECTED_ATTR)).toBe(true);
     });
 
+    it('persists selection when clicking the same selected cell again', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      simulateClick(grid, 1, 1);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
+
+      callback.mockClear();
+
+      // Click the same cell again — selection should persist without clearing
+      simulateClick(grid, 1, 1);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+      expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
+      // Should NOT have fired onSelectionActiveChange(false) — selection was never cleared
+      expect(callback).not.toHaveBeenCalledWith(false);
+    });
+
+    it('allows drag-extending from an already-selected cell', () => {
+      // Select cell (0,0) via click
+      simulateClick(grid, 0, 0);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
+
+      // Now drag from (0,0) to (1,1) — should create a 2x2 selection
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(4);
+    });
+
     it('clears single-cell selection on click-away', () => {
       const callback = vi.fn();
 

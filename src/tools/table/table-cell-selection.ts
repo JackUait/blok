@@ -227,8 +227,19 @@ export class TableCellSelection {
       return;
     }
 
-    // If there's an existing selection, clear it first
-    if (this.hasSelection) {
+    // If clicking the same single-cell that's already selected, keep the
+    // selection instead of clearing and re-creating it (avoids border flash).
+    const clickedSameCell = this.hasSelection
+      && this.lastPaintedRange !== null
+      && this.lastPaintedRange.minRow === cell.row
+      && this.lastPaintedRange.maxRow === cell.row
+      && this.lastPaintedRange.minCol === cell.col
+      && this.lastPaintedRange.maxCol === cell.col;
+
+    if (clickedSameCell) {
+      // Remove the document clear handler so it doesn't fire for this click
+      document.removeEventListener('pointerdown', this.boundClearSelection);
+    } else if (this.hasSelection) {
       this.clearSelection();
     }
 
@@ -322,13 +333,18 @@ export class TableCellSelection {
       // interaction's pointerdown triggering the clear handler.
       document.addEventListener('pointerdown', this.boundClearSelection);
     } else if (this.anchorCell) {
-      // Single click without drag — select the clicked cell
-      this.showProgrammaticSelection(
-        this.anchorCell.row,
-        this.anchorCell.col,
-        this.anchorCell.row,
-        this.anchorCell.col,
-      );
+      if (this.hasSelection) {
+        // Already selected (same single cell) — just re-register clear handler
+        document.addEventListener('pointerdown', this.boundClearSelection);
+      } else {
+        // Single click without drag — select the clicked cell
+        this.showProgrammaticSelection(
+          this.anchorCell.row,
+          this.anchorCell.col,
+          this.anchorCell.row,
+          this.anchorCell.col,
+        );
+      }
     }
 
     this.isSelecting = false;

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 
 import { Header,  type HeaderConfig  } from '../tools/header';
+import { Marker } from '../tools';
 
 import { createEditorContainer } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
@@ -33,6 +34,19 @@ const createEditor = (args: HeaderArgs): HTMLElement => createEditorContainer({
   tools: {
     header: Header,
   },
+});
+
+const markerHeaderTools = {
+  header: {
+    class: Header,
+    inlineToolbar: true,
+  },
+  marker: Marker,
+};
+
+const createMarkerEditor = (args: HeaderArgs): HTMLElement => createEditorContainer({
+  ...args,
+  tools: markerHeaderTools,
 });
 
 const meta: Meta<HeaderArgs> = {
@@ -138,4 +152,96 @@ export const AllLevelsCustomStyles: Story = {
     data: createAllHeaderLevelsData(),
   },
   render: createCustomHeaderEditor,
+};
+
+// ---------------------------------------------------------------------------
+//  Headers with color markers
+// ---------------------------------------------------------------------------
+
+const PRESETS = [
+  { name: 'gray', text: '#787774', bg: '#f1f1ef' },
+  { name: 'brown', text: '#9f6b53', bg: '#f4eeee' },
+  { name: 'orange', text: '#d9730d', bg: '#fbecdd' },
+  { name: 'yellow', text: '#cb9b00', bg: '#fbf3db' },
+  { name: 'green', text: '#448361', bg: '#edf3ec' },
+  { name: 'teal', text: '#2b9a8f', bg: '#e4f5f3' },
+  { name: 'blue', text: '#337ea9', bg: '#e7f3f8' },
+  { name: 'purple', text: '#9065b0', bg: '#f6f3f9' },
+  { name: 'pink', text: '#c14c8a', bg: '#f9f0f5' },
+  { name: 'red', text: '#d44c47', bg: '#fdebec' },
+];
+
+const textMark = (hex: string, label: string): string =>
+  `<mark style="color: ${hex}; background-color: transparent">${label}</mark>`;
+
+const bgMark = (hex: string, label: string): string =>
+  `<mark style="background-color: ${hex}">${label}</mark>`;
+
+/**
+ * H2 header with all 10 text-color presets applied as inline marks.
+ */
+export const HeaderTextColors: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: [
+        {
+          id: 'header-text-colors',
+          type: 'header',
+          data: {
+            text: PRESETS.map((p) => textMark(p.text, p.name)).join(' '),
+            level: 2,
+          },
+        },
+      ],
+    },
+  },
+  render: createMarkerEditor,
+};
+
+/**
+ * H2 header with all 10 background-color presets applied as inline marks.
+ */
+export const HeaderBackgroundColors: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: [
+        {
+          id: 'header-bg-colors',
+          type: 'header',
+          data: {
+            text: PRESETS.map((p) => bgMark(p.bg, p.name)).join(' '),
+            level: 2,
+          },
+        },
+      ],
+    },
+  },
+  render: createMarkerEditor,
+};
+
+/**
+ * H1 through H6, each with a different preset text color applied.
+ * Shows color markers render correctly at every heading level.
+ */
+export const HeaderLevelsWithColors: Story = {
+  args: {
+    minHeight: 500,
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: PRESETS.slice(0, 6).map((p, i) => ({
+        id: `header-level-color-${i + 1}`,
+        type: 'header',
+        data: {
+          text: `Heading ${i + 1} in ${textMark(p.text, p.name)}`,
+          level: i + 1,
+        },
+      })),
+    },
+  },
+  render: createMarkerEditor,
 };

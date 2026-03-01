@@ -1224,6 +1224,158 @@ export const PresetDualColors: Story = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════
+// INLINE MARKERS IN CELLS
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * 2×5 table: each cell has a preset background color AND an inline text-color
+ * mark on the word. Tests CSS cascade — mark text color overrides cell text.
+ */
+export const CellBgWithInlineMarker: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: [
+        {
+          id: 'cellmark-bg-table',
+          type: 'table',
+          data: {
+            withHeadings: false,
+            withHeadingColumn: false,
+            content: [
+              [
+                { blocks: ['cm-bg-gray'], color: '#f1f1ef' },
+                { blocks: ['cm-bg-brown'], color: '#f4eeee' },
+                { blocks: ['cm-bg-orange'], color: '#fbecdd' },
+                { blocks: ['cm-bg-yellow'], color: '#fbf3db' },
+                { blocks: ['cm-bg-green'], color: '#edf3ec' },
+              ],
+              [
+                { blocks: ['cm-bg-teal'], color: '#e4f5f3' },
+                { blocks: ['cm-bg-blue'], color: '#e7f3f8' },
+                { blocks: ['cm-bg-purple'], color: '#f6f3f9' },
+                { blocks: ['cm-bg-pink'], color: '#f9f0f5' },
+                { blocks: ['cm-bg-red'], color: '#fdebec' },
+              ],
+            ],
+          },
+        },
+        { id: 'cm-bg-gray', type: 'paragraph', data: { text: '<mark style="color: #787774; background-color: transparent">Gray</mark>' } },
+        { id: 'cm-bg-brown', type: 'paragraph', data: { text: '<mark style="color: #9f6b53; background-color: transparent">Brown</mark>' } },
+        { id: 'cm-bg-orange', type: 'paragraph', data: { text: '<mark style="color: #d9730d; background-color: transparent">Orange</mark>' } },
+        { id: 'cm-bg-yellow', type: 'paragraph', data: { text: '<mark style="color: #cb9b00; background-color: transparent">Yellow</mark>' } },
+        { id: 'cm-bg-green', type: 'paragraph', data: { text: '<mark style="color: #448361; background-color: transparent">Green</mark>' } },
+        { id: 'cm-bg-teal', type: 'paragraph', data: { text: '<mark style="color: #2b9a8f; background-color: transparent">Teal</mark>' } },
+        { id: 'cm-bg-blue', type: 'paragraph', data: { text: '<mark style="color: #337ea9; background-color: transparent">Blue</mark>' } },
+        { id: 'cm-bg-purple', type: 'paragraph', data: { text: '<mark style="color: #9065b0; background-color: transparent">Purple</mark>' } },
+        { id: 'cm-bg-pink', type: 'paragraph', data: { text: '<mark style="color: #c14c8a; background-color: transparent">Pink</mark>' } },
+        { id: 'cm-bg-red', type: 'paragraph', data: { text: '<mark style="color: #d44c47; background-color: transparent">Red</mark>' } },
+      ],
+    },
+  },
+};
+
+/**
+ * 2×5 table: each cell has a preset text color AND an inline background-color
+ * mark. Tests CSS cascade — mark background overlays cell, text inherits cell color.
+ */
+export const CellTextColorWithInlineMarker: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: [
+        {
+          id: 'cellmark-text-table',
+          type: 'table',
+          data: {
+            withHeadings: false,
+            withHeadingColumn: false,
+            content: [
+              [
+                { blocks: ['cm-tc-gray'], textColor: '#787774' },
+                { blocks: ['cm-tc-brown'], textColor: '#9f6b53' },
+                { blocks: ['cm-tc-orange'], textColor: '#d9730d' },
+                { blocks: ['cm-tc-yellow'], textColor: '#cb9b00' },
+                { blocks: ['cm-tc-green'], textColor: '#448361' },
+              ],
+              [
+                { blocks: ['cm-tc-teal'], textColor: '#2b9a8f' },
+                { blocks: ['cm-tc-blue'], textColor: '#337ea9' },
+                { blocks: ['cm-tc-purple'], textColor: '#9065b0' },
+                { blocks: ['cm-tc-pink'], textColor: '#c14c8a' },
+                { blocks: ['cm-tc-red'], textColor: '#d44c47' },
+              ],
+            ],
+          },
+        },
+        { id: 'cm-tc-gray', type: 'paragraph', data: { text: '<mark style="background-color: #f1f1ef">Gray</mark>' } },
+        { id: 'cm-tc-brown', type: 'paragraph', data: { text: '<mark style="background-color: #f4eeee">Brown</mark>' } },
+        { id: 'cm-tc-orange', type: 'paragraph', data: { text: '<mark style="background-color: #fbecdd">Orange</mark>' } },
+        { id: 'cm-tc-yellow', type: 'paragraph', data: { text: '<mark style="background-color: #fbf3db">Yellow</mark>' } },
+        { id: 'cm-tc-green', type: 'paragraph', data: { text: '<mark style="background-color: #edf3ec">Green</mark>' } },
+        { id: 'cm-tc-teal', type: 'paragraph', data: { text: '<mark style="background-color: #e4f5f3">Teal</mark>' } },
+        { id: 'cm-tc-blue', type: 'paragraph', data: { text: '<mark style="background-color: #e7f3f8">Blue</mark>' } },
+        { id: 'cm-tc-purple', type: 'paragraph', data: { text: '<mark style="background-color: #f6f3f9">Purple</mark>' } },
+        { id: 'cm-tc-pink', type: 'paragraph', data: { text: '<mark style="background-color: #f9f0f5">Pink</mark>' } },
+        { id: 'cm-tc-red', type: 'paragraph', data: { text: '<mark style="background-color: #fdebec">Red</mark>' } },
+      ],
+    },
+  },
+};
+
+/**
+ * 2×5 table: each cell has preset dual colors (bg + text) AND an inline
+ * dual mark (different text + bg). Tests full override — mark colors take
+ * precedence over cell colors on marked text.
+ */
+export const CellDualWithInlineMarker: Story = {
+  args: {
+    data: {
+      time: Date.now(),
+      version: '1.0.0',
+      blocks: [
+        {
+          id: 'cellmark-dual-table',
+          type: 'table',
+          data: {
+            withHeadings: false,
+            withHeadingColumn: false,
+            content: [
+              [
+                { blocks: ['cm-d-gray'], color: '#f1f1ef', textColor: '#787774' },
+                { blocks: ['cm-d-brown'], color: '#f4eeee', textColor: '#9f6b53' },
+                { blocks: ['cm-d-orange'], color: '#fbecdd', textColor: '#d9730d' },
+                { blocks: ['cm-d-yellow'], color: '#fbf3db', textColor: '#cb9b00' },
+                { blocks: ['cm-d-green'], color: '#edf3ec', textColor: '#448361' },
+              ],
+              [
+                { blocks: ['cm-d-teal'], color: '#e4f5f3', textColor: '#2b9a8f' },
+                { blocks: ['cm-d-blue'], color: '#e7f3f8', textColor: '#337ea9' },
+                { blocks: ['cm-d-purple'], color: '#f6f3f9', textColor: '#9065b0' },
+                { blocks: ['cm-d-pink'], color: '#f9f0f5', textColor: '#c14c8a' },
+                { blocks: ['cm-d-red'], color: '#fdebec', textColor: '#d44c47' },
+              ],
+            ],
+          },
+        },
+        { id: 'cm-d-gray', type: 'paragraph', data: { text: 'Plain and <mark style="color: #d44c47; background-color: #fdebec">red mark</mark>' } },
+        { id: 'cm-d-brown', type: 'paragraph', data: { text: 'Plain and <mark style="color: #337ea9; background-color: #e7f3f8">blue mark</mark>' } },
+        { id: 'cm-d-orange', type: 'paragraph', data: { text: 'Plain and <mark style="color: #448361; background-color: #edf3ec">green mark</mark>' } },
+        { id: 'cm-d-yellow', type: 'paragraph', data: { text: 'Plain and <mark style="color: #9065b0; background-color: #f6f3f9">purple mark</mark>' } },
+        { id: 'cm-d-green', type: 'paragraph', data: { text: 'Plain and <mark style="color: #c14c8a; background-color: #f9f0f5">pink mark</mark>' } },
+        { id: 'cm-d-teal', type: 'paragraph', data: { text: 'Plain and <mark style="color: #d9730d; background-color: #fbecdd">orange mark</mark>' } },
+        { id: 'cm-d-blue', type: 'paragraph', data: { text: 'Plain and <mark style="color: #cb9b00; background-color: #fbf3db">yellow mark</mark>' } },
+        { id: 'cm-d-purple', type: 'paragraph', data: { text: 'Plain and <mark style="color: #2b9a8f; background-color: #e4f5f3">teal mark</mark>' } },
+        { id: 'cm-d-pink', type: 'paragraph', data: { text: 'Plain and <mark style="color: #787774; background-color: #f1f1ef">gray mark</mark>' } },
+        { id: 'cm-d-red', type: 'paragraph', data: { text: 'Plain and <mark style="color: #9f6b53; background-color: #f4eeee">brown mark</mark>' } },
+      ],
+    },
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════
 // EDGE CASES
 // ═══════════════════════════════════════════════════════════════════════
 

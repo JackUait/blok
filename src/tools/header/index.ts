@@ -23,7 +23,7 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
-import { ARROW_ICON, ARROW_STYLES, TOGGLE_ATTR } from '../toggle/constants';
+import { ARROW_ICON, ARROW_STYLES, TOGGLE_ATTR, TOGGLE_WRAPPER_STYLES } from '../toggle/constants';
 import { updateArrowState, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 
 /**
@@ -474,6 +474,27 @@ export class Header implements BlockTool {
     if (data.text !== undefined) {
       this._element.innerHTML = this._data.text || '';
     }
+
+    /**
+     * Re-add toggle arrow after innerHTML assignments (which destroy it).
+     * Also update toggle styles and attributes.
+     */
+    if (this._data.isToggleable) {
+      this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
+
+      if (!this._element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)) {
+        const arrow = this.buildArrow();
+
+        this._arrowElement = arrow;
+        this._element.prepend(arrow);
+      }
+
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, TOGGLE_WRAPPER_STYLES);
+    } else {
+      this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
+      this._arrowElement = null;
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+    }
   }
 
   /**
@@ -497,8 +518,7 @@ export class Header implements BlockTool {
      * Add styles class using twMerge to combine base and level-specific styles.
      * When isToggleable, add flex layout to align arrow and text.
      */
-    const toggleStyles = this._data.isToggleable ? 'flex items-start' : '';
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, toggleStyles);
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, this._data.isToggleable ? TOGGLE_WRAPPER_STYLES : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)

@@ -23,6 +23,8 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
+import { ARROW_ICON, ARROW_STYLES, TOGGLE_ATTR } from '../toggle/constants';
+import { updateArrowState, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 
 /**
  * Tool's input and output data format
@@ -32,6 +34,8 @@ export interface HeaderData extends BlockToolData {
   text: string;
   /** Header's level from 1 to 6 */
   level: number;
+  /** Whether this header has toggle (collapse/expand) behavior */
+  isToggleable?: boolean;
 }
 
 /**
@@ -126,6 +130,21 @@ export class Header implements BlockTool {
   private _element: HTMLHeadingElement;
 
   /**
+   * Arrow element for toggle heading
+   */
+  private _arrowElement: HTMLElement | null = null;
+
+  /**
+   * Whether the toggle is currently open (expanded)
+   */
+  private _isOpen: boolean = false;
+
+  /**
+   * Block ID from the editor
+   */
+  private blockId?: string;
+
+  /**
    * Render plugin's main Element and fill it with saved data
    *
    * @param options - constructor options
@@ -133,14 +152,19 @@ export class Header implements BlockTool {
    * @param options.config - user config for Tool
    * @param options.api - Editor API
    * @param options.readOnly - read only mode flag
+   * @param options.block - block instance
    */
-  constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<HeaderData, HeaderConfig>) {
+  constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<HeaderData, HeaderConfig>) {
     this.api = api;
     this.readOnly = readOnly;
 
     this._settings = config || {};
     this._data = this.normalizeData(data);
     this._element = this.getTag();
+
+    if (block) {
+      this.blockId = block.id;
+    }
   }
 
   /**
@@ -183,10 +207,16 @@ export class Header implements BlockTool {
     const parsedLevel = parseInt(String(data.level));
     const isValidLevel = data.level !== undefined && !isNaN(parsedLevel);
 
-    return {
+    const normalized: HeaderData = {
       text: data.text || '',
       level: isValidLevel ? parsedLevel : this.defaultLevel.number,
     };
+
+    if (data.isToggleable === true) {
+      normalized.isToggleable = true;
+    }
+
+    return normalized;
   }
 
   /**
@@ -196,6 +226,16 @@ export class Header implements BlockTool {
    */
   public render(): HTMLHeadingElement {
     return this._element;
+  }
+
+  /**
+   * Called after the block is rendered in the DOM.
+   * Hides children if the toggle heading is collapsed.
+   */
+  public rendered(): void {
+    if (this._data.isToggleable) {
+      this.updateChildrenVisibility();
+    }
   }
 
   /**
@@ -219,28 +259,47 @@ export class Header implements BlockTool {
       toolboxEntries[0].data === undefined &&
       (toolboxEntries[0].title === undefined || toolboxEntries[0].title === 'Heading');
 
+    let levelSettings: MenuConfig;
+
     if (toolboxEntries !== undefined && toolboxEntries.length > 0 && !isDefaultToolboxEntry) {
-      return this.buildSettingsFromToolboxEntries(toolboxEntries);
+      levelSettings = this.buildSettingsFromToolboxEntries(toolboxEntries);
+    } else {
+      /**
+       * Fall back to existing behavior using levels config
+       */
+      levelSettings = this.levels.map(level => {
+        const translated = this.api.i18n.t(level.nameKey);
+        const title = translated !== level.nameKey ? translated : level.name;
+
+        return {
+          icon: level.icon,
+          title,
+          onActivate: (): void => this.setLevel(level.number),
+          closeOnActivate: true,
+          isActive: this.currentLevel.number === level.number,
+          dataset: {
+            'blok-header-level': String(level.number),
+          },
+        };
+      });
     }
 
-    /**
-     * Fall back to existing behavior using levels config
-     */
-    return this.levels.map(level => {
-      const translated = this.api.i18n.t(level.nameKey);
-      const title = translated !== level.nameKey ? translated : level.name;
+    const settingsArray = Array.isArray(levelSettings) ? levelSettings : [levelSettings];
 
-      return {
-        icon: level.icon,
-        title,
-        onActivate: (): void => this.setLevel(level.number),
-        closeOnActivate: true,
-        isActive: this.currentLevel.number === level.number,
-        dataset: {
-          'blok-header-level': String(level.number),
-        },
-      };
+    /**
+     * Add toggle heading option
+     */
+    const toggleHeadingTitle = this.api.i18n.t('tools.header.toggleHeading');
+
+    settingsArray.push({
+      icon: ARROW_ICON,
+      title: toggleHeadingTitle !== 'tools.header.toggleHeading' ? toggleHeadingTitle : 'Toggle heading',
+      onActivate: (): void => this.toggleIsToggleable(),
+      closeOnActivate: true,
+      isActive: this._data.isToggleable === true,
     });
+
+    return settingsArray;
   }
 
   /**
@@ -294,6 +353,7 @@ export class Header implements BlockTool {
     this.data = {
       level: level,
       text: this.data.text,
+      isToggleable: this._data.isToggleable,
     };
   }
 
@@ -325,10 +385,16 @@ export class Header implements BlockTool {
    * @returns saved data
    */
   public save(toolsContent: HTMLHeadingElement): HeaderData {
-    return {
+    const data: HeaderData = {
       text: toolsContent.innerHTML,
       level: this.currentLevel.number,
     };
+
+    if (this._data.isToggleable === true) {
+      data.isToggleable = true;
+    }
+
+    return data;
   }
 
   /**
@@ -348,6 +414,7 @@ export class Header implements BlockTool {
     return {
       level: false,
       text: {},
+      isToggleable: false,
     };
   }
 
@@ -434,9 +501,11 @@ export class Header implements BlockTool {
     tag.innerHTML = this._data.text || '';
 
     /**
-     * Add styles class using twMerge to combine base and level-specific styles
+     * Add styles class using twMerge to combine base and level-specific styles.
+     * When isToggleable, add flex layout to align arrow and text.
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+    const toggleStyles = this._data.isToggleable ? 'flex items-start' : '';
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, toggleStyles);
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -458,6 +527,17 @@ export class Header implements BlockTool {
     tag.contentEditable = this.readOnly ? 'false' : 'true';
 
     /**
+     * Add toggle arrow if isToggleable
+     */
+    if (this._data.isToggleable) {
+      tag.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
+
+      const arrow = this.buildArrow();
+      this._arrowElement = arrow;
+      tag.prepend(arrow);
+    }
+
+    /**
      * Add Placeholder with caret positioning support
      */
     if (!this.readOnly) {
@@ -467,6 +547,71 @@ export class Header implements BlockTool {
     }
 
     return tag;
+  }
+
+  /**
+   * Build the arrow element for toggle heading.
+   *
+   * @returns The arrow element
+   */
+  private buildArrow(): HTMLElement {
+    const arrow = document.createElement('div');
+    arrow.className = ARROW_STYLES;
+    arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
+    arrow.setAttribute('role', 'button');
+    arrow.setAttribute('tabindex', '-1');
+    arrow.setAttribute('aria-label', 'Toggle');
+    arrow.contentEditable = 'false';
+    arrow.innerHTML = ARROW_ICON;
+
+    if (this._isOpen) {
+      arrow.style.transform = 'rotate(90deg)';
+    }
+
+    arrow.addEventListener('click', (event: MouseEvent) => {
+      event.stopPropagation();
+      this.toggleOpen();
+    });
+
+    return arrow;
+  }
+
+  /**
+   * Toggle the isToggleable state on/off.
+   * Called from the settings menu.
+   */
+  private toggleIsToggleable(): void {
+    const wasToggleable = this._data.isToggleable === true;
+
+    this.data = {
+      level: this._data.level,
+      text: this._data.text,
+      isToggleable: !wasToggleable || undefined,
+    };
+  }
+
+  /**
+   * Toggle the open/closed state of the toggle heading.
+   */
+  private toggleOpen(): void {
+    this._isOpen = !this._isOpen;
+
+    if (this._arrowElement && this._element) {
+      updateArrowState(this._arrowElement, this._element, this._isOpen);
+    }
+
+    this.updateChildrenVisibility();
+  }
+
+  /**
+   * Show or hide child blocks based on the toggle's open state.
+   */
+  private updateChildrenVisibility(): void {
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    updateChildrenVisibility(this.api, this.blockId, this._isOpen);
   }
 
   /**

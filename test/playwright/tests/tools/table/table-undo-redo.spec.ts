@@ -1211,4 +1211,88 @@ test.describe('Table Undo/Redo', () => {
     ).toBe(true);
   });
 
+  test('Undo of the last action in a table cell does not scroll the article to the top', async ({ page }) => {
+    // Regression: when the user performs an action in a table cell that is below
+    // the fold (requiring scroll to see) and then presses CMD+Z, the viewport
+    // should stay near the table — not jump to the top of the article.
+    // This covers text input, Enter key, and other actions that trigger setData
+    // during undo (full table DOM rebuild).
+
+    // 1. Create a document with many paragraphs above a table to force scrolling
+    const manyParagraphs = Array.from({ length: 30 }, (_, i) => ({
+      type: 'paragraph',
+      data: { text: `Paragraph ${i + 1} — filler content to push the table below the fold.` },
+    }));
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          ...manyParagraphs,
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Alpha', 'Beta'], ['Gamma', 'Delta']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    // 2. Scroll the table into view and click into the first cell
+    await table.scrollIntoViewIfNeeded();
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.press('End');
+
+    // Wait for Yjs to capture any initialization state
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 3. Record scroll position after clicking into the cell
+    const scrollBeforeAction = await page.evaluate(() => window.scrollY);
+
+    expect(scrollBeforeAction, 'Should be scrolled down to the table').toBeGreaterThan(100);
+
+    // 4. Press Enter to create a new paragraph in the cell (triggers table setData on undo)
+    await page.keyboard.press('Enter');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 5. Undo the Enter
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // 6. Verify the scroll position did NOT jump to the top
+    const scrollAfterUndo = await page.evaluate(() => window.scrollY);
+
+    expect(
+      scrollAfterUndo,
+      `Scroll should stay near the table (was ${scrollBeforeAction}px), not jump to top (got ${scrollAfterUndo}px)`
+    ).toBeGreaterThan(scrollBeforeAction * 0.5);
+
+    // 7. Also test with plain text typing
+    await firstCellEditable.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' added');
+    await expect(firstCellEditable).toContainText('Alpha added');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    const scrollBeforeTextUndo = await page.evaluate(() => window.scrollY);
+
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    const scrollAfterTextUndo = await page.evaluate(() => window.scrollY);
+
+    expect(
+      scrollAfterTextUndo,
+      `Scroll should stay near the table after text undo (was ${scrollBeforeTextUndo}px), got ${scrollAfterTextUndo}px`
+    ).toBeGreaterThan(scrollBeforeTextUndo * 0.5);
+  });
+
 });

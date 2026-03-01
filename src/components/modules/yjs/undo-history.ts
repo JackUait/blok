@@ -203,6 +203,12 @@ export class UndoHistory {
    * Restores caret position after the undo operation.
    */
   public undo(): void {
+    // Save scroll position before DOM manipulation. Removing focused elements
+    // from the DOM (e.g., undoing an Enter in a table cell removes cell paragraph
+    // blocks) can cause the browser to scroll to the top. We restore scroll after
+    // caret restoration to catch cases where the referenced block no longer exists.
+    const savedScrollY = window.scrollY;
+
     // Check if the last operation was a move (or group of moves)
     const lastMoveGroup = this.moveUndoStack.pop();
 
@@ -220,6 +226,7 @@ export class UndoHistory {
       const caretEntry = this.caretUndoStack.pop();
 
       this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
+      this.restoreScrollIfJumped(savedScrollY);
 
       return;
     }
@@ -231,6 +238,7 @@ export class UndoHistory {
     const caretEntry = this.caretUndoStack.pop();
 
     this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
+    this.restoreScrollIfJumped(savedScrollY);
   }
 
   /**
@@ -239,6 +247,9 @@ export class UndoHistory {
    * Restores caret position after the redo operation.
    */
   public redo(): void {
+    // Save scroll position before DOM manipulation (same rationale as undo).
+    const savedScrollY = window.scrollY;
+
     // Check if the last undone operation was a move (or group of moves)
     const lastMoveGroup = this.moveRedoStack.pop();
 
@@ -255,6 +266,7 @@ export class UndoHistory {
       const caretEntry = this.caretRedoStack.pop();
 
       this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
+      this.restoreScrollIfJumped(savedScrollY);
 
       return;
     }
@@ -266,6 +278,7 @@ export class UndoHistory {
     const caretEntry = this.caretRedoStack.pop();
 
     this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
+    this.restoreScrollIfJumped(savedScrollY);
   }
 
   /**
@@ -492,10 +505,21 @@ export class UndoHistory {
   }
 
   /**
+   * Restore scroll position if it jumped far from the original position.
+   * This catches cases where caret restoration focused a distant block
+   * (e.g., the referenced block was removed during undo and the fallback
+   * set focus to the first block at the top of the article).
+   */
+  private restoreScrollIfJumped(savedScrollY: number): void {
+    if (Math.abs(window.scrollY - savedScrollY) > window.innerHeight) {
+      window.scrollTo(0, savedScrollY);
+    }
+  }
+
+  /**
    * Restore caret position from a snapshot.
    * Handles edge cases: null snapshot, deleted block, invalid input index,
    * and disconnected inputs (e.g., after table DOM rebuild during undo).
-   * @param snapshot - CaretSnapshot to restore, or null to preserve existing focus
    */
   private restoreCaretSnapshot(snapshot: CaretSnapshot | null): void {
     if (snapshot === null) {

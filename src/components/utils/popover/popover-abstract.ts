@@ -449,7 +449,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // Set CSS variables
     popover.style.setProperty('--width', this.params.width ?? 'auto');
-    popover.style.setProperty('--item-padding', '3px');
+    popover.style.setProperty('--item-padding', '4px');
     popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
     popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');
     popover.style.setProperty('--popover-left', '0');
@@ -464,7 +464,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Create nothing found message
     const nothingFoundMessage = document.createElement('div');
     nothingFoundMessage.className = twMerge(
-      'cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text p-[3px]',
+      'cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text px-3 py-3 text-center',
       'hidden'
     );
     nothingFoundMessage.setAttribute('data-blok-testid', 'popover-nothing-found');

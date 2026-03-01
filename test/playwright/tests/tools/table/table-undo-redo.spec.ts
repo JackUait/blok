@@ -1029,6 +1029,59 @@ test.describe('Table Undo/Redo', () => {
     await expect(overlay).toHaveCount(1);
   });
 
+  test('Undo preserves column/row grip visibility', async ({ page }) => {
+    // Regression: hovering over a cell makes the col/row grip pills visible.
+    // After undo, setData() destroys and recreates TableRowColControls, so the
+    // new grips lose the visibility state that the old grips had from the hover.
+
+    // 1. Create a 2x2 table
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Hello', 'World'], ['Foo', 'Bar']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Click first cell — mouseover fires first (making grips visible),
+    //    then cell selection activates (hides then shows grips via display toggle).
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+
+    // 3. Verify at least one grip has the visible attribute
+    const visibleGrips = page.locator('[data-blok-table-grip-visible]');
+
+    await expect(visibleGrips).not.toHaveCount(0);
+    const gripCountBefore = await visibleGrips.count();
+
+    // 4. Move caret to end and wait for Yjs capture
+    await page.keyboard.press('End');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 5. Press Enter to create a new paragraph in the cell
+    await page.keyboard.press('Enter');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 6. Undo the Enter
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // 7. The same number of grips should still be visible after undo
+    await expect(visibleGrips).toHaveCount(gripCountBefore);
+  });
+
   test('Undo preserves focus even when typing starts immediately after table creation', async ({ page }) => {
     // Edge case: user types within the Yjs captureTimeout after table creation.
     // This tests the scenario where text changes may be batched with table creation.

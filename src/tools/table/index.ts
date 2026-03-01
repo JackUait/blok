@@ -464,6 +464,7 @@ export class Table implements BlockTool {
     }
 
     const savedSelectionRange = this.cellSelection?.getSelectedRange() ?? null;
+    const savedGripIndices = this.rowColControls?.getVisibleGripIndices() ?? null;
 
     this.teardownSubsystems();
 
@@ -533,6 +534,10 @@ export class Table implements BlockTool {
 
     if (savedSelectionRange !== null && this.cellSelection !== null) {
       this.cellSelection.selectRange(savedSelectionRange);
+    }
+
+    if (savedGripIndices !== null && this.rowColControls !== null) {
+      this.rowColControls.restoreVisibleGrips(savedGripIndices.col, savedGripIndices.row);
     }
 
     applyCellColors(gridEl, this.model.snapshot().content);

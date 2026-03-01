@@ -242,6 +242,30 @@ export class TableRowColControls {
     this.lockedGrip = null;
   }
 
+  /**
+   * Return the indices of the currently visible grips, or null if none are active.
+   */
+  public getVisibleGripIndices(): { col: number; row: number } | null {
+    if (this.activeColGripIndex < 0 && this.activeRowGripIndex < 0) {
+      return null;
+    }
+
+    return { col: this.activeColGripIndex, row: this.activeRowGripIndex };
+  }
+
+  /**
+   * Programmatically restore grip visibility (e.g. after a DOM rebuild during undo).
+   */
+  public restoreVisibleGrips(col: number, row: number): void {
+    if (col >= 0) {
+      this.showColGrip(col);
+    }
+    if (row >= 0) {
+      this.showRowGrip(row);
+    }
+    this.isInsideTable = col >= 0 || row >= 0;
+  }
+
   public get isPopoverOpen(): boolean {
     return this.popoverState.popover !== null;
   }

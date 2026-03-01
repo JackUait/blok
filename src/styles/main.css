@@ -220,6 +220,28 @@
 }
 
 /**
+ * Popover scrollbar — thin, non-overlay, subtle
+ */
+@utility blok-popover-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+}
+
+/**
  * Navigation mode styles
  * Applied when user enters block navigation mode via Escape key
  */

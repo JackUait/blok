@@ -171,8 +171,16 @@ export class UndoHistory {
       }
 
       if (event.type === 'undo' && this.caretUndoStack.length > 0) {
-        // Update the 'after' position of the most recent undo entry
         const lastEntry = this.caretUndoStack[this.caretUndoStack.length - 1];
+
+        // Backfill the 'before' position if the initial capture failed
+        // (e.g., for table cell paragraphs where the debounced selectionchange
+        // hadn't set currentBlock yet when the first character was typed)
+        if (lastEntry.before === null && this.pendingCaretBefore !== null) {
+          lastEntry.before = this.pendingCaretBefore;
+        }
+
+        // Update the 'after' position of the most recent undo entry
         lastEntry.after = this.captureCaretSnapshot();
       }
 
@@ -273,7 +281,17 @@ export class UndoHistory {
     }
 
     stack.push(entry);
-    this.restoreCaretSnapshot(position === 'before' ? entry.before : entry.after);
+
+    // Use the requested position, falling back to the other one when the
+    // requested snapshot wasn't captured (e.g., the debounced selectionchange
+    // hadn't set currentBlock for table cell paragraphs).
+    // The fallback offset will be clamped to the actual text length by the
+    // caret restore logic, so the caret ends up at a reasonable position.
+    const snapshot = position === 'before'
+      ? entry.before ?? entry.after
+      : entry.after ?? entry.before;
+
+    this.restoreCaretSnapshot(snapshot);
   }
 
   /**
@@ -418,18 +436,29 @@ export class UndoHistory {
     }
 
     const { BlockManager } = this.blok;
-    const currentBlock = BlockManager.currentBlock;
+    let currentBlock = BlockManager.currentBlock;
+
+    // If currentBlock is not set (e.g., debounced selectionchange hasn't fired yet
+    // for nested blocks like table cell paragraphs), resolve it from the selection.
+    if (currentBlock === undefined) {
+      const anchorNode = window.getSelection()?.anchorNode;
+
+      if (anchorNode !== null && anchorNode !== undefined) {
+        currentBlock = BlockManager.setCurrentBlockByChildNode(anchorNode);
+      }
+    }
 
     if (currentBlock === undefined) {
       return null;
     }
 
     const currentInput = currentBlock.currentInput;
+    const offset = currentInput !== undefined ? getCaretOffset(currentInput) : 0;
 
     return {
       blockId: currentBlock.id,
       inputIndex: currentBlock.currentInputIndex,
-      offset: currentInput !== undefined ? getCaretOffset(currentInput) : 0,
+      offset,
     };
   }
 
@@ -468,7 +497,8 @@ export class UndoHistory {
    */
   private restoreCaretSnapshot(snapshot: CaretSnapshot | null): void {
     if (snapshot === null) {
-      window.getSelection()?.removeAllRanges();
+      // No snapshot available — preserve whatever focus state exists after the
+      // DOM update rather than actively destroying the selection.
       return;
     }
 

@@ -677,6 +677,76 @@ test.describe('Table Undo/Redo', () => {
     expect(paragraphTexts).toContain('Delta');
   });
 
+  test('Undo of text input in table cell preserves focus in the cell', async ({ page }) => {
+    // Regression: after undo inside a table cell, the caret/focus was lost
+    // because captureCaretSnapshot returned null when currentBlock was not yet set
+    // (debounced selectionchange hadn't fired for nested table cell paragraphs)
+
+    // 1. Create a 2x2 table with known text content
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Alpha', 'Beta'], ['Gamma', 'Delta']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Click into the first cell and type additional text
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' added');
+
+    // Verify text was added
+    await expect(firstCellEditable).toContainText('Alpha added');
+
+    // Wait for Yjs to capture the text change
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 3. Undo the text change
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // 4. Verify the text was reverted
+    await expect(firstCellEditable).toContainText('Alpha');
+    await expect(firstCellEditable).not.toContainText('added');
+
+    // 5. Verify focus is still inside the first cell's contenteditable
+    const selectionAfterUndo = await page.evaluate(() => {
+      const sel = window.getSelection();
+      const activeEl = document.activeElement;
+
+      return {
+        inCell: activeEl?.closest?.('[data-blok-table-cell]') !== null,
+        selectionRangeCount: sel?.rangeCount ?? 0,
+      };
+    });
+
+    expect(selectionAfterUndo.inCell, 'Focus should remain inside a table cell after undo').toBe(true);
+    expect(selectionAfterUndo.selectionRangeCount, 'Should have a selection range after undo').toBeGreaterThan(0);
+
+    // 6. Verify the user can continue typing at the correct position (not at the beginning)
+    await page.keyboard.type('X');
+
+    const textAfterTyping = await firstCellEditable.textContent();
+
+    // The X should appear at the end of "Alpha" (at the restore position), not at the beginning
+    expect(textAfterTyping, 'Typed character should not appear at position 0').not.toMatch(/^X/);
+    await expect(firstCellEditable).toContainText('Alpha');
+  });
+
   test('Undo after multi-cell color change restores all cell colors in single undo', async ({ page }) => {
     // Regression: handleCellColorChange was not wrapped in runTransactedStructuralOp,
     // so multi-cell color changes could create multiple undo entries instead of one.
@@ -758,4 +828,136 @@ test.describe('Table Undo/Redo', () => {
     expect(content[0][0].color, 'Cell (0,0) saved data should have no color after undo').toBeUndefined();
     expect(content[0][1].color, 'Cell (0,1) saved data should have no color after undo').toBeUndefined();
   });
+
+  test('Undo preserves focus when table was created empty and text typed immediately', async ({ page }) => {
+    // Scenario: user creates a new empty table, types in a cell, then undoes.
+    // The cell initialization happens in rendered() via rAF.
+    // If the user types within the Yjs captureTimeout (500ms), the text change
+    // could be batched with the table creation, causing undo to remove everything.
+
+    // 1. Create an empty table (simulates "insert table from toolbox")
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Wait for rendered() + initializeCells() to complete (rAF + buffer)
+    await waitForDelay(page, 100);
+
+    // 3. Wait for the Yjs captureTimeout to expire so the table creation
+    //    becomes a separate undo entry from any subsequent typing
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 4. Click into the first cell and type text
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.type('Hello');
+
+    await expect(firstCellEditable).toContainText('Hello');
+
+    // 5. Wait for Yjs to capture the text change as a separate undo entry
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 6. Undo — should revert text only (not remove the table)
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // 7. Verify text was reverted
+    await expect(firstCellEditable).not.toContainText('Hello');
+
+    // 8. Verify focus is still inside the table cell
+    const focusState = await page.evaluate(() => {
+      const activeEl = document.activeElement;
+
+      return {
+        inCell: activeEl?.closest?.('[data-blok-table-cell]') !== null,
+        isContentEditable: (activeEl as HTMLElement)?.contentEditable === 'true',
+      };
+    });
+
+    expect(focusState.inCell, 'Focus should remain inside a table cell after undo').toBe(true);
+    expect(focusState.isContentEditable, 'Active element should be contenteditable').toBe(true);
+
+    // 9. Verify the user can continue typing
+    await page.keyboard.type('X');
+    await expect(firstCellEditable).toContainText('X');
+  });
+
+  test('Undo preserves focus even when typing starts immediately after table creation', async ({ page }) => {
+    // Edge case: user types within the Yjs captureTimeout after table creation.
+    // This tests the scenario where text changes may be batched with table creation.
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Wait only for rendered() to complete, but NOT for captureTimeout to expire
+    await waitForDelay(page, 100);
+
+    // Click and type IMMEDIATELY — text may be batched with table creation
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.type('Fast');
+
+    await expect(firstCellEditable).toContainText('Fast');
+
+    // Wait for captureTimeout to ensure all changes are captured
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // Check state after undo
+    const focusState = await page.evaluate(() => {
+      const activeEl = document.activeElement;
+
+      return {
+        inCell: activeEl?.closest?.('[data-blok-table-cell]') !== null,
+        isContentEditable: (activeEl as HTMLElement)?.contentEditable === 'true',
+        tableStillExists: document.querySelector('[data-blok-tool="table"]') !== null,
+      };
+    });
+
+    if (focusState.tableStillExists) {
+      // Text was a separate undo entry — table still exists, focus should be in cell
+      expect(focusState.inCell, 'Focus should remain in cell when table still exists').toBe(true);
+      expect(focusState.isContentEditable, 'Active element should be contenteditable').toBe(true);
+    }
+
+    // If table was removed (batched undo), that's expected behavior —
+    // the entire table creation + text was one undo entry
+  });
+
 });

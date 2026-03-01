@@ -463,6 +463,8 @@ export class Table implements BlockTool {
       return;
     }
 
+    const savedSelectionRange = this.cellSelection?.getSelectedRange() ?? null;
+
     this.teardownSubsystems();
 
     const newElement = this.render();
@@ -528,6 +530,11 @@ export class Table implements BlockTool {
     }
 
     this.initSubsystems(gridEl);
+
+    if (savedSelectionRange !== null && this.cellSelection !== null) {
+      this.cellSelection.selectRange(savedSelectionRange);
+    }
+
     applyCellColors(gridEl, this.model.snapshot().content);
   }
 

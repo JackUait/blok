@@ -978,6 +978,57 @@ test.describe('Table Undo/Redo', () => {
     await expect(firstCellEditable).toContainText('Hello');
   });
 
+  test('Undo preserves cell selection border after Enter-created paragraphs are undone', async ({ page }) => {
+    // Regression: pressing Enter in a selected cell, then undoing, should keep
+    // the blue cell selection overlay visible. Previously, setData() destroyed
+    // and recreated subsystems without preserving selection state.
+
+    // 1. Create a 2x2 table
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Hello', 'World'], ['Foo', 'Bar']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Click the first cell — this triggers single-cell selection (blue border)
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+
+    // 3. Verify the selection overlay exists after click
+    const overlay = page.locator('[data-blok-table-selection-overlay]');
+
+    await expect(overlay).toHaveCount(1);
+
+    // 4. Move caret to end and wait for Yjs capture
+    await page.keyboard.press('End');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 5. Press Enter to create a new paragraph in the cell
+    await page.keyboard.press('Enter');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 6. Undo the Enter
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 300);
+
+    // 7. The cell selection overlay should still be visible after undo
+    await expect(overlay).toHaveCount(1);
+  });
+
   test('Undo preserves focus even when typing starts immediately after table creation', async ({ page }) => {
     // Edge case: user types within the Yjs captureTimeout after table creation.
     // This tests the scenario where text changes may be batched with table creation.

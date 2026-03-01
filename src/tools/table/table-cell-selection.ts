@@ -192,6 +192,20 @@ export class TableCellSelection {
   }
 
   /**
+   * Return the currently painted selection range, or null if nothing is selected.
+   */
+  public getSelectedRange(): SelectionRange | null {
+    return this.hasSelection ? this.lastPaintedRange : null;
+  }
+
+  /**
+   * Programmatically restore a selection range (e.g. after a DOM rebuild).
+   */
+  public selectRange(range: SelectionRange): void {
+    this.showProgrammaticSelection(range.minRow, range.minCol, range.maxRow, range.maxCol);
+  }
+
+  /**
    * Prevent native drag-and-drop while a cell selection drag is in progress.
    * Without this, the browser can fire dragstart on contenteditable cells
    * during a pointer drag, which suppresses pointermove events and breaks

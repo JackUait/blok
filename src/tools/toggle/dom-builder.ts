@@ -26,8 +26,6 @@ export interface ToggleDOMBuilderContext {
   data: ToggleItemData;
   /** Whether the editor is in read-only mode */
   readOnly: boolean;
-  /** Placeholder text for empty toggle items */
-  placeholder: string;
   /** Whether the toggle is open (expanded) */
   isOpen: boolean;
   /** Optional keydown event handler */

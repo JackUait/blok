@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {
   ARROW_STYLES,
@@ -15,7 +15,6 @@ import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 const createDefaultContext = (overrides: Partial<ToggleDOMBuilderContext> = {}): ToggleDOMBuilderContext => ({
   data: { text: 'Hello toggle' } as ToggleItemData,
   readOnly: false,
-  placeholder: 'Toggle placeholder',
   isOpen: false,
   keydownHandler: null,
   onArrowClick: vi.fn(),
@@ -25,6 +24,10 @@ const createDefaultContext = (overrides: Partial<ToggleDOMBuilderContext> = {}):
 describe('Toggle DOM Builder', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('buildToggleItem', () => {

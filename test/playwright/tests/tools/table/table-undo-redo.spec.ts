@@ -1082,6 +1082,71 @@ test.describe('Table Undo/Redo', () => {
     await expect(visibleGrips).toHaveCount(gripCountBefore);
   });
 
+  test('Undo does not cause grip opacity transition flash', async ({ page }) => {
+    // Regression: when setData() rebuilds subsystems, restoreVisibleGrips()
+    // called showColGrip/showRowGrip while isInsideTable was still false.
+    // applyVisibleClasses skips the CSS transition only when isInsideTable is true,
+    // so the new grips animated opacity 0→1 over 150ms — a visible flash.
+    //
+    // To detect this: slow grip transitions to 5s with a CSS override, then check
+    // computed opacity immediately after the undo rebuild. If the transition was
+    // properly skipped, opacity is "1". If it's running (bug), opacity is near "0".
+
+    // 1. Create a 2x2 table
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Hello', 'World'], ['Foo', 'Bar']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Click first cell — grips become visible from hover
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.press('End');
+
+    const visibleGrips = page.locator('[data-blok-table-grip-visible]');
+
+    await expect(visibleGrips).not.toHaveCount(0);
+
+    // 3. Create a paragraph (Enter) and wait for Yjs capture
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+    await page.keyboard.press('Enter');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 4. Slow down grip transitions so we can detect the flash
+    await page.addStyleTag({
+      content: '[data-blok-table-grip] { transition-duration: 5s !important; }',
+    });
+
+    // 5. Undo — triggers setData() which rebuilds subsystems
+    await page.keyboard.press(UNDO_SHORTCUT);
+
+    // 6. Immediately check computed opacity of visible grips.
+    //    If the transition was skipped (correct), opacity is "1".
+    //    If the 5s transition is running (bug), opacity is near "0".
+    const opacity = await page.evaluate(() => {
+      const grip = document.querySelector('[data-blok-table-grip-visible]');
+
+      return grip ? getComputedStyle(grip).opacity : null;
+    });
+
+    expect(Number(opacity), 'Visible grip should have full opacity immediately (no transition flash)').toBe(1);
+  });
+
   test('Undo preserves focus even when typing starts immediately after table creation', async ({ page }) => {
     // Edge case: user types within the Yjs captureTimeout after table creation.
     // This tests the scenario where text changes may be batched with table creation.

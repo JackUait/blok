@@ -257,13 +257,16 @@ export class TableRowColControls {
    * Programmatically restore grip visibility (e.g. after a DOM rebuild during undo).
    */
   public restoreVisibleGrips(col: number, row: number): void {
+    // Set isInsideTable BEFORE showing grips so applyVisibleClasses()
+    // skips the CSS opacity transition (no flash).
+    this.isInsideTable = col >= 0 || row >= 0;
+
     if (col >= 0) {
       this.showColGrip(col);
     }
     if (row >= 0) {
       this.showRowGrip(row);
     }
-    this.isInsideTable = col >= 0 || row >= 0;
   }
 
   public get isPopoverOpen(): boolean {

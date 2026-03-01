@@ -162,6 +162,16 @@ Publish happens **before** git push — if publish fails, nothing is pushed.
 
 **Fallback:** Pushing a `v*` tag manually also triggers the CI release workflow (`.github/workflows/release.yml`): lint → test → build → E2E → npm publish → GitHub release. Beta tags publish to npm with `--tag beta`.
 
+### GitHub Release Notes
+
+- **Never use `--generate-notes`** for GitHub releases — it dumps everything under "Other Changes"
+- **Always write categorized release notes** with these sections:
+  - **Features** — new functionality, with PR numbers
+  - **Bug Fixes** — fixes, one line each
+  - **Maintenance** — dependency upgrades, tooling, tests, chores
+- Group related commits into single bullet points (e.g. multiple marker commits → one "Marker Inline Tool" feature)
+- Reference PR numbers where available
+
 ## Architecture
 
 Entry: `src/blok.ts` → `Core` (`src/components/core.ts`) → modules

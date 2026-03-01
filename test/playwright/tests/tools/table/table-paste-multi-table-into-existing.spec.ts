@@ -361,31 +361,19 @@ test.describe('Multi-table paste into existing table — content preservation', 
       'text/plain': 'PastedA1\tPastedA2\nPastedB1\tPastedB2',
     });
 
-    // Wait for paste processing to complete by checking the DOM for 3 table blocks.
-    // The paste handler is fire-and-forget async, so we need to wait for all 3 tables
-    // (1 original + 2 pasted) to appear in the DOM before calling save().
-    await page.waitForFunction(
-      () => document.querySelectorAll('[data-blok-tool="table"]').length >= 3,
-      { timeout: 5000 }
-    );
+    // Wait for paste processing to fully complete.
+    // The paste handler is fire-and-forget async, and table blocks appear in
+    // the DOM (with data-blok-tool="table") during insert() BEFORE onPaste()
+    // populates their content. Wait for PastedB1 to appear in the DOM text,
+    // which proves the last pasted table's onPaste has completed.
+    await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toContainText('PastedB1', { timeout: 10000 });
 
-    // Now that the DOM is stable with all 3 tables, save() should return the full state
-    const allBlocks = await page.waitForFunction(async () => {
+    // Now that paste processing is fully complete, save and verify
+    const allBlocks = await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
-      const blocks = data?.blocks;
 
-      if (!Array.isArray(blocks) || blocks.length === 0) {
-        return false;
-      }
-
-      const tableCount = blocks.filter((b: { type: string }) => b.type === 'table').length;
-
-      if (tableCount < 3) {
-        return false;
-      }
-
-      return blocks;
-    }, undefined, { timeout: 5000 }).then(handle => handle.jsonValue()) as SavedBlock[];
+      return data?.blocks ?? [];
+    }) as SavedBlock[];
 
     const tableBlocks = allBlocks.filter(b => b.type === 'table');
 

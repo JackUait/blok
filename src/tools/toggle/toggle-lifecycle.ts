@@ -47,7 +47,7 @@ export const renderToggleItem = (context: ToggleRenderContext): ToggleRenderResu
 /**
  * Update the arrow rotation and wrapper's open state attribute.
  *
- * @param arrowElement - The arrow element to rotate
+ * @param arrowEl - The arrow element to rotate
  * @param wrapper - The wrapper element to update the open attribute on
  * @param isOpen - Whether the toggle is open
  */

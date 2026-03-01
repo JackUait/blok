@@ -78,10 +78,9 @@ export class ToggleShortcuts {
    */
   private toggleAll(): void {
     const blockCount = this.api.blocks.getBlocksCount();
-    const indices = Array.from({ length: blockCount }, (_, i) => i);
     const toggleBlocks: { call: (method: string) => void; isOpen: boolean }[] = [];
 
-    for (const i of indices) {
+    for (const i of Array.from({ length: blockCount }, (_, idx) => idx)) {
       const block = this.api.blocks.getBlockByIndex(i);
 
       if (block === undefined || block.name !== TOOL_NAME) {

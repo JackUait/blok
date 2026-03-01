@@ -259,15 +259,9 @@ export class Header implements BlockTool {
       toolboxEntries[0].data === undefined &&
       (toolboxEntries[0].title === undefined || toolboxEntries[0].title === 'Heading');
 
-    let levelSettings: MenuConfig;
-
-    if (toolboxEntries !== undefined && toolboxEntries.length > 0 && !isDefaultToolboxEntry) {
-      levelSettings = this.buildSettingsFromToolboxEntries(toolboxEntries);
-    } else {
-      /**
-       * Fall back to existing behavior using levels config
-       */
-      levelSettings = this.levels.map(level => {
+    const levelSettings: MenuConfig = toolboxEntries !== undefined && toolboxEntries.length > 0 && !isDefaultToolboxEntry
+      ? this.buildSettingsFromToolboxEntries(toolboxEntries)
+      : this.levels.map(level => {
         const translated = this.api.i18n.t(level.nameKey);
         const title = translated !== level.nameKey ? translated : level.name;
 
@@ -282,7 +276,6 @@ export class Header implements BlockTool {
           },
         };
       });
-    }
 
     const settingsArray = Array.isArray(levelSettings) ? levelSettings : [levelSettings];
 

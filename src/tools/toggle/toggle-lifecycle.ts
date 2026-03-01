@@ -10,7 +10,7 @@ import { setupPlaceholder } from '../../components/utils/placeholder';
 
 import { TOGGLE_ATTR } from './constants';
 import { buildToggleItem } from './dom-builder';
-import type { ToggleDOMBuilderContext, ToggleBuildResult } from './dom-builder';
+import type { ToggleDOMBuilderContext } from './dom-builder';
 
 /**
  * Context for rendering a toggle item
@@ -51,8 +51,10 @@ export const renderToggleItem = (context: ToggleRenderContext): ToggleRenderResu
  * @param wrapper - The wrapper element to update the open attribute on
  * @param isOpen - Whether the toggle is open
  */
-export const updateArrowState = (arrowElement: HTMLElement, wrapper: HTMLElement, isOpen: boolean): void => {
-  arrowElement.style.transform = isOpen ? 'rotate(90deg)' : '';
+export const updateArrowState = (arrowEl: HTMLElement, wrapper: HTMLElement, isOpen: boolean): void => {
+  const { style } = arrowEl;
+
+  style.transform = isOpen ? 'rotate(90deg)' : '';
   wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
 };
 

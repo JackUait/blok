@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { API, BlockToolConstructorOptions, ConversionConfig, ToolboxConfig } from '../../../../types';
+import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
 
@@ -113,7 +113,7 @@ describe('ToggleItem', () => {
   describe('static toolbox', () => {
     it('has correct config with title and icon', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
-      const toolbox = ToggleItem.toolbox as ToolboxConfig;
+      const toolbox = ToggleItem.toolbox;
 
       expect(toolbox).toBeDefined();
 
@@ -129,7 +129,7 @@ describe('ToggleItem', () => {
   describe('static conversionConfig', () => {
     it('has export: "text" and import: "text"', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
-      const config = ToggleItem.conversionConfig as ConversionConfig;
+      const config = ToggleItem.conversionConfig;
 
       expect(config.export).toBe('text');
       expect(config.import).toBe('text');

@@ -130,18 +130,46 @@ export class ToggleItem implements BlockTool {
     return [];
   }
 
+  /**
+   * Expand the toggle (no-op if already expanded).
+   * Can be called externally via block.call('expand').
+   */
+  public expand(): void {
+    if (this._isOpen) {
+      return;
+    }
+
+    this.setOpenState(true);
+  }
+
+  /**
+   * Collapse the toggle (no-op if already collapsed).
+   * Can be called externally via block.call('collapse').
+   */
+  public collapse(): void {
+    if (!this._isOpen) {
+      return;
+    }
+
+    this.setOpenState(false);
+  }
+
   private getContentElement(): HTMLElement | null {
     return this._contentElement;
   }
 
-  private toggleOpen(): void {
-    this._isOpen = !this._isOpen;
+  private setOpenState(open: boolean): void {
+    this._isOpen = open;
 
     if (this._arrowElement && this._element) {
       updateArrowState(this._arrowElement, this._element, this._isOpen);
     }
 
     this.updateChildrenVisibility();
+  }
+
+  private toggleOpen(): void {
+    this.setOpenState(!this._isOpen);
   }
 
   private updateChildrenVisibility(): void {
@@ -205,6 +233,10 @@ export class ToggleItem implements BlockTool {
     if (contentEl) {
       this._data.text = contentEl.innerHTML;
     }
+  }
+
+  public static get shortcut(): string {
+    return 'CMD+ALT+7';
   }
 
   public static get toolbox(): ToolboxConfig {

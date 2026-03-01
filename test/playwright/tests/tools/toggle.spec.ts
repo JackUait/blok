@@ -10,7 +10,6 @@ const HOLDER_ID = 'blok';
 const TOGGLE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="toggle"]`;
 const PARAGRAPH_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`;
 const POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
-const POPOVER_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item"]`;
 
 declare global {
   interface Window {
@@ -136,6 +135,23 @@ test.describe('Toggle Tool', () => {
       await arrow.click();
       await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'false');
     });
+
+    test('clicking text enters edit mode without toggling', async ({ page }) => {
+      await createBlok(page, createToggleData('Editable text'));
+
+      const content = page.locator('[data-blok-toggle-content]');
+      const toggleWrapper = page.locator('[data-blok-toggle-open]');
+
+      // Click the text content
+      await content.click();
+
+      // Toggle should still be collapsed
+      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+
+      // Content should be editable — typing should work
+      await page.keyboard.type(' edited');
+      await expect(content).toContainText('edited');
+    });
   });
 
   test.describe('slash command', () => {
@@ -150,8 +166,8 @@ test.describe('Toggle Tool', () => {
       // Type "/" to open toolbox
       await page.keyboard.type('/');
 
-      // Wait for the Toggle option to appear in the toolbox popover
-      const toggleOption = page.locator(POPOVER_ITEM_SELECTOR).filter({ hasText: 'Toggle' });
+      // Wait for the Toggle list option to appear in the toolbox popover
+      const toggleOption = page.locator(`${POPOVER_SELECTOR} [data-blok-item-name="toggle"]`);
 
       await expect(toggleOption).toBeVisible();
       await toggleOption.click();

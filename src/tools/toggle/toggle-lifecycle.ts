@@ -55,6 +55,7 @@ export const updateArrowState = (arrowEl: HTMLElement, wrapper: HTMLElement, isO
   const { style } = arrowEl;
 
   style.transform = isOpen ? 'rotate(90deg)' : '';
+  arrowEl.setAttribute('aria-label', isOpen ? 'Collapse' : 'Expand');
   wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
 };
 

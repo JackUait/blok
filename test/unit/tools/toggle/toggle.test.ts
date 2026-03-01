@@ -120,7 +120,7 @@ describe('ToggleItem', () => {
       // Handle both array and single entry format
       const entry = Array.isArray(toolbox) ? toolbox[0] : toolbox;
 
-      expect(entry.title).toBe('Toggle');
+      expect(entry.title).toBe('Toggle list');
       expect(entry.icon).toBeDefined();
       expect(typeof entry.icon).toBe('string');
     });
@@ -179,6 +179,49 @@ describe('ToggleItem', () => {
       const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
 
       expect(contentEl?.innerHTML).toBe('updated');
+    });
+  });
+
+  describe('arrow aria-label updates', () => {
+    it('updates aria-label to Collapse when expanded', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+      // Click to expand
+      arrow.click();
+
+      expect(arrow.getAttribute('aria-label')).toBe('Collapse');
+    });
+
+    it('updates aria-label to Expand when collapsed', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+      // Expand then collapse
+      arrow.click();
+      arrow.click();
+
+      expect(arrow.getAttribute('aria-label')).toBe('Expand');
     });
   });
 

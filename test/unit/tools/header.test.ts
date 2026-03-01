@@ -748,4 +748,33 @@ describe('Header Tool - Custom Configurations', () => {
       });
     });
   });
+
+  describe('static toolbox', () => {
+    it('includes toggle heading entries for levels 1-3', () => {
+      const toolbox = Header.toolbox;
+
+      expect(Array.isArray(toolbox)).toBe(true);
+
+      const entries = toolbox as Array<{ name: string; data: Record<string, unknown>; title: string }>;
+
+      const toggleEntries = entries.filter(e => e.name.startsWith('toggle-header-'));
+
+      expect(toggleEntries).toHaveLength(3);
+      expect(toggleEntries[0].name).toBe('toggle-header-1');
+      expect(toggleEntries[0].data).toEqual({ level: 1, isToggleable: true });
+      expect(toggleEntries[1].name).toBe('toggle-header-2');
+      expect(toggleEntries[1].data).toEqual({ level: 2, isToggleable: true });
+      expect(toggleEntries[2].name).toBe('toggle-header-3');
+      expect(toggleEntries[2].data).toEqual({ level: 3, isToggleable: true });
+    });
+
+    it('includes search terms for toggle heading entries', () => {
+      const toolbox = Header.toolbox;
+      const entries = toolbox as Array<{ name: string; searchTerms?: string[] }>;
+      const toggleEntry = entries.find(e => e.name === 'toggle-header-1');
+
+      expect(toggleEntry?.searchTerms).toContain('toggle');
+      expect(toggleEntry?.searchTerms).toContain('collapsible');
+    });
+  });
 });

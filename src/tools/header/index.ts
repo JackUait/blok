@@ -573,7 +573,7 @@ export class Header implements BlockTool {
     arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
     arrow.setAttribute('role', 'button');
     arrow.setAttribute('tabindex', '-1');
-    arrow.setAttribute('aria-label', 'Toggle');
+    arrow.setAttribute('aria-label', 'Expand');
     arrow.contentEditable = 'false';
     arrow.innerHTML = ARROW_ICON;
 
@@ -794,7 +794,7 @@ export class Header implements BlockTool {
    * @returns ToolboxConfig array with entries for H1-H6
    */
   public static get toolbox(): ToolboxConfig {
-    return Header.DEFAULT_LEVELS.map(level => ({
+    const headingEntries = Header.DEFAULT_LEVELS.map(level => ({
       icon: level.icon,
       title: level.name,
       titleKey: level.nameKey,
@@ -803,5 +803,29 @@ export class Header implements BlockTool {
       searchTerms: [`h${level.number}`, 'title', 'header', 'heading'],
       shortcut: '#'.repeat(level.number),
     }));
+
+    const toggleHeadingEntries = Header.DEFAULT_LEVELS
+      .filter(level => level.number <= 3)
+      .map(level => ({
+        icon: Header.buildToggleHeadingIcon(level.icon),
+        title: `Toggle heading ${level.number}`,
+        titleKey: `tools.header.toggleHeading${level.number}`,
+        name: `toggle-header-${level.number}`,
+        data: { level: level.number, isToggleable: true },
+        searchTerms: ['toggle', 'heading', `h${level.number}`, 'collapsible'],
+      }));
+
+    return [...headingEntries, ...toggleHeadingEntries];
+  }
+
+  /**
+   * Build a composite icon for toggle headings by combining
+   * the heading icon with a small toggle arrow indicator.
+   */
+  private static buildToggleHeadingIcon(headingIcon: string): string {
+    return `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(-1, 0) scale(0.85)">${headingIcon.replace(/<\/?svg[^>]*>/g, '')}</g>
+  <path d="M15 8l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
   }
 }

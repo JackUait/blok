@@ -193,8 +193,8 @@ export class ToggleItem implements BlockTool {
     }
   }
 
-  private async handleEnter(): Promise<void> {
-    const context = {
+  private createKeyboardContext(): Parameters<typeof handleToggleEnter>[0] {
+    return {
       api: this.api,
       blockId: this.blockId,
       data: this._data,
@@ -206,25 +206,14 @@ export class ToggleItem implements BlockTool {
         this._isOpen = open;
       },
     };
+  }
 
-    await handleToggleEnter(context);
+  private async handleEnter(): Promise<void> {
+    await handleToggleEnter(this.createKeyboardContext());
   }
 
   private async handleBackspace(event: KeyboardEvent): Promise<void> {
-    const context = {
-      api: this.api,
-      blockId: this.blockId,
-      data: this._data,
-      element: this._element,
-      getContentElement: this.getContentElement.bind(this),
-      syncContentFromDOM: this.syncContentFromDOM.bind(this),
-      isOpen: this._isOpen,
-      setOpen: (open: boolean) => {
-        this._isOpen = open;
-      },
-    };
-
-    await handleToggleBackspace(context, event);
+    await handleToggleBackspace(this.createKeyboardContext(), event);
   }
 
   private syncContentFromDOM(): void {
@@ -242,7 +231,7 @@ export class ToggleItem implements BlockTool {
   public static get toolbox(): ToolboxConfig {
     return {
       icon: ARROW_ICON,
-      title: 'Toggle',
+      title: 'Toggle list',
       name: TOOL_NAME,
       searchTerms: ['toggle', 'collapse', 'expand', 'accordion'],
     };

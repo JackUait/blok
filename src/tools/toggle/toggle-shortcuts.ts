@@ -1,5 +1,5 @@
 /**
- * Toggle Shortcuts - Manages the collapse/expand-all keyboard shortcut (CMD+SHIFT+T).
+ * Toggle Shortcuts - Manages the collapse/expand-all keyboard shortcut (CMD+ALT+T).
  *
  * Iterates all blocks in the editor and toggles all toggle blocks:
  * - If any toggle is collapsed, expands all
@@ -12,7 +12,7 @@ import { Shortcuts } from '../../components/utils/shortcuts';
 
 import { TOGGLE_ATTR, TOOL_NAME } from './constants';
 
-const COLLAPSE_EXPAND_ALL_SHORTCUT = 'CMD+SHIFT+T';
+const COLLAPSE_EXPAND_ALL_SHORTCUT = 'CMD+ALT+T';
 
 /**
  * Manages the collapse/expand-all shortcut for toggle blocks.
@@ -28,7 +28,7 @@ export class ToggleShortcuts {
   }
 
   /**
-   * Register the CMD+SHIFT+T shortcut on the document.
+   * Register the CMD+ALT+T shortcut on the document.
    */
   public register(): void {
     if (this.registered) {
@@ -80,7 +80,7 @@ export class ToggleShortcuts {
     const blockCount = this.api.blocks.getBlocksCount();
     const toggleBlocks: { call: (method: string) => void; isOpen: boolean }[] = [];
 
-    for (const i of Array.from({ length: blockCount }, (_, idx) => idx)) {
+    for (let i = 0; i < blockCount; i++) {
       const block = this.api.blocks.getBlockByIndex(i);
 
       if (block === undefined || block.name !== TOOL_NAME) {

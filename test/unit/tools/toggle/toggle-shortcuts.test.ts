@@ -187,16 +187,16 @@ describe('ToggleShortcuts', () => {
     vi.clearAllMocks();
 
     // Clean up shortcuts that may be left over
-    Shortcuts.remove(document, 'CMD+SHIFT+T');
+    Shortcuts.remove(document, 'CMD+ALT+T');
   });
 
   afterEach(() => {
-    Shortcuts.remove(document, 'CMD+SHIFT+T');
+    Shortcuts.remove(document, 'CMD+ALT+T');
     vi.restoreAllMocks();
   });
 
   describe('register', () => {
-    it('registers CMD+SHIFT+T shortcut without throwing', async () => {
+    it('registers CMD+ALT+T shortcut without throwing', async () => {
       const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
       const mockAPI = createMockAPI();
 
@@ -296,7 +296,7 @@ describe('ToggleShortcuts', () => {
         code: 'KeyT',
         key: 'T',
         metaKey: true,
-        shiftKey: true,
+        altKey: true,
       });
       Object.defineProperty(event, 'target', { value: child, writable: false });
 
@@ -338,7 +338,7 @@ describe('ToggleShortcuts', () => {
         code: 'KeyT',
         key: 'T',
         metaKey: true,
-        shiftKey: true,
+        altKey: true,
       });
       Object.defineProperty(event, 'target', { value: child, writable: false });
 
@@ -373,7 +373,7 @@ describe('ToggleShortcuts', () => {
         code: 'KeyT',
         key: 'T',
         metaKey: true,
-        shiftKey: true,
+        altKey: true,
       });
       Object.defineProperty(event, 'target', { value: child, writable: false });
 
@@ -411,7 +411,7 @@ describe('ToggleShortcuts', () => {
         code: 'KeyT',
         key: 'T',
         metaKey: true,
-        shiftKey: true,
+        altKey: true,
       });
       Object.defineProperty(event, 'target', { value: outsideElement, writable: false });
 

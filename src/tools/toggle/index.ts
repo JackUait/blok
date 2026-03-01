@@ -232,6 +232,7 @@ export class ToggleItem implements BlockTool {
     return {
       icon: ARROW_ICON,
       title: 'Toggle list',
+      titleKey: 'toggleList',
       name: TOOL_NAME,
       searchTerms: ['toggle', 'collapse', 'expand', 'accordion'],
     };
@@ -255,6 +256,11 @@ export class ToggleItem implements BlockTool {
         },
         b: true,
         i: true,
+        mark: {
+          class: true,
+          style: true,
+        },
+        code: true,
       },
     };
   }

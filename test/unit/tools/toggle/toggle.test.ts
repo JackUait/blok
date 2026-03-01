@@ -124,6 +124,14 @@ describe('ToggleItem', () => {
       expect(entry.icon).toBeDefined();
       expect(typeof entry.icon).toBe('string');
     });
+
+    it('has titleKey for i18n', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toolbox = ToggleItem.toolbox;
+      const entry = Array.isArray(toolbox) ? toolbox[0] : toolbox;
+
+      expect(entry.titleKey).toBe('toggleList');
+    });
   });
 
   describe('static conversionConfig', () => {
@@ -141,6 +149,22 @@ describe('ToggleItem', () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       expect(ToggleItem.isReadOnlySupported).toBe(true);
+    });
+  });
+
+  describe('static sanitize', () => {
+    it('includes mark with class and style attributes', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const sanitize = ToggleItem.sanitize;
+
+      expect(sanitize.text.mark).toEqual({ class: true, style: true });
+    });
+
+    it('includes code tag', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const sanitize = ToggleItem.sanitize;
+
+      expect(sanitize.text.code).toBe(true);
     });
   });
 

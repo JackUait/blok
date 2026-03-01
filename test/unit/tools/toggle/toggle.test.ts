@@ -181,4 +181,107 @@ describe('ToggleItem', () => {
       expect(contentEl?.innerHTML).toBe('updated');
     });
   });
+
+  describe('children visibility', () => {
+    /**
+     * Creates a ToggleItem with a mock API that returns child block holders.
+     * Returns the toggle instance, the mock API, and the child holders.
+     */
+    const setupToggleWithChildren = async (childCount = 2) => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const childHolders = Array.from({ length: childCount }, (_, i) => {
+        const holder = document.createElement('div');
+        holder.setAttribute('data-blok-element', '');
+        holder.textContent = `Child ${i + 1}`;
+
+        return holder;
+      });
+
+      const childBlocks = childHolders.map((holder, i) => ({
+        id: `child-${i}`,
+        holder,
+      }));
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+
+      return { toggle, mockAPI, childHolders };
+    };
+
+    it('hides child block holders when toggle is collapsed on rendered()', async () => {
+      const { toggle, childHolders } = await setupToggleWithChildren();
+      toggle.render();
+
+      // Simulate the rendered() lifecycle hook
+      toggle.rendered();
+
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(true);
+      }
+    });
+
+    it('shows child block holders when toggle is expanded via arrow click', async () => {
+      const { toggle, childHolders } = await setupToggleWithChildren();
+      const element = toggle.render();
+      toggle.rendered();
+
+      // All children should be hidden initially
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(true);
+      }
+
+      // Click the arrow to expand
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+      arrow.click();
+
+      // Children should now be visible
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(false);
+      }
+    });
+
+    it('hides child block holders again when toggle is collapsed after expanding', async () => {
+      const { toggle, childHolders } = await setupToggleWithChildren();
+      const element = toggle.render();
+      toggle.rendered();
+
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+      // Expand
+      arrow.click();
+
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(false);
+      }
+
+      // Collapse again
+      arrow.click();
+
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(true);
+      }
+    });
+
+    it('calls getChildren with the correct block id', async () => {
+      const { toggle, mockAPI } = await setupToggleWithChildren();
+      toggle.render();
+      toggle.rendered();
+
+      expect(mockAPI.blocks.getChildren).toHaveBeenCalledWith('test-block-id');
+    });
+
+    it('does nothing when there are no children', async () => {
+      const { toggle } = await setupToggleWithChildren(0);
+      toggle.render();
+
+      // Should not throw
+      toggle.rendered();
+    });
+  });
 });

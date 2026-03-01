@@ -4,6 +4,8 @@
  * Extracted from ToggleItem to reduce file size.
  */
 
+import type { API } from '../../../types';
+
 import { setupPlaceholder } from '../../components/utils/placeholder';
 
 import { TOGGLE_ATTR } from './constants';
@@ -52,4 +54,24 @@ export const renderToggleItem = (context: ToggleRenderContext): ToggleRenderResu
 export const updateArrowState = (arrowElement: HTMLElement, wrapper: HTMLElement, isOpen: boolean): void => {
   arrowElement.style.transform = isOpen ? 'rotate(90deg)' : '';
   wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
+};
+
+/**
+ * Show or hide child block holders based on the toggle's open state.
+ * Children are hidden via the 'hidden' CSS class (display: none), not removed from the DOM.
+ *
+ * @param api - Blok API instance
+ * @param blockId - The toggle block's id
+ * @param isOpen - Whether the toggle is currently open (expanded)
+ */
+export const updateChildrenVisibility = (api: API, blockId: string, isOpen: boolean): void => {
+  const children = api.blocks.getChildren(blockId);
+
+  for (const child of children) {
+    if (isOpen) {
+      child.holder.classList.remove('hidden');
+    } else {
+      child.holder.classList.add('hidden');
+    }
+  }
 };

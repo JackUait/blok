@@ -23,7 +23,7 @@ import {
   parseHTML,
 } from './block-operations';
 import { ARROW_ICON, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
-import { renderToggleItem, updateArrowState } from './toggle-lifecycle';
+import { renderToggleItem, updateArrowState, updateChildrenVisibility } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
 
@@ -91,6 +91,10 @@ export class ToggleItem implements BlockTool {
     return this._element;
   }
 
+  public rendered(): void {
+    this.updateChildrenVisibility();
+  }
+
   public save(): ToggleItemData {
     return saveToggleItem(this._data, this._element, this.getContentElement.bind(this));
   }
@@ -136,6 +140,16 @@ export class ToggleItem implements BlockTool {
     if (this._arrowElement && this._element) {
       updateArrowState(this._arrowElement, this._element, this._isOpen);
     }
+
+    this.updateChildrenVisibility();
+  }
+
+  private updateChildrenVisibility(): void {
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    updateChildrenVisibility(this.api, this.blockId, this._isOpen);
   }
 
   private handleKeyDown(event: KeyboardEvent): void {

@@ -898,6 +898,86 @@ test.describe('Table Undo/Redo', () => {
     await expect(firstCellEditable).toContainText('X');
   });
 
+  test('Undo of Enter-created paragraphs in table cell keeps focus inside the cell', async ({ page }) => {
+    // Regression: pressing Enter several times in a table cell to create paragraphs,
+    // then CMD+Z to undo, should keep focus inside the cell.
+    // Previously, focus jumped to the first block outside the table because
+    // restoreCaretSnapshot fell back to firstBlock when the deleted block's ID
+    // was not found and no sibling block in the same cell was tried.
+
+    // 1. Create a 2x2 table with some initial content
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['Hello', 'World'], ['Foo', 'Bar']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // 2. Click into the first cell and move to end
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.press('End');
+
+    // Wait for Yjs to capture the initial state
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // 3. Press Enter 3 times to create 3 new paragraphs in the cell
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+    }
+
+    // 4. The cell should now have 4 contenteditable blocks (original + 3 new)
+    const firstCell = page.locator(CELL_SELECTOR).first();
+    const cellEditables = firstCell.locator('[contenteditable="true"]');
+
+    await expect(cellEditables).toHaveCount(4);
+
+    // 5. Undo each Enter — after EVERY undo, focus must remain inside the cell
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 300);
+
+      const focusState = await page.evaluate(() => {
+        const sel = window.getSelection();
+        const activeEl = document.activeElement;
+        const cellContainer = activeEl?.closest?.('[data-blok-table-cell]');
+
+        return {
+          inCell: cellContainer !== null,
+          selectionRangeCount: sel?.rangeCount ?? 0,
+          activeTag: activeEl?.tagName ?? 'none',
+        };
+      });
+
+      expect(
+        focusState.inCell,
+        `After undo #${i + 1}: focus should remain inside a table cell`
+      ).toBe(true);
+      expect(
+        focusState.selectionRangeCount,
+        `After undo #${i + 1}: should have a selection range`
+      ).toBeGreaterThan(0);
+    }
+
+    // 6. Only the original paragraph should remain in the cell
+    await expect(cellEditables).toHaveCount(1);
+    await expect(firstCellEditable).toContainText('Hello');
+  });
+
   test('Undo preserves focus even when typing starts immediately after table creation', async ({ page }) => {
     // Edge case: user types within the Yjs captureTimeout after table creation.
     // This tests the scenario where text changes may be batched with table creation.
@@ -950,14 +1030,16 @@ test.describe('Table Undo/Redo', () => {
       };
     });
 
-    if (focusState.tableStillExists) {
-      // Text was a separate undo entry — table still exists, focus should be in cell
-      expect(focusState.inCell, 'Focus should remain in cell when table still exists').toBe(true);
-      expect(focusState.isContentEditable, 'Active element should be contenteditable').toBe(true);
-    }
-
-    // If table was removed (batched undo), that's expected behavior —
-    // the entire table creation + text was one undo entry
+    // Either the table was removed (batched undo — entire creation + text was one entry),
+    // or focus remains in the cell. Both are valid outcomes.
+    expect(
+      !focusState.tableStillExists || focusState.inCell,
+      'If table exists after undo, focus should remain in cell'
+    ).toBe(true);
+    expect(
+      !focusState.tableStillExists || focusState.isContentEditable,
+      'If table exists after undo, active element should be contenteditable'
+    ).toBe(true);
   });
 
 });

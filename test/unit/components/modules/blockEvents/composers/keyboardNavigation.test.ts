@@ -115,6 +115,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
     } as unknown as BlokModules['CrossBlockSelection'],
     YjsManager: {
       stopCapturing: vi.fn(),
+      markCaretBeforeChange: vi.fn(),
     } as unknown as BlokModules['YjsManager'],
   };
 
@@ -280,6 +281,7 @@ describe('KeyboardNavigation', () => {
           split,
           insertDefaultBlockAtIndex,
           currentBlockIndex: 0,
+          transactForTool: vi.fn((fn: () => void) => fn()),
         } as unknown as BlokModules['BlockManager'],
         Toolbar: {
           moveAndOpen,
@@ -290,6 +292,7 @@ describe('KeyboardNavigation', () => {
         } as unknown as BlokModules['Caret'],
         YjsManager: {
           stopCapturing,
+          markCaretBeforeChange: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
@@ -321,6 +324,7 @@ describe('KeyboardNavigation', () => {
           split,
           insertDefaultBlockAtIndex,
           currentBlockIndex: 1,
+          transactForTool: vi.fn((fn: () => void) => fn()),
         } as unknown as BlokModules['BlockManager'],
         Toolbar: {
           moveAndOpen,
@@ -331,6 +335,7 @@ describe('KeyboardNavigation', () => {
         } as unknown as BlokModules['Caret'],
         YjsManager: {
           stopCapturing,
+          markCaretBeforeChange: vi.fn(),
         } as unknown as BlokModules['YjsManager'],
       });
       const keyboardNavigation = new KeyboardNavigation(blok);

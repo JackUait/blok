@@ -436,17 +436,18 @@ export class UndoHistory {
     }
 
     const { BlockManager } = this.blok;
-    let currentBlock = BlockManager.currentBlock;
 
     // If currentBlock is not set (e.g., debounced selectionchange hasn't fired yet
     // for nested blocks like table cell paragraphs), resolve it from the selection.
-    if (currentBlock === undefined) {
+    const currentBlock = BlockManager.currentBlock ?? (() => {
       const anchorNode = window.getSelection()?.anchorNode;
 
       if (anchorNode !== null && anchorNode !== undefined) {
-        currentBlock = BlockManager.setCurrentBlockByChildNode(anchorNode);
+        return BlockManager.setCurrentBlockByChildNode(anchorNode);
       }
-    }
+
+      return undefined;
+    })();
 
     if (currentBlock === undefined) {
       return null;
@@ -492,8 +493,9 @@ export class UndoHistory {
 
   /**
    * Restore caret position from a snapshot.
-   * Handles edge cases: null snapshot, deleted block, invalid input index.
-   * @param snapshot - CaretSnapshot to restore, or null to clear selection
+   * Handles edge cases: null snapshot, deleted block, invalid input index,
+   * and disconnected inputs (e.g., after table DOM rebuild during undo).
+   * @param snapshot - CaretSnapshot to restore, or null to preserve existing focus
    */
   private restoreCaretSnapshot(snapshot: CaretSnapshot | null): void {
     if (snapshot === null) {
@@ -518,12 +520,35 @@ export class UndoHistory {
     // Get the specific input within the block
     const input = block.inputs[snapshot.inputIndex];
 
-    if (input !== undefined) {
+    if (input !== undefined && input.isConnected) {
       Caret.setToInput(input, Caret.positions.DEFAULT, snapshot.offset);
-    } else {
-      // Input doesn't exist anymore, fall back to block start
-      Caret.setToBlock(block, Caret.positions.START);
+      return;
     }
+
+    // Input is disconnected or doesn't exist (e.g., the block was removed from
+    // a table cell during undo but still exists in BlockManager). Try to find
+    // a connected sibling block in the same parent context.
+    if (block.parentId != null) {
+      const lastConnectedSibling = BlockManager.blocks
+        .filter(b => b.parentId === block.parentId && b.id !== block.id && b.inputs.length > 0 && b.inputs[0].isConnected)
+        .at(-1);
+
+      if (lastConnectedSibling !== undefined) {
+        Caret.setToBlock(lastConnectedSibling, Caret.positions.END);
+        return;
+      }
+
+      // No connected siblings — try the parent block itself
+      const parentBlock = BlockManager.getBlockById(block.parentId);
+
+      if (parentBlock !== undefined) {
+        Caret.setToBlock(parentBlock, Caret.positions.START);
+        return;
+      }
+    }
+
+    // Fall back to block start
+    Caret.setToBlock(block, Caret.positions.START);
   }
 
   /**

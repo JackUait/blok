@@ -132,17 +132,31 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
-    // Force new undo group so block creation is separate from previous typing
-    this.Blok.YjsManager.stopCapturing();
-
-    const blockToFocus = this.createBlockOnEnter(currentBlock);
-
-    this.Blok.Caret.setToBlock(blockToFocus);
+    /**
+     * Capture caret position before block creation so undo can restore it.
+     * Must run before stopCapturing/block insertion since the keyboard capture
+     * handler fires AFTER handleEnter (document capture runs before redactor capture).
+     */
+    this.Blok.YjsManager.markCaretBeforeChange();
 
     /**
-     * Show Toolbar
+     * Use transactForTool to keep the entire Enter operation in a single undo entry:
+     * 1. Calls stopCapturing() to separate from previous typing
+     * 2. Suppresses stopCapturing during block creation + caret movement
+     *    (prevents currentBlockIndex setter from splitting the undo entry
+     *    before async table cell content sync completes)
+     * 3. Calls stopCapturing() in rAF after all async syncs complete
      */
-    this.Blok.Toolbar.moveAndOpen(blockToFocus);
+    this.Blok.BlockManager.transactForTool(() => {
+      const blockToFocus = this.createBlockOnEnter(currentBlock);
+
+      this.Blok.Caret.setToBlock(blockToFocus);
+
+      /**
+       * Show Toolbar
+       */
+      this.Blok.Toolbar.moveAndOpen(blockToFocus);
+    });
 
     event.preventDefault();
   }
@@ -162,24 +176,15 @@ export class KeyboardNavigation extends BlockEventComposer {
     if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && (currentBlock.parentId === null || !currentBlock.isEmpty)) {
       this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
 
-      // Force new undo group so typing in the new block is separate from block creation
-      this.Blok.YjsManager.stopCapturing();
-
       return currentBlock;
     }
 
     // Case 2: Caret at end - insert block below
     if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
-      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
-
-      // Force new undo group so typing in the new block is separate from block creation
-      this.Blok.YjsManager.stopCapturing();
-
-      return newBlock;
+      return this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
     }
 
     // Case 3: Caret in middle - split block
-    // Note: split() uses transact() internally, so it's already atomic - no stopCapturing needed
     return this.Blok.BlockManager.split();
   }
 

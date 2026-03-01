@@ -419,12 +419,7 @@ describe('UndoHistory', () => {
       expect(blok.Caret.setToBlock).toHaveBeenCalledWith(firstBlock, 'start');
     });
 
-    it('clears selection when snapshot is null and no first block exists', () => {
-      const removeAllRangesFn = vi.fn();
-      vi.spyOn(window, 'getSelection').mockReturnValue({
-        removeAllRanges: removeAllRangesFn,
-      } as unknown as ReturnType<typeof window.getSelection>);
-
+    it('preserves existing focus when snapshot is null', () => {
       const snapshot = null;
 
       (blok.BlockManager as unknown as { getBlockById: typeof vi.fn; firstBlock: undefined })
@@ -440,12 +435,14 @@ describe('UndoHistory', () => {
 
       history.undo();
 
-      // Verify observable behavior: selection was cleared
-      expect(removeAllRangesFn).toHaveBeenCalledWith();
+      // When snapshot is null, restoreCaretSnapshot returns early
+      // without modifying focus — preserves whatever DOM state exists
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Caret.setToInput).not.toHaveBeenCalled();
     });
 
     it('falls back to block start when input no longer exists', () => {
-      const block = { id: 'b1', inputs: [] };
+      const block = { id: 'b1', inputs: [], parentId: null };
       const snapshot = { blockId: 'b1', inputIndex: 5, offset: 10 }; // input at index 5 doesn't exist
 
       (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
@@ -465,7 +462,10 @@ describe('UndoHistory', () => {
 
     it('restores to specific input when input exists', () => {
       const input = document.createElement('div');
-      const block = { id: 'b1', inputs: [input] };
+
+      // Append to document so isConnected returns true
+      document.body.appendChild(input);
+      const block = { id: 'b1', inputs: [input], parentId: null };
       const snapshot = { blockId: 'b1', inputIndex: 0, offset: 5 };
 
       (blok.BlockManager as unknown as { getBlockById: typeof vi.fn }).getBlockById = vi.fn().mockReturnValue(block);
@@ -481,6 +481,9 @@ describe('UndoHistory', () => {
 
       // Should restore to specific input
       expect(blok.Caret.setToInput).toHaveBeenCalledWith(input, 'default', 5);
+
+      // Clean up
+      input.remove();
     });
 
     it('does nothing when snapshot is null and no block manager available', () => {

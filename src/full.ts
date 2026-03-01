@@ -21,6 +21,7 @@ import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-li
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
+import { ToggleItem as Toggle } from './tools/toggle';
 
 export { Blok, version, DATA_ATTR } from './blok';
 
@@ -29,6 +30,7 @@ export {
   Paragraph,
   Header,
   List,
+  Toggle,
   Bold,
   Italic,
   Link,

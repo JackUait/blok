@@ -17,7 +17,7 @@ export const css = {
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
 
-  items: 'overflow-y-auto overscroll-contain blok-popover-scrollbar',
+  items: 'overflow-y-auto overscroll-contain [scrollbar-gutter:stable] pr-1',
 };
 
 /**

@@ -4,7 +4,9 @@ import {
   saveToggleItem,
   mergeToggleItemData,
   setToggleItemData,
+  parseHTML,
 } from '../../../../src/tools/toggle/block-operations';
+import type { MergeContext } from '../../../../src/tools/toggle/block-operations';
 import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 
 vi.mock('../../../../src/components/utils', () => ({
@@ -68,13 +70,20 @@ describe('Toggle Block Operations', () => {
   });
 
   describe('mergeToggleItemData', () => {
+    const createMergeContext = (data: ToggleItemData, contentElement: HTMLElement | null): MergeContext => ({
+      data,
+      getContentElement: () => contentElement,
+      parseHTML,
+    });
+
     it('appends incoming text to current data', () => {
       const currentData: ToggleItemData = { text: 'Hello' };
       const contentElement = document.createElement('div');
       contentElement.innerHTML = 'Hello';
+      const context = createMergeContext(currentData, contentElement);
       const incomingData: ToggleItemData = { text: ' World' };
 
-      mergeToggleItemData(currentData, contentElement, incomingData);
+      mergeToggleItemData(context, incomingData);
 
       expect(currentData.text).toBe('Hello World');
     });
@@ -83,18 +92,20 @@ describe('Toggle Block Operations', () => {
       const currentData: ToggleItemData = { text: 'Hello' };
       const contentElement = document.createElement('div');
       contentElement.innerHTML = 'Hello';
+      const context = createMergeContext(currentData, contentElement);
       const incomingData: ToggleItemData = { text: '<b>Bold</b>' };
 
-      mergeToggleItemData(currentData, contentElement, incomingData);
+      mergeToggleItemData(context, incomingData);
 
       expect(contentElement.innerHTML).toContain('Bold');
     });
 
-    it('does nothing when content element is null', () => {
+    it('does nothing to DOM when content element is null', () => {
       const currentData: ToggleItemData = { text: 'Hello' };
+      const context = createMergeContext(currentData, null);
       const incomingData: ToggleItemData = { text: ' World' };
 
-      mergeToggleItemData(currentData, null, incomingData);
+      mergeToggleItemData(context, incomingData);
 
       // Data is still updated
       expect(currentData.text).toBe('Hello World');
@@ -105,9 +116,10 @@ describe('Toggle Block Operations', () => {
       const contentElement = document.createElement('div');
       contentElement.innerHTML = 'Hello';
       const normalize = vi.spyOn(contentElement, 'normalize');
+      const context = createMergeContext(currentData, contentElement);
       const incomingData: ToggleItemData = { text: ' there' };
 
-      mergeToggleItemData(currentData, contentElement, incomingData);
+      mergeToggleItemData(context, incomingData);
 
       expect(normalize).toHaveBeenCalledOnce();
     });
@@ -120,7 +132,7 @@ describe('Toggle Block Operations', () => {
       contentElement.innerHTML = 'old';
       const newData: ToggleItemData = { text: 'new' };
 
-      const result = setToggleItemData(currentData, newData, contentElement);
+      const result = setToggleItemData(currentData, newData, () => contentElement);
 
       expect(result.inPlace).toBe(true);
       expect(result.newData.text).toBe('new');
@@ -132,7 +144,7 @@ describe('Toggle Block Operations', () => {
       contentElement.innerHTML = 'old';
       const newData: ToggleItemData = { text: 'new content' };
 
-      setToggleItemData(currentData, newData, contentElement);
+      setToggleItemData(currentData, newData, () => contentElement);
 
       expect(contentElement.innerHTML).toBe('new content');
     });
@@ -141,7 +153,7 @@ describe('Toggle Block Operations', () => {
       const currentData: ToggleItemData = { text: 'old' };
       const newData: ToggleItemData = { text: 'new' };
 
-      const result = setToggleItemData(currentData, newData, null);
+      const result = setToggleItemData(currentData, newData, () => null);
 
       expect(result.inPlace).toBe(false);
       expect(result.newData.text).toBe('old');
@@ -153,7 +165,7 @@ describe('Toggle Block Operations', () => {
       contentElement.innerHTML = 'old';
       const newData: ToggleItemData = { text: 'new' };
 
-      const result = setToggleItemData(currentData, newData, contentElement);
+      const result = setToggleItemData(currentData, newData, () => contentElement);
 
       expect(result.newData).toEqual({ text: 'new' });
     });

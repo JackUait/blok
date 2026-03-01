@@ -32,7 +32,7 @@ export const TOGGLE_WRAPPER_STYLES = 'flex items-start';
 /**
  * Styles for the toggle arrow button
  */
-export const ARROW_STYLES = 'flex-shrink-0 w-6 h-6 flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-colors duration-150 mt-px';
+export const ARROW_STYLES = 'flex-shrink-0 w-6 h-6 flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-all duration-200 ease-in-out mt-px';
 
 /**
  * SVG icon for the toggle arrow
@@ -42,8 +42,7 @@ export const ARROW_ICON = '<svg width="12" height="12" viewBox="0 0 12 12" fill=
 /**
  * Data attributes specific to the toggle tool
  */
-export const DATA_ATTR = {
-  tool: 'data-blok-tool',
+export const TOGGLE_ATTR = {
   toggleOpen: 'data-blok-toggle-open',
   toggleArrow: 'data-blok-toggle-arrow',
   toggleContent: 'data-blok-toggle-content',

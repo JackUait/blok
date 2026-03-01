@@ -5,6 +5,7 @@
  * They create DOM elements without side effects.
  */
 
+import { DATA_ATTR } from '../../components/constants';
 import { twMerge } from '../../components/utils/tw';
 
 import {
@@ -12,7 +13,7 @@ import {
   ARROW_STYLES,
   BASE_STYLES,
   CONTENT_STYLES,
-  DATA_ATTR,
+  TOGGLE_ATTR,
   TOGGLE_WRAPPER_STYLES,
   TOOL_NAME,
 } from './constants';
@@ -58,7 +59,7 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
   const wrapper = document.createElement('div');
   wrapper.className = twMerge(BASE_STYLES, TOGGLE_WRAPPER_STYLES);
   wrapper.setAttribute(DATA_ATTR.tool, TOOL_NAME);
-  wrapper.setAttribute(DATA_ATTR.toggleOpen, String(isOpen));
+  wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
 
   const arrowElement = buildArrow(isOpen, onArrowClick);
   const contentElement = buildContent(data, readOnly, keydownHandler);
@@ -79,12 +80,11 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
 const buildArrow = (isOpen: boolean, onArrowClick: () => void): HTMLElement => {
   const arrow = document.createElement('div');
   arrow.className = ARROW_STYLES;
-  arrow.setAttribute(DATA_ATTR.toggleArrow, '');
+  arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
   arrow.setAttribute('role', 'button');
   arrow.setAttribute('tabindex', '-1');
   arrow.setAttribute('aria-label', 'Toggle');
   arrow.innerHTML = ARROW_ICON;
-  arrow.style.transition = 'transform 200ms ease';
 
   if (isOpen) {
     arrow.style.transform = 'rotate(90deg)';
@@ -113,7 +113,7 @@ const buildContent = (
 ): HTMLElement => {
   const content = document.createElement('div');
   content.className = CONTENT_STYLES;
-  content.setAttribute(DATA_ATTR.toggleContent, '');
+  content.setAttribute(TOGGLE_ATTR.toggleContent, '');
   content.contentEditable = readOnly ? 'false' : 'true';
   content.innerHTML = data.text;
 

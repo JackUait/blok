@@ -1,11 +1,8 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { DATA_ATTR } from '../../../../src/components/constants';
 import {
-  ARROW_STYLES,
-  BASE_STYLES,
-  CONTENT_STYLES,
-  DATA_ATTR,
-  TOGGLE_WRAPPER_STYLES,
+  TOGGLE_ATTR,
   TOOL_NAME,
 } from '../../../../src/tools/toggle/constants';
 import { buildToggleItem } from '../../../../src/tools/toggle/dom-builder';
@@ -63,14 +60,14 @@ describe('Toggle DOM Builder', () => {
         const context = createDefaultContext({ isOpen: false });
         const result = buildToggleItem(context);
 
-        expect(result.wrapper.getAttribute(DATA_ATTR.toggleOpen)).toBe('false');
+        expect(result.wrapper.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       });
 
       it('sets data-blok-toggle-open="true" when open', () => {
         const context = createDefaultContext({ isOpen: true });
         const result = buildToggleItem(context);
 
-        expect(result.wrapper.getAttribute(DATA_ATTR.toggleOpen)).toBe('true');
+        expect(result.wrapper.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
       });
     });
 
@@ -79,7 +76,7 @@ describe('Toggle DOM Builder', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
-        expect(result.arrowElement.hasAttribute(DATA_ATTR.toggleArrow)).toBe(true);
+        expect(result.arrowElement.hasAttribute(TOGGLE_ATTR.toggleArrow)).toBe(true);
       });
 
       it('has role="button" and tabindex="-1"', () => {
@@ -118,12 +115,12 @@ describe('Toggle DOM Builder', () => {
         expect(result.arrowElement.style.transform).toBe('rotate(90deg)');
       });
 
-      it('has transition style for transform', () => {
+      it('has transition classes via Tailwind', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
-        expect(result.arrowElement.style.transition).toContain('transform');
-        expect(result.arrowElement.style.transition).toContain('200ms');
+        expect(result.arrowElement.className).toContain('transition-all');
+        expect(result.arrowElement.className).toContain('duration-200');
       });
 
       it('calls onArrowClick when clicked', () => {
@@ -155,7 +152,7 @@ describe('Toggle DOM Builder', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
-        expect(result.contentElement.hasAttribute(DATA_ATTR.toggleContent)).toBe(true);
+        expect(result.contentElement.hasAttribute(TOGGLE_ATTR.toggleContent)).toBe(true);
       });
 
       it('renders text from data', () => {

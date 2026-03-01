@@ -14,7 +14,7 @@ import type { ToggleItemData } from './types';
  * @param html - HTML string to parse
  * @returns DocumentFragment with parsed nodes
  */
-const parseHTML = (html: string): DocumentFragment => {
+export const parseHTML = (html: string): DocumentFragment => {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = html.trim();
 
@@ -46,23 +46,35 @@ export const saveToggleItem = (
 };
 
 /**
+ * Context for merge operations
+ */
+export interface MergeContext {
+  data: ToggleItemData;
+  getContentElement: () => HTMLElement | null;
+  parseHTML: (html: string) => DocumentFragment;
+}
+
+/**
  * Merge incoming data into toggle item.
  *
- * @param currentData - The current toggle item data (mutated)
- * @param contentElement - The content element (or null)
+ * @param context - The merge context
  * @param incomingData - The incoming data to merge
  */
 export const mergeToggleItemData = (
-  currentData: ToggleItemData,
-  contentElement: HTMLElement | null,
+  context: MergeContext,
   incomingData: ToggleItemData
 ): void => {
-  currentData.text += incomingData.text;
+  const { data, getContentElement } = context;
 
-  if (contentElement && incomingData.text) {
-    const fragment = parseHTML(incomingData.text);
-    contentElement.appendChild(fragment);
-    contentElement.normalize();
+  data.text += incomingData.text;
+
+  const contentEl = getContentElement();
+
+  if (contentEl && incomingData.text) {
+    const fragment = context.parseHTML(incomingData.text);
+
+    contentEl.appendChild(fragment);
+    contentEl.normalize();
   }
 };
 
@@ -71,15 +83,17 @@ export const mergeToggleItemData = (
  *
  * @param currentData - The current toggle item data
  * @param newData - The new data to apply
- * @param contentElement - The content element (or null)
+ * @param getContentElement - Function to get the content element
  * @returns Object with the updated data and whether the update was in-place
  */
 export const setToggleItemData = (
   currentData: ToggleItemData,
   newData: ToggleItemData,
-  contentElement: HTMLElement | null
+  getContentElement: () => HTMLElement | null
 ): { newData: ToggleItemData; inPlace: boolean } => {
-  if (!contentElement) {
+  const contentEl = getContentElement();
+
+  if (!contentEl) {
     return { newData: currentData, inPlace: false };
   }
 
@@ -89,7 +103,7 @@ export const setToggleItemData = (
   };
 
   if (typeof newData.text === 'string') {
-    contentElement.innerHTML = newData.text;
+    contentEl.innerHTML = newData.text;
   }
 
   return { newData: updatedData, inPlace: true };

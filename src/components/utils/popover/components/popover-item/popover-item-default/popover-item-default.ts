@@ -385,10 +385,10 @@ export class PopoverItemDefault extends PopoverItem {
 
     if (isHidden) {
       this.nodes.root.setAttribute(DATA_ATTR.hidden, 'true');
-      this.nodes.root.classList.add('hidden!');
+      this.nodes.root.classList.add('opacity-0', 'max-h-0!', 'py-0!', 'mb-0!');
     } else {
       this.nodes.root.removeAttribute(DATA_ATTR.hidden);
-      this.nodes.root.classList.remove('hidden!');
+      this.nodes.root.classList.remove('opacity-0', 'max-h-0!', 'py-0!', 'mb-0!');
     }
   }
 

@@ -31,4 +31,20 @@ describe('PopoverItemSeparator', () => {
     separator.toggleHidden(false);
     expect(element).not.toHaveAttribute('data-blok-hidden');
   });
+
+  it('applies animated collapse classes when hiding instead of display:none', () => {
+    const separator = new PopoverItemSeparator();
+    const element = separator.getElement();
+
+    separator.toggleHidden(true);
+
+    expect(element.className).toContain('opacity-0');
+    expect(element.className).toContain('max-h-0!');
+    expect(element.className).not.toContain(' hidden');
+
+    separator.toggleHidden(false);
+
+    expect(element.className).not.toContain('opacity-0');
+    expect(element.className).not.toContain('max-h-0!');
+  });
 });

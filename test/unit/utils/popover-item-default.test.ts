@@ -99,6 +99,25 @@ describe('PopoverItemDefault', () => {
     expect(element).not.toHaveAttribute(DATA_ATTR.hidden);
   });
 
+  it('applies animated collapse classes when hiding instead of display:none', () => {
+    const { item, element } = createItem();
+
+    item.toggleHidden(true);
+
+    expect(element.classList.contains('opacity-0')).toBe(true);
+    expect(element.classList.contains('max-h-0!')).toBe(true);
+    expect(element.classList.contains('py-0!')).toBe(true);
+    expect(element.classList.contains('mb-0!')).toBe(true);
+    expect(element.classList.contains('hidden!')).toBe(false);
+
+    item.toggleHidden(false);
+
+    expect(element.classList.contains('opacity-0')).toBe(false);
+    expect(element.classList.contains('max-h-0!')).toBe(false);
+    expect(element.classList.contains('py-0!')).toBe(false);
+    expect(element.classList.contains('mb-0!')).toBe(false);
+  });
+
   it('invokes onActivate when clicked without confirmation', () => {
     const onActivate = vi.fn();
     const { item, params, element } = createItem({ onActivate });

@@ -337,3 +337,19 @@
 [data-blok-table-haze][data-blok-table-haze-visible] {
   @apply opacity-100;
 }
+
+/**
+ * Slash search input appearance
+ * When the user types "/" to open the toolbox, the contenteditable
+ * transforms to look like a search input with a placeholder.
+ */
+[data-blok-slash-search] {
+  @apply bg-[#F8F8F8] rounded-lg transition-colors duration-150;
+  color: transparent;
+  caret-color: var(--color-dark);
+}
+
+[data-blok-slash-search]::after {
+  content: attr(data-blok-slash-search);
+  @apply text-gray-text font-medium text-base pointer-events-none;
+}

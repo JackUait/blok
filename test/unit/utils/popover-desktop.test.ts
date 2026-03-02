@@ -720,6 +720,32 @@ describe('PopoverDesktop', () => {
       });
       expect(separator?.getElement().hasAttribute(DATA_ATTR.hidden)).toBe(true);
     });
+
+    it('hides items instantly (no transition) when nothing is found', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const items = instance.items;
+      const defaultItems = items.filter(
+        (item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault => item instanceof PopoverItemDefault
+      );
+
+      const searchInput = getMockSearchInput();
+
+      searchInput.emitSearch({
+        query: 'Zzzzzz',
+        items: [],
+      });
+
+      // After nothing-found search, transition-duration inline override should be cleaned up
+      defaultItems.forEach((item: PopoverItemDefault) => {
+        const el = item.getElement();
+
+        expect(el?.style.transitionDuration).toBe('');
+      });
+    });
   });
 
   describe('onFlip', () => {

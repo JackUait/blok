@@ -701,6 +701,18 @@ export class PopoverDesktop extends PopoverAbstract {
     // Cast data.items to PopoverItemDefault[] since we know that's what filterItems passes
     const matchingItems = data.items as unknown as PopoverItemDefault[];
 
+    /**
+     * When nothing is found, disable transitions so items hide instantly.
+     * The "Nothing found" message fade-in provides the visual transition;
+     * animating the last items' collapse simultaneously causes a jarring
+     * height bounce in the popover container.
+     */
+    if (isNothingFound) {
+      this.items.forEach(item => {
+        item.getElement()?.style.setProperty('transition-duration', '0s');
+      });
+    }
+
     this.items
       .forEach((item) => {
         const isDefaultItem = item instanceof PopoverItemDefault;
@@ -711,6 +723,15 @@ export class PopoverDesktop extends PopoverAbstract {
 
         item.toggleHidden(isHidden);
       });
+
+    if (isNothingFound) {
+      // Force reflow so the instant hide takes effect, then restore transitions
+      this.nodes.popoverContainer.offsetHeight;
+      this.items.forEach(item => {
+        item.getElement()?.style.removeProperty('transition-duration');
+      });
+    }
+
     this.toggleNothingFoundMessage(isNothingFound);
 
     /** List of elements available for keyboard navigation considering search query applied */

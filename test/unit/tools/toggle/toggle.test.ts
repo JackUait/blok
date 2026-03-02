@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { API, BlockToolConstructorOptions } from '../../../../types';
+import type { API, BlockToolConstructorOptions, SanitizerConfig } from '../../../../types';
 import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
 
@@ -156,15 +156,17 @@ describe('ToggleItem', () => {
     it('includes mark with class and style attributes', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const sanitize = ToggleItem.sanitize;
+      const textRules = sanitize.text as SanitizerConfig;
 
-      expect(sanitize.text.mark).toEqual({ class: true, style: true });
+      expect(textRules.mark).toEqual({ class: true, style: true });
     });
 
     it('includes code tag', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const sanitize = ToggleItem.sanitize;
+      const textRules = sanitize.text as SanitizerConfig;
 
-      expect(sanitize.text.code).toBe(true);
+      expect(textRules.code).toBe(true);
     });
   });
 
@@ -211,7 +213,7 @@ describe('ToggleItem', () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
 
       const options = createToggleOptions();
       options.api = mockAPI;
@@ -231,7 +233,7 @@ describe('ToggleItem', () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
 
       const options = createToggleOptions();
       options.api = mockAPI;
@@ -271,7 +273,7 @@ describe('ToggleItem', () => {
       }));
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
       const options = createToggleOptions();
       options.api = mockAPI;

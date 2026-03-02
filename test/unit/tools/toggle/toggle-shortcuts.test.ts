@@ -74,7 +74,7 @@ describe('ToggleItem shortcuts', () => {
       }));
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
       const options = createToggleOptions();
       options.api = mockAPI;
@@ -107,7 +107,7 @@ describe('ToggleItem shortcuts', () => {
       }));
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
       const options = createToggleOptions();
       options.api = mockAPI;
@@ -136,7 +136,7 @@ describe('ToggleItem shortcuts', () => {
       }));
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
       const options = createToggleOptions();
       options.api = mockAPI;
@@ -164,7 +164,7 @@ describe('ToggleItem shortcuts', () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
 
       const options = createToggleOptions();
       options.api = mockAPI;
@@ -276,8 +276,8 @@ describe('ToggleShortcuts', () => {
       const paragraphBlock = createMockParagraphBlock('p1');
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(3);
-      (mockAPI.blocks as Record<string, unknown>).getBlockByIndex = vi.fn()
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(3);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn()
         .mockImplementation((index: number) => {
           return [toggleBlock1, paragraphBlock, toggleBlock2][index];
         });
@@ -319,8 +319,8 @@ describe('ToggleShortcuts', () => {
       const toggleBlock2 = createMockToggleBlock('t2', true);
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(2);
-      (mockAPI.blocks as Record<string, unknown>).getBlockByIndex = vi.fn()
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn()
         .mockImplementation((index: number) => {
           return [toggleBlock1, toggleBlock2][index];
         });
@@ -357,8 +357,8 @@ describe('ToggleShortcuts', () => {
       const paragraphBlock = createMockParagraphBlock('p1');
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(1);
-      (mockAPI.blocks as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(paragraphBlock);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(1);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(paragraphBlock);
 
       const wrapper = document.createElement('div');
       document.body.appendChild(wrapper);
@@ -394,8 +394,8 @@ describe('ToggleShortcuts', () => {
       const toggleBlock = createMockToggleBlock('t1', false);
 
       const mockAPI = createMockAPI();
-      (mockAPI.blocks as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(1);
-      (mockAPI.blocks as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(toggleBlock);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(1);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(toggleBlock);
 
       const wrapper = document.createElement('div');
       document.body.appendChild(wrapper);

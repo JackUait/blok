@@ -19,7 +19,7 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
-import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading } from '../../components/icons';
+import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggleH1, IconToggleH2, IconToggleH3 } from '../../components/icons';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
@@ -804,10 +804,16 @@ export class Header implements BlockTool {
       shortcut: '#'.repeat(level.number),
     }));
 
+    const toggleHeadingIcons: Record<number, string> = {
+      1: IconToggleH1,
+      2: IconToggleH2,
+      3: IconToggleH3,
+    };
+
     const toggleHeadingEntries = Header.DEFAULT_LEVELS
       .filter(level => level.number <= 3)
       .map(level => ({
-        icon: Header.buildToggleHeadingIcon(level.icon),
+        icon: toggleHeadingIcons[level.number],
         title: `Toggle heading ${level.number}`,
         titleKey: `tools.header.toggleHeading${level.number}`,
         name: `toggle-header-${level.number}`,
@@ -818,14 +824,4 @@ export class Header implements BlockTool {
     return [...headingEntries, ...toggleHeadingEntries];
   }
 
-  /**
-   * Build a composite icon for toggle headings by combining
-   * the heading icon with a small toggle arrow indicator.
-   */
-  private static buildToggleHeadingIcon(headingIcon: string): string {
-    return `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(-1, 0.5) scale(0.78)">${headingIcon.replace(/<\/?svg[^>]*>/g, '')}</g>
-  <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-  }
 }

@@ -584,7 +584,7 @@ describe('Header Tool - Custom Configurations', () => {
         }));
 
         const mockAPI = createMockAPI();
-        (mockAPI.blocks as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
           data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,

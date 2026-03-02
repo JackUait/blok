@@ -203,13 +203,13 @@ test.describe('Toggle Tool', () => {
     test('Enter does not insert newline in toggle content', async ({ page }) => {
       await createBlok(page, createToggleData('No newline'));
 
-      const content = page.locator('[data-blok-toggle-content]');
+      const content = page.locator('[data-blok-toggle-content]').filter({ hasText: 'No newline' });
 
       await content.click();
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
 
-      // Content should not have a <br> or newline - Enter is prevented by the tool
+      // Content should not have a <br> or newline - Enter splits the block instead
       const html = await content.innerHTML();
 
       expect(html).not.toContain('<br>');

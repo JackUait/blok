@@ -8,6 +8,7 @@ import type { API } from '../../../types';
 
 import { isCaretAtStartOfInput } from '../../components/utils/caret';
 
+import { TOOL_NAME } from './constants';
 import type { ToggleItemData } from './types';
 
 /**
@@ -30,7 +31,7 @@ export interface ToggleKeyboardContext {
  * @param context - The toggle keyboard context
  */
 export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise<void> => {
-  const { api, blockId, syncContentFromDOM } = context;
+  const { api, blockId, data, getContentElement, syncContentFromDOM } = context;
 
   syncContentFromDOM();
 
@@ -38,7 +39,27 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
     return;
   }
 
-  api.blocks.splitBlock(blockId);
+  const contentEl = getContentElement();
+  const selection = window.getSelection();
+
+  if (!contentEl || !selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  const { beforeContent, afterContent } = splitContentAtRange(contentEl, range);
+
+  const currentBlockIndex = api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex();
+
+  api.blocks.splitBlock(
+    blockId,
+    { text: beforeContent },
+    TOOL_NAME,
+    { text: afterContent },
+    currentBlockIndex + 1
+  );
+
+  data.text = beforeContent;
 };
 
 /**
@@ -80,4 +101,39 @@ export const handleToggleBackspace = async (
   event.preventDefault();
 
   await api.blocks.convert(blockId, 'paragraph', { text });
+};
+
+/**
+ * Split content element's HTML at the given range position.
+ *
+ * @param contentEl - The contenteditable element containing text
+ * @param range - The current selection range
+ * @returns Object with before/after HTML content
+ */
+const splitContentAtRange = (
+  contentEl: HTMLElement,
+  range: Range
+): { beforeContent: string; afterContent: string } => {
+  if (!contentEl.lastChild) {
+    return { beforeContent: '', afterContent: '' };
+  }
+
+  const beforeRange = document.createRange();
+  beforeRange.setStart(contentEl, 0);
+  beforeRange.setEnd(range.startContainer, range.startOffset);
+
+  const afterRange = document.createRange();
+  afterRange.setStart(range.endContainer, range.endOffset);
+  afterRange.setEndAfter(contentEl.lastChild);
+
+  const beforeDiv = document.createElement('div');
+  beforeDiv.appendChild(beforeRange.cloneContents());
+
+  const afterDiv = document.createElement('div');
+  afterDiv.appendChild(afterRange.cloneContents());
+
+  return {
+    beforeContent: beforeDiv.innerHTML,
+    afterContent: afterDiv.innerHTML,
+  };
 };

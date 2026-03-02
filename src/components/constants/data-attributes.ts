@@ -306,6 +306,13 @@ export const DATA_ATTR = {
   stubSubtitle: 'data-blok-stub-subtitle',
 
   // ============================================
+  // Slash Search
+  // ============================================
+
+  /** Slash search active on content editable */
+  slashSearch: 'data-blok-slash-search',
+
+  // ============================================
   // Testing
   // ============================================
 

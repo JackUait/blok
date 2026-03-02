@@ -11,7 +11,7 @@ import type {
   BlockToolConstructorOptions,
   ToolboxConfig,
   ConversionConfig,
-  SanitizerConfig,
+  ToolSanitizerConfig,
   PasteConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
@@ -246,7 +246,7 @@ export class ToggleItem implements BlockTool {
     };
   }
 
-  public static get sanitize(): SanitizerConfig {
+  public static get sanitize(): ToolSanitizerConfig {
     return {
       text: {
         br: true,

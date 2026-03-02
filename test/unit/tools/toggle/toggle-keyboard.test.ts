@@ -25,6 +25,8 @@ const createMockContext = (overrides: Partial<ToggleKeyboardContext> = {}): Togg
       blocks: {
         splitBlock: vi.fn(),
         convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        getCurrentBlockIndex: vi.fn().mockReturnValue(0),
       },
     } as unknown as API,
     blockId: 'test-block-id',
@@ -48,14 +50,39 @@ describe('Toggle Keyboard Handlers', () => {
   });
 
   describe('handleToggleEnter', () => {
-    it('calls syncContentFromDOM and splitBlock', async () => {
+    it('calls syncContentFromDOM and splitBlock with correct arguments', async () => {
       const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
-      const context = createMockContext();
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'hello';
+      document.body.appendChild(contentElement);
+
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+      });
+
+      // Set up a selection at position 0 so splitBlock can split content
+      const range = document.createRange();
+      range.setStart(contentElement.childNodes[0], 0);
+      range.setEnd(contentElement.childNodes[0], 0);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
 
       await handleToggleEnter(context);
 
       expect(context.syncContentFromDOM).toHaveBeenCalledOnce();
       expect(context.api.blocks.splitBlock).toHaveBeenCalledOnce();
+      expect(context.api.blocks.splitBlock).toHaveBeenCalledWith(
+        'test-block-id',
+        { text: '' },
+        'toggle',
+        { text: 'hello' },
+        1
+      );
+
+      contentElement.remove();
     });
   });
 

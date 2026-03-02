@@ -122,6 +122,7 @@ const LOGIC_TESTS = [
   '**/ui/selection-with-link-input.spec.ts',
   '**/ui/inline-toolbar-nested-popover.spec.ts',
   '**/ui/multilingual-search.spec.ts',
+  '**/ui/slash-search-placeholder.spec.ts',
   '**/ui/table-toolbar-visibility.spec.ts',
   '**/ui/css-layer-conflict.spec.ts',
 

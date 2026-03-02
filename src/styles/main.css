@@ -345,8 +345,6 @@
  */
 [data-blok-slash-search] {
   @apply bg-[#F8F8F8] rounded-lg transition-colors duration-150 max-w-[240px];
-  color: transparent;
-  caret-color: var(--color-dark);
 }
 
 [data-blok-slash-search]::after {

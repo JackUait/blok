@@ -341,9 +341,7 @@ export class BlockEvents extends Module {
    * If Toolbox is not open, then just open it and show plus button
    */
   private activateToolbox(): void {
-    if (!this.Blok.Toolbar.opened) {
-      this.Blok.Toolbar.moveAndOpen();
-    } // else Flipper will leaf through it
+    this.Blok.Toolbar.moveAndOpen();
 
     this.Blok.Toolbar.toolbox.open();
   }

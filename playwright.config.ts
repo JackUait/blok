@@ -123,6 +123,7 @@ const LOGIC_TESTS = [
   '**/ui/inline-toolbar-nested-popover.spec.ts',
   '**/ui/multilingual-search.spec.ts',
   '**/ui/table-toolbar-visibility.spec.ts',
+  '**/ui/css-layer-conflict.spec.ts',
 
   // Seed/utility tests
   '**/seed.spec.ts',

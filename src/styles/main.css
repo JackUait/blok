@@ -1,5 +1,14 @@
-/* Tailwind CSS - must be first */
-@import 'tailwindcss';
+/*
+  Import Tailwind CSS sub-modules individually (without native @layer wrappers).
+  The default `@import 'tailwindcss'` wraps all output in @layer declarations,
+  which causes styles to lose to ANY un-layered consumer CSS — per the CSS spec,
+  un-layered styles always beat layered styles regardless of specificity.
+  Individual imports avoid this, making the library's styles work in real apps.
+  See: https://github.com/tailwindlabs/tailwindcss/discussions/13188
+*/
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/preflight.css';
+@import 'tailwindcss/utilities.css';
 
 /*
   Exclude non-source directories from Tailwind's automatic content detection.
@@ -167,14 +176,12 @@
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
+*,
+::after,
+::before,
+::backdrop,
+::file-selector-button {
+  border-color: var(--color-gray-200, currentcolor);
 }
 
 /**

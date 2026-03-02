@@ -540,6 +540,31 @@ test.describe('Cell Text Color', () => {
     expect(cellColorAfter).toBe('');
   });
 
+  test('text color propagates to cell content without CSS transition delay', async ({ page }) => {
+    await create3x3TableWithContent(page);
+
+    // The bug: transition-colors on [data-blok-element-content] includes bare 'color'
+    // in transition-property. When cell.style.color is set, the inherited color on
+    // element-content transitions from black → target over 150ms, causing a visible flash.
+    // Fix: table cell descendants should NOT transition the 'color' property.
+
+    const transitionProperty = await getCell(page, 0, 0).evaluate((cell) => {
+      const elementContent = cell.querySelector('[data-blok-element-content]');
+
+      if (!elementContent) {
+        return 'no-element-content-found';
+      }
+
+      return window.getComputedStyle(elementContent).transitionProperty;
+    });
+
+    // Split by comma, trim each — bare 'color' must NOT be present
+    // (background-color, border-color, etc. are fine)
+    const properties = transitionProperty.split(',').map((p) => p.trim());
+
+    expect(properties).not.toContain('color');
+  });
+
   test('applies both text and background color to same cell', async ({ page }) => {
     await create3x3TableWithContent(page);
 

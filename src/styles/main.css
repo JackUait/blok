@@ -309,6 +309,19 @@
 }
 
 /**
+ * Exclude bare 'color' from transition-property inside table cells.
+ * StyleManager applies transition-colors (which includes 'color') for smooth
+ * selection-state changes, but inside table cells inherited text-color changes
+ * trigger a 150ms flash from black → target. Keep all other transition
+ * properties so background-color selection highlighting still animates.
+ */
+[data-blok-table-cell] [data-blok-element-content] {
+  transition-property: background-color, border-color, outline-color,
+    text-decoration-color, fill, stroke, --tw-gradient-from,
+    --tw-gradient-via, --tw-gradient-to;
+}
+
+/**
  * Table heading styles
  * Applied to first row (heading row) and first column (heading column) cells
  */

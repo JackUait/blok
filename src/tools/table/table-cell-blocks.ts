@@ -86,6 +86,9 @@ export class TableCellBlocks {
   /** Events deferred during structural operations, replayed or discarded afterward. */
   private deferredEvents: Array<unknown> = [];
 
+  /** When true, handleBlockMutation skips claiming so exitTableForward's new block stays outside the grid. */
+  private isExitingTable = false;
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -139,6 +142,12 @@ export class TableCellBlocks {
       this.handleShiftTabNavigation(position);
 
       return;
+    }
+
+    // ArrowDown at last row -> exit table
+    if (event.key === 'ArrowDown' && position.row === this.getRowCount() - 1) {
+      event.preventDefault();
+      this.exitTableForward();
     }
   }
 
@@ -209,15 +218,24 @@ export class TableCellBlocks {
 
     if (blockAfterTable !== null) {
       this.api.caret.setToBlock(blockAfterTable.id, 'start');
-    } else {
-      this.api.blocks.insertAtEnd();
 
-      const lastIndex = this.api.blocks.getBlocksCount() - 1;
-      const lastBlock = this.api.blocks.getBlockByIndex(lastIndex);
+      return;
+    }
 
-      if (lastBlock) {
-        this.api.caret.setToBlock(lastBlock.id, 'start');
-      }
+    /**
+     * No block after the table — create a new default block.
+     * Set isExitingTable so handleBlockMutation does not claim the new block
+     * into a cell (the block-added event fires synchronously during insert).
+     */
+    this.isExitingTable = true;
+
+    try {
+      const totalBlocks = this.api.blocks.getBlocksCount();
+      const newBlock = this.api.blocks.insert(undefined, {}, {}, totalBlocks, true);
+
+      this.api.caret.setToBlock(newBlock.id, 'start');
+    } finally {
+      this.isExitingTable = false;
     }
   }
 
@@ -557,6 +575,10 @@ export class TableCellBlocks {
     if (this.isStructuralOpActive()) {
       this.deferredEvents.push(data);
 
+      return;
+    }
+
+    if (this.isExitingTable) {
       return;
     }
 

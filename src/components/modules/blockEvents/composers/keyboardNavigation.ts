@@ -83,6 +83,14 @@ export class KeyboardNavigation extends BlockEventComposer {
       return;
     }
 
+    /**
+     * Skip Tab handling for blocks inside table cells — the table's own grid-level
+     * handler (setupKeyboardNavigation) manages cell-to-cell and table-exit navigation.
+     */
+    if (this.isCurrentBlockInsideTableCell) {
+      return;
+    }
+
     const isNavigated = event.shiftKey ? Caret.navigatePrevious(true) : Caret.navigateNext(true);
 
     /**
@@ -485,6 +493,14 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     const isDownKey = keyCode === keyCodes.DOWN;
     const isRightKey = keyCode === keyCodes.RIGHT && !this.isRtl;
+
+    /**
+     * Skip ArrowDown handling for blocks inside table cells — the table's own
+     * grid-level handler manages row-based navigation and table exit.
+     */
+    if (isDownKey && this.isCurrentBlockInsideTableCell) {
+      return;
+    }
 
     const isNavigated = (() => {
       if (isDownKey) {

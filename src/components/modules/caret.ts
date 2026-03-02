@@ -682,15 +682,17 @@ export class Caret extends Module {
     }
 
     /**
-     * If current block is inside a table cell (has parentId), check if the next
-     * block is also in the same table. If so, skip past all cell paragraphs to
-     * the first block after the table, or create one if none exists.
+     * If current block is inside a table cell (has parentId), check if we should
+     * exit the table. This handles two cases:
+     * 1. nextBlock is still in the same table → skip all cell paragraphs
+     * 2. nextBlock is null (last block in flat list) → table is at the end
      */
-    if (currentBlock.parentId !== null && nextBlock !== null) {
-      const isNextBlockInSameTable = nextBlock.parentId === currentBlock.parentId
-        || nextBlock.id === currentBlock.parentId;
+    if (currentBlock.parentId !== null) {
+      const isNextBlockInSameTable = nextBlock !== null
+        && (nextBlock.parentId === currentBlock.parentId || nextBlock.id === currentBlock.parentId);
+      const isLastBlockInList = nextBlock === null;
 
-      if (isNextBlockInSameTable) {
+      if (isNextBlockInSameTable || isLastBlockInList) {
         const blockAfterTable = this.findFirstBlockAfterParent(currentBlock.parentId);
 
         if (blockAfterTable !== null) {
@@ -699,18 +701,12 @@ export class Caret extends Module {
           return true;
         }
 
-        // No block after table — create one if at end of input
-        const isAtEnd = currentInput !== undefined ? isCaretAtEndOfInput(currentInput) : true;
+        // No block after table — create one
+        const newBlock = BlockManager.insertAtEnd();
 
-        if (isAtEnd) {
-          const newBlock = BlockManager.insertAtEnd();
+        this.setToBlock(newBlock, this.positions.START);
 
-          this.setToBlock(newBlock, this.positions.START);
-
-          return true;
-        }
-
-        return false;
+        return true;
       }
     }
 

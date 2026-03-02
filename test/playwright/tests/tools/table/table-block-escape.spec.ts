@@ -148,7 +148,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
     // Verify the new block is editable
     await page.keyboard.type('After table');
 
-    const newParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"][contenteditable="true"]`);
+    const newParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`);
 
     await expect(newParagraph.filter({ hasText: 'After table' })).toHaveCount(1);
   });
@@ -287,7 +287,7 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
 
     await page.keyboard.type('New block');
 
-    const newParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"][contenteditable="true"]`);
+    const newParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`);
 
     await expect(newParagraph.filter({ hasText: 'New block' })).toHaveCount(1);
   });

@@ -265,21 +265,13 @@ export class TableCellBlocks {
    */
   private findFirstBlockAfterTable(tableIndex: number): { id: string } | null {
     const totalBlocks = this.api.blocks.getBlocksCount();
+    const candidates = Array.from({ length: totalBlocks - tableIndex - 1 }, (_, offset) =>
+      this.api.blocks.getBlockByIndex(tableIndex + 1 + offset)
+    );
 
-    for (let i = tableIndex + 1; i < totalBlocks; i++) {
-      const block = this.api.blocks.getBlockByIndex(i);
-
-      if (!block) {
-        continue;
-      }
-
-      // Check if this block's holder is inside the table grid — if not, it's after the table
-      if (!this.gridElement.contains(block.holder)) {
-        return block;
-      }
-    }
-
-    return null;
+    return candidates.find(block =>
+      block !== null && block !== undefined && !this.gridElement.contains(block.holder)
+    ) ?? null;
   }
 
   /**

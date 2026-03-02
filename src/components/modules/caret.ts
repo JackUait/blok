@@ -687,27 +687,27 @@ export class Caret extends Module {
      * 1. nextBlock is still in the same table → skip all cell paragraphs
      * 2. nextBlock is null (last block in flat list) → table is at the end
      */
-    if (currentBlock.parentId !== null) {
-      const isNextBlockInSameTable = nextBlock !== null
-        && (nextBlock.parentId === currentBlock.parentId || nextBlock.id === currentBlock.parentId);
-      const isLastBlockInList = nextBlock === null;
+    const shouldExitParent = currentBlock.parentId !== null && (
+      nextBlock === null ||
+      nextBlock.parentId === currentBlock.parentId ||
+      nextBlock.id === currentBlock.parentId
+    );
 
-      if (isNextBlockInSameTable || isLastBlockInList) {
-        const blockAfterTable = this.findFirstBlockAfterParent(currentBlock.parentId);
+    if (shouldExitParent) {
+      const blockAfterTable = this.findFirstBlockAfterParent(currentBlock.parentId);
 
-        if (blockAfterTable !== null) {
-          this.setToBlockAtXPosition(blockAfterTable, caretX, true);
-
-          return true;
-        }
-
-        // No block after table — create one
-        const newBlock = BlockManager.insertAtEnd();
-
-        this.setToBlock(newBlock, this.positions.START);
+      if (blockAfterTable !== null) {
+        this.setToBlockAtXPosition(blockAfterTable, caretX, true);
 
         return true;
       }
+
+      // No block after table — create one
+      const newBlock = BlockManager.insertAtEnd();
+
+      this.setToBlock(newBlock, this.positions.START);
+
+      return true;
     }
 
     /**
@@ -815,15 +815,7 @@ export class Caret extends Module {
       return null;
     }
 
-    for (let i = parentIndex + 1; i < blocks.length; i++) {
-      const block = blocks[i];
-
-      if (block.parentId !== parentBlockId) {
-        return block;
-      }
-    }
-
-    return null;
+    return blocks.slice(parentIndex + 1).find(b => b.parentId !== parentBlockId) ?? null;
   }
 
   /**

@@ -23,7 +23,8 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggle
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
-import { ARROW_ICON, ARROW_STYLES, TOGGLE_ATTR, TOGGLE_WRAPPER_STYLES } from '../toggle/constants';
+import { ARROW_ICON, TOGGLE_ATTR, TOGGLE_WRAPPER_STYLES } from '../toggle/constants';
+import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 
 /**
@@ -653,34 +654,7 @@ export class Header implements BlockTool {
    * @returns The arrow element
    */
   private buildArrow(): HTMLElement {
-    const arrow = document.createElement('div');
-    arrow.className = ARROW_STYLES;
-    arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
-    arrow.setAttribute('role', 'button');
-    arrow.setAttribute('tabindex', '0');
-    arrow.setAttribute('aria-label', this._isOpen ? 'Collapse' : 'Expand');
-    arrow.setAttribute('aria-expanded', String(this._isOpen));
-    arrow.contentEditable = 'false';
-    arrow.innerHTML = ARROW_ICON;
-
-    if (this._isOpen) {
-      arrow.style.transform = 'rotate(90deg)';
-    }
-
-    arrow.addEventListener('click', (event: MouseEvent) => {
-      event.stopPropagation();
-      this.toggleOpen();
-    });
-
-    arrow.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        event.stopPropagation();
-        this.toggleOpen();
-      }
-    });
-
-    return arrow;
+    return buildArrow(this._isOpen, () => this.toggleOpen(), { contentEditableFalse: true });
   }
 
   /**

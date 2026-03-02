@@ -71,13 +71,26 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
 };
 
 /**
+ * Options for building arrow element
+ */
+export interface BuildArrowOptions {
+  /** Set contentEditable="false" on the arrow (used by Header to prevent caret entering arrow) */
+  contentEditableFalse?: boolean;
+}
+
+/**
  * Build the arrow element for toggling open/closed state.
  *
  * @param isOpen - Whether the toggle is currently open
  * @param onArrowClick - Callback when arrow is clicked
+ * @param options - Optional configuration
  * @returns The arrow element
  */
-const buildArrow = (isOpen: boolean, onArrowClick: () => void): HTMLElement => {
+export const buildArrow = (
+  isOpen: boolean,
+  onArrowClick: () => void,
+  options: BuildArrowOptions = {}
+): HTMLElement => {
   const arrow = document.createElement('div');
   arrow.className = ARROW_STYLES;
   arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
@@ -85,6 +98,11 @@ const buildArrow = (isOpen: boolean, onArrowClick: () => void): HTMLElement => {
   arrow.setAttribute('tabindex', '0');
   arrow.setAttribute('aria-label', isOpen ? 'Collapse' : 'Expand');
   arrow.setAttribute('aria-expanded', String(isOpen));
+
+  if (options.contentEditableFalse === true) {
+    arrow.contentEditable = 'false';
+  }
+
   arrow.innerHTML = ARROW_ICON;
 
   if (isOpen) {

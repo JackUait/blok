@@ -556,6 +556,17 @@ describe('Header Tool - Custom Configurations', () => {
         expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       });
 
+      it('arrow element has contentEditable="false" in toggle heading', () => {
+        const options = createHeaderOptions({ text: 'Test', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+
+        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+        expect(arrow).not.toBeNull();
+        expect(arrow.contentEditable).toBe('false');
+      });
+
       it('preserves heading text content when isToggleable is true', () => {
         const options = createHeaderOptions({ text: '<b>Bold</b> toggle heading', level: 1, isToggleable: true });
         const header = new Header(options);

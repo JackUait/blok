@@ -5,7 +5,7 @@ import {
   TOGGLE_ATTR,
   TOOL_NAME,
 } from '../../../../src/tools/toggle/constants';
-import { buildToggleItem } from '../../../../src/tools/toggle/dom-builder';
+import { buildToggleItem, buildArrow } from '../../../../src/tools/toggle/dom-builder';
 import type { ToggleDOMBuilderContext } from '../../../../src/tools/toggle/dom-builder';
 import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 
@@ -311,6 +311,21 @@ describe('Toggle DOM Builder', () => {
 
         expect(result.wrapper.children.length).toBe(2);
       });
+    });
+  });
+
+  describe('buildArrow', () => {
+    it('does not set contentEditable by default', () => {
+      const arrow = buildArrow(false, vi.fn());
+
+      // By default, contentEditable should be 'inherit' (the browser default)
+      expect(arrow.contentEditable).not.toBe('false');
+    });
+
+    it('sets contentEditable to "false" when contentEditableFalse option is true', () => {
+      const arrow = buildArrow(false, vi.fn(), { contentEditableFalse: true });
+
+      expect(arrow.contentEditable).toBe('false');
     });
   });
 });

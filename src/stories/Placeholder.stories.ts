@@ -171,10 +171,15 @@ export const TypeAndClearPlaceholder: Story = {
 
       if (contentEditable) {
         await userEvent.click(contentEditable);
-        await userEvent.type(contentEditable, 'Hello world');
+        await userEvent.keyboard('Hello world');
       }
 
-      expect(contentEditable?.textContent).toContain('Hello world');
+      await waitFor(
+        () => {
+          expect(contentEditable?.textContent).toContain('Hello world');
+        },
+        TIMEOUT_ACTION
+      );
     });
 
     await step('Clear content to restore placeholder', async () => {

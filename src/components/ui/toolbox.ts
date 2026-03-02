@@ -1,4 +1,5 @@
 import { getRestrictedTools } from '../../tools/table/table-restrictions';
+import { DATA_ATTR } from '../constants';
 import { Dom } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
 import { SelectionUtils } from '../selection';
@@ -14,8 +15,6 @@ import { translateToolTitle, type I18nInstance } from '../utils/tools';
 
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
-import { DATA_ATTR } from '../constants';
-
 
 /**
  * @todo the first Tab on the Block — focus Plus Button, the second — focus Block Tunes Toggler, the third — focus next Block

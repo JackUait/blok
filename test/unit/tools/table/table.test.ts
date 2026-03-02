@@ -74,6 +74,7 @@ const createMockAPI = (overrides: Partial<API> = {}): API => {
       getCurrentBlockIndex: () => 0,
       getBlocksCount: () => 0,
       getBlockIndex: () => undefined,
+      getById: () => null,
       setBlockParent: vi.fn(),
       ...(blocksOverrides as Record<string, unknown>),
     },
@@ -3233,6 +3234,15 @@ describe('Table Tool', () => {
   });
 
   describe('caret placement on new table', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
     const createMockApiWithEditableBlocks = (): API => {
       return createMockAPI({
         blocks: {
@@ -3252,11 +3262,33 @@ describe('Table Tool', () => {
       } as never);
     };
 
-    it('focuses the first cell contenteditable after rendered() for a new table', () => {
+    it('selects the block via BlockAPI after rendered() for a new table', () => {
+      const mockSelected = vi.fn();
+      const mockGetById = vi.fn().mockReturnValue({
+        set selected(state: boolean) {
+          mockSelected(state);
+        },
+      });
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
         data: { withHeadings: false, withHeadingColumn: false, content: [] },
         config: {},
-        api: createMockApiWithEditableBlocks(),
+        api: createMockAPI({
+          blocks: {
+            insert: () => {
+              const holder = document.createElement('div');
+              const editable = document.createElement('div');
+
+              editable.setAttribute('contenteditable', 'true');
+              holder.appendChild(editable);
+              holder.setAttribute('data-blok-id', 'mock-id');
+
+              return { id: 'mock-id', holder };
+            },
+            getBlocksCount: vi.fn().mockReturnValue(0),
+            getBlockIndex: () => undefined,
+            getById: mockGetById,
+          },
+        } as never),
         readOnly: false,
         block: { id: 'table-new' } as never,
       };
@@ -3267,11 +3299,11 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      const firstCell = element.querySelector('[data-blok-table-cell]');
-      const firstEditable = firstCell?.querySelector('[contenteditable="true"]');
+      // The selection is set via requestAnimationFrame
+      vi.runAllTimers();
 
-      expect(firstEditable).not.toBeNull();
-      expect(firstEditable).toHaveFocus();
+      expect(mockGetById).toHaveBeenCalledWith('table-new');
+      expect(mockSelected).toHaveBeenCalledWith(true);
 
       document.body.removeChild(element);
     });

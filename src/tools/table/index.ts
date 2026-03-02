@@ -404,10 +404,21 @@ export class Table implements BlockTool {
     this.initSubsystems(gridEl);
     applyCellColors(gridEl, this.model.snapshot().content);
 
-    if (this.isNewTable) {
-      const firstEditable = gridEl.querySelector<HTMLElement>('[contenteditable="true"]');
+    if (this.isNewTable && this.blockId) {
+      // Select the block (blue highlight) after the toolbox finishes its
+      // synchronous setToBlock call. Using requestAnimationFrame ensures we
+      // run after the toolbox flow completes, so clearSelection() in
+      // setToBlock doesn't undo our selection.
+      const blockId = this.blockId;
+      const api = this.api;
 
-      firstEditable?.focus();
+      requestAnimationFrame(() => {
+        const blockApi = api.blocks.getById(blockId);
+
+        if (blockApi) {
+          blockApi.selected = true;
+        }
+      });
     }
   }
 

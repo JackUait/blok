@@ -257,4 +257,12 @@ describe('PopoverItemDefault', () => {
     expect(item.title).toBe(customTitle);
     expect(item.isDisabled).toBe(true);
   });
+
+  it('prevents icon container from shrinking in flex layout', () => {
+    const { element } = createItem();
+    const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+    expect(icon).not.toBeNull();
+    expect(icon?.className).toContain('shrink-0');
+  });
 });

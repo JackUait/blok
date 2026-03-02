@@ -21,7 +21,7 @@ export const css = {
   /**
    * Icon container styles
    */
-  icon: 'flex items-center justify-center w-[26px] h-[26px] rounded-lg [&_svg]:w-icon [&_svg]:h-icon',
+  icon: 'flex items-center justify-center w-[26px] h-[26px] shrink-0 rounded-lg [&_svg]:w-icon [&_svg]:h-icon',
 
   /**
    * Focused state class for DomIterator/Flipper keyboard navigation.

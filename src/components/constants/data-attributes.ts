@@ -91,8 +91,6 @@ export const DATA_ATTR = {
   blockSettingsOpened: 'data-blok-block-settings-opened',
   /** Element is opened (generic) */
   opened: 'data-blok-opened',
-  /** Block is in slash search mode (toolbox filtering) */
-  slashSearch: 'data-blok-slash-search',
 
   // ============================================
   // Popover Container

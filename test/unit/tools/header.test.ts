@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/header';
+import { IconToggleH1, IconToggleH2, IconToggleH3 } from '../../../src/components/icons';
 import { TOGGLE_ATTR } from '../../../src/tools/toggle/constants';
 import type { API, BlockToolConstructorOptions, ToolboxConfigEntry } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
@@ -775,6 +776,30 @@ describe('Header Tool - Custom Configurations', () => {
 
       expect(toggleEntry?.searchTerms).toContain('toggle');
       expect(toggleEntry?.searchTerms).toContain('collapsible');
+    });
+
+    it('uses dedicated icon constants for toggle heading entries', () => {
+      const toolbox = Header.toolbox;
+      const entries = toolbox as Array<{ name: string; icon: string }>;
+
+      const toggleH1 = entries.find(e => e.name === 'toggle-header-1');
+      const toggleH2 = entries.find(e => e.name === 'toggle-header-2');
+      const toggleH3 = entries.find(e => e.name === 'toggle-header-3');
+
+      expect(toggleH1?.icon).toBe(IconToggleH1);
+      expect(toggleH2?.icon).toBe(IconToggleH2);
+      expect(toggleH3?.icon).toBe(IconToggleH3);
+    });
+
+    it('toggle heading icons do not contain scale transforms', () => {
+      const toolbox = Header.toolbox;
+      const entries = toolbox as Array<{ name: string; icon: string }>;
+      const toggleEntries = entries.filter(e => e.name.startsWith('toggle-header-'));
+
+      for (const entry of toggleEntries) {
+        expect(entry.icon).not.toContain('scale(');
+        expect(entry.icon).not.toContain('<g transform');
+      }
     });
   });
 });

@@ -205,16 +205,6 @@ export class Paragraph implements BlockTool {
     'mb-px',
     '[&>p:first-of-type]:mt-0',
     '[&>p:last-of-type]:mb-0',
-    // Slash search container styling (active when toolbox is open)
-    'data-[blok-slash-search]:bg-[#F8F8F8]',
-    'data-[blok-slash-search]:border',
-    'data-[blok-slash-search]:border-[rgba(226,226,229,0.20)]',
-    'data-[blok-slash-search]:rounded-lg',
-    'data-[blok-slash-search]:text-gray-text',
-    'data-[blok-slash-search]:transition-colors',
-    'data-[blok-slash-search]:duration-150',
-    'data-[blok-slash-search]:focus:bg-white',
-    'data-[blok-slash-search]:focus:border-[rgba(56,138,229,0.3)]',
   ];
 
 

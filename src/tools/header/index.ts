@@ -824,8 +824,8 @@ export class Header implements BlockTool {
    */
   private static buildToggleHeadingIcon(headingIcon: string): string {
     return `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(-1, 0) scale(0.85)">${headingIcon.replace(/<\/?svg[^>]*>/g, '')}</g>
-  <path d="M15 8l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(-1, 0.5) scale(0.78)">${headingIcon.replace(/<\/?svg[^>]*>/g, '')}</g>
+  <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
   }
 }

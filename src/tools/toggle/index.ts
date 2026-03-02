@@ -22,7 +22,8 @@ import {
   setToggleItemData,
   parseHTML,
 } from './block-operations';
-import { ARROW_ICON, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
+import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
+import { IconToggleList } from '../../components/icons';
 import { renderToggleItem, updateArrowState, updateChildrenVisibility } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
@@ -230,7 +231,7 @@ export class ToggleItem implements BlockTool {
 
   public static get toolbox(): ToolboxConfig {
     return {
-      icon: ARROW_ICON,
+      icon: IconToggleList,
       title: 'Toggle list',
       titleKey: 'toggleList',
       name: TOOL_NAME,

@@ -211,16 +211,31 @@ export const IconWarning = `
 </svg>
 `;
 
-// Bulleted List icon
-export const IconListBulleted = `
+// Toggle List icon
+export const IconToggleList = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path
-    d="M8 5h9M8 10h9M8 15h9M4 5h.01M4 10h.01M4 15h.01"
+    d="M3 3l3 2-3 2M9 5h8M6 10h11M6 15h11"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
+</svg>
+`;
+
+// Bulleted List icon
+export const IconListBulleted = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path
+    d="M8 5h9M8 10h9M8 15h9"
+    stroke="currentColor"
+    stroke-width="1.25"
+    stroke-linecap="round"
+  />
+  <circle cx="4" cy="5" r="1" fill="currentColor"/>
+  <circle cx="4" cy="10" r="1" fill="currentColor"/>
+  <circle cx="4" cy="15" r="1" fill="currentColor"/>
 </svg>
 `;
 

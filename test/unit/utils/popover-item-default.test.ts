@@ -274,11 +274,14 @@ describe('PopoverItemDefault', () => {
     expect(secondary?.className).toContain('shrink-0');
   });
 
-  it('allows title to shrink below content when secondary label is present', () => {
+  it('does not truncate title text when secondary label is present', () => {
     const { element } = createItem({ secondaryLabel: '#####' });
     const title = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-title"]');
 
     expect(title).not.toBeNull();
-    expect(title?.className).toContain('min-w-0');
+    expect(title?.className).not.toContain('overflow-hidden');
+    expect(title?.className).not.toContain('text-ellipsis');
+    expect(title?.className).not.toContain('min-w-0');
+    expect(title?.className).toContain('whitespace-nowrap');
   });
 });

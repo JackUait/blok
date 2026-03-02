@@ -78,6 +78,14 @@ export interface PopoverParams {
    * Use 'auto' to fit content width.
    */
   width?: string;
+
+  /**
+   * Optional element whose left edge should be used for horizontal positioning.
+   * When provided, the popover's left position uses this element's left coordinate
+   * instead of the trigger's left. Useful for aligning the toolbox popover to the
+   * block content area rather than to the plus button.
+   */
+  leftAlignElement?: HTMLElement;
 }
 
 

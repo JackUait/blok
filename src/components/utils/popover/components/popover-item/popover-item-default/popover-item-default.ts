@@ -258,7 +258,7 @@ export class PopoverItemDefault extends PopoverItem {
       const titleEl = document.createElement('div');
 
       titleEl.className = params.secondaryLabel
-        ? 'grow min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium leading-5'
+        ? 'grow whitespace-nowrap text-sm font-medium leading-5'
         : 'mr-auto whitespace-nowrap text-sm font-medium leading-5';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');

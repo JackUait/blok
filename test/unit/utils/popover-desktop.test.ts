@@ -973,6 +973,57 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('leftAlignElement', () => {
+    it('uses leftAlignElement left edge for horizontal positioning instead of trigger', () => {
+      const trigger = document.createElement('button');
+      const leftAlignElement = document.createElement('div');
+
+      document.body.appendChild(trigger);
+      document.body.appendChild(leftAlignElement);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+      vi.spyOn(leftAlignElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 200, right: 600, width: 400, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+        leftAlignElement,
+      });
+
+      popover.show();
+
+      // Horizontal position should use leftAlignElement's left (200), not trigger's left (50)
+      expect(popover.getElement().style.left).toBe(`${200 + window.scrollX}px`);
+
+      trigger.remove();
+      leftAlignElement.remove();
+    });
+
+    it('falls back to trigger left when leftAlignElement is not provided', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+      });
+
+      popover.show();
+
+      // Horizontal position should use trigger's left (50) as before
+      expect(popover.getElement().style.left).toBe(`${50 + window.scrollX}px`);
+
+      trigger.remove();
+    });
+  });
+
   describe('nested popover trigger item refresh', () => {
     it('refreshes trigger item active state after click inside nested popover', () => {
       const isActiveFn = vi.fn(() => false);

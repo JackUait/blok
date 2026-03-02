@@ -146,6 +146,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private triggerElement?: HTMLElement;
 
   /**
+   * Optional element whose left edge is used for horizontal popover alignment.
+   */
+  private leftAlignElement?: HTMLElement;
+
+  /**
    * The block element currently being listened to for inline slash search
    */
   private currentBlockForSearch: HTMLElement | null = null;
@@ -169,13 +174,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param options.tools - Tools available to check whether some of them should be displayed at the Toolbox or not
    * @param options.i18n - I18n instance for translations
    * @param options.triggerElement - Element relative to which the popover should be positioned
+   * @param options.leftAlignElement - Element whose left edge is used for horizontal popover alignment
    */
-  constructor({ api, tools, i18nLabels, i18n, triggerElement }: {
+  constructor({ api, tools, i18nLabels, i18n, triggerElement, leftAlignElement }: {
     api: API;
     tools: ToolsCollection<BlockToolAdapter>;
     i18nLabels: Record<ToolboxTextLabelsKeys, string>;
     i18n: I18nInstance;
     triggerElement?: HTMLElement;
+    leftAlignElement?: HTMLElement;
   }) {
     super();
 
@@ -184,6 +191,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.i18nLabels = i18nLabels;
     this.i18n = i18n;
     this.triggerElement = triggerElement;
+    this.leftAlignElement = leftAlignElement;
 
     this.enableShortcuts();
 
@@ -346,6 +354,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.popover = new PopoverClass({
       scopeElement: this.api.ui.nodes.redactor,
       trigger: this.triggerElement || this.nodes.toolbox,
+      leftAlignElement: this.leftAlignElement,
       messages: {
         nothingFound: this.i18nLabels.nothingFound,
         search: this.i18nLabels.filter,

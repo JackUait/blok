@@ -61,6 +61,12 @@ export class PopoverDesktop extends PopoverAbstract {
   private trigger: HTMLElement | undefined;
 
   /**
+   * Optional element whose left edge is used for horizontal positioning
+   * instead of the trigger's left edge.
+   */
+  private leftAlignElement: HTMLElement | undefined;
+
+  /**
    * Popover size cache
    */
   private _size: { height: number; width: number } | undefined;
@@ -76,6 +82,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (params.trigger) {
       this.trigger = params.trigger;
+    }
+
+    if (params.leftAlignElement) {
+      this.leftAlignElement = params.leftAlignElement;
     }
 
     if (params.nestingLevel !== undefined) {
@@ -276,7 +286,7 @@ export class PopoverDesktop extends PopoverAbstract {
       (rect.top - offset - popoverRect.height > window.scrollY);
     const top = shouldFlipTop ? rect.top - offset - popoverRect.height + window.scrollY : initialTop;
 
-    const initialLeft = rect.left + window.scrollX;
+    const initialLeft = (this.leftAlignElement?.getBoundingClientRect().left ?? rect.left) + window.scrollX;
     const shouldFlipLeft = initialLeft + popoverRect.width > windowWidth + window.scrollX;
     const left = shouldFlipLeft ? Math.max(0, rect.right - popoverRect.width + window.scrollX) : initialLeft;
 

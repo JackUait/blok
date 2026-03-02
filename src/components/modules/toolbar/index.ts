@@ -834,6 +834,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       },
       i18n: this.Blok.I18n,
       triggerElement: this.nodes.plusButton,
+      leftAlignElement: this.nodes.content,
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {

@@ -12,13 +12,29 @@ Unlike traditional `contenteditable` solutions that treat text as a single HTML 
 
 **Key Features:**
 
-**🧱 Block Architecture**: Content is structured as JSON data, not raw HTML, making it easy to parse, store, and render anywhere.
+**🧱 Block Architecture** — Content is structured as JSON blocks, not HTML, making it easy to store, transform, and render on any platform.
 
-**⚡ Slash Commands**: Includes a built-in "Slash Menu" (/) for quick formatting and inserting media.
+**🛠️ Built-in Tools** — Ships with paragraph, header, list, table, and toggle blocks, plus inline formatting (bold, italic, link, marker) — all configurable.
 
-**🖱️ Drag & Drop**: Native support for rearranging blocks with intuitive handles.
+**⚡ Slash Commands & Markdown Shortcuts** — Type `/` to search and insert blocks, or use markdown syntax (`#`, `-`, `1.`, `[]`, `>`) that auto-converts on space.
 
-**🔌 Extensible Plugin System**: Easily create custom blocks to fit your specific use case.
+**🖱️ Drag & Drop** — Pointer-based block reordering with multi-block drag, Alt+drag to duplicate, auto-scroll near edges, and full keyboard accessibility.
+
+**🔄 CRDT-Powered History** — Undo/redo built on Yjs with caret restoration, smart edit grouping, and atomic transactions via `blocks.transact()`.
+
+**🌍 68 Locales & RTL** — Auto-detects browser language, lazy-loads locale data, and supports right-to-left languages out of the box.
+
+**🔌 Extensible Plugin System** — Three tool types (BlockTool, InlineTool, BlockTune) with lifecycle hooks, paste configs, conversion configs, and access to 17 public API modules.
+
+**📦 Pre-configured Bundles** — Import `@jackuait/blok/full` for batteries-included setup with `defaultTools` or `allTools`, or import individual tools for full control.
+
+**📋 Smart Paste** — Priority-based handler chain that preserves block structure on internal paste, cleans Google Docs HTML, and supports tool-specific file/pattern matching.
+
+**🔀 Block Conversion** — Convert between block types from the inline toolbar or programmatically, with multi-block batch conversion support.
+
+**👁️ Read-Only Mode** — Toggle at runtime with `readOnly.set()` — re-renders all blocks with editing UI hidden.
+
+**♿ Accessible** — ARIA live announcements for drag and block operations, full keyboard navigation (Notion-style vertical caret movement), and semantic data attributes throughout.
 
 ## Documentation
 

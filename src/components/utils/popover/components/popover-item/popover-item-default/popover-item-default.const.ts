@@ -10,7 +10,7 @@ export const css = {
    * Note: noHover state is handled via [data-blok-popover-item-no-hover] which disables hover
    * Priority order: active < hover < focus (focus wins when navigating with keyboard)
    */
-  item: 'flex items-center select-none border-none bg-transparent rounded-md px-2 py-(--item-padding) text-text-primary mb-px data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
+  item: 'flex items-center select-none border-none bg-transparent rounded-lg px-2 py-(--item-padding) text-text-primary mb-0.5 transition-colors duration-150 data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
 
   /**
    * Item disabled state
@@ -21,7 +21,7 @@ export const css = {
   /**
    * Icon container styles
    */
-  icon: 'flex items-center justify-center w-[26px] h-[26px] [&_svg]:w-icon [&_svg]:h-icon',
+  icon: 'flex items-center justify-center w-[26px] h-[26px] rounded-lg [&_svg]:w-icon [&_svg]:h-icon',
 
   /**
    * Focused state class for DomIterator/Flipper keyboard navigation.

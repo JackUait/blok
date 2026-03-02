@@ -211,11 +211,11 @@ export const IconWarning = `
 </svg>
 `;
 
-// Bulleted List icon
-export const IconListBulleted = `
+// Toggle List icon
+export const IconToggleList = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path
-    d="M8 5h9M8 10h9M8 15h9M4 5h.01M4 10h.01M4 15h.01"
+    d="M3 3l3 2-3 2M9 5h8M6 10h11M6 15h11"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -224,16 +224,28 @@ export const IconListBulleted = `
 </svg>
 `;
 
-// Numbered List icon
-export const IconListNumbered = `
+// Bulleted List icon
+export const IconListBulleted = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path
-    d="M8 5h9M8 10h9M8 15h9M3.5 4.5l1-1v3M3.5 9.5a1 1 0 1 1 2 0c0 .75-2 1.25-2 2h2M3.5 13.5h1a.75.75 0 0 1 0 1.5.75.75 0 0 1 0 1.5h-1"
+    d="M8 5h9M8 10h9M8 15h9"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
-    stroke-linejoin="round"
   />
+  <circle cx="4" cy="5" r="1" fill="currentColor"/>
+  <circle cx="4" cy="10" r="1" fill="currentColor"/>
+  <circle cx="4" cy="15" r="1" fill="currentColor"/>
+</svg>
+`;
+
+// Numbered List icon
+export const IconListNumbered = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 5h9M8 10h9M8 15h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <text x="4" y="6" fill="currentColor" font-size="5" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">1</text>
+  <text x="4" y="11" fill="currentColor" font-size="5" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">2</text>
+  <text x="4" y="16" fill="currentColor" font-size="5" font-family="sans-serif" text-anchor="middle" dominant-baseline="central">3</text>
 </svg>
 `;
 
@@ -347,5 +359,30 @@ export const IconTrash = `
   <path d="M8 6.5V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M6.5 6.5l.5 8.5a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1l.5-8.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M8.5 9.5v3.5M11.5 9.5v3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Toggle Heading 1 icon (H1 with toggle arrow)
+export const IconToggleH1 = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M2.5 10h5M2.5 15V5M7.5 15V5m3.5 5 2-1.5V15" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Toggle Heading 2 icon (H2 with toggle arrow)
+export const IconToggleH2 = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M2.5 10h5M2.5 15V5M7.5 15V5m7 10h-3c0-3 3-2.25 3-4.5 0-1.125-1.5-1.875-3-.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Toggle Heading 3 icon (H3 with toggle arrow)
+export const IconToggleH3 = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M2.5 10h5M2.5 15V5M7.5 15V5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11 8.5c1.25-.75 2.5-.25 2.5.75 0 .75-1 1.25-1 1.25s1 .5 1 1.25c0 1-1.25 1.5-2.5.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;

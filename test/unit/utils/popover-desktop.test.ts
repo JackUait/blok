@@ -909,6 +909,44 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('width consistency during search', () => {
+    it('locks --width to measured pixel value on show when width param is auto', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+          { title: 'Gamma', name: 'gamma', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 200, width: 250 });
+
+      expect(popover.getElement().style.getPropertyValue('--width')).toBe('auto');
+
+      popover.show();
+
+      expect(popover.getElement().style.getPropertyValue('--width')).toBe('250px');
+    });
+
+    it('does not override an explicit width param', () => {
+      const popover = createPopover({
+        width: '300px',
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 200, width: 300 });
+
+      popover.show();
+
+      expect(popover.getElement().style.getPropertyValue('--width')).toBe('300px');
+    });
+  });
+
   describe('nested popover trigger item refresh', () => {
     it('refreshes trigger item active state after click inside nested popover', () => {
       const isActiveFn = vi.fn(() => false);

@@ -67,6 +67,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       blockTools: new Map([
         ['list', { settings: {} }],
         ['header', { settings: { levels: [1, 2, 3, 4, 5, 6] } }],
+        ['toggle', { settings: {} }],
       ]),
     } as unknown as BlokModules['Tools'],
     YjsManager: {
@@ -496,6 +497,94 @@ describe('MarkdownShortcuts', () => {
           level: 3,
         })
       );
+    });
+  });
+
+  describe('toggle shortcut', () => {
+    it('converts "> " to toggle block', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '> ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'toggle',
+        expect.objectContaining({
+          text: '',
+        })
+      );
+      expect(stopCapturing).toHaveBeenCalledTimes(2);
+    });
+
+    it('preserves text content after toggle shortcut', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '> Some toggle text';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
+      expect(replaceCall[2].text).toBe('Some toggle text');
+    });
+
+    it('returns false when toggle tool is not available', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '> ';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['header', { settings: { levels: [1, 2, 3, 4, 5, 6] } }],
+            // No toggle tool
+          ]),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
     });
   });
 

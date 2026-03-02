@@ -1,5 +1,14 @@
-/* Tailwind CSS - must be first */
-@import 'tailwindcss';
+/*
+  Import Tailwind CSS sub-modules individually (without native @layer wrappers).
+  The default `@import 'tailwindcss'` wraps all output in @layer declarations,
+  which causes styles to lose to ANY un-layered consumer CSS — per the CSS spec,
+  un-layered styles always beat layered styles regardless of specificity.
+  Individual imports avoid this, making the library's styles work in real apps.
+  See: https://github.com/tailwindlabs/tailwindcss/discussions/13188
+*/
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/preflight.css';
+@import 'tailwindcss/utilities.css';
 
 /*
   Exclude non-source directories from Tailwind's automatic content detection.
@@ -47,6 +56,7 @@
   --color-item-focus-bg: rgba(34, 186, 255, 0.08);
   --color-item-focus-shadow: rgba(7, 161, 227, 0.08);
   --color-item-hover-bg: #f8f8f8;
+  --color-icon-bg: rgba(0, 0, 0, 0.04);
   --color-item-confirm-bg: #e24a4a;
   --color-item-confirm-hover-bg: #ce4343;
   --color-item-destructive-text: #e24a4a;
@@ -166,14 +176,12 @@
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
+*,
+::after,
+::before,
+::backdrop,
+::file-selector-button {
+  border-color: var(--color-gray-200, currentcolor);
 }
 
 /**
@@ -298,6 +306,19 @@
 
 [data-blok-table-cell-blocks] .blok-block {
   @apply p-0 m-0 min-h-[1.6em];
+}
+
+/**
+ * Exclude bare 'color' from transition-property inside table cells.
+ * StyleManager applies transition-colors (which includes 'color') for smooth
+ * selection-state changes, but inside table cells inherited text-color changes
+ * trigger a 150ms flash from black → target. Keep all other transition
+ * properties so background-color selection highlighting still animates.
+ */
+[data-blok-table-cell] [data-blok-element-content] {
+  transition-property: background-color, border-color, outline-color,
+    text-decoration-color, fill, stroke, --tw-gradient-from,
+    --tw-gradient-via, --tw-gradient-to;
 }
 
 /**

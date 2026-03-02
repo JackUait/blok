@@ -70,12 +70,12 @@ test.describe('multilingual tool search', () => {
     await initBlokWithFrenchLocale(page);
     await openToolboxAndSearch(page, 'h1');
 
-    // Should find exactly 1 item via "h1" alias (using data-blok-hidden attribute)
+    // Should find exactly 2 items via "h1" alias: "Heading 1" and "Toggle heading 1"
     const visibleItems = page.locator(VISIBLE_ITEM_SELECTOR);
-    await expect(visibleItems).toHaveCount(1);
+    await expect(visibleItems).toHaveCount(2);
 
-    // The item should be Heading 1 (either English "Heading 1" or French "Titre 1")
-    await expect(visibleItems).toContainText(/Heading 1|Titre 1/);
+    // The items should include Heading 1 and Toggle heading 1
+    await expect(visibleItems.filter({ hasText: /Heading 1|Titre 1/, hasNotText: 'Toggle' })).toHaveCount(1);
   });
 
   test('should find header tool by English name "heading" in French locale', async ({ page }) => {

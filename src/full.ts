@@ -30,6 +30,7 @@ export {
   Paragraph,
   Header,
   List,
+  Toggle,
   Bold,
   Italic,
   Link,

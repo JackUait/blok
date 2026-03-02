@@ -555,7 +555,7 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.getByTestId('block-tunes-popover').getByTestId('popover-item').filter({ hasText: 'Heading 1' });
+    const tuneOption = page.getByTestId('block-tunes-popover').getByTestId('popover-item').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
 
     await tuneOption.click();
 

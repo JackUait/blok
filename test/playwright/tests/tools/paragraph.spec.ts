@@ -354,7 +354,7 @@ test.describe('paragraph tool', () => {
       // hover and overlaps the trigger item, failing Playwright's intercept check
       await convertToOption.dispatchEvent('mouseover');
 
-      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`).filter({ hasText: 'Heading 1' });
+      const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`).filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
 
       await expect(headerOption).toBeVisible();
       await headerOption.click();

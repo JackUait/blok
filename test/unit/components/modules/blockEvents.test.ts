@@ -369,6 +369,54 @@ describe('BlockEvents', () => {
       wrapper.remove();
     });
 
+    it('calls moveAndOpen to reposition toolbar when "/" is pressed and toolbar is already open on a different block', () => {
+      const currentBlock = {
+        isEmpty: true,
+      } as unknown as Block;
+      const wrapper = document.createElement('div');
+      const target = document.createElement('div');
+      const insertContentAtCaretPosition = vi.fn();
+      const moveAndOpen = vi.fn();
+      const toolboxOpen = vi.fn();
+
+      wrapper.appendChild(target);
+      document.body.appendChild(wrapper);
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          currentBlock,
+          setCurrentBlockByChildNode: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        UI: {
+          nodes: {
+            wrapper,
+          },
+        } as unknown as BlokModules['UI'],
+        Caret: {
+          insertContentAtCaretPosition,
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          opened: true,
+          hideBlockActions: vi.fn(),
+          moveAndOpen,
+          toolbox: {
+            open: toolboxOpen,
+          },
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const event = createKeyboardEvent({
+        keyCode: keyCodes.SLASH,
+        key: '/',
+        target,
+      });
+
+      blockEvents.keydown(event);
+
+      expect(moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(toolboxOpen).toHaveBeenCalledTimes(1);
+
+      wrapper.remove();
+    });
+
     it('opens BlockSettings for Ctrl+Slash combination', () => {
       let blockSettingsOpened = false;
       const blockSettingsOpen = vi.fn().mockImplementation(async function(this: BlokModules['BlockSettings']) {

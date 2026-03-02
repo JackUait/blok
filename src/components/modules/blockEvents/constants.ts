@@ -63,3 +63,15 @@ export const ORDERED_LIST_PATTERN = /^(\d+)[.)]\s([\s\S]*)$/;
  * Captures remaining content after the shortcut in group 2
  */
 export const HEADER_PATTERN = /^(#{1,6})\s([\s\S]*)$/;
+
+/**
+ * Tool name for toggle blocks.
+ */
+export const TOGGLE_TOOL_NAME = 'toggle';
+
+/**
+ * Regex pattern for detecting toggle shortcuts.
+ * Matches ">" followed by a space at the start of text.
+ * Captures remaining content after the shortcut in group 1.
+ */
+export const TOGGLE_PATTERN = /^>\s([\s\S]*)$/;

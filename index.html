@@ -246,7 +246,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Bold, Italic, Link, Marker } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Bold, Italic, Link, Marker } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -262,6 +262,7 @@
         header: true,
         list: true,
         table: true,
+        toggle: true,
       },
     };
 
@@ -501,6 +502,42 @@
       },
       {
         type: "header",
+        id: "toggle-section-header",
+        data: {
+          text: "Toggle Blocks",
+          level: 2
+        }
+      },
+      {
+        id: "toggle-example-1",
+        type: "toggle",
+        data: {
+          text: "Click the arrow to expand this toggle"
+        }
+      },
+      {
+        id: "toggle-child-1",
+        type: "paragraph",
+        data: {
+          text: "This content is inside the toggle. It can contain any block type."
+        }
+      },
+      {
+        id: "toggle-example-2",
+        type: "toggle",
+        data: {
+          text: "Another toggle with nested content"
+        }
+      },
+      {
+        id: "toggle-child-2",
+        type: "paragraph",
+        data: {
+          text: "Toggles are great for FAQs, documentation, and collapsible sections."
+        }
+      },
+      {
+        type: "header",
         id: "table-section-header",
         data: {
           text: "Tables",
@@ -564,6 +601,7 @@
       if (state.tools.header) tools.header = { class: Header, placeholder: 'Header' };
       if (state.tools.list) tools.list = List;
       if (state.tools.table) tools.table = Table;
+      if (state.tools.toggle) tools.toggle = { class: Toggle, inlineToolbar: true };
 
       return {
         readOnly: state.readOnly,
@@ -696,6 +734,7 @@
       { key: 'header', label: 'Header', icon: Icons.IconHeading },
       { key: 'list', label: 'List', icon: Icons.IconListBulleted },
       { key: 'table', label: 'Table', icon: Icons.IconTable },
+      { key: 'toggle', label: 'Toggle', icon: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
     ];
 
     const toolTogglesContainer = document.getElementById('tool-toggles');

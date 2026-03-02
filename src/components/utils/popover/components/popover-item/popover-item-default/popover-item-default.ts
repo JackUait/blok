@@ -272,7 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'min-w-14 text-right whitespace-nowrap pl-3 pr-1.5 text-xs font-light tracking-[0.25px] text-text-secondary opacity-60';
+      secondaryEl.className = 'ml-auto flex items-center whitespace-nowrap pl-3 text-[11px] font-medium tracking-wide text-text-secondary/50';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;
@@ -326,8 +326,8 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
-      // Asymmetric padding: pr-8 for visual balance, pr-2 when secondary label or chevron occupies right edge
-      !isInline && !isNestedInline && (this.params.secondaryLabel || (this.hasChildren && !this.isChevronHidden) ? 'pl-2 pr-2' : 'pl-2 pr-8'),
+      // Asymmetric padding: pr-8 for visual balance, pr-4 when secondary label or chevron occupies right edge
+      !isInline && !isNestedInline && (this.params.secondaryLabel || (this.hasChildren && !this.isChevronHidden) ? 'pl-2 pr-4' : 'pl-2 pr-8'),
       isInline && cssInline.item,
       isNestedInline && cssNestedInline.item,
       this.params.isDisabled && css.itemDisabled
@@ -343,6 +343,7 @@ export class PopoverItemDefault extends PopoverItem {
       isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
       iconWithGap && 'mr-3',
+      iconWithGap && !isInline && 'bg-icon-bg',
       iconWithGap && isInline && 'shadow-none bg-transparent mr-0!',
       iconWithGap && isNestedInline && 'mr-2!',
       isWobbling && 'animate-wobble'

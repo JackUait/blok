@@ -5,19 +5,19 @@
  */
 export const css = {
   // Popover container - base styles
-  popoverContainer: 'absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-4 max-h-0 min-w-(--width) w-(--width) rounded-lg shadow-[0_3px_15px_-3px_var(--color-popover-shadow)] left-(--popover-left) top-(--popover-top) bg-popover-bg',
+  popoverContainer: 'absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-4 max-h-0 min-w-(--width) w-(--width) rounded-xl shadow-[0_4px_20px_-4px_var(--color-popover-shadow),0_0_0_0.5px_rgba(0,0,0,0.06)] left-(--popover-left) top-(--popover-top) bg-popover-bg',
 
   // Popover container - mobile styles (applied conditionally)
   // Reset left/top from base class since inset shorthand may not properly override them in twMerge
   popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] left-auto top-auto inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
 
   // Popover container - opened state
-  popoverContainerOpened: 'opacity-100 pointer-events-auto p-1 max-h-(--max-height) border border-popover-border animate-[panelShowing_100ms_ease]',
+  popoverContainerOpened: 'opacity-100 pointer-events-auto p-1.5 max-h-(--max-height) border border-popover-border animate-[panelShowing_100ms_ease]',
 
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
 
-  items: 'overflow-y-auto overscroll-contain',
+  items: 'overflow-y-auto overscroll-contain [scrollbar-gutter:stable] pr-1',
 };
 
 /**

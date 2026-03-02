@@ -14,6 +14,7 @@ import { translateToolTitle, type I18nInstance } from '../utils/tools';
 
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { DATA_ATTR } from '../constants';
 
 
 /**
@@ -311,6 +312,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.isInsideTableCell = false;
     }
 
+    this.stopListeningToBlockInput();
     this.popover?.hide();
     this.opened = false;
     this.emit(ToolboxEvent.Closed);
@@ -630,6 +632,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.currentBlockForSearch = currentBlock.holder;
     this.currentContentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
+    if (this.currentContentEditable instanceof HTMLElement) {
+      this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, '');
+    }
     this.listeners.on(this.currentBlockForSearch, 'input', this.handleBlockInput);
   }
 
@@ -639,6 +644,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private stopListeningToBlockInput(): void {
     if (this.currentBlockForSearch !== null) {
       this.listeners.off(this.currentBlockForSearch, 'input', this.handleBlockInput);
+      if (this.currentContentEditable instanceof HTMLElement) {
+        this.currentContentEditable.removeAttribute(DATA_ATTR.slashSearch);
+      }
       this.currentBlockForSearch = null;
       this.currentContentEditable = null;
     }

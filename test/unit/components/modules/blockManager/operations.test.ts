@@ -973,6 +973,33 @@ describe('BlockOperations', () => {
 
       expect(operations.currentBlockIndexValue).toBe(1);
     });
+
+    it('inherits parentId from the current block when splitting', () => {
+      // Setup parent-child relationship
+      const parentBlock = repository.getBlockById('block-1');
+      const childBlock = repository.getBlockById('block-2');
+      if (!parentBlock || !childBlock) {
+        throw new Error('Test setup failed: blocks not found');
+      }
+
+      // Make block-2 a child of block-1
+      hierarchy.setBlockParent(childBlock, 'block-1');
+
+      operations.currentBlockIndexValue = 1; // block-2
+      const newBlock = operations.splitBlockWithData(
+        'block-2',
+        { text: 'Remaining' },
+        'paragraph',
+        { text: 'Extracted' },
+        2,
+        blocksStore
+      );
+
+      // The new block should inherit the same parentId as block-2
+      expect(newBlock.parentId).toBe('block-1');
+      // The parent should have the new block in its contentIds
+      expect(parentBlock.contentIds).toContain(newBlock.id);
+    });
   });
 
   describe('convert', () => {

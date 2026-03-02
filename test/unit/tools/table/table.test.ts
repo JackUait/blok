@@ -236,17 +236,18 @@ describe('Table Tool', () => {
       expect(cells).toHaveLength(4);
     });
 
-    it('the ::after hover zone allows pointer events for proximity-based add-row detection', () => {
+    it('the ::after hover zone does not intercept pointer events (proximity detection uses coordinates)', () => {
       const options = createTableOptions();
       const table = new Table(options);
       const element = table.render();
 
       /**
        * The table wrapper has an ::after pseudo-element that extends 40px below
-       * the table for add-row button hover detection. It needs to respond to
-       * pointer events so the add-row button appears when approaching from below.
+       * the table. It must NOT intercept pointer events — the add-row proximity
+       * detection uses getBoundingClientRect() coordinates, not hit-testing.
+       * pointer-events-none ensures clicks below the table reach the editor.
        */
-      expect(element.classList.contains('after:pointer-events-none')).toBe(false);
+      expect(element.classList.contains('after:pointer-events-none')).toBe(true);
     });
   });
 

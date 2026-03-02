@@ -86,6 +86,9 @@ export class TableCellBlocks {
   /** Events deferred during structural operations, replayed or discarded afterward. */
   private deferredEvents: Array<unknown> = [];
 
+  /** When true, handleBlockMutation skips claiming so exitTableForward's new block stays outside the grid. */
+  private isExitingTable = false;
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -140,6 +143,12 @@ export class TableCellBlocks {
 
       return;
     }
+
+    // ArrowDown at last row -> exit table
+    if (event.key === 'ArrowDown' && position.row === this.getRowCount() - 1) {
+      event.preventDefault();
+      this.exitTableForward();
+    }
   }
 
   /**
@@ -161,7 +170,12 @@ export class TableCellBlocks {
 
     if (nextRow < this.getRowCount()) {
       this.navigateToCell({ row: nextRow, col: 0 });
+
+      return;
     }
+
+    // At the very last cell — exit the table by focusing or creating a block below
+    this.exitTableForward();
   }
 
   /**
@@ -182,7 +196,82 @@ export class TableCellBlocks {
 
     if (prevRow >= 0) {
       this.navigateToCell({ row: prevRow, col: this.getColumnCount() - 1 }, true);
+
+      return;
     }
+
+    // At the very first cell — exit the table by focusing the block above
+    this.exitTableBackward();
+  }
+
+  /**
+   * Exit the table by focusing the first block after it, or creating one if none exists.
+   */
+  private exitTableForward(): void {
+    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
+
+    if (tableIndex === undefined) {
+      return;
+    }
+
+    const blockAfterTable = this.findFirstBlockAfterTable(tableIndex);
+
+    if (blockAfterTable !== null) {
+      this.api.caret.setToBlock(blockAfterTable.id, 'start');
+
+      return;
+    }
+
+    /**
+     * No block after the table — create a new default block.
+     * Set isExitingTable so handleBlockMutation does not claim the new block
+     * into a cell (the block-added event fires synchronously during insert).
+     */
+    this.isExitingTable = true;
+
+    try {
+      const totalBlocks = this.api.blocks.getBlocksCount();
+      const newBlock = this.api.blocks.insert(undefined, {}, {}, totalBlocks, true);
+
+      this.api.caret.setToBlock(newBlock.id, 'start');
+    } finally {
+      this.isExitingTable = false;
+    }
+  }
+
+  /**
+   * Exit the table backward by focusing the block before the table.
+   * If no block exists before the table, do nothing.
+   */
+  private exitTableBackward(): void {
+    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
+
+    if (tableIndex === undefined || tableIndex === 0) {
+      return;
+    }
+
+    // The block immediately before the table in the flat array
+    const blockBefore = this.api.blocks.getBlockByIndex(tableIndex - 1);
+
+    if (blockBefore) {
+      this.api.caret.setToBlock(blockBefore.id, 'end');
+    }
+  }
+
+  /**
+   * Scan the flat block array starting after the table block, skipping all blocks
+   * whose holder is inside the table grid, and return the first non-child block.
+   * Returns null if no such block exists.
+   */
+  private findFirstBlockAfterTable(tableIndex: number): { id: string } | null {
+    const totalBlocks = this.api.blocks.getBlocksCount();
+    const candidates = Array.from({ length: totalBlocks - tableIndex - 1 }, (_, offset) =>
+      this.api.blocks.getBlockByIndex(tableIndex + 1 + offset)
+    );
+
+    return candidates.find(block =>
+      block !== null && block !== undefined && !this.gridElement.contains(block.holder)
+    ) ?? null;
   }
 
   /**
@@ -478,6 +567,10 @@ export class TableCellBlocks {
     if (this.isStructuralOpActive()) {
       this.deferredEvents.push(data);
 
+      return;
+    }
+
+    if (this.isExitingTable) {
       return;
     }
 

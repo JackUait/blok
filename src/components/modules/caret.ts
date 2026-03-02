@@ -682,6 +682,35 @@ export class Caret extends Module {
     }
 
     /**
+     * If current block is inside a table cell (has parentId), check if we should
+     * exit the table. This handles two cases:
+     * 1. nextBlock is still in the same table → skip all cell paragraphs
+     * 2. nextBlock is null (last block in flat list) → table is at the end
+     */
+    const shouldExitParent = currentBlock.parentId !== null && (
+      nextBlock === null ||
+      nextBlock.parentId === currentBlock.parentId ||
+      nextBlock.id === currentBlock.parentId
+    );
+
+    if (shouldExitParent) {
+      const blockAfterTable = this.findFirstBlockAfterParent(currentBlock.parentId);
+
+      if (blockAfterTable !== null) {
+        this.setToBlockAtXPosition(blockAfterTable, caretX, true);
+
+        return true;
+      }
+
+      // No block after table — create one
+      const newBlock = BlockManager.insertAtEnd();
+
+      this.setToBlock(newBlock, this.positions.START);
+
+      return true;
+    }
+
+    /**
      * Navigate to next block, preserving horizontal position
      */
     if (nextBlock !== null) {
@@ -771,6 +800,22 @@ export class Caret extends Module {
     }
 
     return false;
+  }
+
+  /**
+   * Find the first block after a parent block (e.g., a table) by scanning the flat
+   * block array and skipping blocks whose parentId matches.
+   */
+  private findFirstBlockAfterParent(parentBlockId: string): Block | null {
+    const { BlockManager } = this.Blok;
+    const blocks = BlockManager.blocks;
+    const parentIndex = blocks.findIndex(b => b.id === parentBlockId);
+
+    if (parentIndex === -1) {
+      return null;
+    }
+
+    return blocks.slice(parentIndex + 1).find(b => b.parentId !== parentBlockId) ?? null;
   }
 
   /**

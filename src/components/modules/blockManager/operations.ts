@@ -257,6 +257,19 @@ export class BlockOperations {
     blocksStore.insert(targetIndex, block, replace, appendToWorkingArea);
 
     /**
+     * Update currentBlockIndex BEFORE firing the mutation event so that
+     * listeners (e.g. TableCellBlocks.handleBlockMutation) see the index
+     * of the newly inserted block, not the stale previous value.
+     */
+    if (needToFocus) {
+      this.currentBlockIndexValue = targetIndex;
+    }
+
+    if (!needToFocus && targetIndex <= this.currentBlockIndex) {
+      this.currentBlockIndexValue++;
+    }
+
+    /**
      * Force call of didMutated event on Block insertion
      */
     this.blockDidMutated(BlockAddedMutationType, block, {
@@ -275,14 +288,6 @@ export class BlockOperations {
         data: block.preservedData,
         parent: block.parentId ?? undefined,
       }, targetIndex);
-    }
-
-    if (needToFocus) {
-      this.currentBlockIndexValue = targetIndex;
-    }
-
-    if (!needToFocus && targetIndex <= this.currentBlockIndex) {
-      this.currentBlockIndexValue++;
     }
 
     return block;

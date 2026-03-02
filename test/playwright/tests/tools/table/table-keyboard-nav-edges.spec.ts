@@ -164,7 +164,7 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('Tab at the very last cell does not move focus outside the table', async ({ page }) => {
+  test('Tab at the very last cell exits the table to the block below', async ({ page }) => {
     // 1. Initialize editor with a 2x2 table and a paragraph block after it
     await createBlok(page, {
       tools: defaultTools,
@@ -192,16 +192,14 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     // 3. Press Tab
     await page.keyboard.press('Tab');
 
-    // Verify focus does not escape the table - activeElement must still be inside a table cell
+    // Verify focus exits the table — activeElement should be outside all table cells
     const focusedCellIndex = await getFocusedCellIndex(page);
 
-    // -2 means focus left the table entirely (e.g., moved to the paragraph block)
-    expect(focusedCellIndex).not.toBe(-2);
-    // -1 means no activeElement at all
-    expect(focusedCellIndex).not.toBe(-1);
+    // -2 means focus left the table — this is now the expected behavior
+    expect(focusedCellIndex).toBe(-2);
   });
 
-  test('Shift+Tab at the very first cell does not move focus outside the table', async ({ page }) => {
+  test('Shift+Tab at the very first cell exits the table to the block above', async ({ page }) => {
     // 1. Initialize editor with a paragraph block before a 2x2 table
     await createBlok(page, {
       tools: defaultTools,
@@ -229,13 +227,11 @@ test.describe('Keyboard Navigation Edge Cases', () => {
     // 3. Press Shift+Tab
     await page.keyboard.press('Shift+Tab');
 
-    // Verify focus does not escape the table - activeElement must still be inside a table cell
+    // Verify focus exits the table — activeElement should be outside all table cells
     const focusedCellIndex = await getFocusedCellIndex(page);
 
-    // -2 means focus left the table entirely (e.g., moved to the paragraph block before)
-    expect(focusedCellIndex).not.toBe(-2);
-    // -1 means no activeElement at all
-    expect(focusedCellIndex).not.toBe(-1);
+    // -2 means focus left the table — this is now the expected behavior
+    expect(focusedCellIndex).toBe(-2);
   });
 
   test('Enter key creates a new block within the cell, not a new row', async ({ page }) => {

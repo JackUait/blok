@@ -265,4 +265,20 @@ describe('PopoverItemDefault', () => {
     expect(icon).not.toBeNull();
     expect(icon?.className).toContain('shrink-0');
   });
+
+  it('prevents secondary label from shrinking so shortcuts stay right-aligned', () => {
+    const { element } = createItem({ secondaryLabel: '#####' });
+    const secondary = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-secondary-title"]');
+
+    expect(secondary).not.toBeNull();
+    expect(secondary?.className).toContain('shrink-0');
+  });
+
+  it('allows title to shrink below content when secondary label is present', () => {
+    const { element } = createItem({ secondaryLabel: '#####' });
+    const title = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-title"]');
+
+    expect(title).not.toBeNull();
+    expect(title?.className).toContain('min-w-0');
+  });
 });

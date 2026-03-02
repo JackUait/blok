@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Προσθήκη μπλοκ",
   "toolbox.optionAddAbove": "⌥ — προσθήκη πάνω",
   "toolbox.ctrlAddAbove": "Ctrl — προσθήκη πάνω",
+  "toolbox.typeToSearch": "Πληκτρολογήστε για αναζήτηση",
   "popover.search": "Αναζήτηση",
   "popover.nothingFound": "Δεν βρέθηκαν αποτελέσματα",
   "popover.convertTo": "Μετατροπή σε",

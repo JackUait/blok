@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Кликните за додавање испод",
   "toolbox.optionAddAbove": "Option-клик за додавање изнад",
   "toolbox.ctrlAddAbove": "Ctrl-клик за додавање изнад",
+  "toolbox.typeToSearch": "Унесите за претрагу",
   "popover.search": "Претрага",
   "popover.nothingFound": "Ништа није пронађено",
   "popover.convertTo": "Претвори у",

@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Klikk for å legge til nedenfor",
   "toolbox.optionAddAbove": "Option-klikk for å legge til ovenfor",
   "toolbox.ctrlAddAbove": "Ctrl-klikk for å legge til ovenfor",
+  "toolbox.typeToSearch": "Skriv for å søke",
   "popover.search": "Søk",
   "popover.nothingFound": "Ingen treff",
   "popover.convertTo": "Konverter til",

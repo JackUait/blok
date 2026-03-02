@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Klõpsa alla lisamiseks",
   "toolbox.optionAddAbove": "Option-klõps lisab üles",
   "toolbox.ctrlAddAbove": "Ctrl-klõps lisab üles",
+  "toolbox.typeToSearch": "Sisestage otsimiseks",
   "popover.search": "Otsi",
   "popover.nothingFound": "Midagi ei leitud",
   "popover.convertTo": "Teisenda",

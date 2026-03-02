@@ -4,6 +4,7 @@
   "toolbox.addBelow": "คลิกเพื่อเพิ่มด้านล่าง",
   "toolbox.optionAddAbove": "⌥ คลิกเพื่อเพิ่มด้านบน",
   "toolbox.ctrlAddAbove": "Ctrl คลิกเพื่อเพิ่มด้านบน",
+  "toolbox.typeToSearch": "พิมพ์เพื่อค้นหา",
   "popover.search": "ค้นหา",
   "popover.nothingFound": "ไม่พบผลลัพธ์",
   "popover.convertTo": "แปลงเป็น",

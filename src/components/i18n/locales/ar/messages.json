@@ -4,6 +4,7 @@
   "toolbox.addBelow": "إضافة كتلة",
   "toolbox.optionAddAbove": "⌥ — إضافة أعلى",
   "toolbox.ctrlAddAbove": "Ctrl — إضافة أعلى",
+  "toolbox.typeToSearch": "اكتب للبحث",
   "popover.search": "بحث",
   "popover.nothingFound": "لا توجد نتائج",
   "popover.convertTo": "تحويل إلى",

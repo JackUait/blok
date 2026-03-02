@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Noklikšķiniet, lai pievienotu zemāk",
   "toolbox.optionAddAbove": "Option-klikšķis pievieno augšā",
   "toolbox.ctrlAddAbove": "Ctrl-klikšķis pievieno augšā",
+  "toolbox.typeToSearch": "Rakstiet, lai meklētu",
   "popover.search": "Meklēt",
   "popover.nothingFound": "Nekas nav atrasts",
   "popover.convertTo": "Pārvērst par",

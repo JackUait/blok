@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Kliknutím pridáte nižšie",
   "toolbox.optionAddAbove": "Option-klik pridá vyššie",
   "toolbox.ctrlAddAbove": "Ctrl-klik pridá vyššie",
+  "toolbox.typeToSearch": "Zadajte hľadaný výraz",
   "popover.search": "Hľadať",
   "popover.nothingFound": "Nič sa nenašlo",
   "popover.convertTo": "Konvertovať na",

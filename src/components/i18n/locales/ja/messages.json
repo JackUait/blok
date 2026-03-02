@@ -4,6 +4,7 @@
   "toolbox.addBelow": "ブロックを追加",
   "toolbox.optionAddAbove": "⌥ 上に追加",
   "toolbox.ctrlAddAbove": "Ctrl 上に追加",
+  "toolbox.typeToSearch": "入力して検索",
   "popover.search": "検索",
   "popover.nothingFound": "見つかりません",
   "popover.convertTo": "変換",

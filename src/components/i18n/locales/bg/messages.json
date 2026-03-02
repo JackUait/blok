@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Щракнете за добавяне отдолу",
   "toolbox.optionAddAbove": "Option-щракване за добавяне отгоре",
   "toolbox.ctrlAddAbove": "Ctrl-щракване за добавяне отгоре",
+  "toolbox.typeToSearch": "Въведете за търсене",
   "popover.search": "Търсене",
   "popover.nothingFound": "Нищо не е намерено",
   "popover.convertTo": "Конвертиране в",

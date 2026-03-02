@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Aggiungi blocco",
   "toolbox.optionAddAbove": "⌥ — aggiungi sopra",
   "toolbox.ctrlAddAbove": "Ctrl — aggiungi sopra",
+  "toolbox.typeToSearch": "Digita per cercare",
   "popover.search": "Cerca",
   "popover.nothingFound": "Nessun risultato",
   "popover.convertTo": "Converti in",

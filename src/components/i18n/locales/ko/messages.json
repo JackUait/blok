@@ -4,6 +4,7 @@
   "toolbox.addBelow": "블록 추가",
   "toolbox.optionAddAbove": "⌥ 위에 추가",
   "toolbox.ctrlAddAbove": "Ctrl 위에 추가",
+  "toolbox.typeToSearch": "검색어를 입력하세요",
   "popover.search": "검색",
   "popover.nothingFound": "검색 결과 없음",
   "popover.convertTo": "변환",

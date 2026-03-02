@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Blokk hozzáadása",
   "toolbox.optionAddAbove": "⌥ — hozzáadás fölé",
   "toolbox.ctrlAddAbove": "Ctrl — hozzáadás fölé",
+  "toolbox.typeToSearch": "Írjon a kereséshez",
   "popover.search": "Keresés",
   "popover.nothingFound": "Nincs találat",
   "popover.convertTo": "Átalakítás",

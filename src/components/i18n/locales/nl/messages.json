@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Blok toevoegen",
   "toolbox.optionAddAbove": "⌥ — erboven invoegen",
   "toolbox.ctrlAddAbove": "Ctrl — erboven invoegen",
+  "toolbox.typeToSearch": "Typ om te zoeken",
   "popover.search": "Zoeken",
   "popover.nothingFound": "Niets gevonden",
   "popover.convertTo": "Omzetten naar",

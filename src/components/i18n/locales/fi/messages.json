@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Napsauta lisätäksesi alle",
   "toolbox.optionAddAbove": "Option-napsautus lisää yläpuolelle",
   "toolbox.ctrlAddAbove": "Ctrl-napsautus lisää yläpuolelle",
+  "toolbox.typeToSearch": "Kirjoita hakeaksesi",
   "popover.search": "Haku",
   "popover.nothingFound": "Ei tuloksia",
   "popover.convertTo": "Muunna muotoon",

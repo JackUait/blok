@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Přidat blok",
   "toolbox.optionAddAbove": "⌥ — přidat nad",
   "toolbox.ctrlAddAbove": "Ctrl — přidat nad",
+  "toolbox.typeToSearch": "Zadejte hledaný výraz",
   "popover.search": "Hledat",
   "popover.nothingFound": "Nic nenalezeno",
   "popover.convertTo": "Převést na",

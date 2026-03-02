@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Adaugă bloc",
   "toolbox.optionAddAbove": "⌥ — adaugă deasupra",
   "toolbox.ctrlAddAbove": "Ctrl — adaugă deasupra",
+  "toolbox.typeToSearch": "Tastați pentru a căuta",
   "popover.search": "Căutare",
   "popover.nothingFound": "Niciun rezultat",
   "popover.convertTo": "Convertește în",

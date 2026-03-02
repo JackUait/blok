@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Добавить блок",
   "toolbox.optionAddAbove": "⌥ — добавить выше",
   "toolbox.ctrlAddAbove": "Ctrl — добавить выше",
+  "toolbox.typeToSearch": "Введите для поиска",
   "popover.search": "Поиск",
   "popover.nothingFound": "Ничего не найдено",
   "popover.convertTo": "Преобразовать в",

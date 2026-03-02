@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Blok ekle",
   "toolbox.optionAddAbove": "⌥ Üstüne ekle",
   "toolbox.ctrlAddAbove": "Ctrl Üstüne ekle",
+  "toolbox.typeToSearch": "Aramak için yazın",
   "popover.search": "Ara",
   "popover.nothingFound": "Sonuç bulunamadı",
   "popover.convertTo": "Dönüştür",

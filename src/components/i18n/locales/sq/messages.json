@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Kliko për të shtuar poshtë",
   "toolbox.optionAddAbove": "Option-kliko për të shtuar sipër",
   "toolbox.ctrlAddAbove": "Ctrl-kliko për të shtuar sipër",
+  "toolbox.typeToSearch": "Shkruani për të kërkuar",
   "popover.search": "Kërko",
   "popover.nothingFound": "Nuk u gjet asgjë",
   "popover.convertTo": "Konverto në",

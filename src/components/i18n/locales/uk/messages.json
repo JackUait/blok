@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Додати блок",
   "toolbox.optionAddAbove": "⌥ — додати вище",
   "toolbox.ctrlAddAbove": "Ctrl — додати вище",
+  "toolbox.typeToSearch": "Введіть для пошуку",
   "popover.search": "Пошук",
   "popover.nothingFound": "Нічого не знайдено",
   "popover.convertTo": "Перетворити на",

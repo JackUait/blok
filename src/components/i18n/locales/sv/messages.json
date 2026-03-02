@@ -4,6 +4,7 @@
   "toolbox.addBelow": "Lägg till block",
   "toolbox.optionAddAbove": "⌥ — lägg till ovanför",
   "toolbox.ctrlAddAbove": "Ctrl — lägg till ovanför",
+  "toolbox.typeToSearch": "Skriv för att söka",
   "popover.search": "Sök",
   "popover.nothingFound": "Inget hittades",
   "popover.convertTo": "Omvandla till",

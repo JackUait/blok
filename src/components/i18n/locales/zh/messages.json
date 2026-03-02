@@ -4,6 +4,7 @@
   "toolbox.addBelow": "添加内容块",
   "toolbox.optionAddAbove": "⌥ 在上方添加",
   "toolbox.ctrlAddAbove": "Ctrl 在上方添加",
+  "toolbox.typeToSearch": "输入以搜索",
   "popover.search": "搜索",
   "popover.nothingFound": "未找到结果",
   "popover.convertTo": "转换为",

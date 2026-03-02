@@ -4,6 +4,7 @@
   "toolbox.addBelow": "အောက်တွင် ထည့်ရန် နှိပ်ပါ",
   "toolbox.optionAddAbove": "အပေါ်တွင် ထည့်ရန် Option-နှိပ်ပါ",
   "toolbox.ctrlAddAbove": "အပေါ်တွင် ထည့်ရန် Ctrl-နှိပ်ပါ",
+  "toolbox.typeToSearch": "ရှာဖွေရန် စာရိုက်ပါ",
   "popover.search": "ရှာဖွေရန်",
   "popover.nothingFound": "ဘာမှမတွေ့ပါ",
   "popover.convertTo": "သို့ပြောင်းရန်",

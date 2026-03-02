@@ -56,10 +56,20 @@ describe('ToggleItem shortcuts', () => {
   });
 
   describe('static shortcut', () => {
-    it('exposes CMD+ALT+7 as the block creation shortcut', async () => {
+    it('does not define a keyboard shortcut', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
-      expect(ToggleItem.shortcut).toBe('CMD+ALT+7');
+      expect(ToggleItem.shortcut).toBeUndefined();
+    });
+  });
+
+  describe('toolbox config', () => {
+    it('shows > as the shortcut hint in the toolbox', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const toolbox = ToggleItem.toolbox as { shortcut?: string };
+
+      expect(toolbox.shortcut).toBe('>');
     });
   });
 

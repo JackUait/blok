@@ -229,10 +229,6 @@ export class ToggleItem implements BlockTool {
     }
   }
 
-  public static get shortcut(): string {
-    return 'CMD+ALT+7';
-  }
-
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconToggleList,
@@ -240,6 +236,7 @@ export class ToggleItem implements BlockTool {
       titleKey: 'toggleList',
       name: TOOL_NAME,
       searchTerms: ['toggle', 'collapse', 'expand', 'accordion'],
+      shortcut: '>',
     };
   }
 

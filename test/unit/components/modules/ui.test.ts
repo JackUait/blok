@@ -10,6 +10,8 @@ import * as Dom from "../../../../src/components/dom";
 import { mobileScreenBreakpoint } from "../../../../src/components/utils";
 import { SelectionUtils } from "../../../../src/components/selection/index";
 import type { BlokConfig } from "../../../../types";
+import type { API } from "../../../../types";
+import { ToggleShortcuts } from "../../../../src/tools/toggle/toggle-shortcuts";
 
 const fakeCssContent = ".mock-style{}";
 
@@ -17,6 +19,20 @@ vi.mock(
   "../../../../src/components/styles/main.css?inline",
   () => fakeCssContent,
 );
+
+const mockRegister = vi.fn();
+const mockUnregister = vi.fn();
+
+vi.mock("../../../../src/tools/toggle/toggle-shortcuts", () => {
+  const MockToggleShortcuts = vi.fn(function (this: { register: typeof mockRegister; unregister: typeof mockUnregister }) {
+    this.register = mockRegister;
+    this.unregister = mockUnregister;
+  });
+
+  return {
+    ToggleShortcuts: MockToggleShortcuts,
+  };
+});
 
 const createBlokStub = (): UI["Blok"] => {
   const blockSettingsWrapper = document.createElement("div");
@@ -95,6 +111,9 @@ const createBlokStub = (): UI["Blok"] => {
     },
     ReadOnly: {
       isEnabled: false,
+    },
+    API: {
+      methods: {} as API,
     },
     InlineToolbarAPI: {},
     BlockSettingsAPI: {},
@@ -189,6 +208,9 @@ describe("UI module", () => {
     document.body.innerHTML = "";
     document.head.innerHTML = "";
     vi.restoreAllMocks();
+    mockRegister.mockClear();
+    mockUnregister.mockClear();
+    vi.mocked(ToggleShortcuts).mockClear();
     // Restore requestIdleCallback to its original state
     if (typeof window.requestIdleCallback === "undefined") {
       Object.defineProperty(window, "requestIdleCallback", {
@@ -921,6 +943,39 @@ describe("UI module", () => {
       expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
       expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
       expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("ToggleShortcuts", () => {
+    it("registers ToggleShortcuts during prepare()", async () => {
+      const { ui, blok } = createUI({ attachNodes: false });
+
+      await ui.prepare();
+
+      // Verify ToggleShortcuts was constructed with the API methods and wrapper node
+      expect(ToggleShortcuts).toHaveBeenCalledTimes(1);
+      expect(ToggleShortcuts).toHaveBeenCalledWith(
+        blok.API.methods,
+        (ui as { nodes: UI["nodes"] }).nodes.wrapper,
+      );
+
+      // Verify register() was called
+      expect(mockRegister).toHaveBeenCalledTimes(1);
+    });
+
+    it("unregisters ToggleShortcuts during destroy()", () => {
+      const { ui } = createUI();
+
+      // Simulate that ToggleShortcuts was already set up (as prepare() would do)
+      const toggleShortcutsInstance = { register: mockRegister, unregister: mockUnregister };
+
+      (ui as unknown as { toggleShortcuts: typeof toggleShortcutsInstance }).toggleShortcuts =
+        toggleShortcutsInstance;
+
+      ui.destroy();
+
+      // Verify unregister() was called
+      expect(mockUnregister).toHaveBeenCalledTimes(1);
     });
   });
 });

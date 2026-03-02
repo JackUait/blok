@@ -22,6 +22,7 @@ import { KeyboardController } from './uiControllers/controllers/keyboard';
 import { SelectionController } from './uiControllers/controllers/selection';
 import { createDocumentClickedHandler } from './uiControllers/handlers/click';
 import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
+import { ToggleShortcuts } from '../../tools/toggle/toggle-shortcuts';
 
 /**
  * HTML Elements used for UI
@@ -56,6 +57,7 @@ export class UI extends Module<UINodes> {
   private keyboardController: KeyboardController | null = null;
   private selectionController: SelectionController | null = null;
   private blockHoverController: BlockHoverController | null = null;
+  private toggleShortcuts: ToggleShortcuts | null = null;
 
   /**
    * Handlers for simple event behaviors
@@ -157,6 +159,15 @@ export class UI extends Module<UINodes> {
      * Initialize controllers after Blok modules are ready
      */
     this.initializeControllers();
+
+    /**
+     * Register toggle shortcuts (CMD+ALT+T) for collapsing/expanding all toggle blocks
+     */
+    this.toggleShortcuts = new ToggleShortcuts(
+      this.Blok.API.methods,
+      this.nodes.wrapper
+    );
+    this.toggleShortcuts.register();
 
     /**
      * Enable selection controller after initialization.
@@ -343,6 +354,7 @@ export class UI extends Module<UINodes> {
    * Clean blok`s UI
    */
   public destroy(): void {
+    this.toggleShortcuts?.unregister();
     this.nodes.holder.innerHTML = '';
 
     this.unbindReadOnlyInsensitiveListeners();

@@ -682,6 +682,39 @@ export class Caret extends Module {
     }
 
     /**
+     * If current block is inside a table cell (has parentId), check if the next
+     * block is also in the same table. If so, skip past all cell paragraphs to
+     * the first block after the table, or create one if none exists.
+     */
+    if (currentBlock.parentId !== null && nextBlock !== null) {
+      const isNextBlockInSameTable = nextBlock.parentId === currentBlock.parentId
+        || nextBlock.id === currentBlock.parentId;
+
+      if (isNextBlockInSameTable) {
+        const blockAfterTable = this.findFirstBlockAfterParent(currentBlock.parentId);
+
+        if (blockAfterTable !== null) {
+          this.setToBlockAtXPosition(blockAfterTable, caretX, true);
+
+          return true;
+        }
+
+        // No block after table — create one if at end of input
+        const isAtEnd = currentInput !== undefined ? isCaretAtEndOfInput(currentInput) : true;
+
+        if (isAtEnd) {
+          const newBlock = BlockManager.insertAtEnd();
+
+          this.setToBlock(newBlock, this.positions.START);
+
+          return true;
+        }
+
+        return false;
+      }
+    }
+
+    /**
      * Navigate to next block, preserving horizontal position
      */
     if (nextBlock !== null) {
@@ -771,6 +804,30 @@ export class Caret extends Module {
     }
 
     return false;
+  }
+
+  /**
+   * Find the first block after a parent block (e.g., a table) by scanning the flat
+   * block array and skipping blocks whose parentId matches.
+   */
+  private findFirstBlockAfterParent(parentBlockId: string): Block | null {
+    const { BlockManager } = this.Blok;
+    const blocks = BlockManager.blocks;
+    const parentIndex = blocks.findIndex(b => b.id === parentBlockId);
+
+    if (parentIndex === -1) {
+      return null;
+    }
+
+    for (let i = parentIndex + 1; i < blocks.length; i++) {
+      const block = blocks[i];
+
+      if (block.parentId !== parentBlockId) {
+        return block;
+      }
+    }
+
+    return null;
   }
 
   /**

@@ -3252,7 +3252,7 @@ describe('Table Tool', () => {
       } as never);
     };
 
-    it('focuses the first cell contenteditable after rendered() for a new table', () => {
+    it('selects the first cell with blue border after rendered() for a new table', () => {
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
         data: { withHeadings: false, withHeadingColumn: false, content: [] },
         config: {},
@@ -3267,11 +3267,35 @@ describe('Table Tool', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      const firstCell = element.querySelector('[data-blok-table-cell]');
-      const firstEditable = firstCell?.querySelector('[contenteditable="true"]');
+      const selectedCells = element.querySelectorAll('[data-blok-table-cell-selected]');
 
-      expect(firstEditable).not.toBeNull();
-      expect(firstEditable).toHaveFocus();
+      expect(selectedCells).toHaveLength(1);
+
+      const firstCell = element.querySelector('[data-blok-table-cell]');
+
+      expect(firstCell).toHaveAttribute('data-blok-table-cell-selected');
+
+      document.body.removeChild(element);
+    });
+
+    it('does not focus cell contenteditable for a new table (selection overlay used instead)', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [] },
+        config: {},
+        api: createMockApiWithEditableBlocks(),
+        readOnly: false,
+        block: { id: 'table-new' } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const firstEditable = element.querySelector('[contenteditable="true"]');
+
+      expect(firstEditable).not.toHaveFocus();
 
       document.body.removeChild(element);
     });

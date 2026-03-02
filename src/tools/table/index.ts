@@ -405,9 +405,7 @@ export class Table implements BlockTool {
     applyCellColors(gridEl, this.model.snapshot().content);
 
     if (this.isNewTable) {
-      const firstEditable = gridEl.querySelector<HTMLElement>('[contenteditable="true"]');
-
-      firstEditable?.focus();
+      this.cellSelection?.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
     }
   }
 

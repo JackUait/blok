@@ -188,7 +188,7 @@ test.describe('Toggle Headings', () => {
       await openBlockTunesViaToolbar(page);
 
       // Find the "Toggle heading" option
-      const toggleOption = page.locator(POPOVER_ITEM_SELECTOR).filter({ hasText: 'Toggle heading' });
+      const toggleOption = page.locator(POPOVER_ITEM_SELECTOR).filter({ hasText: 'Toggle heading', hasNotText: /Toggle heading \d/ });
 
       await expect(toggleOption).toBeVisible();
       await toggleOption.click();
@@ -212,7 +212,7 @@ test.describe('Toggle Headings', () => {
       await openBlockTunesViaToolbar(page);
 
       // Click toggle heading to disable it
-      const toggleOption = page.locator(POPOVER_ITEM_SELECTOR).filter({ hasText: 'Toggle heading' });
+      const toggleOption = page.locator(POPOVER_ITEM_SELECTOR).filter({ hasText: 'Toggle heading', hasNotText: /Toggle heading \d/ });
 
       await toggleOption.click();
 

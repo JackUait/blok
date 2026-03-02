@@ -242,7 +242,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1' });
+      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
 
       await h1Option.click();
 
@@ -258,7 +258,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h3Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 3' });
+      const h3Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 3', hasNotText: 'Toggle' });
 
       await h3Option.click();
 
@@ -274,7 +274,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 4' });
+      const h4Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 4', hasNotText: 'Toggle' });
 
       await h4Option.click();
 
@@ -290,7 +290,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h5Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 5' });
+      const h5Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 5', hasNotText: 'Toggle' });
 
       await h5Option.click();
 
@@ -306,7 +306,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h6Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 6' });
+      const h6Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 6', hasNotText: 'Toggle' });
 
       await h6Option.click();
 
@@ -324,7 +324,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1' });
+      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
 
       await h1Option.click();
 
@@ -486,11 +486,11 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 4' });
+      const h4Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 4', hasNotText: 'Toggle' });
 
       await h4Option.click();
 
-       
+
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
@@ -509,7 +509,7 @@ test.describe('header Tool', () => {
       await openBlockTunesViaToolbar(page);
 
       for (let level = 1; level <= 6; level++) {
-        const option = page.getByTestId('popover-item').filter({ hasText: `Heading ${level}` });
+        const option = page.getByTestId('popover-item').filter({ hasText: `Heading ${level}`, hasNotText: 'Toggle' });
 
         await expect(option).toBeVisible();
       }
@@ -522,7 +522,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h3Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 3' });
+      const h3Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 3', hasNotText: 'Toggle' });
 
       await expect(h3Option).toHaveAttribute('data-blok-popover-item-active', 'true');
     });

@@ -326,8 +326,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
-      // Asymmetric padding: pr-8 for visual balance, pr-4 when secondary label or chevron occupies right edge
-      !isInline && !isNestedInline && (this.params.secondaryLabel || (this.hasChildren && !this.isChevronHidden) ? 'pl-2 pr-4' : 'pl-2 pr-8'),
+      !isInline && !isNestedInline && 'pl-2 pr-4',
       isInline && cssInline.item,
       isNestedInline && cssNestedInline.item,
       this.params.isDisabled && css.itemDisabled

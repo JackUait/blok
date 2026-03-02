@@ -231,7 +231,21 @@ describe('PopoverItemDefault', () => {
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemDestructive);
   });
 
-  it('uses reduced right padding when item has children with visible chevron', () => {
+  it('uses uniform pr-4 right padding for items without secondary label or chevron', () => {
+    const { element } = createItem();
+
+    expect(element.className).toContain('pr-4');
+    expect(element.className).not.toContain('pr-8');
+  });
+
+  it('uses pr-4 right padding when item has secondary label', () => {
+    const { element } = createItem({ secondaryLabel: '#' });
+
+    expect(element.className).toContain('pr-4');
+    expect(element.className).not.toContain('pr-8');
+  });
+
+  it('uses pr-4 right padding when item has children with visible chevron', () => {
     const { element } = createItem({
       children: {
         items: [

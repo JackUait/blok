@@ -32,12 +32,12 @@ export const TOGGLE_WRAPPER_STYLES = 'flex items-start';
 /**
  * Styles for the toggle arrow button
  */
-export const ARROW_STYLES = 'flex-shrink-0 w-6 h-6 flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-all duration-200 ease-in-out mt-px';
+export const ARROW_STYLES = 'flex-shrink-0 w-6 h-6 flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-all duration-200 ease-in-out mt-px focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none';
 
 /**
  * SVG icon for the toggle arrow
  */
-export const ARROW_ICON = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 /**
  * Data attributes specific to the toggle tool

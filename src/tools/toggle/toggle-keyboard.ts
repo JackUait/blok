@@ -76,7 +76,9 @@ export const handleToggleBackspace = async (
   context: ToggleKeyboardContext,
   event: KeyboardEvent
 ): Promise<void> => {
-  const { api, blockId, data, getContentElement } = context;
+  const { api, blockId, data, getContentElement, syncContentFromDOM } = context;
+
+  syncContentFromDOM();
 
   if (blockId === undefined) {
     return;

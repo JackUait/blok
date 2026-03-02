@@ -698,6 +698,70 @@ describe('Header Tool - Custom Configurations', () => {
 
         expect(savedData.isToggleable).toBeUndefined();
       });
+
+      it('does not include arrow HTML in saved text when isToggleable is true', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+        const savedData = header.save(element);
+
+        expect(savedData.text).not.toContain(TOGGLE_ATTR.toggleArrow);
+        expect(savedData.text).toBe('Toggle Heading');
+      });
+
+      it('re-adds arrow element after save so DOM is not mutated', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+
+        // Arrow should exist before save
+        expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+
+        header.save(element);
+
+        // Arrow should still exist after save
+        expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+      });
+    });
+
+    describe('data getter does not include arrow HTML', () => {
+      it('returns text without arrow HTML when isToggleable is true', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        header.render();
+
+        const { text } = header.data;
+
+        expect(text).not.toContain(TOGGLE_ATTR.toggleArrow);
+        expect(text).toBe('Toggle Heading');
+      });
+
+      it('re-adds arrow element after reading data getter', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+
+        // Arrow should exist before data access
+        expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+
+        void header.data;
+
+        // Arrow should still exist after data access
+        expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+      });
+    });
+
+    describe('normalizeData strips arrow HTML from corrupted data', () => {
+      it('strips previously saved arrow HTML from text', () => {
+        const corruptedText = `<div ${TOGGLE_ATTR.toggleArrow}="" role="button">arrow</div>Clean text`;
+        const options = createHeaderOptions({ text: corruptedText, level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+        const savedData = header.save(element);
+
+        expect(savedData.text).not.toContain(TOGGLE_ATTR.toggleArrow);
+        expect(savedData.text).toBe('Clean text');
+      });
     });
 
     describe('renderSettings()', () => {
@@ -726,6 +790,203 @@ describe('Header Tool - Custom Configurations', () => {
         const toggleSetting = settings.find(s => s.title === 'Toggle heading');
 
         expect(toggleSetting?.isActive).toBe(false);
+      });
+    });
+
+    describe('toggling isToggleable off unhides children', () => {
+      it('shows hidden children when isToggleable is turned off via settings', () => {
+        const childHolders = Array.from({ length: 2 }, (_, i) => {
+          const holder = document.createElement('div');
+          holder.textContent = `Child ${i + 1}`;
+
+          return holder;
+        });
+
+        const childBlocks = childHolders.map((holder, i) => ({
+          id: `child-${i}`,
+          holder,
+        }));
+
+        const mockAPI = createMockAPI();
+        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+
+        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          config: {},
+          api: mockAPI,
+          readOnly: false,
+          block: { id: 'test-block-id' } as never,
+        };
+
+        const header = new Header(options);
+        header.render();
+
+        // Call rendered() to trigger initial collapse (toggle starts collapsed)
+        header.rendered();
+
+        // Verify children are hidden (collapsed state)
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(true);
+        }
+
+        // Toggle isToggleable OFF via the settings menu
+        const settings = toMenuArray(header.renderSettings());
+        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
+        const onActivate = toggleSetting?.onActivate as (() => void) | undefined;
+
+        onActivate?.();
+
+        // Children should now be visible since toggle was disabled
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(false);
+        }
+      });
+
+      it('resets _isOpen when isToggleable is turned off', () => {
+        const mockAPI = createMockAPI();
+        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          config: {},
+          api: mockAPI,
+          readOnly: false,
+          block: { id: 'test-block-id' } as never,
+        };
+
+        const header = new Header(options);
+        header.render();
+
+        // Toggle isToggleable OFF
+        const settings = toMenuArray(header.renderSettings());
+        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
+        const onActivate = toggleSetting?.onActivate as (() => void) | undefined;
+
+        onActivate?.();
+
+        // isToggleable should be undefined (off)
+        const savedData = header.save(header.render());
+
+        expect(savedData.isToggleable).toBeUndefined();
+      });
+    });
+
+    describe('expand() and collapse() public methods', () => {
+      /**
+       * Creates a toggle heading with child blocks for testing expand/collapse.
+       */
+      const setupToggleHeaderForExpandCollapse = (childCount = 2) => {
+        const childHolders = Array.from({ length: childCount }, (_, i) => {
+          const holder = document.createElement('div');
+          holder.textContent = `Child ${i + 1}`;
+
+          return holder;
+        });
+
+        const childBlocks = childHolders.map((holder, i) => ({
+          id: `child-${i}`,
+          holder,
+        }));
+
+        const mockAPI = createMockAPI();
+        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+
+        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          config: {},
+          api: mockAPI,
+          readOnly: false,
+          block: { id: 'test-block-id' } as never,
+        };
+
+        const header = new Header(options);
+
+        return { header, childHolders };
+      };
+
+      it('expand() expands a collapsed toggle heading', () => {
+        const { header, childHolders } = setupToggleHeaderForExpandCollapse();
+        const element = header.render();
+        header.rendered();
+
+        // Start collapsed
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(true);
+        }
+
+        // Expand via public method
+        header.expand();
+
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(false);
+        }
+      });
+
+      it('expand() is a no-op if already expanded', () => {
+        const { header, childHolders } = setupToggleHeaderForExpandCollapse();
+        const element = header.render();
+        header.rendered();
+
+        header.expand();
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+
+        // Expand again - should remain expanded
+        header.expand();
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(false);
+        }
+      });
+
+      it('collapse() collapses an expanded toggle heading', () => {
+        const { header, childHolders } = setupToggleHeaderForExpandCollapse();
+        const element = header.render();
+        header.rendered();
+
+        // Expand first
+        header.expand();
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+
+        // Collapse via public method
+        header.collapse();
+
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(true);
+        }
+      });
+
+      it('collapse() is a no-op if already collapsed', () => {
+        const { header } = setupToggleHeaderForExpandCollapse();
+        const element = header.render();
+        header.rendered();
+
+        // Already collapsed
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+
+        // Collapse again - no-op
+        header.collapse();
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+      });
+
+      it('expand() is a no-op on a non-toggleable header', () => {
+        const options = createHeaderOptions({ text: 'Normal Heading', level: 2 });
+        const header = new Header(options);
+        header.render();
+
+        // Should not throw and should be a no-op
+        expect(() => header.expand()).not.toThrow();
+      });
+
+      it('collapse() is a no-op on a non-toggleable header', () => {
+        const options = createHeaderOptions({ text: 'Normal Heading', level: 2 });
+        const header = new Header(options);
+        header.render();
+
+        // Should not throw and should be a no-op
+        expect(() => header.collapse()).not.toThrow();
       });
     });
 

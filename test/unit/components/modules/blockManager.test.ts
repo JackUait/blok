@@ -874,4 +874,102 @@ describe('BlockManager', () => {
     expect(Object.prototype.propertyIsEnumerable.call(payload.event, 'type')).toBe(true);
     expect(Object.prototype.propertyIsEnumerable.call(payload.event, 'detail')).toBe(true);
   });
+
+  describe('hierarchy preservation', () => {
+    it('removeBlock promotes children to root level when parent is removed', async () => {
+      const parentBlock = createBlockStub({ id: 'parent' });
+      const childBlock1 = createBlockStub({ id: 'child-1' });
+      const childBlock2 = createBlockStub({ id: 'child-2' });
+
+      // Set up hierarchy: parentBlock has two children
+      parentBlock.contentIds = ['child-1', 'child-2'];
+      childBlock1.parentId = 'parent';
+      childBlock2.parentId = 'parent';
+
+      // Children are hidden (e.g. inside a collapsed toggle)
+      childBlock1.holder.classList.add('hidden');
+      childBlock2.holder.classList.add('hidden');
+
+      const { blockManager } = createBlockManager({
+        initialBlocks: [parentBlock, childBlock1, childBlock2],
+      });
+
+      blockManager.currentBlockIndex = 0;
+
+      await blockManager.removeBlock(parentBlock, false);
+
+      // Children should be promoted to root level (parentId cleared)
+      expect(childBlock1.parentId).toBeNull();
+      expect(childBlock2.parentId).toBeNull();
+
+      // Children should be made visible (hidden class removed)
+      expect(childBlock1.holder.classList.contains('hidden')).toBe(false);
+      expect(childBlock2.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('replace() transfers parentId and contentIds to the new block', () => {
+      const parentBlock = createBlockStub({ id: 'grandparent' });
+      const blockToReplace = createBlockStub({ id: 'toggle-parent' });
+      const childBlock = createBlockStub({ id: 'child-1' });
+
+      // Set up hierarchy: blockToReplace is child of parentBlock and parent of childBlock
+      parentBlock.contentIds = ['toggle-parent'];
+      blockToReplace.parentId = 'grandparent';
+      blockToReplace.contentIds = ['child-1'];
+      childBlock.parentId = 'toggle-parent';
+
+      const { blockManager, composeBlockSpy } = createBlockManager({
+        initialBlocks: [parentBlock, blockToReplace, childBlock],
+      });
+
+      blockManager.currentBlockIndex = 1;
+
+      const newBlock = createBlockStub({ id: 'new-block' });
+      composeBlockSpy.mockReturnValue(newBlock);
+
+      const result = blockManager.replace(blockToReplace, 'paragraph', { text: 'converted' });
+
+      // New block should inherit parentId from the old block
+      expect(result.parentId).toBe('grandparent');
+
+      // New block should inherit contentIds from the old block
+      expect(result.contentIds).toEqual(['child-1']);
+
+      // Parent's contentIds should reference the new block, not the old one
+      expect(parentBlock.contentIds).toContain('new-block');
+      expect(parentBlock.contentIds).not.toContain('toggle-parent');
+
+      // Child's parentId should reference the new block
+      expect(childBlock.parentId).toBe('new-block');
+    });
+
+    it('update() preserves parentId and contentIds on the recreated block', async () => {
+      const parentBlock = createBlockStub({ id: 'parent' });
+      const blockToUpdate = createBlockStub({ id: 'block-1', data: { text: 'Hello' } });
+      const childBlock = createBlockStub({ id: 'child-1' });
+
+      // Set up hierarchy
+      parentBlock.contentIds = ['block-1'];
+      blockToUpdate.parentId = 'parent';
+      blockToUpdate.contentIds = ['child-1'];
+      childBlock.parentId = 'block-1';
+
+      const { blockManager, composeBlockSpy } = createBlockManager({
+        initialBlocks: [parentBlock, blockToUpdate, childBlock],
+      });
+
+      const newBlock = createBlockStub({ id: 'block-1' });
+      composeBlockSpy.mockReturnValue(newBlock);
+
+      await blockManager.update(blockToUpdate, { text: 'Updated' });
+
+      // composeBlock should be called with parentId and contentIds
+      expect(composeBlockSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parentId: 'parent',
+          contentIds: ['child-1'],
+        })
+      );
+    });
+  });
 });

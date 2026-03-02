@@ -1,6 +1,7 @@
 import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../../../types/data-formats';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
+import type { Block } from '../../../block';
 import { sanitizeBlocks } from '../../../utils/sanitizer';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
@@ -9,6 +10,15 @@ import type { HandlerContext, PatternMatch } from '../types';
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 import { PatternHandler } from './pattern-handler';
+
+/**
+ * Shape of a block in the Blok clipboard data.
+ * Extends the basic SavedData fields with optional hierarchy information.
+ */
+interface BlokClipboardBlock extends Pick<SavedData, 'id' | 'data' | 'tool'> {
+  parentId?: string | null;
+  contentIds?: string[];
+}
 
 
 /**
@@ -45,7 +55,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    const parsedBlokData = JSON.parse(data) as Pick<SavedData, 'id' | 'data' | 'tool'>[];
+    const parsedBlokData = JSON.parse(data) as BlokClipboardBlock[];
 
     // Check if we should try pattern matching first (for URL pasting within editor)
     const hasPatterns = this.toolRegistry.toolsPatterns.length > 0;
@@ -118,9 +128,11 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
 
   /**
    * Insert Blok JSON blocks.
+   * After inserting all blocks, restores parent-child hierarchy using an ID mapping
+   * (pasted blocks receive new IDs, so original IDs are mapped to new block instances).
    */
   private insertBlokBlocks(
-    blocks: Pick<SavedData, 'id' | 'data' | 'tool'>[],
+    blocks: BlokClipboardBlock[],
     canReplace: boolean
   ): void {
     const { BlockManager, Caret, Tools } = this.Blok;
@@ -130,7 +142,14 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       this.config.sanitizer
     );
 
-    sanitizedBlocks.forEach(({ tool, data }, i) => {
+    /**
+     * Map from original (old) block ID to the newly inserted Block instance.
+     * Used after insertion to re-establish parent-child relationships.
+     */
+    const oldIdToEntry = new Map<string, { newBlock: Block; original: BlokClipboardBlock }>();
+
+    sanitizedBlocks.forEach((sanitizedBlock, i) => {
+      const { tool, data } = sanitizedBlock;
       const needToReplaceCurrentBlock = i === 0 &&
         canReplace &&
         Boolean(BlockManager.currentBlock?.tool.isDefault) &&
@@ -142,7 +161,35 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
         replace: needToReplaceCurrentBlock,
       });
 
+      const originalBlock = blocks[i];
+
+      if (originalBlock !== undefined) {
+        oldIdToEntry.set(originalBlock.id, { newBlock: block, original: originalBlock });
+      }
+
       Caret.setToBlock(block, Caret.positions.END);
     });
+
+    /**
+     * Restore parent-child hierarchy using the old-to-new ID mapping.
+     * Only restores relationships where both parent and child are in the pasted set.
+     */
+    for (const [, { newBlock, original }] of oldIdToEntry) {
+      if (original.parentId === undefined || original.parentId === null) {
+        continue;
+      }
+
+      const parentEntry = oldIdToEntry.get(original.parentId);
+
+      if (parentEntry === undefined) {
+        continue;
+      }
+
+      newBlock.parentId = parentEntry.newBlock.id;
+
+      if (!parentEntry.newBlock.contentIds.includes(newBlock.id)) {
+        parentEntry.newBlock.contentIds = [...parentEntry.newBlock.contentIds, newBlock.id];
+      }
+    }
   }
 }

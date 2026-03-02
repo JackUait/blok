@@ -39,6 +39,8 @@ const createBlockStub = (
     selected?: boolean;
     stretched?: boolean;
     listDepth?: number | null;
+    contentIds?: string[];
+    parentId?: string | null;
   } = {},
 ): Block => {
   const holder = document.createElement("div");
@@ -96,6 +98,8 @@ const createBlockStub = (
     id: options.id ?? `block-${Math.random().toString(16).slice(2)}`,
     holder,
     stretched: options.stretched ?? false,
+    contentIds: options.contentIds ?? [],
+    parentId: options.parentId ?? null,
   };
 
   Object.defineProperty(block, "selected", {
@@ -132,6 +136,7 @@ const createDragManager = (
     blocks,
     getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
+    getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
     move: vi.fn(),
     insert: vi.fn(),
   };
@@ -567,6 +572,178 @@ describe("DragManager - Component Integration", () => {
 
       // Sibling should have drop indicator
       expect(siblingBlock.holder).toHaveAttribute("data-drop-indicator");
+
+      // Cleanup
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+  });
+
+  describe("Hierarchy descendants (toggle/parent-child blocks)", () => {
+    it("should include toggle children (via contentIds) in the drag operation", () => {
+      const { dragManager, modules, wrapper } = createDragManager();
+
+      // Create a toggle structure using the parentId/contentIds hierarchy model:
+      // - toggleBlock (contentIds: ['child-1', 'child-2'])
+      //   - child1 (parentId: 'toggle')
+      //   - child2 (parentId: 'toggle')
+      // - unrelated (no parent)
+      const toggleBlock = createBlockStub({
+        id: "toggle",
+        contentIds: ["child-1", "child-2"],
+      });
+      const child1 = createBlockStub({
+        id: "child-1",
+        parentId: "toggle",
+      });
+      const child2 = createBlockStub({
+        id: "child-2",
+        parentId: "toggle",
+      });
+      const unrelatedBlock = createBlockStub({ id: "unrelated" });
+
+      const allBlocks = [toggleBlock, child1, child2, unrelatedBlock];
+      (modules.BlockManager as unknown as { blocks: Block[] }).blocks =
+        allBlocks;
+      (modules.BlockManager.getBlockIndex as Mock).mockImplementation(
+        (block: Block) => allBlocks.indexOf(block),
+      );
+      (modules.BlockManager.getBlockByIndex as Mock).mockImplementation(
+        (index: number) => allBlocks[index],
+      );
+      (modules.BlockManager.getBlockById as Mock).mockImplementation(
+        (id: string) => allBlocks.find((b) => b.id === id),
+      );
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, toggleBlock);
+
+      // Start drag (toggle with its children)
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Verify multi-block dragging is set (because toggle children are included)
+      expect(wrapper).toHaveAttribute(DATA_ATTR.draggingMulti, "true");
+
+      // Cleanup
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("should include nested hierarchy descendants recursively", () => {
+      const { dragManager, modules, wrapper } = createDragManager();
+
+      // Create a nested toggle structure:
+      // - toggleBlock (contentIds: ['child-1'])
+      //   - child1 (parentId: 'toggle', contentIds: ['grandchild-1'])
+      //     - grandchild1 (parentId: 'child-1')
+      const toggleBlock = createBlockStub({
+        id: "toggle",
+        contentIds: ["child-1"],
+      });
+      const child1 = createBlockStub({
+        id: "child-1",
+        parentId: "toggle",
+        contentIds: ["grandchild-1"],
+      });
+      const grandchild1 = createBlockStub({
+        id: "grandchild-1",
+        parentId: "child-1",
+      });
+
+      const allBlocks = [toggleBlock, child1, grandchild1];
+      (modules.BlockManager as unknown as { blocks: Block[] }).blocks =
+        allBlocks;
+      (modules.BlockManager.getBlockIndex as Mock).mockImplementation(
+        (block: Block) => allBlocks.indexOf(block),
+      );
+      (modules.BlockManager.getBlockByIndex as Mock).mockImplementation(
+        (index: number) => allBlocks[index],
+      );
+      (modules.BlockManager.getBlockById as Mock).mockImplementation(
+        (id: string) => allBlocks.find((b) => b.id === id),
+      );
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, toggleBlock);
+
+      // Start drag
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Should be multi-block (toggle + child + grandchild = 3 blocks)
+      expect(wrapper).toHaveAttribute(DATA_ATTR.draggingMulti, "true");
+
+      // Cleanup
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("should not include hierarchy children for selected block drags", () => {
+      const { dragManager, modules, wrapper } = createDragManager();
+
+      // Toggle with children, but block is selected (multi-selection drag)
+      const toggleBlock = createBlockStub({
+        id: "toggle",
+        selected: true,
+        contentIds: ["child-1"],
+      });
+      const child1 = createBlockStub({
+        id: "child-1",
+        parentId: "toggle",
+      });
+
+      const allBlocks = [toggleBlock, child1];
+      (modules.BlockManager as unknown as { blocks: Block[] }).blocks =
+        allBlocks;
+      (modules.BlockManager.getBlockIndex as Mock).mockImplementation(
+        (block: Block) => allBlocks.indexOf(block),
+      );
+      (modules.BlockManager.getBlockByIndex as Mock).mockImplementation(
+        (index: number) => allBlocks[index],
+      );
+      (modules.BlockManager.getBlockById as Mock).mockImplementation(
+        (id: string) => allBlocks.find((b) => b.id === id),
+      );
+
+      // Set up block selection to return the toggle as selected
+      (
+        modules.BlockSelection as unknown as { selectedBlocks: Block[] }
+      ).selectedBlocks = [toggleBlock];
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, toggleBlock);
+
+      // Start drag
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Should NOT be multi-block because selected blocks use selection, not hierarchy
+      expect(wrapper).not.toHaveAttribute(DATA_ATTR.draggingMulti);
 
       // Cleanup
       document.dispatchEvent(createMouseEvent("mouseup"));

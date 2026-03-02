@@ -110,10 +110,17 @@ export class DragController extends Module {
       ? this.Blok.BlockSelection.selectedBlocks
       : [block];
 
-    // For single-block list item drags, include all descendants
-    const descendants = !isBlockSelected && this.listItemDescendants
+    // For single-block drags, include all descendants (list items via depth, toggles via contentIds)
+    const listDescendants = !isBlockSelected && this.listItemDescendants
       ? this.listItemDescendants.getDescendants(block)
       : [];
+
+    // If no list descendants found, check for hierarchy children (toggle blocks)
+    const hasHierarchyChildren = !isBlockSelected && block.contentIds?.length > 0;
+    const hierarchyDescendants = listDescendants.length === 0 && hasHierarchyChildren
+      ? this.getHierarchyDescendants(block)
+      : [];
+    const descendants = listDescendants.length > 0 ? listDescendants : hierarchyDescendants;
 
     const blocksToMove = descendants.length > 0
       ? [block, ...descendants]
@@ -456,6 +463,31 @@ export class DragController extends Module {
       return;
     }
     this.Blok.Toolbar.moveAndOpen(blockToShow);
+  }
+
+  /**
+   * Recursively collects all descendants of a block via the parentId/contentIds hierarchy.
+   * Used for toggle blocks and other parent-child structures that don't use data-list-depth.
+   * @param block - Parent block to collect descendants for
+   * @returns Array of descendant blocks
+   */
+  private getHierarchyDescendants(block: Block): Block[] {
+    const descendants: Block[] = [];
+
+    const collectChildren = (parentBlock: Block): void => {
+      for (const childId of parentBlock.contentIds) {
+        const child = this.Blok.BlockManager.getBlockById(childId);
+
+        if (child !== undefined) {
+          descendants.push(child);
+          collectChildren(child);
+        }
+      }
+    };
+
+    collectChildren(block);
+
+    return descendants;
   }
 
   public destroy(): void {

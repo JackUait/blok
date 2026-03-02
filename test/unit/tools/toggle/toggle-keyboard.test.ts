@@ -162,5 +162,39 @@ describe('Toggle Keyboard Handlers', () => {
       expect(preventDefaultSpy).not.toHaveBeenCalled();
       expect(context.api.blocks.convert).not.toHaveBeenCalled();
     });
+
+    it('syncs content from DOM before checking emptiness (Bug 16)', async () => {
+      const { handleToggleBackspace } = await import('../../../../src/tools/toggle/toggle-keyboard');
+
+      const contentElement = document.createElement('div');
+      contentElement.innerHTML = '';
+
+      /**
+       * Simulate stale data: data.text is non-empty but DOM is actually empty.
+       * Without syncContentFromDOM, the handler would read stale data.text and
+       * skip the convert, leaving the user stuck in a toggle block.
+       */
+      const context = createMockContext({
+        data: { text: 'stale content' },
+        getContentElement: () => contentElement,
+        syncContentFromDOM: vi.fn(() => {
+          // When called, syncs the empty DOM to data.text
+          context.data.text = contentElement.innerHTML;
+        }),
+      });
+
+      mockIsCaretAtStartOfInput.mockReturnValue(true);
+
+      const event = new KeyboardEvent('keydown', { key: 'Backspace' });
+
+      await handleToggleBackspace(context, event);
+
+      expect(context.syncContentFromDOM).toHaveBeenCalledOnce();
+      expect(context.api.blocks.convert).toHaveBeenCalledWith(
+        'test-block-id',
+        'paragraph',
+        { text: '' }
+      );
+    });
   });
 });

@@ -336,6 +336,8 @@ export class BlockSelection extends Module {
       tool: block.name,
       data: block.preservedData,
       tunes: block.preservedTunes,
+      parentId: block.parentId,
+      contentIds: block.contentIds,
     }));
 
     this.selectedBlocks.forEach((block) => {

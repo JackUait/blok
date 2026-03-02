@@ -79,19 +79,105 @@ describe('Toggle DOM Builder', () => {
         expect(result.arrowElement.hasAttribute(TOGGLE_ATTR.toggleArrow)).toBe(true);
       });
 
-      it('has role="button" and tabindex="-1"', () => {
+      it('has role="button" and tabindex="0" for keyboard accessibility', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
         expect(result.arrowElement.getAttribute('role')).toBe('button');
-        expect(result.arrowElement.getAttribute('tabindex')).toBe('-1');
+        expect(result.arrowElement.getAttribute('tabindex')).toBe('0');
       });
 
-      it('has aria-label attribute', () => {
+      it('has aria-label "Expand" when closed', () => {
+        const context = createDefaultContext({ isOpen: false });
+        const result = buildToggleItem(context);
+
+        expect(result.arrowElement.getAttribute('aria-label')).toBe('Expand');
+      });
+
+      it('has aria-label "Collapse" when open', () => {
+        const context = createDefaultContext({ isOpen: true });
+        const result = buildToggleItem(context);
+
+        expect(result.arrowElement.getAttribute('aria-label')).toBe('Collapse');
+      });
+
+      it('has aria-expanded="false" when closed', () => {
+        const context = createDefaultContext({ isOpen: false });
+        const result = buildToggleItem(context);
+
+        expect(result.arrowElement.getAttribute('aria-expanded')).toBe('false');
+      });
+
+      it('has aria-expanded="true" when open', () => {
+        const context = createDefaultContext({ isOpen: true });
+        const result = buildToggleItem(context);
+
+        expect(result.arrowElement.getAttribute('aria-expanded')).toBe('true');
+      });
+
+      it('calls onArrowClick on Enter keydown', () => {
+        const onArrowClick = vi.fn();
+        const context = createDefaultContext({ onArrowClick });
+        const result = buildToggleItem(context);
+
+        const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+        result.arrowElement.dispatchEvent(event);
+
+        expect(onArrowClick).toHaveBeenCalledOnce();
+      });
+
+      it('calls onArrowClick on Space keydown', () => {
+        const onArrowClick = vi.fn();
+        const context = createDefaultContext({ onArrowClick });
+        const result = buildToggleItem(context);
+
+        const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true });
+        result.arrowElement.dispatchEvent(event);
+
+        expect(onArrowClick).toHaveBeenCalledOnce();
+      });
+
+      it('prevents default and stops propagation on Enter/Space keydown', () => {
+        const onArrowClick = vi.fn();
+        const context = createDefaultContext({ onArrowClick });
+        const result = buildToggleItem(context);
+
+        const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+        const preventDefault = vi.spyOn(event, 'preventDefault');
+        const stopPropagation = vi.spyOn(event, 'stopPropagation');
+
+        result.arrowElement.dispatchEvent(event);
+
+        expect(preventDefault).toHaveBeenCalledOnce();
+        expect(stopPropagation).toHaveBeenCalledOnce();
+      });
+
+      it('does not call onArrowClick on other key presses', () => {
+        const onArrowClick = vi.fn();
+        const context = createDefaultContext({ onArrowClick });
+        const result = buildToggleItem(context);
+
+        const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+        result.arrowElement.dispatchEvent(event);
+
+        expect(onArrowClick).not.toHaveBeenCalled();
+      });
+
+      it('has focus-visible styles for keyboard focus indicator', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
-        expect(result.arrowElement.getAttribute('aria-label')).toBeTruthy();
+        expect(result.arrowElement.className).toContain('focus-visible:ring-2');
+        expect(result.arrowElement.className).toContain('focus-visible:outline-none');
+      });
+
+      it('has aria-hidden="true" on the SVG icon', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        const svg = result.arrowElement.querySelector('svg');
+        expect(svg).not.toBeNull();
+        expect(svg?.getAttribute('aria-hidden')).toBe('true');
       });
 
       it('contains the arrow SVG icon', () => {

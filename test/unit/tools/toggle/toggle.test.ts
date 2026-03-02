@@ -27,6 +27,7 @@ const createMockAPI = (): API => ({
     convert: vi.fn(),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
     getBlocksCount: vi.fn().mockReturnValue(1),
+    getChildren: vi.fn().mockReturnValue([]),
   },
 } as unknown as API);
 
@@ -205,6 +206,45 @@ describe('ToggleItem', () => {
       const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
 
       expect(contentEl?.innerHTML).toBe('updated');
+    });
+
+    it('reconciles child visibility after data update for undo/redo (Bug 10)', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const childHolders = Array.from({ length: 2 }, (_, i) => {
+        const holder = document.createElement('div');
+        holder.setAttribute('data-blok-element', '');
+        holder.textContent = `Child ${i + 1}`;
+
+        return holder;
+      });
+
+      const childBlocks = childHolders.map((holder, i) => ({
+        id: `child-${i}`,
+        holder,
+      }));
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+
+      const options = createToggleOptions({ text: 'before undo' });
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      toggle.render();
+      toggle.rendered();
+
+      // Children should be hidden (toggle starts collapsed)
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(true);
+      }
+
+      // Simulate undo/redo calling setData — this should reconcile child visibility
+      toggle.setData({ text: 'after undo' });
+
+      // getChildren should have been called during setData's updateChildrenVisibility
+      // The call count should be: 1 from rendered() + 1 from setData()
+      expect(mockAPI.blocks.getChildren).toHaveBeenCalledTimes(2);
     });
   });
 

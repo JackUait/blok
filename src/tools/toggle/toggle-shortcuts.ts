@@ -1,16 +1,17 @@
 /**
  * Toggle Shortcuts - Manages the collapse/expand-all keyboard shortcut (CMD+ALT+T).
  *
- * Iterates all blocks in the editor and toggles all toggle blocks:
- * - If any toggle is collapsed, expands all
- * - If all toggles are expanded, collapses all
+ * Iterates all blocks in the editor and toggles all collapsible blocks
+ * (toggle blocks and toggle headings):
+ * - If any collapsible block is collapsed, expands all
+ * - If all collapsible blocks are expanded, collapses all
  */
 
 import type { API } from '../../../types';
 
 import { Shortcuts } from '../../components/utils/shortcuts';
 
-import { TOGGLE_ATTR, TOOL_NAME } from './constants';
+import { TOGGLE_ATTR } from './constants';
 
 const COLLAPSE_EXPAND_ALL_SHORTCUT = 'CMD+ALT+T';
 
@@ -73,8 +74,8 @@ export class ToggleShortcuts {
   }
 
   /**
-   * Toggle all toggle blocks.
-   * If any toggle is collapsed, expand all. If all are expanded, collapse all.
+   * Toggle all collapsible blocks (toggle blocks and toggle headings).
+   * If any is collapsed, expand all. If all are expanded, collapse all.
    */
   private toggleAll(): void {
     const blockCount = this.api.blocks.getBlocksCount();
@@ -83,12 +84,17 @@ export class ToggleShortcuts {
     for (const i of Array.from({ length: blockCount }, (_, idx) => idx)) {
       const block = this.api.blocks.getBlockByIndex(i);
 
-      if (block === undefined || block.name !== TOOL_NAME) {
+      if (block === undefined) {
         continue;
       }
 
       const toggleWrapper = block.holder.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
-      const isOpen = toggleWrapper?.getAttribute(TOGGLE_ATTR.toggleOpen) === 'true';
+
+      if (toggleWrapper === null) {
+        continue;
+      }
+
+      const isOpen = toggleWrapper.getAttribute(TOGGLE_ATTR.toggleOpen) === 'true';
 
       toggleBlocks.push({ call: (method: string) => block.call(method), isOpen });
     }

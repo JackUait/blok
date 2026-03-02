@@ -499,7 +499,7 @@ export class Caret extends Module {
    */
   public navigateNext(force = false): boolean {
     const { BlockManager } = this.Blok;
-    const { currentBlock, nextBlock } = BlockManager;
+    const { currentBlock, nextVisibleBlock: nextBlock } = BlockManager;
 
     if (currentBlock === undefined) {
       return false;
@@ -567,7 +567,7 @@ export class Caret extends Module {
    * @param {boolean} force - pass true to skip check for caret position
    */
   public navigatePrevious(force = false): boolean {
-    const { currentBlock, previousBlock } = this.Blok.BlockManager;
+    const { currentBlock, previousVisibleBlock: previousBlock } = this.Blok.BlockManager;
 
     if (!currentBlock) {
       return false;
@@ -634,7 +634,7 @@ export class Caret extends Module {
    */
   public navigateVerticalNext(): boolean {
     const { BlockManager } = this.Blok;
-    const { currentBlock, nextBlock } = BlockManager;
+    const { currentBlock, nextVisibleBlock: nextBlock } = BlockManager;
 
     if (currentBlock === undefined) {
       return false;
@@ -743,7 +743,7 @@ export class Caret extends Module {
    */
   public navigateVerticalPrevious(): boolean {
     const { BlockManager } = this.Blok;
-    const { currentBlock, previousBlock } = BlockManager;
+    const { currentBlock, previousVisibleBlock: previousBlock } = BlockManager;
 
     if (currentBlock === undefined) {
       return false;

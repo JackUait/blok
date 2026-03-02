@@ -12,6 +12,8 @@ type BlockManagerStub = {
   currentBlock?: Block;
   nextBlock: Block | null;
   previousBlock: Block | null;
+  nextVisibleBlock: Block | null;
+  previousVisibleBlock: Block | null;
   lastBlock?: Block;
   insertAtEnd: ReturnType<typeof vi.fn>;
   setCurrentBlockByChildNode: ReturnType<typeof vi.fn>;
@@ -31,6 +33,8 @@ type CaretSetup = {
 type BlockOptions = {
   focusable?: boolean;
   isEmpty?: boolean;
+  hidden?: boolean;
+  parentId?: string | null;
   tool?: { isDefault: boolean };
   inputs?: {
     first?: HTMLElement;
@@ -67,6 +71,10 @@ const createBlock = (options: BlockOptions = {}): Block => {
 
   holder.setAttribute('data-blok-testid', 'block-element');
 
+  if (options.hidden) {
+    holder.classList.add('hidden');
+  }
+
   const defaultInput = attachInput(holder, options.inputs?.current) ?? createContentEditable();
 
   attachInput(holder, options.inputs?.first);
@@ -76,6 +84,7 @@ const createBlock = (options: BlockOptions = {}): Block => {
     holder,
     focusable: options.focusable ?? true,
     isEmpty: options.isEmpty ?? false,
+    parentId: options.parentId ?? null,
     tool: options.tool ?? { isDefault: true },
     firstInput: options.inputs?.first ?? defaultInput,
     lastInput: options.inputs?.last ?? defaultInput,
@@ -92,6 +101,8 @@ const createCaret = (overrides: Partial<BlokModules> = {}): CaretSetup => {
     currentBlock: undefined,
     nextBlock: null,
     previousBlock: null,
+    nextVisibleBlock: null,
+    previousVisibleBlock: null,
     lastBlock: undefined,
     insertAtEnd: vi.fn(),
     setCurrentBlockByChildNode: vi.fn(),
@@ -354,6 +365,7 @@ describe('Caret module', () => {
 
       blockManager.currentBlock = currentBlock;
       blockManager.previousBlock = previousBlock;
+      blockManager.previousVisibleBlock = previousBlock;
 
       const setToBlock = vi.spyOn(caret, 'setToBlock').mockImplementation(() => undefined);
 
@@ -377,6 +389,197 @@ describe('Caret module', () => {
       vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
 
       expect(caret.navigatePrevious()).toBe(false);
+    });
+  });
+
+  describe('navigateNext skips hidden blocks', () => {
+    it('skips hidden block and navigates to the next visible block', () => {
+      const { caret, blockManager } = createCaret();
+      const currentBlock = createBlock({
+        inputs: { current: createContentEditable('text') },
+      });
+      const hiddenBlock = createBlock({ hidden: true });
+      const visibleBlock = createBlock();
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.nextBlock = hiddenBlock;
+      blockManager.nextVisibleBlock = visibleBlock;
+
+      const setToBlock = vi.spyOn(caret, 'setToBlock').mockImplementation(() => undefined);
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const result = caret.navigateNext();
+
+      expect(result).toBe(true);
+      expect(setToBlock).toHaveBeenCalledWith(visibleBlock, caret.positions.START);
+    });
+
+    it('returns false when all subsequent blocks are hidden', () => {
+      const { caret, blockManager } = createCaret();
+      const currentBlock = createBlock({
+        tool: { isDefault: true },
+        inputs: { current: createContentEditable('text') },
+      });
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.nextBlock = createBlock({ hidden: true });
+      blockManager.nextVisibleBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      expect(caret.navigateNext()).toBe(false);
+    });
+  });
+
+  describe('navigatePrevious skips hidden blocks', () => {
+    it('skips hidden block and navigates to the previous visible block', () => {
+      const { caret, blockManager } = createCaret();
+      const currentBlock = createBlock({
+        inputs: { current: createContentEditable('content') },
+      });
+      const hiddenBlock = createBlock({ hidden: true });
+      const visibleBlock = createBlock();
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.previousBlock = hiddenBlock;
+      blockManager.previousVisibleBlock = visibleBlock;
+
+      const setToBlock = vi.spyOn(caret, 'setToBlock').mockImplementation(() => undefined);
+
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      const result = caret.navigatePrevious();
+
+      expect(result).toBe(true);
+      expect(setToBlock).toHaveBeenCalledWith(visibleBlock, caret.positions.END);
+    });
+
+    it('returns false when all preceding blocks are hidden', () => {
+      const { caret, blockManager } = createCaret();
+      const currentBlock = createBlock({
+        inputs: { current: createContentEditable('content') },
+      });
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.previousBlock = createBlock({ hidden: true });
+      blockManager.previousVisibleBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      expect(caret.navigatePrevious()).toBe(false);
+    });
+  });
+
+  describe('navigateVerticalNext skips hidden blocks', () => {
+    it('skips hidden block and navigates to the next visible block', () => {
+      const { caret, blockManager } = createCaret();
+      const currentInput = createContentEditable('text');
+      const currentBlock = createBlock({
+        inputs: { current: currentInput },
+      });
+      const hiddenBlock = createBlock({ hidden: true });
+      const visibleBlock = createBlock();
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.nextBlock = hiddenBlock;
+      blockManager.nextVisibleBlock = visibleBlock;
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      const result = caret.navigateVerticalNext();
+
+      expect(result).toBe(true);
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(visibleBlock, 100, true);
+    });
+
+    it('does not navigate when all subsequent blocks are hidden', () => {
+      const { caret, blockManager } = createCaret();
+      const currentInput = createContentEditable('text');
+      const currentBlock = createBlock({
+        tool: { isDefault: true },
+        inputs: { current: currentInput },
+      });
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.nextBlock = createBlock({ hidden: true });
+      blockManager.nextVisibleBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      expect(caret.navigateVerticalNext()).toBe(false);
+    });
+
+    it('skips multiple hidden blocks to find next visible block', () => {
+      const { caret, blockManager } = createCaret();
+      const currentInput = createContentEditable('text');
+      const currentBlock = createBlock({
+        inputs: { current: currentInput },
+      });
+      const visibleBlock = createBlock();
+
+      // Multiple hidden blocks between current and visible
+      blockManager.currentBlock = currentBlock;
+      blockManager.nextBlock = createBlock({ hidden: true });
+      blockManager.nextVisibleBlock = visibleBlock;
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(50);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      const result = caret.navigateVerticalNext();
+
+      expect(result).toBe(true);
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(visibleBlock, 50, true);
+    });
+  });
+
+  describe('navigateVerticalPrevious skips hidden blocks', () => {
+    it('skips hidden block and navigates to the previous visible block', () => {
+      const { caret, blockManager } = createCaret();
+      const currentInput = createContentEditable('text');
+      const currentBlock = createBlock({
+        inputs: { current: currentInput },
+      });
+      const hiddenBlock = createBlock({ hidden: true });
+      const visibleBlock = createBlock();
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.previousBlock = hiddenBlock;
+      blockManager.previousVisibleBlock = visibleBlock;
+
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      const result = caret.navigateVerticalPrevious();
+
+      expect(result).toBe(true);
+      expect(setToBlockAtXPosition).toHaveBeenCalledWith(visibleBlock, 100, false);
+    });
+
+    it('does not navigate when all preceding blocks are hidden', () => {
+      const { caret, blockManager } = createCaret();
+      const currentInput = createContentEditable('text');
+      const currentBlock = createBlock({
+        inputs: { current: currentInput },
+      });
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.previousBlock = createBlock({ hidden: true });
+      blockManager.previousVisibleBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      expect(caret.navigateVerticalPrevious()).toBe(false);
     });
   });
 

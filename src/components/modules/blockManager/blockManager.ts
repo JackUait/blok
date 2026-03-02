@@ -128,6 +128,22 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Returns next visible Block instance (skips hidden blocks)
+   * @returns {Block|null}
+   */
+  public get nextVisibleBlock(): Block | null {
+    return this.operations?.nextVisibleBlock ?? null;
+  }
+
+  /**
+   * Returns previous visible Block instance (skips hidden blocks)
+   * @returns {Block|null}
+   */
+  public get previousVisibleBlock(): Block | null {
+    return this.operations?.previousVisibleBlock ?? null;
+  }
+
+  /**
    * Get array of Block instances
    * @returns {Block[]} {@link Blocks#array}
    */

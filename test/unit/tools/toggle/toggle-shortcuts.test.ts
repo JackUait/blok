@@ -257,6 +257,40 @@ describe('ToggleShortcuts', () => {
       } as unknown as BlockAPI;
     };
 
+    /**
+     * Helper to create a mock header block with toggle behavior.
+     * Toggle headings are header blocks with the toggle-open attribute on the element.
+     */
+    const createMockToggleHeaderBlock = (id: string, isOpen: boolean): BlockAPI => {
+      const holder = document.createElement('div');
+      const headerElement = document.createElement('h2');
+      headerElement.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
+      holder.appendChild(headerElement);
+
+      return {
+        id,
+        name: 'header',
+        holder,
+        call: vi.fn(),
+      } as unknown as BlockAPI;
+    };
+
+    /**
+     * Helper to create a mock regular header block (not toggleable).
+     */
+    const createMockHeaderBlock = (id: string): BlockAPI => {
+      const holder = document.createElement('div');
+      const headerElement = document.createElement('h2');
+      holder.appendChild(headerElement);
+
+      return {
+        id,
+        name: 'header',
+        holder,
+        call: vi.fn(),
+      } as unknown as BlockAPI;
+    };
+
     const createMockParagraphBlock = (id: string): BlockAPI => {
       const holder = document.createElement('div');
 
@@ -383,6 +417,168 @@ describe('ToggleShortcuts', () => {
       }).not.toThrow();
 
       expect(paragraphBlock.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('expands toggle headings along with toggle blocks when any is collapsed', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggleBlock = createMockToggleBlock('t1', true);
+      const toggleHeader = createMockToggleHeaderBlock('th1', false);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn()
+        .mockImplementation((index: number) => {
+          return [toggleBlock, toggleHeader][index];
+        });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // Both the toggle block and toggle heading should be expanded
+      expect(toggleBlock.call).toHaveBeenCalledWith('expand');
+      expect(toggleHeader.call).toHaveBeenCalledWith('expand');
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('collapses toggle headings along with toggle blocks when all are expanded', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggleBlock = createMockToggleBlock('t1', true);
+      const toggleHeader = createMockToggleHeaderBlock('th1', true);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn()
+        .mockImplementation((index: number) => {
+          return [toggleBlock, toggleHeader][index];
+        });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      expect(toggleBlock.call).toHaveBeenCalledWith('collapse');
+      expect(toggleHeader.call).toHaveBeenCalledWith('collapse');
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('ignores regular (non-toggleable) header blocks', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggleBlock = createMockToggleBlock('t1', false);
+      const regularHeader = createMockHeaderBlock('h1');
+      const toggleHeader = createMockToggleHeaderBlock('th1', false);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(3);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn()
+        .mockImplementation((index: number) => {
+          return [toggleBlock, regularHeader, toggleHeader][index];
+        });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // Toggle block and toggle heading should be expanded
+      expect(toggleBlock.call).toHaveBeenCalledWith('expand');
+      expect(toggleHeader.call).toHaveBeenCalledWith('expand');
+      // Regular header should NOT be touched
+      expect(regularHeader.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('handles only toggle headings when no toggle blocks exist', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggleHeader1 = createMockToggleHeaderBlock('th1', true);
+      const toggleHeader2 = createMockToggleHeaderBlock('th2', false);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn()
+        .mockImplementation((index: number) => {
+          return [toggleHeader1, toggleHeader2][index];
+        });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // One is collapsed, so all should expand
+      expect(toggleHeader1.call).toHaveBeenCalledWith('expand');
+      expect(toggleHeader2.call).toHaveBeenCalledWith('expand');
 
       shortcuts.unregister();
       wrapper.remove();

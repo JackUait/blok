@@ -28,7 +28,14 @@ type BlockSelectionSetup = {
   redactor: HTMLDivElement;
 };
 
-const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; initiallySelected?: boolean }): Block => {
+const createBlockStub = (options?: {
+  html?: string;
+  inputs?: HTMLElement[];
+  initiallySelected?: boolean;
+  id?: string;
+  parentId?: string | null;
+  contentIds?: string[];
+}): Block => {
   const holder = document.createElement('div');
 
   holder.setAttribute('data-blok-testid', 'blok-element');
@@ -45,8 +52,10 @@ const createBlockStub = (options?: { html?: string; inputs?: HTMLElement[]; init
   const blockStub = {
     holder,
     inputs,
-    id: 'test-id',
+    id: options?.id ?? 'test-id',
     name: 'paragraph',
+    parentId: options?.parentId ?? null,
+    contentIds: options?.contentIds ?? [],
     save: vi.fn().mockResolvedValue({
       id: 'test',
       tool: 'paragraph',
@@ -418,6 +427,77 @@ describe('BlockSelection', () => {
       // This ensures clipboard operations are synchronous for browser compatibility
       expect(firstBlock.save).not.toHaveBeenCalled();
       expect(secondBlock.save).not.toHaveBeenCalled();
+    });
+
+    it('includes parentId and contentIds in serialized clipboard data for hierarchical blocks', async () => {
+      const parentBlock = createBlockStub({
+        id: 'parent-1',
+        html: '<p>Parent</p>',
+        contentIds: ['child-1', 'child-2'],
+      });
+      const childBlock1 = createBlockStub({
+        id: 'child-1',
+        html: '<p>Child 1</p>',
+        parentId: 'parent-1',
+      });
+      const childBlock2 = createBlockStub({
+        id: 'child-2',
+        html: '<p>Child 2</p>',
+        parentId: 'parent-1',
+      });
+
+      const { blockSelection, modules } = createBlockSelection({
+        BlockManager: {
+          blocks: [parentBlock, childBlock1, childBlock2],
+          currentBlock: parentBlock,
+          getBlockByIndex: vi.fn((index: number) => [parentBlock, childBlock1, childBlock2][index]),
+          getBlock: vi.fn(),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      parentBlock.selected = true;
+      childBlock1.selected = true;
+      childBlock2.selected = true;
+
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      const mimeType = (modules.Paste as unknown as { MIME_TYPE: string }).MIME_TYPE;
+      const blokDataCall = (clipboardData.setData.mock.calls as Array<[string, string]>).find(
+        (call) => call[0] === mimeType
+      );
+
+      if (blokDataCall === undefined) {
+        throw new Error('Expected blok MIME_TYPE clipboard data to be set');
+      }
+
+      const serializedData = JSON.parse(blokDataCall[1]) as Array<{
+        id: string;
+        tool: string;
+        parentId?: string | null;
+        contentIds?: string[];
+      }>;
+
+      // Parent block should have contentIds
+      const parentData = serializedData.find(b => b.id === 'parent-1');
+
+      expect(parentData).toBeDefined();
+      expect(parentData?.contentIds).toEqual(['child-1', 'child-2']);
+
+      // Child blocks should have parentId
+      const child1Data = serializedData.find(b => b.id === 'child-1');
+      const child2Data = serializedData.find(b => b.id === 'child-2');
+
+      expect(child1Data?.parentId).toBe('parent-1');
+      expect(child2Data?.parentId).toBe('parent-1');
     });
   });
 

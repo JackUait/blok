@@ -124,6 +124,8 @@ export class ToggleItem implements BlockTool {
 
     this._data = result.newData;
 
+    this.updateChildrenVisibility();
+
     return result.inPlace;
   }
 
@@ -191,6 +193,8 @@ export class ToggleItem implements BlockTool {
 
     if (event.key === 'Backspace') {
       void this.handleBackspace(event);
+
+      return;
     }
   }
 

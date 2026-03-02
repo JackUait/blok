@@ -176,6 +176,35 @@ export class BlockOperations {
   }
 
   /**
+   * Get next visible block (skips blocks whose holder has 'hidden' class)
+   * Returns null when no visible block is found after the current one
+   */
+  public get nextVisibleBlock(): Block | null {
+    if (this.currentBlockIndex === -1) {
+      return null;
+    }
+
+    return this.repository.blocks
+      .slice(this.currentBlockIndex + 1)
+      .find(block => !block.holder.classList.contains('hidden')) ?? null;
+  }
+
+  /**
+   * Get previous visible block (skips blocks whose holder has 'hidden' class)
+   * Returns null when no visible block is found before the current one
+   */
+  public get previousVisibleBlock(): Block | null {
+    if (this.currentBlockIndex === -1) {
+      return null;
+    }
+
+    return this.repository.blocks
+      .slice(0, this.currentBlockIndex)
+      .reverse()
+      .find(block => !block.holder.classList.contains('hidden')) ?? null;
+  }
+
+  /**
    * Insert new block
    * @param options - Insert options
    * @param blocksStore - The blocks store to modify
@@ -363,6 +392,18 @@ export class BlockOperations {
         parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
       }
 
+      // Promote children to root level when a parent block is removed
+      for (const childId of block.contentIds) {
+        const childBlock = this.repository.getBlockById(childId);
+
+        if (childBlock === undefined) {
+          continue;
+        }
+
+        childBlock.parentId = null;
+        childBlock.holder.classList.remove('hidden');
+      }
+
       blocksStore.remove(index);
 
       /**
@@ -430,6 +471,8 @@ export class BlockOperations {
       tool: block.name,
       data: Object.assign({}, existingData, data ?? {}),
       tunes: tunes ?? block.preservedTunes,
+      parentId: block.parentId ?? undefined,
+      contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
       bindEventsImmediately: true,
     });
 
@@ -469,6 +512,10 @@ export class BlockOperations {
     const blockIndex = this.repository.getBlockIndex(block);
     const newBlockId = generateBlockId();
 
+    // Capture hierarchy before replacement
+    const oldParentId = block.parentId;
+    const oldContentIds = [...block.contentIds];
+
     // Atomic transaction: remove old block + add new block as single undo entry
     this.dependencies.YjsManager.transact(() => {
       this.dependencies.YjsManager.removeBlock(block.id);
@@ -480,7 +527,7 @@ export class BlockOperations {
     });
 
     // DOM update (skip Yjs sync — already done above)
-    return this.insert({
+    const newBlock = this.insert({
       id: newBlockId,
       tool: newTool,
       data,
@@ -488,6 +535,28 @@ export class BlockOperations {
       replace: true,
       skipYjsSync: true,
     }, blocksStore);
+
+    // Transfer hierarchy to new block
+    if (oldParentId !== null) {
+      newBlock.parentId = oldParentId;
+
+      const parentBlock = this.repository.getBlockById(oldParentId);
+
+      if (parentBlock !== undefined) {
+        parentBlock.contentIds = parentBlock.contentIds.map(id => id === block.id ? newBlock.id : id);
+      }
+    }
+
+    for (const childId of oldContentIds) {
+      const childBlock = this.repository.getBlockById(childId);
+
+      if (childBlock !== undefined) {
+        childBlock.parentId = newBlock.id;
+      }
+    }
+    newBlock.contentIds = oldContentIds;
+
+    return newBlock;
   }
 
   /**

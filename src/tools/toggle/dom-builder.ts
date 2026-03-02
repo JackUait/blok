@@ -82,8 +82,9 @@ const buildArrow = (isOpen: boolean, onArrowClick: () => void): HTMLElement => {
   arrow.className = ARROW_STYLES;
   arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
   arrow.setAttribute('role', 'button');
-  arrow.setAttribute('tabindex', '-1');
-  arrow.setAttribute('aria-label', 'Toggle');
+  arrow.setAttribute('tabindex', '0');
+  arrow.setAttribute('aria-label', isOpen ? 'Collapse' : 'Expand');
+  arrow.setAttribute('aria-expanded', String(isOpen));
   arrow.innerHTML = ARROW_ICON;
 
   if (isOpen) {
@@ -93,6 +94,14 @@ const buildArrow = (isOpen: boolean, onArrowClick: () => void): HTMLElement => {
   arrow.addEventListener('click', (event: MouseEvent) => {
     event.stopPropagation();
     onArrowClick();
+  });
+
+  arrow.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      onArrowClick();
+    }
   });
 
   return arrow;

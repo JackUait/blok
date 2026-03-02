@@ -216,6 +216,22 @@ export class Header implements BlockTool {
       normalized.isToggleable = true;
     }
 
+    /**
+     * Sanitize text to remove any previously saved arrow HTML (backwards compatibility)
+     */
+    if (normalized.text) {
+      const temp = document.createElement('div');
+
+      temp.innerHTML = normalized.text;
+
+      const arrowEl = temp.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+      if (arrowEl) {
+        arrowEl.remove();
+        normalized.text = temp.innerHTML;
+      }
+    }
+
     return normalized;
   }
 
@@ -236,6 +252,42 @@ export class Header implements BlockTool {
     if (this._data.isToggleable) {
       this.updateChildrenVisibility();
     }
+  }
+
+  /**
+   * Expand the toggle heading (no-op if not toggleable or already expanded).
+   * Can be called externally via block.call('expand').
+   */
+  public expand(): void {
+    if (!this._data.isToggleable || this._isOpen) {
+      return;
+    }
+
+    this._isOpen = true;
+
+    if (this._arrowElement && this._element) {
+      updateArrowState(this._arrowElement, this._element, this._isOpen);
+    }
+
+    this.updateChildrenVisibility();
+  }
+
+  /**
+   * Collapse the toggle heading (no-op if not toggleable or already collapsed).
+   * Can be called externally via block.call('collapse').
+   */
+  public collapse(): void {
+    if (!this._data.isToggleable || !this._isOpen) {
+      return;
+    }
+
+    this._isOpen = false;
+
+    if (this._arrowElement && this._element) {
+      updateArrowState(this._arrowElement, this._element, this._isOpen);
+    }
+
+    this.updateChildrenVisibility();
   }
 
   /**
@@ -378,10 +430,26 @@ export class Header implements BlockTool {
    * @returns saved data
    */
   public save(toolsContent: HTMLHeadingElement): HeaderData {
+    /**
+     * Strip arrow element before reading innerHTML to avoid saving toggle markup
+     */
+    const arrowEl = toolsContent.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+    if (arrowEl) {
+      arrowEl.remove();
+    }
+
     const data: HeaderData = {
       text: toolsContent.innerHTML,
       level: this.currentLevel.number,
     };
+
+    /**
+     * Re-add arrow after reading so the DOM is not mutated
+     */
+    if (arrowEl && this._data.isToggleable) {
+      toolsContent.prepend(arrowEl);
+    }
 
     if (this._data.isToggleable === true) {
       data.isToggleable = true;
@@ -426,7 +494,24 @@ export class Header implements BlockTool {
    * @returns Current data
    */
   public get data(): HeaderData {
+    /**
+     * Strip arrow element before reading innerHTML to avoid capturing toggle markup
+     */
+    const arrowEl = this._element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+    if (arrowEl) {
+      arrowEl.remove();
+    }
+
     this._data.text = this._element.innerHTML;
+
+    /**
+     * Re-add arrow after reading so the DOM is not mutated
+     */
+    if (arrowEl && this._data.isToggleable) {
+      this._element.prepend(arrowEl);
+    }
+
     this._data.level = this.currentLevel.number;
 
     return this._data;
@@ -572,8 +657,9 @@ export class Header implements BlockTool {
     arrow.className = ARROW_STYLES;
     arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
     arrow.setAttribute('role', 'button');
-    arrow.setAttribute('tabindex', '-1');
-    arrow.setAttribute('aria-label', 'Expand');
+    arrow.setAttribute('tabindex', '0');
+    arrow.setAttribute('aria-label', this._isOpen ? 'Collapse' : 'Expand');
+    arrow.setAttribute('aria-expanded', String(this._isOpen));
     arrow.contentEditable = 'false';
     arrow.innerHTML = ARROW_ICON;
 
@@ -586,6 +672,14 @@ export class Header implements BlockTool {
       this.toggleOpen();
     });
 
+    arrow.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.toggleOpen();
+      }
+    });
+
     return arrow;
   }
 
@@ -595,6 +689,14 @@ export class Header implements BlockTool {
    */
   private toggleIsToggleable(): void {
     const wasToggleable = this._data.isToggleable === true;
+
+    /**
+     * If disabling toggle, ensure children are visible before removing toggle state
+     */
+    if (wasToggleable) {
+      updateChildrenVisibility(this.api, this.blockId ?? '', true);
+      this._isOpen = false;
+    }
 
     this.data = {
       level: this._data.level,

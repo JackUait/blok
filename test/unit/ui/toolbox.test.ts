@@ -676,6 +676,63 @@ describe('Toolbox', () => {
 
       expect(contentEditable?.hasAttribute('data-blok-slash-search')).toBe(false);
     });
+
+    it('should set data-blok-slash-search attribute value to i18n filter label', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]');
+
+      expect(contentEditable?.getAttribute('data-blok-slash-search')).toBe('Filter');
+    });
+
+    it('should clear data-blok-slash-search value when user types a query', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      // Simulate typing "/head"
+      contentEditable.textContent = '/head';
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('');
+    });
+
+    it('should restore data-blok-slash-search value when query is cleared back to just "/"', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      // Type query
+      contentEditable.textContent = '/head';
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('');
+
+      // Clear query back to just "/"
+      contentEditable.textContent = '/';
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('Filter');
+    });
   });
 
   describe('toolbox items with multiple entries', () => {

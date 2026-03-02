@@ -633,7 +633,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.currentBlockForSearch = currentBlock.holder;
     this.currentContentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
     if (this.currentContentEditable instanceof HTMLElement) {
-      this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, '');
+      this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.filter);
     }
     this.listeners.on(this.currentBlockForSearch, 'input', this.handleBlockInput);
   }
@@ -673,6 +673,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     const query = text.slice(slashIndex + 1);
+
+    if (this.currentContentEditable instanceof HTMLElement) {
+      this.currentContentEditable.setAttribute(
+        DATA_ATTR.slashSearch,
+        query.length === 0 ? this.i18nLabels.filter : ''
+      );
+    }
 
     this.popover?.filterItems(query);
   };

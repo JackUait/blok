@@ -17,6 +17,7 @@ export {
   Bold,
   Italic,
   Link,
+  Marker,
   Convert,
   Delete,
   defaultBlockTools,
@@ -76,5 +77,6 @@ export const allTools: {
   readonly bold: { readonly class: InlineToolConstructable };
   readonly italic: { readonly class: InlineToolConstructable };
   readonly link: { readonly class: InlineToolConstructable };
+  readonly marker: { readonly class: InlineToolConstructable };
   readonly convertTo: { readonly class: InlineToolConstructable };
 };

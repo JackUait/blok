@@ -18,6 +18,7 @@
 import { BoldInlineTool as Bold } from './components/inline-tools/inline-tool-bold';
 import { ItalicInlineTool as Italic } from './components/inline-tools/inline-tool-italic';
 import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-link';
+import { MarkerInlineTool as Marker } from './components/inline-tools/inline-tool-marker';
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
@@ -33,6 +34,7 @@ export {
   Bold,
   Italic,
   Link,
+  Marker,
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
@@ -67,4 +69,5 @@ export const allTools = {
   bold: { class: Bold },
   italic: { class: Italic },
   link: { class: Link },
+  marker: { class: Marker },
 } as const;

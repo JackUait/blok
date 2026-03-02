@@ -73,6 +73,14 @@ class TestPopover extends PopoverAbstract {
   public invokeBuildItems(items: PopoverItemParams[]): Array<PopoverItem> {
     return this.buildItems(items);
   }
+
+  /**
+   * Exposes toggleNothingFoundMessage for testing purposes
+   * @param isDisplayed - true if the message should be displayed
+   */
+  public invokeToggleNothingFoundMessage(isDisplayed: boolean): void {
+    this.toggleNothingFoundMessage(isDisplayed);
+  }
 }
 
 const createDefaultItems = (): PopoverItemParams[] => [
@@ -531,6 +539,23 @@ describe('PopoverAbstract', () => {
       itemElement?.dispatchEvent(event);
 
       expect(handleItemClickSpy).toHaveBeenCalledWith(firstItem);
+    });
+  });
+
+  describe('nothing found message animation', () => {
+    it('applies fade-in animation when showing nothing found message', () => {
+      const popover = createPopover({ items: createDefaultItems() });
+      const nodes = popover.getNodesForTests();
+
+      popover.invokeToggleNothingFoundMessage(true);
+
+      expect(nodes.nothingFoundMessage.classList.contains('hidden')).toBe(false);
+      expect(nodes.nothingFoundMessage.className).toContain('animate-');
+
+      popover.invokeToggleNothingFoundMessage(false);
+
+      expect(nodes.nothingFoundMessage.classList.contains('hidden')).toBe(true);
+      expect(nodes.nothingFoundMessage.className).not.toContain('animate-');
     });
   });
 

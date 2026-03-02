@@ -1022,6 +1022,40 @@ describe('Header Tool - Custom Configurations', () => {
     });
   });
 
+  describe('merge()', () => {
+    it('does not inject arrow HTML from merged data text', () => {
+      const options = createHeaderOptions({ text: 'Hello', level: 2, isToggleable: true });
+      const header = new Header(options);
+      header.render();
+
+      // Simulate merging data that has corrupted arrow HTML
+      const corruptedText = `<div ${TOGGLE_ATTR.toggleArrow}="" role="button">arrow</div> World`;
+      header.merge({ text: corruptedText, level: 2 });
+
+      const saved = header.save(header.render());
+
+      expect(saved.text).not.toContain(TOGGLE_ATTR.toggleArrow);
+      expect(saved.text).toContain('Hello');
+      expect(saved.text).toContain('World');
+    });
+
+    it('appends text after existing content, not after arrow element', () => {
+      const options = createHeaderOptions({ text: 'Hello', level: 2, isToggleable: true });
+      const header = new Header(options);
+      const element = header.render();
+
+      header.merge({ text: ' World', level: 2 });
+
+      // Strip arrow and check text content
+      const arrowEl = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+      if (arrowEl) {
+        arrowEl.remove();
+      }
+      expect(element.innerHTML).toBe('Hello World');
+    });
+  });
+
   describe('static toolbox', () => {
     it('includes toggle heading entries for levels 1-3', () => {
       const toolbox = Header.toolbox;

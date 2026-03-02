@@ -410,7 +410,34 @@ export class Header implements BlockTool {
    * @param data - saved data to merge with current block
    */
   public merge(data: HeaderData): void {
-    this._element.insertAdjacentHTML('beforeend', data.text);
+    /**
+     * Strip any arrow HTML from incoming data to prevent injection of toggle markup
+     */
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = data.text;
+    const arrowInData = tempDiv.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+    if (arrowInData) {
+      arrowInData.remove();
+    }
+
+    const cleanText = tempDiv.innerHTML;
+
+    /**
+     * Strip arrow from current element, append text, then re-add arrow.
+     * This ensures text is appended to the content, not interleaved with toggle markup.
+     */
+    const arrowEl = this._element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+    if (arrowEl) {
+      arrowEl.remove();
+    }
+
+    this._element.insertAdjacentHTML('beforeend', cleanText);
+
+    if (arrowEl && this._data.isToggleable) {
+      this._element.prepend(arrowEl);
+    }
   }
 
   /**

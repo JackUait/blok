@@ -47,6 +47,7 @@
   --color-item-focus-bg: rgba(34, 186, 255, 0.08);
   --color-item-focus-shadow: rgba(7, 161, 227, 0.08);
   --color-item-hover-bg: #f8f8f8;
+  --color-icon-bg: rgba(0, 0, 0, 0.04);
   --color-item-confirm-bg: #e24a4a;
   --color-item-confirm-hover-bg: #ce4343;
   --color-item-destructive-text: #e24a4a;

@@ -221,7 +221,7 @@ describe('PopoverItemDefault', () => {
       },
     });
 
-    expect(element.className).toContain('pr-2');
+    expect(element.className).toContain('pr-4');
     expect(element.className).not.toContain('pr-8');
   });
 

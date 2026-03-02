@@ -616,6 +616,68 @@ describe('Toolbox', () => {
     });
   });
 
+  describe('slash search styling', () => {
+    it('should set data-blok-slash-search attribute on contenteditable when opened', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]');
+
+      expect(contentEditable?.hasAttribute('data-blok-slash-search')).toBe(true);
+    });
+
+    it('should remove data-blok-slash-search attribute when popover closes', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]');
+
+      expect(contentEditable?.hasAttribute('data-blok-slash-search')).toBe(true);
+
+      // Simulate popover close event
+      const closeHandler = (mockPopoverInstance.on as ReturnType<typeof vi.fn>).mock.calls.find(
+        (call): call is [string, () => void] => call[0] === PopoverEvent.Closed
+      )?.[1];
+
+      if (closeHandler) {
+        closeHandler();
+      }
+
+      expect(contentEditable?.hasAttribute('data-blok-slash-search')).toBe(false);
+    });
+
+    it('should remove data-blok-slash-search attribute when toolbox.close() is called', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]');
+
+      expect(contentEditable?.hasAttribute('data-blok-slash-search')).toBe(true);
+
+      toolbox.close();
+
+      expect(contentEditable?.hasAttribute('data-blok-slash-search')).toBe(false);
+    });
+  });
+
   describe('toolbox items with multiple entries', () => {
     it('should handle tool with array toolbox config', () => {
       const toolWithMultipleEntries = {

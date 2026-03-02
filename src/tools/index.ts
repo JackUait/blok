@@ -4,7 +4,7 @@
  *
  * @example
  * // Import specific tools
- * import { Paragraph, Header, List, Bold, Italic, Link, Marker } from '@jackuait/blok/tools';
+ * import { Paragraph, Header, List, Toggle, Bold, Italic, Link, Marker } from '@jackuait/blok/tools';
  *
  * // Use in Blok configuration (flat config style)
  * new Blok({
@@ -24,6 +24,7 @@ export { Paragraph } from './paragraph';
 export { Header } from './header';
 export { ListItem as List } from './list';
 export { Table } from './table';
+export { ToggleItem as Toggle } from './toggle';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
@@ -39,6 +40,7 @@ export const defaultBlockTools = {
   header: {},
   list: {},
   table: {},
+  toggle: {},
 } as const;
 
 export const defaultInlineTools = {

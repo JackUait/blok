@@ -98,6 +98,7 @@ const LOGIC_TESTS = [
   '**/tools/paragraph.spec.ts',
   '**/tools/table*.spec.ts',
   '**/tools/table/**/*.spec.ts',
+  '**/tools/toggle*.spec.ts',
   '**/tools/tools-factory.spec.ts',
   '**/tools/tools-collection.spec.ts',
 

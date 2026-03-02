@@ -1,5 +1,5 @@
 import type { Block } from '../../../block';
-import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../constants';
+import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
 
@@ -26,8 +26,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
 
     const handledList = this.handleListShortcut();
     const handledHeader = this.handleHeaderShortcut();
+    const handledToggle = this.handleToggleShortcut();
 
-    return handledList || handledHeader;
+    return handledList || handledHeader || handledToggle;
   }
 
   /**
@@ -198,6 +199,57 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const newBlock = BlockManager.replace(currentBlock, HEADER_TOOL_NAME, {
       text: remainingHtml,
       level: match.level,
+    });
+
+    this.setCaretAfterConversion(newBlock, caretOffset);
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
+   * Check if current block matches a toggle shortcut pattern ("> ") and convert it.
+   */
+  private handleToggleShortcut(): boolean {
+    const { BlockManager, Tools } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return false;
+    }
+
+    if (!currentBlock.tool.isDefault) {
+      return false;
+    }
+
+    const toggleTool = Tools.blockTools.get(TOGGLE_TOOL_NAME);
+
+    if (!toggleTool) {
+      return false;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (!currentInput) {
+      return false;
+    }
+
+    const textContent = currentInput.textContent || '';
+    const match = TOGGLE_PATTERN.exec(textContent);
+
+    if (!match) {
+      return false;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    const shortcutLength = 2; // "> "
+    const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
+    const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
+
+    const newBlock = BlockManager.replace(currentBlock, TOGGLE_TOOL_NAME, {
+      text: remainingHtml,
     });
 
     this.setCaretAfterConversion(newBlock, caretOffset);

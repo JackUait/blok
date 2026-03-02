@@ -161,7 +161,12 @@ export class TableCellBlocks {
 
     if (nextRow < this.getRowCount()) {
       this.navigateToCell({ row: nextRow, col: 0 });
+
+      return;
     }
+
+    // At the very last cell — exit the table by focusing or creating a block below
+    this.exitTableForward();
   }
 
   /**
@@ -182,7 +187,81 @@ export class TableCellBlocks {
 
     if (prevRow >= 0) {
       this.navigateToCell({ row: prevRow, col: this.getColumnCount() - 1 }, true);
+
+      return;
     }
+
+    // At the very first cell — exit the table by focusing the block above
+    this.exitTableBackward();
+  }
+
+  /**
+   * Exit the table by focusing the first block after it, or creating one if none exists.
+   */
+  private exitTableForward(): void {
+    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
+
+    if (tableIndex === undefined) {
+      return;
+    }
+
+    const blockAfterTable = this.findFirstBlockAfterTable(tableIndex);
+
+    if (blockAfterTable !== null) {
+      this.api.caret.setToBlock(blockAfterTable.id, 'start');
+    } else {
+      this.api.blocks.insertAtEnd();
+
+      const lastIndex = this.api.blocks.getBlocksCount() - 1;
+      const lastBlock = this.api.blocks.getBlockByIndex(lastIndex);
+
+      if (lastBlock) {
+        this.api.caret.setToBlock(lastBlock.id, 'start');
+      }
+    }
+  }
+
+  /**
+   * Exit the table backward by focusing the block before the table.
+   * If no block exists before the table, do nothing.
+   */
+  private exitTableBackward(): void {
+    const tableIndex = this.api.blocks.getBlockIndex(this.tableBlockId);
+
+    if (tableIndex === undefined || tableIndex === 0) {
+      return;
+    }
+
+    // The block immediately before the table in the flat array
+    const blockBefore = this.api.blocks.getBlockByIndex(tableIndex - 1);
+
+    if (blockBefore) {
+      this.api.caret.setToBlock(blockBefore.id, 'end');
+    }
+  }
+
+  /**
+   * Scan the flat block array starting after the table block, skipping all blocks
+   * whose holder is inside the table grid, and return the first non-child block.
+   * Returns null if no such block exists.
+   */
+  private findFirstBlockAfterTable(tableIndex: number): { id: string } | null {
+    const totalBlocks = this.api.blocks.getBlocksCount();
+
+    for (let i = tableIndex + 1; i < totalBlocks; i++) {
+      const block = this.api.blocks.getBlockByIndex(i);
+
+      if (!block) {
+        continue;
+      }
+
+      // Check if this block's holder is inside the table grid — if not, it's after the table
+      if (!this.gridElement.contains(block.holder)) {
+        return block;
+      }
+    }
+
+    return null;
   }
 
   /**

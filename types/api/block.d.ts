@@ -32,10 +32,9 @@ export interface BlockAPI {
   readonly isEmpty: boolean;
 
   /**
-   * True if Block is selected with Cross-Block selection.
-   * Can be set by tools to programmatically select/deselect the block.
+   * True if Block is selected with Cross-Block selection
    */
-  selected: boolean;
+  readonly selected: boolean;
 
   /**
    * Last successfully extracted block tool data (synchronous).

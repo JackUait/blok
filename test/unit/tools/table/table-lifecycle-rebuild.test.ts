@@ -52,7 +52,6 @@ const createMockAPI = (overrides: Partial<Record<string, unknown>> = {}): API =>
       getCurrentBlockIndex: vi.fn().mockReturnValue(0),
       getBlocksCount: vi.fn().mockReturnValue(0),
       getBlockIndex: vi.fn().mockReturnValue(undefined),
-      getById: vi.fn().mockReturnValue(null),
       setBlockParent: vi.fn(),
       ...(blocksOverrides as Record<string, unknown>),
     },

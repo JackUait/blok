@@ -61,9 +61,6 @@ const BlockAPIConstructor = function BlockAPI(
     get selected(): boolean {
       return block.selected;
     },
-    set selected(state: boolean) {
-      block.selected = state;
-    },
 
     /**
      * Last successfully extracted block tool data (synchronous)

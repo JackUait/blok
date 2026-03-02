@@ -255,13 +255,6 @@ export class BlockSelection extends Module {
   public clearSelection(reason?: Event, restoreSelection = false): void {
     const { RectangleSelection } = this.Blok;
 
-    /**
-     * Invalidate cache so subsequent anyBlockSelected checks use fresh data.
-     * This handles cases where block.selected was set programmatically
-     * (e.g. via BlockAPI) outside of selectBlock/unselectBlock.
-     */
-    this.clearCache();
-
     this.needToSelectAll = false;
     this.nativeInputSelected = false;
     this.readyToBlockSelection = false;

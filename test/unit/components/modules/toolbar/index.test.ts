@@ -365,7 +365,7 @@ describe('Toolbar module interactions', () => {
     expect(hoveredBlock).toBe(cellBlock);
   });
 
-  it('hides plus button when moveAndOpen is called with a cell block but no target (keyboard/slash path)', () => {
+  it('keeps plus button visible when moveAndOpen is called with a cell block but no target (keyboard/slash path)', () => {
     // Create DOM structure: table block containing a cell container with a cell block
     const tableBlockHolder = document.createElement('div');
 
@@ -430,14 +430,14 @@ describe('Toolbar module interactions', () => {
 
     const nodes = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
 
-    // Plus button should be hidden because the block is inside a table cell
-    expect(nodes.plusButton?.style.display).toBe('none');
+    // Plus button should remain visible so users can add blocks below the table
+    expect(nodes.plusButton?.style.display).toBe('');
 
     // Clean up
     document.body.removeChild(tableBlockHolder);
   });
 
-  it('hides plus button when moveAndOpen is called with no arguments but currentBlock is inside a table cell', () => {
+  it('keeps plus button visible when moveAndOpen is called with no arguments but currentBlock is inside a table cell', () => {
     // Create DOM: cell block inside table cell container
     const cellBlocksContainer = document.createElement('div');
 
@@ -498,8 +498,8 @@ describe('Toolbar module interactions', () => {
 
     const nodes = (toolbar as unknown as { nodes: typeof toolbar['nodes'] }).nodes;
 
-    // Plus button should be hidden because currentBlock is inside a table cell
-    expect(nodes.plusButton?.style.display).toBe('none');
+    // Plus button should remain visible so users can add blocks below the table
+    expect(nodes.plusButton?.style.display).toBe('');
 
     // Clean up
     document.body.removeChild(tableBlockHolder);

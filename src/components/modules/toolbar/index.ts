@@ -393,22 +393,16 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Suppress toolbar buttons when the focused element is inside a table cell.
-     * The toolbar still positions itself for toolbox/slash-search purposes,
-     * but plus button and settings toggler remain hidden while a cell has focus.
-     *
-     * Note: we check focus (activeElement) not hover. On hover alone, the plus
-     * button should remain visible so the user can click it to add blocks
-     * below the table. Only when the user actually clicks/focuses inside a cell
-     * should the buttons be suppressed.
+     * Adjust toolbar button visibility when focus is inside a table cell.
+     * The plus button always stays visible so users can add blocks below the table.
+     * The settings toggler is hidden because drag/settings don't apply to individual cells.
      */
     const focusIsInsideCell = this.isFocusInsideTableCell();
-    const displayValue = focusIsInsideCell ? 'none' : '';
 
-    plusButton.style.display = displayValue;
+    plusButton.style.display = '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = displayValue;
+      settingsToggler.style.display = focusIsInsideCell ? 'none' : '';
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -662,8 +656,8 @@ export class Toolbar extends Module<ToolbarNodes> {
 
   /**
    * Updates toolbar button visibility based on whether a table cell has focus.
-   * Hides plus button and settings toggler when focus is inside a cell;
-   * restores them when focus moves to a regular block.
+   * The plus button always stays visible; the settings toggler is hidden when
+   * focus is inside a cell and restored when focus moves to a regular block.
    *
    * Called from the focusin listener so button state is updated immediately
    * on click, without waiting for the next hover/moveAndOpen cycle.
@@ -676,12 +670,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     const focusIsInsideCell = this.isFocusInsideTableCell();
-    const displayValue = focusIsInsideCell ? 'none' : '';
 
-    plusButton.style.display = displayValue;
+    plusButton.style.display = '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = displayValue;
+      settingsToggler.style.display = focusIsInsideCell ? 'none' : '';
     }
   }
 

@@ -2,11 +2,9 @@
  * Unit tests for Toolbar.moveAndOpen() — table block plus button visibility.
  *
  * Expected behaviour:
- * - Plus button HIDDEN when `target` is inside a [data-blok-table-cell-blocks]
- *   container (i.e. the pointer is on a cell's content area).
- * - Plus button VISIBLE when the target is NOT inside a cell (e.g. table border/padding).
- * - Plus button HIDDEN when `unresolvedBlock.holder` IS inside a cell
- *   (i.e. a cell-paragraph block is passed directly via activateToolbox / slash menu).
+ * - Plus button ALWAYS VISIBLE regardless of cell focus (so users can add blocks below the table).
+ * - Settings toggler HIDDEN when focus is inside a table cell.
+ * - Settings toggler VISIBLE when no cell has focus.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -90,12 +88,13 @@ describe('Toolbar — table block plus button visibility', () => {
     vi.restoreAllMocks();
   });
 
-  it('hides plus button when the focused element is inside a table cell', () => {
+  it('keeps plus button visible when the focused element is inside a table cell', () => {
     /**
      * Scenario: The user clicks inside a table cell, causing document.activeElement
-     * to be inside [data-blok-table-cell-blocks]. The plus button should be hidden.
+     * to be inside [data-blok-table-cell-blocks]. The plus button stays visible
+     * so the user can add blocks below the table. The settings toggler is hidden.
      */
-    const { toolbar, plusButton } = createToolbar();
+    const { toolbar, plusButton, settingsToggler } = createToolbar();
 
     // DOM structure: top-level table holder → cell container → focusable element
     const tableHolder = document.createElement('div');
@@ -127,8 +126,11 @@ describe('Toolbar — table block plus button visibility', () => {
     // Act — call moveAndOpen while cell has focus
     toolbar.moveAndOpen(tableBlock, cellEditable);
 
-    // Plus button must be HIDDEN (focus is inside a cell)
-    expect(plusButton.style.display).toBe('none');
+    // Plus button must be VISIBLE (always visible so users can add blocks below table)
+    expect(plusButton.style.display).toBe('');
+
+    // Settings toggler must be HIDDEN (focus is inside a cell)
+    expect(settingsToggler.style.display).toBe('none');
 
     document.body.removeChild(tableHolder);
   });
@@ -173,11 +175,12 @@ describe('Toolbar — table block plus button visibility', () => {
     document.body.removeChild(tableHolder);
   });
 
-  it('hides plus button when a cell-paragraph block is passed directly and cell is focused', () => {
+  it('keeps plus button visible when a cell-paragraph block is passed directly and cell is focused', () => {
     /**
      * Scenario: A cell-paragraph block is passed directly to moveAndOpen
      * (e.g. via activateToolbox → slash press, not through the blockHover resolver).
-     * The cell is focused (user typed "/" in it), so the plus button should be hidden.
+     * The cell is focused (user typed "/" in it). The plus button stays visible
+     * so the user can add blocks below the table.
      */
     // Bottom-up DOM: tableHolder > cellContainer > cellParagraphHolder
     const tableHolder = document.createElement('div');
@@ -229,7 +232,8 @@ describe('Toolbar — table block plus button visibility', () => {
 
     toolbar.moveAndOpen(cellParagraphBlock, cellParagraphHolder);
 
-    expect(plusButton.style.display).toBe('none');
+    // Plus button must be VISIBLE (always visible so users can add blocks below table)
+    expect(plusButton.style.display).toBe('');
 
     document.body.removeChild(tableHolder);
   });

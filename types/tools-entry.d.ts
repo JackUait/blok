@@ -28,6 +28,7 @@ export const Bold: InlineToolConstructable;
 export const Italic: InlineToolConstructable;
 export const Link: InlineToolConstructable;
 export const Convert: InlineToolConstructable;
+export const Marker: InlineToolConstructable;
 
 // Block tunes
 export const Delete: BlockTuneConstructable;
@@ -49,5 +50,5 @@ export const defaultInlineTools: {
   readonly bold: {};
   readonly italic: {};
   readonly link: {};
-  readonly convertTo: {};
+  readonly marker: {};
 };

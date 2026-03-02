@@ -8,6 +8,7 @@ import { BoldInlineTool } from '../components/inline-tools/inline-tool-bold';
 import { ConvertInlineTool } from '../components/inline-tools/inline-tool-convert';
 import { ItalicInlineTool } from '../components/inline-tools/inline-tool-italic';
 import { LinkInlineTool } from '../components/inline-tools/inline-tool-link';
+import { MarkerInlineTool } from '../components/inline-tools/inline-tool-marker';
 import { Header } from '../tools/header';
 import { ListItem } from '../tools/list';
 import { Paragraph } from '../tools/paragraph';
@@ -35,6 +36,7 @@ export const defaultTools: { [toolName: string]: ToolConstructable | ToolSetting
   bold: BoldInlineTool,
   italic: ItalicInlineTool,
   link: LinkInlineTool,
+  marker: MarkerInlineTool,
   convertTo: ConvertInlineTool,
 };
 

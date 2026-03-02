@@ -1,7 +1,18 @@
-import { alert, confirm, getWrapper, prompt } from './draw';
+import { alert, confirm, createProgressBar, getWrapper, prompt } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './types';
 
 const DEFAULT_TIME = 8000;
+
+/**
+ * Applies the exit animation and removes the element after it finishes.
+ */
+const dismissWithAnimation = (element: HTMLElement): void => {
+  element.classList.add('animate-notify-slide-out');
+
+  element.addEventListener('animationend', () => {
+    element.remove();
+  }, { once: true });
+};
 
 /**
  * Prepare wrapper for notifications
@@ -48,8 +59,24 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
     // type is 'alert' or undefined
     const alertElement = alert(options);
 
+    // Add progress bar for auto-dismissing alerts
+    const progressBar = createProgressBar(options.style, time);
+
+    alertElement.appendChild(progressBar);
+
+    // Wire up the close button to use animated dismissal
+    const crossBtn = alertElement.querySelector('[data-blok-testid="notification-cross"]');
+
+    if (crossBtn) {
+      // Replace the basic remove handler with animated dismissal
+      const newCross = crossBtn.cloneNode(true) as HTMLElement;
+
+      crossBtn.replaceWith(newCross);
+      newCross.addEventListener('click', () => dismissWithAnimation(alertElement));
+    }
+
     window.setTimeout(() => {
-      alertElement.remove();
+      dismissWithAnimation(alertElement);
     }, time);
 
     return alertElement;
@@ -57,7 +84,7 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
 
   if (wrapper && notify) {
     wrapper.appendChild(notify);
-    notify.className = `${notify.className} animate-notify-bounce-in`;
+    notify.className = `${notify.className} animate-notify-slide-in`;
     notify.setAttribute('data-blok-bounce-in', 'true');
   }
 };

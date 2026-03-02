@@ -13,6 +13,7 @@ import type {
   ConversionConfig,
   ToolSanitizerConfig,
   PasteConfig,
+  PasteEvent,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 
@@ -113,6 +114,26 @@ export class ToggleItem implements BlockTool {
       },
       data
     );
+  }
+
+  public onPaste(event: PasteEvent): void {
+    const detail = event.detail;
+
+    if (!('data' in detail)) {
+      return;
+    }
+
+    const content = detail.data as HTMLElement;
+    const summary = content.querySelector('summary');
+    const text = summary !== null ? summary.innerHTML : content.innerHTML;
+
+    this._data = { text };
+
+    const contentEl = this.getContentElement();
+
+    if (contentEl !== null) {
+      contentEl.innerHTML = text;
+    }
   }
 
   public setData(newData: ToggleItemData): boolean {

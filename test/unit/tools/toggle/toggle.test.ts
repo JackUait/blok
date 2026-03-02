@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { API, BlockToolConstructorOptions, SanitizerConfig } from '../../../../types';
+import type { API, BlockToolConstructorOptions, SanitizerConfig, HTMLPasteEvent } from '../../../../types';
 import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
 
@@ -391,6 +391,43 @@ describe('ToggleItem', () => {
 
       // Should not throw
       toggle.rendered();
+    });
+  });
+
+  describe('onPaste()', () => {
+    it('extracts text from DETAILS summary element', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      toggle.render();
+
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.innerHTML = 'Toggle title';
+      details.appendChild(summary);
+      details.appendChild(document.createTextNode('Child content'));
+
+      const event = { detail: { data: details } } as unknown as HTMLPasteEvent;
+      toggle.onPaste(event);
+
+      const saved = toggle.save();
+
+      expect(saved.text).toBe('Toggle title');
+    });
+
+    it('uses full innerHTML when no summary element exists', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      toggle.render();
+
+      const details = document.createElement('details');
+      details.innerHTML = 'Plain toggle content';
+
+      const event = { detail: { data: details } } as unknown as HTMLPasteEvent;
+      toggle.onPaste(event);
+
+      const saved = toggle.save();
+
+      expect(saved.text).toBe('Plain toggle content');
     });
   });
 });

@@ -519,6 +519,92 @@ describe('TableAddControls', () => {
 
       vi.useRealTimers();
     });
+
+    it('add-row button becomes visible via document mousemove when cursor is below wrapper but near grid', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const gridRect = new DOMRect(0, 0, 200, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+
+      // Dispatch mousemove on document (not on wrapper) at y=120, 20px below grid bottom
+      const docEvent = new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true });
+
+      document.dispatchEvent(docEvent);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+    });
+
+    it('document mousemove does not show buttons when cursor is far from the grid', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const gridRect = new DOMRect(0, 0, 200, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+
+      // Dispatch mousemove on document far from the grid (y=300, 200px below grid bottom)
+      const docEvent = new MouseEvent('mousemove', { clientX: 50, clientY: 300, bubbles: true });
+
+      document.dispatchEvent(docEvent);
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('0');
+      expect(addColBtn.style.opacity).toBe('0');
+    });
+
+    it('document mousemove listener is removed after destroy', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const controls = new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      controls.destroy();
+
+      const gridRect = new DOMRect(0, 0, 200, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+
+      // Re-create button manually to check document listener doesn't fire
+      const addRowBtn = document.createElement('div');
+
+      addRowBtn.setAttribute(ADD_ROW_ATTR, '');
+      addRowBtn.style.opacity = '0';
+      wrapper.appendChild(addRowBtn);
+
+      const docEvent = new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true });
+
+      document.dispatchEvent(docEvent);
+
+      expect(addRowBtn.style.opacity).toBe('0');
+    });
   });
 
   describe('click handlers', () => {

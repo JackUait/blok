@@ -79,6 +79,7 @@ export class TableAddControls {
   private dragState: DragState | null = null;
 
   private boundMouseMove: (e: MouseEvent) => void;
+  private boundDocumentMouseMove: (e: MouseEvent) => void;
   private boundMouseLeave: () => void;
   private boundAddRowClick: () => void;
   private boundAddColClick: () => void;
@@ -110,6 +111,7 @@ export class TableAddControls {
     this.onDragEnd = options.onDragEnd;
     this.getNewColumnWidth = options.getNewColumnWidth;
     this.boundMouseMove = this.handleMouseMove.bind(this);
+    this.boundDocumentMouseMove = this.handleDocumentMouseMove.bind(this);
     this.boundMouseLeave = this.handleMouseLeave.bind(this);
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
@@ -126,10 +128,10 @@ export class TableAddControls {
 
     this.wrapper.addEventListener('mousemove', this.boundMouseMove);
     this.wrapper.addEventListener('mouseleave', this.boundMouseLeave);
+    document.addEventListener('mousemove', this.boundDocumentMouseMove);
 
     this.addRowBtn.addEventListener('pointerdown', this.boundRowPointerDown);
     this.addColBtn.addEventListener('pointerdown', this.boundColPointerDown);
-
   }
 
   /**
@@ -212,6 +214,7 @@ export class TableAddControls {
   public destroy(): void {
     this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);
+    document.removeEventListener('mousemove', this.boundDocumentMouseMove);
     this.addRowBtn.removeEventListener('pointerdown', this.boundRowPointerDown);
     this.addColBtn.removeEventListener('pointerdown', this.boundColPointerDown);
 
@@ -397,6 +400,31 @@ export class TableAddControls {
   private handleMouseLeave(): void {
     this.scheduleHideRow();
     this.scheduleHideCol();
+  }
+
+  /**
+   * Document-level mousemove handler.
+   * Catches mouse movements outside the wrapper (e.g. in the ::after
+   * pseudo-element zone below the grid, which has pointer-events-none).
+   * Only delegates to handleMouseMove when the cursor is within the
+   * proximity zone around the grid to avoid unnecessary work.
+   */
+  private handleDocumentMouseMove(e: MouseEvent): void {
+    if (this.wrapper.contains(e.target as Node)) {
+      return;
+    }
+
+    const gridRect = this.grid.getBoundingClientRect();
+    const margin = PROXIMITY_PX;
+    const nearGrid =
+      e.clientX >= gridRect.left - margin &&
+      e.clientX <= gridRect.right + margin &&
+      e.clientY >= gridRect.top - margin &&
+      e.clientY <= gridRect.bottom + margin;
+
+    if (nearGrid) {
+      this.handleMouseMove(e);
+    }
   }
 
   private showRow(): void {

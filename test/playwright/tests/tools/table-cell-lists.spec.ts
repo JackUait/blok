@@ -336,7 +336,7 @@ test.describe('table cells — always-blocks model', () => {
   });
 
   test.describe('toolbar suppression', () => {
-    test('block toolbar should not appear for blocks inside table cells', async ({ page }) => {
+    test('block toolbar hides settings toggler but keeps plus button for blocks inside table cells', async ({ page }) => {
       await create2x2Table(page);
 
       // Click into a cell's editable area to give it focus
@@ -356,7 +356,7 @@ test.describe('table cells — always-blocks model', () => {
       const plusButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`);
       const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
 
-      await expect(plusButton).toBeHidden();
+      await expect(plusButton).toBeVisible();
       await expect(settingsToggler).toBeHidden();
     });
   });

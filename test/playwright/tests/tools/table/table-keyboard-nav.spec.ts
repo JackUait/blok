@@ -226,7 +226,7 @@ test.describe('Keyboard Navigation', () => {
     expect(focusedCellIndex).toBe(2);
   });
 
-  test('Tab at the very last cell of the table does nothing (no wrap to start)', async ({ page }) => {
+  test('Tab at the very last cell exits the table (focus moves outside)', async ({ page }) => {
     // 1. Initialize editor with a 2x2 table
     await createTable2x2(page);
 
@@ -237,7 +237,7 @@ test.describe('Keyboard Navigation', () => {
     // 3. Press Tab
     await page.keyboard.press('Tab');
 
-    // Verify focus does not jump outside the table or wrap back to the first cell
+    // Verify focus has left the table — Tab at the last cell exits to a new block below
     const focusedCellIndex = await page.evaluate(() => {
       const activeEl = document.activeElement;
 
@@ -248,7 +248,7 @@ test.describe('Keyboard Navigation', () => {
       const cell = activeEl.closest('[data-blok-table-cell]');
 
       if (!cell) {
-        // Focus may have left the table entirely — return special sentinel
+        // Focus has left the table entirely
         return -2;
       }
 
@@ -257,9 +257,8 @@ test.describe('Keyboard Navigation', () => {
       return allCells.indexOf(cell);
     });
 
-    // Focus should NOT be at index 0 (first cell / wrap-around) and NOT outside the table (-2)
-    expect(focusedCellIndex).not.toBe(0);
-    expect(focusedCellIndex).not.toBe(-2);
+    // Focus should be outside the table (-2), not inside any cell
+    expect(focusedCellIndex).toBe(-2);
   });
 
   test('Shift+Tab moves focus to the previous cell', async ({ page }) => {

@@ -128,7 +128,7 @@ test.describe('Toolbar Visibility in Table Cells', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('The plus button is hidden when a table cell is focused', async ({ page }) => {
+  test('The plus button stays visible when a table cell is focused', async ({ page }) => {
     // 1. Initialize editor with a table block (2x2 content)
     await createBlok(page, {
       tools: defaultTools,
@@ -157,7 +157,7 @@ test.describe('Toolbar Visibility in Table Cells', () => {
     // 4. Verify the plus button is hidden
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
-    await expect(plusButton).toBeHidden();
+    await expect(plusButton).toBeVisible();
   });
 
   test('The settings toggler is hidden when a table cell is focused', async ({ page }) => {

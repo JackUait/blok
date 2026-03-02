@@ -257,16 +257,17 @@ export class BlockOperations {
     blocksStore.insert(targetIndex, block, replace, appendToWorkingArea);
 
     /**
-     * Update currentBlockIndex BEFORE firing the mutation event so that
-     * listeners (e.g. TableCellBlocks.handleBlockMutation) see the index
-     * of the newly inserted block, not the stale previous value.
+     * Update the raw currentBlockIndex BEFORE firing the mutation event so
+     * that listeners (e.g. TableCellBlocks.handleBlockMutation) see the
+     * index of the newly inserted block. We bypass the setter to avoid
+     * triggering stopCapturing prematurely — that happens after Yjs sync.
      */
-    if (needToFocus) {
-      this.currentBlockIndexValue = targetIndex;
-    }
+    const prevIndex = this.currentBlockIndex;
 
-    if (!needToFocus && targetIndex <= this.currentBlockIndex) {
-      this.currentBlockIndexValue++;
+    if (needToFocus) {
+      this.currentBlockIndex = targetIndex;
+    } else if (targetIndex <= this.currentBlockIndex) {
+      this.currentBlockIndex++;
     }
 
     /**
@@ -288,6 +289,14 @@ export class BlockOperations {
         data: block.preservedData,
         parent: block.parentId ?? undefined,
       }, targetIndex);
+    }
+
+    /**
+     * Trigger stopCapturing for the index change now that Yjs sync is done.
+     * This preserves undo group boundaries at the original timing.
+     */
+    if (this.currentBlockIndex !== prevIndex && !this.suppressStopCapturing) {
+      this.dependencies.YjsManager?.stopCapturing();
     }
 
     return block;

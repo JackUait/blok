@@ -693,7 +693,7 @@ export class Caret extends Module {
       nextBlock.id === currentBlock.parentId
     );
 
-    if (shouldExitParent) {
+    if (shouldExitParent && currentBlock.parentId !== null) {
       const blockAfterTable = this.findFirstBlockAfterParent(currentBlock.parentId);
 
       if (blockAfterTable !== null) {

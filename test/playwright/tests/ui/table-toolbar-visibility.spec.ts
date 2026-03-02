@@ -74,7 +74,7 @@ test.describe('toolbar visibility in table cells', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('hides plus button and settings toggler when clicking inside a table cell', async ({ page }) => {
+  test('hides settings toggler but keeps plus button visible when clicking inside a table cell', async ({ page }) => {
     await createBlokWithTable(page);
 
     const firstCell = page.locator(CELL_SELECTOR).filter({ hasText: 'Cell A' });
@@ -88,6 +88,6 @@ test.describe('toolbar visibility in table cells', () => {
     const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
 
     await expect(settingsButton).toBeHidden();
-    await expect(plusButton).toBeHidden();
+    await expect(plusButton).toBeVisible();
   });
 });

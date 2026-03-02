@@ -114,9 +114,10 @@ vi.mock('../../../src/components/utils', async () => {
  * Tests internal functionality and edge cases not covered by E2E tests
  */
 describe('Toolbox', () => {
-  const i18nLabels: Record<'filter' | 'nothingFound', string> = {
+  const i18nLabels: Record<'filter' | 'nothingFound' | 'slashSearchPlaceholder', string> = {
     filter: 'Filter',
     nothingFound: 'Nothing found',
+    slashSearchPlaceholder: 'Type to search',
   };
 
   // Mock i18n instance for Toolbox
@@ -677,7 +678,7 @@ describe('Toolbox', () => {
       expect(contentEditable?.hasAttribute('data-blok-slash-search')).toBe(false);
     });
 
-    it('should set data-blok-slash-search attribute value to i18n filter label', () => {
+    it('should set data-blok-slash-search attribute value to i18n slash search placeholder', () => {
       const toolbox = new Toolbox({
         api: mocks.api,
         tools: mocks.tools,
@@ -689,7 +690,7 @@ describe('Toolbox', () => {
 
       const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]');
 
-      expect(contentEditable?.getAttribute('data-blok-slash-search')).toBe('Filter');
+      expect(contentEditable?.getAttribute('data-blok-slash-search')).toBe('Type to search');
     });
 
     it('should clear data-blok-slash-search value when user types a query', () => {
@@ -731,7 +732,7 @@ describe('Toolbox', () => {
       // Clear query back to just "/"
       contentEditable.textContent = '/';
       contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('Filter');
+      expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('Type to search');
     });
   });
 

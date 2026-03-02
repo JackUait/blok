@@ -57,7 +57,7 @@ export interface ToolboxEventMap {
 /**
  * Available i18n dict keys that should be passed to the constructor
  */
-type ToolboxTextLabelsKeys = 'filter' | 'nothingFound';
+type ToolboxTextLabelsKeys = 'filter' | 'nothingFound' | 'slashSearchPlaceholder';
 
 /**
  * Toolbox
@@ -633,7 +633,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.currentBlockForSearch = currentBlock.holder;
     this.currentContentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
     if (this.currentContentEditable instanceof HTMLElement) {
-      this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.filter);
+      this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
     }
     this.listeners.on(this.currentBlockForSearch, 'input', this.handleBlockInput);
   }
@@ -677,7 +677,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(
         DATA_ATTR.slashSearch,
-        query.length === 0 ? this.i18nLabels.filter : ''
+        query.length === 0 ? this.i18nLabels.slashSearchPlaceholder : ''
       );
     }
 

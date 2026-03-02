@@ -830,6 +830,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       i18nLabels: {
         filter: this.Blok.I18n.t('popover.search'),
         nothingFound: this.Blok.I18n.t('popover.nothingFound'),
+        slashSearchPlaceholder: this.Blok.I18n.t('toolbox.typeToSearch'),
       },
       i18n: this.Blok.I18n,
       triggerElement: this.nodes.plusButton,

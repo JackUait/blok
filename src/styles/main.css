@@ -344,7 +344,7 @@
  * transforms to look like a search input with a placeholder.
  */
 [data-blok-slash-search] {
-  @apply bg-[#F8F8F8] rounded-lg transition-colors duration-150;
+  @apply bg-[#F8F8F8] rounded-lg transition-colors duration-150 max-w-[240px];
   color: transparent;
   caret-color: var(--color-dark);
 }

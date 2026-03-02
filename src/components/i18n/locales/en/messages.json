@@ -5,6 +5,7 @@
   "toolbox.optionAddAbove": "Option-click to add above",
   "toolbox.ctrlAddAbove": "Ctrl-click to add above",
   "popover.search": "Search",
+  "toolbox.typeToSearch": "Type to search",
   "popover.nothingFound": "Nothing found",
   "popover.convertTo": "Convert to",
   "toolNames.text": "Text",

@@ -327,5 +327,11 @@ describe('Toggle DOM Builder', () => {
 
       expect(arrow.contentEditable).toBe('false');
     });
+
+    it('has data-blok-mutation-free="true" to prevent mutation observer loops', () => {
+      const arrow = buildArrow(false, vi.fn());
+
+      expect(arrow.getAttribute('data-blok-mutation-free')).toBe('true');
+    });
   });
 });

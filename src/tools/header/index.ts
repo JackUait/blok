@@ -459,25 +459,21 @@ export class Header implements BlockTool {
    */
   public save(toolsContent: HTMLHeadingElement): HeaderData {
     /**
-     * Strip arrow element before reading innerHTML to avoid saving toggle markup
+     * Clone the element and strip the arrow from the clone to read innerHTML
+     * without mutating the live DOM — DOM mutations during save would trigger
+     * the MutationObserver → didMutated → syncBlockDataToYjs → save() loop.
      */
-    const arrowEl = toolsContent.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+    const clone = toolsContent.cloneNode(true) as HTMLHeadingElement;
+    const arrowEl = clone.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
 
     if (arrowEl) {
       arrowEl.remove();
     }
 
     const data: HeaderData = {
-      text: toolsContent.innerHTML,
+      text: clone.innerHTML,
       level: this.currentLevel.number,
     };
-
-    /**
-     * Re-add arrow after reading so the DOM is not mutated
-     */
-    if (arrowEl && this._data.isToggleable) {
-      toolsContent.prepend(arrowEl);
-    }
 
     if (this._data.isToggleable === true) {
       data.isToggleable = true;

@@ -720,18 +720,24 @@ describe('Header Tool - Custom Configurations', () => {
         expect(savedData.text).toBe('Toggle Heading');
       });
 
-      it('re-adds arrow element after save so DOM is not mutated', () => {
+      it('does not mutate the live DOM during save (uses clone to strip arrow)', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
         const element = header.render();
 
+        const arrowBefore = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
         // Arrow should exist before save
-        expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+        expect(arrowBefore).not.toBeNull();
+
+        // Spy on the live element to ensure remove() is never called on the arrow
+        const removeSpy = vi.spyOn(arrowBefore!, 'remove');
 
         header.save(element);
 
-        // Arrow should still exist after save
-        expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+        // Arrow should still exist after save — never removed from live DOM
+        expect(element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).toBe(arrowBefore);
+        expect(removeSpy).not.toHaveBeenCalled();
       });
     });
 

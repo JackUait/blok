@@ -94,6 +94,7 @@ export const buildArrow = (
   const arrow = document.createElement('span');
   arrow.className = ARROW_STYLES;
   arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
+  arrow.setAttribute(DATA_ATTR.mutationFree, 'true');
   arrow.setAttribute('role', 'button');
   arrow.setAttribute('tabindex', '0');
   arrow.setAttribute('aria-label', isOpen ? 'Collapse' : 'Expand');

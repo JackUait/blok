@@ -121,6 +121,17 @@ class NestedBlokTool {
       inlineToolbar: true,
     });
 
+    /**
+     * Signal readiness after the inner Blok finishes initialization.
+     * The inner Blok's isReady resolves after UI.prepare() (which enables
+     * SelectionController) and render() (which creates blocks) complete.
+     * Without this, the outer Blok's isReady can resolve before the inner
+     * Blok is ready, causing selection-based interactions to fail.
+     */
+    this.nestedBlok.isReady.then(() => {
+      wrapper.setAttribute('data-blok-nested-ready', 'true');
+    });
+
     return wrapper;
   }
 
@@ -1133,6 +1144,16 @@ test.describe('inline toolbar', () => {
     await expect(nestedParagraph).toHaveCount(1);
 
     await expect(nestedParagraph).toBeVisible();
+
+    /**
+     * Wait for the nested Blok to be fully initialized.
+     * The inner Blok's initialization is deferred via Promise.resolve().then() microtask,
+     * so the outer Blok's isReady can resolve before the inner Blok has finished setting up
+     * its SelectionController (which listens for selectionchange to show the inline toolbar).
+     * The data-blok-nested-ready attribute is set by nestedBlok.isReady.then(), which
+     * guarantees UI.prepare() → SelectionController.enable() has completed.
+     */
+    await expect(page.locator(`[data-blok-testid="${NESTED_BLOK_ID}"][data-blok-nested-ready="true"]`)).toBeVisible();
 
     await selectText(nestedParagraph, 'document structures');
 

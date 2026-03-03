@@ -6,13 +6,15 @@
  */
 
 import { DATA_ATTR } from '../../components/constants';
-import { PLACEHOLDER_EMPTY_EDITOR_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES } from '../../components/utils/placeholder';
+import { PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_EMPTY_EDITOR_CLASSES } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 import {
   ARROW_ICON,
   ARROW_STYLES,
   BASE_STYLES,
+  BODY_PLACEHOLDER_STYLES,
+  BODY_PLACEHOLDER_TEXT,
   CONTENT_STYLES,
   TOGGLE_ATTR,
   TOGGLE_WRAPPER_STYLES,
@@ -34,6 +36,8 @@ export interface ToggleDOMBuilderContext {
   keydownHandler: ((event: KeyboardEvent) => void) | null;
   /** Callback when the arrow is clicked */
   onArrowClick: () => void;
+  /** Callback when the body placeholder is clicked */
+  onBodyPlaceholderClick: (() => void) | null;
 }
 
 /**
@@ -46,6 +50,8 @@ export interface ToggleBuildResult {
   arrowElement: HTMLElement;
   /** The content element for text input */
   contentElement: HTMLElement;
+  /** The body placeholder element */
+  bodyPlaceholderElement: HTMLElement;
 }
 
 /**
@@ -55,20 +61,28 @@ export interface ToggleBuildResult {
  * @returns Object containing the created elements
  */
 export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildResult => {
-  const { data, readOnly, isOpen, keydownHandler, onArrowClick } = context;
+  const { data, readOnly, isOpen, keydownHandler, onArrowClick, onBodyPlaceholderClick } = context;
 
   const wrapper = document.createElement('div');
-  wrapper.className = twMerge(BASE_STYLES, TOGGLE_WRAPPER_STYLES);
+  wrapper.className = BASE_STYLES;
   wrapper.setAttribute(DATA_ATTR.tool, TOOL_NAME);
   wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
+
+  const headerRow = document.createElement('div');
+  headerRow.className = TOGGLE_WRAPPER_STYLES;
 
   const arrowElement = buildArrow(isOpen, onArrowClick);
   const contentElement = buildContent(data, readOnly, keydownHandler);
 
-  wrapper.appendChild(arrowElement);
-  wrapper.appendChild(contentElement);
+  headerRow.appendChild(arrowElement);
+  headerRow.appendChild(contentElement);
 
-  return { wrapper, arrowElement, contentElement };
+  const bodyPlaceholderElement = buildBodyPlaceholder(onBodyPlaceholderClick);
+
+  wrapper.appendChild(headerRow);
+  wrapper.appendChild(bodyPlaceholderElement);
+
+  return { wrapper, arrowElement, contentElement, bodyPlaceholderElement };
 };
 
 /**
@@ -134,6 +148,25 @@ export const buildArrow = (
 };
 
 /**
+ * Build the body placeholder element shown when the toggle has no children.
+ *
+ * @param onClick - Optional click handler (creates a child block)
+ * @returns The body placeholder element
+ */
+const buildBodyPlaceholder = (onClick: (() => void) | null): HTMLElement => {
+  const placeholder = document.createElement('div');
+  placeholder.className = BODY_PLACEHOLDER_STYLES;
+  placeholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
+  placeholder.textContent = BODY_PLACEHOLDER_TEXT;
+
+  if (onClick) {
+    placeholder.addEventListener('click', onClick);
+  }
+
+  return placeholder;
+};
+
+/**
  * Build the content element for text input.
  *
  * @param data - The toggle item data
@@ -147,7 +180,7 @@ const buildContent = (
   keydownHandler: ((event: KeyboardEvent) => void) | null
 ): HTMLElement => {
   const content = document.createElement('div');
-  content.className = twMerge(CONTENT_STYLES, PLACEHOLDER_FOCUS_ONLY_CLASSES, PLACEHOLDER_EMPTY_EDITOR_CLASSES);
+  content.className = twMerge(CONTENT_STYLES, PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_EMPTY_EDITOR_CLASSES);
   content.setAttribute(TOGGLE_ATTR.toggleContent, '');
   content.contentEditable = readOnly ? 'false' : 'true';
   content.innerHTML = data.text;

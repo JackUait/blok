@@ -238,6 +238,136 @@ test.describe('Toggle Tool', () => {
     });
   });
 
+  test.describe('placeholders', () => {
+    test('header placeholder is always visible on empty unfocused toggle', async ({ page }) => {
+      await createBlok(page, createToggleData(''));
+
+      const content = page.locator('[data-blok-toggle-content]');
+
+      // Click elsewhere to unfocus the toggle
+      await page.mouse.click(0, 0);
+
+      // The placeholder attribute should be set
+      await expect(content).toHaveAttribute('data-blok-placeholder-active', 'Toggle');
+
+      // Verify the element is empty (placeholder shows via CSS ::before when :empty)
+      const isEmpty = await content.evaluate(el => el.innerHTML.trim() === '' || el.innerHTML.trim() === '<br>');
+
+      expect(isEmpty).toBe(true);
+    });
+
+    test('body placeholder is visible on empty expanded toggle', async ({ page }) => {
+      await createBlok(page, createToggleData('My toggle'));
+
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(bodyPlaceholder).toBeVisible();
+      await expect(bodyPlaceholder).toHaveText('Empty toggle. Click or drop blocks inside.');
+    });
+
+    test('body placeholder is hidden when toggle is collapsed', async ({ page }) => {
+      await createBlok(page, createToggleData('Collapsible'));
+
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      // Body placeholder is visible when expanded
+      await expect(bodyPlaceholder).toBeVisible();
+
+      // Collapse the toggle
+      await arrow.click();
+
+      // Body placeholder should be hidden
+      await expect(bodyPlaceholder).not.toBeVisible();
+    });
+
+    test('body placeholder disappears when child is added via Enter', async ({ page }) => {
+      await createBlok(page, createToggleData('Parent toggle'));
+
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      // Body placeholder should be visible initially (no children)
+      await expect(bodyPlaceholder).toBeVisible();
+
+      // Click the toggle content and press Enter to create a child
+      const content = page.locator('[data-blok-toggle-content]');
+
+      await content.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // Body placeholder should disappear
+      await expect(bodyPlaceholder).not.toBeVisible();
+    });
+
+    test('clicking body placeholder creates a child paragraph', async ({ page }) => {
+      await createBlok(page, createToggleData('Click target'));
+
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(bodyPlaceholder).toBeVisible();
+
+      // Click the body placeholder
+      await bodyPlaceholder.click();
+
+      // A child paragraph should be created
+      const savedData = await page.evaluate(async () => {
+        return window.blokInstance?.save();
+      });
+
+      expect(savedData).toBeDefined();
+      expect(savedData?.blocks.length).toBeGreaterThanOrEqual(2);
+
+      const toggleBlock = savedData?.blocks.find(b => b.type === 'toggle');
+      const paragraphBlock = savedData?.blocks.find(b => b.type === 'paragraph');
+
+      expect(toggleBlock).toBeDefined();
+      expect(paragraphBlock).toBeDefined();
+      expect(toggleBlock?.content).toContain(paragraphBlock?.id);
+
+      // Body placeholder should be hidden after creating a child
+      await expect(bodyPlaceholder).not.toBeVisible();
+    });
+
+    test('body placeholder is hidden when toggle has existing children', async ({ page }) => {
+      // Create a toggle with an existing child paragraph
+      await page.evaluate(async ({ holder }) => {
+        if (window.blokInstance) {
+          await window.blokInstance.destroy?.();
+          window.blokInstance = undefined;
+        }
+
+        document.getElementById(holder)?.remove();
+
+        const container = document.createElement('div');
+
+        container.id = holder;
+        container.setAttribute('data-blok-testid', holder);
+        container.style.border = '1px dotted #388AE5';
+
+        document.body.appendChild(container);
+
+        const blok = new window.Blok({
+          holder: container,
+          data: {
+            blocks: [
+              { id: 'toggle-1', type: 'toggle', data: { text: 'Has children' }, content: ['child-1'] },
+              { id: 'child-1', type: 'paragraph', data: { text: 'Existing child' }, parent: 'toggle-1' },
+            ],
+          },
+        });
+
+        window.blokInstance = blok;
+        await blok.isReady;
+      }, { holder: HOLDER_ID });
+
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      // Body placeholder should be hidden since toggle has children
+      await expect(bodyPlaceholder).not.toBeVisible();
+    });
+  });
+
   test.describe('save', () => {
     test('saves toggle data correctly', async ({ page }) => {
       await createBlok(page, createToggleData('Saved toggle'));

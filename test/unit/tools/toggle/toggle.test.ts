@@ -251,9 +251,10 @@ describe('ToggleItem', () => {
       // Simulate undo/redo calling setData — this should reconcile child visibility
       toggle.setData({ text: 'after undo' });
 
-      // getChildren should have been called during setData's updateChildrenVisibility
-      // The call count should be: 1 from rendered() + 1 from setData()
-      expect(mockAPI.blocks.getChildren).toHaveBeenCalledTimes(2);
+      // getChildren should have been called during rendered() and setData()
+      // Each call to updateChildrenVisibility + updateBodyPlaceholderVisibility = 2 calls per lifecycle
+      // rendered() = 2 calls, setData() = 2 calls = 4 total
+      expect(mockAPI.blocks.getChildren).toHaveBeenCalledTimes(4);
     });
   });
 
@@ -401,8 +402,8 @@ describe('ToggleItem', () => {
     });
   });
 
-  describe('placeholder', () => {
-    it('uses data-blok-placeholder-active attribute like paragraph', async () => {
+  describe('header placeholder', () => {
+    it('uses data-blok-placeholder-active attribute', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions());
       const element = toggle.render();
@@ -413,26 +414,14 @@ describe('ToggleItem', () => {
       expect(contentEl?.hasAttribute('data-placeholder')).toBe(false);
     });
 
-    it('has focus-only placeholder classes matching paragraph style', async () => {
-      const { PLACEHOLDER_FOCUS_ONLY_CLASSES } = await import('../../../../src/components/utils/placeholder');
+    it('has always-visible placeholder classes (not focus-only)', async () => {
+      const { PLACEHOLDER_ACTIVE_CLASSES } = await import('../../../../src/components/utils/placeholder');
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions());
       const element = toggle.render();
       const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
 
-      for (const cls of PLACEHOLDER_FOCUS_ONLY_CLASSES) {
-        expect(contentEl.classList.contains(cls)).toBe(true);
-      }
-    });
-
-    it('has empty-editor placeholder classes matching paragraph style', async () => {
-      const { PLACEHOLDER_EMPTY_EDITOR_CLASSES } = await import('../../../../src/components/utils/placeholder');
-      const { ToggleItem } = await import('../../../../src/tools/toggle');
-      const toggle = new ToggleItem(createToggleOptions());
-      const element = toggle.render();
-      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
-
-      for (const cls of PLACEHOLDER_EMPTY_EDITOR_CLASSES) {
+      for (const cls of PLACEHOLDER_ACTIVE_CLASSES) {
         expect(contentEl.classList.contains(cls)).toBe(true);
       }
     });
@@ -444,6 +433,156 @@ describe('ToggleItem', () => {
       const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
 
       expect(contentEl?.getAttribute('data-blok-placeholder-active')).toBe('Toggle');
+    });
+  });
+
+  describe('body placeholder', () => {
+    it('renders a body placeholder element with correct text', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`);
+
+      expect(bodyPlaceholder).not.toBeNull();
+      expect(bodyPlaceholder?.textContent).toBe('Empty toggle. Click or drop blocks inside.');
+    });
+
+    it('is visible when toggle is open and has no children', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('is hidden when toggle has children', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const childHolder = document.createElement('div');
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([
+        { id: 'child-1', holder: childHolder },
+      ]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('is hidden when toggle is collapsed', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      // Collapse the toggle
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+      arrow.click();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('is hidden in read-only mode', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions({}, {}, { readOnly: true });
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+
+      // In read-only, toggle starts collapsed and body placeholder should be hidden
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('creates child paragraph when clicked', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockNewBlock = { id: 'new-child-block' };
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockIndex = vi.fn().mockReturnValue(0);
+      (mockAPI.blocks as unknown as Record<string, unknown>).insert = vi.fn().mockReturnValue(mockNewBlock);
+      (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+      bodyPlaceholder.click();
+
+      expect(mockAPI.blocks.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: '' },
+        {},
+        1,
+        true
+      );
+      expect(mockAPI.blocks.setBlockParent).toHaveBeenCalledWith('new-child-block', 'test-block-id');
+    });
+
+    it('reappears when children are removed and toggle is re-expanded', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const childHolder = document.createElement('div');
+      const mockAPI = createMockAPI();
+      const getChildrenMock = vi.fn().mockReturnValue([{ id: 'child-1', holder: childHolder }]);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = getChildrenMock;
+
+      const options = createToggleOptions({ text: 'toggle' });
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+
+      // With children, placeholder should be hidden
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
+
+      // Simulate children being removed (e.g., undo)
+      getChildrenMock.mockReturnValue([]);
+
+      // Trigger re-check via setData (simulating undo/redo)
+      toggle.setData({ text: 'toggle' });
+
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(false);
     });
   });
 

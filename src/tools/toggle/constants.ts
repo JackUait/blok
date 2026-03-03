@@ -40,10 +40,21 @@ export const ARROW_STYLES = 'flex-shrink-0 w-6 h-6 flex items-center justify-cen
 export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 /**
+ * Default body placeholder text shown when the toggle has no children
+ */
+export const BODY_PLACEHOLDER_TEXT = 'Empty toggle. Click or drop blocks inside.';
+
+/**
+ * Styles for the body placeholder element
+ */
+export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 py-1 text-gray-text text-sm cursor-pointer select-none';
+
+/**
  * Data attributes specific to the toggle tool
  */
 export const TOGGLE_ATTR = {
   toggleOpen: 'data-blok-toggle-open',
   toggleArrow: 'data-blok-toggle-arrow',
   toggleContent: 'data-blok-toggle-content',
+  toggleBodyPlaceholder: 'data-blok-toggle-body-placeholder',
 } as const;

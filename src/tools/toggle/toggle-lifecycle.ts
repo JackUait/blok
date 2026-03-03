@@ -26,13 +26,14 @@ export interface ToggleRenderResult {
   wrapper: HTMLElement;
   contentElement: HTMLElement;
   arrowElement: HTMLElement;
+  bodyPlaceholderElement: HTMLElement;
 }
 
 /**
  * Render a toggle item with placeholder support.
  *
  * @param context - The render context
- * @returns Object containing the wrapper, content, and arrow elements
+ * @returns Object containing the wrapper, content, arrow, and body placeholder elements
  */
 export const renderToggleItem = (context: ToggleRenderContext): ToggleRenderResult => {
   const result = buildToggleItem(context);
@@ -80,5 +81,42 @@ export const updateChildrenVisibility = (api: API, blockId: string, isOpen: bool
     } else {
       child.holder.classList.add('hidden');
     }
+  }
+};
+
+/**
+ * Update visibility of the body placeholder based on toggle state and children.
+ * The placeholder is shown only when the toggle is open, has no children, and is not read-only.
+ *
+ * @param bodyPlaceholder - The body placeholder element
+ * @param api - Blok API instance
+ * @param blockId - The toggle block's id
+ * @param isOpen - Whether the toggle is currently open
+ * @param readOnly - Whether the editor is in read-only mode
+ */
+export const updateBodyPlaceholderVisibility = (
+  bodyPlaceholder: HTMLElement | null,
+  api: API,
+  blockId: string,
+  isOpen: boolean,
+  readOnly: boolean
+): void => {
+  if (bodyPlaceholder === null) {
+    return;
+  }
+
+  if (readOnly) {
+    bodyPlaceholder.classList.add('hidden');
+
+    return;
+  }
+
+  const children = api.blocks.getChildren(blockId);
+  const shouldShow = isOpen && children.length === 0;
+
+  if (shouldShow) {
+    bodyPlaceholder.classList.remove('hidden');
+  } else {
+    bodyPlaceholder.classList.add('hidden');
   }
 };

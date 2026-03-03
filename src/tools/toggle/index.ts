@@ -25,7 +25,7 @@ import {
 } from './block-operations';
 import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
-import { renderToggleItem, updateArrowState, updateChildrenVisibility } from './toggle-lifecycle';
+import { renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
 
@@ -37,6 +37,7 @@ export class ToggleItem implements BlockTool {
   private _element: HTMLElement | null = null;
   private _contentElement: HTMLElement | null = null;
   private _arrowElement: HTMLElement | null = null;
+  private _bodyPlaceholderElement: HTMLElement | null = null;
   private _isOpen: boolean;
 
   private blockId?: string;
@@ -85,17 +86,20 @@ export class ToggleItem implements BlockTool {
       placeholder: this.placeholder,
       keydownHandler: this.readOnly ? null : this.handleKeyDown.bind(this),
       onArrowClick: () => this.toggleOpen(),
+      onBodyPlaceholderClick: this.readOnly ? null : () => this.handleBodyPlaceholderClick(),
     });
 
     this._element = result.wrapper;
     this._contentElement = result.contentElement;
     this._arrowElement = result.arrowElement;
+    this._bodyPlaceholderElement = result.bodyPlaceholderElement;
 
     return this._element;
   }
 
   public rendered(): void {
     this.updateChildrenVisibility();
+    this.updateBodyPlaceholderVisibility();
   }
 
   public save(): ToggleItemData {
@@ -147,6 +151,7 @@ export class ToggleItem implements BlockTool {
     this._data = result.newData;
 
     this.updateChildrenVisibility();
+    this.updateBodyPlaceholderVisibility();
 
     return result.inPlace;
   }
@@ -191,6 +196,7 @@ export class ToggleItem implements BlockTool {
     }
 
     this.updateChildrenVisibility();
+    this.updateBodyPlaceholderVisibility();
   }
 
   private toggleOpen(): void {
@@ -203,6 +209,39 @@ export class ToggleItem implements BlockTool {
     }
 
     updateChildrenVisibility(this.api, this.blockId, this._isOpen);
+  }
+
+  private updateBodyPlaceholderVisibility(): void {
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    updateBodyPlaceholderVisibility(
+      this._bodyPlaceholderElement,
+      this.api,
+      this.blockId,
+      this._isOpen,
+      this.readOnly
+    );
+  }
+
+  private handleBodyPlaceholderClick(): void {
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+    if (blockIndex === undefined) {
+      return;
+    }
+
+    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, {}, blockIndex + 1, true);
+
+    this.api.blocks.setBlockParent(newBlock.id, this.blockId);
+
+    // Hide the body placeholder now that a child exists
+    this._bodyPlaceholderElement?.classList.add('hidden');
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -237,6 +276,9 @@ export class ToggleItem implements BlockTool {
 
   private async handleEnter(): Promise<void> {
     await handleToggleEnter(this.createKeyboardContext());
+
+    // After Enter may create a child, update body placeholder visibility
+    this.updateBodyPlaceholderVisibility();
   }
 
   private async handleBackspace(event: KeyboardEvent): Promise<void> {

@@ -15,6 +15,7 @@ const createDefaultContext = (overrides: Partial<ToggleDOMBuilderContext> = {}):
   isOpen: false,
   keydownHandler: null,
   onArrowClick: vi.fn(),
+  onBodyPlaceholderClick: null,
   ...overrides,
 });
 
@@ -44,15 +45,12 @@ describe('Toggle DOM Builder', () => {
       expect(result.wrapper.getAttribute(DATA_ATTR.tool)).toBe(TOOL_NAME);
     });
 
-    it('applies BASE_STYLES and TOGGLE_WRAPPER_STYLES to wrapper', () => {
+    it('applies BASE_STYLES to wrapper (flex layout is on header row)', () => {
       const context = createDefaultContext();
       const result = buildToggleItem(context);
 
-      // twMerge may reorder classes, so check for key classes
       const wrapperClasses = result.wrapper.className;
       expect(wrapperClasses).toContain('outline-hidden');
-      expect(wrapperClasses).toContain('flex');
-      expect(wrapperClasses).toContain('items-start');
     });
 
     describe('toggle open state', () => {
@@ -318,25 +316,75 @@ describe('Toggle DOM Builder', () => {
     });
 
     describe('DOM structure', () => {
-      it('wrapper contains arrow element as first child', () => {
+      it('wrapper contains a header row as first child with flex layout', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+        const headerRow = result.wrapper.firstElementChild as HTMLElement;
+
+        expect(headerRow).toBeInstanceOf(HTMLElement);
+        expect(headerRow.className).toContain('flex');
+        expect(headerRow.className).toContain('items-start');
+      });
+
+      it('header row contains arrow element as first child', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+        const headerRow = result.wrapper.firstElementChild as HTMLElement;
+
+        expect(headerRow.firstElementChild).toBe(result.arrowElement);
+      });
+
+      it('header row contains content element as second child', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+        const headerRow = result.wrapper.firstElementChild as HTMLElement;
+
+        expect(headerRow.children[1]).toBe(result.contentElement);
+      });
+
+      it('wrapper contains body placeholder as second child', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
-        expect(result.wrapper.firstElementChild).toBe(result.arrowElement);
+        expect(result.wrapper.children[1]).toBe(result.bodyPlaceholderElement);
       });
 
-      it('wrapper contains content element as second child', () => {
-        const context = createDefaultContext();
-        const result = buildToggleItem(context);
-
-        expect(result.wrapper.children[1]).toBe(result.contentElement);
-      });
-
-      it('wrapper has exactly two children', () => {
+      it('wrapper has exactly two children (header row + body placeholder)', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
         expect(result.wrapper.children.length).toBe(2);
+      });
+
+      it('body placeholder has correct data attribute', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        expect(result.bodyPlaceholderElement.hasAttribute(TOGGLE_ATTR.toggleBodyPlaceholder)).toBe(true);
+      });
+
+      it('body placeholder has correct text content', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        expect(result.bodyPlaceholderElement.textContent).toBe('Empty toggle. Click or drop blocks inside.');
+      });
+
+      it('body placeholder starts hidden', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        expect(result.bodyPlaceholderElement.classList.contains('hidden')).toBe(true);
+      });
+
+      it('body placeholder calls onBodyPlaceholderClick when clicked', () => {
+        const onBodyPlaceholderClick = vi.fn();
+        const context = createDefaultContext({ onBodyPlaceholderClick });
+        const result = buildToggleItem(context);
+
+        result.bodyPlaceholderElement.click();
+
+        expect(onBodyPlaceholderClick).toHaveBeenCalledOnce();
       });
     });
   });

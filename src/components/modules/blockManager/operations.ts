@@ -746,12 +746,19 @@ export class BlockOperations {
       });
 
       // Insert DOM block (skip Yjs sync - already done above)
-      return this.insert({
+      const newBlock = this.insert({
         id: newBlockId,
         tool: currentBlock.name,
         data: { text: extractedText },
         skipYjsSync: true,
       }, blocksStore);
+
+      // Inherit parentId from the split block so nested blocks stay nested
+      if (currentBlock.parentId !== null) {
+        this.hierarchy.setBlockParent(newBlock, currentBlock.parentId);
+      }
+
+      return newBlock;
     });
   }
 

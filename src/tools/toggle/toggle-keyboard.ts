@@ -28,10 +28,13 @@ export interface ToggleKeyboardContext {
 /**
  * Handle Enter key - sync content from DOM and split the block at the caret position.
  *
+ * When the toggle is open and the caret is at the end of the content,
+ * creates a child paragraph inside the toggle instead of splitting.
+ *
  * @param context - The toggle keyboard context
  */
 export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise<void> => {
-  const { api, blockId, data, getContentElement, syncContentFromDOM } = context;
+  const { api, blockId, data, getContentElement, syncContentFromDOM, isOpen } = context;
 
   syncContentFromDOM();
 
@@ -50,6 +53,18 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
   const { beforeContent, afterContent } = splitContentAtRange(contentEl, range);
 
   const currentBlockIndex = api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex();
+
+  /**
+   * When toggle is open and caret is at the end (no content after caret),
+   * create a child paragraph inside the toggle rather than a sibling toggle.
+   */
+  if (isOpen && afterContent === '') {
+    const newBlock = api.blocks.insert('paragraph', { text: '' }, {}, currentBlockIndex + 1, true);
+
+    api.blocks.setBlockParent(newBlock.id, blockId);
+
+    return;
+  }
 
   api.blocks.splitBlock(
     blockId,

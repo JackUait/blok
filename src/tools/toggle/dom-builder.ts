@@ -91,7 +91,7 @@ export const buildArrow = (
   onArrowClick: () => void,
   options: BuildArrowOptions = {}
 ): HTMLElement => {
-  const arrow = document.createElement('div');
+  const arrow = document.createElement('span');
   arrow.className = ARROW_STYLES;
   arrow.setAttribute(TOGGLE_ATTR.toggleArrow, '');
   arrow.setAttribute('role', 'button');

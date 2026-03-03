@@ -182,14 +182,40 @@ export class KeyboardNavigation extends BlockEventComposer {
   private createBlockOnEnter(currentBlock: Block): Block {
     // Case 1: Caret at start - insert block above
     if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && (currentBlock.parentId === null || !currentBlock.isEmpty)) {
-      this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
+      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex);
+
+      /**
+       * When the current block is a child of a toggle, the new block inserted above
+       * should also be a child of the same parent.
+       */
+      if (currentBlock.parentId !== null) {
+        this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.parentId);
+      }
 
       return currentBlock;
     }
 
     // Case 2: Caret at end - insert block below
     if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
-      return this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
+      const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
+
+      /**
+       * When the current block is an open toggle (heading or list item),
+       * the new block should become a child of the toggle rather than a sibling.
+       * Detect via the data-blok-toggle-open DOM attribute set by toggle tools.
+       *
+       * When the current block is already a child of a toggle, the new block
+       * should inherit the same parent so it stays inside the toggle.
+       */
+      const toggleWrapper = currentBlock.holder.querySelector('[data-blok-toggle-open]');
+
+      if (toggleWrapper?.getAttribute('data-blok-toggle-open') === 'true') {
+        this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.id);
+      } else if (currentBlock.parentId !== null) {
+        this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.parentId);
+      }
+
+      return newBlock;
     }
 
     // Case 3: Caret in middle - split block

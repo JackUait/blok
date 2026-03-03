@@ -138,7 +138,7 @@ export class Header implements BlockTool {
   /**
    * Whether the toggle is currently open (expanded)
    */
-  private _isOpen: boolean = false;
+  private _isOpen: boolean;
 
   /**
    * Block ID from the editor
@@ -158,6 +158,7 @@ export class Header implements BlockTool {
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<HeaderData, HeaderConfig>) {
     this.api = api;
     this.readOnly = readOnly;
+    this._isOpen = !readOnly;
 
     this._settings = config || {};
     this._data = this.normalizeData(data);

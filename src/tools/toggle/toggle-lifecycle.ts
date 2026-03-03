@@ -52,9 +52,12 @@ export const renderToggleItem = (context: ToggleRenderContext): ToggleRenderResu
  * @param isOpen - Whether the toggle is open
  */
 export const updateArrowState = (arrowEl: HTMLElement, wrapper: HTMLElement, isOpen: boolean): void => {
-  const { style } = arrowEl;
+  const svg = arrowEl.querySelector('svg');
 
-  style.transform = isOpen ? 'rotate(90deg)' : '';
+  if (svg) {
+    svg.style.transform = isOpen ? 'rotate(90deg)' : '';
+  }
+
   arrowEl.setAttribute('aria-label', isOpen ? 'Collapse' : 'Expand');
   arrowEl.setAttribute('aria-expanded', String(isOpen));
   wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));

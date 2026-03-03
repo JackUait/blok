@@ -72,10 +72,7 @@ test.describe('Toggle Content - Adding blocks inside toggles', () => {
         blocks: [{ type: 'toggle', data: { text: 'My toggle' } }],
       });
 
-      // Expand the toggle
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-
-      await arrow.click();
+      // Toggle starts expanded in editing mode — verify
       await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
 
       // Click the toggle content and move to end
@@ -114,7 +111,10 @@ test.describe('Toggle Content - Adding blocks inside toggles', () => {
         blocks: [{ type: 'toggle', data: { text: 'Closed toggle' } }],
       });
 
-      // Toggle is closed by default - verify
+      // Toggle starts expanded in editing mode — collapse it first
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+
+      await arrow.click();
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
       // Click the toggle content and move to end
@@ -141,13 +141,11 @@ test.describe('Toggle Content - Adding blocks inside toggles', () => {
 
       const header = page.getByRole('heading', { level: 2, name: 'Toggle heading' });
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
+      // Toggle heading starts expanded in editing mode
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
 
-      // Expand the toggle heading programmatically.
-      // Direct DOM changes on the heading trigger an infinite MutationObserver
-      // feedback loop (a pre-existing bug), so we must disable the observer first.
-      // We keep it disabled for the rest of the test to prevent the loop from
-      // being triggered by Enter key handling as well.
+      // Disable the modifications observer to prevent MutationObserver feedback loop
+      // (a pre-existing bug triggered by DOM changes from Enter key handling)
       await page.evaluate(() => {
         const blok = window.blokInstance as unknown as Record<string, unknown> | undefined;
 
@@ -155,19 +153,11 @@ test.describe('Toggle Content - Adding blocks inside toggles', () => {
           return;
         }
 
-        // Module aliases are on blok.module (non-enumerable property set in exportAPI)
         const modules = blok['module'] as Record<string, unknown> | undefined;
         const modObserver = modules?.['modificationsObserver'] as { disable: () => void } | undefined;
 
         modObserver?.disable();
-
-        // Call expand on the first block
-        const blockApi = (blok as unknown as Blok).blocks.getBlockByIndex(0);
-
-        blockApi?.call('expand');
       });
-
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
 
       // Click the heading text and move to end
       await header.click();
@@ -234,10 +224,7 @@ test.describe('Toggle Content - Adding blocks inside toggles', () => {
         await newBlok.isReady;
       });
 
-      // Expand the toggle so the child is visible
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-
-      await arrow.click();
+      // Toggle starts expanded in editing mode — verify
       await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
 
       // Click the child paragraph and move to end

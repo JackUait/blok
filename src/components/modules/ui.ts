@@ -161,20 +161,30 @@ export class UI extends Module<UINodes> {
     this.initializeControllers();
 
     /**
-     * Register toggle shortcuts (CMD+ALT+T) for collapsing/expanding all toggle blocks
+     * Enable selection controller after initialization.
+     * This is needed because bindReadOnlyInsensitiveListeners() is called in make()
+     * before initializeControllers(), so the selectionController doesn't exist yet.
+     * Must happen before toggleShortcuts.register() so that a shortcut registration
+     * error cannot prevent the selectionchange listener from being set up.
+     */
+    this.selectionController?.enable();
+
+    /**
+     * Register toggle shortcuts (CMD+ALT+T) for collapsing/expanding all toggle blocks.
+     * Wrapped in try-catch because the Shortcuts singleton may throw if shortcuts are
+     * already registered (e.g. race condition with multiple editor instances in CI).
+     * This is non-critical — the editor works fine without toggle shortcuts.
      */
     this.toggleShortcuts = new ToggleShortcuts(
       this.Blok.API.methods,
       this.nodes.wrapper
     );
-    this.toggleShortcuts.register();
 
-    /**
-     * Enable selection controller after initialization.
-     * This is needed because bindReadOnlyInsensitiveListeners() is called in make()
-     * before initializeControllers(), so the selectionController doesn't exist yet.
-     */
-    this.selectionController?.enable();
+    try {
+      this.toggleShortcuts.register();
+    } catch (error) {
+      console.warn('Blok: Failed to register toggle shortcuts:', error);
+    }
   }
 
   /**

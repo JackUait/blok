@@ -218,6 +218,25 @@ describe('ToggleShortcuts', () => {
 
       shortcuts.unregister();
     });
+
+    it('does not throw when CMD+ALT+T is already registered by a previous instance', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+      const mockAPI = createMockAPI();
+
+      // First instance registers the shortcut (simulates a previous editor)
+      const firstInstance = new ToggleShortcuts(mockAPI, document.createElement('div'));
+      firstInstance.register();
+
+      // Second instance registers without the first being unregistered
+      // (this happens in Storybook when stories switch before destroy completes)
+      const secondInstance = new ToggleShortcuts(mockAPI, document.createElement('div'));
+
+      expect(() => {
+        secondInstance.register();
+      }).not.toThrow();
+
+      secondInstance.unregister();
+    });
   });
 
   describe('unregister', () => {

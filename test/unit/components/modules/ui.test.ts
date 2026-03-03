@@ -963,6 +963,42 @@ describe("UI module", () => {
       expect(mockRegister).toHaveBeenCalledTimes(1);
     });
 
+    it("enables selection controller even when toggleShortcuts.register() throws", async () => {
+      mockRegister.mockImplementation(() => {
+        throw new Error("Shortcut CMD+ALT+T is already registered for document");
+      });
+
+      const { ui } = createUI({ attachNodes: false });
+      const selectionEnableSpy = vi.fn();
+
+      // We need to intercept the selectionController after initializeControllers() creates it.
+      // Override initializeControllers to also set up our spy.
+      const originalInitialize = (
+        ui as unknown as { initializeControllers: () => void }
+      ).initializeControllers.bind(ui);
+
+      (
+        ui as unknown as { initializeControllers: () => void }
+      ).initializeControllers = () => {
+        originalInitialize();
+
+        const selectionController = (
+          ui as unknown as { selectionController: { enable: () => void } }
+        ).selectionController;
+
+        selectionEnableSpy.mockImplementation(
+          selectionController.enable.bind(selectionController),
+        );
+        selectionController.enable = selectionEnableSpy;
+      };
+
+      // prepare() should NOT throw even though register() throws
+      await ui.prepare();
+
+      // The selection controller must still be enabled despite the shortcut error
+      expect(selectionEnableSpy).toHaveBeenCalledTimes(1);
+    });
+
     it("unregisters ToggleShortcuts during destroy()", () => {
       const { ui } = createUI();
 

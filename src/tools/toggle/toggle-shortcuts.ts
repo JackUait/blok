@@ -30,11 +30,15 @@ export class ToggleShortcuts {
 
   /**
    * Register the CMD+ALT+T shortcut on the document.
+   * Pre-clears any stale registration to handle cases where a previous editor
+   * instance was not fully destroyed (e.g. Storybook story switching).
    */
   public register(): void {
     if (this.registered) {
       return;
     }
+
+    Shortcuts.remove(document, COLLAPSE_EXPAND_ALL_SHORTCUT);
 
     Shortcuts.add({
       name: COLLAPSE_EXPAND_ALL_SHORTCUT,

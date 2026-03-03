@@ -6,7 +6,7 @@ import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popov
 import { PopoverItemSeparator, css as popoverItemCls , PopoverItemDefault } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchableItem } from './components/search-input';
-import { SearchInput, SearchInputEvent, matchesSearchQuery } from './components/search-input';
+import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables } from './popover.const';
 
@@ -70,6 +70,12 @@ export class PopoverDesktop extends PopoverAbstract {
    * Popover size cache
    */
   private _size: { height: number; width: number } | undefined;
+
+  /**
+   * Original order of item elements in the popover container.
+   * Cached on first search so we can restore order when query is cleared.
+   */
+  private originalItemOrder: Element[] | undefined;
 
   /**
    * Construct the instance
@@ -690,7 +696,21 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param query - search query text
    */
   public override filterItems(query: string): void {
-    const matchingItems = this.itemsDefault.filter(item => matchesSearchQuery(item, query));
+    if (query === '') {
+      this.onSearch({
+        query,
+        items: this.itemsDefault as unknown as SearchableItem[],
+      });
+
+      return;
+    }
+
+    const scoredItems = this.itemsDefault
+      .map(item => ({ item, score: scoreSearchMatch(item, query) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    const matchingItems = scoredItems.map(({ item }) => item);
 
     this.onSearch({
       query,
@@ -742,6 +762,13 @@ export class PopoverDesktop extends PopoverAbstract {
       });
     }
 
+    // Reorder DOM elements to reflect ranking
+    if (!isEmptyQuery && matchingItems.length > 0) {
+      this.reorderItemsByRank(matchingItems);
+    } else if (isEmptyQuery && this.originalItemOrder !== undefined) {
+      this.restoreOriginalItemOrder();
+    }
+
     this.toggleNothingFoundMessage(isNothingFound);
 
     /** List of elements available for keyboard navigation considering search query applied */
@@ -767,4 +794,47 @@ export class PopoverDesktop extends PopoverAbstract {
       this.flipper.focusItem(0, { skipNextTab: true });
     }
   };
+
+  /**
+   * Reorders DOM children of the items container to match the ranked order.
+   * Caches the original order on first call so it can be restored later.
+   * @param rankedItems - items sorted by search relevance (best first)
+   */
+  private reorderItemsByRank(rankedItems: PopoverItemDefault[]): void {
+    if (this.originalItemOrder === undefined && this.nodes.items !== null) {
+      this.originalItemOrder = Array.from(this.nodes.items.children);
+    }
+
+    const itemsContainer = this.nodes.items;
+
+    if (itemsContainer === null) {
+      return;
+    }
+
+    for (const item of rankedItems) {
+      const el = item.getElement();
+
+      if (el !== null) {
+        itemsContainer.appendChild(el);
+      }
+    }
+  }
+
+  /**
+   * Restores the original DOM order of items container children.
+   * Called when the search query is cleared.
+   */
+  private restoreOriginalItemOrder(): void {
+    const itemsContainer = this.nodes.items;
+
+    if (itemsContainer === null || this.originalItemOrder === undefined) {
+      return;
+    }
+
+    for (const el of this.originalItemOrder) {
+      itemsContainer.appendChild(el);
+    }
+
+    this.originalItemOrder = undefined;
+  }
 }

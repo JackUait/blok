@@ -6,6 +6,7 @@
  */
 
 import { DATA_ATTR } from '../../components/constants';
+import { PLACEHOLDER_EMPTY_EDITOR_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 import {
@@ -140,7 +141,7 @@ const buildContent = (
   keydownHandler: ((event: KeyboardEvent) => void) | null
 ): HTMLElement => {
   const content = document.createElement('div');
-  content.className = CONTENT_STYLES;
+  content.className = twMerge(CONTENT_STYLES, PLACEHOLDER_FOCUS_ONLY_CLASSES, PLACEHOLDER_EMPTY_EDITOR_CLASSES);
   content.setAttribute(TOGGLE_ATTR.toggleContent, '');
   content.contentEditable = readOnly ? 'false' : 'true';
   content.innerHTML = data.text;

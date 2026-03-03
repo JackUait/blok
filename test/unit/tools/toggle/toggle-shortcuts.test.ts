@@ -59,7 +59,7 @@ describe('ToggleItem shortcuts', () => {
     it('does not define a keyboard shortcut', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
-      expect(ToggleItem.shortcut).toBeUndefined();
+      expect((ToggleItem as unknown as Record<string, unknown>).shortcut).toBeUndefined();
     });
   });
 

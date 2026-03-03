@@ -74,11 +74,13 @@ const createIcon = (style?: string): HTMLElement => {
   iconWrapper.setAttribute('data-blok-testid', 'notification-icon');
   iconWrapper.setAttribute('data-blok-style', resolvedStyle);
 
-  const colorClass = resolvedStyle === 'success'
-    ? CSS.iconSuccess
-    : resolvedStyle === 'error'
-      ? CSS.iconError
-      : CSS.iconDefault;
+  const iconColorMap: Record<string, string> = {
+    success: CSS.iconSuccess,
+    error: CSS.iconError,
+    default: CSS.iconDefault,
+  };
+
+  const colorClass = iconColorMap[resolvedStyle] ?? CSS.iconDefault;
 
   iconWrapper.className = twJoin(CSS.icon, colorClass);
 
@@ -104,11 +106,12 @@ const createCloseButton = (): HTMLElement => {
 export const createProgressBar = (style?: string, time?: number): HTMLElement => {
   const bar = document.createElement('div');
 
-  const colorClass = style === 'success'
-    ? CSS.progressSuccess
-    : style === 'error'
-      ? CSS.progressError
-      : CSS.progressDefault;
+  const progressColorMap: Record<string, string> = {
+    success: CSS.progressSuccess,
+    error: CSS.progressError,
+  };
+
+  const colorClass = progressColorMap[style ?? ''] ?? CSS.progressDefault;
 
   bar.className = twJoin(CSS.progressBar, colorClass);
   bar.setAttribute('data-blok-testid', 'notification-progress');

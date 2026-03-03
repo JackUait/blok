@@ -32,26 +32,32 @@ const levenshteinDistance = (a: string, b: string): number => {
     return a.length;
   }
 
-  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  /**
+   * Two-row DP approach: prevRow holds distances for the previous character of `a`,
+   * currRow is computed for the current character, then they swap.
+   */
+  const prevRow = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const currRow = new Array<number>(b.length + 1);
 
-  for (let i = 1; i <= a.length; i++) {
-    let prev = i;
+  for (const [idx, char] of [...a].entries()) {
+    currRow[0] = idx + 1;
 
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      const current = Math.min(
-        row[j] + 1,         // deletion
-        prev + 1,            // insertion
-        row[j - 1] + cost    // substitution
+    for (const [jIdx, bChar] of [...b].entries()) {
+      const j = jIdx + 1;
+      const cost = char === bChar ? 0 : 1;
+
+      currRow[j] = Math.min(
+        prevRow[j] + 1,        // deletion
+        currRow[j - 1] + 1,    // insertion
+        prevRow[j - 1] + cost   // substitution
       );
-
-      row[j - 1] = prev;
-      prev = current;
     }
-    row[b.length] = prev;
+
+    /** Copy currRow into prevRow for the next iteration */
+    prevRow.splice(0, prevRow.length, ...currRow);
   }
 
-  return row[b.length];
+  return prevRow[b.length];
 };
 
 /**
@@ -61,15 +67,12 @@ const levenshteinDistance = (a: string, b: string): number => {
  * @returns true if query is a subsequence of target
  */
 const isSubsequence = (target: string, query: string): boolean => {
-  let qi = 0;
+  const matched = [...target].reduce(
+    (qi, char) => (qi < query.length && char === query[qi] ? qi + 1 : qi),
+    0
+  );
 
-  for (let ti = 0; ti < target.length && qi < query.length; ti++) {
-    if (target[ti] === query[qi]) {
-      qi++;
-    }
-  }
-
-  return qi === query.length;
+  return matched === query.length;
 };
 
 /**
@@ -80,17 +83,16 @@ const isSubsequence = (target: string, query: string): boolean => {
  * @returns true if each query char matches a word-boundary character in order
  */
 const matchesWordBoundaries = (target: string, query: string): boolean => {
-  let qi = 0;
+  const matched = [...target].reduce(
+    (qi, char, ti) => {
+      const isWordBoundary = ti === 0 || target[ti - 1] === ' ' || target[ti - 1] === '-' || target[ti - 1] === '_';
 
-  for (let ti = 0; ti < target.length && qi < query.length; ti++) {
-    const isWordBoundary = ti === 0 || target[ti - 1] === ' ' || target[ti - 1] === '-' || target[ti - 1] === '_';
+      return qi < query.length && isWordBoundary && char === query[qi] ? qi + 1 : qi;
+    },
+    0
+  );
 
-    if (isWordBoundary && target[ti] === query[qi]) {
-      qi++;
-    }
-  }
-
-  return qi === query.length;
+  return matched === query.length;
 };
 
 /**
@@ -154,18 +156,11 @@ export const scoreSearchMatch = (item: SearchableItem, query: string): number =>
     }
   }
 
-  let best = 0;
-
-  for (const candidate of candidates) {
+  const best = candidates.reduce((max, candidate) => {
     const score = scoreString(candidate, lowerQuery);
 
-    if (score > best) {
-      best = score;
-    }
-    if (best === 100) {
-      break;
-    }
-  }
+    return score > max ? score : max;
+  }, 0);
 
   return best;
 };

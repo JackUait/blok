@@ -43,6 +43,7 @@ export interface DraggingState {
   isMultiBlockDrag: boolean;
   targetBlock: Block | null;
   targetEdge: DropEdge | null;
+  targetParentId: string | null;
   startX: number;
   startY: number;
 }
@@ -54,6 +55,7 @@ export interface DroppedState {
   isMultiBlockDrag: boolean;
   targetBlock: Block;
   targetEdge: DropEdge;
+  targetParentId: string | null;
 }
 
 export interface CancelledState {
@@ -153,6 +155,7 @@ export class DragStateMachine {
       isMultiBlockDrag: this.state.isMultiBlockDrag,
       targetBlock: null,
       targetEdge: null,
+      targetParentId: null,
       startX: this.state.startX,
       startY: this.state.startY,
     };
@@ -163,7 +166,7 @@ export class DragStateMachine {
   /**
    * Update drop target during drag
    */
-  updateTarget(targetBlock: Block | null, targetEdge: DropEdge | null): void {
+  updateTarget(targetBlock: Block | null, targetEdge: DropEdge | null, targetParentId: string | null = null): void {
     if (this.state.type !== 'dragging') {
       throw new Error(`Cannot update target from state "${this.state.type}", must be dragging`);
     }
@@ -172,6 +175,7 @@ export class DragStateMachine {
       ...this.state,
       targetBlock,
       targetEdge,
+      targetParentId,
     };
   }
 
@@ -194,6 +198,7 @@ export class DragStateMachine {
       isMultiBlockDrag: this.state.isMultiBlockDrag,
       targetBlock: this.state.targetBlock,
       targetEdge: this.state.targetEdge,
+      targetParentId: this.state.targetParentId,
     };
 
     return this.state;

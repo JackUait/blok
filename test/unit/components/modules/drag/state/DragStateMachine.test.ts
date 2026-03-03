@@ -273,6 +273,54 @@ describe('DragStateMachine', () => {
     });
   });
 
+  describe('targetParentId tracking', () => {
+    it('should store targetParentId when updateTarget is called with parentId', () => {
+      stateMachine.startTracking(mockBlock1 as Block, [mockBlock1 as Block], 0, 0);
+      stateMachine.startDrag();
+      stateMachine.updateTarget(mockBlock2 as Block, 'bottom', 'toggle-1');
+
+      const state = stateMachine.getState();
+      expect(state.type).toBe('dragging');
+      if (state.type === 'dragging') {
+        expect(state.targetParentId).toBe('toggle-1');
+      }
+    });
+
+    it('should default targetParentId to null when not provided', () => {
+      stateMachine.startTracking(mockBlock1 as Block, [mockBlock1 as Block], 0, 0);
+      stateMachine.startDrag();
+      stateMachine.updateTarget(mockBlock2 as Block, 'bottom');
+
+      const state = stateMachine.getState();
+      if (state.type === 'dragging') {
+        expect(state.targetParentId).toBeNull();
+      }
+    });
+
+    it('should carry targetParentId through to dropped state', () => {
+      stateMachine.startTracking(mockBlock1 as Block, [mockBlock1 as Block], 0, 0);
+      stateMachine.startDrag();
+      stateMachine.updateTarget(mockBlock2 as Block, 'bottom', 'toggle-1');
+      stateMachine.drop();
+
+      const state = stateMachine.getState();
+      expect(state.type).toBe('dropped');
+      if (state.type === 'dropped') {
+        expect(state.targetParentId).toBe('toggle-1');
+      }
+    });
+
+    it('should initialize targetParentId as null in dragging state', () => {
+      stateMachine.startTracking(mockBlock1 as Block, [mockBlock1 as Block], 0, 0);
+      stateMachine.startDrag();
+
+      const state = stateMachine.getState();
+      if (state.type === 'dragging') {
+        expect(state.targetParentId).toBeNull();
+      }
+    });
+  });
+
   describe('isSourceBlock', () => {
     it('should return true for blocks in source list', () => {
       stateMachine.startTracking(
@@ -330,6 +378,7 @@ describe('DragStateMachine', () => {
         isMultiBlockDrag: false,
         targetBlock: null,
         targetEdge: null,
+        targetParentId: null,
         startX: 0,
         startY: 0,
       };
@@ -346,6 +395,7 @@ describe('DragStateMachine', () => {
         isMultiBlockDrag: false,
         targetBlock: mockBlock2 as Block,
         targetEdge: 'bottom',
+        targetParentId: null,
       };
       expect(isDropped(state)).toBe(true);
       expect(isDragging(state)).toBe(false);
@@ -383,6 +433,7 @@ describe('DragStateMachine', () => {
         isMultiBlockDrag: false,
         targetBlock: null,
         targetEdge: null,
+        targetParentId: null,
         startX: 0,
         startY: 0,
       };
@@ -398,6 +449,7 @@ describe('DragStateMachine', () => {
         isMultiBlockDrag: false,
         targetBlock: mockBlock2 as Block,
         targetEdge: 'bottom',
+        targetParentId: null,
       })).toBe(false);
       expect(isDragActive({
         type: 'cancelled',
@@ -416,6 +468,7 @@ describe('DragStateMachine', () => {
         isMultiBlockDrag: false,
         targetBlock: null,
         targetEdge: null,
+        targetParentId: null,
         startX: 0,
         startY: 0,
       };
@@ -426,6 +479,7 @@ describe('DragStateMachine', () => {
         isMultiBlockDrag: false,
         targetBlock: mockBlock2 as Block,
         targetEdge: 'bottom',
+        targetParentId: null,
       };
       expect(isActuallyDragging(draggingState)).toBe(true);
       expect(isActuallyDragging(droppedState)).toBe(true);

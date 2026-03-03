@@ -2149,4 +2149,197 @@ test.describe('drag and drop', () => {
       await expect(page.getByTestId('block-wrapper')).toHaveCount(1);
     });
   });
+
+  test.describe('drag into toggle (hierarchy)', () => {
+    test('should nest a block as child of toggle when dropped onto bottom of toggle with existing children', async ({ page }) => {
+      // Setup:
+      // - Paragraph "Loose block" (root level — will be dragged into the toggle)
+      // - Toggle "My toggle" (with existing child paragraph "Child 1")
+      //   - Paragraph "Child 1" (parentId = toggle's id)
+      //
+      // "Loose block" is placed ABOVE the toggle so the drag moves downward,
+      // ensuring the cursor reaches the target without overlapping the source.
+      const toggleId = 'toggle-1';
+      const child1Id = 'child-1';
+
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Loose block' },
+            },
+            {
+              id: toggleId,
+              type: 'toggle',
+              data: { text: 'My toggle' },
+              content: [child1Id],
+            },
+            {
+              id: child1Id,
+              type: 'paragraph',
+              data: { text: 'Child 1' },
+              parent: toggleId,
+            },
+          ],
+        },
+      });
+
+      // Hover over "Loose block" to show the settings button (drag handle)
+      const looseBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Loose block' });
+
+      await looseBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag "Loose block" to the bottom of "Child 1" (which is the last child of the toggle)
+      const child1Block = page.getByTestId('block-wrapper').filter({ hasText: 'Child 1' });
+
+      await performDragDrop(page, settingsButton, child1Block, 'bottom');
+
+      // Verify: "Loose block" is now a child of the toggle
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData).toBeDefined();
+      expect(savedData?.blocks).toHaveLength(3);
+
+      // Find each block in the saved data
+      const toggleBlock = savedData?.blocks.find(b => b.type === 'toggle');
+      const child1 = savedData?.blocks.find(b => getBlockText(b) === 'Child 1');
+      const looseBlockData = savedData?.blocks.find(b => getBlockText(b) === 'Loose block');
+
+      expect(toggleBlock).toBeDefined();
+      expect(child1).toBeDefined();
+      expect(looseBlockData).toBeDefined();
+
+      // "Loose block" should now have the toggle as its parent
+      expect(looseBlockData?.parent).toBe(toggleBlock?.id);
+
+      // The toggle's content should include both Child 1 and Loose block
+      expect(toggleBlock?.content).toContain(child1?.id);
+      expect(toggleBlock?.content).toContain(looseBlockData?.id);
+      expect(toggleBlock?.content).toHaveLength(2);
+    });
+
+    test('should nest a block as child of toggle when dropped onto bottom of the toggle itself (no existing children)', async ({ page }) => {
+      // Setup:
+      // - Paragraph "Orphan block" (root level — will be dragged into the toggle)
+      // - Toggle "Empty toggle" (no children)
+      //
+      // "Orphan block" is placed ABOVE the toggle so the drag moves downward.
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: { text: 'Orphan block' },
+            },
+            {
+              type: 'toggle',
+              data: { text: 'Empty toggle' },
+            },
+          ],
+        },
+      });
+
+      // Hover over "Orphan block" to show the settings button
+      const orphanBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Orphan block' });
+
+      await orphanBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag "Orphan block" to the bottom of "Empty toggle"
+      const toggleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Empty toggle' });
+
+      await performDragDrop(page, settingsButton, toggleBlock, 'bottom');
+
+      // Verify: "Orphan block" is now a child of the toggle
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData).toBeDefined();
+      expect(savedData?.blocks).toHaveLength(2);
+
+      const toggle = savedData?.blocks.find(b => b.type === 'toggle');
+      const orphan = savedData?.blocks.find(b => getBlockText(b) === 'Orphan block');
+
+      expect(toggle).toBeDefined();
+      expect(orphan).toBeDefined();
+
+      // "Orphan block" should now have the toggle as its parent
+      expect(orphan?.parent).toBe(toggle?.id);
+
+      // The toggle's content should include the orphan block
+      expect(toggle?.content).toContain(orphan?.id);
+      expect(toggle?.content).toHaveLength(1);
+    });
+
+    test('should remove block from toggle when dragged to root level', async ({ page }) => {
+      // Setup:
+      // - Toggle "My toggle" (with child "Nested block")
+      //   - Paragraph "Nested block" (child of toggle)
+      // - Paragraph "Root block" (root level)
+      const toggleId = 'toggle-1';
+      const nestedId = 'nested-1';
+
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              id: toggleId,
+              type: 'toggle',
+              data: { text: 'My toggle' },
+              content: [nestedId],
+            },
+            {
+              id: nestedId,
+              type: 'paragraph',
+              data: { text: 'Nested block' },
+              parent: toggleId,
+            },
+            {
+              type: 'paragraph',
+              data: { text: 'Root block' },
+            },
+          ],
+        },
+      });
+
+      // Hover over "Nested block" to show the settings button
+      const nestedBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Nested block' });
+
+      await nestedBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag "Nested block" to the bottom of "Root block" (root level target)
+      const rootBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Root block' });
+
+      await performDragDrop(page, settingsButton, rootBlock, 'bottom');
+
+      // Verify: "Nested block" is now at root level (no parent)
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(savedData).toBeDefined();
+      expect(savedData?.blocks).toHaveLength(3);
+
+      const toggle = savedData?.blocks.find(b => b.type === 'toggle');
+      const nested = savedData?.blocks.find(b => getBlockText(b) === 'Nested block');
+
+      expect(toggle).toBeDefined();
+      expect(nested).toBeDefined();
+
+      // "Nested block" should no longer have a parent
+      expect(nested?.parent).toBeUndefined();
+
+      // The toggle's content should be empty
+      expect(toggle?.content ?? []).toHaveLength(0);
+    });
+  });
 });

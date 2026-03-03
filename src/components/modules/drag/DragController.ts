@@ -344,6 +344,15 @@ export class DragController extends Module {
     }
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
+    // Update parent-child relationships after move
+    const newParentId = this.resolveParentForDrop(targetBlock, edge);
+
+    for (const movedBlock of result.movedBlocks) {
+      if (movedBlock.parentId !== newParentId) {
+        this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
+      }
+    }
+
     // Announce successful drop to screen readers
     const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
     if (this.a11y && movedBlock) {
@@ -351,6 +360,29 @@ export class DragController extends Module {
     }
 
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Determines the correct parentId for blocks dropped at a given target position.
+   *
+   * @param targetBlock - The block that was the drop target
+   * @param edge - Which edge of the target the drop occurred on
+   * @returns The parentId for the dropped blocks, or null for root level
+   */
+  private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom'): string | null {
+    // If dropping below a toggle block, the block becomes a child of the toggle
+    if (edge === 'bottom' && targetBlock.name === 'toggle' && targetBlock.parentId === null) {
+      return targetBlock.id;
+    }
+
+    // If the target block is itself a child, the dropped block becomes a sibling
+    // (child of the same parent)
+    if (targetBlock.parentId !== null) {
+      return targetBlock.parentId;
+    }
+
+    // Otherwise, the block goes to root level
+    return null;
   }
 
   private async handleDuplicate(

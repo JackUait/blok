@@ -81,6 +81,9 @@ export const PlaceholderOnlyOnFocus: Story = {
     placeholder: DEFAULT_PLACEHOLDER,
     data: undefined,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
       await waitFor(
@@ -152,6 +155,9 @@ export const TypeAndClearPlaceholder: Story = {
   args: {
     placeholder: DEFAULT_PLACEHOLDER,
     data: undefined,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
@@ -229,6 +235,9 @@ export const MultipleBlocksPlaceholder: Story = {
       ],
     },
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
       await waitFor(
@@ -273,6 +282,9 @@ export const PlaceholderWithToolboxOpen: Story = {
   args: {
     placeholder: DEFAULT_PLACEHOLDER,
     data: undefined,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {

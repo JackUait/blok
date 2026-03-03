@@ -89,6 +89,9 @@ export const ItemHoverState: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -151,6 +154,9 @@ export const ItemHoverState: Story = {
 export const ItemFocusedState: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
@@ -231,6 +237,9 @@ export const BlockTunesPopover: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -289,6 +298,9 @@ export const BlockTunesPopover: Story = {
 export const ConfirmationState: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
@@ -383,6 +395,9 @@ export const SearchFiltering: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -460,6 +475,9 @@ export const SearchFiltering: Story = {
 export const DisabledItem: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
@@ -547,6 +565,7 @@ export const MobilePopover: Story = {
     },
     chromatic: {
       viewports: [375],
+      delay: 500,
     },
   },
   play: async ({ canvasElement, step }) => {
@@ -613,6 +632,7 @@ export const MobileOverlay: Story = {
     },
     chromatic: {
       viewports: [375],
+      delay: 500,
     },
   },
   play: async ({ canvasElement, step }) => {
@@ -682,6 +702,9 @@ export const BlockSettingsConvertToOpen: Story = {
     tools: {
       header: Header,
     },
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {

@@ -113,6 +113,9 @@ export const AlertDefault: Story = {
     message: 'This is a default notification',
     type: 'alert',
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ step }) => {
     await step('Show default alert notification', async () => {
       await showNotification({
@@ -145,6 +148,9 @@ export const AlertSuccess: Story = {
     type: 'alert',
     style: 'success',
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ step }) => {
     await step('Show success alert notification', async () => {
       await showNotification({
@@ -174,6 +180,9 @@ export const AlertError: Story = {
     type: 'alert',
     style: 'error',
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ step }) => {
     await step('Show error alert notification', async () => {
       await showNotification({
@@ -201,6 +210,9 @@ export const ConfirmNotification: Story = {
   args: {
     message: 'Are you sure you want to proceed?',
     type: 'confirm',
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ step }) => {
     await step('Show confirm notification', async () => {
@@ -244,6 +256,9 @@ export const PromptNotification: Story = {
     message: 'Enter your name:',
     type: 'prompt',
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ step }) => {
     await step('Show prompt notification', async () => {
       await showNotification({
@@ -282,6 +297,9 @@ export const WithHTMLContent: Story = {
     type: 'alert',
     style: 'success',
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ step }) => {
     await step('Clean up and show notification with HTML', async () => {
       cleanupNotifications();
@@ -316,7 +334,7 @@ export const BounceInAnimation: Story = {
     type: 'alert',
   },
   parameters: {
-    chromatic: { disableSnapshot: true },
+    chromatic: { disableSnapshot: true, delay: 500 },
   },
   play: async ({ step }) => {
     await step('Show notification with bounce animation', async () => {

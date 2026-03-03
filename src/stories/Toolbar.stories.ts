@@ -75,6 +75,9 @@ export const ToolbarVisible: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -126,6 +129,9 @@ export const ToolbarVisible: Story = {
 export const PlusButtonHover: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
@@ -180,6 +186,9 @@ export const PlusButtonHover: Story = {
 export const SettingsButtonHover: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {

@@ -82,6 +82,9 @@ export const MultiStringSelectionWithLinkInput: Story = {
   args: {
     data: multiLineData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -168,6 +171,9 @@ export const MultiStringSelectionWithLinkInput: Story = {
 export const CrossBlockSelectionWithLinkInput: Story = {
   args: {
     data: multiBlockData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {

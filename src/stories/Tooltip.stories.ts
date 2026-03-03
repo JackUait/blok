@@ -122,6 +122,9 @@ export const TooltipStates: Story = {
     delay: 0,
   },
   render: createAllStatesDemo,
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     const placements: TooltipArgs['placement'][] = ['bottom', 'top', 'left', 'right'];
     const triggerDefault = canvasElement.querySelector('[data-blok-testid="tooltip-trigger-default"]') as HTMLElement;
@@ -171,6 +174,9 @@ export const WithHTMLContent: Story = {
     placement: 'bottom',
     content: '<strong>Bold</strong> tooltip',
     delay: 0,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Show tooltip with HTML content', async () => {

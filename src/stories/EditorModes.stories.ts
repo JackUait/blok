@@ -94,6 +94,9 @@ export const NarrowMode: Story = {
     readOnly: false,
     width: 400,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -164,6 +167,9 @@ export const FocusedWithToolbar: Story = {
     data: sampleData,
     readOnly: false,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -209,6 +215,9 @@ export const ToolboxOpenedMode: Story = {
     data: sampleData,
     readOnly: false,
     width: 450,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
@@ -304,6 +313,9 @@ export const RTLMode: Story = {
       direction: 'rtl',
     },
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Verify RTL direction is applied', async () => {
       await waitFor(
@@ -345,6 +357,9 @@ export const DraggingState: Story = {
   args: {
     data: sampleData,
     readOnly: false,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     const container = canvasElement.querySelector('[data-story-container]');
@@ -445,6 +460,9 @@ export const RectangleSelection: Story = {
   args: {
     data: sampleData,
     readOnly: false,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {

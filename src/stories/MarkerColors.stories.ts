@@ -402,6 +402,9 @@ export const PickerTextTab: Story = {
   args: {
     data: pickerData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Open marker picker on text tab', async () => {
       await openMarkerPicker(canvasElement);
@@ -426,6 +429,9 @@ export const PickerTextTab: Story = {
 export const PickerBackgroundTab: Story = {
   args: {
     data: pickerData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Open marker picker', async () => {
@@ -460,6 +466,9 @@ export const PickerDefaultButton: Story = {
   args: {
     data: pickerData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Open marker picker and verify default button', async () => {
       await openMarkerPicker(canvasElement);
@@ -483,6 +492,9 @@ export const PickerDefaultButton: Story = {
 export const PickerNoActiveSwatch: Story = {
   args: {
     data: pickerData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Open marker picker and verify no active swatch', async () => {
@@ -512,6 +524,9 @@ export const PickerNoActiveSwatch: Story = {
 export const PickerActiveTextSwatch: Story = {
   args: {
     data: preColoredTextData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Select pre-colored text and open picker', async () => {
@@ -584,6 +599,9 @@ export const PickerActiveTextSwatch: Story = {
 export const PickerActiveBackgroundSwatch: Story = {
   args: {
     data: preColoredBgData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Select pre-colored background text and open picker', async () => {
@@ -665,6 +683,9 @@ export const PickerActiveBackgroundSwatch: Story = {
 export const MarkerButtonActive: Story = {
   args: {
     data: preColoredTextData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Select pre-colored text to show marker active state', async () => {

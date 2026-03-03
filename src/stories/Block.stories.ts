@@ -78,6 +78,9 @@ export const Focused: Story = {
     data: sampleData,
     readOnly: false,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -119,6 +122,9 @@ export const SelectedByShortcut: Story = {
   args: {
     data: sampleData,
     readOnly: false,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
@@ -178,6 +184,9 @@ export const MultipleSelected: Story = {
     data: sampleData,
     readOnly: false,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -235,6 +244,9 @@ export const WithTextSelection: Story = {
   args: {
     data: sampleData,
     readOnly: false,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
@@ -342,6 +354,9 @@ export const NewBlockAnimation: Story = {
     data: sampleData,
     readOnly: false,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(
@@ -395,6 +410,9 @@ export const NewBlockAnimation: Story = {
  * This state is shown when a block is configured to stretch to full width.
  */
 export const StretchedBlock: Story = {
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   args: {
     data: {
       time: Date.now(),
@@ -460,6 +478,9 @@ export const NavigationMode: Story = {
   args: {
     data: sampleData,
     readOnly: false,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {

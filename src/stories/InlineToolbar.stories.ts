@@ -103,6 +103,9 @@ export const WithTextSelection: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
       await waitFor(
@@ -143,6 +146,9 @@ export const WithTextSelection: Story = {
 export const BoldActive: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
@@ -190,6 +196,9 @@ export const ItalicActive: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
       await waitFor(
@@ -236,6 +245,9 @@ export const LinkActive: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
       await waitFor(
@@ -280,6 +292,9 @@ export const LinkActive: Story = {
 export const LinkInputShown: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
@@ -376,6 +391,9 @@ export const ConvertToDropdownOpen: Story = {
   args: {
     data: sampleData,
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {
       await waitFor(
@@ -455,6 +473,9 @@ export const ConvertToDropdownOpen: Story = {
 export const ToolHoverState: Story = {
   args: {
     data: sampleData,
+  },
+  parameters: {
+    chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor to initialize', async () => {

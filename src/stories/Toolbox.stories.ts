@@ -113,6 +113,9 @@ export const CustomIconsForAllTools: Story = {
       } as ToolSettings,
     },
   },
+  parameters: {
+    chromatic: { delay: 500 },
+  },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {
       await waitFor(

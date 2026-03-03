@@ -596,6 +596,7 @@ export const ColumnGripsVisible: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -643,6 +644,7 @@ export const RowGripsVisible: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -689,6 +691,7 @@ export const ColumnGripActive: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -736,6 +739,7 @@ export const RowGripActive: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -786,6 +790,7 @@ export const CellFocused: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table and toolbar', async () => {
       await waitForTable(canvasElement);
@@ -841,6 +846,7 @@ export const MultiCellSelection: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -881,6 +887,7 @@ export const SelectionPillExpanded: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -972,6 +979,7 @@ export const ScrollOverflow: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -1476,6 +1484,7 @@ export const AddButtonsVisible: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -1523,6 +1532,7 @@ export const ResizeHandlesVisible: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -1578,6 +1588,7 @@ export const RowDragInProgress: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);
@@ -1629,6 +1640,7 @@ export const ColumnDragInProgress: Story = {
       ],
     },
   },
+  parameters: { chromatic: { delay: 500 } },
   play: async ({ canvasElement, step }) => {
     await step('Wait for table', async () => {
       await waitForTable(canvasElement);

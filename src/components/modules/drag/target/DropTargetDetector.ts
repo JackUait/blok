@@ -67,12 +67,14 @@ export class DropTargetDetector {
     if (bodyPlaceholder) {
       const toggleHolder = bodyPlaceholder.closest(createSelector(DATA_ATTR.element));
 
-      if (toggleHolder instanceof HTMLElement) {
-        const block = this.blockManager.blocks.find(b => b.holder === toggleHolder);
+      if (!(toggleHolder instanceof HTMLElement)) {
+        return { block: undefined, holder: null };
+      }
 
-        if (block) {
-          return { block, holder: toggleHolder };
-        }
+      const block = this.blockManager.blocks.find(b => b.holder === toggleHolder);
+
+      if (block) {
+        return { block, holder: toggleHolder };
       }
     }
 
@@ -308,7 +310,7 @@ export class DropTargetDetector {
    * Post-processes a DropTarget to add toggle nesting information.
    * Determines whether the drop should nest inside a toggle block.
    */
-  private resolveToggleNesting(target: DropTarget, elementUnderCursor: Element): DropTarget {
+  private resolveToggleNesting(target: DropTarget, _elementUnderCursor: Element): DropTarget {
     const { block: targetBlock, edge } = target;
 
     // Case 1: Bottom edge of an open toggle → "insert as first child"

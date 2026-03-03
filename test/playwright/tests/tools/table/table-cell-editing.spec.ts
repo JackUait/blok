@@ -322,6 +322,89 @@ test.describe('Cell Editing', () => {
     await expect(targetCellBlockCount).toHaveCount(2);
   });
 
+  test('Pressing Enter in the middle of text splits into two blocks within the same cell', async ({ page }) => {
+    // 1. Initialize editor with a 2x2 table
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['', ''], ['', '']],
+            },
+          },
+        ],
+      },
+    });
+
+    // 2. Click into the first cell and type text
+    const firstCellEditable = getCellEditable(page, 0, 0);
+
+    await firstCellEditable.click();
+    await page.keyboard.type('HelloWorld');
+
+    // 3. Move caret to the middle (before "World")
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('ArrowLeft');
+    }
+
+    // 4. Press Enter to split the text
+    await page.keyboard.press('Enter');
+
+    // 5. Verify both halves appear in the first cell
+    const firstCell = getCell(page, 0, 0);
+
+    await expect(firstCell).toContainText('Hello');
+    await expect(firstCell).toContainText('World');
+
+    // 6. Verify the cell has exactly 2 block holders
+    const blockHolders = firstCell.locator('[data-blok-id]');
+
+    await expect(blockHolders).toHaveCount(2);
+
+    // 7. Save and verify no orphan blocks outside the table
+    const savedData = await page.evaluate(async () => {
+      const blok = window.blokInstance;
+
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+
+      return blok.save();
+    });
+
+    // Find the table block
+    const tableBlock = savedData.blocks.find(
+      (b: { type: string }) => b.type === 'table'
+    );
+
+    expect(tableBlock).toBeDefined();
+
+    if (!tableBlock) {
+      return;
+    }
+
+    // Count non-table paragraph blocks after the table that are NOT children of the table.
+    // In the flat output, child blocks of the table legitimately appear after the table block
+    // with a parent reference. An orphan is a block that has no parent (or a null parent).
+    const tableIndex = savedData.blocks.indexOf(tableBlock);
+    const blocksAfterTable = savedData.blocks.slice(tableIndex + 1);
+
+    // There should be no orphaned paragraph blocks containing "Hello" or "World"
+    // (orphaned = not owned by the table, i.e. no parent pointing to the table block)
+    const tableId = (tableBlock as { id: string }).id;
+    const orphanedBlocks = blocksAfterTable.filter(
+      (b: { type: string; parent?: string; data?: { text?: string } }) =>
+        b.type === 'paragraph' &&
+        b.parent !== tableId &&
+        (b.data?.text === 'Hello' || b.data?.text === 'World')
+    );
+
+    expect(orphanedBlocks).toHaveLength(0);
+  });
+
   test('Clicking blank space below block content in a cell focuses the last block', async ({ page }) => {
     // 1. Initialize editor with a 2x2 table with empty cells
     await createBlok(page, {

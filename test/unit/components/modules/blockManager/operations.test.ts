@@ -923,6 +923,36 @@ describe('BlockOperations', () => {
       expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
       expect(newBlock).toBeDefined();
     });
+
+    it('defers currentBlockIndex update so blockDidMutated sees original block as current', () => {
+      operations.currentBlockIndexValue = 1; // block-2
+
+      const fragment = document.createDocumentFragment();
+      fragment.appendChild(document.createTextNode('split content'));
+      (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
+
+      // Capture currentBlockIndexValue at the moment BlockAddedMutationType fires
+      let indexDuringMutation: number | undefined;
+
+      blockDidMutatedSpy.mockImplementation(<Type extends BlockMutationType>(
+        mutationType: Type,
+        block: Block,
+        _detailData: unknown
+      ) => {
+        if (mutationType === BlockAddedMutationType) {
+          indexDuringMutation = operations.currentBlockIndexValue;
+        }
+
+        return block;
+      });
+
+      operations.split(blocksStore);
+
+      // During mutation, currentBlockIndex should still point at the ORIGINAL block (index 1)
+      expect(indexDuringMutation).toBe(1);
+      // After split completes, currentBlockIndex should point at the NEW block (index 2)
+      expect(operations.currentBlockIndexValue).toBe(2);
+    });
   });
 
   describe('splitBlockWithData', () => {
@@ -971,6 +1001,39 @@ describe('BlockOperations', () => {
       operations.currentBlockIndexValue = 0;
       operations.splitBlockWithData('block-1', {}, 'paragraph', {}, 1, blocksStore);
 
+      expect(operations.currentBlockIndexValue).toBe(1);
+    });
+
+    it('defers currentBlockIndex update so blockDidMutated sees original block as current', () => {
+      operations.currentBlockIndexValue = 0; // block-1
+
+      // Capture currentBlockIndexValue at the moment BlockAddedMutationType fires
+      let indexDuringMutation: number | undefined;
+
+      blockDidMutatedSpy.mockImplementation(<Type extends BlockMutationType>(
+        mutationType: Type,
+        block: Block,
+        _detailData: unknown
+      ) => {
+        if (mutationType === BlockAddedMutationType) {
+          indexDuringMutation = operations.currentBlockIndexValue;
+        }
+
+        return block;
+      });
+
+      operations.splitBlockWithData(
+        'block-1',
+        { text: 'Remaining' },
+        'paragraph',
+        { text: 'Extracted' },
+        1,
+        blocksStore
+      );
+
+      // During mutation, currentBlockIndex should still point at the ORIGINAL block (index 0)
+      expect(indexDuringMutation).toBe(0);
+      // After split completes, currentBlockIndex should point at the NEW block (index 1)
       expect(operations.currentBlockIndexValue).toBe(1);
     });
 
@@ -1159,6 +1222,49 @@ describe('BlockOperations', () => {
       // withAtomicOperation should have been called (wrapping both insert and onPaste)
       expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
       expect(syncingDuringAtomic).toBe(true);
+    });
+
+    it('defers currentBlockIndex update for non-replace paste so blockDidMutated sees original block', async () => {
+      operations.currentBlockIndexValue = 0; // block-1
+
+      let indexDuringMutation: number | undefined;
+
+      blockDidMutatedSpy.mockImplementation(<Type extends BlockMutationType>(
+        mutationType: Type,
+        block: Block,
+        _detailData: unknown
+      ) => {
+        if (mutationType === BlockAddedMutationType) {
+          indexDuringMutation = operations.currentBlockIndexValue;
+        }
+
+        return block;
+      });
+
+      const pasteEvent = { detail: { data: '<p>pasted</p>' } } as unknown as PasteEvent;
+
+      await operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      // During the mutation event, index should point at the ORIGINAL block (0)
+      expect(indexDuringMutation).toBe(0);
+    });
+
+    it('inherits parentId from predecessor block when pasting non-replace', async () => {
+      // Setup: block-2 is a child of block-1 (simulating a table cell paragraph)
+      const childBlock = repository.getBlockById('block-2');
+
+      if (!childBlock) {
+        throw new Error('block-2 not found');
+      }
+      hierarchy.setBlockParent(childBlock, 'block-1');
+
+      operations.currentBlockIndexValue = 1; // block-2 (child of block-1)
+
+      const pasteEvent = { detail: { data: '<p>pasted</p>' } } as unknown as PasteEvent;
+      const newBlock = await operations.paste('paragraph', pasteEvent, false, blocksStore);
+
+      // The pasted block should inherit block-2's parentId
+      expect(newBlock.parentId).toBe('block-1');
     });
   });
 

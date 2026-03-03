@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "playwright-test": {
+    "playwright": {
       "command": "npx",
-      "args": [
-        "playwright",
-        "run-test-mcp-server"
-      ]
+      "args": ["@playwright/mcp@latest", "--extension"],
+      "env": {
+        "PLAYWRIGHT_MCP_EXTENSION_TOKEN": "gbfub22UNMRWi-9JgBVxWcaoR8ga9f5xjSwcSKHKxMA"
+      }
     }
   }
 }

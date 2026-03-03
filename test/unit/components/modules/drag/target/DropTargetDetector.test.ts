@@ -828,6 +828,40 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(child.holder);
     });
 
+    it('should set indicator depth when target block is child of open toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: ['child-1'],
+        name: 'toggle',
+      });
+      // Toggle at root level → data-blok-depth = 0
+      toggle.holder.setAttribute('data-blok-depth', '0');
+      const child = createToggleTestBlock({ id: 'child-1', parentId: 'toggle-1' });
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([toggle, child, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(child.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 0, right: 200, width: 200, height: 100, x: 0, y: 100, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(child.holder);
+
+      const innerElement = document.createElement('div');
+      child.holder.appendChild(innerElement);
+
+      const result = det.determineDropTarget(innerElement, 100, 199, outsider);
+
+      expect(result).not.toBeNull();
+      // Depth should be (toggleHierarchyDepth + 1) * 2 = (0 + 1) * 2 = 2
+      expect(result?.depth).toBe(2);
+
+      document.body.removeChild(child.holder);
+    });
+
     it('should set parentId when target is body placeholder inside open toggle', () => {
       const toggle = createToggleTestBlock({
         id: 'toggle-1',

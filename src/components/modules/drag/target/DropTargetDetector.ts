@@ -325,7 +325,9 @@ export class DropTargetDetector {
       const parentBlock = this.blockManager.getBlockById(targetBlock.parentId);
 
       if (parentBlock !== undefined && this.isOpenToggle(parentBlock)) {
-        return { ...target, parentId: parentBlock.id };
+        const childDepth = this.getToggleChildIndicatorDepth(parentBlock);
+
+        return { ...target, parentId: parentBlock.id, depth: childDepth };
       }
     }
 

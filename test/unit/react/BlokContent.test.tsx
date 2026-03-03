@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { setHolder, getHolder } from '../../../src/react/holder-map';
+import { setHolder } from '../../../src/react/holder-map';
 
 import { BlokContent } from '../../../src/react/BlokContent';
 
 describe('BlokContent', () => {
-  let mockEditor: object;
+  let mockEditor: Record<string, unknown>;
   let mockHolder: HTMLDivElement;
 
   beforeEach(() => {
@@ -20,7 +20,7 @@ describe('BlokContent', () => {
   });
 
   it('should render an empty div when editor is null', () => {
-    const { container } = render(<BlokContent editor={null} data-testid="content" />);
+    render(<BlokContent editor={null} data-testid="content" />);
 
     const div = screen.getByTestId('content');
 
@@ -47,8 +47,8 @@ describe('BlokContent', () => {
   it('should adopt the editor holder into the container when editor is provided', () => {
     setHolder(mockEditor, mockHolder);
 
-    const { container } = render(
-      <BlokContent editor={mockEditor as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+    render(
+      <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
     );
 
     const div = screen.getByTestId('content');
@@ -61,7 +61,7 @@ describe('BlokContent', () => {
     setHolder(mockEditor, mockHolder);
 
     const { unmount } = render(
-      <BlokContent editor={mockEditor as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+      <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
     );
 
     // Holder is in the container

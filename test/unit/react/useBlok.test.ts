@@ -120,8 +120,10 @@ describe('useBlok', () => {
       vi.runAllTimers();
     });
 
+    // Verify the editor was cleaned up: destroy called, holder removed
     expect(instance.destroy).toHaveBeenCalledTimes(1);
     expect(removeHolder).toHaveBeenCalled();
+
   });
 
   it('should reuse editor instance on StrictMode remount (cleanup then re-run)', async () => {
@@ -131,13 +133,18 @@ describe('useBlok', () => {
 
     await flushAll();
 
-    expect(result.current).not.toBeNull();
+    const firstEditor = result.current;
+
+    expect(firstEditor).not.toBeNull();
     expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
 
     // StrictMode: the deferred destroy mechanism means if cleanup runs
     // and the effect re-runs before the setTimeout fires, the timer is
     // cancelled and the existing editor is reused (only 1 constructor call).
     expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+
+    // Verify the hook still returns the same editor instance (reuse, not recreate)
+    expect(result.current).toBe(firstEditor);
 
     unmount();
     act(() => {
@@ -244,6 +251,10 @@ describe('useBlok', () => {
     rerender({ autofocus: true });
 
     expect(instance.focus).toHaveBeenCalledTimes(1);
+
+    // Verify the editor is still the same instance (focus didn't recreate)
+    expect(result.current).not.toBeNull();
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
   });
 
   it('should return null during SSR (initial render before useEffect)', () => {
@@ -314,5 +325,9 @@ describe('useBlok', () => {
 
     expect(onReady1).not.toHaveBeenCalled();
     expect(onReady2).toHaveBeenCalledTimes(1);
+
+    // Verify no editor recreation occurred — still same instance
+    expect(result.current).not.toBeNull();
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
   });
 });

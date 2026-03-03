@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { setHolder, getHolder, removeHolder } from '../../../src/react/holder-map';
 
 describe('holder-map', () => {
-  let mockEditor: object;
+  let mockEditor: Record<string, unknown>;
   let mockDiv: HTMLDivElement;
 
   beforeEach(() => {

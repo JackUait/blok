@@ -10,7 +10,7 @@ interface EditorInstanceState {
   destroyTimeout: ReturnType<typeof setTimeout> | null;
   isDestroyed: boolean;
   /** Opaque token identifying which deps cycle created this editor */
-  depsToken: object | null;
+  depsToken: Record<string, unknown> | null;
 }
 
 /**
@@ -98,7 +98,7 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     state.editor = blok;
     setHolder(blok, holder);
 
-    blok.isReady.then(() => {
+    void blok.isReady.then(() => {
       if (state.editor === blok && !state.isDestroyed) {
         setEditor(blok);
       }
@@ -107,7 +107,6 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     return (): void => {
       deferDestroy(state, setEditor);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [depsToken]);
 
   // Reactive: readOnly
@@ -116,7 +115,7 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     if (editor === null) {
       return;
     }
-    editor.readOnly.set(readOnly ?? false);
+    void editor.readOnly.set(readOnly ?? false);
   }, [editor, readOnly]);
 
   // Reactive: autofocus
@@ -135,6 +134,7 @@ function deferDestroy(
   state: EditorInstanceState,
   setEditorState: React.Dispatch<React.SetStateAction<Blok | null>>
 ): void {
+  /* eslint-disable no-param-reassign -- intentional mutation of shared state ref */
   state.destroyTimeout = setTimeout(() => {
     if (state.editor !== null) {
       removeHolder(state.editor);
@@ -146,4 +146,5 @@ function deferDestroy(
       setEditorState(null);
     }
   }, 0);
+  /* eslint-enable no-param-reassign */
 }

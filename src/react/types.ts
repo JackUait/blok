@@ -1,5 +1,4 @@
-import type { BlokConfig } from '@/types';
-import type { Blok } from '@/types';
+import type { BlokConfig, Blok } from '@/types';
 
 /**
  * Configuration for useBlok hook.

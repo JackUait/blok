@@ -17,7 +17,9 @@ export const BlokContent = forwardRef<HTMLDivElement, BlokContentProps>(
       if (typeof ref === 'function') {
         ref(node);
       } else if (ref !== null && ref !== undefined) {
-        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        const mutableRef = ref;
+
+        mutableRef.current = node;
       }
     };
 

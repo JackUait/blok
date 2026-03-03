@@ -94,9 +94,14 @@ test.describe('multilingual tool search', () => {
     await initBlokWithFrenchLocale(page);
     await openToolboxAndSearch(page, 'ul');
 
-    // Should find bulleted list via "ul" alias
+    // Should find bulleted list via "ul" alias (fuzzy search may also match other tools)
     const visibleItems = page.locator(VISIBLE_ITEM_SELECTOR);
-    await expect(visibleItems).toHaveCount(1);
+    const count = await visibleItems.count();
+
+    expect(count).toBeGreaterThan(0);
+
+    // Bulleted list (exact match on searchTerm "ul") should be the first result
+    await expect(visibleItems.first()).toHaveAttribute('data-blok-item-name', 'bulleted-list');
   });
 
   test('should find paragraph tool by alias "p"', async ({ page }) => {

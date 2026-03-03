@@ -764,31 +764,9 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Reorder DOM elements to reflect ranking
     if (!isEmptyQuery && matchingItems.length > 0) {
-      // Cache original order on first non-empty search
-      if (this.originalItemOrder === undefined && this.nodes.items !== null) {
-        this.originalItemOrder = Array.from(this.nodes.items.children);
-      }
-      const itemsContainer = this.nodes.items;
-
-      if (itemsContainer !== null) {
-        for (const item of matchingItems) {
-          const el = item.getElement();
-
-          if (el !== null) {
-            itemsContainer.appendChild(el);
-          }
-        }
-      }
+      this.reorderItemsByRank(matchingItems);
     } else if (isEmptyQuery && this.originalItemOrder !== undefined) {
-      // Restore original order when query is cleared
-      const itemsContainer = this.nodes.items;
-
-      if (itemsContainer !== null) {
-        for (const el of this.originalItemOrder) {
-          itemsContainer.appendChild(el);
-        }
-      }
-      this.originalItemOrder = undefined;
+      this.restoreOriginalItemOrder();
     }
 
     this.toggleNothingFoundMessage(isNothingFound);
@@ -816,4 +794,47 @@ export class PopoverDesktop extends PopoverAbstract {
       this.flipper.focusItem(0, { skipNextTab: true });
     }
   };
+
+  /**
+   * Reorders DOM children of the items container to match the ranked order.
+   * Caches the original order on first call so it can be restored later.
+   * @param rankedItems - items sorted by search relevance (best first)
+   */
+  private reorderItemsByRank(rankedItems: PopoverItemDefault[]): void {
+    if (this.originalItemOrder === undefined && this.nodes.items !== null) {
+      this.originalItemOrder = Array.from(this.nodes.items.children);
+    }
+
+    const itemsContainer = this.nodes.items;
+
+    if (itemsContainer === null) {
+      return;
+    }
+
+    for (const item of rankedItems) {
+      const el = item.getElement();
+
+      if (el !== null) {
+        itemsContainer.appendChild(el);
+      }
+    }
+  }
+
+  /**
+   * Restores the original DOM order of items container children.
+   * Called when the search query is cleared.
+   */
+  private restoreOriginalItemOrder(): void {
+    const itemsContainer = this.nodes.items;
+
+    if (itemsContainer === null || this.originalItemOrder === undefined) {
+      return;
+    }
+
+    for (const el of this.originalItemOrder) {
+      itemsContainer.appendChild(el);
+    }
+
+    this.originalItemOrder = undefined;
+  }
 }

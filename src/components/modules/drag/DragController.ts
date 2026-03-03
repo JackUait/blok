@@ -285,7 +285,7 @@ export class DragController extends Module {
     }
 
     // Update state with new target
-    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge);
+    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge, dropTarget.parentId);
 
     // Show drop indicator
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
@@ -307,7 +307,11 @@ export class DragController extends Module {
       return;
     }
 
-    const { targetBlock, targetEdge } = state as { targetBlock: Block | null; targetEdge: 'top' | 'bottom' | null };
+    const { targetBlock, targetEdge, targetParentId } = state as {
+      targetBlock: Block | null;
+      targetEdge: 'top' | 'bottom' | null;
+      targetParentId: string | null;
+    };
 
     if (!targetBlock || !targetEdge) {
       this.cleanup();
@@ -324,7 +328,7 @@ export class DragController extends Module {
     if (e.altKey) {
       void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
     } else {
-      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge);
+      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, targetParentId);
     }
 
     this.cleanup(false, e.altKey);
@@ -334,7 +338,8 @@ export class DragController extends Module {
     sourceBlock: Block,
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom'
+    edge: 'top' | 'bottom',
+    targetParentId: string | null = null
   ): void {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
@@ -344,10 +349,20 @@ export class DragController extends Module {
     }
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
+    // Reparent the moved blocks under the toggle (or clear parent when dragging out)
+    for (const movedBlock of result.movedBlocks) {
+      const currentParentId = movedBlock.parentId;
+
+      if (targetParentId !== currentParentId) {
+        this.Blok.BlockManager.setBlockParent(movedBlock, targetParentId);
+      }
+    }
+
     // Announce successful drop to screen readers
-    const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
-    if (this.a11y && movedBlock) {
-      this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
+    const announcedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
+
+    if (this.a11y && announcedBlock) {
+      this.a11y.announceDropComplete(announcedBlock, sourceBlocks, isMultiBlockDrag);
     }
 
     this.Blok.Toolbar.moveAndOpen(sourceBlock);

@@ -139,6 +139,7 @@ const createDragManager = (
     getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
     move: vi.fn(),
     insert: vi.fn(),
+    setBlockParent: vi.fn(),
   };
 
   const blockSelection = {

@@ -285,7 +285,7 @@ export class DragController extends Module {
     }
 
     // Update state with new target
-    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge, dropTarget.parentId);
+    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge);
 
     // Show drop indicator
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
@@ -307,11 +307,7 @@ export class DragController extends Module {
       return;
     }
 
-    const { targetBlock, targetEdge, targetParentId } = state as {
-      targetBlock: Block | null;
-      targetEdge: 'top' | 'bottom' | null;
-      targetParentId: string | null;
-    };
+    const { targetBlock, targetEdge } = state as { targetBlock: Block | null; targetEdge: 'top' | 'bottom' | null };
 
     if (!targetBlock || !targetEdge) {
       this.cleanup();
@@ -328,7 +324,7 @@ export class DragController extends Module {
     if (e.altKey) {
       void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
     } else {
-      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, targetParentId);
+      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge);
     }
 
     this.cleanup(false, e.altKey);
@@ -338,8 +334,7 @@ export class DragController extends Module {
     sourceBlock: Block,
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom',
-    targetParentId: string | null = null
+    edge: 'top' | 'bottom'
   ): void {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
@@ -349,42 +344,45 @@ export class DragController extends Module {
     }
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
-    // Reparent the moved blocks under the toggle (or clear parent when dragging out)
-    const affectedParentIds = new Set<string>();
+    // Update parent-child relationships after move
+    const newParentId = this.resolveParentForDrop(targetBlock, edge);
 
     for (const movedBlock of result.movedBlocks) {
-      const oldParentId = movedBlock.parentId;
-
-      if (targetParentId === oldParentId) {
-        continue;
-      }
-      if (oldParentId !== null) {
-        affectedParentIds.add(oldParentId);
-      }
-      if (targetParentId !== null) {
-        affectedParentIds.add(targetParentId);
-      }
-      this.Blok.BlockManager.setBlockParent(movedBlock, targetParentId);
-    }
-
-    // Notify affected parent blocks so toggle tools update their visual state
-    // (e.g. hide/show body placeholder when children are added/removed)
-    for (const parentId of affectedParentIds) {
-      const parentBlock = this.Blok.BlockManager.getBlockById(parentId);
-
-      if (parentBlock !== undefined) {
-        parentBlock.call('rendered');
+      if (movedBlock.parentId !== newParentId) {
+        this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
       }
     }
 
     // Announce successful drop to screen readers
-    const announcedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
-
-    if (this.a11y && announcedBlock) {
-      this.a11y.announceDropComplete(announcedBlock, sourceBlocks, isMultiBlockDrag);
+    const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
+    if (this.a11y && movedBlock) {
+      this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
     }
 
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Determines the correct parentId for blocks dropped at a given target position.
+   *
+   * @param targetBlock - The block that was the drop target
+   * @param edge - Which edge of the target the drop occurred on
+   * @returns The parentId for the dropped blocks, or null for root level
+   */
+  private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom'): string | null {
+    // If dropping below a toggle block, the block becomes a child of the toggle
+    if (edge === 'bottom' && targetBlock.name === 'toggle' && targetBlock.parentId === null) {
+      return targetBlock.id;
+    }
+
+    // If the target block is itself a child, the dropped block becomes a sibling
+    // (child of the same parent)
+    if (targetBlock.parentId !== null) {
+      return targetBlock.parentId;
+    }
+
+    // Otherwise, the block goes to root level
+    return null;
   }
 
   private async handleDuplicate(

@@ -12,6 +12,7 @@ export interface DropTarget {
   block: Block;
   edge: 'top' | 'bottom';
   depth: number;
+  parentId: string | null;
 }
 
 export interface ContentRect {
@@ -25,6 +26,7 @@ export interface UIAdapter {
 export interface BlockManagerAdapter {
   getBlockByIndex(index: number): Block | undefined;
   getBlockIndex(block: Block): number;
+  getBlockById(id: string): Block | undefined;
   blocks: Block[];
 }
 
@@ -59,6 +61,23 @@ export class DropTargetDetector {
     clientX: number,
     clientY: number
   ): { block: Block | undefined; holder: HTMLElement | null } {
+    // Check if cursor is on a toggle body placeholder — route to the toggle block
+    const bodyPlaceholder = elementUnderCursor.closest('[data-blok-toggle-body-placeholder]');
+
+    if (bodyPlaceholder) {
+      const toggleHolder = bodyPlaceholder.closest(createSelector(DATA_ATTR.element));
+
+      if (!(toggleHolder instanceof HTMLElement)) {
+        return { block: undefined, holder: null };
+      }
+
+      const block = this.blockManager.blocks.find(b => b.holder === toggleHolder);
+
+      if (block) {
+        return { block, holder: toggleHolder };
+      }
+    }
+
     // First try: find block holder directly under cursor
     const directHolder = elementUnderCursor.closest(createSelector(DATA_ATTR.element));
 
@@ -166,14 +185,15 @@ export class DropTargetDetector {
 
     if (isTopHalf && targetIndex > 0 && canUsePreviousBlock) {
       const targetDepth = this.calculateTargetDepth(previousBlock, 'bottom', sourceBlock);
-      return { block: previousBlock, edge: 'bottom', depth: targetDepth };
+
+      return this.resolveToggleNesting({ block: previousBlock, edge: 'bottom', depth: targetDepth, parentId: null }, elementUnderCursor);
     }
 
     // First block top half, or any block bottom half
     const edge: 'top' | 'bottom' = isTopHalf ? 'top' : 'bottom';
     const targetDepth = this.calculateTargetDepth(targetBlock, edge, sourceBlock);
 
-    return { block: targetBlock, edge, depth: targetDepth };
+    return this.resolveToggleNesting({ block: targetBlock, edge, depth: targetDepth, parentId: null }, elementUnderCursor);
   }
 
   /**
@@ -269,6 +289,52 @@ export class DropTargetDetector {
   }
 
   /**
+   * Checks whether a block is an open toggle (has data-blok-toggle-open="true" inside it).
+   */
+  private isOpenToggle(block: Block): boolean {
+    return block.holder.querySelector('[data-blok-toggle-open="true"]') !== null;
+  }
+
+  /**
+   * Calculates the indicator depth for a child being dropped inside a toggle.
+   * Uses the toggle's hierarchy depth to determine the visual nesting level.
+   */
+  private getToggleChildIndicatorDepth(toggleBlock: Block): number {
+    const toggleAttr = toggleBlock.holder.getAttribute('data-blok-depth');
+    const toggleHierarchyDepth = toggleAttr !== null ? parseInt(toggleAttr, 10) : 0;
+
+    return (toggleHierarchyDepth + 1) * 2;
+  }
+
+  /**
+   * Post-processes a DropTarget to add toggle nesting information.
+   * Determines whether the drop should nest inside a toggle block.
+   */
+  private resolveToggleNesting(target: DropTarget, _elementUnderCursor: Element): DropTarget {
+    const { block: targetBlock, edge } = target;
+
+    // Case 1: Bottom edge of an open toggle → "insert as first child"
+    if (edge === 'bottom' && this.isOpenToggle(targetBlock)) {
+      const toggleDepth = this.getToggleChildIndicatorDepth(targetBlock);
+
+      return { ...target, parentId: targetBlock.id, depth: toggleDepth };
+    }
+
+    // Case 2: Target block is a child of an open toggle
+    if (targetBlock.parentId !== null) {
+      const parentBlock = this.blockManager.getBlockById(targetBlock.parentId);
+
+      if (parentBlock !== undefined && this.isOpenToggle(parentBlock)) {
+        const childDepth = this.getToggleChildIndicatorDepth(parentBlock);
+
+        return { ...target, parentId: parentBlock.id, depth: childDepth };
+      }
+    }
+
+    return { ...target, parentId: null };
+  }
+
+  /**
    * Redirect a drop target to the table block that contains the given cell container.
    * Finds the outermost [data-blok-element] ancestor and returns it as the target.
    *
@@ -289,7 +355,7 @@ export class DropTargetDetector {
     const tableRect = tableBlock.holder.getBoundingClientRect();
     const isTopHalf = clientY < tableRect.top + tableRect.height / 2;
 
-    return { block: tableBlock, edge: isTopHalf ? 'top' : 'bottom', depth: 0 };
+    return { block: tableBlock, edge: isTopHalf ? 'top' : 'bottom', depth: 0, parentId: null };
   }
 
 }

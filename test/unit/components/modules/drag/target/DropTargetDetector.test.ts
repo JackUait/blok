@@ -2,7 +2,7 @@
  * Tests for DropTargetDetector
  */
 
-import { beforeEach, describe, it, expect, vi, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi, type Mock } from 'vitest';
 import { DropTargetDetector } from '../../../../../../src/components/modules/drag/target/DropTargetDetector';
 import type { Block } from '../../../../../../src/components/block';
 import { DATA_ATTR } from '../../../../../../src/components/constants';
@@ -22,6 +22,7 @@ describe('DropTargetDetector', () => {
     mockBlockManager = {
       getBlockByIndex: vi.fn(),
       getBlockIndex: vi.fn(),
+      getBlockById: vi.fn(),
       blocks: [],
     };
 
@@ -687,6 +688,335 @@ describe('DropTargetDetector', () => {
 
         expect(depth).toBe(2);
       });
+    });
+  });
+
+  describe('toggle nesting detection', () => {
+    /**
+     * Creates a block stub for toggle nesting tests.
+     */
+    const createToggleTestBlock = (options: {
+      id?: string;
+      parentId?: string | null;
+      contentIds?: string[];
+      toggleOpen?: boolean;
+      name?: string;
+    } = {}): Block => {
+      const holder = document.createElement('div');
+      holder.setAttribute(DATA_ATTR.element, 'block');
+
+      if (options.toggleOpen !== undefined) {
+        const toggleWrapper = document.createElement('div');
+        toggleWrapper.setAttribute('data-blok-toggle-open', String(options.toggleOpen));
+        holder.appendChild(toggleWrapper);
+      }
+
+      return {
+        id: options.id ?? `block-${Math.random().toString(36).slice(2)}`,
+        parentId: options.parentId ?? null,
+        contentIds: options.contentIds ?? [],
+        holder,
+        name: options.name ?? 'paragraph',
+        selected: false,
+        stretched: false,
+      } as unknown as Block;
+    };
+
+    const createToggleBlockManager = (blocks: Block[]): BlockManagerAdapter => ({
+      blocks,
+      getBlockByIndex: (index: number) => blocks[index],
+      getBlockIndex: (block: Block) => blocks.indexOf(block),
+      getBlockById: (id: string) => blocks.find(b => b.id === id),
+    });
+
+    const createToggleUIAdapter = (): { contentRect: { left: number } } => ({
+      contentRect: { left: 0 },
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should set parentId when dropping on bottom edge of open toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: [],
+        name: 'toggle',
+      });
+      const paragraph = createToggleTestBlock({ id: 'para-1' });
+
+      const blockManager = createToggleBlockManager([toggle, paragraph]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([paragraph]);
+
+      // Mock getBoundingClientRect for the toggle holder
+      vi.spyOn(toggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      // Add to DOM so closest works
+      document.body.appendChild(toggle.holder);
+
+      const innerElement = toggle.holder.querySelector('[data-blok-toggle-open]') ?? toggle.holder;
+      const result = det.determineDropTarget(innerElement, 100, 99, paragraph);
+
+      expect(result).not.toBeNull();
+      expect(result?.block).toBe(toggle);
+      expect(result?.edge).toBe('bottom');
+      expect(result?.parentId).toBe('toggle-1');
+
+      document.body.removeChild(toggle.holder);
+    });
+
+    it('should NOT set parentId when dropping on bottom edge of closed toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: false,
+        contentIds: [],
+        name: 'toggle',
+      });
+      const paragraph = createToggleTestBlock({ id: 'para-1' });
+
+      const blockManager = createToggleBlockManager([toggle, paragraph]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([paragraph]);
+
+      vi.spyOn(toggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(toggle.holder);
+
+      const innerElement = toggle.holder.querySelector('[data-blok-toggle-open]') ?? toggle.holder;
+      const result = det.determineDropTarget(innerElement, 100, 99, paragraph);
+
+      expect(result).not.toBeNull();
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(toggle.holder);
+    });
+
+    it('should set parentId when target block is child of open toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: ['child-1'],
+        name: 'toggle',
+      });
+      const child = createToggleTestBlock({ id: 'child-1', parentId: 'toggle-1' });
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([toggle, child, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(child.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 0, right: 200, width: 200, height: 100, x: 0, y: 100, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(child.holder);
+
+      const innerElement = document.createElement('div');
+      child.holder.appendChild(innerElement);
+
+      const result = det.determineDropTarget(innerElement, 100, 199, outsider);
+
+      expect(result).not.toBeNull();
+      expect(result?.parentId).toBe('toggle-1');
+
+      document.body.removeChild(child.holder);
+    });
+
+    it('should set indicator depth when target block is child of open toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: ['child-1'],
+        name: 'toggle',
+      });
+      // Toggle at root level → data-blok-depth = 0
+      toggle.holder.setAttribute('data-blok-depth', '0');
+      const child = createToggleTestBlock({ id: 'child-1', parentId: 'toggle-1' });
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([toggle, child, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(child.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 0, right: 200, width: 200, height: 100, x: 0, y: 100, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(child.holder);
+
+      const innerElement = document.createElement('div');
+      child.holder.appendChild(innerElement);
+
+      const result = det.determineDropTarget(innerElement, 100, 199, outsider);
+
+      expect(result).not.toBeNull();
+      // Depth should be (toggleHierarchyDepth + 1) * 2 = (0 + 1) * 2 = 2
+      expect(result?.depth).toBe(2);
+
+      document.body.removeChild(child.holder);
+    });
+
+    it('should set parentId when target is body placeholder inside open toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: [],
+        name: 'toggle',
+      });
+      const placeholder = document.createElement('div');
+      placeholder.setAttribute('data-blok-toggle-body-placeholder', '');
+      toggle.holder.appendChild(placeholder);
+
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([toggle, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(toggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(toggle.holder);
+
+      const result = det.determineDropTarget(placeholder, 100, 50, outsider);
+
+      expect(result).not.toBeNull();
+      expect(result?.block).toBe(toggle);
+      expect(result?.edge).toBe('bottom');
+      expect(result?.parentId).toBe('toggle-1');
+
+      document.body.removeChild(toggle.holder);
+    });
+
+    it('should set parentId for toggle heading (header with toggle-open)', () => {
+      const toggleHeading = createToggleTestBlock({
+        id: 'header-1',
+        toggleOpen: true,
+        contentIds: [],
+        name: 'header',
+      });
+      const paragraph = createToggleTestBlock({ id: 'para-1' });
+
+      const blockManager = createToggleBlockManager([toggleHeading, paragraph]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([paragraph]);
+
+      vi.spyOn(toggleHeading.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(toggleHeading.holder);
+
+      const innerElement = toggleHeading.holder.querySelector('[data-blok-toggle-open]') ?? toggleHeading.holder;
+      const result = det.determineDropTarget(innerElement, 100, 99, paragraph);
+
+      expect(result).not.toBeNull();
+      expect(result?.parentId).toBe('header-1');
+
+      document.body.removeChild(toggleHeading.holder);
+    });
+
+    it('should set depth to 2 when dropping inside toggle at root level', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: [],
+        name: 'toggle',
+      });
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([toggle, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(toggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(toggle.holder);
+
+      const innerElement = toggle.holder.querySelector('[data-blok-toggle-open]') ?? toggle.holder;
+      const result = det.determineDropTarget(innerElement, 100, 99, outsider);
+
+      expect(result).not.toBeNull();
+      expect(result?.depth).toBe(2);
+
+      document.body.removeChild(toggle.holder);
+    });
+
+    it('should NOT set parentId when dropping on top edge of open toggle', () => {
+      const paragraph = createToggleTestBlock({ id: 'para-1' });
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: [],
+        name: 'toggle',
+      });
+
+      // paragraph is first, toggle is second
+      const blockManager = createToggleBlockManager([paragraph, toggle]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([paragraph]);
+
+      vi.spyOn(toggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 0, right: 200, width: 200, height: 100, x: 0, y: 100, toJSON: () => ({}),
+      });
+
+      // When dropping on top edge of toggle (index 1), normalization converts to "bottom of paragraph (index 0)"
+      // We also need paragraph to have getBoundingClientRect
+      vi.spyOn(paragraph.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(toggle.holder);
+
+      const innerElement = toggle.holder.querySelector('[data-blok-toggle-open]') ?? toggle.holder;
+      // Top half of toggle = clientY close to top
+      const result = det.determineDropTarget(innerElement, 100, 101, paragraph);
+
+      // "top of toggle" normalizes to "bottom of paragraph" — no nesting
+      expect(result).not.toBeNull();
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(toggle.holder);
+    });
+
+    it('should NOT set parentId when target child belongs to closed toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: false,
+        contentIds: ['child-1'],
+        name: 'toggle',
+      });
+      const child = createToggleTestBlock({ id: 'child-1', parentId: 'toggle-1' });
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([toggle, child, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(child.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 200, left: 0, right: 200, width: 200, height: 100, x: 0, y: 100, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(child.holder);
+
+      const innerElement = document.createElement('div');
+      child.holder.appendChild(innerElement);
+
+      const result = det.determineDropTarget(innerElement, 100, 199, outsider);
+
+      expect(result).not.toBeNull();
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(child.holder);
     });
   });
 });

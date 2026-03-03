@@ -94,6 +94,7 @@ const createBlockStub = (options: {
     id: options.id ?? `block-${Math.random().toString(16).slice(2)}`,
     holder,
     stretched: options.stretched ?? false,
+    call: vi.fn(),
   };
 
   Object.defineProperty(block, 'selected', {
@@ -126,8 +127,10 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
     blocks,
     getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
+    getBlockById: vi.fn((id: string) => blocks.find(b => b.id === id)),
     move: vi.fn(),
     insert: vi.fn(),
+    setBlockParent: vi.fn(),
   };
 
   const blockSelection = {

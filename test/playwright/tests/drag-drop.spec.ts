@@ -2149,4 +2149,389 @@ test.describe('drag and drop', () => {
       await expect(page.getByTestId('block-wrapper')).toHaveCount(1);
     });
   });
+
+  test.describe('drop inside toggle', () => {
+    test('should reparent block when dropped on bottom edge of open toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Outside block' } },
+          ],
+        },
+      });
+
+      // Toggle starts expanded
+      await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
+
+      // Hover over the paragraph to show settings button
+      const outsideBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Outside block' });
+
+      await outsideBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Target the toggle's inner wrapper (not the block-wrapper) to avoid overlap
+      // with the next block's negative margins
+      const toggleInner = page.locator('[data-blok-toggle-open="true"]');
+
+      await performDragDrop(page, settingsButton, toggleInner, 'bottom');
+
+      // Verify: the block is now a child of the toggle
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const toggle = savedData?.blocks.find(b => b.type === 'toggle');
+      const para = savedData?.blocks.find(b => b.type === 'paragraph');
+
+      expect(toggle?.content).toContain(para?.id);
+      expect(para?.parent).toBe(toggle?.id);
+    });
+
+    test('should reparent block when dropped on body placeholder of empty open toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Empty Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Drag me' } },
+          ],
+        },
+      });
+
+      await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
+
+      // Body placeholder should be visible (toggle has no children)
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(bodyPlaceholder).toBeVisible();
+
+      // Hover over paragraph to show settings
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drag me' });
+
+      await paraBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the body placeholder
+      await performDragDrop(page, settingsButton, bodyPlaceholder, 'bottom');
+
+      // Verify reparenting
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const toggle = savedData?.blocks.find(b => b.type === 'toggle');
+      const para = savedData?.blocks.find(b => b.type === 'paragraph');
+
+      expect(toggle?.content).toContain(para?.id);
+      expect(para?.parent).toBe(toggle?.id);
+    });
+
+    test('should NOT reparent when dropping on closed toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Closed Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Stay outside' } },
+          ],
+        },
+      });
+
+      // Collapse the toggle
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+
+      await arrow.click();
+      await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
+
+      // Hover over paragraph
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Stay outside' });
+
+      await paraBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the bottom of the toggle
+      const toggleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Closed Toggle' });
+
+      await performDragDrop(page, settingsButton, toggleBlock, 'bottom');
+
+      // Verify: block is NOT a child
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const para = savedData?.blocks.find(b => b.type === 'paragraph');
+
+      expect(para?.parent).toBeUndefined();
+    });
+
+    test('should reparent block when dropped between existing toggle children', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Parent' }, content: ['child-1', 'child-2'] },
+            { id: 'child-1', type: 'paragraph', data: { text: 'Child A' }, parent: 'toggle-1' },
+            { id: 'child-2', type: 'paragraph', data: { text: 'Child B' }, parent: 'toggle-1' },
+            { id: 'outsider', type: 'paragraph', data: { text: 'Outsider' } },
+          ],
+        },
+      });
+
+      // Hover over outsider
+      const outsiderBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Outsider' });
+
+      await outsiderBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to the top of Child B (which normalizes to bottom of Child A — same parent)
+      const childB = page.getByTestId('block-wrapper').filter({ hasText: 'Child B' });
+
+      await performDragDrop(page, settingsButton, childB, 'top');
+
+      // Verify: Outsider is now a child of toggle
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const outsider = savedData?.blocks.find(b => b.id === 'outsider');
+      const toggle = savedData?.blocks.find(b => b.id === 'toggle-1');
+
+      expect(outsider?.parent).toBe('toggle-1');
+      expect(toggle?.content).toContain('outsider');
+    });
+
+    test('should clear parent when dragging a child OUT of a toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Parent' }, content: ['child-1'] },
+            { id: 'child-1', type: 'paragraph', data: { text: 'Trapped child' }, parent: 'toggle-1' },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Bottom block' } },
+          ],
+        },
+      });
+
+      // Hover over the child block
+      const childBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Trapped child' });
+
+      await childBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag to below Bottom block (outside the toggle)
+      const bottomBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Bottom block' });
+
+      await performDragDrop(page, settingsButton, bottomBlock, 'bottom');
+
+      // Verify: child is now at root level (no parent)
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const exChild = savedData?.blocks.find(b => b.id === 'child-1');
+
+      expect(exChild?.parent).toBeUndefined();
+    });
+
+    test('should reparent block inside toggle heading (isToggleable header)', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Drop me in' } },
+          ],
+        },
+      });
+
+      // Toggle heading starts expanded
+      await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
+
+      // Hover over paragraph
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drop me in' });
+
+      await paraBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Target the toggle's inner wrapper (not the block-wrapper) to avoid overlap
+      // with the next block's negative margins
+      const toggleInner = page.locator('[data-blok-toggle-open="true"]');
+
+      await performDragDrop(page, settingsButton, toggleInner, 'bottom');
+
+      // Verify reparenting
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const header = savedData?.blocks.find(b => b.type === 'header');
+      const para = savedData?.blocks.find(b => b.type === 'paragraph');
+
+      expect(header?.content).toContain(para?.id);
+      expect(para?.parent).toBe(header?.id);
+    });
+
+    test('should hide body placeholder after dropping a block into an empty toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Empty Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Drop me' } },
+          ],
+        },
+      });
+
+      // Body placeholder should be visible initially (toggle has no children)
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(bodyPlaceholder).toBeVisible();
+
+      // Hover over paragraph to show settings
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drop me' });
+
+      await paraBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drop on the body placeholder
+      await performDragDrop(page, settingsButton, bodyPlaceholder, 'bottom');
+
+      // Verify: body placeholder should now be hidden (toggle has a child)
+      await expect(bodyPlaceholder).toBeHidden();
+
+      // Verify: the block is correctly reparented
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const toggle = savedData?.blocks.find(b => b.type === 'toggle');
+      const para = savedData?.blocks.find(b => b.type === 'paragraph');
+
+      expect(toggle?.content).toContain(para?.id);
+      expect(para?.parent).toBe(toggle?.id);
+    });
+
+    test('should visually indent a block after dropping it into a toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Indent me' } },
+          ],
+        },
+      });
+
+      // Get initial state of the paragraph block
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Indent me' });
+      const initialMargin = await paraBlock.evaluate((el: HTMLElement) => el.style.marginLeft);
+
+      // Root block should have no margin
+      expect(initialMargin).toBe('');
+
+      // Hover over paragraph to show settings
+      await paraBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Target the toggle's inner wrapper
+      const toggleInner = page.locator('[data-blok-toggle-open="true"]');
+
+      await performDragDrop(page, settingsButton, toggleInner, 'bottom');
+
+      // Verify: the block now has depth 1 (indented)
+      await expect(async () => {
+        const afterMargin = await paraBlock.evaluate((el: HTMLElement) => el.style.marginLeft);
+
+        expect(afterMargin).toBe('24px');
+      }).toPass({ timeout: 2000 });
+    });
+
+    test('should show body placeholder after dragging last child out of a toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Has Child' }, content: ['child-1'] },
+            { id: 'child-1', type: 'paragraph', data: { text: 'Only child' }, parent: 'toggle-1' },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Bottom' } },
+          ],
+        },
+      });
+
+      // Body placeholder should be hidden (toggle has a child)
+      const bodyPlaceholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(bodyPlaceholder).toBeHidden();
+
+      // Hover over the child block
+      const childBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Only child' });
+
+      await childBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag the child to below the bottom block (outside the toggle)
+      const bottomBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Bottom' });
+
+      await performDragDrop(page, settingsButton, bottomBlock, 'bottom');
+
+      // Verify: body placeholder should now be visible (toggle is empty again)
+      await expect(bodyPlaceholder).toBeVisible();
+
+      // Verify: the child is now at root level
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const exChild = savedData?.blocks.find(b => b.id === 'child-1');
+
+      expect(exChild?.parent).toBeUndefined();
+    });
+
+    test('should show indented drop indicator when hovering inside open toggle', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Drag source' } },
+          ],
+        },
+      });
+
+      // Hover over paragraph to show settings
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drag source' });
+
+      await paraBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Start drag and move to bottom edge of toggle's inner wrapper
+      // (not block-wrapper, to avoid overlap with next block's negative margins)
+      const settingsBox = await getBoundingBox(settingsButton);
+      const toggleInner = page.locator('[data-blok-toggle-open="true"]');
+      const toggleBox = await getBoundingBox(toggleInner);
+
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        toggleBox.x + toggleBox.width / 2,
+        toggleBox.y + toggleBox.height - 1,
+        { steps: 15 }
+      );
+
+      // Wait for drop indicator to appear
+      await page.waitForFunction(() => {
+        return document.querySelector('[data-drop-indicator="bottom"]') !== null;
+      }, { timeout: 2000 });
+
+      // Verify the indicator has non-zero depth (indented)
+      // Check on the block-wrapper which receives the CSS variable
+      const toggleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'My Toggle' });
+      const depth = await toggleBlock.evaluate((el: HTMLElement) =>
+        el.style.getPropertyValue('--drop-indicator-depth')
+      );
+
+      expect(parseInt(depth, 10)).toBeGreaterThan(0);
+
+      // Clean up
+      await page.mouse.up();
+    });
+  });
 });

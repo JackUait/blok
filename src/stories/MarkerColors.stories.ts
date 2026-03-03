@@ -3,7 +3,7 @@ import { waitFor, expect } from 'storybook/test';
 
 import { Marker } from '../tools';
 
-import { createEditorContainer, defaultTools, simulateClick, waitForToolbar, selectTextInBlock, waitForPointerEvents } from './helpers';
+import { createEditorContainer, defaultTools, simulateClick, waitForToolbar, selectTextInBlock, waitForPointerEvents, waitForInlineToolbarOpen } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
 
 import type { OutputData } from '@/types';
@@ -126,7 +126,15 @@ const openMarkerPicker = async (canvasElement: HTMLElement): Promise<void> => {
 
     const range = document.createRange();
 
-    range.selectNodeContents(contentEditable);
+    // Select the first text node directly — more reliable in headless Chromium
+    const textNode = contentEditable.firstChild;
+
+    if (textNode?.nodeType === Node.TEXT_NODE && textNode.textContent) {
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, textNode.textContent.length);
+    } else {
+      range.selectNodeContents(contentEditable);
+    }
 
     const selection = window.getSelection();
 
@@ -142,15 +150,8 @@ const openMarkerPicker = async (canvasElement: HTMLElement): Promise<void> => {
   // 5. Wait for debounced selection handler (180ms) plus popover creation
   await new Promise((resolve) => setTimeout(resolve, 300));
 
-  // 6. Wait for inline toolbar to appear
-  await waitFor(
-    () => {
-      const inlineToolbar = document.querySelector(INLINE_TOOLBAR_TESTID);
-
-      expect(inlineToolbar).toBeInTheDocument();
-    },
-    TIMEOUT_ACTION
-  );
+  // 6. Wait for inline toolbar to be fully open (with popover content)
+  await waitForInlineToolbarOpen();
 
   // 7. Wait for pointer events on the popover container
   await waitForPointerEvents(`${INLINE_TOOLBAR_TESTID} [data-blok-testid="popover-container"]`);
@@ -531,24 +532,16 @@ export const PickerActiveTextSwatch: Story = {
       const block = canvasElement.querySelector(BLOCK_TESTID);
 
       if (block) {
-        selectTextInBlock(block, 'mark');
+        await selectTextInBlock(block, 'mark');
       }
 
-      // Wait for debounced selection handler
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Wait for inline toolbar to be fully open (with popover content)
+      await waitForInlineToolbarOpen();
 
-      // Wait for inline toolbar
-      await waitFor(
-        () => {
-          const inlineToolbar = document.querySelector(INLINE_TOOLBAR_TESTID);
-
-          expect(inlineToolbar).toBeInTheDocument();
-        },
-        TIMEOUT_ACTION
-      );
-
-      // Wait for pointer events
+      // Wait for pointer events on the popover container
       await waitForPointerEvents(`${INLINE_TOOLBAR_TESTID} [data-blok-testid="popover-container"]`);
+
+      // Small delay for CSS animation to complete
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Click the marker tool to open the picker
@@ -611,24 +604,16 @@ export const PickerActiveBackgroundSwatch: Story = {
       const block = canvasElement.querySelector(BLOCK_TESTID);
 
       if (block) {
-        selectTextInBlock(block, 'mark');
+        await selectTextInBlock(block, 'mark');
       }
 
-      // Wait for debounced selection handler
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Wait for inline toolbar to be fully open (with popover content)
+      await waitForInlineToolbarOpen();
 
-      // Wait for inline toolbar
-      await waitFor(
-        () => {
-          const inlineToolbar = document.querySelector(INLINE_TOOLBAR_TESTID);
-
-          expect(inlineToolbar).toBeInTheDocument();
-        },
-        TIMEOUT_ACTION
-      );
-
-      // Wait for pointer events
+      // Wait for pointer events on the popover container
       await waitForPointerEvents(`${INLINE_TOOLBAR_TESTID} [data-blok-testid="popover-container"]`);
+
+      // Small delay for CSS animation to complete
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Click the marker tool to open the picker
@@ -700,21 +685,11 @@ export const MarkerButtonActive: Story = {
       const block = canvasElement.querySelector(BLOCK_TESTID);
 
       if (block) {
-        selectTextInBlock(block, 'mark');
+        await selectTextInBlock(block, 'mark');
       }
 
-      // Wait for debounced selection handler
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Wait for inline toolbar
-      await waitFor(
-        () => {
-          const inlineToolbar = document.querySelector(INLINE_TOOLBAR_TESTID);
-
-          expect(inlineToolbar).toBeInTheDocument();
-        },
-        TIMEOUT_ACTION
-      );
+      // Wait for inline toolbar to be fully open (with popover content)
+      await waitForInlineToolbarOpen();
 
       // Verify the marker tool button is active
       await waitFor(

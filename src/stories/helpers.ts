@@ -354,17 +354,23 @@ export const triggerSelectAll = (element: Element): void => {
 
 /**
  * Selects text within a block, handling DOM normalization (e.g., <b> → <strong>).
- * Focuses the contenteditable element and creates a proper selection.
+ * Simulates a click on the contenteditable, creates a proper selection, and waits
+ * for the debounced selection handler to fire.
+ *
+ * In headless Chromium (CI), programmatic selections can become collapsed before the
+ * 180ms debounced selectionchange handler fires. The simulateClick + focus + explicit
+ * delay pattern ensures the selection persists reliably.
+ *
  * @param block - The block wrapper element containing the contenteditable
  * @param selector - CSS selector for the element to select (e.g., 'strong', 'em', 'a')
  * @param contentEditableSelector - Selector for the contenteditable element
  * @returns True if selection was created successfully
  */
-export const selectTextInBlock = (
+export const selectTextInBlock = async (
   block: Element,
   selector: string,
   contentEditableSelector = '[contenteditable="true"]'
-): boolean => {
+): Promise<boolean> => {
   const contentEditable = block.querySelector(contentEditableSelector);
   const targetElement = block.querySelector(selector);
 
@@ -372,10 +378,8 @@ export const selectTextInBlock = (
     return false;
   }
 
-  // Focus the contenteditable first to ensure selection is rendered
-  if (contentEditable instanceof HTMLElement) {
-    contentEditable.focus();
-  }
+  // Simulate a full click sequence to establish proper focus context
+  simulateClick(contentEditable);
 
   // Create and apply the selection
   const range = document.createRange();
@@ -387,8 +391,16 @@ export const selectTextInBlock = (
   selection?.removeAllRanges();
   selection?.addRange(range);
 
-  // Dispatch selectionchange event to trigger toolbar
+  // Re-focus to ensure selection is active after range is set
+  if (contentEditable instanceof HTMLElement) {
+    contentEditable.focus();
+  }
+
+  // Dispatch selectionchange event to trigger the debounced handler
   document.dispatchEvent(new Event('selectionchange'));
+
+  // Wait for the debounced selection handler (180ms) plus popover creation time
+  await new Promise((resolve) => setTimeout(resolve, 300));
 
   return true;
 };
@@ -454,6 +466,49 @@ export const waitForPointerEvents = (selector: string, timeout = 3000): Promise<
 
       if (isTimedOut) {
         reject(new Error(`Element ${selector} did not get pointer-events enabled within ${timeout}ms`));
+
+        return;
+      }
+
+      setTimeout(check, checkInterval);
+    };
+
+    check();
+  });
+};
+
+/**
+ * Waits for the inline toolbar to be fully opened (with popover content).
+ * Unlike simply checking for the toolbar wrapper element, this verifies that
+ * the popover container has been created inside the toolbar, which only happens
+ * after the `open()` method runs successfully.
+ *
+ * @param selector - CSS selector for the inline toolbar wrapper (default: data-blok-testid="inline-toolbar")
+ * @param timeout - Maximum time to wait in ms (default: 5000)
+ */
+export const waitForInlineToolbarOpen = (
+  selector = '[data-blok-testid="inline-toolbar"]',
+  timeout = 5000
+): Promise<Element> => {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const checkInterval = 50;
+
+    const check = (): void => {
+      const toolbar = document.querySelector(selector);
+      const popover = toolbar?.querySelector('[data-blok-testid="popover-container"]');
+
+      if (toolbar && popover) {
+        resolve(toolbar);
+
+        return;
+      }
+
+      if (Date.now() - startTime >= timeout) {
+        reject(new Error(
+          `Inline toolbar popover not found within ${timeout}ms. ` +
+          `Wrapper exists: ${toolbar !== null}, Popover exists: ${popover !== null}`
+        ));
 
         return;
       }

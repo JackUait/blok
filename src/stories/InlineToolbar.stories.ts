@@ -3,7 +3,7 @@ import { userEvent, waitFor, expect } from 'storybook/test';
 
 import { Header } from '../tools/header';
 
-import { createEditorContainer, simulateClick, waitForToolbar, selectTextInBlock, waitForPointerEvents } from './helpers';
+import { createEditorContainer, simulateClick, waitForToolbar, selectTextInBlock, waitForPointerEvents, waitForInlineToolbarOpen } from './helpers';
 import type { EditorFactoryOptions } from './helpers';
 
 import type { OutputData } from '@/types';
@@ -154,6 +154,7 @@ export const BoldActive: Story = {
         },
         TIMEOUT_INIT
       );
+      await waitForToolbar(canvasElement);
     });
 
     await step('Select bold text to show active state', async () => {
@@ -162,7 +163,7 @@ export const BoldActive: Story = {
 
       // Use 'strong' selector - browsers normalize <b> to <strong>
       if (secondBlock) {
-        selectTextInBlock(secondBlock, 'strong');
+        await selectTextInBlock(secondBlock, 'strong');
       }
 
       await waitFor(
@@ -199,6 +200,7 @@ export const ItalicActive: Story = {
         },
         TIMEOUT_INIT
       );
+      await waitForToolbar(canvasElement);
     });
 
     await step('Select italic text to show active state', async () => {
@@ -207,7 +209,7 @@ export const ItalicActive: Story = {
 
       // Use 'em' selector - browsers normalize <i> to <em>
       if (secondBlock) {
-        selectTextInBlock(secondBlock, 'em');
+        await selectTextInBlock(secondBlock, 'em');
       }
 
       await waitFor(
@@ -244,6 +246,7 @@ export const LinkActive: Story = {
         },
         TIMEOUT_INIT
       );
+      await waitForToolbar(canvasElement);
     });
 
     await step('Select link text to show active/unlink state', async () => {
@@ -251,7 +254,7 @@ export const LinkActive: Story = {
       const thirdBlock = blocks[2];
 
       if (thirdBlock) {
-        selectTextInBlock(thirdBlock, 'a');
+        await selectTextInBlock(thirdBlock, 'a');
       }
 
       await waitFor(
@@ -333,14 +336,12 @@ export const LinkInputShown: Story = {
           const inlineToolbar = document.querySelector(INLINE_TOOLBAR_TESTID);
 
           expect(inlineToolbar).toBeInTheDocument();
-
-          // Also verify the popover is populated
-          const popoverContainer = inlineToolbar?.querySelector('[data-blok-testid="popover-container"]');
-
-          expect(popoverContainer).toBeInTheDocument();
         },
         TIMEOUT_ACTION
       );
+
+      // Verify the toolbar has actual popover content (not just the empty wrapper)
+      await waitForInlineToolbarOpen();
     });
 
     await step('Click link tool to show input', async () => {
@@ -385,6 +386,7 @@ export const ConvertToDropdownOpen: Story = {
         },
         TIMEOUT_INIT
       );
+      await waitForToolbar(canvasElement);
     });
 
     await step('Select text to show inline toolbar', async () => {
@@ -394,8 +396,12 @@ export const ConvertToDropdownOpen: Story = {
       if (contentEditable) {
         simulateClick(contentEditable);
         selectText(contentEditable, 0, 11);
+        (contentEditable as HTMLElement).focus();
         document.dispatchEvent(new Event('selectionchange'));
       }
+
+      // Wait for the debounced selection handler (180ms) plus popover creation time
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       await waitFor(
         () => {
@@ -460,6 +466,7 @@ export const ToolHoverState: Story = {
         },
         TIMEOUT_INIT
       );
+      await waitForToolbar(canvasElement);
     });
 
     await step('Select text to show inline toolbar', async () => {
@@ -469,8 +476,12 @@ export const ToolHoverState: Story = {
       if (contentEditable) {
         simulateClick(contentEditable);
         selectText(contentEditable, 0, 11);
+        (contentEditable as HTMLElement).focus();
         document.dispatchEvent(new Event('selectionchange'));
       }
+
+      // Wait for the debounced selection handler (180ms) plus popover creation time
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       await waitFor(
         () => {

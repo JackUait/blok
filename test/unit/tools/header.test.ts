@@ -548,8 +548,22 @@ describe('Header Tool - Custom Configurations', () => {
         expect(arrow).toBeNull();
       });
 
-      it('starts collapsed when isToggleable is true', () => {
+      it('starts expanded when isToggleable is true in editing mode', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+
+        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+      });
+
+      it('starts collapsed when isToggleable is true in readOnly mode', () => {
+        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          config: {},
+          api: createMockAPI(),
+          readOnly: true,
+          block: { id: 'test-block-id' } as never,
+        };
         const header = new Header(options);
         const element = header.render();
 
@@ -610,74 +624,75 @@ describe('Header Tool - Custom Configurations', () => {
         return { header, mockAPI, childHolders };
       };
 
-      it('expands children when arrow is clicked', () => {
+      it('collapses children when arrow is clicked (starts expanded)', () => {
         const { header, childHolders } = setupToggleHeaderWithChildren();
         const element = header.render();
 
-        // Call rendered() to trigger initial collapse
+        // Call rendered() to apply initial state
         header.rendered();
 
-        // Verify children are hidden initially
-        for (const holder of childHolders) {
-          expect(holder.classList.contains('hidden')).toBe(true);
-        }
-
-        // Click arrow to expand
-        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
-        arrow.click();
-
-        // Children should now be visible
-        for (const holder of childHolders) {
-          expect(holder.classList.contains('hidden')).toBe(false);
-        }
-      });
-
-      it('collapses children when arrow is clicked again after expanding', () => {
-        const { header, childHolders } = setupToggleHeaderWithChildren();
-        const element = header.render();
-        header.rendered();
-
-        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
-
-        // Expand
-        arrow.click();
+        // Verify children are visible initially (expanded by default in editing mode)
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(false);
         }
 
-        // Collapse
+        // Click arrow to collapse
+        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
         arrow.click();
+
+        // Children should now be hidden
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(true);
         }
       });
 
-      it('rotates arrow 90deg when expanded', () => {
+      it('re-expands children when arrow is clicked twice (collapse then expand)', () => {
+        const { header, childHolders } = setupToggleHeaderWithChildren();
+        const element = header.render();
+        header.rendered();
+
+        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+        // First click: collapse (starts expanded)
+        arrow.click();
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(true);
+        }
+
+        // Second click: expand again
+        arrow.click();
+        for (const holder of childHolders) {
+          expect(holder.classList.contains('hidden')).toBe(false);
+        }
+      });
+
+      it('rotates arrow SVG 90deg when expanded and resets when collapsed', () => {
         const { header } = setupToggleHeaderWithChildren();
         const element = header.render();
         header.rendered();
 
         const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+        const svg = arrow.querySelector('svg') as SVGElement;
 
-        // Initially collapsed - no rotation
-        expect(arrow.style.transform).toBe('');
-
-        // Click to expand
-        arrow.click();
-        expect(arrow.style.transform).toBe('rotate(90deg)');
+        // Initially expanded - SVG rotated 90deg
+        expect(svg.style.transform).toBe('rotate(90deg)');
 
         // Click to collapse
         arrow.click();
-        expect(arrow.style.transform).toBe('');
+        expect(svg.style.transform).toBe('');
+
+        // Click to expand again
+        arrow.click();
+        expect(svg.style.transform).toBe('rotate(90deg)');
       });
 
-      it('hides children on rendered() when toggle is collapsed', () => {
+      it('shows children on rendered() when toggle starts expanded (editing mode)', () => {
         const { header, childHolders } = setupToggleHeaderWithChildren();
         header.render();
         header.rendered();
 
         for (const holder of childHolders) {
-          expect(holder.classList.contains('hidden')).toBe(true);
+          expect(holder.classList.contains('hidden')).toBe(false);
         }
       });
     });
@@ -836,10 +851,14 @@ describe('Header Tool - Custom Configurations', () => {
         };
 
         const header = new Header(options);
+
         header.render();
 
-        // Call rendered() to trigger initial collapse (toggle starts collapsed)
+        // Call rendered() to apply initial state (expanded in editing mode)
         header.rendered();
+
+        // Collapse first so children are hidden
+        header.collapse();
 
         // Verify children are hidden (collapsed state)
         for (const holder of childHolders) {
@@ -926,7 +945,8 @@ describe('Header Tool - Custom Configurations', () => {
         const element = header.render();
         header.rendered();
 
-        // Start collapsed
+        // Collapse first (starts expanded in editing mode)
+        header.collapse();
         expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(true);
@@ -980,7 +1000,8 @@ describe('Header Tool - Custom Configurations', () => {
         const element = header.render();
         header.rendered();
 
-        // Already collapsed
+        // Collapse first (starts expanded in editing mode)
+        header.collapse();
         expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
 
         // Collapse again - no-op

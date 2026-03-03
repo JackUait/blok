@@ -89,12 +89,12 @@ test.describe('Toggle Tool', () => {
       await expect(content).toHaveText('Toggle content');
     });
 
-    test('starts collapsed by default', async ({ page }) => {
-      await createBlok(page, createToggleData('Collapsed toggle'));
+    test('starts expanded by default in editing mode', async ({ page }) => {
+      await createBlok(page, createToggleData('Expanded toggle'));
 
       const toggleWrapper = page.locator('[data-blok-toggle-open]');
 
-      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
     test('renders arrow button', async ({ page }) => {
@@ -108,32 +108,32 @@ test.describe('Toggle Tool', () => {
   });
 
   test.describe('expand/collapse', () => {
-    test('expands when arrow clicked', async ({ page }) => {
-      await createBlok(page, createToggleData('Expandable'));
-
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-      const toggleWrapper = page.locator('[data-blok-toggle-open]');
-
-      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'false');
-
-      await arrow.click();
-
-      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'true');
-    });
-
-    test('collapses when arrow clicked again', async ({ page }) => {
+    test('collapses when arrow clicked (starts expanded)', async ({ page }) => {
       await createBlok(page, createToggleData('Collapsible'));
 
       const arrow = page.locator('[data-blok-toggle-arrow]');
       const toggleWrapper = page.locator('[data-blok-toggle-open]');
 
-      // Expand
-      await arrow.click();
       await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'true');
 
-      // Collapse
+      await arrow.click();
+
+      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+    });
+
+    test('re-expands when arrow clicked again', async ({ page }) => {
+      await createBlok(page, createToggleData('Re-expandable'));
+
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+      const toggleWrapper = page.locator('[data-blok-toggle-open]');
+
+      // Collapse (starts expanded)
       await arrow.click();
       await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+
+      // Expand again
+      await arrow.click();
+      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
     test('clicking text enters edit mode without toggling', async ({ page }) => {
@@ -145,8 +145,8 @@ test.describe('Toggle Tool', () => {
       // Click the text content
       await content.click();
 
-      // Toggle should still be collapsed
-      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+      // Toggle should still be expanded (default in editing mode)
+      await expect(toggleWrapper).toHaveAttribute('data-blok-toggle-open', 'true');
 
       // Content should be editable — typing should work
       await page.keyboard.type(' edited');

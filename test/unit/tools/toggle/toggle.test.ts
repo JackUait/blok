@@ -36,12 +36,13 @@ const createMockAPI = (): API => ({
  */
 const createToggleOptions = (
   data: Partial<ToggleItemData> = {},
-  config: ToggleItemConfig = {}
+  config: ToggleItemConfig = {},
+  overrides: { readOnly?: boolean } = {}
 ): BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig> => ({
   data: { text: '', ...data } as ToggleItemData,
   config,
   api: createMockAPI(),
-  readOnly: false,
+  readOnly: overrides.readOnly ?? false,
   block: { id: 'test-block-id' } as never,
 });
 
@@ -81,9 +82,17 @@ describe('ToggleItem', () => {
       expect(contentEl?.innerHTML).toBe('Hello world');
     });
 
-    it('starts collapsed by default (data-blok-toggle-open="false")', async () => {
+    it('starts expanded by default in editing mode (data-blok-toggle-open="true")', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+
+      expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+    });
+
+    it('starts collapsed by default in readonly mode (data-blok-toggle-open="false")', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions({}, {}, { readOnly: true }));
       const element = toggle.render();
 
       expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
@@ -234,9 +243,9 @@ describe('ToggleItem', () => {
       toggle.render();
       toggle.rendered();
 
-      // Children should be hidden (toggle starts collapsed)
+      // Children should be visible (toggle starts expanded in editing mode)
       for (const holder of childHolders) {
-        expect(holder.classList.contains('hidden')).toBe(true);
+        expect(holder.classList.contains('hidden')).toBe(false);
       }
 
       // Simulate undo/redo calling setData — this should reconcile child visibility
@@ -263,9 +272,7 @@ describe('ToggleItem', () => {
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Click to expand
-      arrow.click();
-
+      // Toggle starts expanded in editing mode — aria-label should already be Collapse
       expect(arrow.getAttribute('aria-label')).toBe('Collapse');
     });
 
@@ -283,8 +290,7 @@ describe('ToggleItem', () => {
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Expand then collapse
-      arrow.click();
+      // Click once to collapse (starts expanded)
       arrow.click();
 
       expect(arrow.getAttribute('aria-label')).toBe('Expand');
@@ -323,57 +329,58 @@ describe('ToggleItem', () => {
       return { toggle, mockAPI, childHolders };
     };
 
-    it('hides child block holders when toggle is collapsed on rendered()', async () => {
+    it('shows child block holders when toggle starts expanded in editing mode on rendered()', async () => {
       const { toggle, childHolders } = await setupToggleWithChildren();
       toggle.render();
 
       // Simulate the rendered() lifecycle hook
       toggle.rendered();
 
-      for (const holder of childHolders) {
-        expect(holder.classList.contains('hidden')).toBe(true);
-      }
-    });
-
-    it('shows child block holders when toggle is expanded via arrow click', async () => {
-      const { toggle, childHolders } = await setupToggleWithChildren();
-      const element = toggle.render();
-      toggle.rendered();
-
-      // All children should be hidden initially
-      for (const holder of childHolders) {
-        expect(holder.classList.contains('hidden')).toBe(true);
-      }
-
-      // Click the arrow to expand
-      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
-      arrow.click();
-
-      // Children should now be visible
+      // Toggle starts expanded in editing mode — children should be visible
       for (const holder of childHolders) {
         expect(holder.classList.contains('hidden')).toBe(false);
       }
     });
 
-    it('hides child block holders again when toggle is collapsed after expanding', async () => {
+    it('hides child block holders when toggle is collapsed via arrow click', async () => {
+      const { toggle, childHolders } = await setupToggleWithChildren();
+      const element = toggle.render();
+      toggle.rendered();
+
+      // All children should be visible initially (editing mode starts expanded)
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(false);
+      }
+
+      // Click the arrow to collapse
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+      arrow.click();
+
+      // Children should now be hidden
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(true);
+      }
+    });
+
+    it('shows child block holders again when toggle is expanded after collapsing', async () => {
       const { toggle, childHolders } = await setupToggleWithChildren();
       const element = toggle.render();
       toggle.rendered();
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Expand
-      arrow.click();
-
-      for (const holder of childHolders) {
-        expect(holder.classList.contains('hidden')).toBe(false);
-      }
-
-      // Collapse again
+      // Collapse
       arrow.click();
 
       for (const holder of childHolders) {
         expect(holder.classList.contains('hidden')).toBe(true);
+      }
+
+      // Expand again
+      arrow.click();
+
+      for (const holder of childHolders) {
+        expect(holder.classList.contains('hidden')).toBe(false);
       }
     });
 

@@ -92,7 +92,8 @@ describe('ToggleItem shortcuts', () => {
       const element = toggle.render();
       toggle.rendered();
 
-      // Start collapsed
+      // Starts expanded in editing mode — collapse first to test expand
+      toggle.collapse();
       expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       for (const holder of childHolders) {
         expect(holder.classList.contains('hidden')).toBe(true);
@@ -182,7 +183,8 @@ describe('ToggleItem shortcuts', () => {
       const element = toggle.render();
       toggle.rendered();
 
-      // Already collapsed
+      // Starts expanded in editing mode — collapse first
+      toggle.collapse();
       expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
 
       // Collapse again — no-op

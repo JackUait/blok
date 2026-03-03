@@ -559,6 +559,89 @@ test.describe('plus button inserts slash paragraph', () => {
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
   });
 
+  test('fuzzy search: subsequence match finds tools', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '' } },
+    ]);
+
+    const block = page.locator(BLOCK_SELECTOR);
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await plusButton.click();
+
+    const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
+
+    await expect(toolbox).toBeVisible();
+
+    // "hdr" should match "Header" via subsequence (H-ea-D-e-R)
+    await page.keyboard.type('hdr');
+
+    const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
+
+    // Should find at least one match (headings have 'header' in searchTerms)
+    await expect(visibleItems).not.toHaveCount(0);
+  });
+
+  test('fuzzy search: typo-tolerant match finds tools', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '' } },
+    ]);
+
+    const block = page.locator(BLOCK_SELECTOR);
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await plusButton.click();
+
+    const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
+
+    await expect(toolbox).toBeVisible();
+
+    // "haeder" should match "header" (searchTerm) via Levenshtein
+    await page.keyboard.type('haeder');
+
+    const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
+
+    await expect(visibleItems).not.toHaveCount(0);
+  });
+
+  test('fuzzy search: results ranked with exact matches first', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      { type: 'paragraph', data: { text: '' } },
+    ]);
+
+    const block = page.locator(BLOCK_SELECTOR);
+
+    await block.hover();
+
+    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+    await plusButton.click();
+
+    const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
+
+    await expect(toolbox).toBeVisible();
+
+    // Type "list" — exact matches on list tools should come first
+    await page.keyboard.type('list');
+
+    const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
+    const count = await visibleItems.count();
+
+    expect(count).toBeGreaterThan(0);
+
+    // First visible item should be one of the list tools (they have 'list' as a searchTerm)
+    const firstName = await visibleItems.first().getAttribute('data-blok-item-name');
+
+    // List tools have names like 'list' or contain 'list'
+    expect(firstName).toContain('list');
+  });
+
   test('clicking plus button on table block creates new paragraph below the table, not inside a cell', async ({ page }) => {
     // Need to create Blok with table tool registered
     await resetBlok(page);

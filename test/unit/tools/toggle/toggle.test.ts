@@ -394,6 +394,52 @@ describe('ToggleItem', () => {
     });
   });
 
+  describe('placeholder', () => {
+    it('uses data-blok-placeholder-active attribute like paragraph', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
+
+      expect(contentEl).not.toBeNull();
+      expect(contentEl?.hasAttribute('data-blok-placeholder-active')).toBe(true);
+      expect(contentEl?.hasAttribute('data-placeholder')).toBe(false);
+    });
+
+    it('has focus-only placeholder classes matching paragraph style', async () => {
+      const { PLACEHOLDER_FOCUS_ONLY_CLASSES } = await import('../../../../src/components/utils/placeholder');
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
+
+      for (const cls of PLACEHOLDER_FOCUS_ONLY_CLASSES) {
+        expect(contentEl.classList.contains(cls)).toBe(true);
+      }
+    });
+
+    it('has empty-editor placeholder classes matching paragraph style', async () => {
+      const { PLACEHOLDER_EMPTY_EDITOR_CLASSES } = await import('../../../../src/components/utils/placeholder');
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
+
+      for (const cls of PLACEHOLDER_EMPTY_EDITOR_CLASSES) {
+        expect(contentEl.classList.contains(cls)).toBe(true);
+      }
+    });
+
+    it('sets placeholder text to "Toggle" by default', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
+
+      expect(contentEl?.getAttribute('data-blok-placeholder-active')).toBe('Toggle');
+    });
+  });
+
   describe('onPaste()', () => {
     it('extracts text from DETAILS summary element', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');

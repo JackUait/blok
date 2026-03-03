@@ -187,26 +187,53 @@ describe('Toggle DOM Builder', () => {
         expect(result.arrowElement.querySelector('svg')).not.toBeNull();
       });
 
-      it('has no rotation transform when closed', () => {
+      it('has no rotation transform on arrow container when closed', () => {
         const context = createDefaultContext({ isOpen: false });
         const result = buildToggleItem(context);
 
         expect(result.arrowElement.style.transform).toBe('');
       });
 
-      it('has rotate(90deg) transform when open', () => {
+      it('has no rotation transform on arrow container when open (rotation is on SVG)', () => {
         const context = createDefaultContext({ isOpen: true });
         const result = buildToggleItem(context);
 
-        expect(result.arrowElement.style.transform).toBe('rotate(90deg)');
+        expect(result.arrowElement.style.transform).toBe('');
       });
 
-      it('has transition classes via Tailwind', () => {
+      it('rotates the SVG inside the arrow 90deg when open', () => {
+        const context = createDefaultContext({ isOpen: true });
+        const result = buildToggleItem(context);
+
+        const svg = result.arrowElement.querySelector('svg') as SVGSVGElement;
+
+        expect(svg.style.transform).toBe('rotate(90deg)');
+      });
+
+      it('does not rotate the SVG when closed', () => {
+        const context = createDefaultContext({ isOpen: false });
+        const result = buildToggleItem(context);
+
+        const svg = result.arrowElement.querySelector('svg') as SVGSVGElement;
+
+        expect(svg.style.transform).toBe('');
+      });
+
+      it('has transition-colors on the arrow container for hover effects', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
-        expect(result.arrowElement.className).toContain('transition-all');
+        expect(result.arrowElement.className).toContain('transition-colors');
         expect(result.arrowElement.className).toContain('duration-200');
+      });
+
+      it('has transition on the SVG for smooth rotation', () => {
+        const context = createDefaultContext();
+        const result = buildToggleItem(context);
+
+        const svg = result.arrowElement.querySelector('svg') as SVGSVGElement;
+
+        expect(svg.style.transition).toContain('transform');
       });
 
       it('calls onArrowClick when clicked', () => {

@@ -37,13 +37,14 @@ export class ToggleItem implements BlockTool {
   private _element: HTMLElement | null = null;
   private _contentElement: HTMLElement | null = null;
   private _arrowElement: HTMLElement | null = null;
-  private _isOpen: boolean = false;
+  private _isOpen: boolean;
 
   private blockId?: string;
 
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig>) {
     this.api = api;
     this.readOnly = readOnly;
+    this._isOpen = !readOnly;
     this._settings = config || {};
     this._data = this.normalizeData(data);
 

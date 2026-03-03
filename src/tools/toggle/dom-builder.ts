@@ -107,8 +107,14 @@ export const buildArrow = (
 
   arrow.innerHTML = ARROW_ICON;
 
-  if (isOpen) {
-    arrow.style.transform = 'rotate(90deg)';
+  const svg = arrow.querySelector('svg');
+
+  if (svg) {
+    svg.style.transition = 'transform 200ms ease-in-out';
+
+    if (isOpen) {
+      svg.style.transform = 'rotate(90deg)';
+    }
   }
 
   arrow.addEventListener('click', (event: MouseEvent) => {

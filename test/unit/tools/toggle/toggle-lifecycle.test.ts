@@ -49,21 +49,29 @@ describe('Toggle Lifecycle', () => {
       expect(arrowEl.getAttribute('aria-label')).toBe('Expand');
     });
 
-    it('rotates arrow 90deg when opening', () => {
+    it('rotates SVG inside arrow 90deg when opening (not the arrow container)', () => {
       const arrowEl = document.createElement('div');
+      arrowEl.innerHTML = '<svg><path/></svg>';
       const wrapper = document.createElement('div');
 
       updateArrowState(arrowEl, wrapper, true);
 
-      expect(arrowEl.style.transform).toBe('rotate(90deg)');
+      const svg = arrowEl.querySelector('svg') as SVGSVGElement;
+
+      expect(svg.style.transform).toBe('rotate(90deg)');
+      expect(arrowEl.style.transform).toBe('');
     });
 
-    it('removes rotation when closing', () => {
+    it('removes SVG rotation when closing (not the arrow container)', () => {
       const arrowEl = document.createElement('div');
+      arrowEl.innerHTML = '<svg><path/></svg>';
       const wrapper = document.createElement('div');
 
       updateArrowState(arrowEl, wrapper, false);
 
+      const svg = arrowEl.querySelector('svg') as SVGSVGElement;
+
+      expect(svg.style.transform).toBe('');
       expect(arrowEl.style.transform).toBe('');
     });
 

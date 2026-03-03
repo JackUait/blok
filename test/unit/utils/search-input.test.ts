@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchInput } from '../../../src/components/utils/popover/components/search-input/search-input';
+import type { SearchableItem } from '../../../src/components/utils/popover/components/search-input/search-input.types';
 import { SearchInputEvent } from '../../../src/components/utils/popover/components/search-input/search-input.types';
 
 const getInput = (instance: SearchInput): HTMLInputElement => {
@@ -135,6 +136,31 @@ describe('SearchInput', () => {
 
     // Destroy can be called multiple times (idempotent)
     expect(() => searchInput.destroy()).not.toThrow();
+  });
+
+  it('emits items sorted by match score', () => {
+    const items: SearchableItem[] = [
+      { title: 'Zebra Heading' },
+      { title: 'Header' },
+      { title: 'Paragraph' },
+    ];
+    const instance = createSearchInput({ items });
+    const handler = vi.fn();
+
+    instance.on(SearchInputEvent.Search, handler);
+
+    const input = getInput(instance);
+
+    input.value = 'head';
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    const emittedItems = handler.mock.calls[0][0].items;
+
+    // 'Header' has prefix match (score 90), 'Zebra Heading' has substring match (score 75)
+    // 'Paragraph' should not match
+    expect(emittedItems).toHaveLength(2);
+    expect(emittedItems[0].title).toBe('Header');
+    expect(emittedItems[1].title).toBe('Zebra Heading');
   });
 });
 

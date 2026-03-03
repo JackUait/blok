@@ -33,6 +33,7 @@ storybook-static
 # Environment variables
 .env
 .env.local
+.npmrc
 
 # Bundle size tracking (stored in GitHub artifacts)
 .bundle-size-history.json

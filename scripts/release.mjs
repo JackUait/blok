@@ -1,4 +1,18 @@
 import { execSync } from 'child_process';
+import { writeFileSync, unlinkSync, readFileSync, existsSync } from 'fs';
+
+// Load .env so BLOK_NPM_TOKEN is available without polluting the shell profile
+if (existsSync('.env')) {
+  for (const line of readFileSync('.env', 'utf-8').split('\n')) {
+    const match = line.match(/^\s*([\w]+)\s*=\s*(.+)\s*$/);
+
+    if (match && !process.env[match[1]]) {
+      process.env[match[1]] = match[2];
+    }
+  }
+}
+
+let cleanupNpmrc = false;
 
 const version = process.argv[2];
 
@@ -33,10 +47,18 @@ if (status) {
   process.exit(1);
 }
 
+const npmToken = process.env.BLOK_NPM_TOKEN;
+
+if (npmToken) {
+  // Write a project-scoped .npmrc so npm publish uses the automation token
+  writeFileSync('.npmrc', `//registry.npmjs.org/:_authToken=${npmToken}\n`);
+  cleanupNpmrc = true;
+}
+
 try {
   runCapture('npm whoami');
 } catch {
-  console.error('Not logged in to npm. Run `npm login` first.');
+  console.error('Not logged in to npm. Set BLOK_NPM_TOKEN in .env or run `npm login` first.');
   process.exit(1);
 }
 
@@ -53,6 +75,12 @@ run(`npm version ${version} --no-git-tag-version`);
 // --- Publish to npm (triggers prepublishOnly → yarn build) ---
 
 run(`npm publish --tag ${tag}`);
+
+// --- Cleanup temporary .npmrc ---
+
+if (cleanupNpmrc) {
+  unlinkSync('.npmrc');
+}
 
 // --- Git: commit, tag, push ---
 

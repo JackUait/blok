@@ -6,7 +6,7 @@ import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popov
 import { PopoverItemSeparator, css as popoverItemCls , PopoverItemDefault } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchableItem } from './components/search-input';
-import { SearchInput, SearchInputEvent, matchesSearchQuery } from './components/search-input';
+import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables } from './popover.const';
 
@@ -70,6 +70,12 @@ export class PopoverDesktop extends PopoverAbstract {
    * Popover size cache
    */
   private _size: { height: number; width: number } | undefined;
+
+  /**
+   * Original order of item elements in the popover container.
+   * Cached on first search so we can restore order when query is cleared.
+   */
+  private originalItemOrder: Element[] | undefined;
 
   /**
    * Construct the instance
@@ -690,7 +696,21 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param query - search query text
    */
   public override filterItems(query: string): void {
-    const matchingItems = this.itemsDefault.filter(item => matchesSearchQuery(item, query));
+    if (query === '') {
+      this.onSearch({
+        query,
+        items: this.itemsDefault as unknown as SearchableItem[],
+      });
+
+      return;
+    }
+
+    const scoredItems = this.itemsDefault
+      .map(item => ({ item, score: scoreSearchMatch(item, query) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    const matchingItems = scoredItems.map(({ item }) => item);
 
     this.onSearch({
       query,
@@ -740,6 +760,35 @@ export class PopoverDesktop extends PopoverAbstract {
       this.items.forEach(item => {
         item.getElement()?.style.removeProperty('transition-duration');
       });
+    }
+
+    // Reorder DOM elements to reflect ranking
+    if (!isEmptyQuery && matchingItems.length > 0) {
+      // Cache original order on first non-empty search
+      if (this.originalItemOrder === undefined && this.nodes.items !== null) {
+        this.originalItemOrder = Array.from(this.nodes.items.children);
+      }
+      const itemsContainer = this.nodes.items;
+
+      if (itemsContainer !== null) {
+        for (const item of matchingItems) {
+          const el = item.getElement();
+
+          if (el !== null) {
+            itemsContainer.appendChild(el);
+          }
+        }
+      }
+    } else if (isEmptyQuery && this.originalItemOrder !== undefined) {
+      // Restore original order when query is cleared
+      const itemsContainer = this.nodes.items;
+
+      if (itemsContainer !== null) {
+        for (const el of this.originalItemOrder) {
+          itemsContainer.appendChild(el);
+        }
+      }
+      this.originalItemOrder = undefined;
     }
 
     this.toggleNothingFoundMessage(isNothingFound);

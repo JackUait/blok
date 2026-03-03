@@ -97,9 +97,12 @@ const searchInputRegistry = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../src/components/utils/popover/components/search-input', async (importOriginal) => {
-  // Import the real matchesSearchQuery so filterItems() works in tests
+  // Import the real matchesSearchQuery and scoreSearchMatch so filterItems() works in tests
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- importOriginal returns unknown, assertion needed for property access
-  const actual = await importOriginal() as { matchesSearchQuery: (item: unknown, query: string) => boolean };
+  const actual = await importOriginal() as {
+    matchesSearchQuery: (item: unknown, query: string) => boolean;
+    scoreSearchMatch: (item: unknown, query: string) => number;
+  };
 
   const SearchInputEvent = {
     Search: 'search' as const,
@@ -148,6 +151,7 @@ vi.mock('../../../src/components/utils/popover/components/search-input', async (
     SearchInput: MockSearchInput,
     SearchInputEvent,
     matchesSearchQuery: actual.matchesSearchQuery,
+    scoreSearchMatch: actual.scoreSearchMatch,
   };
 });
 
@@ -745,6 +749,96 @@ describe('PopoverDesktop', () => {
 
         expect(el?.style.transitionDuration).toBe('');
       });
+    });
+
+    it('filterItems sorts matching items by fuzzy match score', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Zzz Heading', name: 'zzz-heading', onActivate: vi.fn() },
+          { title: 'Header', name: 'header', onActivate: vi.fn() },
+          { title: 'Paragraph', name: 'paragraph', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      popover.filterItems('header');
+
+      const headerItem = instance.itemsDefault.find(i => i.name === 'header');
+      const paragraphItem = instance.itemsDefault.find(i => i.name === 'paragraph');
+
+      // 'Header' should be visible (exact match), 'Paragraph' should be hidden (no match)
+      expect(headerItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
+      expect(paragraphItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
+    });
+
+    it('reorders DOM elements to match ranked search results', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Zebra', name: 'zebra', onActivate: vi.fn() },
+          { title: 'Alpha Beta', name: 'alpha-beta', onActivate: vi.fn() },
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      // 'Alpha' is exact match (100), 'Alpha Beta' is prefix match (90), 'Zebra' doesn't match
+      popover.filterItems('alpha');
+
+      const itemsContainer = instance.nodes.items;
+      const visibleElements = Array.from(itemsContainer.children).filter(
+        (el) => !el.hasAttribute(DATA_ATTR.hidden)
+      );
+
+      const alphaItem = instance.itemsDefault.find(i => i.name === 'alpha');
+      const alphaBetaItem = instance.itemsDefault.find(i => i.name === 'alpha-beta');
+
+      expect(alphaItem).toBeDefined();
+      expect(alphaBetaItem).toBeDefined();
+
+      if (alphaItem && alphaBetaItem) {
+        const alphaEl = alphaItem.getElement();
+        const alphaBetaEl = alphaBetaItem.getElement();
+
+        expect(alphaEl).not.toBeNull();
+        expect(alphaBetaEl).not.toBeNull();
+
+        if (alphaEl && alphaBetaEl) {
+          const alphaIndex = visibleElements.indexOf(alphaEl);
+          const alphaBetaIndex = visibleElements.indexOf(alphaBetaEl);
+
+          // 'Alpha' (exact) should come before 'Alpha Beta' (prefix)
+          expect(alphaIndex).toBeLessThan(alphaBetaIndex);
+        }
+      }
+    });
+
+    it('restores original DOM order when query is cleared', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Zebra', name: 'zebra', onActivate: vi.fn() },
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Middle', name: 'middle', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      const itemsContainer = instance.nodes.items;
+      const originalOrder = Array.from(itemsContainer.children);
+
+      // Filter to reorder
+      popover.filterItems('alpha');
+      // Clear filter
+      popover.filterItems('');
+
+      const restoredOrder = Array.from(itemsContainer.children);
+
+      expect(restoredOrder).toEqual(originalOrder);
     });
   });
 

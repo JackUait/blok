@@ -922,6 +922,15 @@ describe("DragManager - Component Integration", () => {
         name: "toggle",
         parentId: null,
       });
+
+      // Add the toggle-open DOM attribute that toggle tools set
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
       const paragraphBlock = createBlockStub({
         id: "paragraph-1",
         name: "paragraph",
@@ -1039,6 +1048,229 @@ describe("DragManager - Component Integration", () => {
       );
     });
 
+    it("should set parent to toggle heading id when dropping on bottom of a toggle heading", () => {
+      // Bug 1: Toggle headings (header with data-blok-toggle-open) were ignored
+      // because resolveParentForDrop only checked block.name === 'toggle'
+      const toggleHeading = createBlockStub({
+        id: "toggle-heading-1",
+        name: "header",
+        parentId: null,
+      });
+
+      // Add the toggle-open DOM attribute that toggle headings have
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleHeading.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const paragraphBlock = createBlockStub({
+        id: "paragraph-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [paragraphBlock, toggleHeading];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(
+        dragManager,
+        wrapper,
+        paragraphBlock,
+        toggleHeading,
+        "bottom",
+      );
+
+      // setBlockParent should be called with the toggle heading's id
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "paragraph-1" }),
+        "toggle-heading-1",
+      );
+    });
+
+    it("should set parent to nested toggle id when dropping on bottom of a nested toggle", () => {
+      // Bug 5: Nested toggles (parentId !== null) couldn't accept children
+      // because resolveParentForDrop required parentId === null
+      const outerToggle = createBlockStub({
+        id: "outer-toggle",
+        name: "toggle",
+        parentId: null,
+        contentIds: ["inner-toggle"],
+      });
+
+      // Add toggle-open attribute to outer toggle
+      const outerToggleWrapper = document.createElement("div");
+
+      outerToggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      outerToggle.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(outerToggleWrapper);
+
+      const innerToggle = createBlockStub({
+        id: "inner-toggle",
+        name: "toggle",
+        parentId: "outer-toggle",
+      });
+
+      // Add toggle-open attribute to inner toggle
+      const innerToggleWrapper = document.createElement("div");
+
+      innerToggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      innerToggle.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(innerToggleWrapper);
+
+      const looseBlock = createBlockStub({
+        id: "loose-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [looseBlock, outerToggle, innerToggle];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(
+        dragManager,
+        wrapper,
+        looseBlock,
+        innerToggle,
+        "bottom",
+      );
+
+      // setBlockParent should be called with the INNER toggle's id (not the outer toggle)
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "loose-1" }),
+        "inner-toggle",
+      );
+    });
+
+    it("should preserve internal hierarchy when dragging a toggle with children", () => {
+      // Bug 3: When dragging a toggle with auto-collected children,
+      // handleDrop applied the same newParentId to ALL moved blocks,
+      // orphaning the children from their toggle parent
+      const toggleBlock = createBlockStub({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+        contentIds: ["child-a", "child-b"],
+      });
+
+      // Add toggle-open attribute
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const childA = createBlockStub({
+        id: "child-a",
+        name: "paragraph",
+        parentId: "toggle-1",
+      });
+      const childB = createBlockStub({
+        id: "child-b",
+        name: "paragraph",
+        parentId: "toggle-1",
+      });
+      const targetBlock = createBlockStub({
+        id: "target-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [toggleBlock, childA, childB, targetBlock];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(
+        dragManager,
+        wrapper,
+        toggleBlock,
+        targetBlock,
+        "bottom",
+      );
+
+      // setBlockParent should NOT be called for child-a or child-b
+      // because their parentId (toggle-1) is also being moved
+      const setBlockParentCalls = vi.mocked(
+        modules.BlockManager.setBlockParent,
+      ).mock.calls;
+
+      for (const [block] of setBlockParentCalls) {
+        const calledBlock = block as unknown as Block;
+
+        expect(calledBlock.id).not.toBe("child-a");
+        expect(calledBlock.id).not.toBe("child-b");
+      }
+    });
+
+    it("should hide dropped block when parent toggle is collapsed", () => {
+      // Bug 4: Dropping a block into a collapsed toggle left it visible
+      // because updateChildrenVisibility was never called
+      const collapsedToggle = createBlockStub({
+        id: "collapsed-toggle",
+        name: "toggle",
+        parentId: null,
+      });
+
+      // Add toggle-open attribute set to "false" (collapsed)
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "false");
+      collapsedToggle.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const paragraphBlock = createBlockStub({
+        id: "paragraph-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [paragraphBlock, collapsedToggle];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(
+        dragManager,
+        wrapper,
+        paragraphBlock,
+        collapsedToggle,
+        "bottom",
+      );
+
+      // The dropped block should be hidden since the toggle is collapsed
+      expect(paragraphBlock.holder.classList.contains("hidden")).toBe(true);
+    });
+
     it("should not call setBlockParent when block is already at correct parent", () => {
       const toggleBlock = createBlockStub({
         id: "toggle-1",
@@ -1071,6 +1303,249 @@ describe("DragManager - Component Integration", () => {
       performDragDrop(dragManager, wrapper, child2, child1, "bottom");
 
       // setBlockParent should NOT be called since child-2 already has toggle-1 as parent
+      expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Duplicate parent-child relationship updates", () => {
+    /**
+     * Creates a block stub with a `save()` method for duplication tests.
+     */
+    const createDuplicableBlock = (
+      options: Parameters<typeof createBlockStub>[0] & {
+        saveData?: Record<string, unknown>;
+      } = {},
+    ): Block => {
+      const block = createBlockStub(options);
+      const saveData = options.saveData ?? { text: "duplicated content" };
+
+      (block as unknown as { save: () => Promise<{ data: Record<string, unknown>; tunes: Record<string, unknown> }> }).save =
+        vi.fn().mockResolvedValue({ data: saveData, tunes: {} });
+
+      return block;
+    };
+
+    /**
+     * Creates a BlockManager mock that supports both move and insert (for duplication).
+     * `insert` returns a new block stub so that handleDuplicate gets valid duplicated blocks.
+     */
+    const createDuplicateBlockManagerMock = (
+      allBlocks: Block[],
+    ): BlokModules["BlockManager"] => {
+      const blocks = [...allBlocks];
+      let insertCounter = 0;
+
+      return {
+        blocks,
+        getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+        getBlockByIndex: vi.fn((index: number) => blocks[index]),
+        getBlockById: vi.fn((id: string) =>
+          blocks.find((b) => b.id === id),
+        ),
+        move: vi.fn((toIndex: number, fromIndex: number) => {
+          const [block] = blocks.splice(fromIndex, 1);
+
+          blocks.splice(toIndex, 0, block);
+        }),
+        insert: vi.fn((config: { tool: string; data: Record<string, unknown>; index: number }) => {
+          insertCounter++;
+          const newBlock = createBlockStub({
+            id: `duplicated-${insertCounter}`,
+            name: config.tool,
+            parentId: null,
+          });
+
+          blocks.splice(config.index, 0, newBlock);
+
+          return newBlock;
+        }),
+        setBlockParent: vi.fn(),
+      } as unknown as BlokModules["BlockManager"];
+    };
+
+    /**
+     * Helper to perform a full Alt+drag duplicate operation.
+     * Sets up the drag from sourceBlock, positions cursor over targetBlock,
+     * and releases the mouse with Alt key held to trigger handleDuplicate.
+     */
+    const performAltDragDuplicate = async (
+      dragManager: DragManager,
+      wrapper: HTMLDivElement,
+      sourceBlock: Block,
+      targetBlock: Block,
+      edge: "top" | "bottom",
+    ): Promise<void> => {
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+
+      // Start drag from source
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      // Position cursor over target block
+      vi.mocked(document.elementFromPoint).mockReturnValue(
+        targetBlock.holder,
+      );
+
+      const targetY = edge === "top" ? 105 : 140;
+
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 100,
+        toJSON: () => ({}),
+      });
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: targetY }),
+      );
+
+      // Drop with Alt key held → triggers handleDuplicate
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: true }));
+
+      // handleDuplicate is async, flush microtasks
+      await vi.runAllTimersAsync();
+    };
+
+    it("should set parent to toggle id when alt+drag duplicating to bottom of a toggle block", async () => {
+      const toggleBlock = createDuplicableBlock({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+      });
+
+      // Add toggle-open attribute so resolveParentForDrop detects it as a toggle
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const paragraphBlock = createDuplicableBlock({
+        id: "paragraph-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [paragraphBlock, toggleBlock];
+      const blockManagerMock = createDuplicateBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      await performAltDragDuplicate(
+        dragManager,
+        wrapper,
+        paragraphBlock,
+        toggleBlock,
+        "bottom",
+      );
+
+      // setBlockParent should be called on the duplicated block with toggle's id
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "duplicated-1" }),
+        "toggle-1",
+      );
+    });
+
+    it("should set parent to target's parent when alt+drag duplicating to bottom of a child block", async () => {
+      const toggleBlock = createDuplicableBlock({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+        contentIds: ["child-1"],
+      });
+
+      // Add toggle-open attribute
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const childBlock = createDuplicableBlock({
+        id: "child-1",
+        name: "paragraph",
+        parentId: "toggle-1",
+      });
+      const looseBlock = createDuplicableBlock({
+        id: "loose-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [looseBlock, toggleBlock, childBlock];
+      const blockManagerMock = createDuplicateBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      await performAltDragDuplicate(
+        dragManager,
+        wrapper,
+        looseBlock,
+        childBlock,
+        "bottom",
+      );
+
+      // setBlockParent should be called with the toggle's id (child's parent)
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "duplicated-1" }),
+        "toggle-1",
+      );
+    });
+
+    it("should not call setBlockParent when alt+drag duplicating to root level", async () => {
+      const rootParagraph = createDuplicableBlock({
+        id: "root-paragraph",
+        name: "paragraph",
+        parentId: null,
+      });
+      const anotherBlock = createDuplicableBlock({
+        id: "another-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [rootParagraph, anotherBlock];
+      const blockManagerMock = createDuplicateBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      await performAltDragDuplicate(
+        dragManager,
+        wrapper,
+        rootParagraph,
+        anotherBlock,
+        "bottom",
+      );
+
+      // setBlockParent should NOT be called since both blocks are at root level
+      // and the duplicated block also goes to root level (parentId already null)
       expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
     });
   });

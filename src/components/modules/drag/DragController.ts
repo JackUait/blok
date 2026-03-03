@@ -346,11 +346,25 @@ export class DragController extends Module {
 
     // Update parent-child relationships after move
     const newParentId = this.resolveParentForDrop(targetBlock, edge);
+    const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
+    const reparentedBlocks: Block[] = [];
 
     for (const movedBlock of result.movedBlocks) {
+      // Skip blocks whose parent is also being moved — their internal hierarchy is preserved
+      const parentIsBeingMoved = movedBlock.parentId !== null && movedBlockIds.has(movedBlock.parentId);
+
+      if (parentIsBeingMoved) {
+        continue;
+      }
       if (movedBlock.parentId !== newParentId) {
         this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
+        reparentedBlocks.push(movedBlock);
       }
+    }
+
+    // If dropped into a collapsed toggle, hide newly reparented blocks
+    if (newParentId !== null && reparentedBlocks.length > 0) {
+      this.hideBlocksIfParentCollapsed(newParentId, reparentedBlocks);
     }
 
     // Announce successful drop to screen readers
@@ -370,8 +384,9 @@ export class DragController extends Module {
    * @returns The parentId for the dropped blocks, or null for root level
    */
   private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom'): string | null {
-    // If dropping below a toggle block, the block becomes a child of the toggle
-    if (edge === 'bottom' && targetBlock.name === 'toggle' && targetBlock.parentId === null) {
+    // If dropping below a toggleable block, the block becomes a child of the toggle.
+    // Detect via DOM attribute (covers both toggle list blocks AND toggle headings).
+    if (edge === 'bottom' && this.isToggleableBlock(targetBlock)) {
       return targetBlock.id;
     }
 
@@ -383,6 +398,38 @@ export class DragController extends Module {
 
     // Otherwise, the block goes to root level
     return null;
+  }
+
+  /**
+   * Checks whether a block is a toggleable block (toggle list or toggle heading)
+   * by looking for the data-blok-toggle-open DOM attribute on its holder.
+   */
+  private isToggleableBlock(block: Block): boolean {
+    return block.holder.querySelector('[data-blok-toggle-open]') !== null;
+  }
+
+  /**
+   * Hides blocks if their parent toggle is currently collapsed.
+   * This prevents newly reparented or duplicated blocks from appearing
+   * visually when their parent is in a collapsed state.
+   */
+  private hideBlocksIfParentCollapsed(parentId: string, blocks: Block[]): void {
+    if (blocks.length === 0) {
+      return;
+    }
+    const parentBlock = this.Blok.BlockManager.getBlockById(parentId);
+
+    if (parentBlock === undefined) {
+      return;
+    }
+    const toggleEl = parentBlock.holder.querySelector('[data-blok-toggle-open]');
+    const isCollapsed = toggleEl?.getAttribute('data-blok-toggle-open') === 'false';
+
+    if (isCollapsed) {
+      for (const block of blocks) {
+        block.holder.classList.add('hidden');
+      }
+    }
   }
 
   private async handleDuplicate(
@@ -397,6 +444,22 @@ export class DragController extends Module {
 
     if (result.duplicatedBlocks.length === 0) {
       return;
+    }
+
+    // Set parent relationships for duplicated blocks
+    const newParentId = this.resolveParentForDrop(targetBlock, edge);
+
+    for (const dupBlock of result.duplicatedBlocks) {
+      if (dupBlock.parentId !== newParentId) {
+        this.Blok.BlockManager.setBlockParent(dupBlock, newParentId);
+      }
+    }
+
+    // If duplicated into a collapsed toggle, hide the new blocks
+    if (newParentId !== null) {
+      const blocksToHide = result.duplicatedBlocks.filter(b => b.parentId === newParentId);
+
+      this.hideBlocksIfParentCollapsed(newParentId, blocksToHide);
     }
 
     if (this.a11y) {

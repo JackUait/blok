@@ -5,7 +5,7 @@ import { Listeners } from '../../../listeners';
 
 import { css } from './search-input.const';
 import type { SearchInputEventMap, SearchableItem } from './search-input.types';
-import { SearchInputEvent, matchesSearchQuery } from './search-input.types';
+import { SearchInputEvent, scoreSearchMatch } from './search-input.types';
 
 
 /**
@@ -167,17 +167,13 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
   }
 
   /**
-   * Returns list of found items for the current search query
+   * Returns list of found items for the current search query, sorted by relevance
    */
   private get foundItems(): SearchableItem[] {
-    return this.items.filter(item => this.checkItem(item));
-  }
-
-  /**
-   * Contains logic for checking whether passed item conforms the search query.
-   * @param item - item to be checked
-   */
-  private checkItem(item: SearchableItem): boolean {
-    return matchesSearchQuery(item, this.searchQuery);
+    return this.items
+      .map(item => ({ item, score: scoreSearchMatch(item, this.searchQuery) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ item }) => item);
   }
 }

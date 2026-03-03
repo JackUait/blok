@@ -15,7 +15,7 @@ type BlokWithNotifier = Blok & { notifier: NotifierAPI };
 
 const HOLDER_ID = 'blok';
 const NOTIFIER_CONTAINER_SELECTOR = '[data-blok-testid="notifier-container"]';
-const NOTIFICATION_TESTID_PREFIX = '[data-blok-testid^="notification"]';
+const NOTIFICATION_TESTID_PREFIX = '> [data-blok-testid^="notification"]';
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {

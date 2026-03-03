@@ -94,6 +94,7 @@ const createBlockStub = (options: {
     id: options.id ?? `block-${Math.random().toString(16).slice(2)}`,
     holder,
     stretched: options.stretched ?? false,
+    call: vi.fn(),
   };
 
   Object.defineProperty(block, 'selected', {

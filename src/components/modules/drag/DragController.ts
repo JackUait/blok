@@ -350,11 +350,30 @@ export class DragController extends Module {
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
     // Reparent the moved blocks under the toggle (or clear parent when dragging out)
-    for (const movedBlock of result.movedBlocks) {
-      const currentParentId = movedBlock.parentId;
+    const affectedParentIds = new Set<string>();
 
-      if (targetParentId !== currentParentId) {
-        this.Blok.BlockManager.setBlockParent(movedBlock, targetParentId);
+    for (const movedBlock of result.movedBlocks) {
+      const oldParentId = movedBlock.parentId;
+
+      if (targetParentId === oldParentId) {
+        continue;
+      }
+      if (oldParentId !== null) {
+        affectedParentIds.add(oldParentId);
+      }
+      if (targetParentId !== null) {
+        affectedParentIds.add(targetParentId);
+      }
+      this.Blok.BlockManager.setBlockParent(movedBlock, targetParentId);
+    }
+
+    // Notify affected parent blocks so toggle tools update their visual state
+    // (e.g. hide/show body placeholder when children are added/removed)
+    for (const parentId of affectedParentIds) {
+      const parentBlock = this.Blok.BlockManager.getBlockById(parentId);
+
+      if (parentBlock !== undefined) {
+        parentBlock.call('rendered');
       }
     }
 

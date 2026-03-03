@@ -21,6 +21,12 @@ import * as announcer from "../../../../../src/components/utils/announcer";
  */
 let originalElementFromPoint: typeof document.elementFromPoint;
 
+/**
+ * Track all created DragManager instances so we can destroy them in afterEach
+ * to prevent event listener leakage between tests
+ */
+const dragManagerInstances: DragManager[] = [];
+
 type DragManagerSetup = {
   dragManager: DragManager;
   modules: BlokModules;
@@ -100,6 +106,7 @@ const createBlockStub = (
     stretched: options.stretched ?? false,
     contentIds: options.contentIds ?? [],
     parentId: options.parentId ?? null,
+    call: vi.fn(),
   };
 
   Object.defineProperty(block, "selected", {
@@ -206,6 +213,9 @@ const createDragManager = (
   // Call prepare to initialize internal components
   void dragManager.prepare();
 
+  // Track instance for cleanup in afterEach
+  dragManagerInstances.push(dragManager);
+
   return {
     dragManager,
     modules: mergedState,
@@ -246,6 +256,12 @@ describe("DragManager - Component Integration", () => {
   });
 
   afterEach(() => {
+    // Destroy all DragManager instances to remove document event listeners
+    for (const instance of dragManagerInstances) {
+      instance.destroy();
+    }
+    dragManagerInstances.length = 0;
+
     document.body.innerHTML = "";
     document.elementFromPoint = originalElementFromPoint;
     vi.useRealTimers();
@@ -834,6 +850,160 @@ describe("DragManager - Component Integration", () => {
       // No operations should have been executed
       expect(modules.BlockManager.move).not.toHaveBeenCalled();
       expect(modules.BlockManager.insert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("toggle reparenting notification", () => {
+    it("should call rendered() on the new parent block after reparenting into a toggle", () => {
+      // Create a toggle block with open toggle attribute in its DOM
+      const toggleBlock = createBlockStub({ id: "toggle-1" });
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder.querySelector("[data-blok-element-content]")?.appendChild(toggleWrapper);
+
+      // Configure toggle's bounding rect at y=0..50
+      (toggleBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 0, bottom: 50, left: 0, right: 100, width: 100, height: 50, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      const sourceBlock = createBlockStub({ id: "source-1" });
+
+      // Configure source block bounding rect at y=60..110
+      (sourceBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 60, bottom: 110, left: 0, right: 100, width: 100, height: 50, x: 0, y: 60, toJSON: () => ({}),
+      });
+
+      const { dragManager, wrapper, modules } = createDragManager({
+        BlockManager: {
+          blocks: [toggleBlock, sourceBlock],
+          getBlockIndex: vi.fn((block: Block) => [toggleBlock, sourceBlock].indexOf(block)),
+          getBlockByIndex: vi.fn((index: number) => [toggleBlock, sourceBlock][index]),
+          getBlockById: vi.fn((id: string) => [toggleBlock, sourceBlock].find((b) => b.id === id)),
+          move: vi.fn(),
+          insert: vi.fn(),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules["BlockManager"],
+      });
+
+      document.body.appendChild(wrapper);
+      wrapper.appendChild(toggleBlock.holder);
+      wrapper.appendChild(sourceBlock.holder);
+
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+
+      // Start drag
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 50, clientY: 80 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 60, clientY: 80 }),
+      );
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Point elementFromPoint at the toggle wrapper (bottom edge) to trigger nesting detection
+      vi.mocked(document.elementFromPoint).mockReturnValue(toggleWrapper);
+
+      // Move mouse to bottom edge of toggle
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 48 }),
+      );
+
+      // Drop
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      // Verify: setBlockParent was called to reparent the source block under the toggle
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        sourceBlock,
+        "toggle-1",
+      );
+
+      // Verify: rendered() was called on the toggle (new parent) to update visual state
+      expect(toggleBlock.call).toHaveBeenCalledWith("rendered");
+    });
+
+    it("should call rendered() on the old parent block after reparenting out of a toggle", () => {
+      // Create a toggle block with open toggle attribute in its DOM
+      const toggleBlock = createBlockStub({ id: "toggle-1", contentIds: ["child-1"] });
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder.querySelector("[data-blok-element-content]")?.appendChild(toggleWrapper);
+
+      (toggleBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 0, bottom: 50, left: 0, right: 100, width: 100, height: 50, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      // Child block currently inside the toggle
+      const childBlock = createBlockStub({ id: "child-1", parentId: "toggle-1" });
+
+      (childBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 50, bottom: 100, left: 24, right: 100, width: 76, height: 50, x: 24, y: 50, toJSON: () => ({}),
+      });
+
+      // Target block outside the toggle
+      const outsideBlock = createBlockStub({ id: "outside-1" });
+
+      (outsideBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 100, bottom: 150, left: 0, right: 100, width: 100, height: 50, x: 0, y: 100, toJSON: () => ({}),
+      });
+
+      const allBlocks = [toggleBlock, childBlock, outsideBlock];
+      const { dragManager, wrapper, modules } = createDragManager({
+        BlockManager: {
+          blocks: allBlocks,
+          getBlockIndex: vi.fn((block: Block) => allBlocks.indexOf(block)),
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlockById: vi.fn((id: string) => allBlocks.find((b) => b.id === id)),
+          move: vi.fn((toIndex: number, fromIndex: number) => {
+            const [moved] = allBlocks.splice(fromIndex, 1);
+
+            allBlocks.splice(toIndex, 0, moved);
+          }),
+          insert: vi.fn(),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules["BlockManager"],
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, childBlock);
+
+      // Start drag
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 50, clientY: 70 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 60, clientY: 70 }),
+      );
+
+      expect(dragManager.isDragging).toBe(true);
+
+      // Point elementFromPoint at the outside block (bottom edge — no toggle nesting)
+      vi.mocked(document.elementFromPoint).mockReturnValue(outsideBlock.holder);
+
+      // Move to bottom of outside block
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 140 }),
+      );
+
+      // Drop
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      // Verify: setBlockParent was called to clear the parent (drag out of toggle)
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        childBlock,
+        null,
+      );
+
+      // Verify: rendered() was called on the old parent (toggle) to update its visual state
+      expect(toggleBlock.call).toHaveBeenCalledWith("rendered");
     });
   });
 });

@@ -91,6 +91,7 @@ const createBlockStub = (options: {
     stretched: options.stretched ?? false,
     name: 'paragraph',
     save: vi.fn().mockResolvedValue({ data: {}, tunes: {} }),
+    call: vi.fn(),
   };
 
   Object.defineProperty(block, 'selected', {

@@ -24,6 +24,7 @@ const PLUGINS_TO_REMOVE = new Set([
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  staticDirs: [{ from: './fonts', to: '/fonts' }],
   addons: [
     '@storybook/addon-a11y',
     '@storybook/addon-vitest'

@@ -750,8 +750,14 @@ export class BlockOperations {
         id: newBlockId,
         tool: currentBlock.name,
         data: { text: extractedText },
+        needToFocus: false,
         skipYjsSync: true,
       }, blocksStore);
+
+      // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
+      // This allows the table cell claiming logic to see the original block as
+      // "current" during the mutation event, so it correctly claims the new block.
+      this.currentBlockIndex = insertIndex;
 
       // Inherit parentId from the split block so nested blocks stay nested
       if (currentBlock.parentId !== null) {
@@ -817,9 +823,14 @@ export class BlockOperations {
         tool: newBlockType,
         data: newBlockData,
         index: insertIndex,
-        needToFocus: true,
+        needToFocus: false,
         skipYjsSync: true,
       }, blocksStore);
+
+      // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
+      // This allows the table cell claiming logic to see the original block as
+      // "current" during the mutation event, so it correctly claims the new block.
+      this.currentBlockIndex = insertIndex;
 
       // Inherit parentId from the split block so nested blocks stay nested
       if (currentBlock.parentId !== null) {
@@ -903,6 +914,12 @@ export class BlockOperations {
     replace = false,
     blocksStore: BlocksStore
   ): Promise<Block> {
+    // Capture predecessor's parentId BEFORE insert (for non-replace, the
+    // predecessor is the current block; its parentId should be inherited).
+    const predecessorParentId = !replace
+      ? this.currentBlock?.parentId ?? null
+      : null;
+
     // Insert block without syncing to Yjs yet.
     // Wrap in atomic operation so that child blocks created during rendered()
     // (e.g., table cell paragraph blocks) also skip Yjs sync.
@@ -910,9 +927,13 @@ export class BlockOperations {
       return this.insert({
         tool: toolName,
         replace,
+        needToFocus: false,
         skipYjsSync: true,
       }, blocksStore);
     });
+
+    // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
+    this.currentBlockIndex = this.repository.getBlockIndex(block);
 
     // Wait for the block to be fully rendered before calling onPaste,
     // because onPaste may change the tool's root element and needs
@@ -926,6 +947,11 @@ export class BlockOperations {
       block.refreshToolRootElement();
     });
 
+    // Inherit parentId from predecessor for non-replace inserts.
+    if (!replace && predecessorParentId !== null) {
+      this.hierarchy.setBlockParent(block, predecessorParentId);
+    }
+
     // Sync final state to Yjs as single operation
     const savedData = await block.save();
 
@@ -934,6 +960,7 @@ export class BlockOperations {
         id: block.id,
         type: block.name,
         data: savedData.data,
+        parent: block.parentId ?? undefined,
       }, this.repository.getBlockIndex(block));
     }
 

@@ -32,6 +32,7 @@ const createMockAPI = (): API => {
     i18n: { t: (key: string) => key },
     blocks: {
       delete: vi.fn(),
+      getChildren: vi.fn().mockReturnValue([]),
       isSyncingFromYjs: false,
       insert: vi.fn().mockImplementation(() => {
         insertCounter++;

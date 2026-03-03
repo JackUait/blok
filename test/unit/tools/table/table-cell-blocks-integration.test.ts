@@ -33,6 +33,7 @@ const createMockAPI = (): API => ({
       id: 'list-item-1',
       holder: document.createElement('div'),
     }),
+    getChildren: vi.fn().mockReturnValue([]),
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
     getBlocksCount: vi.fn().mockReturnValue(1),
     setBlockParent: vi.fn(),

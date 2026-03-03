@@ -34,6 +34,7 @@ const createMockAPI = (): API => {
         return { id: `mock-block-${insertCallCount}`, holder };
       }),
       delete: vi.fn(),
+      getChildren: vi.fn().mockReturnValue([]),
       getCurrentBlockIndex: vi.fn().mockReturnValue(0),
       getBlockIndex: vi.fn().mockReturnValue(undefined),
       getBlocksCount: vi.fn().mockReturnValue(0),

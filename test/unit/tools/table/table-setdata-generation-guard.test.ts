@@ -38,6 +38,7 @@ const createMockAPI = (overrides: Partial<Record<string, unknown>> = {}): API =>
     },
     blocks: {
       delete: vi.fn(),
+      getChildren: vi.fn().mockReturnValue([]),
       insert: vi.fn().mockImplementation(() => {
         const holder = document.createElement('div');
 

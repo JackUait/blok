@@ -502,4 +502,100 @@ test.describe('Cell Editing', () => {
     // Also verify the data-placeholder attribute is stripped from table cell editables
     await expect(firstCellEditable).not.toHaveAttribute('data-placeholder');
   });
+
+  test('Ghost children (blocks with parent but not in any cell) are cleaned up on render', async ({ page }) => {
+    // Set up data that simulates stale ghost children:
+    // - A table with a 2x2 grid where cells reference specific child blocks
+    // - Additional paragraph blocks that claim the table as parent but are NOT in any cell's blocks array
+    const tableId = 'table-ghost-test';
+    const cellBlock1 = 'cell-block-1';
+    const cellBlock2 = 'cell-block-2';
+    const cellBlock3 = 'cell-block-3';
+    const cellBlock4 = 'cell-block-4';
+    const ghostBlock1 = 'ghost-block-1';
+    const ghostBlock2 = 'ghost-block-2';
+    const ghostBlock3 = 'ghost-block-3';
+
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            id: tableId,
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [{ blocks: [cellBlock1] }, { blocks: [cellBlock2] }],
+                [{ blocks: [cellBlock3] }, { blocks: [cellBlock4] }],
+              ],
+            },
+          },
+          // Legitimate child blocks referenced by cells
+          { id: cellBlock1, type: 'paragraph', data: { text: 'Cell 1' }, parent: tableId },
+          { id: cellBlock2, type: 'paragraph', data: { text: 'Cell 2' }, parent: tableId },
+          { id: cellBlock3, type: 'paragraph', data: { text: 'Cell 3' }, parent: tableId },
+          { id: cellBlock4, type: 'paragraph', data: { text: 'Cell 4' }, parent: tableId },
+          // Ghost children: have parent=tableId but are NOT in any cell's blocks array
+          { id: ghostBlock1, type: 'paragraph', data: { text: 'Ghost 1' }, parent: tableId },
+          { id: ghostBlock2, type: 'paragraph', data: { text: '' }, parent: tableId },
+          { id: ghostBlock3, type: 'paragraph', data: { text: 'Ghost 3' }, parent: tableId },
+        ],
+      },
+    });
+
+    // 1. Verify ghost blocks are NOT visible in the working area outside the table
+    // Check that ghost block holders don't exist as direct children of the working area
+    const ghostBlocksInWorkingArea = await page.evaluate(
+      ({ ghostIds }) => {
+        const workingArea = document.querySelector('[data-blok-redactor]');
+
+        if (!workingArea) {
+          return [];
+        }
+
+        return ghostIds.filter(id =>
+          workingArea.querySelector(`:scope > [data-blok-id="${id}"]`) !== null
+        );
+      },
+      { ghostIds: [ghostBlock1, ghostBlock2, ghostBlock3] }
+    );
+
+    expect(ghostBlocksInWorkingArea).toHaveLength(0);
+
+    // 2. Verify the "Ghost" text does not appear anywhere outside the table
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Ghost text should not be present on the page at all
+    await expect(page.getByText('Ghost 1')).toHaveCount(0);
+    await expect(page.getByText('Ghost 3')).toHaveCount(0);
+
+    // 3. Verify legitimate cell blocks still render correctly inside the table
+    await expect(table).toContainText('Cell 1');
+    await expect(table).toContainText('Cell 2');
+    await expect(table).toContainText('Cell 3');
+    await expect(table).toContainText('Cell 4');
+
+    // 4. Save and verify ghost blocks are excluded from output
+    const savedData = await page.evaluate(async () => {
+      return window.blokInstance?.save();
+    });
+
+    const savedBlockIds = savedData?.blocks.map(
+      (b: { id?: string }) => b.id
+    ) ?? [];
+
+    // Ghost block IDs should not appear in saved data
+    expect(savedBlockIds).not.toContain(ghostBlock1);
+    expect(savedBlockIds).not.toContain(ghostBlock2);
+    expect(savedBlockIds).not.toContain(ghostBlock3);
+
+    // Legitimate cell block IDs should still be present
+    expect(savedBlockIds).toContain(cellBlock1);
+    expect(savedBlockIds).toContain(cellBlock2);
+    expect(savedBlockIds).toContain(cellBlock3);
+    expect(savedBlockIds).toContain(cellBlock4);
+  });
 });

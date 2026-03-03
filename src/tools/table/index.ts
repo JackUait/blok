@@ -392,6 +392,8 @@ export class Table implements BlockTool {
       if (this.isNewTable) {
         populateNewCells(gridEl, this.cellBlocks);
       }
+
+      this.removeGhostChildren();
     }, true);
 
     if (this.model.initialColWidth === undefined) {
@@ -407,6 +409,42 @@ export class Table implements BlockTool {
 
     if (this.isNewTable) {
       this.cellSelection?.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
+    }
+  }
+
+  /**
+   * Remove blocks that claim this table as parent but are not referenced in any cell.
+   *
+   * These "ghost children" can appear when stale data is saved — e.g. a paste or split
+   * creates a child block that never gets placed into a cell. On the next load, the
+   * Renderer creates Block instances for every saved block and appends their holders to
+   * the working area. initializeCells() only claims blocks actually listed in a cell's
+   * `blocks` array, leaving ghosts visible below the table.
+   *
+   * Must be called after initializeCells() and model.replaceAll() so the model's
+   * blockCellMap is fully populated.
+   */
+  private removeGhostChildren(): void {
+    const tableId = this.blockId;
+
+    if (tableId === undefined) {
+      return;
+    }
+
+    const allChildren = this.api.blocks.getChildren(tableId);
+
+    // Delete ghost children in reverse index order so removals don't shift indices
+    const ghostEntries = allChildren
+      .filter(child => this.model.findCellForBlock(child.id) === null)
+      .map(child => ({
+        id: child.id,
+        index: this.api.blocks.getBlockIndex(child.id),
+      }))
+      .filter((entry): entry is { id: string; index: number } => entry.index !== undefined)
+      .sort((a, b) => b.index - a.index);
+
+    for (const { index } of ghostEntries) {
+      void this.api.blocks.delete(index);
     }
   }
 

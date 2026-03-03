@@ -64,6 +64,7 @@ const createMockAPI = (overrides: Partial<API> = {}): API => {
     },
     blocks: {
       delete: () => {},
+      getChildren: () => [],
       insert: () => {
         const holder = document.createElement('div');
 

@@ -56,6 +56,7 @@ const meta: Meta<PopoverArgs> = {
   tags: ['autodocs'],
   args: {
     minHeight: 350,
+    width: 450,
     data: sampleData,
   },
   render: createEditor,
@@ -538,6 +539,7 @@ export const MobilePopover: Story = {
   args: {
     data: sampleData,
     minHeight: 400,
+    width: 0,
   },
   parameters: {
     viewport: {
@@ -603,6 +605,7 @@ export const MobileOverlay: Story = {
   args: {
     data: sampleData,
     minHeight: 400,
+    width: 0,
   },
   parameters: {
     viewport: {

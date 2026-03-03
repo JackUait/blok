@@ -208,6 +208,7 @@ export const ToolboxOpenedMode: Story = {
   args: {
     data: sampleData,
     readOnly: false,
+    width: 450,
   },
   play: async ({ canvasElement, step }) => {
     await step('Wait for editor and toolbar to initialize', async () => {

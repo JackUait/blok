@@ -62,6 +62,7 @@ const meta: Meta<ToolboxArgs> = {
   tags: ['autodocs'],
   args: {
     minHeight: 300,
+    width: 450,
     data: sampleData,
   },
   render: createEditor,

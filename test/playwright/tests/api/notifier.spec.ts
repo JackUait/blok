@@ -15,7 +15,7 @@ type BlokWithNotifier = Blok & { notifier: NotifierAPI };
 
 const HOLDER_ID = 'blok';
 const NOTIFIER_CONTAINER_SELECTOR = '[data-blok-testid="notifier-container"]';
-const NOTIFICATION_SELECTOR = '[data-blok-testid="notifier-container"] > [data-blok-testid^="notification"]';
+const NOTIFICATION_TESTID_PREFIX = '[data-blok-testid^="notification"]';
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
@@ -91,7 +91,7 @@ test.describe('api.notifier', () => {
       });
     }, { text: message });
 
-    const notification = page.locator(NOTIFICATION_SELECTOR).filter({ hasText: message });
+    const notification = page.locator(NOTIFIER_CONTAINER_SELECTOR).locator(NOTIFICATION_TESTID_PREFIX).filter({ hasText: message });
 
     await expect(notification).toBeVisible();
     await expect(notification).toHaveAttribute('data-blok-testid', 'notification-success');
@@ -122,7 +122,7 @@ test.describe('api.notifier', () => {
       cancel: cancelText,
     });
 
-    const notification = page.locator(NOTIFICATION_SELECTOR).filter({ hasText: message });
+    const notification = page.locator(NOTIFIER_CONTAINER_SELECTOR).locator(NOTIFICATION_TESTID_PREFIX).filter({ hasText: message });
 
     await expect(notification).toBeVisible();
     await expect(notification).toHaveAttribute('data-blok-testid', 'notification-error');

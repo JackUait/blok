@@ -993,10 +993,10 @@ describe("UI module", () => {
       };
 
       // prepare() should NOT throw even though register() throws
-      await ui.prepare();
+      await expect(ui.prepare()).resolves.toBeUndefined();
 
       // The selection controller must still be enabled despite the shortcut error
-      expect(selectionEnableSpy).toHaveBeenCalledTimes(1);
+      expect(selectionEnableSpy).toHaveBeenCalledWith();
     });
 
     it("unregisters ToggleShortcuts during destroy()", () => {
@@ -1010,8 +1010,8 @@ describe("UI module", () => {
 
       ui.destroy();
 
-      // Verify unregister() was called
-      expect(mockUnregister).toHaveBeenCalledTimes(1);
+      // Verify unregister() was called with no arguments
+      expect(mockUnregister).toHaveBeenCalledWith();
     });
   });
 });

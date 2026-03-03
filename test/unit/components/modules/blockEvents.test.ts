@@ -412,6 +412,7 @@ describe('BlockEvents', () => {
       blockEvents.keydown(event);
 
       expect(moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(moveAndOpen).toHaveBeenCalledWith();
       expect(toolboxOpen).toHaveBeenCalledTimes(1);
 
       wrapper.remove();

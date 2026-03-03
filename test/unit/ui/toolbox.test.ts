@@ -707,7 +707,7 @@ describe('Toolbox', () => {
 
       // Simulate typing "/head"
       contentEditable.textContent = '/head';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
 
       expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('');
     });
@@ -726,12 +726,12 @@ describe('Toolbox', () => {
 
       // Type query
       contentEditable.textContent = '/head';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
       expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('');
 
       // Clear query back to just "/"
       contentEditable.textContent = '/';
-      contentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
       expect(contentEditable.getAttribute('data-blok-slash-search')).toBe('Type to search');
     });
   });

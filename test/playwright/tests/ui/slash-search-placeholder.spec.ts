@@ -32,7 +32,7 @@ test.describe('slash search placeholder', () => {
   });
 
   test('should show placeholder when slash is typed and hide it when query is entered', async ({ page }) => {
-    const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR).first();
+    const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
     await paragraph.click();
 
     // Type "/" to open toolbox
@@ -60,7 +60,7 @@ test.describe('slash search placeholder', () => {
   });
 
   test('should remove slash search styling when toolbox closes', async ({ page }) => {
-    const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR).first();
+    const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
     await paragraph.click();
 
     await page.keyboard.type('/');

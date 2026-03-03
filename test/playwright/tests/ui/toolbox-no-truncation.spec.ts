@@ -61,7 +61,7 @@ test.describe('Toolbox dynamic width', () => {
   test('toolbox item titles should not be truncated', async ({ page }) => {
     await createBlok(page);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await paragraph.click();
     await paragraph.type('/');
@@ -96,7 +96,7 @@ test.describe('Toolbox dynamic width', () => {
   test('toolbox should have spacing between title and shortcut', async ({ page }) => {
     await createBlok(page);
 
-    const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
     await paragraph.click();
     await paragraph.type('/');

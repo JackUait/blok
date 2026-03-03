@@ -311,14 +311,14 @@ test.describe('Table Block Escape — Adding Blocks Below Tables', () => {
 
     const tableBox = await tableWrapper.boundingBox();
 
-    if (tableBox === null) {
-      throw new Error('Table bounding box is null');
-    }
+    expect(tableBox).not.toBeNull();
+
+    const box = tableBox as NonNullable<typeof tableBox>;
 
     // Click 20px below the table's bottom edge (inside the 40px pseudo-element zone)
     await page.mouse.click(
-      tableBox.x + tableBox.width / 2,
-      tableBox.y + tableBox.height + 20
+      box.x + box.width / 2,
+      box.y + box.height + 20
     );
 
     const outsideTable = await isFocusOutsideTable(page);

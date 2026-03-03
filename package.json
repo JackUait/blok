@@ -14,6 +14,9 @@
       ],
       "locales": [
         "./types/locales.d.ts"
+      ],
+      "react": [
+        "./types/react.d.ts"
       ]
     }
   },
@@ -33,6 +36,10 @@
     "./locales": {
       "types": "./types/locales.d.ts",
       "import": "./dist/locales.mjs"
+    },
+    "./react": {
+      "types": "./types/react.d.ts",
+      "import": "./dist/react.mjs"
     }
   },
   "bin": {

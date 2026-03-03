@@ -11,7 +11,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.ts'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: ['src/**/*.d.ts', 'src/**/__module.ts', 'src/**/index.ts', 'test/**', 'node_modules/**']
     },
     projects: [
@@ -21,7 +21,7 @@ export default defineConfig({
           name: 'unit',
           globals: true,
           environment: 'jsdom',
-          include: ['test/unit/**/*.test.ts'],
+          include: ['test/unit/**/*.test.ts', 'test/unit/**/*.test.tsx'],
           setupFiles: ['test/unit/vitest.setup.ts']
         }
       },

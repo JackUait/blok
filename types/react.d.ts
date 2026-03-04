@@ -54,4 +54,4 @@ export function useBlok(
  * <BlokContent editor={editor} className="my-editor" />
  * ```
  */
-export declare const BlokContent: React.FC<BlokContentProps>;
+export declare const BlokContent: React.ForwardRefExoticComponent<BlokContentProps & React.RefAttributes<HTMLDivElement>>;

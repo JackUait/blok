@@ -68,7 +68,11 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     // Destroy leftover editor from a previous deps cycle
     if (state.editor !== null && !state.isDestroyed) {
       removeHolder(state.editor);
-      state.editor.destroy();
+      try {
+        state.editor.destroy();
+      } catch {
+        // destroy may throw — still clean up state
+      }
       state.editor = null;
       state.holder = null;
       state.isDestroyed = true;
@@ -98,11 +102,26 @@ export function useBlok(config: UseBlokConfig, deps?: DependencyList): Blok | nu
     state.editor = blok;
     setHolder(blok, holder);
 
-    void blok.isReady.then(() => {
-      if (state.editor === blok && !state.isDestroyed) {
-        setEditor(blok);
-      }
-    });
+    void blok.isReady
+      .then(() => {
+        if (state.editor === blok && !state.isDestroyed) {
+          setEditor(blok);
+        }
+      })
+      .catch(() => {
+        if (state.editor === blok && !state.isDestroyed) {
+          removeHolder(blok);
+          try {
+            blok.destroy();
+          } catch {
+            // destroy may also throw — still clean up state
+          }
+          state.editor = null;
+          state.holder = null;
+          state.isDestroyed = true;
+          setEditor(null);
+        }
+      });
 
     return (): void => {
       deferDestroy(state, setEditor);
@@ -138,7 +157,11 @@ function deferDestroy(
   state.destroyTimeout = setTimeout(() => {
     if (state.editor !== null) {
       removeHolder(state.editor);
-      state.editor.destroy();
+      try {
+        state.editor.destroy();
+      } catch {
+        // destroy may throw — still clean up state
+      }
       state.editor = null;
       state.holder = null;
       state.isDestroyed = true;

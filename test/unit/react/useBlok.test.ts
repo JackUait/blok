@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { UseBlokConfig } from '../../../src/react/types';
@@ -26,6 +27,18 @@ type MockBlokInstance = ReturnType<typeof createMockBlokInstance>;
 let mockBlokInstances: MockBlokInstance[] = [];
 const MockBlokConstructor = vi.fn();
 
+/**
+ * Per-test override for isReady. When set, the next Blok constructor
+ * will use this promise instead of the default resolved one.
+ */
+let nextIsReadyOverride: Promise<void> | null = null;
+
+/**
+ * Per-test override for destroy. When set, the next Blok constructor
+ * will use this function instead of the default vi.fn().
+ */
+let nextDestroyOverride: ReturnType<typeof vi.fn> | null = null;
+
 vi.mock('../../../src/blok', () => {
   return {
     Blok: class MockBlok {
@@ -38,6 +51,15 @@ vi.mock('../../../src/blok', () => {
       constructor(config?: unknown) {
         MockBlokConstructor(config);
         const instance = createMockBlokInstance();
+
+        if (nextIsReadyOverride !== null) {
+          instance.isReady = nextIsReadyOverride;
+          nextIsReadyOverride = null;
+        }
+        if (nextDestroyOverride !== null) {
+          instance.destroy = nextDestroyOverride;
+          nextDestroyOverride = null;
+        }
 
         this.isReady = instance.isReady;
         this.destroy = instance.destroy;
@@ -72,6 +94,8 @@ describe('useBlok', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBlokInstances = [];
+    nextIsReadyOverride = null;
+    nextDestroyOverride = null;
     vi.useFakeTimers();
   });
 
@@ -333,5 +357,196 @@ describe('useBlok', () => {
     expect(result.current).not.toBeNull();
     expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
     expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('should clean up when isReady rejects', async () => {
+    const rejectFn: { current: ((err: Error) => void) | null } = { current: null };
+
+    nextIsReadyOverride = new Promise<void>((_resolve, reject) => {
+      rejectFn.current = reject;
+    });
+
+    const config: UseBlokConfig = {};
+
+    const { result } = renderHook(() => useBlok(config));
+
+    // Editor not ready yet — still null
+    expect(result.current).toBeNull();
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+
+    const instance = mockBlokInstances[0];
+
+    // Reject isReady
+    await act(async () => {
+      rejectFn.current?.(new Error('init failed'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Editor should remain null (never exposed to consumer)
+    expect(result.current).toBeNull();
+
+    // destroy() should have been called for cleanup
+    expect(instance.destroy).toHaveBeenCalledTimes(1);
+    expect(removeHolder).toHaveBeenCalled();
+  });
+
+  it('should clean up state when destroy() throws', async () => {
+    nextDestroyOverride = vi.fn().mockImplementation(() => {
+      throw new Error('destroy crashed');
+    });
+
+    const config: UseBlokConfig = {};
+
+    const { result, unmount } = renderHook(() => useBlok(config));
+
+    await flushAll();
+
+    // Hook returns the editor instance before unmount
+    expect(result.current).not.toBeNull();
+
+    // Unmount — triggers deferred destroy; destroy() will throw,
+    // but the hook should swallow the error and still clean up.
+    // The key behavior: this act() block completes without throwing.
+    unmount();
+
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    // No additional editor instances were created during cleanup (no accidental recreation)
+    expect(mockBlokInstances).toHaveLength(1);
+
+    // removeHolder should still have been called despite the throw
+    expect(removeHolder).toHaveBeenCalled();
+  });
+
+  it('should clean up state when destroy() throws during deps change', async () => {
+    const destroyError = new Error('destroy crashed');
+
+    nextDestroyOverride = vi.fn().mockImplementation(() => {
+      throw destroyError;
+    });
+
+    const config: UseBlokConfig = {};
+
+    const { result, rerender } = renderHook(
+      ({ d }: { d: string[] }) => useBlok(config, d),
+      { initialProps: { d: ['dep1'] } }
+    );
+
+    await flushAll();
+    expect(result.current).not.toBeNull();
+
+    const firstInstance = mockBlokInstances[0];
+
+    // Change deps — triggers synchronous destroy of old editor + create new one
+    rerender({ d: ['dep2'] });
+
+    await flushAll();
+
+    // First instance's destroy was called (and threw)
+    expect(firstInstance.destroy).toHaveBeenCalledTimes(1);
+
+    // A second editor was still created despite the throw
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(2);
+    expect(mockBlokInstances).toHaveLength(2);
+  });
+
+  it('should use latest onChange callback ref without recreating editor', async () => {
+    const onChange1 = vi.fn();
+    const onChange2 = vi.fn();
+
+    const { result, rerender } = renderHook(
+      ({ onChange }: { onChange: () => void }) => useBlok({ onChange }),
+      { initialProps: { onChange: onChange1 } }
+    );
+
+    await flushAll();
+    expect(result.current).not.toBeNull();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onChange: (...args: unknown[]) => void;
+    };
+
+    // Update to new callback
+    rerender({ onChange: onChange2 });
+
+    // Call the wrapper — should call onChange2 (latest), not onChange1
+    passedConfig.onChange();
+
+    expect(onChange1).not.toHaveBeenCalled();
+    expect(onChange2).toHaveBeenCalledTimes(1);
+
+    // Verify no editor recreation occurred
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('should not expose a stale editor when isReady resolves after deps change', async () => {
+    // First editor: isReady is deferred so we can control when it resolves
+    const resolveFn: { current: (() => void) | null } = { current: null };
+
+    nextIsReadyOverride = new Promise<void>((resolve) => {
+      resolveFn.current = resolve;
+    });
+
+    const config: UseBlokConfig = {};
+
+    const { result, rerender } = renderHook(
+      ({ d }: { d: string[] }) => useBlok(config, d),
+      { initialProps: { d: ['dep1'] } }
+    );
+
+    await flushAll();
+
+    // Editor is still null — isReady hasn't resolved yet
+    expect(result.current).toBeNull();
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+
+    // Change deps — this destroys old editor and creates a new one
+    rerender({ d: ['dep2'] });
+
+    // Flush to let the new editor's isReady (immediate) resolve
+    await flushAll();
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    // Second editor should be ready
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(2);
+    expect(result.current).not.toBeNull();
+
+    const secondInstance = mockBlokInstances[1];
+
+    // Now resolve the OLD editor's isReady — this should be guarded
+    await act(async () => {
+      resolveFn.current?.();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // The returned editor should still be the second instance, not the stale first
+    // We check by verifying the current editor's destroy is the second instance's destroy
+    expect(result.current).not.toBeNull();
+    expect((result.current as unknown as MockBlokInstance).destroy).toBe(secondInstance.destroy);
+  });
+
+  it('should reuse editor in React.StrictMode (actual wrapper)', async () => {
+    const config: UseBlokConfig = {};
+
+    const StrictWrapper = ({ children }: { children: React.ReactNode }): React.ReactElement => {
+      return React.createElement(React.StrictMode, null, children);
+    };
+
+    const { result } = renderHook(() => useBlok(config), {
+      wrapper: StrictWrapper,
+    });
+
+    await flushAll();
+
+    // In StrictMode, effect runs → cleanup → effect re-runs.
+    // The deferred destroy is cancelled on remount, so only 1 constructor call.
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+    expect(result.current).not.toBeNull();
   });
 });

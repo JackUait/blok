@@ -75,4 +75,35 @@ describe('BlokContent', () => {
     // eslint-disable-next-line testing-library/no-node-access
     expect(mockHolder.parentElement).toBeNull();
   });
+
+  it('should swap holders when editor prop changes to a different instance', () => {
+    setHolder(mockEditor, mockHolder);
+
+    const { rerender } = render(
+      <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+    );
+
+    const div = screen.getByTestId('content');
+
+    expect(div.contains(mockHolder)).toBe(true);
+
+    const mockEditorB: Record<string, unknown> = {};
+    const mockHolderB = document.createElement('div');
+
+    mockHolderB.textContent = 'editor-b-content';
+    setHolder(mockEditorB, mockHolderB);
+
+    rerender(
+      <BlokContent editor={mockEditorB as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+    );
+
+    // Old holder should be removed from container
+    // eslint-disable-next-line testing-library/no-node-access
+    expect(mockHolder.parentElement).toBeNull();
+    expect(div.contains(mockHolder)).toBe(false);
+
+    // New holder should be adopted
+    expect(div.contains(mockHolderB)).toBe(true);
+    expect(div.textContent).toBe('editor-b-content');
+  });
 });

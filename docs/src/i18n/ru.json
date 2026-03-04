@@ -650,7 +650,7 @@
     "heroToBlok": "на",
     "heroBlok": "Blok",
     "heroDescription": "Мигрируйте проект за несколько минут с помощью автоматического кодмода.",
-    "statAverageMigrationValue": "~2мин",
+    "statAverageMigrationValue": "~2 мин",
     "statAverageMigrationLabel": "Средняя миграция",
     "statApiCompatibleValue": "100%",
     "statApiCompatibleLabel": "Совместимость API",
@@ -706,7 +706,7 @@
       "changed": "Изменено",
       "fix": "Исправлено",
       "removed": "Удалено",
-      "breaking": "Ломающее",
+      "breaking": "Ломающее изменение",
       "deprecated": "Устарело",
       "security": "Безопасность"
     }

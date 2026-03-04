@@ -1,0 +1,80 @@
+/* ============================================
+   Integrations Page Styles
+   Reuses api.css patterns; adds hero + extras
+   ============================================ */
+
+/* Import shared sidebar + api layout styles */
+@import './api.css';
+
+/* ── Hero ─────────────────────────────────── */
+.intg-hero {
+  padding-bottom: var(--spacing-3xl);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-3xl);
+}
+
+.intg-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: rgba(240, 123, 75, 0.1);
+  color: var(--color-coral);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-md);
+}
+
+.intg-hero-title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.15;
+  margin: 0 0 var(--spacing-md);
+  letter-spacing: -0.02em;
+}
+
+.intg-hero-description {
+  font-size: 1.0625rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  max-width: 640px;
+  margin: 0;
+}
+
+.intg-hero-description code {
+  font-size: 0.9375em;
+  background: rgba(240, 123, 75, 0.08);
+  color: var(--color-coral);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ── Install block ────────────────────────── */
+.intg-install-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.intg-install-note {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  line-height: 1.6;
+}
+
+/* ── Section spacing tweak ────────────────── */
+.intg-section:first-of-type {
+  padding-top: 0;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 640px) {
+  .intg-hero-title {
+    font-size: 1.5rem;
+  }
+}

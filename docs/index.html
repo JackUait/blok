@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <script>
+      // SPA routing restore for GitHub Pages
+      // Decodes the URL encoded by 404.html and restores it via history.replaceState
+      // Based on https://github.com/rafgraph/spa-github-pages
+      (function(l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function(s) {
+            return s.replace(/~and~/g, '&');
+          });
+          window.history.replaceState(
+            null, null,
+            l.pathname.slice(0, -1) + decoded[0] +
+            (decoded[1] ? '?' + decoded[1] : '') +
+            l.hash
+          );
+        }
+      }(window.location));
+    </script>
     <script type="module">
       if (import.meta.env.DEV) {
         import("react-grab");

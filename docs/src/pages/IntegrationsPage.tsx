@@ -229,7 +229,7 @@ export const IntegrationsPage: React.FC = () => {
               <h1 className="intg-hero-title">{t('integrations.heroTitle')}</h1>
               <p className="intg-hero-description">
                 {t('integrations.heroDescription1')}{' '}
-                <code>@jackuait/blok/react</code>. {t('integrations.heroDescription2')}{' '}
+                <code>@jackuait/blok/react</code>{t('integrations.heroDescription2')}{' '}
                 <code>useBlok</code> {t('integrations.heroDescription3')} <code>BlokContent</code>{' '}
                 {t('integrations.heroDescription4')}
               </p>

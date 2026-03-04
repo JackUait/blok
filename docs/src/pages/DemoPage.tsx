@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
@@ -16,10 +16,23 @@ interface BlokEditor {
 }
 
 export const DemoPage: React.FC = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [showOutput, setShowOutput] = useState(false);
   const [output, setOutput] = useState<string>(() => t('demo.outputInitialMessage'));
   const editorRef = useRef<BlokEditor | null>(null);
+
+  const emptyMessage = t('demo.outputInitialMessage');
+
+  useEffect(() => {
+    setOutput(prev => {
+      try {
+        JSON.parse(prev);
+        return prev; // real JSON — keep it
+      } catch {
+        return emptyMessage; // placeholder — update to new locale
+      }
+    });
+  }, [locale, emptyMessage]);
 
   const handleEditorReady = useCallback((editor: BlokEditor) => {
     editorRef.current = editor;

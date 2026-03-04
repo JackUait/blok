@@ -700,10 +700,12 @@
     },
     "category": {
       "added": "Added",
+      "changed": "Changed",
       "fix": "Fixed",
       "removed": "Removed",
       "breaking": "Breaking",
-      "deprecated": "Deprecated"
+      "deprecated": "Deprecated",
+      "security": "Security"
     }
   },
   "integrations": {

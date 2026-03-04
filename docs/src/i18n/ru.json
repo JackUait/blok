@@ -700,10 +700,12 @@
     },
     "category": {
       "added": "Добавлено",
+      "changed": "Изменено",
       "fix": "Исправлено",
       "removed": "Удалено",
       "breaking": "Ломающее",
-      "deprecated": "Устарело"
+      "deprecated": "Устарело",
+      "security": "Безопасность"
     }
   },
   "integrations": {

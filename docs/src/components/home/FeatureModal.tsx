@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 import { CodeBlock } from "../common/CodeBlock";
+import { useI18n } from "../../contexts/I18nContext";
 
 export interface FeatureDetail {
   icon: React.ReactNode;
   title: string;
-  description: React.ReactNode;
+  description: string;
+  learnMore: string;
   accent:
     | "coral"
     | "orange"
@@ -33,6 +35,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
   feature,
   onClose,
 }) => {
+  const { t } = useI18n();
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -85,7 +88,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
             ref={closeButtonRef}
             className="feature-modal-close"
             onClick={onClose}
-            aria-label="Close modal"
+            aria-label={t('home.featureModal.close')}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
@@ -110,7 +113,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
             <p className="feature-modal-summary">{feature.details.summary}</p>
 
             <div className="feature-modal-benefits">
-              <h3>Key Benefits</h3>
+              <h3>{t('home.featureModal.keyBenefits')}</h3>
               <ul>
                 {feature.details.benefits.map((benefit, index) => (
                   <li key={index}>{benefit}</li>
@@ -120,7 +123,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
 
             {feature.details.codeExample && (
               <div className="feature-modal-code">
-                <h3>Example</h3>
+                <h3>{t('home.featureModal.example')}</h3>
                 <CodeBlock
                   code={feature.details.codeExample}
                   language="typescript"
@@ -130,7 +133,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
 
             {feature.details.apiLink && (
               <a href={feature.details.apiLink} className="feature-modal-link">
-                View API Documentation →
+                {t('home.featureModal.viewApiDocs')}
               </a>
             )}
           </div>

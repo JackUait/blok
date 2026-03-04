@@ -1,12 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { QuickStart } from './QuickStart';
+import { I18nProvider } from '../../contexts/I18nContext';
 
 const testIdPrefix = 'quick-start';
 
 describe('QuickStart', () => {
   it('should render a section element with id="quick-start"', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     const section = screen.getByTestId(`${testIdPrefix}-section`);
     expect(section).toBeInTheDocument();
@@ -14,7 +19,11 @@ describe('QuickStart', () => {
   });
 
   it('should render the section header', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     const section = screen.getByTestId(`${testIdPrefix}-section`);
     expect(section).toBeInTheDocument();
@@ -22,7 +31,11 @@ describe('QuickStart', () => {
   });
 
   it('should render 3 install steps', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('install-step-1')).toBeInTheDocument();
     expect(screen.getByTestId('install-step-2')).toBeInTheDocument();
@@ -30,7 +43,11 @@ describe('QuickStart', () => {
   });
 
   it('should render step 1: Install Blok', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByText('Install Blok')).toBeInTheDocument();
     expect(
@@ -39,7 +56,11 @@ describe('QuickStart', () => {
   });
 
   it('should render step 2: Import and configure', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByText('Import and configure')).toBeInTheDocument();
     expect(
@@ -48,14 +69,22 @@ describe('QuickStart', () => {
   });
 
   it('should render step 3: Save content', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByText('Save content')).toBeInTheDocument();
     expect(screen.getByText('Extract clean JSON data ready to save anywhere.')).toBeInTheDocument();
   });
 
   it('should render step numbers', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     const stepNumber1 = screen.getByTestId('step-number-1');
     const stepNumber2 = screen.getByTestId('step-number-2');
@@ -67,13 +96,21 @@ describe('QuickStart', () => {
   });
 
   it('should have install-steps container', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('install-steps')).toBeInTheDocument();
   });
 
   it('should have install-step elements', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('install-step-1')).toBeInTheDocument();
     expect(screen.getByTestId('install-step-2')).toBeInTheDocument();
@@ -81,7 +118,11 @@ describe('QuickStart', () => {
   });
 
   it('should have step-content divs', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('step-content-1')).toBeInTheDocument();
     expect(screen.getByTestId('step-content-2')).toBeInTheDocument();
@@ -89,7 +130,11 @@ describe('QuickStart', () => {
   });
 
   it('should have step-title elements', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByRole('heading', { name: 'Install Blok' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Import and configure' })).toBeInTheDocument();
@@ -97,7 +142,11 @@ describe('QuickStart', () => {
   });
 
   it('should have step-description elements', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('step-description-1')).toBeInTheDocument();
     expect(screen.getByTestId('step-description-2')).toBeInTheDocument();
@@ -105,7 +154,11 @@ describe('QuickStart', () => {
   });
 
   it('should apply animation-delay styles to steps', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     const step1 = screen.getByTestId('install-step-1');
     const step2 = screen.getByTestId('install-step-2');
@@ -117,13 +170,21 @@ describe('QuickStart', () => {
   });
 
   it('should have quick-start-bg div', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('quick-start-bg')).toBeInTheDocument();
   });
 
   it('should have quick-start-blur element', () => {
-    render(<QuickStart />);
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('quick-start-blur')).toBeInTheDocument();
   });

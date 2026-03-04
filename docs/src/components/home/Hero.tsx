@@ -2,8 +2,10 @@ import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { use3DTilt } from '../../hooks/use3DTilt';
 import { WaveDivider } from '../common/WaveDivider';
+import { useI18n } from '../../contexts/I18nContext';
 
 export const Hero: React.FC = () => {
+  const { t } = useI18n();
   const mascotTilt = use3DTilt({
     maxTilt: 20,
     scale: 1.08,
@@ -29,15 +31,14 @@ export const Hero: React.FC = () => {
       </div>
       <div className="hero-container">
         <div className="hero-content" data-blok-testid="hero-content">
-          <p className="hero-eyebrow">Open-Source Editor</p>
+          <p className="hero-eyebrow">{t('home.hero.eyebrow')}</p>
           <h1 className="hero-title">
-            Build beautiful
+            {t('home.hero.title')}
             <br />
-            <span className="hero-title-gradient">block-based editors</span>
+            <span className="hero-title-gradient">{t('home.hero.titleGradient')}</span>
           </h1>
           <p className="hero-description">
-            A production-ready, extensible rich text editor that brings Notion-like
-            block-based editing to your app — customizable, themeable, and battle-tested.
+            {t('home.hero.description')}
           </p>
           <div className="hero-actions">
             <a
@@ -45,7 +46,7 @@ export const Hero: React.FC = () => {
               className="btn btn-primary"
               onClick={handleScrollToQuickStart}
             >
-              Get Started
+              {t('home.hero.ctaGetStarted')}
             </a>
             <Link to="/demo" className="btn btn-secondary">
               <svg
@@ -58,7 +59,7 @@ export const Hero: React.FC = () => {
               >
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
-              Try it out
+              {t('home.hero.ctaTryItOut')}
             </Link>
           </div>
         </div>
@@ -71,7 +72,7 @@ export const Hero: React.FC = () => {
             onMouseEnter={mascotTilt.onMouseEnter}
             onMouseLeave={mascotTilt.onMouseLeave}
             style={mascotTilt.style}
-            aria-label="Try the demo"
+            aria-label={t('home.hero.mascotAriaLabel')}
           >
             {/* Sparkle particles */}
             <div className="hero-mascot-sparkles" aria-hidden="true">
@@ -83,7 +84,7 @@ export const Hero: React.FC = () => {
             </div>
             <img
               src="/mascot.png"
-              alt="Blok mascot - a friendly orange character with pink yarn"
+              alt={t('home.hero.mascotAlt')}
               className="hero-mascot-image"
             />
             {/* Floating shadow that moves with tilt */}

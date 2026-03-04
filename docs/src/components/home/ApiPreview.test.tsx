@@ -2,14 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiPreview } from './ApiPreview';
+import { I18nProvider } from '../../contexts/I18nContext';
 
-describe('ApiPreview', () => {
-  it('should render a section element with id="api"', () => {
-    render(
+const renderApiPreview = () =>
+  render(
+    <I18nProvider>
       <MemoryRouter>
         <ApiPreview />
       </MemoryRouter>
-    );
+    </I18nProvider>
+  );
+
+describe('ApiPreview', () => {
+  it('should render a section element with id="api"', () => {
+    renderApiPreview();
 
     const section = screen.getByTestId('api-preview-section');
     expect(section).toBeInTheDocument();
@@ -17,11 +23,7 @@ describe('ApiPreview', () => {
   });
 
   it('should render the section header', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     // The title is split by <br /> tags, so we need to find it by partial text
     expect(screen.getByText((content) => content.includes('Powerful APIs'))).toBeInTheDocument();
@@ -29,11 +31,7 @@ describe('ApiPreview', () => {
   });
 
   it('should render the section description', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     expect(
       screen.getByText('Access every aspect of the editor through our comprehensive API surface.')
@@ -41,11 +39,7 @@ describe('ApiPreview', () => {
   });
 
   it('should render 3 API cards', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     expect(screen.getByTestId('api-card-core-methods')).toBeInTheDocument();
     expect(screen.getByTestId('api-card-blocks-api')).toBeInTheDocument();
@@ -53,11 +47,7 @@ describe('ApiPreview', () => {
   });
 
   it('should render Core Methods card', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     expect(screen.getByText('Core Methods')).toBeInTheDocument();
     expect(screen.getByText('save()')).toBeInTheDocument();
@@ -67,11 +57,7 @@ describe('ApiPreview', () => {
   });
 
   it('should render Blocks API card', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     expect(screen.getByText('Blocks API')).toBeInTheDocument();
     expect(screen.getByText('blocks.delete()')).toBeInTheDocument();
@@ -81,11 +67,7 @@ describe('ApiPreview', () => {
   });
 
   it('should render Events card', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     expect(screen.getByText('Events')).toBeInTheDocument();
     expect(screen.getByText('on(event, fn)')).toBeInTheDocument();
@@ -93,14 +75,8 @@ describe('ApiPreview', () => {
     expect(screen.getByText('emit(event, data)')).toBeInTheDocument();
   });
 
-
-
   it('should render method descriptions', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     expect(screen.getByText('Extract content as JSON')).toBeInTheDocument();
     expect(screen.getByText('Render from JSON data')).toBeInTheDocument();
@@ -109,11 +85,7 @@ describe('ApiPreview', () => {
   });
 
   it('should render View Full API Reference link', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     const link = screen.getByRole('link', { name: 'View Full API Reference' });
     expect(link).toBeInTheDocument();
@@ -121,55 +93,35 @@ describe('ApiPreview', () => {
   });
 
   it('should have api-grid div', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     const grid = screen.getByTestId('api-grid');
     expect(grid).toBeInTheDocument();
   });
 
   it('should have api-cta div', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     const cta = screen.getByTestId('api-cta');
     expect(cta).toBeInTheDocument();
   });
 
   it('should have api-card-header elements', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     const headers = screen.getAllByTestId('api-card-header');
     expect(headers).toHaveLength(3);
   });
 
   it('should have api-card-content elements', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     const contents = screen.getAllByTestId('api-card-content');
     expect(contents).toHaveLength(3);
   });
 
   it('should have api-method elements', () => {
-    render(
-      <MemoryRouter>
-        <ApiPreview />
-      </MemoryRouter>
-    );
+    renderApiPreview();
 
     const methods = screen.getAllByTestId('api-method');
     expect(methods.length).toBeGreaterThan(0);

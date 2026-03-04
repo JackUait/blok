@@ -6,12 +6,15 @@
     "recipes": "Recipes",
     "migration": "Migration",
     "changelog": "Changelog",
-    "github": "GitHub"
+    "github": "GitHub",
+    "searchAriaLabel": "Search (⌘K)",
+    "toggleMenu": "Toggle menu"
   },
   "common": {
     "filter": "Filter...",
     "clearSearch": "Clear search",
-    "noResults": "No results"
+    "noResults": "No results",
+    "selectSection": "Select section"
   },
   "api": {
     "filterLabel": "Filter API sections",
@@ -22,6 +25,8 @@
     "description": "Description",
     "option": "Option",
     "default": "Default",
+    "parameter": "Parameter",
+    "name": "Name",
     "quickStartSteps": {
       "install": {
         "title": "Install Blok",
@@ -301,11 +306,159 @@
       "description": "The structure of each block in the blocks array."
     }
   },
+  "home": {
+    "hero": {
+      "eyebrow": "Open-Source Editor",
+      "title": "Build beautiful",
+      "titleGradient": "block-based editors",
+      "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app — customizable, themeable, and battle-tested.",
+      "ctaGetStarted": "Get Started",
+      "ctaTryItOut": "Try it out",
+      "mascotAlt": "Blok mascot - a friendly orange character with pink yarn",
+      "mascotAriaLabel": "Try the demo"
+    },
+    "features": {
+      "eyebrow": "Why Blok",
+      "title1": "Built for developers,",
+      "title2": "designed for users",
+      "description": "Everything you need to create powerful editing experiences in your applications.",
+      "cleanJson": {
+        "title": "Clean JSON Output",
+        "description": "Content is structured as typed JSON blocks, not raw HTML. Parse, store, and render anywhere.",
+        "learnMore": "Learn more about Clean JSON Output"
+      },
+      "slashCommands": {
+        "title": "Toolbox & Slash Commands",
+        "description": "Press / or click + to open the block menu. Insert paragraphs, headers, lists, and custom blocks instantly.",
+        "learnMore": "Learn more about Toolbox & Slash Commands"
+      },
+      "inlineToolbar": {
+        "title": "Inline Toolbar",
+        "description": "Select text to format with bold, italic, and links. Extensible with custom inline tools.",
+        "learnMore": "Learn more about Inline Toolbar"
+      },
+      "dragDrop": {
+        "title": "Drag & Drop",
+        "description": "Rearrange blocks with drag handles. Pointer-based system for desktop devices.",
+        "learnMore": "Learn more about Drag & Drop"
+      },
+      "customBlocks": {
+        "title": "Custom Block Tools",
+        "description": "Extend the editor with custom blocks. Built-in paragraph, header, list tools included.",
+        "learnMore": "Learn more about Custom Block Tools"
+      },
+      "readOnly": {
+        "title": "Read-Only Mode",
+        "description": "Toggle read-only mode at runtime. Perfect for view-only contexts or permission-based editing.",
+        "learnMore": "Learn more about Read-Only Mode"
+      },
+      "undoRedo": {
+        "title": "Undo & Redo",
+        "description": "CRDT-based history with ⌘Z / ⌘⇧Z. Conflict-free state tracking for reliable undo/redo.",
+        "learnMore": "Learn more about Undo & Redo"
+      },
+      "languages": {
+        "title": "68 Languages",
+        "description": "Lazy-loaded i18n with RTL support. Only English bundled by default ~3KB.",
+        "learnMore": "Learn more about 68 Languages"
+      },
+      "smartPaste": {
+        "title": "Smart Paste",
+        "description": "Paste from Google Docs or plain text. HTML is sanitized and converted to blocks.",
+        "learnMore": "Learn more about Smart Paste"
+      }
+    },
+    "quickStart": {
+      "eyebrow": "Get Started",
+      "title": "Up and running in minutes",
+      "description": "Three simple steps to integrate Blok into your project"
+    },
+    "apiPreview": {
+      "eyebrow": "Developer Experience",
+      "title1": "Powerful APIs",
+      "title2": "for every use case",
+      "description": "Access every aspect of the editor through our comprehensive API surface.",
+      "viewFullDocs": "View Full API Reference",
+      "coreMethods": {
+        "title": "Core Methods",
+        "save": "Extract content as JSON",
+        "render": "Render from JSON data",
+        "focus": "Set cursor focus",
+        "clear": "Clear all blocks"
+      },
+      "blocksApi": {
+        "title": "Blocks API",
+        "delete": "Remove specified block",
+        "insert": "Insert new block",
+        "move": "Move block to new index",
+        "update": "Update block data"
+      },
+      "events": {
+        "title": "Events",
+        "on": "Subscribe to events",
+        "off": "Unsubscribe from events",
+        "emit": "Emit custom events"
+      }
+    },
+    "migrationCard": {
+      "badge": "Zero downtime migration",
+      "title": "Migrate from EditorJS",
+      "description": "Already using EditorJS? Our automated codemod handles most of the transition — just run it, review the changes, and ship.",
+      "viewGuide": "View Migration Guide",
+      "viewCodemod": "View Codemod"
+    },
+    "featureModal": {
+      "close": "Close modal",
+      "keyBenefits": "Key Benefits",
+      "example": "Example",
+      "viewApiDocs": "View API Documentation →"
+    }
+  },
   "footer": {
     "madeWith": "Made with",
-    "copyright": "© 2024 Blok. Open source under MIT license."
+    "copyright": "© 2024 Blok. Open source under MIT license.",
+    "tagline": "A friendly block-based rich text editor for modern applications.",
+    "docColumnTitle": "Documentation",
+    "resourcesColumnTitle": "Resources",
+    "communityColumnTitle": "Community",
+    "quickStart": "Quick Start",
+    "apiReference": "API Reference",
+    "migrationGuide": "Migration Guide",
+    "github": "GitHub",
+    "npm": "npm",
+    "liveDemo": "Live Demo",
+    "issues": "Issues",
+    "discussions": "Discussions",
+    "contributing": "Contributing",
+    "githubAriaLabel": "GitHub",
+    "telegramAriaLabel": "Telegram",
+    "copyrightText": "© 2026 JackUait",
+    "licensedUnder": "Licensed under"
   },
   "languageSelector": {
-    "label": "Language"
+    "label": "Language",
+    "selectLanguage": "Select language"
+  },
+  "search": {
+    "placeholder": "Search docs...",
+    "clearSearch": "Clear search",
+    "escKey": "ESC",
+    "noResultsTitle": "No results found",
+    "noResultsDescription": "Try different keywords or browse the documentation sections",
+    "emptyTitle": "Search Blok docs",
+    "emptyDescription": "Find API methods, configuration options, tools, and more",
+    "navigate": "navigate",
+    "select": "select"
+  },
+  "theme": {
+    "light": "Light theme",
+    "dark": "Dark theme"
+  },
+  "codeBlock": {
+    "copy": "Copy",
+    "copied": "Copied!"
+  },
+  "packageManagerToggle": {
+    "switchAriaPrefix": "Switch to"
   }
 }

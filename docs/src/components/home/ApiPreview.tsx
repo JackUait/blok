@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useI18n } from "../../contexts/I18nContext";
 
 interface ApiMethod {
   name: string;
@@ -37,102 +38,103 @@ const IconBroadcast: React.FC = () => (
   </svg>
 );
 
-const API_DATA: ApiCard[] = [
-  {
-    title: "Core Methods",
-    icon: <IconBolt />,
-    accentColor: "coral",
-    docSection: "core",
-    methods: [
-      {
-        name: "save()",
-        description: "Extract content as JSON",
-        anchor: "core-save",
-      },
-      {
-        name: "render(data)",
-        description: "Render from JSON data",
-        anchor: "core-render",
-      },
-      {
-        name: "focus()",
-        description: "Set cursor focus",
-        anchor: "core-focus",
-      },
-      {
-        name: "clear()",
-        description: "Clear all blocks",
-        anchor: "core-clear",
-      },
-    ],
-  },
-  {
-    title: "Blocks API",
-    icon: <IconBlocks />,
-    accentColor: "green",
-    docSection: "blocks-api",
-    methods: [
-      {
-        name: "blocks.delete()",
-        description: "Remove specified block",
-        anchor: "blocks-api-blocks-delete",
-      },
-      {
-        name: "blocks.insert()",
-        description: "Insert new block",
-        anchor: "blocks-api-blocks-insert",
-      },
-      {
-        name: "blocks.move()",
-        description: "Move block to new index",
-        anchor: "blocks-api-blocks-move",
-      },
-      {
-        name: "blocks.update()",
-        description: "Update block data",
-        anchor: "blocks-api-blocks-update",
-      },
-    ],
-  },
-  {
-    title: "Events",
-    icon: <IconBroadcast />,
-    accentColor: "pink",
-    docSection: "events-api",
-    methods: [
-      {
-        name: "on(event, fn)",
-        description: "Subscribe to events",
-        anchor: "events-api-on",
-      },
-      {
-        name: "off(event, fn)",
-        description: "Unsubscribe from events",
-        anchor: "events-api-off",
-      },
-      {
-        name: "emit(event, data)",
-        description: "Emit custom events",
-        anchor: "events-api-emit",
-      },
-    ],
-  },
-];
-
 export const ApiPreview: React.FC = () => {
+  const { t } = useI18n();
+
+  const API_DATA: ApiCard[] = [
+    {
+      title: t('home.apiPreview.coreMethods.title'),
+      icon: <IconBolt />,
+      accentColor: "coral",
+      docSection: "core",
+      methods: [
+        {
+          name: "save()",
+          description: t('home.apiPreview.coreMethods.save'),
+          anchor: "core-save",
+        },
+        {
+          name: "render(data)",
+          description: t('home.apiPreview.coreMethods.render'),
+          anchor: "core-render",
+        },
+        {
+          name: "focus()",
+          description: t('home.apiPreview.coreMethods.focus'),
+          anchor: "core-focus",
+        },
+        {
+          name: "clear()",
+          description: t('home.apiPreview.coreMethods.clear'),
+          anchor: "core-clear",
+        },
+      ],
+    },
+    {
+      title: t('home.apiPreview.blocksApi.title'),
+      icon: <IconBlocks />,
+      accentColor: "green",
+      docSection: "blocks-api",
+      methods: [
+        {
+          name: "blocks.delete()",
+          description: t('home.apiPreview.blocksApi.delete'),
+          anchor: "blocks-api-blocks-delete",
+        },
+        {
+          name: "blocks.insert()",
+          description: t('home.apiPreview.blocksApi.insert'),
+          anchor: "blocks-api-blocks-insert",
+        },
+        {
+          name: "blocks.move()",
+          description: t('home.apiPreview.blocksApi.move'),
+          anchor: "blocks-api-blocks-move",
+        },
+        {
+          name: "blocks.update()",
+          description: t('home.apiPreview.blocksApi.update'),
+          anchor: "blocks-api-blocks-update",
+        },
+      ],
+    },
+    {
+      title: t('home.apiPreview.events.title'),
+      icon: <IconBroadcast />,
+      accentColor: "pink",
+      docSection: "events-api",
+      methods: [
+        {
+          name: "on(event, fn)",
+          description: t('home.apiPreview.events.on'),
+          anchor: "events-api-on",
+        },
+        {
+          name: "off(event, fn)",
+          description: t('home.apiPreview.events.off'),
+          anchor: "events-api-off",
+        },
+        {
+          name: "emit(event, data)",
+          description: t('home.apiPreview.events.emit'),
+          anchor: "events-api-emit",
+        },
+      ],
+    },
+  ];
+
   return (
     <section className="api" id="api" data-blok-testid="api-preview-section">
       <div className="container">
         <div className="section-header">
-          <span className="section-eyebrow">Developer Experience</span>
+          <span className="section-eyebrow">{t('home.apiPreview.eyebrow')}</span>
           <h2 className="section-title">
-            Powerful APIs
+            {t('home.apiPreview.title1')}
             <br />
-            for every use case
+            {t('home.apiPreview.title2')}
           </h2>
           <p className="section-description">
-            Access every aspect of the editor through our comprehensive API
-            surface.
+            {t('home.apiPreview.description')}
           </p>
         </div>
         <div className="api-grid" data-blok-testid="api-grid">
@@ -175,7 +177,7 @@ export const ApiPreview: React.FC = () => {
         </div>
         <div className="api-cta" data-blok-testid="api-cta">
           <Link to="/docs" className="btn btn-secondary">
-            View Full API Reference
+            {t('home.apiPreview.viewFullDocs')}
           </Link>
         </div>
       </div>

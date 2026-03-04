@@ -34,7 +34,7 @@ describe('MigrationPage', () => {
     renderMigrationPage();
 
     expect(
-      screen.getByText(/Blok is designed as a drop-in replacement for EditorJS/)
+      screen.getByText(/Blok is a drop-in replacement for EditorJS/)
     ).toBeInTheDocument();
   });
 

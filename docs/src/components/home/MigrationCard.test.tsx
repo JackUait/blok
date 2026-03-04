@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MigrationCard } from './MigrationCard';
+import { I18nProvider } from '../../contexts/I18nContext';
 
 // Mock Shiki to avoid async highlighting issues in tests
 vi.mock('shiki', () => ({
@@ -18,9 +19,11 @@ vi.mock('shiki', () => ({
 describe('MigrationCard', () => {
   it('should render a section element', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByTestId('migration-section')).toBeInTheDocument();
@@ -28,9 +31,11 @@ describe('MigrationCard', () => {
 
   it('should render the migration card', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByTestId('migration-card')).toBeInTheDocument();
@@ -38,9 +43,11 @@ describe('MigrationCard', () => {
 
   it('should render the title', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByText('Migrate from EditorJS')).toBeInTheDocument();
@@ -48,9 +55,11 @@ describe('MigrationCard', () => {
 
   it('should render the description', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByText(/Our automated codemod handles most of the transition/)).toBeInTheDocument();
@@ -58,9 +67,11 @@ describe('MigrationCard', () => {
 
   it('should render the migration badge', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByTestId('migration-badge')).toBeInTheDocument();
@@ -69,9 +80,11 @@ describe('MigrationCard', () => {
 
   it('should render the migration code', async () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     await waitFor(() => {
@@ -81,9 +94,11 @@ describe('MigrationCard', () => {
 
   it('should render the View Migration Guide button', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     const link = screen.getByRole('link', { name: /View Migration Guide/i });
@@ -93,9 +108,11 @@ describe('MigrationCard', () => {
 
   it('should render the View Codemod button', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     const link = screen.getByRole('link', { name: /View Codemod/i });
@@ -105,9 +122,11 @@ describe('MigrationCard', () => {
 
   it('should have migration-content div', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByTestId('migration-content')).toBeInTheDocument();
@@ -115,9 +134,11 @@ describe('MigrationCard', () => {
 
   it('should have migration-code element', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByTestId('migration-code')).toBeInTheDocument();
@@ -125,9 +146,11 @@ describe('MigrationCard', () => {
 
   it('should have code element inside migration-code', async () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     // The code is rendered within a pre/code element inside migration-code
@@ -141,9 +164,11 @@ describe('MigrationCard', () => {
 
   it('should have migration-title', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByTestId('migration-title')).toBeInTheDocument();
@@ -151,9 +176,11 @@ describe('MigrationCard', () => {
 
   it('should have migration-description', () => {
     render(
-      <MemoryRouter>
-        <MigrationCard />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByTestId('migration-description')).toBeInTheDocument();

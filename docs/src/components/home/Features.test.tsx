@@ -1,17 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { Features } from './Features';
+import { I18nProvider } from '../../contexts/I18nContext';
+
+const renderFeatures = () =>
+  render(
+    <I18nProvider>
+      <Features />
+    </I18nProvider>
+  );
 
 describe('Features', () => {
   it('should render a section element with id="features"', () => {
-    render(<Features />);
+    renderFeatures();
 
     const section = screen.getByRole('region', { name: /features/i });
     expect(section).toBeInTheDocument();
   });
 
   it('should render the section header', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Why Blok')).toBeInTheDocument();
     // The title is split by <br /> tags
@@ -20,7 +28,7 @@ describe('Features', () => {
   });
 
   it('should render the section description', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(
       screen.getByText('Everything you need to create powerful editing experiences in your applications.')
@@ -28,21 +36,21 @@ describe('Features', () => {
   });
 
   it('should render all 9 feature cards as buttons', () => {
-    render(<Features />);
+    renderFeatures();
 
     const featureCards = screen.getAllByRole('button', { name: /learn more about/i });
     expect(featureCards).toHaveLength(9);
   });
 
   it('should render Clean JSON Output feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Clean JSON Output')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('typed JSON blocks'))).toBeInTheDocument();
   });
 
   it('should render Toolbox & Slash Commands feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Toolbox & Slash Commands')).toBeInTheDocument();
     expect(
@@ -51,7 +59,7 @@ describe('Features', () => {
   });
 
   it('should render Inline Toolbar feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Inline Toolbar')).toBeInTheDocument();
     expect(
@@ -60,14 +68,14 @@ describe('Features', () => {
   });
 
   it('should render Drag & Drop feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Drag & Drop')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('drag handles'))).toBeInTheDocument();
   });
 
   it('should render Custom Block Tools feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     const button = screen.getByRole('button', { name: 'Learn more about Custom Block Tools' });
     const withinButton = within(button);
@@ -76,7 +84,7 @@ describe('Features', () => {
   });
 
   it('should render Read-Only Mode feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Read-Only Mode')).toBeInTheDocument();
     expect(
@@ -85,7 +93,7 @@ describe('Features', () => {
   });
 
   it('should render Undo & Redo feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Undo & Redo')).toBeInTheDocument();
     expect(
@@ -94,7 +102,7 @@ describe('Features', () => {
   });
 
   it('should render 68 Languages feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('68 Languages')).toBeInTheDocument();
     expect(
@@ -103,7 +111,7 @@ describe('Features', () => {
   });
 
   it('should render Smart Paste feature', () => {
-    render(<Features />);
+    renderFeatures();
 
     expect(screen.getByText('Smart Paste')).toBeInTheDocument();
     expect(
@@ -112,7 +120,7 @@ describe('Features', () => {
   });
 
   it('should render feature cards with accessible labels', () => {
-    render(<Features />);
+    renderFeatures();
 
     const expectedTitles = [
       'Clean JSON Output',
@@ -129,5 +137,16 @@ describe('Features', () => {
     expectedTitles.forEach((title) => {
       expect(screen.getByRole('button', { name: `Learn more about ${title}` })).toBeInTheDocument();
     });
+  });
+
+  it('should render Russian strings when locale is ru', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+    render(
+      <I18nProvider>
+        <Features />
+      </I18nProvider>
+    );
+    expect(screen.getByText('Почему Blok')).toBeInTheDocument();
+    localStorage.removeItem('blok-docs-locale');
   });
 });

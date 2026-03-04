@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CodeBlock } from "../common/CodeBlock";
 import type { PackageManager } from "../common/PackageManagerToggle";
+import { useI18n } from "../../contexts/I18nContext";
 
 const PACKAGE_NAME = "@jackuait/blok";
 
@@ -21,29 +22,30 @@ const editor = new Blok({
 
 const SAVE_CODE = `const data = await editor.save();`;
 
-const STEPS = [
-  {
-    number: 1,
-    title: "Install Blok",
-    description: "Add Blok to your project using your favorite package manager.",
-    accent: "coral",
-  },
-  {
-    number: 2,
-    title: "Import and configure",
-    description: "Import the editor and tools, then configure your block types.",
-    accent: "orange",
-  },
-  {
-    number: 3,
-    title: "Save content",
-    description: "Extract clean JSON data ready to save anywhere.",
-    accent: "pink",
-  },
-];
-
 export const QuickStart: React.FC = () => {
+  const { t } = useI18n();
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
+
+  const STEPS = [
+    {
+      number: 1,
+      title: t('api.quickStartSteps.install.title'),
+      description: t('api.quickStartSteps.install.description'),
+      accent: "coral",
+    },
+    {
+      number: 2,
+      title: t('api.quickStartSteps.configure.title'),
+      description: t('api.quickStartSteps.configure.description'),
+      accent: "orange",
+    },
+    {
+      number: 3,
+      title: t('api.quickStartSteps.save.title'),
+      description: t('api.quickStartSteps.save.description'),
+      accent: "pink",
+    },
+  ];
 
   // Default install command (fallback, will be overridden by CodeBlock)
   const getInstallCommand = (manager: PackageManager): string => {
@@ -74,9 +76,9 @@ export const QuickStart: React.FC = () => {
       
       <div className="container">
         <div className="section-header quick-start-header">
-          <span className="section-eyebrow">Get Started</span>
-          <h2 className="section-title">Up and running in minutes</h2>
-          <p className="section-description">Three simple steps to integrate Blok into your project</p>
+          <span className="section-eyebrow">{t('home.quickStart.eyebrow')}</span>
+          <h2 className="section-title">{t('home.quickStart.title')}</h2>
+          <p className="section-description">{t('home.quickStart.description')}</p>
         </div>
         
         <div className="install-steps" data-blok-testid="install-steps">

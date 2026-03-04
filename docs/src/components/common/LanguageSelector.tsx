@@ -47,7 +47,7 @@ const FlagIcon = ({ locale }: { locale: Locale }) => {
 };
 
 export const LanguageSelector = () => {
-  const { locale, setLocale, localeNames } = useI18n();
+  const { locale, setLocale, localeNames, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +89,7 @@ export const LanguageSelector = () => {
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        aria-label={`Language: ${localeNames[locale]}`}
+        aria-label={`${t('languageSelector.label')}: ${localeNames[locale]}`}
         type="button"
       >
         <svg 
@@ -112,7 +112,7 @@ export const LanguageSelector = () => {
       <div 
         className={`${styles.dropdown} ${isOpen ? styles.dropdownOpen : ''}`} 
         role="listbox" 
-        aria-label="Select language"
+        aria-label={t('languageSelector.selectLanguage')}
         aria-hidden={!isOpen}
       >
         {locales.map((loc) => (

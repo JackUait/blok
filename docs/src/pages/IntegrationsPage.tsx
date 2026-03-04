@@ -10,11 +10,13 @@ import {
   INTEGRATIONS_SIDEBAR,
   type IntegrationSection,
 } from '../components/integrations/integrations-data';
+import { useI18n } from '../contexts/I18nContext';
 import '../../assets/integrations.css';
 
 // ─── Section renderer ──────────────────────────────────────────────────────
 
 const IntegrationSectionView: React.FC<{ section: IntegrationSection }> = ({ section }) => {
+  const { t } = useI18n();
   if (section.customType === 'install') {
     return (
       <section id={section.id} className="api-section intg-section" aria-label={section.title}>
@@ -56,10 +58,10 @@ const IntegrationSectionView: React.FC<{ section: IntegrationSection }> = ({ sec
           <table className="api-table">
             <thead>
               <tr>
-                <th>Parameter</th>
-                <th>Type</th>
-                <th>Default</th>
-                <th>Description</th>
+                <th>{t('api.parameter')}</th>
+                <th>{t('api.type')}</th>
+                <th>{t('api.default')}</th>
+                <th>{t('api.description')}</th>
               </tr>
             </thead>
             <tbody>
@@ -84,9 +86,9 @@ const IntegrationSectionView: React.FC<{ section: IntegrationSection }> = ({ sec
           <table className="api-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Description</th>
+                <th>{t('api.name')}</th>
+                <th>{t('api.type')}</th>
+                <th>{t('api.description')}</th>
               </tr>
             </thead>
             <tbody>

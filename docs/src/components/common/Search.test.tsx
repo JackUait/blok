@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { I18nProvider } from '../../contexts/I18nContext';
 import { Search } from './Search';
 
 describe('Search', () => {
@@ -10,18 +11,22 @@ describe('Search', () => {
 
   it('should not render when open is false', () => {
     const { queryByPlaceholderText } = render(
-      <MemoryRouter>
-        <Search open={false} onClose={vi.fn()} />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={false} onClose={vi.fn()} />
+        </MemoryRouter>
+      </I18nProvider>
     );
     expect(queryByPlaceholderText('Search docs...')).not.toBeInTheDocument();
   });
 
   it('should render when open is true', () => {
     render(
-      <MemoryRouter>
-        <Search open={true} onClose={vi.fn()} />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      </I18nProvider>
     );
     expect(screen.getByPlaceholderText('Search docs...')).toBeInTheDocument();
   });
@@ -29,9 +34,11 @@ describe('Search', () => {
   it('should close when backdrop is clicked', async () => {
     const onClose = vi.fn();
     render(
-      <MemoryRouter>
-        <Search open={true} onClose={onClose} />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={true} onClose={onClose} />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     const backdrop = screen.getByTestId('search-backdrop');
@@ -47,9 +54,11 @@ describe('Search', () => {
   it('should close when clicking outside the dialog (on container)', async () => {
     const onClose = vi.fn();
     render(
-      <MemoryRouter>
-        <Search open={true} onClose={onClose} />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={true} onClose={onClose} />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     const container = screen.getByTestId('search-container');
@@ -66,9 +75,11 @@ describe('Search', () => {
   it('should not call onClose when clicking inside the dialog', () => {
     const onClose = vi.fn();
     render(
-      <MemoryRouter>
-        <Search open={true} onClose={onClose} />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={true} onClose={onClose} />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     const input = screen.getByPlaceholderText('Search docs...');
@@ -82,9 +93,11 @@ describe('Search', () => {
   it('should close when Escape key is pressed', async () => {
     const onClose = vi.fn();
     render(
-      <MemoryRouter>
-        <Search open={true} onClose={onClose} />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={true} onClose={onClose} />
+        </MemoryRouter>
+      </I18nProvider>
     );
 
     expect(screen.getByPlaceholderText('Search docs...')).toBeInTheDocument();
@@ -98,9 +111,11 @@ describe('Search', () => {
 
   it('should focus input when opened', () => {
     render(
-      <MemoryRouter>
-        <Search open={true} onClose={vi.fn()} />
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter>
+          <Search open={true} onClose={vi.fn()} />
+        </MemoryRouter>
+      </I18nProvider>
     );
     const input = screen.getByPlaceholderText('Search docs...');
     expect(input).toHaveFocus();
@@ -109,9 +124,11 @@ describe('Search', () => {
   describe('module grouping', () => {
     it('should group search results by module', async () => {
       render(
-        <MemoryRouter>
-          <Search open={true} onClose={vi.fn()} />
-        </MemoryRouter>
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
       );
 
       const input = screen.getByPlaceholderText('Search docs...');
@@ -135,9 +152,11 @@ describe('Search', () => {
 
     it('should display module headers in correct order', async () => {
       render(
-        <MemoryRouter>
-          <Search open={true} onClose={vi.fn()} />
-        </MemoryRouter>
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
       );
 
       const input = screen.getByPlaceholderText('Search docs...');
@@ -162,9 +181,11 @@ describe('Search', () => {
 
     it('should show results under their respective module headers', async () => {
       render(
-        <MemoryRouter>
-          <Search open={true} onClose={vi.fn()} />
-        </MemoryRouter>
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
       );
 
       const input = screen.getByPlaceholderText('Search docs...');

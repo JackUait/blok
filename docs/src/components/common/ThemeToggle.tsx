@@ -1,5 +1,6 @@
 import { useTheme } from "@/hooks/useTheme";
 import styles from "./ThemeToggle.module.css";
+import { useI18n } from '../../contexts/I18nContext';
 
 /**
  * Theme toggle button that cycles between light and dark modes.
@@ -7,6 +8,7 @@ import styles from "./ThemeToggle.module.css";
  */
 export const ThemeToggle: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
 
   // Icon based on current theme
   const getIcon = () => {
@@ -19,9 +21,9 @@ export const ThemeToggle: React.FC = () => {
   const getLabel = () => {
     switch (theme) {
       case "light":
-        return "Light theme";
+        return t('theme.light');
       case "dark":
-        return "Dark theme";
+        return t('theme.dark');
     }
   };
 

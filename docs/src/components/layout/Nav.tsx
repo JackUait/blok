@@ -143,7 +143,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
               className={styles.searchButton}
               onClick={() => setSearchOpen(true)}
               type="button"
-              aria-label="Search (⌘K)"
+              aria-label={t('nav.searchAriaLabel')}
             >
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                 <path
@@ -161,7 +161,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
           </div>
           <button
             className={`nav-toggle ${menuOpen ? "active" : ""}`}
-            aria-label="Toggle menu"
+            aria-label={t('nav.toggleMenu')}
             data-nav-toggle
             onClick={() => setMenuOpen(!menuOpen)}
             type="button"

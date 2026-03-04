@@ -179,4 +179,33 @@ describe('Nav', () => {
     expect(screen.getByText('Migration')).toBeInTheDocument();
     expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
+
+  it('should render search button with translated aria-label', () => {
+    render(
+      <TestWrapper>
+        <Nav links={mockLinks} />
+      </TestWrapper>
+    );
+    expect(screen.getByLabelText('Search (⌘K)')).toBeInTheDocument();
+  });
+
+  it('should render translated toggle menu label when locale is Russian', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+    render(
+      <TestWrapper>
+        <Nav links={mockLinks} />
+      </TestWrapper>
+    );
+    expect(screen.getByLabelText('Открыть меню')).toBeInTheDocument();
+  });
+
+  it('should render translated search aria-label when locale is Russian', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+    render(
+      <TestWrapper>
+        <Nav links={mockLinks} />
+      </TestWrapper>
+    );
+    expect(screen.getByLabelText('Поиск (⌘K)')).toBeInTheDocument();
+  });
 });

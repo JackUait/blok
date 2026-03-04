@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeToggle } from './ThemeToggle';
+import { I18nProvider } from '../../contexts/I18nContext';
 
 const { mockToggleTheme } = vi.hoisted(() => ({
   mockToggleTheme: vi.fn(),
@@ -29,14 +30,22 @@ describe('ThemeToggle', () => {
 
   describe('basic rendering', () => {
     it('should render a button with accessible label', () => {
-      render(<ThemeToggle />);
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
 
       const button = screen.getByRole('button', { name: /toggle theme/i });
       expect(button).toBeInTheDocument();
     });
 
     it('should display an icon in the button', () => {
-      render(<ThemeToggle />);
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
 
       const button = screen.getByRole('button');
       const iconWrapper = within(button).getByRole('generic', { name: '' });
@@ -44,7 +53,11 @@ describe('ThemeToggle', () => {
     });
 
     it('should be keyboard accessible', () => {
-      render(<ThemeToggle />);
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
 
       const button = screen.getByRole('button');
       button.focus();
@@ -57,7 +70,11 @@ describe('ThemeToggle', () => {
 
   describe('theme change interaction', () => {
     it('should trigger theme toggle when clicked', () => {
-      render(<ThemeToggle />);
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
 
       const button = screen.getByRole('button');
       fireEvent.click(button);
@@ -76,7 +93,11 @@ describe('ThemeToggle', () => {
         toggleTheme: vi.fn(),
       });
 
-      render(<ThemeToggle />);
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
 
       const button = screen.getByRole('button', { name: /light theme/i });
       expect(button).toBeInTheDocument();
@@ -93,7 +114,11 @@ describe('ThemeToggle', () => {
         toggleTheme: vi.fn(),
       });
 
-      render(<ThemeToggle />);
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
 
       const button = screen.getByRole('button', { name: /dark theme/i });
       expect(button).toBeInTheDocument();

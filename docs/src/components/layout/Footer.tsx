@@ -146,7 +146,7 @@ export const Footer: React.FC = () => {
             </div>
             </div>
             <p className="footer-tagline">
-              A friendly block-based rich text editor for modern applications.
+              {t('footer.tagline')}
               <br />
               <span className="footer-mascot-text">{t('footer.madeWith')} <HeartIcon /></span>
             </p>
@@ -156,25 +156,25 @@ export const Footer: React.FC = () => {
             <div className="footer-column">
               <h4 className="footer-column-title">
                 <BookIcon />
-                <span>Documentation</span>
+                <span>{t('footer.docColumnTitle')}</span>
               </h4>
               <Link to="/#quick-start" className="footer-link">
-                <span>Quick Start</span>
+                <span>{t('footer.quickStart')}</span>
                 <ArrowRightIcon />
               </Link>
               <Link to="/docs" className="footer-link">
-                <span>API Reference</span>
+                <span>{t('footer.apiReference')}</span>
                 <ArrowRightIcon />
               </Link>
               <Link to="/migration" className="footer-link">
-                <span>Migration Guide</span>
+                <span>{t('footer.migrationGuide')}</span>
                 <ArrowRightIcon />
               </Link>
             </div>
             <div className="footer-column">
               <h4 className="footer-column-title">
                 <CodeIcon />
-                <span>Resources</span>
+                <span>{t('footer.resourcesColumnTitle')}</span>
               </h4>
               <a
                 href="https://github.com/JackUait/blok"
@@ -183,7 +183,7 @@ export const Footer: React.FC = () => {
                 rel="noopener noreferrer"
                 data-blok-testid="github-link"
               >
-                <span>GitHub</span>
+                <span>{t('footer.github')}</span>
                 <ArrowRightIcon />
               </a>
               <a
@@ -192,18 +192,18 @@ export const Footer: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span>npm</span>
+                <span>{t('footer.npm')}</span>
                 <ArrowRightIcon />
               </a>
               <Link to="/demo" className="footer-link">
-                <span>Live Demo</span>
+                <span>{t('footer.liveDemo')}</span>
                 <ArrowRightIcon />
               </Link>
             </div>
             <div className="footer-column">
               <h4 className="footer-column-title">
                 <MessageIcon />
-                <span>Community</span>
+                <span>{t('footer.communityColumnTitle')}</span>
               </h4>
               <a
                 href="https://github.com/JackUait/blok/issues"
@@ -211,7 +211,7 @@ export const Footer: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span>Issues</span>
+                <span>{t('footer.issues')}</span>
                 <ArrowRightIcon />
               </a>
               <a
@@ -220,7 +220,7 @@ export const Footer: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span>Discussions</span>
+                <span>{t('footer.discussions')}</span>
                 <ArrowRightIcon />
               </a>
               <a
@@ -229,7 +229,7 @@ export const Footer: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span>Contributing</span>
+                <span>{t('footer.contributing')}</span>
                 <ArrowRightIcon />
               </a>
             </div>
@@ -239,7 +239,7 @@ export const Footer: React.FC = () => {
         <div className="footer-bottom" data-blok-testid="footer-bottom">
           <div className="footer-bottom-content">
             <p className="footer-copyright">
-              &copy; 2026 JackUait. Licensed under{" "}
+              {t('footer.copyrightText')}. {t('footer.licensedUnder')}{" "}
               <a
                 href="https://www.apache.org/licenses/LICENSE-2.0"
                 target="_blank"
@@ -255,7 +255,7 @@ export const Footer: React.FC = () => {
                 className="footer-social-link"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="GitHub"
+                aria-label={t('footer.githubAriaLabel')}
               >
                 <GitHubIcon />
               </a>
@@ -264,7 +264,7 @@ export const Footer: React.FC = () => {
                 className="footer-social-link"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Telegram"
+                aria-label={t('footer.telegramAriaLabel')}
               >
                 <TelegramIcon />
               </a>

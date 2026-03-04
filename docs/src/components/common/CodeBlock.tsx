@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useI18n } from '../../contexts/I18nContext';
 import {
   createHighlighter,
   type Highlighter,
@@ -144,12 +145,14 @@ const createPlainTextHtml = (text: string): string => {
 export const CodeBlock: React.FC<CodeBlockProps> = ({
   code,
   language = "bash",
-  copyLabel = "Copy",
+  copyLabel,
   showPackageManagerToggle = false,
   packageName,
   onPackageManagerChange,
 }) => {
   const { copyToClipboard } = useCopyToClipboard();
+  const { t } = useI18n();
+  const actualCopyLabel = copyLabel ?? t('codeBlock.copy');
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
@@ -250,7 +253,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           data-blok-testid="code-copy-button"
           onClick={handleCopy}
           type="button"
-          aria-label={copied ? "Copied!" : copyLabel}
+          aria-label={copied ? t('codeBlock.copied') : actualCopyLabel}
         >
           {copied ? (
             <svg

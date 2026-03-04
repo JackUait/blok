@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -14,6 +14,10 @@ const renderFooter = () =>
   );
 
 describe('Footer', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('should render a footer element', () => {
     renderFooter();
     const footer = screen.getByRole('contentinfo');
@@ -97,5 +101,14 @@ describe('Footer', () => {
     renderFooter();
 
     expect(screen.getByTestId('footer-bottom')).toBeInTheDocument();
+  });
+
+  it('should render translated strings when locale is Russian', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+    renderFooter();
+    expect(screen.getByText('Документация')).toBeInTheDocument();
+    expect(screen.getByText('Быстрый старт')).toBeInTheDocument();
+    expect(screen.getByText('Справочник API')).toBeInTheDocument();
+    expect(screen.getByText('Руководство по миграции')).toBeInTheDocument();
   });
 });

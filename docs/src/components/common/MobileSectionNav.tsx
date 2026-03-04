@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useI18n } from '../../contexts/I18nContext';
 import type { SidebarSection } from '../common/Sidebar';
 
 interface MobileSectionNavProps {
@@ -11,13 +12,14 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
   activeSection,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useI18n();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Find current section label
   const currentLabel = sections
     .flatMap((s) => s.links)
-    .find((link) => link.id === activeSection)?.label ?? 'Select section';
+    .find((link) => link.id === activeSection)?.label ?? t('common.selectSection');
     
   // Find current section title
   const currentSectionTitle = sections.find((s) =>

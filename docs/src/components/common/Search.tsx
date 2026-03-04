@@ -7,6 +7,7 @@ import { ModuleIcon } from './ModuleIcon';
 import buttonStyles from './SearchButton.module.css';
 import dialogStyles from './SearchDialog.module.css';
 import resultsStyles from './SearchResults.module.css';
+import { useI18n } from '../../contexts/I18nContext';
 
 // Combined styles object consolidating the split CSS modules
 const styles = { ...buttonStyles, ...dialogStyles, ...resultsStyles };
@@ -107,6 +108,7 @@ const CLOSE_ANIMATION_MS = 200;
 
 export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -161,12 +163,14 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   }, [isClosing, onClose]);
 
   // Disable body scroll when modal is open
+  // Set overflow on <html> not <body> — the portal renders fixed children directly
+  // inside <body>, and overflow:hidden on body clips its fixed children in some browsers.
   useEffect(() => {
     if (open) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
+      const originalOverflow = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = 'hidden';
       return () => {
-        document.body.style.overflow = originalOverflow;
+        document.documentElement.style.overflow = originalOverflow;
       };
     }
   }, [open]);
@@ -379,7 +383,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
               ref={inputRef}
               type="text"
               className={styles['search-input']}
-              placeholder="Search docs..."
+              placeholder={t('search.placeholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -390,8 +394,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                 className={styles['search-clear']}
                 onClick={() => setQuery('')}
                 type="button"
-                aria-label="Clear search"
-              >
+                aria-label={t('search.clearSearch')}              >
                 <svg
                   width="16"
                   height="16"
@@ -407,7 +410,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                 </svg>
               </button>
             )}
-            <kbd className={styles['search-shortcut']}>ESC</kbd>
+            <kbd className={styles['search-shortcut']}>{t('search.escKey')}</kbd>
           </div>
 
           <div className={styles['search-results']} ref={resultsRef}>
@@ -443,9 +446,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                         />
                       </svg>
                     </div>
-                    <p className={styles['search-empty-title']}>No results found</p>
+                    <p className={styles['search-empty-title']}>{t('search.noResultsTitle')}</p>
                     <p className={styles['search-empty-description']}>
-                      Try different keywords or browse the documentation sections
+                      {t('search.noResultsDescription')}
                     </p>
                   </>
                 ) : (
@@ -472,9 +475,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                         />
                       </svg>
                     </div>
-                    <p className={styles['search-empty-title']}>Search Blok docs</p>
+                    <p className={styles['search-empty-title']}>{t('search.emptyTitle')}</p>
                     <p className={styles['search-empty-description']}>
-                      Find API methods, configuration options, tools, and more
+                      {t('search.emptyDescription')}
                     </p>
                   </>
                 )}
@@ -548,9 +551,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
 
           <div className={styles['search-footer']}>
             <span className={styles['search-footer-hint']}>
-              <kbd>↑↓</kbd> navigate
+              <kbd>↑↓</kbd> {t('search.navigate')}
               <span className={styles['search-footer-separator']} />
-              <kbd>↵</kbd> select
+              <kbd>↵</kbd> {t('search.select')}
             </span>
           </div>
         </div>

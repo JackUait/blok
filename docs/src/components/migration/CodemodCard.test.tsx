@@ -1,29 +1,46 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { CodemodCard } from './CodemodCard';
+import { I18nProvider } from '../../contexts/I18nContext';
 
 describe('CodemodCard', () => {
   it('should render a div with codemod-card class', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('codemod-card')).toBeInTheDocument();
   });
 
   it('should render the codemod icon', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('codemod-icon')).toBeInTheDocument();
   });
 
   it('should render the title and badge', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByText('Codemod')).toBeInTheDocument();
     expect(screen.getByText('Automated')).toBeInTheDocument();
   });
 
   it('should render the description', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(
       screen.getByText(/Our codemod handles imports, selectors, types, and configuration automatically/)
@@ -31,14 +48,22 @@ describe('CodemodCard', () => {
   });
 
   it('should render two tabs', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByText('Preview')).toBeInTheDocument();
     expect(screen.getByText('Apply')).toBeInTheDocument();
   });
 
   it('should have dry-run tab active by default', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     const dryRunTab = screen.getByTestId('codemod-tab-dry-run');
     expect(dryRunTab).toHaveClass('active');
@@ -48,7 +73,11 @@ describe('CodemodCard', () => {
   });
 
   it('should switch to apply tab when clicked', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     const applyTab = screen.getByTestId('codemod-tab-apply');
     fireEvent.click(applyTab);
@@ -60,7 +89,11 @@ describe('CodemodCard', () => {
   });
 
   it('should render dry-run code by default', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     // CodeBlock stores code in data-code attribute for copy functionality
     // Query within the dry-run panel to get the correct copy button
@@ -70,7 +103,11 @@ describe('CodemodCard', () => {
   });
 
   it('should render apply code when apply tab is active', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     const applyTab = screen.getByTestId('codemod-tab-apply');
     fireEvent.click(applyTab);
@@ -82,13 +119,21 @@ describe('CodemodCard', () => {
   });
 
   it('should render codemod-options section', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByText('Options')).toBeInTheDocument();
   });
 
   it('should render the options table', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     // Use getAllByText since --dry-run appears in both the code block and options
     expect(screen.getAllByText('--dry-run').length).toBeGreaterThanOrEqual(1);
@@ -97,7 +142,11 @@ describe('CodemodCard', () => {
   });
 
   it('should render option descriptions', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByText('Preview changes without modifying files')).toBeInTheDocument();
     expect(screen.getByText('Show detailed output for each file processed')).toBeInTheDocument();
@@ -105,39 +154,63 @@ describe('CodemodCard', () => {
   });
 
   it('should have codemod-tabs div', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('codemod-tabs')).toBeInTheDocument();
   });
 
   it('should have codemod-tab buttons', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('codemod-tab-dry-run')).toBeInTheDocument();
     expect(screen.getByTestId('codemod-tab-apply')).toBeInTheDocument();
   });
 
   it('should have codemod-content div', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('codemod-content')).toBeInTheDocument();
   });
 
   it('should have codemod-panel divs', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('codemod-panel-dry-run')).toBeInTheDocument();
     expect(screen.getByTestId('codemod-panel-apply')).toBeInTheDocument();
   });
 
   it('should have codemod-options div', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     expect(screen.getByTestId('codemod-options')).toBeInTheDocument();
   });
 
   it('should have codemod-options-title h4', () => {
-    render(<CodemodCard />);
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
 
     const title = screen.getByTestId('codemod-options-title');
     expect(title).toHaveTextContent('Options');

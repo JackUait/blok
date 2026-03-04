@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from '../../contexts/I18nContext';
 
 export type PackageManager = "yarn" | "npm" | "bun";
 
@@ -12,6 +13,7 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
   onChange,
 }) => {
   const [selected, setSelected] = useState<PackageManager>("yarn");
+  const { t } = useI18n();
 
   const handleClick = (manager: PackageManager) => {
     setSelected(manager);
@@ -27,7 +29,7 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
           className={`package-manager-option ${selected === manager ? "active" : ""}`}
           onClick={() => handleClick(manager)}
           aria-pressed={selected === manager}
-          aria-label={`Switch to ${manager} command`}
+          aria-label={`${t('packageManagerToggle.switchAriaPrefix')} ${manager}`}
         >
           {manager}
         </button>

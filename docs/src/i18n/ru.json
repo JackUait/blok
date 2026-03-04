@@ -9,13 +9,13 @@
     "changelog": "История изменений",
     "github": "GitHub",
     "searchAriaLabel": "Поиск (⌘K)",
-    "toggleMenu": "Меню навигации"
+    "toggleMenu": "Открыть меню навигации"
   },
   "common": {
-    "filter": "Фильтр...",
+    "filter": "Фильтровать...",
     "clearSearch": "Очистить поиск",
     "noResults": "Нет результатов",
-    "selectSection": "Выбор раздела",
+    "selectSection": "Выберите раздел",
     "unknownError": "Неизвестная ошибка",
     "pressSlashToSearch": "Нажмите / для поиска"
   },
@@ -492,7 +492,7 @@
     "migrationGuide": "Руководство по миграции",
     "github": "GitHub",
     "npm": "npm",
-    "liveDemo": "Демонстрация",
+    "liveDemo": "Демо",
     "issues": "Задачи",
     "discussions": "Обсуждения",
     "contributing": "Участие в проекте",
@@ -503,7 +503,7 @@
   },
   "languageSelector": {
     "label": "Язык",
-    "selectLanguage": "Выбор языка"
+    "selectLanguage": "Выберите язык"
   },
   "search": {
     "placeholder": "Поиск по документации...",

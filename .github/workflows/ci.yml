@@ -31,6 +31,9 @@ jobs:
       - name: Check translations
         run: node scripts/i18n/check-translations.mjs
 
+      - name: Check docs translations
+        run: node scripts/i18n/check-docs-translations.mjs
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

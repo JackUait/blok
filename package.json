@@ -85,6 +85,7 @@
     "lint:types": "tsc --noEmit",
     "i18n:audit": "node scripts/i18n-audit.js",
     "i18n:check": "node scripts/i18n/check-translations.mjs",
+    "i18n:check:docs": "node scripts/i18n/check-docs-translations.mjs",
     "typography:check": "node scripts/typography-finder/cli.mjs",
     "e2e": "yarn build:test && playwright test",
     "e2e:smoke": "yarn build:test && playwright test --project=chromium --grep=\"@smoke\"",

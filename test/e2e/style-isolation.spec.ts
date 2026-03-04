@@ -1,4 +1,65 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import type { Blok, OutputData } from '@/types';
+import { BLOK_INTERFACE_SELECTOR } from '../../src/components/constants';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../playwright/tests/helpers/ensure-build';
+
+declare global {
+  interface Window {
+    blokInstance?: Blok;
+  }
+}
+
+const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const POPOVER_SELECTOR = '[data-blok-popover]';
+
+const resetBlok = async (page: Page): Promise<void> => {
+  await page.evaluate(async ({ holder }) => {
+    if (window.blokInstance) {
+      await window.blokInstance.destroy?.();
+      window.blokInstance = undefined;
+    }
+
+    document.getElementById(holder)?.remove();
+
+    const container = document.createElement('div');
+
+    container.id = holder;
+    document.body.appendChild(container);
+  }, { holder: HOLDER_ID });
+};
+
+const createBlok = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
+
+  await page.evaluate(
+    async ({ holder, blokBlocks }) => {
+      const blok = new window.Blok({
+        holder,
+        data: { blocks: blokBlocks },
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    },
+    { holder: HOLDER_ID, blokBlocks: blocks }
+  );
+};
+
+const openToolbox = async (page: Page): Promise<void> => {
+  const firstBlock = page.locator(PARAGRAPH_SELECTOR).first();
+
+  await firstBlock.hover();
+
+  const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+  await expect(plusButton).toBeVisible();
+  await plusButton.click();
+  await page.waitForSelector(`${POPOVER_SELECTOR}[data-blok-popover-opened]`, { state: 'attached' });
+};
 
 /**
  * These tests verify that Blok's UI is isolated from host-page styles.
@@ -8,18 +69,22 @@ import { test, expect } from '@playwright/test';
  * 2. Explicit targeting of Blok selectors still applies styles (user overrides work).
  */
 test.describe('Style isolation', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-blok-testid="blok-editor"]');
+    await page.goto(TEST_PAGE_URL);
   });
 
   test('host body font-family does not cascade into editor wrapper', async ({ page }) => {
-    // Inject aggressive host-page font styles
     await page.addStyleTag({
       content: `body { font-family: 'Times New Roman', serif !important; }`,
     });
 
-    const editorFontFamily = await page.locator('[data-blok-interface]').evaluate(
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+
+    const editorFontFamily = await page.locator(BLOK_INTERFACE_SELECTOR).evaluate(
       (el) => window.getComputedStyle(el).fontFamily
     );
 
@@ -31,7 +96,9 @@ test.describe('Style isolation', () => {
       content: `* { color: rgb(255, 0, 0) !important; }`,
     });
 
-    const editorColor = await page.locator('[data-blok-interface]').evaluate(
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+
+    const editorColor = await page.locator(BLOK_INTERFACE_SELECTOR).evaluate(
       (el) => window.getComputedStyle(el).color
     );
 
@@ -43,11 +110,10 @@ test.describe('Style isolation', () => {
       content: `body { font-family: 'Times New Roman', serif !important; }`,
     });
 
-    // Open the toolbox via + button
-    await page.getByTestId('toolbox-toggler').click();
-    await page.waitForSelector('[data-blok-popover]');
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+    await openToolbox(page);
 
-    const popoverFontFamily = await page.locator('[data-blok-popover]').first().evaluate(
+    const popoverFontFamily = await page.locator(POPOVER_SELECTOR).first().evaluate(
       (el) => window.getComputedStyle(el).fontFamily
     );
 
@@ -59,10 +125,10 @@ test.describe('Style isolation', () => {
       content: `* { color: rgb(255, 0, 0) !important; }`,
     });
 
-    await page.getByTestId('toolbox-toggler').click();
-    await page.waitForSelector('[data-blok-popover]');
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+    await openToolbox(page);
 
-    const popoverColor = await page.locator('[data-blok-popover]').first().evaluate(
+    const popoverColor = await page.locator(POPOVER_SELECTOR).first().evaluate(
       (el) => window.getComputedStyle(el).color
     );
 
@@ -72,10 +138,12 @@ test.describe('Style isolation', () => {
   test('explicit targeting of [data-blok-interface] still applies styles', async ({ page }) => {
     // User explicitly targets Blok's wrapper — this SHOULD work
     await page.addStyleTag({
-      content: `[data-blok-interface] { color: rgb(0, 128, 0) !important; }`,
+      content: `${BLOK_INTERFACE_SELECTOR} { color: rgb(0, 128, 0) !important; }`,
     });
 
-    const editorColor = await page.locator('[data-blok-interface]').evaluate(
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+
+    const editorColor = await page.locator(BLOK_INTERFACE_SELECTOR).evaluate(
       (el) => window.getComputedStyle(el).color
     );
 

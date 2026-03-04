@@ -176,6 +176,13 @@
   letter-spacing: -0.01em;
 }
 
+/* The search input is always inside an unmissable modal dialog — no focus ring needed.
+   The global :focus-visible rule must be explicitly overridden here because
+   browsers always trigger :focus-visible on text inputs regardless of input method. */
+.search-input:focus-visible {
+  outline: none;
+}
+
 .search-input::placeholder {
   color: var(--color-text-tertiary);
   font-weight: 400;

@@ -34,6 +34,19 @@ h1, h2, h3 {
   border-radius: var(--radius-sm);
 }
 
+/* Suppress native :focus-visible outline on text inputs and contenteditable elements.
+   - Inputs/textareas: browsers always trigger :focus-visible on click (per spec).
+   - contenteditable: Blok editor manages its own visual focus state; the global
+     outline overrides the editor's outline-hidden utility classes.
+   The outline-offset on the global rule also causes the ring to bleed outside element
+   bounds through overflow:hidden containers. */
+input:focus-visible,
+textarea:focus-visible,
+[contenteditable]:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
 /* Selection highlight */
 ::selection {
   background: rgba(240, 123, 75, 0.25);

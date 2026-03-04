@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "../../contexts/I18nContext";
 
@@ -41,7 +42,7 @@ const IconBroadcast: React.FC = () => (
 export const ApiPreview: React.FC = () => {
   const { t } = useI18n();
 
-  const API_DATA: ApiCard[] = [
+  const API_DATA = useMemo<ApiCard[]>(() => [
     {
       title: t('home.apiPreview.coreMethods.title'),
       icon: <IconBolt />,
@@ -121,7 +122,7 @@ export const ApiPreview: React.FC = () => {
         },
       ],
     },
-  ];
+  ], [t]);
 
   return (
     <section className="api" id="api" data-blok-testid="api-preview-section">

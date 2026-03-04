@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CodeBlock } from "../common/CodeBlock";
 import type { PackageManager } from "../common/PackageManagerToggle";
 import { useI18n } from "../../contexts/I18nContext";
@@ -26,7 +26,7 @@ export const QuickStart: React.FC = () => {
   const { t } = useI18n();
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
 
-  const STEPS = [
+  const STEPS = useMemo(() => [
     {
       number: 1,
       title: t('api.quickStartSteps.install.title'),
@@ -45,7 +45,7 @@ export const QuickStart: React.FC = () => {
       description: t('api.quickStartSteps.save.description'),
       accent: "pink",
     },
-  ];
+  ], [t]);
 
   // Default install command (fallback, will be overridden by CodeBlock)
   const getInstallCommand = (manager: PackageManager): string => {

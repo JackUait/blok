@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { useI18n } from "../../contexts/I18nContext";
 
@@ -9,7 +9,7 @@ export const Features: React.FC = () => {
     null,
   );
 
-  const FEATURES: FeatureDetail[] = [
+  const FEATURES = useMemo<FeatureDetail[]>(() => [
     {
       icon: (
         <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
@@ -393,7 +393,7 @@ console.log(editor.readOnly.isEnabled);`,
         ],
       },
     },
-  ];
+  ], [t]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

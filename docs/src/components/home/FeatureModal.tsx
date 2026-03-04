@@ -115,8 +115,8 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
             <div className="feature-modal-benefits">
               <h3>{t('home.featureModal.keyBenefits')}</h3>
               <ul>
-                {feature.details.benefits.map((benefit, index) => (
-                  <li key={index}>{benefit}</li>
+                {feature.details.benefits.map((benefit) => (
+                  <li key={benefit}>{benefit}</li>
                 ))}
               </ul>
             </div>

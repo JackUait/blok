@@ -101,6 +101,13 @@ describe('FeatureModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('should NOT call onClose when clicking inside modal content', () => {
+    const onClose = vi.fn();
+    renderModal(mockFeature, onClose);
+    fireEvent.click(screen.getByText('Output is clean JSON, not HTML.'));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('should have aria-modal="true" on the dialog', () => {
     renderModal();
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');

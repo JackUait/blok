@@ -354,7 +354,7 @@
       },
       "undoRedo": {
         "title": "Отмена и повтор",
-        "description": "История на CRDT с Cmd+Z / Cmd+Shift+Z. Безконфликтное отслеживание изменений.",
+        "description": "История на CRDT с Cmd+Z / Cmd+Shift+Z. Бесконфликтное отслеживание изменений.",
         "learnMore": "Подробнее об отмене и повторе"
       },
       "languages": {

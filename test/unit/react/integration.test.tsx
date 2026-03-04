@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, within, fireEvent } from '@testing-library/react';
 import { useBlok } from '../../../src/react/useBlok';
 import { BlokContent } from '../../../src/react/BlokContent';
 import type { UseBlokConfig } from '../../../src/react/types';
@@ -90,7 +90,7 @@ describe('React adapter integration', () => {
 
     // Editor DOM should be visible inside the container
     const container = screen.getByTestId('editor-container');
-    expect(container.querySelector('[data-blok-editor]')).not.toBeNull();
+    expect(within(container).getByText('Editor loaded')).toBeInTheDocument();
   });
 
   it('should allow calling editor.save() via the returned instance', async () => {
@@ -100,7 +100,7 @@ describe('React adapter integration', () => {
     expect(screen.getByTestId('status').textContent).toBe('ready');
 
     // Click save
-    screen.getByTestId('save').click();
+    fireEvent.click(screen.getByTestId('save'));
 
     // The last created instance is the one exposed to the component
     const activeInstance = mockBlokInstances[mockBlokInstances.length - 1];

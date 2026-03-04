@@ -25,7 +25,7 @@ describe('BlokContent', () => {
     const div = screen.getByTestId('content');
 
     expect(div).toBeInstanceOf(HTMLDivElement);
-    expect(div.children).toHaveLength(0);
+    expect(div).toBeEmptyDOMElement();
   });
 
   it('should pass className to the container div', () => {
@@ -64,12 +64,15 @@ describe('BlokContent', () => {
       <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
     );
 
-    // Holder is in the container
-    expect(mockHolder.parentElement).not.toBeNull();
+    // Holder is in the container — verify via its text content being present
+    expect(screen.getByText('editor-content')).toBeInTheDocument();
 
     unmount();
 
-    // After unmount, holder should be removed (detached from DOM)
+    // After unmount, holder should be removed (detached from DOM).
+    // Direct node access is necessary here: after unmount there is no rendered tree
+    // to query, and we need to verify the cleanup effect detached this specific DOM node.
+    // eslint-disable-next-line testing-library/no-node-access
     expect(mockHolder.parentElement).toBeNull();
   });
 });

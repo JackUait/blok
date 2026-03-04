@@ -124,6 +124,8 @@ describe('useBlok', () => {
     expect(instance.destroy).toHaveBeenCalledTimes(1);
     expect(removeHolder).toHaveBeenCalled();
 
+    // No additional editor instances were created during cleanup
+    expect(mockBlokInstances).toHaveLength(1);
   });
 
   it('should reuse editor instance on StrictMode remount (cleanup then re-run)', async () => {
@@ -255,6 +257,7 @@ describe('useBlok', () => {
     // Verify the editor is still the same instance (focus didn't recreate)
     expect(result.current).not.toBeNull();
     expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
   });
 
   it('should return null during SSR (initial render before useEffect)', () => {
@@ -329,5 +332,6 @@ describe('useBlok', () => {
     // Verify no editor recreation occurred — still same instance
     expect(result.current).not.toBeNull();
     expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
   });
 });

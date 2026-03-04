@@ -23,7 +23,7 @@ test.describe('React adapter', () => {
     await expect(editorContainer.locator('[data-blok-editor]')).toBeVisible();
 
     // There should be an editable paragraph with initial content
-    const paragraph = editorContainer.locator('[contenteditable="true"]').first();
+    const paragraph = editorContainer.locator('[contenteditable="true"]').filter({ hasText: 'Hello from React' });
 
     await expect(paragraph).toBeVisible();
     await expect(paragraph).toContainText('Hello from React');
@@ -44,7 +44,7 @@ test.describe('React adapter', () => {
 
     // Editor should initially be editable
     const editorContainer = page.getByTestId('editor-container');
-    const paragraph = editorContainer.locator('[contenteditable]').first();
+    const paragraph = editorContainer.locator('[contenteditable]').filter({ hasText: 'Hello from React' });
 
     await expect(paragraph).toHaveAttribute('contenteditable', 'true');
 

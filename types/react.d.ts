@@ -1,5 +1,6 @@
 import type { BlokConfig } from './index';
 import type { Blok } from './index';
+import type React from 'react';
 
 /**
  * Configuration for the useBlok hook.

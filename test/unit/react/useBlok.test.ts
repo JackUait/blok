@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import type { UseBlokConfig } from '../../../src/react/types';
 
 /**
@@ -152,30 +153,48 @@ describe('useBlok', () => {
     expect(mockBlokInstances).toHaveLength(1);
   });
 
-  it('should reuse editor instance on StrictMode remount (cleanup then re-run)', async () => {
+  it('should short-circuit deferDestroy when editor is already null before timer fires', async () => {
+    // J2: deferDestroy queues a setTimeout(0), but before the timer fires the
+    // editor has already been cleaned up by another path (deps change).
+    // The timer body must see state.editor === null and do nothing.
+    //
+    // Scenario:
+    //   1. Render with dep1 → editor A created
+    //   2. Change to dep2 → cleanup runs (deferDestroy queued for A) → new effect
+    //      runs synchronously, cancels the timer, destroys A directly, creates B
+    //   3. Run all timers → the deferred timer for A was already cancelled, so no
+    //      extra destroy call on A
     const config: UseBlokConfig = {};
 
-    const { result, unmount } = renderHook(() => useBlok(config));
+    const { result, rerender } = renderHook(
+      ({ d }: { d: string[] }) => useBlok(config, d),
+      { initialProps: { d: ['dep1'] } }
+    );
 
     await flushAll();
+    // First editor is active
+    expect(mockBlokInstances).toHaveLength(1);
+    const firstInstance = mockBlokInstances[0];
 
-    const firstEditor = result.current;
+    // Change deps — synchronous cleanup queues deferDestroy; then the new effect
+    // immediately cancels that timer, destroys A directly, and creates B.
+    rerender({ d: ['dep2'] });
+    await flushAll();
 
-    expect(firstEditor).not.toBeNull();
-    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    // Second editor created; first was destroyed by the sync path (not the timer)
+    expect(mockBlokInstances).toHaveLength(2);
+    expect(firstInstance.destroy).toHaveBeenCalledTimes(1);
 
-    // StrictMode: the deferred destroy mechanism means if cleanup runs
-    // and the effect re-runs before the setTimeout fires, the timer is
-    // cancelled and the existing editor is reused (only 1 constructor call).
-    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
-
-    // Verify the hook still returns the same editor instance (reuse, not recreate)
-    expect(result.current).toBe(firstEditor);
-
-    unmount();
+    // Run all remaining timers — the deferDestroy for A was cancelled, so no
+    // additional destroy calls occur. The hook returns the second editor.
     act(() => {
       vi.runAllTimers();
     });
+
+    // First editor was destroyed exactly once (by sync path, not by timer)
+    expect(firstInstance.destroy).toHaveBeenCalledTimes(1);
+    // Hook still returns the second (live) editor
+    expect(result.current).toBeDefined();
   });
 
   it('should recreate editor when deps change', async () => {
@@ -284,7 +303,7 @@ describe('useBlok', () => {
     expect(mockBlokInstances).toHaveLength(1);
   });
 
-  it('should return null during SSR (initial render before useEffect)', () => {
+  it('should return null on initial render before useEffect runs', () => {
     // useEffect doesn't run during SSR; hook returns null from useState initial value
     const config: UseBlokConfig = {};
 
@@ -528,6 +547,132 @@ describe('useBlok', () => {
     // We check by verifying the current editor's destroy is the second instance's destroy
     expect(result.current).not.toBeNull();
     expect((result.current as unknown as MockBlokInstance).destroy).toBe(secondInstance.destroy);
+  });
+
+  it('should ignore stale isReady rejection when editor has already been replaced by deps change', async () => {
+    // G2: isReady rejects for the FIRST editor AFTER deps changed and the second
+    // editor is already active.  The rejection handler checks `state.editor === blok`;
+    // since state.editor now points to the second instance, it must do nothing
+    // (no destroy of second editor, no setEditor(null)).
+    const rejectFn: { current: ((err: Error) => void) | null } = { current: null };
+
+    nextIsReadyOverride = new Promise<void>((_resolve, reject) => {
+      rejectFn.current = reject;
+    });
+
+    const config: UseBlokConfig = {};
+
+    const { result, rerender } = renderHook(
+      ({ d }: { d: string[] }) => useBlok(config, d),
+      { initialProps: { d: ['dep1'] } }
+    );
+
+    // isReady for first editor is pending — still null
+    expect(result.current).toBeNull();
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+
+    // Change deps — destroys first editor (state.editor now points to second),
+    // creates second editor whose isReady resolves immediately.
+    rerender({ d: ['dep2'] });
+
+    await flushAll();
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    // Second editor is active
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(2);
+    expect(result.current).not.toBeNull();
+
+    const secondInstance = mockBlokInstances[1];
+
+    // Now reject the FIRST editor's isReady — the guard (state.editor === blok)
+    // must prevent any side-effects on the second editor.
+    await act(async () => {
+      rejectFn.current?.(new Error('first editor init failed'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Second editor is still active — rejection handler was a no-op
+    expect(result.current).not.toBeNull();
+    expect((result.current as unknown as MockBlokInstance).destroy).toBe(secondInstance.destroy);
+
+    // Second editor's destroy was NOT called by the stale rejection handler
+    expect(secondInstance.destroy).not.toHaveBeenCalled();
+  });
+
+  it('should swallow destroy() error and still clean up state when isReady rejects', async () => {
+    // G1: isReady rejects AND destroy() also throws during the catch handler.
+    // The hook must swallow both errors and still clean up state.
+    const rejectFn: { current: ((err: Error) => void) | null } = { current: null };
+
+    nextIsReadyOverride = new Promise<void>((_resolve, reject) => {
+      rejectFn.current = reject;
+    });
+
+    nextDestroyOverride = vi.fn().mockImplementation(() => {
+      throw new Error('destroy crashed too');
+    });
+
+    const config: UseBlokConfig = {};
+
+    const { result } = renderHook(() => useBlok(config));
+
+    expect(result.current).toBeNull();
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+
+    const instance = mockBlokInstances[0];
+
+    // Reject isReady — destroy() will also throw inside the catch handler.
+    // The act() must complete without throwing (errors are swallowed).
+    await act(async () => {
+      rejectFn.current?.(new Error('init failed'));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Editor should be null — state was cleaned up despite destroy throwing
+    expect(result.current).toBeNull();
+
+    // destroy() was attempted
+    expect(instance.destroy).toHaveBeenCalledTimes(1);
+
+    // removeHolder was still called (before the destroy attempt)
+    expect(removeHolder).toHaveBeenCalled();
+  });
+
+  it('should not create an editor during server-side rendering (SSR guard)', () => {
+    // The hook has `if (typeof window === 'undefined') { return; }` inside useEffect.
+    //
+    // NOTE: Setting globalThis.window = undefined while using renderHook is not feasible:
+    // React DOM reads window.event during rendering, so it would crash before our guard.
+    // useEffect also runs synchronously inside renderHook's act(), leaving no timing window
+    // in which to patch window between React DOM init and our effect executing.
+    //
+    // Instead we test the observable SSR contract using react-dom/server renderToString:
+    // in a real SSR environment, useEffect never runs at all.  Therefore no Blok
+    // constructor is called and the hook returns its useState initial value (null).
+    // This is the real-world scenario the guard protects against.
+
+    // Suppress the React "not wrapped in act()" warning that renderToString triggers
+    // when a state update occurs during SSR. This is expected behaviour in this test.
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    let capturedResult: ReturnType<typeof useBlok> | undefined;
+
+    function TestComponent(): React.ReactElement {
+      capturedResult = useBlok({});
+      return React.createElement(React.Fragment, null);
+    }
+
+    // renderToString is a synchronous SSR pass — useEffect does NOT run
+    renderToString(React.createElement(TestComponent));
+
+    consoleErrorSpy.mockRestore();
+
+    // No Blok constructor was called during SSR
+    expect(MockBlokConstructor).not.toHaveBeenCalled();
+    // The hook returned the useState initial value: null
+    expect(capturedResult).toBeNull();
   });
 
   it('should reuse editor in React.StrictMode (actual wrapper)', async () => {

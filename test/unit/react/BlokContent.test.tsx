@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import React from 'react';
 import { setHolder } from '../../../src/react/holder-map';
 
 import { BlokContent } from '../../../src/react/BlokContent';
@@ -105,5 +106,60 @@ describe('BlokContent', () => {
     // New holder should be adopted
     expect(div.contains(mockHolderB)).toBe(true);
     expect(div.textContent).toBe('editor-b-content');
+  });
+
+  it('should call a function ref with the container HTMLDivElement (A1)', () => {
+    const callbackRef = vi.fn<(node: HTMLDivElement | null) => void>();
+
+    render(<BlokContent editor={null} ref={callbackRef} data-testid="content" />);
+
+    expect(callbackRef).toHaveBeenCalledTimes(1);
+    const receivedNode = callbackRef.mock.calls[0][0];
+    expect(receivedNode).toBeInstanceOf(HTMLDivElement);
+    expect(receivedNode).toBe(screen.getByTestId('content'));
+  });
+
+  it('should assign the container HTMLDivElement to an object ref (A2)', () => {
+    const objectRef = React.createRef<HTMLDivElement>();
+
+    render(<BlokContent editor={null} ref={objectRef} data-testid="content" />);
+
+    expect(objectRef.current).toBeInstanceOf(HTMLDivElement);
+    expect(objectRef.current).toBe(screen.getByTestId('content'));
+  });
+
+  it('should render an empty container without throwing when editor has no registered holder (C1)', () => {
+    const editorWithoutHolder: Record<string, unknown> = {};
+
+    expect(() => {
+      render(
+        <BlokContent
+          editor={editorWithoutHolder as unknown as Parameters<typeof BlokContent>[0]['editor']}
+          data-testid="content"
+        />
+      );
+    }).not.toThrow();
+
+    const div = screen.getByTestId('content');
+
+    expect(div).toBeInstanceOf(HTMLDivElement);
+    expect(div).toBeEmptyDOMElement();
+  });
+
+  it('should remove the holder from the container when editor changes to null', () => {
+    setHolder(mockEditor, mockHolder);
+
+    const { rerender } = render(
+      <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+    );
+
+    // Holder is in the container
+    expect(screen.getByText('editor-content')).toBeInTheDocument();
+
+    rerender(<BlokContent editor={null} data-testid="content" />);
+
+    // After switching editor to null, the cleanup effect should have detached the holder
+    // eslint-disable-next-line testing-library/no-node-access
+    expect(mockHolder.parentElement).toBeNull();
   });
 });

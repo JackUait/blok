@@ -90,16 +90,16 @@ test.describe('Dark theme', () => {
       await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
     });
 
-    test('--blok-popover-bg resolves to dark value (#1e2330)', async ({ page }) => {
+    test('--blok-popover-bg resolves to dark value (#252525)', async ({ page }) => {
       const value = await getCustomProperty(page, '--blok-popover-bg');
 
-      expect(value).toBe('#1e2330');
+      expect(value).toBe('#252525');
     });
 
-    test('--blok-text-primary resolves to dark value (#e2e8f0)', async ({ page }) => {
+    test('--blok-text-primary resolves to dark value (#f0efed)', async ({ page }) => {
       const value = await getCustomProperty(page, '--blok-text-primary');
 
-      expect(value).toBe('#e2e8f0');
+      expect(value).toBe('#f0efed');
     });
   });
 
@@ -111,10 +111,10 @@ test.describe('Dark theme', () => {
       await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
     });
 
-    test('--blok-popover-bg resolves to dark value (#1e2330)', async ({ page }) => {
+    test('--blok-popover-bg resolves to dark value (#252525)', async ({ page }) => {
       const value = await getCustomProperty(page, '--blok-popover-bg');
 
-      expect(value).toBe('#1e2330');
+      expect(value).toBe('#252525');
     });
 
     test('explicit data-blok-theme="light" overrides system dark preference', async ({ page }) => {

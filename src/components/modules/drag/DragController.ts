@@ -357,18 +357,19 @@ export class DragController extends Module {
       if (parentIsBeingMoved) {
         continue;
       }
-      if (movedBlock.parentId !== newParentId) {
-        const oldParentId = movedBlock.parentId;
-
-        if (oldParentId !== null) {
-          affectedParentIds.add(oldParentId);
-        }
-        if (newParentId !== null) {
-          affectedParentIds.add(newParentId);
-        }
-        this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
-        reparentedBlocks.push(movedBlock);
+      if (movedBlock.parentId === newParentId) {
+        continue;
       }
+      const oldParentId = movedBlock.parentId;
+
+      if (oldParentId !== null) {
+        affectedParentIds.add(oldParentId);
+      }
+      if (newParentId !== null) {
+        affectedParentIds.add(newParentId);
+      }
+      this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
+      reparentedBlocks.push(movedBlock);
     }
 
     // Notify affected parent blocks so toggle tools update their visual state
@@ -470,12 +471,13 @@ export class DragController extends Module {
     const affectedParentIds = new Set<string>();
 
     for (const dupBlock of result.duplicatedBlocks) {
-      if (dupBlock.parentId !== newParentId) {
-        if (newParentId !== null) {
-          affectedParentIds.add(newParentId);
-        }
-        this.Blok.BlockManager.setBlockParent(dupBlock, newParentId);
+      if (dupBlock.parentId === newParentId) {
+        continue;
       }
+      if (newParentId !== null) {
+        affectedParentIds.add(newParentId);
+      }
+      this.Blok.BlockManager.setBlockParent(dupBlock, newParentId);
     }
 
     // Notify affected parent blocks so toggle tools update their visual state

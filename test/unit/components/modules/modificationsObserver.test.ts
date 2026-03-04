@@ -224,14 +224,33 @@ describe('ModificationsObserver', () => {
   });
 
   describe('destroy()', () => {
-    it('disconnects the MutationObserver', () => {
-      const { observer } = createObserver();
+    it('disconnects the MutationObserver and disables onChange delivery', () => {
+      const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
 
-      observer.destroy();
+      observer.enable();
 
       const instance = MutationObserverStub.lastInstance;
 
+      expect(instance).not.toBeNull();
+
+      // Baseline: confirm onChange fires normally before destroy
+      const beforeEvent = createBlockMutationEvent('block-before');
+
+      eventsDispatcher.emit(BlockChanged, { event: beforeEvent });
+      vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
+      expect(onChange).toHaveBeenCalledWith(apiMethods, beforeEvent);
+
+      onChange.mockClear();
+
+      // Now destroy and confirm no further onChange delivery
+      observer.destroy();
       expect(instance?.disconnect).toHaveBeenCalledTimes(1);
+
+      const afterEvent = createBlockMutationEvent('block-after');
+
+      eventsDispatcher.emit(BlockChanged, { event: afterEvent });
+      vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
+      expect(onChange).not.toHaveBeenCalled();
     });
 
     it('cancels the pending batching timeout so onChange is not fired after destroy', () => {

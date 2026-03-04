@@ -26,9 +26,9 @@
     "property": "Свойство",
     "type": "Тип",
     "description": "Описание",
-    "option": "Опция",
+    "option": "Параметр",
     "default": "По умолчанию",
-    "parameter": "Параметр",
+    "parameter": "Аргумент",
     "name": "Имя",
     "quickStartSteps": {
       "install": {

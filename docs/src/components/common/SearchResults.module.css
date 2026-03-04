@@ -287,25 +287,6 @@
 
 /* Mobile responsive */
 @media (max-width: 640px) {
-  .search-container {
-    padding-top: 8vh;
-  }
-
-  .search-dialog {
-    margin: 0 var(--spacing-sm);
-    max-width: 100%;
-    border-radius: 16px;
-  }
-
-  .search-input-wrapper {
-    padding: var(--spacing-md) var(--spacing-lg);
-  }
-
-  .search-input {
-    font-size: 16px;
-    height: 40px;
-  }
-
   .search-results {
     max-height: 50vh;
   }

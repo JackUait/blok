@@ -40,7 +40,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       // Keep hover background when toolbox is opened
       'group-data-[blok-toolbox-opened=true]:bg-bg-light',
       // Mobile styles (static positioning with overlay-pane appearance)
-      'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
+      'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
       'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
       // RTL styles
       'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto',
@@ -69,7 +69,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       'group-data-[blok-block-settings-opened=true]:bg-bg-light',
       'can-hover:hover:group-data-[blok-block-settings-opened=true]:cursor-pointer',
       // Mobile styles (static positioning with overlay-pane appearance)
-      'mobile:bg-white mobile:border mobile:border-[#e8e8eb] mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
+      'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
       'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
       // Not-mobile styles
       'not-mobile:w-6'

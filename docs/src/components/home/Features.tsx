@@ -443,7 +443,7 @@ console.log(editor.readOnly.isEnabled);`,
           {FEATURES.map((feature, index) => (
             <button
               type="button"
-              key={feature.title}
+              key={feature.accent}
               className={`feature-card feature-card--${feature.accent}${index === 0 ? ' feature-card--featured' : ''}`}
               data-feature-card
               style={{ "--animation-order": index } as React.CSSProperties}

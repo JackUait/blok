@@ -129,6 +129,9 @@ const LOGIC_TESTS = [
 
   // Seed/utility tests
   '**/seed.spec.ts',
+
+  // React adapter
+  '**/react-adapter.spec.ts',
 ] as const;
 
 // Generate cross-browser projects programmatically

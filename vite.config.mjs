@@ -29,10 +29,12 @@ export default defineConfig(({ mode }) => {
           blok: path.resolve(__dirname, 'src', 'blok.ts'),
           tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
           full: path.resolve(__dirname, 'src', 'full.ts'),
+          react: path.resolve(__dirname, 'src', 'react', 'index.ts'),
         },
         formats: ['es'],
       },
       rollupOptions: {
+        external: ['react', 'react-dom', 'react/jsx-runtime'],
         output: {
           entryFileNames: '[name].mjs',
           chunkFileNames: 'chunks/[name]-[hash].mjs',

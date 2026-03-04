@@ -7,6 +7,7 @@ import { ApiPage } from "./pages/ApiPage";
 import { MigrationPage } from "./pages/MigrationPage";
 import { RecipesPage } from "./pages/RecipesPage";
 import ChangelogPage from "./pages/ChangelogPage";
+import { IntegrationsPage } from "./pages/IntegrationsPage";
 import { PageTransition } from "./components/common/PageTransition";
 
 const ScrollHandler = () => {
@@ -70,6 +71,7 @@ const App = () => {
           <Route path="/recipes" element={<PageTransition><RecipesPage /></PageTransition>} />
           <Route path="/docs" element={<PageTransition><ApiPage /></PageTransition>} />
           <Route path="/migration" element={<PageTransition><MigrationPage /></PageTransition>} />
+          <Route path="/integrations" element={<PageTransition><IntegrationsPage /></PageTransition>} />
           <Route path="/changelog" element={<PageTransition><ChangelogPage /></PageTransition>} />
         </Routes>
       </AnimatePresence>

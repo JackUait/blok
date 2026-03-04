@@ -13,6 +13,7 @@ import jestDom from 'eslint-plugin-jest-dom';
 import testingLibrary from 'eslint-plugin-testing-library';
 import tseslint from 'typescript-eslint';
 import jsdoc from 'eslint-plugin-jsdoc';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tailwindcss from 'eslint-plugin-tailwindcss';
 
 
@@ -1279,7 +1280,7 @@ export default defineConfig(
   },
 
   {
-    files: ['test/unit/**/*.ts'],
+    files: ['test/unit/**/*.ts', 'test/unit/**/*.tsx'],
     plugins: {
       jest,
       vitest,
@@ -1424,6 +1425,17 @@ export default defineConfig(
       'testing-library/prefer-presence-queries': 'warn',
       'testing-library/prefer-query-by-disappearance': 'warn',
       'testing-library/prefer-user-event': 'off', // Disabled - project uses fireEvent pattern
+    },
+  },
+  // React hooks rules for the React adapter
+  {
+    files: ['src/react/**/*.{ts,tsx}', 'test/unit/react/**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
   {

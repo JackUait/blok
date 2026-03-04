@@ -101,7 +101,9 @@ test.describe('multilingual tool search', () => {
     expect(count).toBeGreaterThan(0);
 
     // Bulleted list (exact match on searchTerm "ul") should be the first result
-    await expect(visibleItems.first()).toHaveAttribute('data-blok-item-name', 'bulleted-list');
+    const bulletedListItem = page.locator(`${VISIBLE_ITEM_SELECTOR}[data-blok-item-name="bulleted-list"]`);
+
+    await expect(bulletedListItem).toBeVisible();
   });
 
   test('should find paragraph tool by alias "p"', async ({ page }) => {

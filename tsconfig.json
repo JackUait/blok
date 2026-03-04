@@ -31,6 +31,7 @@
   },
   "include": [
     "**/*.ts",
+    "**/*.tsx",
     "**/*.js",
     "**/*.json",
     "vite.config*.mjs",

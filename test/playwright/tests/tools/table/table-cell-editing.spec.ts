@@ -375,26 +375,21 @@ test.describe('Cell Editing', () => {
       return blok.save();
     });
 
-    // Find the table block
-    const tableBlock = savedData.blocks.find(
+    // Find the table block index
+    const tableIndex = savedData.blocks.findIndex(
       (b: { type: string }) => b.type === 'table'
     );
 
-    expect(tableBlock).toBeDefined();
-
-    if (!tableBlock) {
-      return;
-    }
+    expect(tableIndex).toBeGreaterThanOrEqual(0);
 
     // Count non-table paragraph blocks after the table that are NOT children of the table.
     // In the flat output, child blocks of the table legitimately appear after the table block
     // with a parent reference. An orphan is a block that has no parent (or a null parent).
-    const tableIndex = savedData.blocks.indexOf(tableBlock);
     const blocksAfterTable = savedData.blocks.slice(tableIndex + 1);
 
     // There should be no orphaned paragraph blocks containing "Hello" or "World"
     // (orphaned = not owned by the table, i.e. no parent pointing to the table block)
-    const tableId = (tableBlock as { id: string }).id;
+    const tableId = (savedData.blocks[tableIndex] as { id: string }).id;
     const orphanedBlocks = blocksAfterTable.filter(
       (b: { type: string; parent?: string; data?: { text?: string } }) =>
         b.type === 'paragraph' &&

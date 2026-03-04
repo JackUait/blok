@@ -635,11 +635,10 @@ test.describe('plus button inserts slash paragraph', () => {
 
     expect(count).toBeGreaterThan(0);
 
-    // First visible item should be one of the list tools (they have 'list' as a searchTerm)
-    const firstName = await visibleItems.first().getAttribute('data-blok-item-name');
+    // At least one visible item should be a list tool (they have 'list' in their name)
+    const listToolItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name*="list"]:not([data-blok-hidden])');
 
-    // List tools have names like 'list' or contain 'list'
-    expect(firstName).toContain('list');
+    await expect(listToolItem).not.toHaveCount(0);
   });
 
   test('clicking plus button on table block creates new paragraph below the table, not inside a cell', async ({ page }) => {

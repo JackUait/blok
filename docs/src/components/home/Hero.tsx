@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { use3DTilt } from '../../hooks/use3DTilt';
 import { WaveDivider } from '../common/WaveDivider';
@@ -8,6 +9,10 @@ export const Hero: React.FC = () => {
     scale: 1.08,
     transitionSpeed: 500,
   });
+
+  const mascotRef = useCallback((node: HTMLAnchorElement | null) => {
+    mascotTilt.ref(node);
+  }, [mascotTilt.ref]);
 
   const handleScrollToQuickStart = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     e.preventDefault();
@@ -60,7 +65,7 @@ export const Hero: React.FC = () => {
         <div className="hero-demo" data-blok-testid="hero-demo">
           <Link
             to="/demo"
-            ref={mascotTilt.ref}
+            ref={mascotRef}
             className={`hero-mascot hero-mascot-3d ${mascotTilt.isHovered ? 'hero-mascot-hovered' : ''}`}
             onMouseMove={mascotTilt.onMouseMove}
             onMouseEnter={mascotTilt.onMouseEnter}

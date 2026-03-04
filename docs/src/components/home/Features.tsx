@@ -35,13 +35,12 @@ export const Features: React.FC = () => {
       learnMore: t('home.features.cleanJson.learnMore'),
       accent: "coral",
       details: {
-        summary:
-          "Blok outputs clean, typed JSON data that's easy to store, transform, and render in any environment.",
+        summary: t('home.features.cleanJson.details.summary'),
         benefits: [
-          "Store content in any database without HTML parsing",
-          "Render on server, client, or native apps",
-          "Full TypeScript types for all block data",
-          "Easy content migration and transformation",
+          t('home.features.cleanJson.details.benefit1'),
+          t('home.features.cleanJson.details.benefit2'),
+          t('home.features.cleanJson.details.benefit3'),
+          t('home.features.cleanJson.details.benefit4'),
         ],
         codeExample: `const data = await editor.save();
 // { blocks: [{ type: "paragraph", data: { text: "Hello" } }] }`,
@@ -74,13 +73,12 @@ export const Features: React.FC = () => {
       learnMore: t('home.features.slashCommands.learnMore'),
       accent: "orange",
       details: {
-        summary:
-          'A powerful command palette for quick block insertion. Users can type "/" to search and insert any block type.',
+        summary: t('home.features.slashCommands.details.summary'),
         benefits: [
-          'Keyboard-first workflow with "/" commands',
-          "Searchable block menu with fuzzy matching",
-          "Custom shortcuts for frequently used blocks",
-          "Accessible with full keyboard navigation",
+          t('home.features.slashCommands.details.benefit1'),
+          t('home.features.slashCommands.details.benefit2'),
+          t('home.features.slashCommands.details.benefit3'),
+          t('home.features.slashCommands.details.benefit4'),
         ],
         codeExample: `// Configure custom toolbox items
 new Blok({
@@ -121,13 +119,12 @@ new Blok({
       learnMore: t('home.features.inlineToolbar.learnMore'),
       accent: "pink",
       details: {
-        summary:
-          "A floating toolbar appears when text is selected, providing quick access to inline formatting options.",
+        summary: t('home.features.inlineToolbar.details.summary'),
         benefits: [
-          "Context-aware formatting options",
-          "Built-in bold, italic, and link tools",
-          "Extensible with custom inline tools",
-          "Smart positioning that stays in viewport",
+          t('home.features.inlineToolbar.details.benefit1'),
+          t('home.features.inlineToolbar.details.benefit2'),
+          t('home.features.inlineToolbar.details.benefit3'),
+          t('home.features.inlineToolbar.details.benefit4'),
         ],
         codeExample: `// Add custom inline tool
 new Blok({
@@ -158,13 +155,12 @@ new Blok({
       learnMore: t('home.features.dragDrop.learnMore'),
       accent: "mauve",
       details: {
-        summary:
-          "Intuitive drag and drop reordering using a pointer-based system. Currently available on desktop devices.",
+        summary: t('home.features.dragDrop.details.summary'),
         benefits: [
-          "Works on desktop devices",
-          "Visual drop indicators",
-          "Smooth animations during drag",
-          "Accessible keyboard alternatives",
+          t('home.features.dragDrop.details.benefit1'),
+          t('home.features.dragDrop.details.benefit2'),
+          t('home.features.dragDrop.details.benefit3'),
+          t('home.features.dragDrop.details.benefit4'),
         ],
       },
     },
@@ -206,13 +202,12 @@ new Blok({
       learnMore: t('home.features.customBlocks.learnMore'),
       accent: "green",
       details: {
-        summary:
-          "Create any block type you need. From simple text blocks to complex interactive components.",
+        summary: t('home.features.customBlocks.details.summary'),
         benefits: [
-          "Simple API for creating custom blocks",
-          "Built-in paragraph, header, and list tools",
-          "Full lifecycle hooks (render, save, validate)",
-          "Block tunes for additional settings",
+          t('home.features.customBlocks.details.benefit1'),
+          t('home.features.customBlocks.details.benefit2'),
+          t('home.features.customBlocks.details.benefit3'),
+          t('home.features.customBlocks.details.benefit4'),
         ],
         codeExample: `class MyTool {
   static get toolbox() {
@@ -242,13 +237,12 @@ new Blok({
       learnMore: t('home.features.readOnly.learnMore'),
       accent: "purple",
       details: {
-        summary:
-          "Switch between edit and read-only modes at runtime without reinitializing the editor.",
+        summary: t('home.features.readOnly.details.summary'),
         benefits: [
-          "Toggle at runtime via API",
-          "Perfect for permission-based editing",
-          "Preserves content and scroll position",
-          "Disables all editing interactions",
+          t('home.features.readOnly.details.benefit1'),
+          t('home.features.readOnly.details.benefit2'),
+          t('home.features.readOnly.details.benefit3'),
+          t('home.features.readOnly.details.benefit4'),
         ],
         codeExample: `// Set read-only mode
 await editor.readOnly.set(true);
@@ -300,13 +294,12 @@ console.log(editor.readOnly.isEnabled);`,
       learnMore: t('home.features.undoRedo.learnMore'),
       accent: "yellow",
       details: {
-        summary:
-          "CRDT-powered undo/redo ensures conflict-free history tracking. Keyboard shortcuts and API access included.",
+        summary: t('home.features.undoRedo.details.summary'),
         benefits: [
-          "CRDT-based change tracking",
-          "Conflict-free state management",
-          "Keyboard shortcuts (⌘Z / ⌘⇧Z)",
-          "Programmatic undo/redo via API",
+          t('home.features.undoRedo.details.benefit1'),
+          t('home.features.undoRedo.details.benefit2'),
+          t('home.features.undoRedo.details.benefit3'),
+          t('home.features.undoRedo.details.benefit4'),
         ],
         apiLink: "/docs#blocks-api",
       },
@@ -337,13 +330,12 @@ console.log(editor.readOnly.isEnabled);`,
       learnMore: t('home.features.languages.learnMore'),
       accent: "cyan",
       details: {
-        summary:
-          "Full internationalization with 68 languages, RTL support, and lazy loading for optimal bundle size.",
+        summary: t('home.features.languages.details.summary'),
         benefits: [
-          "68 supported languages",
-          "Full RTL layout support",
-          "Lazy-loaded translations (~3KB base)",
-          "Custom translation overrides",
+          t('home.features.languages.details.benefit1'),
+          t('home.features.languages.details.benefit2'),
+          t('home.features.languages.details.benefit3'),
+          t('home.features.languages.details.benefit4'),
         ],
         codeExample: `new Blok({
   i18n: { locale: 'ar' } // Arabic with RTL
@@ -383,13 +375,12 @@ console.log(editor.readOnly.isEnabled);`,
       learnMore: t('home.features.smartPaste.learnMore'),
       accent: "blue",
       details: {
-        summary:
-          "Paste content from Google Docs and watch it transform into clean, structured blocks automatically.",
+        summary: t('home.features.smartPaste.details.summary'),
         benefits: [
-          "Works with Google Docs and plain text",
-          "Automatic XSS-safe HTML sanitization",
-          "Preserves headings, lists, and formatting",
-          "Extensible paste handlers for custom tools",
+          t('home.features.smartPaste.details.benefit1'),
+          t('home.features.smartPaste.details.benefit2'),
+          t('home.features.smartPaste.details.benefit3'),
+          t('home.features.smartPaste.details.benefit4'),
         ],
       },
     },

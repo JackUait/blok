@@ -14,7 +14,8 @@
     "filter": "Filter...",
     "clearSearch": "Clear search",
     "noResults": "No results",
-    "selectSection": "Select section"
+    "selectSection": "Select section",
+    "unknownError": "Unknown error"
   },
   "api": {
     "filterLabel": "Filter API sections",
@@ -573,7 +574,15 @@
       "failedToLoad": "Failed to load editor",
       "buildHint": "Make sure the Blok editor is built with",
       "errorPrefix": "Error:"
-    }
+    },
+    "headerPlaceholder": "Enter a header...",
+    "paragraphPlaceholder": "Type \"/\" for commands...",
+    "welcomeTitle": "Welcome to Blok",
+    "welcomeParagraph": "This is a live demo of the Blok editor. Try typing <code>/</code> to see available commands, or select text to format it.",
+    "welcomeListItem1": "Block-based architecture",
+    "welcomeListItem2": "Slash commands for quick formatting",
+    "welcomeListItem3": "Drag and drop to reorder blocks",
+    "welcomeListItem4": "Clean JSON output"
   },
   "recipes": {
     "heroBadge": "Recipes",
@@ -673,7 +682,9 @@
     "changeCssSelectors": "CSS Selectors",
     "changeDefaultHolder": "Default Holder",
     "changeDataAttributes": "Data Attributes",
-    "selectorsCount": "{count} selectors"
+    "selectorsCount": "{count} selectors",
+    "removed": "Removed",
+    "added": "Added"
   },
   "changelog": {
     "badge": "Version History",
@@ -681,7 +692,19 @@
     "description": "Track every improvement, fix, and feature as Blok evolves",
     "loading": "Loading...",
     "errorLoading": "Error loading changelog:",
-    "viewDocs": "View docs"
+    "viewDocs": "View docs",
+    "releaseType": {
+      "major": "Major",
+      "minor": "Minor",
+      "patch": "Patch"
+    },
+    "category": {
+      "added": "Added",
+      "fix": "Fixed",
+      "removed": "Removed",
+      "breaking": "Breaking",
+      "deprecated": "Deprecated"
+    }
   },
   "integrations": {
     "badge": "Integrations",
@@ -694,6 +717,53 @@
     "parametersTitle": "Parameters",
     "propsTitle": "Props",
     "returnsTitle": "Returns",
-    "filterLabel": "Filter integrations"
+    "filterLabel": "Filter integrations",
+    "sections": {
+      "setup": {
+        "badge": "Setup",
+        "title": "Installation",
+        "description": "Install Blok and its React adapter. React 18 or higher is required as a peer dependency."
+      },
+      "quickstart": {
+        "badge": "Guide",
+        "title": "Quick Start",
+        "description": "Import useBlok and BlokContent from @jackuait/blok/react. The hook manages the editor lifecycle; the component mounts the editor DOM into your layout."
+      },
+      "useBlok": {
+        "badge": "Hook",
+        "title": "useBlok",
+        "description": "A React hook that creates and manages a Blok editor instance. Returns the editor once it is ready, or null during initialization."
+      },
+      "blokContent": {
+        "badge": "Component",
+        "title": "BlokContent",
+        "description": "A component that mounts the editor's DOM tree into your layout. Renders an empty div when editor is null, maintaining layout stability while the editor initializes."
+      },
+      "readOnly": {
+        "badge": "Guide",
+        "title": "Read-Only Mode",
+        "description": "Toggle read-only mode reactively by passing readOnly to useBlok. The editor updates via editor.readOnly.set() without recreation."
+      },
+      "switchingDocs": {
+        "badge": "Guide",
+        "title": "Switching Documents",
+        "description": "Pass a deps array as the second argument to useBlok to recreate the editor when your document changes. The old instance is destroyed cleanly before the new one is created."
+      },
+      "fullExample": {
+        "badge": "Example",
+        "title": "Complete Example",
+        "description": "A full blog editor component using useBlok and BlokContent together."
+      }
+    },
+    "sidebar": {
+      "react": "React",
+      "installation": "Installation",
+      "quickStart": "Quick Start",
+      "useBlok": "useBlok",
+      "blokContent": "BlokContent",
+      "readOnlyMode": "Read-Only Mode",
+      "switchingDocuments": "Switching Documents",
+      "completeExample": "Complete Example"
+    }
   }
 }

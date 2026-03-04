@@ -11,9 +11,10 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
   const [copied, setCopied] = useState(false);
   const { t } = useI18n();
 
+  const emptyPlaceholder = t('demo.outputInitialMessage');
+
   const handleCopy = async () => {
-    const isValidOutput =
-      output && output !== 'Click "Save" to see the JSON output';
+    const isValidOutput = output && output !== emptyPlaceholder;
     if (!isValidOutput) {
       return;
     }

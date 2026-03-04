@@ -76,12 +76,12 @@ export const MigrationSteps: React.FC = () => {
                 <div className="diff-block">
                   <div className="diff-removed">
                     <span className="diff-accent-bar" aria-hidden="true" />
-                    <span className="diff-marker" aria-label="Removed">−</span>
+                    <span className="diff-marker" aria-label={t('migration.removed')}>−</span>
                     <code>{item.removed}</code>
                   </div>
                   <div className="diff-added">
                     <span className="diff-accent-bar" aria-hidden="true" />
-                    <span className="diff-marker" aria-label="Added">+</span>
+                    <span className="diff-marker" aria-label={t('migration.added')}>+</span>
                     <code>{item.added}</code>
                   </div>
                 </div>

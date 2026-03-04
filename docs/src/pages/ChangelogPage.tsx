@@ -244,7 +244,7 @@ const ChangelogPage: React.FC = () => {
         setReleases(parsed);
       } catch (err) {
         console.error("Error loading changelog:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
+        setError(err instanceof Error ? err.message : t('common.unknownError'));
       } finally {
         setLoading(false);
       }
@@ -330,7 +330,7 @@ const ChangelogPage: React.FC = () => {
                   </span>
                 )}
                 <span className="changelog-version-type">
-                  {release.releaseType}
+                  {t(`changelog.releaseType.${release.releaseType}`) || release.releaseType}
                 </span>
                 <span className="changelog-version-date">
                   {formatDate(release.date, locale)}
@@ -354,7 +354,7 @@ const ChangelogPage: React.FC = () => {
                         className={`changelog-change-badge ${change.category}`}
                       >
                         <IconFor name={change.category as keyof typeof Icons} />
-                        {change.category}
+                        {t(`changelog.category.${change.category}`) || change.category}
                       </span>
                       <span className="changelog-change-description">
                         {formatDescription(change.description)}

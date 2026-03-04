@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
@@ -7,7 +7,6 @@ import { CodeBlock } from '../components/common/CodeBlock';
 import { NAV_LINKS } from '../utils/constants';
 import {
   REACT_SECTIONS,
-  INTEGRATIONS_SIDEBAR,
   type IntegrationSection,
 } from '../components/integrations/integrations-data';
 import { useI18n } from '../contexts/I18nContext';
@@ -122,6 +121,31 @@ export const IntegrationsPage: React.FC = () => {
   });
   const scrollTargetRef = useRef<string | null>(null);
 
+  const sectionKeys = ['setup', 'quickstart', 'useBlok', 'blokContent', 'readOnly', 'switchingDocs', 'fullExample'] as const;
+
+  const translatedSections = useMemo(() => REACT_SECTIONS.map((section, i) => {
+    const key = sectionKeys[i];
+    return {
+      ...section,
+      badge: t(`integrations.sections.${key}.badge`),
+      title: t(`integrations.sections.${key}.title`),
+      description: t(`integrations.sections.${key}.description`),
+    };
+  }), [t]);
+
+  const translatedSidebar = useMemo(() => [{
+    title: t('integrations.sidebar.react'),
+    links: [
+      { id: 'react-install',      label: t('integrations.sidebar.installation') },
+      { id: 'react-quickstart',   label: t('integrations.sidebar.quickStart') },
+      { id: 'react-use-blok',     label: t('integrations.sidebar.useBlok') },
+      { id: 'react-blok-content', label: t('integrations.sidebar.blokContent') },
+      { id: 'react-read-only',    label: t('integrations.sidebar.readOnlyMode') },
+      { id: 'react-deps',         label: t('integrations.sidebar.switchingDocuments') },
+      { id: 'react-full-example', label: t('integrations.sidebar.completeExample') },
+    ],
+  }], [t]);
+
   const scrollToHash = useCallback(() => {
     const hash = window.location.hash.slice(1);
     if (!hash) return;
@@ -189,14 +213,14 @@ export const IntegrationsPage: React.FC = () => {
       <Nav links={NAV_LINKS} />
       <div className="api-docs intg-page">
         <Sidebar
-          sections={INTEGRATIONS_SIDEBAR}
+          sections={translatedSidebar}
           activeSection={activeSection}
           variant="api"
           filterLabel={t('integrations.filterLabel')}
         />
         <div className="api-content-wrapper">
           <MobileSectionNav
-            sections={INTEGRATIONS_SIDEBAR}
+            sections={translatedSidebar}
             activeSection={activeSection}
           />
             <main className="api-main intg-main">
@@ -210,7 +234,7 @@ export const IntegrationsPage: React.FC = () => {
                 {t('integrations.heroDescription4')}
               </p>
             </div>
-            {REACT_SECTIONS.map((section) => (
+            {translatedSections.map((section) => (
               <IntegrationSectionView key={section.id} section={section} />
             ))}
           </main>

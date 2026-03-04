@@ -32,6 +32,10 @@ export const EditorWrapper: React.FC<{
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
 
+  // Use a ref to access t inside the one-time effect without adding it as a dependency
+  const tRef = useRef(t);
+  tRef.current = t;
+
   useEffect(() => {
     const editorState = { editor: null as BlokEditor | null, isMounted: true };
 
@@ -64,7 +68,7 @@ export const EditorWrapper: React.FC<{
             header: {
               class: module.Header,
               config: {
-                placeholder: "Enter a header...",
+                placeholder: tRef.current("demo.headerPlaceholder"),
                 levels: [1, 2, 3, 4],
                 defaultLevel: 2,
               },
@@ -75,7 +79,7 @@ export const EditorWrapper: React.FC<{
               inlineToolbar: ["bold", "italic", "link"],
               config: {
                 preserveBlank: true,
-                placeholder: 'Type "/" for commands...',
+                placeholder: tRef.current("demo.paragraphPlaceholder"),
               },
             },
             list: {
@@ -92,7 +96,7 @@ export const EditorWrapper: React.FC<{
                 id: "welcome-block",
                 type: "header",
                 data: {
-                  text: "Welcome to Blok",
+                  text: tRef.current("demo.welcomeTitle"),
                   level: 2,
                 },
               },
@@ -100,7 +104,7 @@ export const EditorWrapper: React.FC<{
                 id: "intro-block",
                 type: "paragraph",
                 data: {
-                  text: "This is a live demo of the Blok editor. Try typing <code>/</code> to see available commands, or select text to format it.",
+                  text: tRef.current("demo.welcomeParagraph"),
                 },
               },
               {
@@ -109,10 +113,10 @@ export const EditorWrapper: React.FC<{
                 data: {
                   style: "unordered",
                   items: [
-                    "Block-based architecture",
-                    "Slash commands for quick formatting",
-                    "Drag and drop to reorder blocks",
-                    "Clean JSON output",
+                    tRef.current("demo.welcomeListItem1"),
+                    tRef.current("demo.welcomeListItem2"),
+                    tRef.current("demo.welcomeListItem3"),
+                    tRef.current("demo.welcomeListItem4"),
                   ],
                 },
               },
@@ -147,7 +151,7 @@ export const EditorWrapper: React.FC<{
       } catch (err) {
         if (editorState.isMounted) {
           const errorMessage =
-            err instanceof Error ? err.message : "Unknown error";
+            err instanceof Error ? err.message : tRef.current("common.unknownError");
           setError(errorMessage);
           setLoading(false);
         }

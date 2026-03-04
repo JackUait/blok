@@ -14,7 +14,8 @@
     "filter": "Фильтр...",
     "clearSearch": "Очистить поиск",
     "noResults": "Нет результатов",
-    "selectSection": "Выбор раздела"
+    "selectSection": "Выбор раздела",
+    "unknownError": "Неизвестная ошибка"
   },
   "api": {
     "filterLabel": "Фильтр разделов API",
@@ -573,7 +574,15 @@
       "failedToLoad": "Не удалось загрузить редактор",
       "buildHint": "Убедитесь, что редактор собран командой",
       "errorPrefix": "Ошибка:"
-    }
+    },
+    "headerPlaceholder": "Заголовок...",
+    "paragraphPlaceholder": "Введите \"/\" для команд...",
+    "welcomeTitle": "Добро пожаловать в Blok",
+    "welcomeParagraph": "Это живое демо редактора Blok. Введите <code>/</code> для просмотра команд или выделите текст для форматирования.",
+    "welcomeListItem1": "Блочная архитектура",
+    "welcomeListItem2": "Команды / для быстрого форматирования",
+    "welcomeListItem3": "Перетаскивание блоков",
+    "welcomeListItem4": "Чистый JSON"
   },
   "recipes": {
     "heroBadge": "Рецепты",
@@ -673,7 +682,9 @@
     "changeCssSelectors": "CSS-селекторы",
     "changeDefaultHolder": "Контейнер по умолчанию",
     "changeDataAttributes": "Data-атрибуты",
-    "selectorsCount": "{count} селекторов"
+    "selectorsCount": "{count} селекторов",
+    "removed": "Удалено",
+    "added": "Добавлено"
   },
   "changelog": {
     "badge": "История версий",
@@ -681,7 +692,19 @@
     "description": "Следите за каждым улучшением, исправлением и новой функцией в развитии Blok",
     "loading": "Загрузка...",
     "errorLoading": "Ошибка загрузки:",
-    "viewDocs": "Документация"
+    "viewDocs": "Документация",
+    "releaseType": {
+      "major": "Мажорный",
+      "minor": "Минорный",
+      "patch": "Патч"
+    },
+    "category": {
+      "added": "Добавлено",
+      "fix": "Исправлено",
+      "removed": "Удалено",
+      "breaking": "Ломающее",
+      "deprecated": "Устарело"
+    }
   },
   "integrations": {
     "badge": "Интеграции",
@@ -694,6 +717,53 @@
     "parametersTitle": "Параметры",
     "propsTitle": "Пропсы",
     "returnsTitle": "Возвращает",
-    "filterLabel": "Фильтр интеграций"
+    "filterLabel": "Фильтр интеграций",
+    "sections": {
+      "setup": {
+        "badge": "Установка",
+        "title": "Установка",
+        "description": "Установите Blok и его адаптер для React. React версии 18 или выше требуется как peer-зависимость."
+      },
+      "quickstart": {
+        "badge": "Руководство",
+        "title": "Быстрый старт",
+        "description": "Импортируйте useBlok и BlokContent из @jackuait/blok/react. Хук управляет жизненным циклом редактора; компонент монтирует DOM редактора в ваш макет."
+      },
+      "useBlok": {
+        "badge": "Хук",
+        "title": "useBlok",
+        "description": "React-хук, который создаёт экземпляр редактора Blok и управляет им. Возвращает редактор после инициализации или null в процессе."
+      },
+      "blokContent": {
+        "badge": "Компонент",
+        "title": "BlokContent",
+        "description": "Компонент, который монтирует DOM-дерево редактора в ваш макет. Отображает пустой div, пока editor равен null, сохраняя стабильность макета при инициализации."
+      },
+      "readOnly": {
+        "badge": "Руководство",
+        "title": "Режим чтения",
+        "description": "Реактивно переключайте режим только для чтения, передавая readOnly в useBlok. Редактор обновляется через editor.readOnly.set() без пересоздания."
+      },
+      "switchingDocs": {
+        "badge": "Руководство",
+        "title": "Переключение документов",
+        "description": "Передайте массив deps вторым аргументом в useBlok, чтобы пересоздавать редактор при смене документа. Старый экземпляр корректно уничтожается перед созданием нового."
+      },
+      "fullExample": {
+        "badge": "Пример",
+        "title": "Полный пример",
+        "description": "Полный компонент редактора блога, использующий useBlok и BlokContent вместе."
+      }
+    },
+    "sidebar": {
+      "react": "React",
+      "installation": "Установка",
+      "quickStart": "Быстрый старт",
+      "useBlok": "useBlok",
+      "blokContent": "BlokContent",
+      "readOnlyMode": "Режим чтения",
+      "switchingDocuments": "Переключение документов",
+      "completeExample": "Полный пример"
+    }
   }
 }

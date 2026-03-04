@@ -50,7 +50,10 @@ export default defineConfig({
                   }, 0);
                 }
                 destroy = () => {};
+                save = () => Promise.resolve({ blocks: [] });
                 clear = () => Promise.resolve();
+                undo = () => Promise.resolve();
+                redo = () => Promise.resolve();
                 render = () => Promise.resolve();
                 blocks = {
                   clear: () => Promise.resolve(),

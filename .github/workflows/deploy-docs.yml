@@ -2,7 +2,7 @@ name: Deploy Docs
 
 on:
   push:
-    branches: ["master"]
+    branches: ["**"]
   workflow_dispatch:
 
 permissions:
@@ -15,10 +15,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  docs-tests:
+    name: Docs Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Run docs tests
+        run: cd docs && npm test
+
   build:
     name: Build Docs
     runs-on: ubuntu-latest
+    needs: docs-tests
     timeout-minutes: 15
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

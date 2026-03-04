@@ -156,7 +156,7 @@ const crossBrowserProjects = BROWSERS.map(browser => ({
 
 export default defineConfig({
   globalSetup: './test/playwright/global-setup.ts',
-  testDir: 'test/playwright/tests',
+  testDir: 'test',
   webServer: {
     command: 'npx serve . -l 3303 --no-clipboard',
     port: 3303,
@@ -194,6 +194,11 @@ export default defineConfig({
       name: 'chromium-logic',
       use: { browserName: 'chromium' },
       testMatch: [...LOGIC_TESTS],
+    },
+    {
+      name: 'chromium-e2e',
+      use: { browserName: 'chromium' },
+      testMatch: ['**/e2e/**/*.spec.ts'],
     },
   ],
   retries: 0,

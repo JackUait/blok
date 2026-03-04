@@ -6,6 +6,7 @@ import { parseChangelog } from "../utils/changelog-parser";
 import type { Release } from "@/types/changelog";
 import "../../assets/changelog.css";
 import { NAV_LINKS } from "../utils/constants";
+import { useI18n } from "../contexts/I18nContext";
 
 // Category icons as SVG components - refined strokes
 const Icons = {
@@ -128,9 +129,14 @@ const IconFor = ({ name }: { name: keyof typeof Icons }) => {
   return <IconComponent />;
 };
 
-const formatDate = (dateString: string): string => {
+const LOCALE_MAP: Record<string, string> = {
+  en: "en-US",
+  ru: "ru-RU",
+};
+
+const formatDate = (dateString: string, locale: string): string => {
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(LOCALE_MAP[locale] ?? "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -219,6 +225,7 @@ const formatDescription = (text: string): React.ReactNode => {
 };
 
 const ChangelogPage: React.FC = () => {
+  const { t, locale } = useI18n();
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -254,10 +261,10 @@ const ChangelogPage: React.FC = () => {
           <div className="changelog-hero">
             <div className="changelog-hero-badge">
               <Icons.clock />
-              Version History
+              {t('changelog.badge')}
             </div>
-            <h1 className="changelog-hero-title">Changelog</h1>
-            <p className="changelog-hero-description">Loading...</p>
+            <h1 className="changelog-hero-title">{t('changelog.title')}</h1>
+            <p className="changelog-hero-description">{t('changelog.loading')}</p>
           </div>
         </main>
         <Footer />
@@ -271,9 +278,9 @@ const ChangelogPage: React.FC = () => {
         <Nav links={NAV_LINKS} />
         <main className="changelog-main">
           <div className="changelog-hero">
-            <h1 className="changelog-hero-title">Changelog</h1>
+            <h1 className="changelog-hero-title">{t('changelog.title')}</h1>
             <p className="changelog-hero-description">
-              Error loading changelog: {error}
+              {t('changelog.errorLoading')} {error}
             </p>
           </div>
         </main>
@@ -291,9 +298,13 @@ const ChangelogPage: React.FC = () => {
         <div className="changelog-gradient-2" aria-hidden="true" />
 
         <div className="changelog-hero">
-          <h1 className="changelog-hero-title">Changelog</h1>
+          <div className="changelog-hero-badge">
+            <Icons.clock />
+            {t('changelog.badge')}
+          </div>
+          <h1 className="changelog-hero-title">{t('changelog.title')}</h1>
           <p className="changelog-hero-description">
-            Track every improvement, fix, and feature as Blok evolves
+            {t('changelog.description')}
           </p>
         </div>
 
@@ -322,7 +333,7 @@ const ChangelogPage: React.FC = () => {
                   {release.releaseType}
                 </span>
                 <span className="changelog-version-date">
-                  {formatDate(release.date)}
+                  {formatDate(release.date, locale)}
                 </span>
               </div>
 
@@ -352,7 +363,7 @@ const ChangelogPage: React.FC = () => {
                             to={change.link}
                             className="changelog-change-link"
                           >
-                            View docs
+                            {t('changelog.viewDocs')}
                             <Icons.external />
                           </Link>
                         )}

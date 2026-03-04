@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
+import { useI18n } from "../../contexts/I18nContext";
 
 interface OutputPanelProps {
   output: string;
@@ -8,6 +9,7 @@ interface OutputPanelProps {
 export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
   const { copyToClipboard } = useCopyToClipboard();
   const [copied, setCopied] = useState(false);
+  const { t } = useI18n();
 
   const handleCopy = async () => {
     const isValidOutput =
@@ -51,7 +53,7 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
               strokeLinejoin="round"
             />
           </svg>
-          <span>JSON Output</span>
+          <span>{t("demo.outputPanel.title")}</span>
         </div>
         <button
           className={`output-copy ${copied ? "copied" : ""}`}
@@ -68,7 +70,7 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
           >
             <path d="M5 3v8a2 2 0 002 2h6V11H7a1 1 0 01-1-1V3H5zm2-1h6a2 2 0 012 2v9a2 2 0 01-2 2H7a2 2 0 01-2-2V2z" />
           </svg>
-          <span className="copy-text">{copied ? "Copied!" : "Copy"}</span>
+          <span className="copy-text">{copied ? t("demo.outputPanel.copied") : t("demo.outputPanel.copy")}</span>
         </button>
       </div>
       <pre

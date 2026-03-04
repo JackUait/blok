@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { CodemodCard } from './CodemodCard';
 import { I18nProvider } from '../../contexts/I18nContext';
+import enJson from '../../i18n/en.json';
+
+const m = enJson.migration;
 
 describe('CodemodCard', () => {
   it('should render a div with codemod-card class', () => {
@@ -31,7 +34,7 @@ describe('CodemodCard', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByText('Codemod')).toBeInTheDocument();
+    expect(screen.getByText(m.codemodTitle)).toBeInTheDocument();
   });
 
   it('should render two tabs', () => {
@@ -41,8 +44,8 @@ describe('CodemodCard', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByText('Preview')).toBeInTheDocument();
-    expect(screen.getByText('Apply')).toBeInTheDocument();
+    expect(screen.getByText(m.codemodPreviewTab)).toBeInTheDocument();
+    expect(screen.getByText(m.codemodApplyTab)).toBeInTheDocument();
   });
 
   it('should have dry-run tab active by default', () => {
@@ -112,7 +115,7 @@ describe('CodemodCard', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByText('Options')).toBeInTheDocument();
+    expect(screen.getByText(m.codemodOptionsTitle)).toBeInTheDocument();
   });
 
   it('should render the options table', () => {
@@ -135,9 +138,9 @@ describe('CodemodCard', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByText('Preview changes without modifying files')).toBeInTheDocument();
-    expect(screen.getByText('Show detailed output for each file processed')).toBeInTheDocument();
-    expect(screen.getByText("Use Blok's built-in translations (68 languages)")).toBeInTheDocument();
+    expect(screen.getByText(m.codemodDryRunDescription)).toBeInTheDocument();
+    expect(screen.getByText(m.codemodVerboseDescription)).toBeInTheDocument();
+    expect(screen.getByText(m.codemodI18nDescription)).toBeInTheDocument();
   });
 
   it('should have codemod-tabs div', () => {
@@ -200,7 +203,7 @@ describe('CodemodCard', () => {
     );
 
     const title = screen.getByTestId('codemod-options-title');
-    expect(title).toHaveTextContent('Options');
+    expect(title).toHaveTextContent(m.codemodOptionsTitle);
   });
 
 });

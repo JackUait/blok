@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
+import { I18nProvider } from '../../contexts/I18nContext';
 import { EditorWrapper } from './EditorWrapper';
+
+const renderEditor = (props: Parameters<typeof EditorWrapper>[0] = {}) =>
+  render(
+    <I18nProvider>
+      <EditorWrapper {...props} />
+    </I18nProvider>
+  );
 
 describe('EditorWrapper', () => {
   beforeEach(() => {
@@ -13,13 +21,13 @@ describe('EditorWrapper', () => {
 
   describe('loading state', () => {
     it('shows loading placeholder before editor initializes', () => {
-      render(<EditorWrapper />);
+      renderEditor();
 
       expect(screen.getByText('Loading editor...')).toBeInTheDocument();
     });
 
     it('renders the editor container with blok-editor class', () => {
-      const { container } = render(<EditorWrapper />);
+      const { container } = renderEditor();
 
       expect(container.querySelector('.blok-editor')).toBeInTheDocument();
     });
@@ -27,7 +35,7 @@ describe('EditorWrapper', () => {
 
   describe('successful initialization', () => {
     it('hides the loading placeholder after editor loads', async () => {
-      render(<EditorWrapper />);
+      renderEditor();
 
       expect(screen.getByText('Loading editor...')).toBeInTheDocument();
 
@@ -37,7 +45,7 @@ describe('EditorWrapper', () => {
     });
 
     it('does not show the error state on successful load', async () => {
-      render(<EditorWrapper />);
+      renderEditor();
 
       await waitFor(() => {
         expect(screen.queryByText('Failed to load editor')).not.toBeInTheDocument();
@@ -47,7 +55,7 @@ describe('EditorWrapper', () => {
     it('calls onEditorReady with the editor instance after loading', async () => {
       const onEditorReady = vi.fn();
 
-      render(<EditorWrapper onEditorReady={onEditorReady} />);
+      renderEditor({ onEditorReady });
 
       await waitFor(() => {
         expect(onEditorReady).toHaveBeenCalledOnce();
@@ -61,7 +69,7 @@ describe('EditorWrapper', () => {
     it('exposes an editor with a destroy method', async () => {
       const onEditorReady = vi.fn();
 
-      render(<EditorWrapper onEditorReady={onEditorReady} />);
+      renderEditor({ onEditorReady });
 
       await waitFor(() => {
         expect(onEditorReady).toHaveBeenCalledOnce();
@@ -143,7 +151,7 @@ describe('EditorWrapper', () => {
     it('calls destroy on the editor instance when component unmounts', async () => {
       const onEditorReady = vi.fn();
 
-      const { unmount } = render(<EditorWrapper onEditorReady={onEditorReady} />);
+      const { unmount } = renderEditor({ onEditorReady });
 
       await waitFor(() => {
         expect(onEditorReady).toHaveBeenCalledOnce();
@@ -160,7 +168,7 @@ describe('EditorWrapper', () => {
     });
 
     it('does not throw when unmounting before the editor finishes initializing', () => {
-      const { unmount } = render(<EditorWrapper />);
+      const { unmount } = renderEditor();
 
       // Unmount synchronously before async init resolves
       expect(() => act(() => unmount())).not.toThrow();
@@ -172,10 +180,14 @@ describe('EditorWrapper', () => {
       const firstCallback = vi.fn();
       const secondCallback = vi.fn();
 
-      const { rerender } = render(<EditorWrapper onEditorReady={firstCallback} />);
+      const { rerender } = renderEditor({ onEditorReady: firstCallback });
 
       // Synchronously update to a new callback before the async init resolves
-      rerender(<EditorWrapper onEditorReady={secondCallback} />);
+      rerender(
+        <I18nProvider>
+          <EditorWrapper onEditorReady={secondCallback} />
+        </I18nProvider>
+      );
 
       await waitFor(() => {
         expect(secondCallback).toHaveBeenCalledOnce();

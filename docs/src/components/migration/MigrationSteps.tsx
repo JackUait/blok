@@ -1,6 +1,49 @@
-import { CHANGE_ITEMS, CSS_MAPPINGS } from "./migration-data";
+import { useMemo } from "react";
+import { CSS_MAPPINGS } from "./migration-data";
+import { useI18n } from "../../contexts/I18nContext";
 
 export const MigrationSteps: React.FC = () => {
+  const { t } = useI18n();
+
+  const changeItems = useMemo(() => [
+    {
+      icon: "1",
+      title: t('migration.changeImports'),
+      removed: "import EditorJS from '@editorjs/editorjs';",
+      added: "import { Blok } from '@jackuait/blok';",
+    },
+    {
+      icon: "2",
+      title: t('migration.changeToolImports'),
+      removed: "import Header from '@editorjs/header';",
+      added: "import { Header } from '@jackuait/blok/tools';",
+    },
+    {
+      icon: "3",
+      title: t('migration.changeTypes'),
+      removed: "import type { EditorConfig } from '@editorjs/editorjs';",
+      added: "import type { BlokConfig } from '@jackuait/blok';",
+    },
+    {
+      icon: "4",
+      title: t('migration.changeCssSelectors'),
+      removed: ".ce-block",
+      added: "[data-blok-element]",
+    },
+    {
+      icon: "5",
+      title: t('migration.changeDefaultHolder'),
+      removed: '<div id="editorjs"></div>',
+      added: '<div id="blok"></div>',
+    },
+    {
+      icon: "6",
+      title: t('migration.changeDataAttributes'),
+      removed: "data-id",
+      added: "data-blok-id",
+    },
+  ], [t]);
+
   return (
     <>
       <section
@@ -9,18 +52,18 @@ export const MigrationSteps: React.FC = () => {
       >
         <div className="migration-section-header">
           <span className="migration-section-badge">
-            Step 2
+            {t('migration.step2Badge')}
           </span>
-          <h2 className="migration-section-title">What Gets Transformed</h2>
+          <h2 className="migration-section-title">{t('migration.step2Title')}</h2>
           <p className="migration-section-description">
-            The codemod handles all the breaking changes automatically.
+            {t('migration.step2Description')}
           </p>
         </div>
 
         <div className="changes-grid" data-blok-testid="changes-grid">
-          {CHANGE_ITEMS.map((item, index) => (
+          {changeItems.map((item, index) => (
             <article
-              key={item.title}
+              key={item.icon}
               className="change-card"
               data-blok-testid="change-card"
               style={{ animationDelay: `${index * 0.1}s` }}
@@ -54,11 +97,11 @@ export const MigrationSteps: React.FC = () => {
       >
         <div className="migration-section-header">
           <span className="migration-section-badge">
-            Step 3
+            {t('migration.step3Badge')}
           </span>
-          <h2 className="migration-section-title">CSS Selector Reference</h2>
+          <h2 className="migration-section-title">{t('migration.step3Title')}</h2>
           <p className="migration-section-description">
-            Reference for manually updating your CSS selectors.
+            {t('migration.step3Description')}
           </p>
         </div>
 
@@ -67,17 +110,17 @@ export const MigrationSteps: React.FC = () => {
             <div className="reference-legend">
               <div className="reference-legend-item reference-legend-item--old">
                 <span className="reference-legend-dot" />
-                <span>EditorJS</span>
+                <span>{t('migration.heroFromEditorJS')}</span>
               </div>
               <svg className="reference-legend-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
               <div className="reference-legend-item reference-legend-item--new">
                 <span className="reference-legend-dot" />
-                <span>Blok</span>
+                <span>{t('migration.heroBlok')}</span>
               </div>
             </div>
-            <span className="reference-count">{CSS_MAPPINGS.length} selectors</span>
+            <span className="reference-count">{t('migration.selectorsCount').replace('{count}', String(CSS_MAPPINGS.length))}</span>
           </div>
           <div className="reference-mappings">
             {CSS_MAPPINGS.map((mapping, index) => (

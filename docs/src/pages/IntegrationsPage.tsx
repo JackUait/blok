@@ -32,8 +32,7 @@ const IntegrationSectionView: React.FC<{ section: IntegrationSection }> = ({ sec
           <div className="api-block intg-install-block">
             <CodeBlock code={section.example} language="bash" />
             <p className="intg-install-note">
-              React 18+ is a peer dependency — it is not bundled with Blok.
-              If you already have React in your project, no extra install is needed.
+              {t('integrations.installNote')}
             </p>
           </div>
         )}
@@ -54,7 +53,7 @@ const IntegrationSectionView: React.FC<{ section: IntegrationSection }> = ({ sec
 
       {section.table && section.table.length > 0 && (
         <div className="api-block">
-          <h3 className="api-block-title">Parameters</h3>
+          <h3 className="api-block-title">{t('integrations.parametersTitle')}</h3>
           <table className="api-table">
             <thead>
               <tr>
@@ -81,7 +80,7 @@ const IntegrationSectionView: React.FC<{ section: IntegrationSection }> = ({ sec
       {section.properties && section.properties.length > 0 && (
         <div className="api-block">
           <h3 className="api-block-title">
-            {section.id === 'react-blok-content' ? 'Props' : 'Returns'}
+            {section.id === 'react-blok-content' ? t('integrations.propsTitle') : t('integrations.returnsTitle')}
           </h3>
           <table className="api-table">
             <thead>
@@ -116,6 +115,7 @@ const IntegrationSectionView: React.FC<{ section: IntegrationSection }> = ({ sec
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export const IntegrationsPage: React.FC = () => {
+  const { t } = useI18n();
   const [activeSection, setActiveSection] = useState<string>(() => {
     const hash = window.location.hash.slice(1);
     return hash || 'react-install';
@@ -192,23 +192,22 @@ export const IntegrationsPage: React.FC = () => {
           sections={INTEGRATIONS_SIDEBAR}
           activeSection={activeSection}
           variant="api"
-          filterLabel="Filter"
+          filterLabel={t('integrations.filterLabel')}
         />
         <div className="api-content-wrapper">
           <MobileSectionNav
             sections={INTEGRATIONS_SIDEBAR}
             activeSection={activeSection}
           />
-          <main className="api-main intg-main">
+            <main className="api-main intg-main">
             <div className="intg-hero">
-              <div className="intg-hero-badge">Integrations</div>
-              <h1 className="intg-hero-title">Use Blok with React</h1>
+              <div className="intg-hero-badge">{t('integrations.badge')}</div>
+              <h1 className="intg-hero-title">{t('integrations.heroTitle')}</h1>
               <p className="intg-hero-description">
-                The official React adapter ships as{' '}
-                <code>@jackuait/blok/react</code>. It provides a{' '}
-                <code>useBlok</code> hook and a <code>BlokContent</code>{' '}
-                component that manage the full editor lifecycle — including
-                StrictMode, SSR-safe rendering, and clean teardown.
+                {t('integrations.heroDescription1')}{' '}
+                <code>@jackuait/blok/react</code>. {t('integrations.heroDescription2')}{' '}
+                <code>useBlok</code> {t('integrations.heroDescription3')} <code>BlokContent</code>{' '}
+                {t('integrations.heroDescription4')}
               </p>
             </div>
             {REACT_SECTIONS.map((section) => (

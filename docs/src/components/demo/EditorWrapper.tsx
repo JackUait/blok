@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "../../contexts/I18nContext";
 
 interface BlokEditor {
   save: () => Promise<unknown>;
@@ -25,6 +26,7 @@ export const EditorWrapper: React.FC<{
   const editorRef = useRef<BlokEditor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
 
   // Use a ref to store the latest callback without triggering re-runs
   const onEditorReadyRef = useRef(onEditorReady);
@@ -176,12 +178,12 @@ export const EditorWrapper: React.FC<{
           }}
         >
           <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
-            Failed to load editor
+            {t("demo.editorWrapper.failedToLoad")}
           </p>
           <p style={{ fontSize: 14 }}>
-            Make sure the Blok editor is built with <code>npm run build</code>
+            {t("demo.editorWrapper.buildHint")} <code>npm run build</code>
           </p>
-          <p style={{ fontSize: 12, marginTop: "1rem" }}>Error: {error}</p>
+          <p style={{ fontSize: 12, marginTop: "1rem" }}>{t("demo.editorWrapper.errorPrefix")} {error}</p>
         </div>
       </div>
     );
@@ -225,7 +227,7 @@ export const EditorWrapper: React.FC<{
                 </linearGradient>
               </defs>
             </svg>
-            <p>Loading editor...</p>
+            <p>{t("demo.editorWrapper.loading")}</p>
           </div>
         </div>
       )}

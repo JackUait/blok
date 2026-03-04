@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { CodeBlock } from '../components/common/CodeBlock';
@@ -7,10 +7,11 @@ import { RecipeCard } from '../components/recipes/RecipeCard';
 import { KeyboardShortcuts } from '../components/recipes/KeyboardShortcuts';
 import { MobileSectionNav } from '../components/common/MobileSectionNav';
 import { SIDEBAR_SECTIONS } from '../components/recipes/recipes-data';
+import { useI18n } from '../contexts/I18nContext';
 import { NAV_LINKS } from '../utils/constants';
 import '../../assets/recipes.css';
 
-// Flatten sidebar sections to get all section IDs
+// Flatten sidebar sections to get all section IDs (IDs are stable, no translation needed)
 const ALL_SECTION_IDS = SIDEBAR_SECTIONS.flatMap((section) =>
   section.links.map((link) => link.id)
 );
@@ -193,6 +194,29 @@ new Blok({
 });`;
 
 export const RecipesPage: React.FC = () => {
+  const { t } = useI18n();
+
+  // Translated sidebar sections — labels change with locale, IDs remain stable
+  const translatedSections = useMemo(() => [
+    {
+      title: t('recipes.sidebarQuickReference'),
+      links: [
+        { id: 'keyboard-shortcuts', label: t('recipes.sidebarKeyboardShortcuts') },
+      ],
+    },
+    {
+      title: t('recipes.sidebarCodeRecipes'),
+      links: [
+        { id: 'autosave', label: t('recipes.sidebarAutosave') },
+        { id: 'events', label: t('recipes.sidebarEvents') },
+        { id: 'custom-tool', label: t('recipes.sidebarCustomTool') },
+        { id: 'styling', label: t('recipes.sidebarStyling') },
+        { id: 'read-only', label: t('recipes.sidebarReadOnly') },
+        { id: 'localization', label: t('recipes.sidebarLocalization') },
+      ],
+    },
+  ], [t]);
+
   // Initialize active section from URL hash
   const [activeSection, setActiveSection] = useState<string>(() => {
     const hash = window.location.hash.slice(1);
@@ -293,22 +317,21 @@ export const RecipesPage: React.FC = () => {
       <Nav links={NAV_LINKS} />
       <div className="recipes-docs" data-blok-testid="recipes-docs">
         <Sidebar
-          sections={SIDEBAR_SECTIONS}
+          sections={translatedSections}
           activeSection={activeSection}
           variant="recipes"
-          filterLabel="Filter recipes"
+          filterLabel={t('recipes.filterLabel')}
         />
         <div className="recipes-content-wrapper">
           <MobileSectionNav
-            sections={SIDEBAR_SECTIONS}
+            sections={translatedSections}
             activeSection={activeSection}
           />
           <main className="recipes-main" data-blok-testid="recipes-main">
           <section className="recipes-hero">
-            <h1 className="recipes-hero-title">Recipes</h1>
+            <h1 className="recipes-hero-title">{t('recipes.heroTitle')}</h1>
             <p className="recipes-hero-description">
-              Practical tips, patterns, and code snippets to help you get the most out of Blok.
-              From basic setup to advanced customization.
+              {t('recipes.heroDescription')}
             </p>
           </section>
 
@@ -320,7 +343,7 @@ export const RecipesPage: React.FC = () => {
                   <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" />
                 </svg>
               </span>
-              Keyboard Shortcuts
+              {t('recipes.keyboardShortcutsTitle')}
             </h2>
             <KeyboardShortcuts />
           </section>
@@ -328,9 +351,9 @@ export const RecipesPage: React.FC = () => {
           <section id="autosave" className="recipes-section">
             <RecipeCard
               icon={<SaveIcon />}
-              title="Autosave with Debouncing"
-              description="Automatically save content as users type, with debouncing to prevent excessive server requests."
-              tip="A 1-second debounce is usually a good balance between responsiveness and server load."
+              title={t('recipes.autosaveTitle')}
+              description={t('recipes.autosaveDescription')}
+              tip={t('recipes.autosaveTip')}
             >
               <CodeBlock code={AUTOSAVE_CODE} language="typescript" />
             </RecipeCard>
@@ -339,8 +362,8 @@ export const RecipesPage: React.FC = () => {
           <section id="events" className="recipes-section">
             <RecipeCard
               icon={<EventIcon />}
-              title="Working with Events"
-              description="Listen to editor events to integrate with your application's state management or analytics."
+              title={t('recipes.eventsTitle')}
+              description={t('recipes.eventsDescription')}
             >
               <CodeBlock code={EVENTS_CODE} language="typescript" />
             </RecipeCard>
@@ -349,9 +372,9 @@ export const RecipesPage: React.FC = () => {
           <section id="custom-tool" className="recipes-section">
             <RecipeCard
               icon={<ToolIcon />}
-              title="Creating a Custom Tool"
-              description="Build your own block type to extend Blok's functionality. This example creates a simple alert/callout block."
-              tip="Keep tools focused on a single purpose. For complex needs, compose multiple simple tools."
+              title={t('recipes.customToolTitle')}
+              description={t('recipes.customToolDescription')}
+              tip={t('recipes.customToolTip')}
             >
               <CodeBlock code={CUSTOM_TOOL_CODE} language="typescript" />
             </RecipeCard>
@@ -360,8 +383,8 @@ export const RecipesPage: React.FC = () => {
           <section id="styling" className="recipes-section">
             <RecipeCard
               icon={<StyleIcon />}
-              title="Styling with Data Attributes"
-              description="Customize Blok's appearance using CSS and data attributes. No need to fight with specificity."
+              title={t('recipes.stylingTitle')}
+              description={t('recipes.stylingDescription')}
             >
               <CodeBlock code={STYLING_CODE} language="css" />
             </RecipeCard>
@@ -370,9 +393,9 @@ export const RecipesPage: React.FC = () => {
           <section id="read-only" className="recipes-section">
             <RecipeCard
               icon={<ReadOnlyIcon />}
-              title="Read-Only Mode"
-              description="Display saved content without editing capabilities, or toggle between edit and preview modes."
-              tip="Read-only mode is perfect for previewing content before publishing or displaying user-generated content."
+              title={t('recipes.readOnlyTitle')}
+              description={t('recipes.readOnlyDescription')}
+              tip={t('recipes.readOnlyTip')}
             >
               <CodeBlock code={READONLY_CODE} language="typescript" />
             </RecipeCard>
@@ -381,9 +404,9 @@ export const RecipesPage: React.FC = () => {
           <section id="localization" className="recipes-section">
             <RecipeCard
               icon={<LocaleIcon />}
-              title="Localization with Preloading"
-              description="Configure Blok for multiple languages with optional preloading for offline support or instant initialization."
-              tip="Most apps can use on-demand loading with buildRegistry() directly—the ~50-100ms delay is usually imperceptible."
+              title={t('recipes.localizationTitle')}
+              description={t('recipes.localizationDescription')}
+              tip={t('recipes.localizationTip')}
             >
               <CodeBlock code={LOCALE_CODE} language="typescript" />
             </RecipeCard>
@@ -395,11 +418,11 @@ export const RecipesPage: React.FC = () => {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
-                <span>Community</span>
+                <span>{t('recipes.communityBadge')}</span>
               </div>
-              <h2>Have a recipe to share?</h2>
+              <h2>{t('recipes.ctaTitle')}</h2>
               <p>
-                Your patterns and techniques could help thousands of developers build better editors.
+                {t('recipes.ctaDescription')}
               </p>
               <div className="recipes-cta-actions">
                 <a
@@ -408,7 +431,7 @@ export const RecipesPage: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <span className="recipes-cta-btn-text">Contribute a Recipe</span>
+                  <span className="recipes-cta-btn-text">{t('recipes.ctaButton')}</span>
                   <span className="recipes-cta-btn-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="5" y1="12" x2="19" y2="12" />

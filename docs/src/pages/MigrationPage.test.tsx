@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MigrationPage } from './MigrationPage';
 import { I18nProvider } from '../contexts/I18nContext';
+import enJson from '../i18n/en.json';
+
+const m = enJson.migration;
 
 const renderMigrationPage = () =>
   render(
@@ -24,24 +27,23 @@ describe('MigrationPage', () => {
   it('should render the migration hero title', () => {
     renderMigrationPage();
 
-    expect(screen.getByText('From EditorJS')).toBeInTheDocument();
+    // heroFromEditorJS appears in the hero title and also in the CSS reference legend
+    expect(screen.getAllByText(m.heroFromEditorJS).length).toBeGreaterThanOrEqual(1);
     // Blok appears in the gradient span within the h1 title
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('Blok');
+    expect(heading).toHaveTextContent(m.heroBlok);
   });
 
   it('should render the migration hero description', () => {
     renderMigrationPage();
 
-    expect(
-      screen.getByText(/Migrate your project in minutes/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(m.heroDescription)).toBeInTheDocument();
   });
 
   it('should render the CodemodCard component', () => {
     renderMigrationPage();
 
-    expect(screen.getByText('Codemod')).toBeInTheDocument();
+    expect(screen.getByTestId('codemod-card')).toBeInTheDocument();
   });
 
   it('should render the main element', () => {
@@ -56,7 +58,7 @@ describe('MigrationPage', () => {
 
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toBeInTheDocument();
-    expect(heading).toHaveTextContent('Blok');
+    expect(heading).toHaveTextContent(m.heroBlok);
   });
 
   it('should render navigation links', () => {

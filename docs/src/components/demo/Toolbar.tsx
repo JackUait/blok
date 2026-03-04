@@ -1,3 +1,6 @@
+import React from "react";
+import { useI18n } from "../../contexts/I18nContext";
+
 interface ToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
@@ -15,6 +18,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   canUndo = true,
   canRedo = true,
 }) => {
+  const { t } = useI18n();
   return (
     <div className="demo-toolbar">
       <div className="toolbar-group">
@@ -22,7 +26,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           className="toolbar-btn"
           onClick={onUndo}
           disabled={!canUndo}
-          title="Undo"
+          title={t("demo.toolbar.undoTitle")}
           type="button"
         >
           <svg
@@ -41,7 +45,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           className="toolbar-btn"
           onClick={onRedo}
           disabled={!canRedo}
-          title="Redo"
+          title={t("demo.toolbar.redoTitle")}
           type="button"
         >
           <svg
@@ -62,7 +66,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button
           className="toolbar-btn"
           onClick={onSave}
-          title="Save JSON"
+          title={t("demo.toolbar.saveTitle")}
           type="button"
         >
           <svg
@@ -77,12 +81,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <polyline points="17 21 17 13 7 13 7 21" />
             <polyline points="7 3 7 8 15 8" />
           </svg>
-          <span>Save</span>
+          <span>{t("demo.toolbar.saveLabel")}</span>
         </button>
         <button
           className="toolbar-btn"
           onClick={onClear}
-          title="Clear Editor"
+          title={t("demo.toolbar.clearTitle")}
           type="button"
         >
           <svg
@@ -96,7 +100,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
-          <span>Clear</span>
+          <span>{t("demo.toolbar.clearLabel")}</span>
         </button>
       </div>
     </div>

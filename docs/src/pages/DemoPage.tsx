@@ -4,6 +4,7 @@ import { Footer } from '../components/layout/Footer';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
 import { OutputPanel } from '../components/demo/OutputPanel';
 import { NAV_LINKS } from '../utils/constants';
+import { useI18n } from '../contexts/I18nContext';
 import '../../assets/demo.css';
 
 interface BlokEditor {
@@ -15,8 +16,9 @@ interface BlokEditor {
 }
 
 export const DemoPage: React.FC = () => {
+  const { t } = useI18n();
   const [showOutput, setShowOutput] = useState(false);
-  const [output, setOutput] = useState<string>('Click "Get JSON" to see the output');
+  const [output, setOutput] = useState<string>(() => t('demo.outputInitialMessage'));
   const editorRef = useRef<BlokEditor | null>(null);
 
   const handleEditorReady = useCallback((editor: BlokEditor) => {
@@ -34,9 +36,9 @@ export const DemoPage: React.FC = () => {
   const handleClear = useCallback(async () => {
     if (editorRef.current) {
       await editorRef.current.clear();
-      setOutput('Editor cleared');
+      setOutput(t('demo.editorCleared'));
     }
-  }, []);
+  }, [t]);
 
   const handleUndo = useCallback(async () => {
     if (editorRef.current) {
@@ -62,13 +64,14 @@ export const DemoPage: React.FC = () => {
 
         <div className="demo-container">
           <div className="demo-header">
-            <span className="demo-live-badge">Interactive Demo</span>
+            <span className="demo-live-badge">{t('demo.badge')}</span>
             <h1 className="demo-title">
-              Try the <span className="demo-title-gradient">Editor</span>
+              {t('demo.title')} <span className="demo-title-gradient">{t('demo.titleGradient')}</span>
             </h1>
             <p className="demo-subtitle">
-              A fully interactive editor running right here in your browser.
-              Type <code className="inline-code">/</code> for commands, drag blocks to reorder, or select text to format.
+              {t('demo.subtitle')}
+              <code className="inline-code">{t('demo.subtitleCommand')}</code>
+              {t('demo.subtitleRest')}
             </p>
           </div>
 
@@ -87,14 +90,14 @@ export const DemoPage: React.FC = () => {
                     <rect x="3" y="14" width="7" height="7" rx="1" />
                     <rect x="14" y="14" width="7" height="7" rx="1" />
                   </svg>
-                  Blok Editor
+                  {t('demo.editorTitle')}
                 </div>
                 <div className="demo-chrome-actions">
                   <button
                     className="demo-action-btn"
                     onClick={handleUndo}
-                    title="Undo (Ctrl+Z)"
-                    aria-label="Undo"
+                    title={t('demo.undoTitle')}
+                    aria-label={t('demo.undoAriaLabel')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 7v6h6" />
@@ -104,8 +107,8 @@ export const DemoPage: React.FC = () => {
                   <button
                     className="demo-action-btn"
                     onClick={handleRedo}
-                    title="Redo (Ctrl+Shift+Z)"
-                    aria-label="Redo"
+                    title={t('demo.redoTitle')}
+                    aria-label={t('demo.redoAriaLabel')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 7v6h-6" />
@@ -116,7 +119,7 @@ export const DemoPage: React.FC = () => {
                   <button
                     className="demo-action-btn demo-action-btn--primary"
                     onClick={handleSave}
-                    title="Get JSON output"
+                    title={t('demo.getJsonTitle')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -125,12 +128,12 @@ export const DemoPage: React.FC = () => {
                       <line x1="16" y1="17" x2="8" y2="17" />
                       <polyline points="10 9 9 9 8 9" />
                     </svg>
-                    <span>Get JSON</span>
+                    <span>{t('demo.getJsonLabel')}</span>
                   </button>
                   <button
                     className="demo-action-btn demo-action-btn--danger"
                     onClick={handleClear}
-                    title="Clear editor"
+                    title={t('demo.clearTitle')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
@@ -152,13 +155,13 @@ export const DemoPage: React.FC = () => {
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
-                    JSON Output
+                    {t('demo.jsonOutputTitle')}
                   </div>
                   <button
                     className="demo-close-btn"
                     onClick={() => setShowOutput(false)}
-                    title="Close output panel"
-                    aria-label="Close output panel"
+                    title={t('demo.closeOutputTitle')}
+                    aria-label={t('demo.closeOutputAriaLabel')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" />
@@ -174,19 +177,19 @@ export const DemoPage: React.FC = () => {
           <div className="demo-tips">
             <div className="demo-tip">
               <kbd>/</kbd>
-              <span>Open command menu</span>
+              <span>{t('demo.tipOpenMenu')}</span>
             </div>
             <div className="demo-tip">
               <kbd>Tab</kbd>
-              <span>Indent list item</span>
+              <span>{t('demo.tipIndentList')}</span>
             </div>
             <div className="demo-tip">
               <kbd>Ctrl</kbd><span>+</span><kbd>Z</kbd>
-              <span>Undo</span>
+              <span>{t('demo.tipUndo')}</span>
             </div>
             <div className="demo-tip">
               <kbd>Ctrl</kbd><span>+</span><kbd>B</kbd>
-              <span>Bold text</span>
+              <span>{t('demo.tipBoldText')}</span>
             </div>
           </div>
 
@@ -198,8 +201,8 @@ export const DemoPage: React.FC = () => {
                 </svg>
               </div>
               <div className="hint-content">
-                <strong>Instant Feedback</strong>
-                <p>Everything happens locally in your browser. No server roundtrips, just pure performance.</p>
+                <strong>{t('demo.hintInstantFeedbackTitle')}</strong>
+                <p>{t('demo.hintInstantFeedbackDesc')}</p>
               </div>
             </div>
 
@@ -211,8 +214,8 @@ export const DemoPage: React.FC = () => {
                 </svg>
               </div>
               <div className="hint-content">
-                <strong>Clean JSON Output</strong>
-                <p>Content is stored as structured JSON blocks. Parse, validate, and store anywhere.</p>
+                <strong>{t('demo.hintCleanJsonTitle')}</strong>
+                <p>{t('demo.hintCleanJsonDesc')}</p>
               </div>
             </div>
 
@@ -226,8 +229,8 @@ export const DemoPage: React.FC = () => {
                 </svg>
               </div>
               <div className="hint-content">
-                <strong>Block-Based Architecture</strong>
-                <p>Create custom block types with simple JavaScript classes. Fully extensible.</p>
+                <strong>{t('demo.hintBlockArchTitle')}</strong>
+                <p>{t('demo.hintBlockArchDesc')}</p>
               </div>
             </div>
           </div>

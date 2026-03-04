@@ -1,100 +1,108 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { I18nProvider } from '../../contexts/I18nContext';
 import { MigrationSteps } from './MigrationSteps';
+import enJson from '../../i18n/en.json';
+
+const m = enJson.migration;
+
+const renderMigrationSteps = () =>
+  render(
+    <I18nProvider>
+      <MigrationSteps />
+    </I18nProvider>
+  );
 
 describe('MigrationSteps', () => {
   it('should render the component', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     expect(screen.getByTestId('migration-section')).toBeInTheDocument();
   });
 
   it('should render What Gets Transformed section heading', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('What Gets Transformed')).toBeInTheDocument();
+    expect(screen.getByText(m.step2Title)).toBeInTheDocument();
   });
 
   it('should render the section description', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(
-      screen.getByText('The codemod handles all the breaking changes automatically.')
-    ).toBeInTheDocument();
+    expect(screen.getByText(m.step2Description)).toBeInTheDocument();
   });
 
   it('should render 6 change cards', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     const cards = screen.getAllByTestId('change-card');
     expect(cards).toHaveLength(6);
   });
 
   it('should render Imports change card', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('Imports')).toBeInTheDocument();
+    expect(screen.getByText(m.changeImports)).toBeInTheDocument();
   });
 
   it('should render Tool Imports change card', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('Tool Imports')).toBeInTheDocument();
+    expect(screen.getByText(m.changeToolImports)).toBeInTheDocument();
   });
 
   it('should render Types change card', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('Types')).toBeInTheDocument();
+    expect(screen.getByText(m.changeTypes)).toBeInTheDocument();
   });
 
   it('should render CSS Selectors change card', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('CSS Selectors')).toBeInTheDocument();
+    expect(screen.getByText(m.changeCssSelectors)).toBeInTheDocument();
   });
 
   it('should render Default Holder change card', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('Default Holder')).toBeInTheDocument();
+    expect(screen.getByText(m.changeDefaultHolder)).toBeInTheDocument();
   });
 
   it('should render Data Attributes change card', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('Data Attributes')).toBeInTheDocument();
+    expect(screen.getByText(m.changeDataAttributes)).toBeInTheDocument();
   });
 
   it('should render CSS Selector Reference section heading', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('CSS Selector Reference')).toBeInTheDocument();
+    expect(screen.getByText(m.step3Title)).toBeInTheDocument();
   });
 
   it('should render CSS reference description', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(
-      screen.getByText('Reference for manually updating your CSS selectors.')
-    ).toBeInTheDocument();
+    expect(screen.getByText(m.step3Description)).toBeInTheDocument();
   });
 
   it('should render the CSS mappings table headers', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
-    expect(screen.getByText('EditorJS')).toBeInTheDocument();
-    expect(screen.getByText('Blok')).toBeInTheDocument();
+    const referenceCard = screen.getByTestId('migration-table');
+    expect(within(referenceCard).getByText(m.heroFromEditorJS)).toBeInTheDocument();
+    expect(within(referenceCard).getByText(m.heroBlok)).toBeInTheDocument();
   });
 
   it('should render .codex-editor mapping in table', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     expect(screen.getByText('.codex-editor')).toBeInTheDocument();
   });
 
   it('should render .ce-block mapping in table', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     const table = screen.getByTestId('migration-table');
     const withinTable = within(table);
@@ -102,7 +110,7 @@ describe('MigrationSteps', () => {
   });
 
   it('should render [data-blok-element] mapping in table', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     const table = screen.getByTestId('migration-table');
     const withinTable = within(table);
@@ -110,26 +118,26 @@ describe('MigrationSteps', () => {
   });
 
   it('should render both migration sections', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     expect(screen.getByTestId('migration-section')).toBeInTheDocument();
     expect(screen.getByTestId('css-reference-section')).toBeInTheDocument();
   });
 
   it('should render changes grid container', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     expect(screen.getByTestId('changes-grid')).toBeInTheDocument();
   });
 
   it('should render migration table', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     expect(screen.getByTestId('migration-table')).toBeInTheDocument();
   });
 
   it('should render removed and added code diffs in each change card', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     const cards = screen.getAllByTestId('change-card');
     // Use Unicode minus sign (−) which is used in the component
@@ -142,7 +150,7 @@ describe('MigrationSteps', () => {
   });
 
   it('should render code elements for each change', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     const codeElements = screen.getAllByRole('code');
 
@@ -150,7 +158,7 @@ describe('MigrationSteps', () => {
   });
 
   it('should render each change card with title and diff', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     const cards = screen.getAllByTestId('change-card');
 
@@ -165,13 +173,14 @@ describe('MigrationSteps', () => {
   });
 
   it('should render reference card with proper header legend', () => {
-    render(<MigrationSteps />);
+    renderMigrationSteps();
 
     const referenceCard = screen.getByTestId('migration-table');
 
     // Legend shows EditorJS → Blok transformation direction
-    expect(within(referenceCard).getByText('EditorJS')).toBeInTheDocument();
-    expect(within(referenceCard).getByText('Blok')).toBeInTheDocument();
-    expect(within(referenceCard).getByText('8 selectors')).toBeInTheDocument();
+    expect(within(referenceCard).getByText(m.heroFromEditorJS)).toBeInTheDocument();
+    expect(within(referenceCard).getByText(m.heroBlok)).toBeInTheDocument();
+    // Count is interpolated: "{count} selectors" with CSS_MAPPINGS.length = 8
+    expect(within(referenceCard).getByText(m.selectorsCount.replace('{count}', '8'))).toBeInTheDocument();
   });
 });

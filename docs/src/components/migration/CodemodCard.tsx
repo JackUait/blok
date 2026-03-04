@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CodeBlock } from "../common/CodeBlock";
+import { useI18n } from "../../contexts/I18nContext";
 
 type Tab = "dry-run" | "apply";
 
@@ -7,23 +8,24 @@ const DRY_RUN_CODE =
   "npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run";
 const APPLY_CODE = "npx -p @jackuait/blok migrate-from-editorjs ./src";
 
-const CODEMOD_OPTIONS = [
-  { 
-    flag: "--dry-run", 
-    description: "Preview changes without modifying files",
-  },
-  {
-    flag: "--verbose",
-    description: "Show detailed output for each file processed",
-  },
-  {
-    flag: "--use-library-i18n",
-    description: "Use Blok's built-in translations (68 languages)",
-  },
-];
-
 export const CodemodCard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("dry-run");
+  const { t } = useI18n();
+
+  const codemodOptions = useMemo(() => [
+    {
+      flag: "--dry-run",
+      description: t('migration.codemodDryRunDescription'),
+    },
+    {
+      flag: "--verbose",
+      description: t('migration.codemodVerboseDescription'),
+    },
+    {
+      flag: "--use-library-i18n",
+      description: t('migration.codemodI18nDescription'),
+    },
+  ], [t]);
 
   return (
     <div className="codemod-card" data-blok-testid="codemod-card">
@@ -43,7 +45,7 @@ export const CodemodCard: React.FC = () => {
             </div>
           </div>
           <div className="codemod-header-text">
-            <h2 className="codemod-title">Codemod</h2>
+            <h2 className="codemod-title">{t('migration.codemodTitle')}</h2>
           </div>
         </div>
         
@@ -61,7 +63,7 @@ export const CodemodCard: React.FC = () => {
                 <circle cx="12" cy="12" r="3" />
               </svg>
             </span>
-            <span className="codemod-tab-text">Preview</span>
+            <span className="codemod-tab-text">{t('migration.codemodPreviewTab')}</span>
           </button>
           <button
             className={`codemod-tab ${activeTab === "apply" ? "active" : ""}`}
@@ -75,7 +77,7 @@ export const CodemodCard: React.FC = () => {
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
             </span>
-            <span className="codemod-tab-text">Apply</span>
+            <span className="codemod-tab-text">{t('migration.codemodApplyTab')}</span>
           </button>
         </div>
 
@@ -87,7 +89,7 @@ export const CodemodCard: React.FC = () => {
             <div className="codemod-panel-header">
               <span className="codemod-panel-indicator codemod-panel-indicator--preview" />
               <p className="codemod-panel-label">
-                Preview what will change <span className="codemod-panel-hint">(recommended first)</span>
+                {t('migration.codemodPreviewLabel')} <span className="codemod-panel-hint">{t('migration.codemodPreviewHint')}</span>
               </p>
             </div>
             <CodeBlock code={DRY_RUN_CODE} language="bash" />
@@ -98,7 +100,7 @@ export const CodemodCard: React.FC = () => {
           >
             <div className="codemod-panel-header">
               <span className="codemod-panel-indicator codemod-panel-indicator--apply" />
-              <p className="codemod-panel-label">Apply the changes to your files</p>
+              <p className="codemod-panel-label">{t('migration.codemodApplyLabel')}</p>
             </div>
             <CodeBlock code={APPLY_CODE} language="bash" />
           </div>
@@ -121,11 +123,11 @@ export const CodemodCard: React.FC = () => {
                 <line x1="9" y1="8" x2="15" y2="8" />
                 <line x1="17" y1="16" x2="23" y2="16" />
               </svg>
-              Options
+              {t('migration.codemodOptionsTitle')}
             </h4>
           </div>
           <div className="codemod-options-list">
-            {CODEMOD_OPTIONS.map((option, index) => (
+            {codemodOptions.map((option, index) => (
               <div 
                 key={option.flag} 
                 className="codemod-option-item"

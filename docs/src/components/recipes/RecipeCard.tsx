@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useI18n } from '../../contexts/I18nContext';
 
 interface RecipeCardProps {
   icon: ReactNode;
@@ -15,6 +16,8 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
   children,
   tip,
 }) => {
+  const { t } = useI18n();
+
   return (
     <div className="recipe-card" data-blok-testid="recipe-card">
       <div className="recipe-card-header">
@@ -31,7 +34,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
       </div>
       {tip && (
         <div className="recipe-card-tip" data-blok-testid="recipe-card-tip">
-          <strong>Pro tip</strong> {tip}
+          <strong>{t('recipes.proTip')}</strong> {tip}
         </div>
       )}
     </div>

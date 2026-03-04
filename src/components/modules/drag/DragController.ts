@@ -285,7 +285,7 @@ export class DragController extends Module {
     }
 
     // Update state with new target
-    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge, dropTarget.parentId);
+    this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge);
 
     // Show drop indicator
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
@@ -307,11 +307,7 @@ export class DragController extends Module {
       return;
     }
 
-    const { targetBlock, targetEdge, targetParentId } = state as {
-      targetBlock: Block | null;
-      targetEdge: 'top' | 'bottom' | null;
-      targetParentId: string | null;
-    };
+    const { targetBlock, targetEdge } = state as { targetBlock: Block | null; targetEdge: 'top' | 'bottom' | null };
 
     if (!targetBlock || !targetEdge) {
       this.cleanup();
@@ -328,7 +324,7 @@ export class DragController extends Module {
     if (e.altKey) {
       void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
     } else {
-      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, targetParentId);
+      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge);
     }
 
     this.cleanup(false, e.altKey);
@@ -338,8 +334,7 @@ export class DragController extends Module {
     sourceBlock: Block,
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom',
-    targetParentId: string | null = null
+    edge: 'top' | 'bottom'
   ): void {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
@@ -349,22 +344,31 @@ export class DragController extends Module {
     }
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
-    // Reparent the moved blocks under the toggle (or clear parent when dragging out)
+    // Update parent-child relationships after move
+    const newParentId = this.resolveParentForDrop(targetBlock, edge);
+    const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
+    const reparentedBlocks: Block[] = [];
     const affectedParentIds = new Set<string>();
 
     for (const movedBlock of result.movedBlocks) {
-      const oldParentId = movedBlock.parentId;
+      // Skip blocks whose parent is also being moved — their internal hierarchy is preserved
+      const parentIsBeingMoved = movedBlock.parentId !== null && movedBlockIds.has(movedBlock.parentId);
 
-      if (targetParentId === oldParentId) {
+      if (parentIsBeingMoved) {
         continue;
       }
-      if (oldParentId !== null) {
-        affectedParentIds.add(oldParentId);
+      if (movedBlock.parentId !== newParentId) {
+        const oldParentId = movedBlock.parentId;
+
+        if (oldParentId !== null) {
+          affectedParentIds.add(oldParentId);
+        }
+        if (newParentId !== null) {
+          affectedParentIds.add(newParentId);
+        }
+        this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
+        reparentedBlocks.push(movedBlock);
       }
-      if (targetParentId !== null) {
-        affectedParentIds.add(targetParentId);
-      }
-      this.Blok.BlockManager.setBlockParent(movedBlock, targetParentId);
     }
 
     // Notify affected parent blocks so toggle tools update their visual state
@@ -377,14 +381,74 @@ export class DragController extends Module {
       }
     }
 
-    // Announce successful drop to screen readers
-    const announcedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
+    // If dropped into a collapsed toggle, hide newly reparented blocks
+    if (newParentId !== null && reparentedBlocks.length > 0) {
+      this.hideBlocksIfParentCollapsed(newParentId, reparentedBlocks);
+    }
 
-    if (this.a11y && announcedBlock) {
-      this.a11y.announceDropComplete(announcedBlock, sourceBlocks, isMultiBlockDrag);
+    // Announce successful drop to screen readers
+    const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
+    if (this.a11y && movedBlock) {
+      this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
     }
 
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Determines the correct parentId for blocks dropped at a given target position.
+   *
+   * @param targetBlock - The block that was the drop target
+   * @param edge - Which edge of the target the drop occurred on
+   * @returns The parentId for the dropped blocks, or null for root level
+   */
+  private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom'): string | null {
+    // If dropping below a toggleable block, the block becomes a child of the toggle.
+    // Detect via DOM attribute (covers both toggle list blocks AND toggle headings).
+    if (edge === 'bottom' && this.isToggleableBlock(targetBlock)) {
+      return targetBlock.id;
+    }
+
+    // If the target block is itself a child, the dropped block becomes a sibling
+    // (child of the same parent)
+    if (targetBlock.parentId !== null) {
+      return targetBlock.parentId;
+    }
+
+    // Otherwise, the block goes to root level
+    return null;
+  }
+
+  /**
+   * Checks whether a block is a toggleable block (toggle list or toggle heading)
+   * by looking for the data-blok-toggle-open DOM attribute on its holder.
+   */
+  private isToggleableBlock(block: Block): boolean {
+    return block.holder.querySelector('[data-blok-toggle-open]') !== null;
+  }
+
+  /**
+   * Hides blocks if their parent toggle is currently collapsed.
+   * This prevents newly reparented or duplicated blocks from appearing
+   * visually when their parent is in a collapsed state.
+   */
+  private hideBlocksIfParentCollapsed(parentId: string, blocks: Block[]): void {
+    if (blocks.length === 0) {
+      return;
+    }
+    const parentBlock = this.Blok.BlockManager.getBlockById(parentId);
+
+    if (parentBlock === undefined) {
+      return;
+    }
+    const toggleEl = parentBlock.holder.querySelector('[data-blok-toggle-open]');
+    const isCollapsed = toggleEl?.getAttribute('data-blok-toggle-open') === 'false';
+
+    if (isCollapsed) {
+      for (const block of blocks) {
+        block.holder.classList.add('hidden');
+      }
+    }
   }
 
   private async handleDuplicate(
@@ -399,6 +463,35 @@ export class DragController extends Module {
 
     if (result.duplicatedBlocks.length === 0) {
       return;
+    }
+
+    // Set parent relationships for duplicated blocks
+    const newParentId = this.resolveParentForDrop(targetBlock, edge);
+    const affectedParentIds = new Set<string>();
+
+    for (const dupBlock of result.duplicatedBlocks) {
+      if (dupBlock.parentId !== newParentId) {
+        if (newParentId !== null) {
+          affectedParentIds.add(newParentId);
+        }
+        this.Blok.BlockManager.setBlockParent(dupBlock, newParentId);
+      }
+    }
+
+    // Notify affected parent blocks so toggle tools update their visual state
+    for (const parentId of affectedParentIds) {
+      const parentBlock = this.Blok.BlockManager.getBlockById(parentId);
+
+      if (parentBlock !== undefined) {
+        parentBlock.call('rendered');
+      }
+    }
+
+    // If duplicated into a collapsed toggle, hide the new blocks
+    if (newParentId !== null) {
+      const blocksToHide = result.duplicatedBlocks.filter(b => b.parentId === newParentId);
+
+      this.hideBlocksIfParentCollapsed(newParentId, blocksToHide);
     }
 
     if (this.a11y) {

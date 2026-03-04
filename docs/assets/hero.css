@@ -258,19 +258,13 @@
     transform: translateY(0) rotate(0deg);
   }
   15% {
-    transform: translateY(-3px) rotate(3deg);
+    transform: translateY(-1.5px) rotate(1.2deg);
   }
-  30% {
-    transform: translateY(0) rotate(-2deg);
+  35% {
+    transform: translateY(0) rotate(-0.7deg);
   }
-  45% {
-    transform: translateY(-2px) rotate(1.5deg);
-  }
-  60% {
-    transform: translateY(0) rotate(-1deg);
-  }
-  75% {
-    transform: translateY(-1px) rotate(0.5deg);
+  55% {
+    transform: translateY(-0.75px) rotate(0.4deg);
   }
   100% {
     transform: translateY(0) rotate(0deg);

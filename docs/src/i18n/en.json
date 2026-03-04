@@ -511,6 +511,7 @@
     "emptyDescription": "Find API methods, configuration options, tools, and more",
     "navigate": "navigate",
     "select": "select",
+    "result": "result",
     "results": "results"
   },
   "theme": {

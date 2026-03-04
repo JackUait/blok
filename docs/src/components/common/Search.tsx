@@ -485,8 +485,8 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
             ) : (
               <>
                 <div className={styles['search-results-header']}>
-                  <span className={styles['search-results-count']}>
-                    {results.length} {t('search.results')}
+                  <span className={styles['search-results-count']} data-blok-testid="search-results-count">
+                    {results.length} {results.length === 1 ? t('search.result') : t('search.results')}
                   </span>
                 </div>
                 {results.map((result, index) => {

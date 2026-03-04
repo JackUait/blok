@@ -3,6 +3,17 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { Search } from './Search';
+import * as searchUtils from '@/utils/search';
+import type { SearchResult } from '@/types/search';
+
+vi.mock('@/utils/search', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/search')>();
+  return {
+    ...actual,
+    search: vi.fn(actual.search),
+    getSearchIndex: vi.fn(actual.getSearchIndex),
+  };
+});
 
 describe('Search', () => {
   beforeEach(() => {
@@ -119,6 +130,61 @@ describe('Search', () => {
     );
     const input = screen.getByPlaceholderText('Search docs...');
     expect(input).toHaveFocus();
+  });
+
+  describe('result count pluralization', () => {
+    it('should show singular "result" when there is exactly 1 result', async () => {
+      const singleResult: SearchResult = {
+        id: 'test-single',
+        title: 'Single Result',
+        description: 'Only one',
+        category: 'api',
+        module: 'Core',
+        path: '/docs',
+        hash: 'test-single',
+        rank: 1,
+      };
+      vi.mocked(searchUtils.search).mockReturnValueOnce([singleResult]);
+
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      fireEvent.change(input, { target: { value: 'single' } });
+
+      await waitFor(() => {
+        const countEl = screen.getByTestId('search-results-count');
+        expect(countEl.textContent).toBe('1 result');
+      });
+    });
+
+    it('should show plural "results" when there are multiple results', async () => {
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      const input = screen.getByPlaceholderText('Search docs...');
+
+      // Search for a broad term that should return multiple results
+      fireEvent.change(input, { target: { value: 'blocks' } });
+
+      await waitFor(() => {
+        const countEl = screen.getByTestId('search-results-count');
+        const text = countEl.textContent ?? '';
+        const count = parseInt(text, 10);
+        expect(count).toBeGreaterThan(1);
+        expect(text).toMatch(/results$/);
+      });
+    });
   });
 
   describe('module grouping', () => {

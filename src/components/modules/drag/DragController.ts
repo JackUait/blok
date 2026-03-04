@@ -348,6 +348,7 @@ export class DragController extends Module {
     const newParentId = this.resolveParentForDrop(targetBlock, edge);
     const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
     const reparentedBlocks: Block[] = [];
+    const affectedParentIds = new Set<string>();
 
     for (const movedBlock of result.movedBlocks) {
       // Skip blocks whose parent is also being moved — their internal hierarchy is preserved
@@ -357,8 +358,26 @@ export class DragController extends Module {
         continue;
       }
       if (movedBlock.parentId !== newParentId) {
+        const oldParentId = movedBlock.parentId;
+
+        if (oldParentId !== null) {
+          affectedParentIds.add(oldParentId);
+        }
+        if (newParentId !== null) {
+          affectedParentIds.add(newParentId);
+        }
         this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
         reparentedBlocks.push(movedBlock);
+      }
+    }
+
+    // Notify affected parent blocks so toggle tools update their visual state
+    // (e.g. hide/show body placeholder when children are added/removed)
+    for (const parentId of affectedParentIds) {
+      const parentBlock = this.Blok.BlockManager.getBlockById(parentId);
+
+      if (parentBlock !== undefined) {
+        parentBlock.call('rendered');
       }
     }
 
@@ -448,10 +467,23 @@ export class DragController extends Module {
 
     // Set parent relationships for duplicated blocks
     const newParentId = this.resolveParentForDrop(targetBlock, edge);
+    const affectedParentIds = new Set<string>();
 
     for (const dupBlock of result.duplicatedBlocks) {
       if (dupBlock.parentId !== newParentId) {
+        if (newParentId !== null) {
+          affectedParentIds.add(newParentId);
+        }
         this.Blok.BlockManager.setBlockParent(dupBlock, newParentId);
+      }
+    }
+
+    // Notify affected parent blocks so toggle tools update their visual state
+    for (const parentId of affectedParentIds) {
+      const parentBlock = this.Blok.BlockManager.getBlockById(parentId);
+
+      if (parentBlock !== undefined) {
+        parentBlock.call('rendered');
       }
     }
 

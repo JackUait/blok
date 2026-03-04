@@ -102,6 +102,7 @@ const createBlockStub = (
     stretched: options.stretched ?? false,
     contentIds: options.contentIds ?? [],
     parentId: options.parentId ?? null,
+    call: vi.fn(),
   };
 
   Object.defineProperty(block, "selected", {
@@ -1304,6 +1305,98 @@ describe("DragManager - Component Integration", () => {
 
       // setBlockParent should NOT be called since child-2 already has toggle-1 as parent
       expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
+    });
+
+    it("should call rendered() on affected parent blocks after reparenting", () => {
+      // After dropping a block into a toggle, the toggle tool needs its rendered()
+      // lifecycle called so it can update body placeholder visibility.
+      const toggleBlock = createBlockStub({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+      });
+
+      // Add the toggle-open DOM attribute
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const paragraphBlock = createBlockStub({
+        id: "paragraph-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [paragraphBlock, toggleBlock];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(
+        dragManager,
+        wrapper,
+        paragraphBlock,
+        toggleBlock,
+        "bottom",
+      );
+
+      // The toggle (new parent) should have call('rendered') invoked
+      expect(toggleBlock.call).toHaveBeenCalledWith("rendered");
+    });
+
+    it("should call rendered() on old parent when dragging last child out of a toggle", () => {
+      // When the last child is dragged out, the old parent toggle needs
+      // rendered() called so it can show the body placeholder again.
+      const toggleBlock = createBlockStub({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+        contentIds: ["child-1"],
+      });
+
+      // Add toggle-open attribute
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const childBlock = createBlockStub({
+        id: "child-1",
+        name: "paragraph",
+        parentId: "toggle-1",
+      });
+
+      const rootTarget = createBlockStub({
+        id: "root-target",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [toggleBlock, childBlock, rootTarget];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag child out of toggle to below root-target
+      performDragDrop(dragManager, wrapper, childBlock, rootTarget, "bottom");
+
+      // The old parent toggle should have call('rendered') invoked
+      expect(toggleBlock.call).toHaveBeenCalledWith("rendered");
     });
   });
 

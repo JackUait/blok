@@ -136,6 +136,25 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Cleans up the module: disconnects the MutationObserver and cancels any
+   * pending batching timeout.  Called by the editor's destroy() chain so that
+   * webkit (and other browsers) can close the page cleanly without the
+   * MutationObserver firing on an already-destroyed instance or the pending
+   * setTimeout keeping the JS engine alive.
+   */
+  public destroy(): void {
+    this.disabled = true;
+    this.mutationObserver.disconnect();
+
+    if (this.batchingTimeout !== null) {
+      clearTimeout(this.batchingTimeout);
+      this.batchingTimeout = null;
+    }
+
+    this.batchingOnChangeQueue.clear();
+  }
+
+  /**
    * Fired on every blocks wrapper dom change
    * @param mutations - mutations happened
    */

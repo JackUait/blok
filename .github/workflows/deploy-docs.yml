@@ -33,7 +33,7 @@ jobs:
         run: cd docs && yarn build
 
       - name: Copy Blok library into docs output
-        run: mkdir -p docs/dist/dist && cp dist/full.mjs docs/dist/dist/full.mjs
+        run: mkdir -p docs/dist/dist && cp -r dist/. docs/dist/dist/
 
       - name: Copy CHANGELOG into docs output
         run: cp CHANGELOG.md docs/dist/CHANGELOG.md

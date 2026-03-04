@@ -12,6 +12,13 @@ const mockLinks: NavLink[] = [
   { href: 'https://github.com/JackUait/blok', label: 'GitHub', external: true },
 ];
 
+const mockLinksWithI18nKeys: NavLink[] = [
+  { href: '/docs', label: 'Docs', i18nKey: 'nav.docs' },
+  { href: '/demo', label: 'Demo', i18nKey: 'nav.demo' },
+  { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },
+  { href: 'https://github.com/JackUait/blok', label: 'GitHub', i18nKey: 'nav.github', external: true },
+];
+
 const TestWrapper: React.FC<{ children: React.ReactNode; initialPath?: string }> = ({
   children,
   initialPath = '/',
@@ -24,6 +31,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode; initialPath?: string }>
 describe('Nav', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('should render a nav element', () => {
@@ -129,5 +137,46 @@ describe('Nav', () => {
     // The home link has Logo image and "Blok" text
     const homeLink = screen.getByRole('link', { name: /Blok/i });
     expect(homeLink).toHaveAttribute('href', '/');
+  });
+
+  it('should use link.label as fallback when i18nKey is not provided', () => {
+    render(
+      <TestWrapper>
+        <Nav links={mockLinks} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByText('Docs')).toBeInTheDocument();
+    expect(screen.getByText('Demo')).toBeInTheDocument();
+  });
+
+  it('should render translated labels when locale is Russian and i18nKey is provided', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+
+    render(
+      <TestWrapper>
+        <Nav links={mockLinksWithI18nKeys} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByText('Документация')).toBeInTheDocument();
+    expect(screen.getByText('Демо')).toBeInTheDocument();
+    expect(screen.getByText('Миграция')).toBeInTheDocument();
+    expect(screen.getByText('GitHub')).toBeInTheDocument();
+  });
+
+  it('should render English labels when locale is English and i18nKey is provided', () => {
+    localStorage.setItem('blok-docs-locale', 'en');
+
+    render(
+      <TestWrapper>
+        <Nav links={mockLinksWithI18nKeys} />
+      </TestWrapper>
+    );
+
+    expect(screen.getByText('Docs')).toBeInTheDocument();
+    expect(screen.getByText('Demo')).toBeInTheDocument();
+    expect(screen.getByText('Migration')).toBeInTheDocument();
+    expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
 });

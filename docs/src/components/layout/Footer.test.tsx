@@ -1,45 +1,39 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { I18nProvider } from '../../contexts/I18nContext';
 import { Footer } from './Footer';
 
-describe('Footer', () => {
-  it('should render a footer element', () => {
-    render(
+const renderFooter = () =>
+  render(
+    <I18nProvider>
       <MemoryRouter>
         <Footer />
       </MemoryRouter>
-    );
+    </I18nProvider>
+  );
+
+describe('Footer', () => {
+  it('should render a footer element', () => {
+    renderFooter();
     const footer = screen.getByRole('contentinfo');
     expect(footer).toBeInTheDocument();
   });
 
   it('should render the Blok mascot', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
     expect(screen.getByAltText('Blok mascot')).toBeInTheDocument();
   });
 
   it('should render the tagline', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
     expect(
       screen.getByText(/friendly block-based rich text editor for modern applications/i)
     ).toBeInTheDocument();
   });
 
   it('should render Documentation section', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     expect(screen.getByText('Documentation')).toBeInTheDocument();
     expect(screen.getByText('Quick Start')).toBeInTheDocument();
@@ -48,11 +42,7 @@ describe('Footer', () => {
   });
 
   it('should render Resources section', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     expect(screen.getByText('Resources')).toBeInTheDocument();
     expect(screen.getByText('GitHub')).toBeInTheDocument();
@@ -61,11 +51,7 @@ describe('Footer', () => {
   });
 
   it('should render Community section', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     expect(screen.getByText('Community')).toBeInTheDocument();
     expect(screen.getByText('Issues')).toBeInTheDocument();
@@ -74,11 +60,7 @@ describe('Footer', () => {
   });
 
   it('should have external links with correct attributes', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     const githubLink = screen.getByTestId('github-link');
     expect(githubLink).toHaveAttribute('target', '_blank');
@@ -86,21 +68,13 @@ describe('Footer', () => {
   });
 
   it('should render the copyright notice', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     expect(screen.getByText(/2026 JackUait/)).toBeInTheDocument();
   });
 
   it('should render the Apache 2.0 license link', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     const licenseLink = screen.getByTestId('license-link');
     expect(licenseLink).toBeInTheDocument();
@@ -108,31 +82,19 @@ describe('Footer', () => {
   });
 
   it('should have a footer-brand div', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     expect(screen.getByTestId('footer-brand')).toBeInTheDocument();
   });
 
   it('should have footer-links div', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     expect(screen.getByTestId('footer-links')).toBeInTheDocument();
   });
 
   it('should have footer-bottom div', () => {
-    render(
-      <MemoryRouter>
-        <Footer />
-      </MemoryRouter>
-    );
+    renderFooter();
 
     expect(screen.getByTestId('footer-bottom')).toBeInTheDocument();
   });

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useI18n } from "../../contexts/I18nContext";
 
 const BookIcon = () => (
   <svg
@@ -97,6 +98,7 @@ const HeartIcon = () => (
 );
 
 export const Footer: React.FC = () => {
+  const { t } = useI18n();
   return (
     <footer className="footer">
       {/* Decorative wave top */}
@@ -146,7 +148,7 @@ export const Footer: React.FC = () => {
             <p className="footer-tagline">
               A friendly block-based rich text editor for modern applications.
               <br />
-              <span className="footer-mascot-text">Built with <HeartIcon /></span>
+              <span className="footer-mascot-text">{t('footer.madeWith')} <HeartIcon /></span>
             </p>
           </div>
 

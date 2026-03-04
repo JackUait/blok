@@ -222,6 +222,49 @@ describe('ModificationsObserver', () => {
     eventsDispatcher.emit(FakeCursorHaveBeenSet, { state: true });
     expect(instance?.observe).toHaveBeenCalledTimes(2);
   });
+
+  describe('destroy()', () => {
+    it('disconnects the MutationObserver', () => {
+      const { observer } = createObserver();
+
+      observer.destroy();
+
+      const instance = MutationObserverStub.lastInstance;
+
+      expect(instance?.disconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancels the pending batching timeout so onChange is not fired after destroy', () => {
+      const { observer, eventsDispatcher, onChange } = createObserver();
+
+      // Queue a batched onChange event
+      const blockEvent = createBlockMutationEvent('block-1');
+
+      eventsDispatcher.emit(BlockChanged, { event: blockEvent });
+
+      // Destroy before the batch timer fires
+      observer.destroy();
+
+      // Advance past the batch timeout
+      vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
+
+      // onChange must NOT have been called — the pending timer was cancelled
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('prevents further onChange emissions after destroy', () => {
+      const { observer, eventsDispatcher, onChange } = createObserver();
+
+      observer.destroy();
+
+      const blockEvent = createBlockMutationEvent('block-2');
+
+      eventsDispatcher.emit(BlockChanged, { event: blockEvent });
+      vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
 });
 
 

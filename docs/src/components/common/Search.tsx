@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { search, getSearchIndex } from '@/utils/search';
 import type { SearchResult } from '@/types/search';
@@ -347,7 +348,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   const backdropClasses = `${styles['search-backdrop']} ${isClosing ? styles['search-backdrop-closing'] : ''}`;
   const dialogClasses = `${styles['search-dialog']} ${isClosing ? styles['search-dialog-closing'] : ''}`;
 
-  return (
+  return createPortal(
     <>
       <div className={backdropClasses} onClick={handleClose} data-blok-testid="search-backdrop" />
       <div className={styles['search-container']} onClick={handleClose} data-blok-testid="search-container">
@@ -554,6 +555,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 };

@@ -59,6 +59,23 @@ const SIDEBAR_LINK_KEYS: Record<string, string> = {
 };
 
 /**
+ * Extracts the base key from a method name.
+ * e.g. "save()" -> "save", "render(data)" -> "render", "focus(atEnd?)" -> "focus"
+ */
+function getMethodKey(methodName: string): string {
+  return methodName.replace(/\(.*\)$/, '');
+}
+
+/**
+ * Safely look up a translation key. Returns undefined if the key has no translation
+ * (i.e., t() returned the key itself, meaning the key is missing).
+ */
+function safeTranslate(t: (key: string) => string, key: string): string | undefined {
+  const result = t(key);
+  return result !== key ? result : undefined;
+}
+
+/**
  * Hook that returns translated API sections for the documentation page
  */
 export const useApiTranslations = () => {
@@ -71,11 +88,33 @@ export const useApiTranslations = () => {
         return section;
       }
 
+      const translatedMethods = section.methods?.map((method) => {
+        const methodKey = getMethodKey(method.name);
+        const descKey = `${translationKey}.methods.${methodKey}.description`;
+        const translated = safeTranslate(t, descKey);
+        return translated !== undefined ? { ...method, description: translated } : method;
+      });
+
+      const translatedProperties = section.properties?.map((property) => {
+        const descKey = `${translationKey}.properties.${property.name}.description`;
+        const translated = safeTranslate(t, descKey);
+        return translated !== undefined ? { ...property, description: translated } : property;
+      });
+
+      const translatedTable = section.table?.map((row) => {
+        const descKey = `${translationKey}.table.${row.option}.description`;
+        const translated = safeTranslate(t, descKey);
+        return translated !== undefined ? { ...row, description: translated } : row;
+      });
+
       return {
         ...section,
         title: t(`${translationKey}.title`),
         badge: section.badge ? t(`${translationKey}.badge`) : undefined,
         description: section.description ? t(`${translationKey}.description`) : undefined,
+        ...(translatedMethods !== undefined && { methods: translatedMethods }),
+        ...(translatedProperties !== undefined && { properties: translatedProperties }),
+        ...(translatedTable !== undefined && { table: translatedTable }),
       };
     });
   }, [t, locale]);

@@ -74,4 +74,74 @@ describe('useApiTranslations', () => {
     expect(sectionIds).toContain('core');
     expect(sectionIds).toContain('blocks-api');
   });
+
+  it('should translate core section method descriptions in Russian', () => {
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const coreSection = result.current.apiSections.find(s => s.id === 'core');
+
+    const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
+    expect(saveMethod?.description).toBe('Получает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента.');
+
+    const renderMethod = coreSection?.methods?.find(m => m.name === 'render(data)');
+    expect(renderMethod?.description).toBe('Отображает содержимое редактора из ранее сохранённых JSON-данных.');
+
+    const focusMethod = coreSection?.methods?.find(m => m.name === 'focus(atEnd?)');
+    expect(focusMethod?.description).toBe('Устанавливает фокус на редактор. Опционально позиционирует курсор в конце содержимого.');
+
+    const clearMethod = coreSection?.methods?.find(m => m.name === 'clear()');
+    expect(clearMethod?.description).toBe('Удаляет все блоки из редактора.');
+
+    const destroyMethod = coreSection?.methods?.find(m => m.name === 'destroy()');
+    expect(destroyMethod?.description).toBe('Уничтожает экземпляр редактора и удаляет все DOM-элементы и обработчики событий.');
+  });
+
+  it('should translate core section property descriptions in Russian', () => {
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const coreSection = result.current.apiSections.find(s => s.id === 'core');
+
+    const isReadyProp = coreSection?.properties?.find(p => p.name === 'isReady');
+    expect(isReadyProp?.description).toBe('Promise, который разрешается когда редактор готов');
+
+    const blocksProp = coreSection?.properties?.find(p => p.name === 'blocks');
+    expect(blocksProp?.description).toBe('Модуль API для работы с блоками');
+  });
+
+  it('should translate configuration section table row descriptions in Russian', () => {
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const configSection = result.current.apiSections.find(s => s.id === 'config');
+
+    const holderRow = configSection?.table?.find(r => r.option === 'holder');
+    expect(holderRow?.description).toBe('Контейнер (ID или элемент DOM)');
+
+    const toolsRow = configSection?.table?.find(r => r.option === 'tools');
+    expect(toolsRow?.description).toBe('Доступные блочные и строчные инструменты');
+
+    const readOnlyRow = configSection?.table?.find(r => r.option === 'readOnly');
+    expect(readOnlyRow?.description).toBe('Включить режим только для чтения');
+  });
+
+  it('should keep English method descriptions unchanged in English locale', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const coreSection = result.current.apiSections.find(s => s.id === 'core');
+
+    const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
+    expect(saveMethod?.description).toBe('Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content.');
+  });
+
+  it('should keep English table descriptions unchanged in English locale', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const configSection = result.current.apiSections.find(s => s.id === 'config');
+
+    const holderRow = configSection?.table?.find(r => r.option === 'holder');
+    expect(holderRow?.description).toBe('Container element ID or reference');
+  });
 });

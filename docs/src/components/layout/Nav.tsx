@@ -4,6 +4,7 @@ import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { LanguageSelector } from "../common/LanguageSelector";
+import { useI18n } from "../../contexts/I18nContext";
 import type { NavLink } from "@/types/navigation";
 import styles from "./Nav.module.css";
 
@@ -13,6 +14,7 @@ interface NavProps {
 
 export const Nav: React.FC<NavProps> = ({ links }) => {
   const location = useLocation();
+  const { t } = useI18n();
   const [navScrolled, setNavScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -117,7 +119,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {link.label}
+                      {link.i18nKey ? t(link.i18nKey) : link.label}
                     </a>
                   );
                 }
@@ -128,7 +130,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
                     className={getLinkClassName(link)}
                     onClick={() => setMenuOpen(false)}
                   >
-                    {link.label}
+                    {link.i18nKey ? t(link.i18nKey) : link.label}
                   </Link>
                 );
               })}

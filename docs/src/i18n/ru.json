@@ -8,7 +8,7 @@
     "changelog": "История изменений",
     "github": "GitHub",
     "searchAriaLabel": "Поиск (⌘K)",
-    "toggleMenu": "Открыть меню"
+    "toggleMenu": "Меню навигации"
   },
   "common": {
     "filter": "Фильтр...",

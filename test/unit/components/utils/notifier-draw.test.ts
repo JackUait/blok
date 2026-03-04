@@ -127,5 +127,10 @@ describe('Notifier draw', () => {
     it('uses refined border radius', () => {
       expect(CSS.notification).toContain('rounded');
     });
+
+    it('suppresses native focus outline on action buttons', () => {
+      // outline-hidden ensures buttons (OK/Cancel) do not show a browser focus ring on click
+      expect(CSS.btn).toContain('outline-hidden');
+    });
   });
 });

@@ -288,6 +288,14 @@ describe('PopoverItemDefault', () => {
     expect(secondary?.className).toContain('shrink-0');
   });
 
+  it('suppresses native focus outline so only keyboard-driven focus styles show', () => {
+    const { element } = createItem();
+
+    // outline-hidden removes the browser default focus ring; custom focus styles
+    // are applied via the data-blok-focused attribute instead.
+    expect(element.className).toContain('outline-hidden');
+  });
+
   it('does not truncate title text when secondary label is present', () => {
     const { element } = createItem({ secondaryLabel: '#####' });
     const title = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-title"]');

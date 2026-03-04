@@ -371,4 +371,32 @@ describe('createColorPicker', () => {
     expect(element.querySelector('[data-blok-testid="custom-default-btn"]')).not.toBeNull();
     expect(element.querySelector(`[data-blok-testid="custom-swatch-${COLOR_PRESETS[0].name}"]`)).not.toBeNull();
   });
+
+  describe('focus outline suppression', () => {
+    it('suppresses native focus outline on tab buttons', () => {
+      const { element } = createColorPicker(createOptions());
+      const tabs = Array.from(element.querySelectorAll<HTMLButtonElement>('[data-blok-testid^="test-tab-"]'));
+
+      for (const tab of tabs) {
+        expect(tab.className).toContain('outline-hidden');
+      }
+    });
+
+    it('suppresses native focus outline on color swatches', () => {
+      const { element } = createColorPicker(createOptions());
+      const swatches = Array.from(element.querySelectorAll<HTMLButtonElement>('[data-blok-testid^="test-swatch-"]'));
+
+      for (const swatch of swatches) {
+        expect(swatch.className).toContain('outline-hidden');
+      }
+    });
+
+    it('suppresses native focus outline on default button', () => {
+      const { element } = createColorPicker(createOptions());
+      const defaultBtn = element.querySelector<HTMLButtonElement>('[data-blok-testid="test-default-btn"]');
+
+      expect(defaultBtn).not.toBeNull();
+      expect(defaultBtn?.className).toContain('outline-hidden');
+    });
+  });
 });

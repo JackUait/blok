@@ -64,7 +64,7 @@ export interface ColorPickerHandle {
 /**
  * Base Tailwind classes shared by tab buttons
  */
-const TAB_BASE_CLASSES = 'flex-1 py-1.5 text-xs text-center rounded-md cursor-pointer border-none transition-colors';
+const TAB_BASE_CLASSES = 'flex-1 py-1.5 text-xs text-center rounded-md cursor-pointer border-none outline-hidden transition-colors';
 
 /**
  * Neutral background for text-mode swatches so they render as visible buttons
@@ -139,7 +139,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
 
       swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${preset.name}`);
       swatch.className = twMerge(
-        'w-8 h-8 rounded-md cursor-pointer border-none',
+        'w-8 h-8 rounded-md cursor-pointer border-none outline-hidden',
         'flex items-center justify-center text-sm font-semibold',
         'transition-shadow ring-inset hover:ring-2 hover:ring-black/10',
         isActive && 'ring-2 ring-black/30'
@@ -169,7 +169,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   defaultBtn.setAttribute('data-blok-testid', `${testIdPrefix}-default-btn`);
   defaultBtn.className = twMerge(
     'w-full py-1.5 text-xs text-center rounded-md cursor-pointer',
-    'bg-transparent border-none hover:bg-item-hover-bg',
+    'bg-transparent border-none outline-hidden hover:bg-item-hover-bg',
     'mt-0.5 transition-colors'
   );
   defaultBtn.textContent = i18n.t('tools.marker.default');

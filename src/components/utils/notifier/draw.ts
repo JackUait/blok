@@ -38,7 +38,7 @@ export const CSS = {
     'hover:opacity-100'
   ),
   btnsWrapper: 'flex flex-row flex-nowrap mt-[5px]',
-  btn: 'border-none rounded-[3px] text-[13px] py-[5px] px-2.5 cursor-pointer last:ml-2.5',
+  btn: 'border-none rounded-[3px] text-[13px] py-[5px] px-2.5 cursor-pointer outline-hidden last:ml-2.5',
   okBtn: 'bg-[#34c992] shadow-[0_1px_1px_0_rgba(18,49,35,0.05)] text-white hover:bg-[#2db583]',
   cancelBtn: 'bg-[#f2f5f7] shadow-[0_2px_1px_0_rgba(16,19,29,0)] text-[#656b7c] hover:bg-[#e9ecee]',
   input: twJoin(

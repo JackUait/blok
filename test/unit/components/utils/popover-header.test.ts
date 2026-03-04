@@ -147,4 +147,12 @@ describe('PopoverHeader', () => {
     backButton?.click();
     expect(handler).toHaveBeenCalledTimes(1); // Still 1, not 2
   });
+
+  it('suppresses native focus outline on back button', () => {
+    const header = createHeader();
+    const backButton = header.getElement()?.querySelector<HTMLButtonElement>('button');
+
+    expect(backButton).not.toBeNull();
+    expect(backButton?.className).toContain('outline-hidden');
+  });
 });

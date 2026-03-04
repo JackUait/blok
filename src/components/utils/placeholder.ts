@@ -119,8 +119,10 @@ const handleEmptyElement = (element: HTMLElement): void => {
 
 /**
  * Set up placeholder behavior for a contenteditable element.
- * Adds focus and input event listeners to handle caret positioning
- * when the element is empty.
+ * Adds a focus event listener to position the caret at the start
+ * when the element is empty. Does NOT handle caret positioning on
+ * input events — doing so would race with the browser's own editing
+ * model and destroy content mid-typing (e.g. "Hello world" → "He").
  *
  * @param element - The contenteditable element
  * @param placeholder - Optional placeholder text to set
@@ -134,10 +136,7 @@ export const setupPlaceholder = (
   // Always set the attribute, even if empty (for consistency and testing)
   element.setAttribute(attributeName, placeholder ?? '');
 
-  const handler = (): void => handleEmptyElement(element);
-
-  element.addEventListener('focus', handler);
-  element.addEventListener('input', handler);
+  element.addEventListener('focus', () => handleEmptyElement(element));
 };
 
 /**

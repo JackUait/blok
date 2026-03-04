@@ -12,7 +12,7 @@
     "toggleMenu": "Открыть меню навигации"
   },
   "common": {
-    "filter": "Фильтровать...",
+    "filter": "Фильтр...",
     "clearSearch": "Очистить поиск",
     "noResults": "Нет результатов",
     "selectSection": "Выберите раздел",

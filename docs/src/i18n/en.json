@@ -325,47 +325,110 @@
       "cleanJson": {
         "title": "Clean JSON Output",
         "description": "Content is structured as typed JSON blocks, not raw HTML. Parse, store, and render anywhere.",
-        "learnMore": "Learn more about Clean JSON Output"
+        "learnMore": "Learn more about Clean JSON Output",
+        "details": {
+          "summary": "Blok outputs clean, typed JSON data that's easy to store, transform, and render in any environment.",
+          "benefit1": "Store content in any database without HTML parsing",
+          "benefit2": "Render on server, client, or native apps",
+          "benefit3": "Full TypeScript types for all block data",
+          "benefit4": "Easy content migration and transformation"
+        }
       },
       "slashCommands": {
         "title": "Toolbox & Slash Commands",
         "description": "Press / or click + to open the block menu. Insert paragraphs, headers, lists, and custom blocks instantly.",
-        "learnMore": "Learn more about Toolbox & Slash Commands"
+        "learnMore": "Learn more about Toolbox & Slash Commands",
+        "details": {
+          "summary": "A powerful command palette for quick block insertion. Users can type \"/\" to search and insert any block type.",
+          "benefit1": "Keyboard-first workflow with \"/\" commands",
+          "benefit2": "Searchable block menu with fuzzy matching",
+          "benefit3": "Custom shortcuts for frequently used blocks",
+          "benefit4": "Accessible with full keyboard navigation"
+        }
       },
       "inlineToolbar": {
         "title": "Inline Toolbar",
         "description": "Select text to format with bold, italic, and links. Extensible with custom inline tools.",
-        "learnMore": "Learn more about Inline Toolbar"
+        "learnMore": "Learn more about Inline Toolbar",
+        "details": {
+          "summary": "A floating toolbar appears when text is selected, providing quick access to inline formatting options.",
+          "benefit1": "Context-aware formatting options",
+          "benefit2": "Built-in bold, italic, and link tools",
+          "benefit3": "Extensible with custom inline tools",
+          "benefit4": "Smart positioning that stays in viewport"
+        }
       },
       "dragDrop": {
         "title": "Drag & Drop",
         "description": "Rearrange blocks with drag handles. Pointer-based system for desktop devices.",
-        "learnMore": "Learn more about Drag & Drop"
+        "learnMore": "Learn more about Drag & Drop",
+        "details": {
+          "summary": "Intuitive drag and drop reordering using a pointer-based system. Currently available on desktop devices.",
+          "benefit1": "Works on desktop devices",
+          "benefit2": "Visual drop indicators",
+          "benefit3": "Smooth animations during drag",
+          "benefit4": "Accessible keyboard alternatives"
+        }
       },
       "customBlocks": {
         "title": "Custom Block Tools",
         "description": "Extend the editor with custom blocks. Built-in paragraph, header, list tools included.",
-        "learnMore": "Learn more about Custom Block Tools"
+        "learnMore": "Learn more about Custom Block Tools",
+        "details": {
+          "summary": "Create any block type you need. From simple text blocks to complex interactive components.",
+          "benefit1": "Simple API for creating custom blocks",
+          "benefit2": "Built-in paragraph, header, and list tools",
+          "benefit3": "Full lifecycle hooks (render, save, validate)",
+          "benefit4": "Block tunes for additional settings"
+        }
       },
       "readOnly": {
         "title": "Read-Only Mode",
         "description": "Toggle read-only mode at runtime. Perfect for view-only contexts or permission-based editing.",
-        "learnMore": "Learn more about Read-Only Mode"
+        "learnMore": "Learn more about Read-Only Mode",
+        "details": {
+          "summary": "Switch between edit and read-only modes at runtime without reinitializing the editor.",
+          "benefit1": "Toggle at runtime via API",
+          "benefit2": "Perfect for permission-based editing",
+          "benefit3": "Preserves content and scroll position",
+          "benefit4": "Disables all editing interactions"
+        }
       },
       "undoRedo": {
         "title": "Undo & Redo",
         "description": "CRDT-based history with ⌘Z / ⌘⇧Z. Conflict-free state tracking for reliable undo/redo.",
-        "learnMore": "Learn more about Undo & Redo"
+        "learnMore": "Learn more about Undo & Redo",
+        "details": {
+          "summary": "CRDT-powered undo/redo ensures conflict-free history tracking. Keyboard shortcuts and API access included.",
+          "benefit1": "CRDT-based change tracking",
+          "benefit2": "Conflict-free state management",
+          "benefit3": "Keyboard shortcuts (⌘Z / ⌘⇧Z)",
+          "benefit4": "Programmatic undo/redo via API"
+        }
       },
       "languages": {
         "title": "68 Languages",
         "description": "Lazy-loaded i18n with RTL support. Only English bundled by default ~3KB.",
-        "learnMore": "Learn more about 68 Languages"
+        "learnMore": "Learn more about 68 Languages",
+        "details": {
+          "summary": "Full internationalization with 68 languages, RTL support, and lazy loading for optimal bundle size.",
+          "benefit1": "68 supported languages",
+          "benefit2": "Full RTL layout support",
+          "benefit3": "Lazy-loaded translations (~3KB base)",
+          "benefit4": "Custom translation overrides"
+        }
       },
       "smartPaste": {
         "title": "Smart Paste",
         "description": "Paste from Google Docs or plain text. HTML is sanitized and converted to blocks.",
-        "learnMore": "Learn more about Smart Paste"
+        "learnMore": "Learn more about Smart Paste",
+        "details": {
+          "summary": "Paste content from Google Docs and watch it transform into clean, structured blocks automatically.",
+          "benefit1": "Works with Google Docs and plain text",
+          "benefit2": "Automatic XSS-safe HTML sanitization",
+          "benefit3": "Preserves headings, lists, and formatting",
+          "benefit4": "Extensible paste handlers for custom tools"
+        }
       }
     },
     "quickStart": {
@@ -447,7 +510,8 @@
     "emptyTitle": "Search Blok docs",
     "emptyDescription": "Find API methods, configuration options, tools, and more",
     "navigate": "navigate",
-    "select": "select"
+    "select": "select",
+    "results": "results"
   },
   "theme": {
     "light": "Light theme",

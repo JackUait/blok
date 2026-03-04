@@ -35,6 +35,9 @@ jobs:
       - name: Copy Blok library into docs output
         run: mkdir -p docs/dist/dist && cp dist/full.mjs docs/dist/dist/full.mjs
 
+      - name: Copy CHANGELOG into docs output
+        run: cp CHANGELOG.md docs/dist/CHANGELOG.md
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

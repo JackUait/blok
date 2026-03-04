@@ -204,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <kbd
               className={`${variant}-sidebar-search-shortcut`}
-              title="Press / to focus search"
+              title={t('common.pressSlashToSearch')}
               data-blok-testid={`${variant}-sidebar-search-shortcut`}
             >
               /

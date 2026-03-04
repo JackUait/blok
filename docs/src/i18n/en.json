@@ -4,6 +4,7 @@
     "demo": "Demo",
     "docs": "Docs",
     "recipes": "Recipes",
+    "integrations": "Integrations",
     "migration": "Migration",
     "changelog": "Changelog",
     "github": "GitHub",
@@ -15,7 +16,8 @@
     "clearSearch": "Clear search",
     "noResults": "No results",
     "selectSection": "Select section",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "pressSlashToSearch": "Press / to focus search"
   },
   "api": {
     "filterLabel": "Filter API sections",
@@ -323,6 +325,7 @@
       "title1": "Built for developers,",
       "title2": "designed for users",
       "description": "Everything you need to create powerful editing experiences in your applications.",
+      "sectionLabel": "Features",
       "cleanJson": {
         "title": "Clean JSON Output",
         "description": "Content is structured as typed JSON blocks, not raw HTML. Parse, store, and render anywhere.",

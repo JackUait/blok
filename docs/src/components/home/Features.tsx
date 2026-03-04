@@ -414,7 +414,7 @@ console.log(editor.readOnly.isEnabled);`,
   };
 
   return (
-    <section className="features" id="features" ref={sectionRef} aria-label="Features">
+    <section className="features" id="features" ref={sectionRef} aria-label={t('home.features.sectionLabel')}>
       {/* Decorative background elements */}
       <div className="features-bg">
         <div className="features-blob features-blob-1" />

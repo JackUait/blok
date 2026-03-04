@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -18,6 +18,12 @@ vi.mock('@/utils/search', async (importOriginal) => {
 describe('Search', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   it('should not render when open is false', () => {
@@ -268,6 +274,22 @@ describe('Search', () => {
 
       // Verify that the first module header has visible text content
       expect(moduleHeaders[0]).toHaveTextContent(/.+/);
+    });
+  });
+
+  describe('locale switching', () => {
+    it('shows Russian placeholder when locale is ru', () => {
+      localStorage.setItem('blok-docs-locale', 'ru');
+
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      expect(screen.getByPlaceholderText('Поиск по документации...')).toBeInTheDocument();
     });
   });
 });

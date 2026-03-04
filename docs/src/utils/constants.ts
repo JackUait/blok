@@ -4,7 +4,7 @@ import type { NavLink } from '@/types/navigation';
 // Active state is determined by current path, not by this config
 export const NAV_LINKS: NavLink[] = [
   { href: '/docs', label: 'Docs', i18nKey: 'nav.docs' },
-  { href: '/integrations', label: 'Integrations' },
+  { href: '/integrations', label: 'Integrations', i18nKey: 'nav.integrations' },
   { href: '/recipes', label: 'Recipes', i18nKey: 'nav.recipes' },
   { href: '/demo', label: 'Demo', i18nKey: 'nav.demo' },
   { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },

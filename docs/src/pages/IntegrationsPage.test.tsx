@@ -75,7 +75,8 @@ describe('IntegrationsPage', () => {
 
       renderIntegrationsPage();
 
-      expect(screen.getByText(ru.badge)).toBeInTheDocument();
+      // The badge text may appear multiple times (e.g. nav link + hero badge)
+      expect(screen.getAllByText(ru.badge).length).toBeGreaterThan(0);
     });
 
     it('renders the hero title in Russian', () => {

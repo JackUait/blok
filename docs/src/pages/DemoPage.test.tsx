@@ -18,6 +18,7 @@ function renderDemoPage() {
 describe('DemoPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -196,6 +197,24 @@ describe('DemoPage', () => {
       renderDemoPage();
 
       expect(screen.getByText('Block-Based Architecture')).toBeInTheDocument();
+    });
+  });
+
+  describe('locale switching', () => {
+    it('renders the Russian badge when locale is ru', () => {
+      localStorage.setItem('blok-docs-locale', 'ru');
+
+      renderDemoPage();
+
+      expect(screen.getByText('Интерактивное демо')).toBeInTheDocument();
+    });
+
+    it('renders Russian undo button title when locale is ru', () => {
+      localStorage.setItem('blok-docs-locale', 'ru');
+
+      renderDemoPage();
+
+      expect(screen.getByTitle('Отмена (Ctrl+Z)')).toBeInTheDocument();
     });
   });
 });

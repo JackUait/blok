@@ -188,4 +188,15 @@ describe('QuickStart', () => {
 
     expect(screen.getByTestId('quick-start-blur')).toBeInTheDocument();
   });
+
+  it('should render Russian strings when locale is ru', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+    render(
+      <I18nProvider>
+        <QuickStart />
+      </I18nProvider>
+    );
+    expect(screen.getByText('Начало работы')).toBeInTheDocument();
+    localStorage.removeItem('blok-docs-locale');
+  });
 });

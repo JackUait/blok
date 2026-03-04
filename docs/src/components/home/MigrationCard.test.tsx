@@ -185,4 +185,17 @@ describe('MigrationCard', () => {
 
     expect(screen.getByTestId('migration-description')).toBeInTheDocument();
   });
+
+  it('should render Russian strings when locale is ru', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <MigrationCard />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+    expect(screen.getByText('Миграция с EditorJS')).toBeInTheDocument();
+    localStorage.removeItem('blok-docs-locale');
+  });
 });

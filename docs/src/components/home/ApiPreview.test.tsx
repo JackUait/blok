@@ -126,4 +126,17 @@ describe('ApiPreview', () => {
     const methods = screen.getAllByTestId('api-method');
     expect(methods.length).toBeGreaterThan(0);
   });
+
+  it('should render Russian strings when locale is ru', () => {
+    localStorage.setItem('blok-docs-locale', 'ru');
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <ApiPreview />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+    expect(screen.getByText('Для разработчиков')).toBeInTheDocument();
+    localStorage.removeItem('blok-docs-locale');
+  });
 });

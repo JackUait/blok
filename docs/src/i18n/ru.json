@@ -416,7 +416,6 @@
   },
   "footer": {
     "madeWith": "Сделано с",
-    "copyright": "© 2024 Blok. Открытый исходный код под лицензией MIT.",
     "tagline": "Удобный редактор блочного контента для современных приложений.",
     "docColumnTitle": "Документация",
     "resourcesColumnTitle": "Ресурсы",
@@ -433,7 +432,7 @@
     "githubAriaLabel": "GitHub",
     "telegramAriaLabel": "Telegram",
     "copyrightText": "© 2026 JackUait",
-    "licensedUnder": "Лицензия"
+    "licensedUnder": "Лицензировано под"
   },
   "languageSelector": {
     "label": "Язык",

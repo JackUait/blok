@@ -394,7 +394,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                 className={styles['search-clear']}
                 onClick={() => setQuery('')}
                 type="button"
-                aria-label={t('search.clearSearch')}              >
+                aria-label={t('search.clearSearch')}>
                 <svg
                   width="16"
                   height="16"

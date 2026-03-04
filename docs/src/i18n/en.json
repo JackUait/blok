@@ -416,7 +416,6 @@
   },
   "footer": {
     "madeWith": "Made with",
-    "copyright": "© 2024 Blok. Open source under MIT license.",
     "tagline": "A friendly block-based rich text editor for modern applications.",
     "docColumnTitle": "Documentation",
     "resourcesColumnTitle": "Resources",

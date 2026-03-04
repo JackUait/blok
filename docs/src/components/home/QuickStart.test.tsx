@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { QuickStart } from './QuickStart';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -6,6 +6,10 @@ import { I18nProvider } from '../../contexts/I18nContext';
 const testIdPrefix = 'quick-start';
 
 describe('QuickStart', () => {
+  afterEach(() => {
+    localStorage.removeItem('blok-docs-locale');
+  });
+
   it('should render a section element with id="quick-start"', () => {
     render(
       <I18nProvider>
@@ -197,6 +201,5 @@ describe('QuickStart', () => {
       </I18nProvider>
     );
     expect(screen.getByText('Начало работы')).toBeInTheDocument();
-    localStorage.removeItem('blok-docs-locale');
   });
 });

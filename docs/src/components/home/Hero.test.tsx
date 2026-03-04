@@ -1,10 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Hero } from './Hero';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 describe('Hero', () => {
+  afterEach(() => {
+    localStorage.removeItem('blok-docs-locale');
+  });
   it('should render the eyebrow text', () => {
     render(
       <I18nProvider>
@@ -112,13 +115,12 @@ describe('Hero', () => {
   it('should render Russian strings when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     render(
-      <MemoryRouter>
-        <I18nProvider>
+      <I18nProvider>
+        <MemoryRouter>
           <Hero />
-        </I18nProvider>
-      </MemoryRouter>
+        </MemoryRouter>
+      </I18nProvider>
     );
     expect(screen.getByText('Редактор с открытым кодом')).toBeInTheDocument();
-    localStorage.removeItem('blok-docs-locale');
   });
 });

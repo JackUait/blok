@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { Features } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -11,6 +11,10 @@ const renderFeatures = () =>
   );
 
 describe('Features', () => {
+  afterEach(() => {
+    localStorage.removeItem('blok-docs-locale');
+  });
+
   it('should render a section element with id="features"', () => {
     renderFeatures();
 
@@ -147,6 +151,5 @@ describe('Features', () => {
       </I18nProvider>
     );
     expect(screen.getByText('Почему Blok')).toBeInTheDocument();
-    localStorage.removeItem('blok-docs-locale');
   });
 });

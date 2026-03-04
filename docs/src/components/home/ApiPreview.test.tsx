@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiPreview } from './ApiPreview';
@@ -14,6 +14,10 @@ const renderApiPreview = () =>
   );
 
 describe('ApiPreview', () => {
+  afterEach(() => {
+    localStorage.removeItem('blok-docs-locale');
+  });
+
   it('should render a section element with id="api"', () => {
     renderApiPreview();
 
@@ -137,6 +141,5 @@ describe('ApiPreview', () => {
       </I18nProvider>
     );
     expect(screen.getByText('Для разработчиков')).toBeInTheDocument();
-    localStorage.removeItem('blok-docs-locale');
   });
 });

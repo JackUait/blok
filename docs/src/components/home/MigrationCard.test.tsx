@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MigrationCard } from './MigrationCard';
@@ -17,6 +17,10 @@ vi.mock('shiki', () => ({
 }));
 
 describe('MigrationCard', () => {
+  afterEach(() => {
+    localStorage.removeItem('blok-docs-locale');
+  });
+
   it('should render a section element', () => {
     render(
       <I18nProvider>
@@ -196,6 +200,5 @@ describe('MigrationCard', () => {
       </I18nProvider>
     );
     expect(screen.getByText('Миграция с EditorJS')).toBeInTheDocument();
-    localStorage.removeItem('blok-docs-locale');
   });
 });

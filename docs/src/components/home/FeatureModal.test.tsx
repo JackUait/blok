@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FeatureModal, type FeatureDetail } from './FeatureModal';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -25,6 +25,10 @@ const renderModal = (feature: FeatureDetail | null = mockFeature, onClose = vi.f
   );
 
 describe('FeatureModal', () => {
+  afterEach(() => {
+    localStorage.removeItem('blok-docs-locale');
+  });
+
   it('should render nothing when feature is null', () => {
     const { container } = renderModal(null);
     expect(container).toBeEmptyDOMElement();
@@ -110,6 +114,5 @@ describe('FeatureModal', () => {
       </I18nProvider>
     );
     expect(screen.getByRole('button', { name: 'Закрыть' })).toBeInTheDocument();
-    localStorage.removeItem('blok-docs-locale');
   });
 });

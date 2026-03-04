@@ -176,8 +176,7 @@ export const TypeAndClearPlaceholder: Story = {
       const contentEditable = block?.querySelector(CONTENTEDITABLE_SELECTOR);
 
       if (contentEditable) {
-        await userEvent.click(contentEditable);
-        await userEvent.keyboard('Hello world');
+        await userEvent.type(contentEditable, 'Hello world');
       }
 
       await waitFor(

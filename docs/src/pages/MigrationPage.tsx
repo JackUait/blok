@@ -20,20 +20,17 @@ export const MigrationPage: React.FC = () => {
         </div>
 
         <section className="migration-hero">
-          <div className="migration-hero-badge">
-            <span className="migration-hero-badge-dot" />
-            Migration Guide
-          </div>
           <h1 className="migration-hero-title">
-            <span className="migration-hero-title-line">From EditorJS</span>
-            <span className="migration-hero-title-line">
+            <span className="migration-hero-title-sub">From EditorJS</span>
+            <span className="migration-hero-title-main">
               to <span className="migration-hero-gradient">Blok</span>
             </span>
           </h1>
+
           <p className="migration-hero-description">
-            Blok is designed as a drop-in replacement for EditorJS.
-            Follow this guide to migrate your project in minutes, not hours.
+            Migrate your project in minutes using our automated codemod.
           </p>
+
           <div className="migration-hero-stats">
             <div className="migration-stat">
               <span className="migration-stat-value">~2min</span>
@@ -52,7 +49,16 @@ export const MigrationPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="migration-section">
+        <section className="migration-section migration-section--codemod">
+          <div className="migration-section-header">
+            <span className="migration-section-badge">
+              Step 1
+            </span>
+            <h2 className="migration-section-title">Run the Codemod</h2>
+            <p className="migration-section-description">
+              One command handles imports, selectors, types, and configuration automatically.
+            </p>
+          </div>
           <CodemodCard />
         </section>
 
@@ -60,21 +66,11 @@ export const MigrationPage: React.FC = () => {
 
         <section className="migration-cta">
           <div className="migration-cta-card">
+            <div className="migration-cta-band" />
             <div className="migration-cta-content">
-              <div className="migration-cta-icon-wrapper">
-                <div className="migration-cta-icon">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22,4 12,14.01 9,11.01" />
-                  </svg>
-                </div>
-                <div className="migration-cta-sparkle migration-cta-sparkle-1" />
-                <div className="migration-cta-sparkle migration-cta-sparkle-2" />
-                <div className="migration-cta-sparkle migration-cta-sparkle-3" />
-              </div>
               <h2 className="migration-cta-title">Ready to Migrate?</h2>
               <p className="migration-cta-description">
-                Start with the automated codemod and complete your migration today.
+                Start with the automated codemod and complete your migration in minutes.
               </p>
               <div className="migration-cta-actions">
                 <a href="/demo" className="btn btn-primary">

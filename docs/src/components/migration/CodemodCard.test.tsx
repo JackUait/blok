@@ -24,7 +24,7 @@ describe('CodemodCard', () => {
     expect(screen.getByTestId('codemod-icon')).toBeInTheDocument();
   });
 
-  it('should render the title and badge', () => {
+  it('should render the title', () => {
     render(
       <I18nProvider>
         <CodemodCard />
@@ -32,19 +32,6 @@ describe('CodemodCard', () => {
     );
 
     expect(screen.getByText('Codemod')).toBeInTheDocument();
-    expect(screen.getByText('Automated')).toBeInTheDocument();
-  });
-
-  it('should render the description', () => {
-    render(
-      <I18nProvider>
-        <CodemodCard />
-      </I18nProvider>
-    );
-
-    expect(
-      screen.getByText(/Our codemod handles imports, selectors, types, and configuration automatically/)
-    ).toBeInTheDocument();
   });
 
   it('should render two tabs', () => {

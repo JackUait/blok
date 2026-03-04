@@ -7,8 +7,266 @@
   See: https://github.com/tailwindlabs/tailwindcss/discussions/13188
 */
 @import 'tailwindcss/theme.css';
-@import 'tailwindcss/preflight.css';
 @import 'tailwindcss/utilities.css';
+
+/*
+  Style isolation: prevent host-page styles from cascading into Blok's UI,
+  and prevent Blok's preflight from affecting the host page.
+
+  [data-blok-interface] — the editor wrapper element
+  [data-blok-popover]   — popover elements mounted directly to <body>
+
+  `all: revert` rolls every CSS property back to the browser's UA stylesheet
+  baseline, blocking ambient host-page styles from cascading in. Blok's own
+  utility classes (applied to the same elements or descendants) override this
+  because they appear later in the cascade.
+
+  The scoped preflight below replaces `@import 'tailwindcss/preflight.css'`.
+  It applies the same resets as Tailwind's preflight, but only inside Blok's
+  isolation roots — not to the entire host page.
+
+  All selectors use :where() (zero specificity) so user-authored CSS that
+  explicitly targets Blok elements wins without needing !important.
+*/
+
+/* --- Isolation boundaries --- */
+[data-blok-interface],
+[data-blok-popover] {
+  all: initial !important;
+}
+
+/* --- Scoped preflight (replaces tailwindcss/preflight.css) --- */
+
+/*
+  1. Prevent padding and border from affecting element width.
+  2. Remove default margins and padding.
+  3. Reset all borders.
+*/
+:where([data-blok-interface], [data-blok-popover]) *,
+:where([data-blok-interface], [data-blok-popover]) ::after,
+:where([data-blok-interface], [data-blok-popover]) ::before,
+:where([data-blok-interface], [data-blok-popover]) ::backdrop,
+:where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
+  box-sizing: border-box; /* 1 */
+  margin: 0; /* 2 */
+  padding: 0; /* 2 */
+  border: 0 solid; /* 3 */
+}
+
+/*
+  NOTE: The `html` rule from Tailwind preflight (line-height, font-family,
+  tap-highlight, etc.) is intentionally omitted. It cannot be scoped to a
+  sub-element, and it was the primary source of host-page <html> mutations.
+  Blok sets its own font-family and line-height via utility classes on the
+  wrapper and its descendants.
+*/
+
+/* Correct the inheritance of border color in Firefox. */
+:where([data-blok-interface], [data-blok-popover]) hr {
+  height: 0;
+  color: inherit;
+  border-top-width: 1px;
+}
+
+/* Add the correct text decoration in Chrome, Edge, and Safari. */
+:where([data-blok-interface], [data-blok-popover]) abbr:where([title]) {
+  -webkit-text-decoration: underline dotted;
+  text-decoration: underline dotted;
+}
+
+/* Remove the default font size and weight for headings. */
+:where([data-blok-interface], [data-blok-popover]) :is(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Reset links to optimize for opt-in styling instead of opt-out. */
+:where([data-blok-interface], [data-blok-popover]) a {
+  color: inherit;
+  -webkit-text-decoration: inherit;
+  text-decoration: inherit;
+}
+
+/* Add the correct font weight in Edge and Safari. */
+:where([data-blok-interface], [data-blok-popover]) :is(b, strong) {
+  font-weight: bolder;
+}
+
+/* Correct the odd em font sizing in all browsers for code elements. */
+:where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
+  font-family: --theme(
+    --default-mono-font-family,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    'Courier New',
+    monospace
+  );
+  font-feature-settings: --theme(--default-mono-font-feature-settings, normal);
+  font-variation-settings: --theme(--default-mono-font-variation-settings, normal);
+  font-size: 1em;
+}
+
+/* Add the correct font size in all browsers. */
+:where([data-blok-interface], [data-blok-popover]) small {
+  font-size: 80%;
+}
+
+/* Prevent sub and sup elements from affecting line height. */
+:where([data-blok-interface], [data-blok-popover]) :is(sub, sup) {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+:where([data-blok-interface], [data-blok-popover]) sub { bottom: -0.25em; }
+:where([data-blok-interface], [data-blok-popover]) sup { top: -0.5em; }
+
+/* Remove text indentation from table contents and fix border color inheritance. */
+:where([data-blok-interface], [data-blok-popover]) table {
+  text-indent: 0;
+  border-color: inherit;
+  border-collapse: collapse;
+}
+
+/* Use the modern Firefox focus style for all focusable elements. */
+:where([data-blok-interface], [data-blok-popover]) :-moz-focusring {
+  outline: auto;
+}
+
+/* Add the correct vertical alignment in Chrome and Firefox. */
+:where([data-blok-interface], [data-blok-popover]) progress {
+  vertical-align: baseline;
+}
+
+/* Add the correct display in Chrome and Safari. */
+:where([data-blok-interface], [data-blok-popover]) summary {
+  display: list-item;
+}
+
+/* Make lists unstyled by default. */
+:where([data-blok-interface], [data-blok-popover]) :is(ol, ul, menu) {
+  list-style: none;
+}
+
+/* Make replaced elements display: block by default. */
+:where([data-blok-interface], [data-blok-popover]) :is(img, svg, video, canvas, audio, iframe, embed, object) {
+  display: block;
+  vertical-align: middle;
+}
+
+/* Constrain images and videos to the parent width. */
+:where([data-blok-interface], [data-blok-popover]) :is(img, video) {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Inherit font styles in all browsers for form elements. */
+:where([data-blok-interface], [data-blok-popover]) :is(button, input, select, optgroup, textarea, ::file-selector-button) {
+  font: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  border-radius: 0;
+  background-color: transparent;
+  opacity: 1;
+}
+
+/* Restore default font weight for optgroup. */
+:where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup {
+  font-weight: bolder;
+}
+
+/* Restore indentation for optgroup options. */
+:where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup option {
+  padding-inline-start: 20px;
+}
+
+/* Restore space after file selector button. */
+:where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
+  margin-inline-end: 4px;
+}
+
+/* Reset placeholder opacity in Firefox. */
+:where([data-blok-interface], [data-blok-popover]) ::placeholder {
+  opacity: 1;
+}
+
+/* Set placeholder color to semi-transparent version of current text color. */
+@supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
+  :where([data-blok-interface], [data-blok-popover]) ::placeholder {
+    color: color-mix(in oklab, currentcolor 50%, transparent);
+  }
+}
+
+/* Prevent resizing textareas horizontally by default. */
+:where([data-blok-interface], [data-blok-popover]) textarea {
+  resize: vertical;
+}
+
+/* Remove inner padding in Chrome and Safari on macOS. */
+:where([data-blok-interface], [data-blok-popover]) ::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+/* Ensure date/time inputs have consistent height in iOS Safari. */
+:where([data-blok-interface], [data-blok-popover]) ::-webkit-date-and-time-value {
+  min-height: 1lh;
+  text-align: inherit;
+}
+
+/* Prevent height from changing on date/time inputs in macOS Safari. */
+:where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit {
+  display: inline-flex;
+}
+
+/* Remove excess padding from pseudo-elements in date/time inputs. */
+:where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+:where([data-blok-interface], [data-blok-popover]) :is(
+  ::-webkit-datetime-edit,
+  ::-webkit-datetime-edit-year-field,
+  ::-webkit-datetime-edit-month-field,
+  ::-webkit-datetime-edit-day-field,
+  ::-webkit-datetime-edit-hour-field,
+  ::-webkit-datetime-edit-minute-field,
+  ::-webkit-datetime-edit-second-field,
+  ::-webkit-datetime-edit-millisecond-field,
+  ::-webkit-datetime-edit-meridiem-field
+) {
+  padding-block: 0;
+}
+
+/* Center dropdown marker on inputs with paired datalists. */
+:where([data-blok-interface], [data-blok-popover]) ::-webkit-calendar-picker-indicator {
+  line-height: 1;
+}
+
+/* Remove additional :invalid styles in Firefox. */
+:where([data-blok-interface], [data-blok-popover]) :-moz-ui-invalid {
+  box-shadow: none;
+}
+
+/* Correct the inability to style border-radius in iOS Safari. */
+:where([data-blok-interface], [data-blok-popover]) :is(button, input:where([type='button'], [type='reset'], [type='submit']), ::file-selector-button) {
+  appearance: button;
+}
+
+/* Correct the cursor style of increment/decrement buttons in Safari. */
+:where([data-blok-interface], [data-blok-popover]) :is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
+  height: auto;
+}
+
+/* Keep hidden elements hidden. */
+:where([data-blok-interface], [data-blok-popover]) [hidden]:where(:not([hidden='until-found'])) {
+  display: none !important;
+}
 
 /*
   Exclude non-source directories from Tailwind's automatic content detection.
@@ -26,48 +284,10 @@
 @custom-variant not-mobile (@media (min-width: 651px));
 @custom-variant can-hover (@media (hover: hover));
 
-@custom-variant dark (&:where(.dark-mode, .dark-mode *));
-
+/* Non-overridable tokens — compiled statically */
 @theme {
   /* Z-index */
   --z-index-overlay: 999;
-
-  /* Colors */
-  --color-selection: #e1f2ff;
-  --color-selection-inline: #d4ecff;
-  --color-selection-highlight: rgba(46, 170, 220, 0.2);
-  --color-bg-light: #eff2f5;
-  --color-gray-text: #707684;
-  --color-dark: #1d202b;
-  --color-active-icon: #388ae5;
-  --color-link: #388ae5;
-  --color-line-gray: #eff0f1;
-  --color-tooltip-bg: #1d202b;
-  --color-tooltip-font: #cdd1e0;
-  --color-icon-active-bg: rgba(56, 138, 229, 0.1);
-  --color-icon-active-text: #388ae5;
-  --color-text-primary: black;
-  --color-text-secondary: #707684;
-  --color-popover-border: #eff0f1;
-  --color-popover-shadow: rgba(13, 20, 33, 0.1);
-  --color-popover-bg: #ffffff;
-  --color-popover-border-icon: rgb(201 201 204 / 48%);
-  --color-popover-border-icon-disabled: #eff0f1;
-  --color-item-focus-bg: rgba(34, 186, 255, 0.08);
-  --color-item-focus-shadow: rgba(7, 161, 227, 0.08);
-  --color-item-hover-bg: #f8f8f8;
-  --color-icon-bg: rgba(0, 0, 0, 0.04);
-  --color-item-confirm-bg: #e24a4a;
-  --color-item-confirm-hover-bg: #ce4343;
-  --color-item-destructive-text: #e24a4a;
-  --color-item-destructive-hover-bg: rgba(226, 74, 74, 0.08);
-  --color-notify-success-bg: #fafffe;
-  --color-notify-success-bar: #41ffb1;
-  --color-notify-error-bg: #fffbfb;
-  --color-notify-error-bar: #fb5d5d;
-  --color-notify-btn-cancel-bg: #f2f5f7;
-  --color-notify-btn-cancel-text: #656b7c;
-  --color-notify-btn-confirm-bg: #34c992;
 
   /* Spacing (also powers w-*, h-*, min-w-*, min-h-*, size-*) */
   --spacing-content-width: 650px;
@@ -187,6 +407,188 @@
   }
 }
 
+/* Color tokens — resolved at runtime via CSS variables */
+@theme inline {
+  --color-selection: var(--blok-selection);
+  --color-selection-inline: var(--blok-selection-inline);
+  --color-selection-highlight: var(--blok-selection-highlight);
+  --color-bg-light: var(--blok-bg-light);
+  --color-gray-text: var(--blok-gray-text);
+  --color-dark: var(--blok-dark);
+  --color-active-icon: var(--blok-active-icon);
+  --color-link: var(--blok-link);
+  --color-line-gray: var(--blok-line-gray);
+  --color-tooltip-bg: var(--blok-tooltip-bg);
+  --color-tooltip-font: var(--blok-tooltip-font);
+  --color-icon-active-bg: var(--blok-icon-active-bg);
+  --color-icon-active-text: var(--blok-icon-active-text);
+  --color-text-primary: var(--blok-text-primary);
+  --color-text-secondary: var(--blok-text-secondary);
+  --color-popover-border: var(--blok-popover-border);
+  --color-popover-shadow: var(--blok-popover-shadow);
+  --color-popover-bg: var(--blok-popover-bg);
+  --color-popover-border-icon: var(--blok-popover-border-icon);
+  --color-popover-border-icon-disabled: var(--blok-popover-border-icon-disabled);
+  --color-item-focus-bg: var(--blok-item-focus-bg);
+  --color-item-focus-shadow: var(--blok-item-focus-shadow);
+  --color-item-hover-bg: var(--blok-item-hover-bg);
+  --color-icon-bg: var(--blok-icon-bg);
+  --color-item-confirm-bg: var(--blok-item-confirm-bg);
+  --color-item-confirm-hover-bg: var(--blok-item-confirm-hover-bg);
+  --color-item-destructive-text: var(--blok-item-destructive-text);
+  --color-item-destructive-hover-bg: var(--blok-item-destructive-hover-bg);
+  --color-notify-success-bg: var(--blok-notify-success-bg);
+  --color-notify-success-bar: var(--blok-notify-success-bar);
+  --color-notify-error-bg: var(--blok-notify-error-bg);
+  --color-notify-error-bar: var(--blok-notify-error-bar);
+  --color-notify-btn-cancel-bg: var(--blok-notify-btn-cancel-bg);
+  --color-notify-btn-cancel-text: var(--blok-notify-btn-cancel-text);
+  --color-notify-btn-confirm-bg: var(--blok-notify-btn-confirm-bg);
+
+  /* New tokens for hardcoded TS colors */
+  --color-mobile-border: var(--blok-mobile-border);
+  --color-search-input-bg: var(--blok-search-input-bg);
+  --color-search-input-border: var(--blok-search-input-border);
+  --color-search-input-focus-border: var(--blok-search-input-focus-border);
+  --color-link-input-border: var(--blok-link-input-border);
+}
+
+/* ─── Light theme (default) ─────────────────────────── */
+[data-blok-interface=blok] {
+  --blok-selection: #e1f2ff;
+  --blok-selection-inline: #d4ecff;
+  --blok-selection-highlight: rgba(46, 170, 220, 0.2);
+  --blok-bg-light: #eff2f5;
+  --blok-gray-text: #707684;
+  --blok-dark: #1d202b;
+  --blok-active-icon: #388ae5;
+  --blok-link: #388ae5;
+  --blok-line-gray: #eff0f1;
+  --blok-tooltip-bg: #1d202b;
+  --blok-tooltip-font: #cdd1e0;
+  --blok-icon-active-bg: rgba(56, 138, 229, 0.1);
+  --blok-icon-active-text: #388ae5;
+  --blok-text-primary: black;
+  --blok-text-secondary: #707684;
+  --blok-popover-border: #eff0f1;
+  --blok-popover-shadow: rgba(13, 20, 33, 0.1);
+  --blok-popover-bg: #ffffff;
+  --blok-popover-border-icon: rgb(201 201 204 / 48%);
+  --blok-popover-border-icon-disabled: #eff0f1;
+  --blok-item-focus-bg: rgba(34, 186, 255, 0.08);
+  --blok-item-focus-shadow: rgba(7, 161, 227, 0.08);
+  --blok-item-hover-bg: #f8f8f8;
+  --blok-icon-bg: rgba(0, 0, 0, 0.04);
+  --blok-item-confirm-bg: #e24a4a;
+  --blok-item-confirm-hover-bg: #ce4343;
+  --blok-item-destructive-text: #e24a4a;
+  --blok-item-destructive-hover-bg: rgba(226, 74, 74, 0.08);
+  --blok-notify-success-bg: #fafffe;
+  --blok-notify-success-bar: #41ffb1;
+  --blok-notify-error-bg: #fffbfb;
+  --blok-notify-error-bar: #fb5d5d;
+  --blok-notify-btn-cancel-bg: #f2f5f7;
+  --blok-notify-btn-cancel-text: #656b7c;
+  --blok-notify-btn-confirm-bg: #34c992;
+
+  /* Tokens extracted from TS files */
+  --blok-mobile-border: #e8e8eb;
+  --blok-search-input-bg: #f8f8f8;
+  --blok-search-input-border: rgba(226, 226, 229, 0.20);
+  --blok-search-input-focus-border: rgba(56, 138, 229, 0.3);
+  --blok-link-input-border: rgba(226, 226, 229, 0.2);
+}
+
+/* ─── Dark theme — system preference ────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-interface=blok] {
+    --blok-selection: rgba(56, 138, 229, 0.2);
+    --blok-selection-inline: rgba(56, 138, 229, 0.25);
+    --blok-selection-highlight: rgba(46, 170, 220, 0.3);
+    --blok-bg-light: #252b3b;
+    --blok-gray-text: #8892a4;
+    --blok-dark: #0d1117;
+    --blok-active-icon: #388ae5;
+    --blok-link: #388ae5;
+    --blok-line-gray: #2a3040;
+    --blok-tooltip-bg: #0d1117;
+    --blok-tooltip-font: #cdd1e0;
+    --blok-icon-active-bg: rgba(56, 138, 229, 0.15);
+    --blok-icon-active-text: #388ae5;
+    --blok-text-primary: #e2e8f0;
+    --blok-text-secondary: #8892a4;
+    --blok-popover-border: #2a3040;
+    --blok-popover-shadow: rgba(0, 0, 0, 0.4);
+    --blok-popover-bg: #1e2330;
+    --blok-popover-border-icon: rgba(100, 110, 130, 0.4);
+    --blok-popover-border-icon-disabled: #2a3040;
+    --blok-item-focus-bg: rgba(34, 186, 255, 0.1);
+    --blok-item-focus-shadow: rgba(7, 161, 227, 0.12);
+    --blok-item-hover-bg: #252b3b;
+    --blok-icon-bg: rgba(255, 255, 255, 0.06);
+    --blok-item-confirm-bg: #c43b3b;
+    --blok-item-confirm-hover-bg: #b53535;
+    --blok-item-destructive-text: #f07070;
+    --blok-item-destructive-hover-bg: rgba(226, 74, 74, 0.12);
+    --blok-notify-success-bg: #152520;
+    --blok-notify-success-bar: #41ffb1;
+    --blok-notify-error-bg: #251515;
+    --blok-notify-error-bar: #fb5d5d;
+    --blok-notify-btn-cancel-bg: #252b3b;
+    --blok-notify-btn-cancel-text: #8892a4;
+    --blok-notify-btn-confirm-bg: #34c992;
+    --blok-mobile-border: #2a3040;
+    --blok-search-input-bg: #252b3b;
+    --blok-search-input-border: rgba(255, 255, 255, 0.08);
+    --blok-search-input-focus-border: rgba(56, 138, 229, 0.4);
+    --blok-link-input-border: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ─── Dark theme — explicit override ────────────────── */
+[data-blok-theme="dark"] [data-blok-interface=blok] {
+  --blok-selection: rgba(56, 138, 229, 0.2);
+  --blok-selection-inline: rgba(56, 138, 229, 0.25);
+  --blok-selection-highlight: rgba(46, 170, 220, 0.3);
+  --blok-bg-light: #252b3b;
+  --blok-gray-text: #8892a4;
+  --blok-dark: #0d1117;
+  --blok-active-icon: #388ae5;
+  --blok-link: #388ae5;
+  --blok-line-gray: #2a3040;
+  --blok-tooltip-bg: #0d1117;
+  --blok-tooltip-font: #cdd1e0;
+  --blok-icon-active-bg: rgba(56, 138, 229, 0.15);
+  --blok-icon-active-text: #388ae5;
+  --blok-text-primary: #e2e8f0;
+  --blok-text-secondary: #8892a4;
+  --blok-popover-border: #2a3040;
+  --blok-popover-shadow: rgba(0, 0, 0, 0.4);
+  --blok-popover-bg: #1e2330;
+  --blok-popover-border-icon: rgba(100, 110, 130, 0.4);
+  --blok-popover-border-icon-disabled: #2a3040;
+  --blok-item-focus-bg: rgba(34, 186, 255, 0.1);
+  --blok-item-focus-shadow: rgba(7, 161, 227, 0.12);
+  --blok-item-hover-bg: #252b3b;
+  --blok-icon-bg: rgba(255, 255, 255, 0.06);
+  --blok-item-confirm-bg: #c43b3b;
+  --blok-item-confirm-hover-bg: #b53535;
+  --blok-item-destructive-text: #f07070;
+  --blok-item-destructive-hover-bg: rgba(226, 74, 74, 0.12);
+  --blok-notify-success-bg: #152520;
+  --blok-notify-success-bar: #41ffb1;
+  --blok-notify-error-bg: #251515;
+  --blok-notify-error-bar: #fb5d5d;
+  --blok-notify-btn-cancel-bg: #252b3b;
+  --blok-notify-btn-cancel-text: #8892a4;
+  --blok-notify-btn-confirm-bg: #34c992;
+  --blok-mobile-border: #2a3040;
+  --blok-search-input-bg: #252b3b;
+  --blok-search-input-border: rgba(255, 255, 255, 0.08);
+  --blok-search-input-focus-border: rgba(56, 138, 229, 0.4);
+  --blok-link-input-border: rgba(255, 255, 255, 0.08);
+}
+
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -195,11 +597,11 @@
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
-*,
-::after,
-::before,
-::backdrop,
-::file-selector-button {
+:where([data-blok-interface], [data-blok-popover]) *,
+:where([data-blok-interface], [data-blok-popover]) ::after,
+:where([data-blok-interface], [data-blok-popover]) ::before,
+:where([data-blok-interface], [data-blok-popover]) ::backdrop,
+:where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
   border-color: var(--color-gray-200, currentcolor);
 }
 
@@ -363,7 +765,7 @@
  * transforms to look like a search input with a placeholder.
  */
 [data-blok-slash-search] {
-  @apply bg-[#F8F8F8] rounded-lg transition-colors duration-150 max-w-[240px];
+  @apply bg-search-input-bg rounded-lg transition-colors duration-150 max-w-[240px];
 }
 
 [data-blok-slash-search]::after {

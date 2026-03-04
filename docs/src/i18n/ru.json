@@ -26,10 +26,10 @@
     "property": "Свойство",
     "type": "Тип",
     "description": "Описание",
-    "option": "Параметр",
+    "option": "Опция",
     "default": "По умолчанию",
     "parameter": "Параметр",
-    "name": "Название",
+    "name": "Имя",
     "quickStartSteps": {
       "install": {
         "title": "Установка Blok",
@@ -56,14 +56,14 @@
       "configuration": "Конфигурация",
       "blocks": "Блоки",
       "blockApi": "BlockAPI",
-      "caret": "Каретка",
+      "caret": "Курсор",
       "events": "События",
       "history": "История",
       "saver": "Сохранение",
       "selection": "Выделение",
       "styles": "Стили",
       "toolbar": "Панель инструментов",
-      "inlineToolbar": "Встроенная панель",
+      "inlineToolbar": "Строчная панель",
       "notifier": "Уведомления",
       "sanitizer": "Очистка",
       "tooltip": "Всплывающие подсказки",
@@ -88,7 +88,7 @@
         "save": {
           "name": "save()",
           "returnType": "Promise<OutputData>",
-          "description": "Получает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента."
+          "description": "Извлекает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента."
         },
         "render": {
           "name": "render(data)",
@@ -115,7 +115,7 @@
         "isReady": {
           "name": "isReady",
           "type": "Promise<void>",
-          "description": "Promise, который разрешается когда редактор готов"
+          "description": "Promise, который разрешается, когда редактор готов"
         },
         "blocks": {
           "name": "blocks",
@@ -125,7 +125,7 @@
         "caret": {
           "name": "caret",
           "type": "CaretAPI",
-          "description": "Модуль API для управления кареткой"
+          "description": "Модуль API для управления курсором"
         },
         "history": {
           "name": "history",
@@ -220,7 +220,7 @@
     },
     "caretApi": {
       "title": "Caret API",
-      "badge": "Каретка",
+      "badge": "Курсор",
       "description": "Управление позицией курсора и выделением внутри редактора."
     },
     "eventsApi": {
@@ -255,7 +255,7 @@
     },
     "inlineToolbarApi": {
       "title": "InlineToolbar API",
-      "badge": "Встроенная",
+      "badge": "Строчная",
       "description": "Управление строчной панелью форматирования (жирный, курсив и т.д.)."
     },
     "notifierApi": {

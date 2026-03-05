@@ -49,6 +49,29 @@ const createBlok = async (page: Page, blocks: OutputData['blocks']): Promise<voi
   );
 };
 
+const createBlokWithConfig = async (
+  page: Page,
+  blocks: OutputData['blocks'],
+  extraConfig: Record<string, unknown>
+): Promise<void> => {
+  await resetBlok(page);
+  await page.waitForFunction(() => typeof window.Blok === 'function');
+
+  await page.evaluate(
+    async ({ holder, blokBlocks, config }) => {
+      const blok = new window.Blok({
+        holder,
+        data: { blocks: blokBlocks },
+        ...config,
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    },
+    { holder: HOLDER_ID, blokBlocks: blocks, config: extraConfig }
+  );
+};
+
 const openToolbox = async (page: Page): Promise<void> => {
   const firstBlock = page.locator(PARAGRAPH_SELECTOR).first();
 
@@ -148,5 +171,34 @@ test.describe('Style isolation', () => {
     );
 
     expect(editorColor).toBe('rgb(0, 128, 0)');
+  });
+
+  test('config.style.fontFamily applies to editor wrapper', async ({ page }) => {
+    await createBlokWithConfig(
+      page,
+      [{ type: 'paragraph', data: { text: 'Hello world' } }],
+      { style: { fontFamily: '"Courier New", monospace' } }
+    );
+
+    const fontFamily = await page.locator(BLOK_INTERFACE_SELECTOR).evaluate(
+      (el) => window.getComputedStyle(el).fontFamily
+    );
+
+    expect(fontFamily).toContain('Courier New');
+  });
+
+  test('config.style.fontFamily applies to body-level popover', async ({ page }) => {
+    await createBlokWithConfig(
+      page,
+      [{ type: 'paragraph', data: { text: 'Hello world' } }],
+      { style: { fontFamily: '"Courier New", monospace' } }
+    );
+    await openToolbox(page);
+
+    const fontFamily = await page.locator(POPOVER_SELECTOR).first().evaluate(
+      (el) => window.getComputedStyle(el).fontFamily
+    );
+
+    expect(fontFamily).toContain('Courier New');
   });
 });

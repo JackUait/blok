@@ -65,11 +65,8 @@ export class UI extends Module<UINodes> {
   private documentClickedHandler: ((event: MouseEvent) => void) | null = null;
   private redactorTouchHandler: ((event: Event) => void) | null = null;
 
-  /** Counter for generating unique style tag IDs across multiple instances */
-  private static instanceCounter = 0;
-
-  /** Unique ID for this instance, used to namespace the font style tag */
-  private readonly instanceId: number = ++UI.instanceCounter;
+  /** Unique style tag ID for this instance's font override, derived from the holder element */
+  private fontStyleTagId: string | null = null;
 
   /**
    * Reset the block hover state (used after drag cancellation to allow toolbar to show again)
@@ -377,6 +374,14 @@ export class UI extends Module<UINodes> {
     this.unbindReadOnlyInsensitiveListeners();
     this.unbindReadOnlySensitiveListeners();
 
+    // Remove the per-instance font style tag to prevent leaks in SPAs
+    if (this.fontStyleTagId !== null) {
+      const fontStyleTag = $.get(this.fontStyleTagId);
+      if (fontStyleTag) {
+        fontStyleTag.remove();
+      }
+    }
+
     // Clean up accessibility announcer
     destroyAnnouncer();
   }
@@ -546,7 +551,10 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    const styleTagId = `blok-font-${this.instanceId}`;
+    const holderId = this.nodes.holder.id !== '' ? this.nodes.holder.id : (this.nodes.wrapper.dataset['blokInterface'] ?? 'default');
+    const styleTagId = `blok-font-${holderId}`;
+
+    this.fontStyleTagId = styleTagId;
 
     if ($.get(styleTagId)) {
       return;

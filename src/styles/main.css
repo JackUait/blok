@@ -71,6 +71,12 @@
   all: initial !important;
 }
 
+/* Font family — user-configurable via config.style.fontFamily */
+[data-blok-interface=blok],
+[data-blok-interface=tooltip] {
+  font-family: var(--blok-font-family, ui-sans-serif, system-ui, sans-serif) !important;
+}
+
 /*
   Reset inherited CSS properties on the body-level popover root.
   Only inherited properties can cascade in from host-page styles;
@@ -80,7 +86,7 @@
 */
 [data-blok-popover]:not([data-blok-popover-inline]) {
   color: initial !important;
-  font-family: initial !important;
+  font-family: var(--blok-font-family, ui-sans-serif, system-ui, sans-serif) !important;
   font-size: initial !important;
   font-weight: initial !important;
   font-style: initial !important;

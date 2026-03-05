@@ -1014,4 +1014,238 @@ describe("UI module", () => {
       expect(mockUnregister).toHaveBeenCalledWith();
     });
   });
+
+  describe("loadFontStyles", () => {
+    it("does not inject a style tag when config.style.fontFamily is not set", () => {
+      const { ui } = createUI({ configOverrides: { style: {} } });
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const fontStyleTags = Array.from(document.head.querySelectorAll("style")).filter(
+        (tag) => tag.id.startsWith("blok-font-"),
+      );
+
+      expect(fontStyleTags).toHaveLength(0);
+    });
+
+    it("injects a style tag when config.style.fontFamily is set", () => {
+      const holder = document.createElement("div");
+      holder.id = "my-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamily: "Georgia, serif" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      // Manually set up nodes (like createUI does with attachNodes)
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-my-editor");
+      expect(tag).not.toBeNull();
+      expect(tag?.tagName.toLowerCase()).toBe("style");
+    });
+
+    it("injected CSS contains --blok-font-family set to the configured value", () => {
+      const holder = document.createElement("div");
+      holder.id = "test-editor-font";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamily: "Roboto, sans-serif" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-test-editor-font");
+      expect(tag?.textContent).toContain("--blok-font-family: Roboto, sans-serif");
+    });
+
+    it("injected CSS targets [data-blok-interface=blok] and [data-blok-popover]:not([data-blok-popover-inline])", () => {
+      const holder = document.createElement("div");
+      holder.id = "test-editor-selectors";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamily: "Arial" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-test-editor-selectors");
+      const css = tag?.textContent ?? "";
+      expect(css).toContain("[data-blok-interface=blok]");
+      expect(css).toContain("[data-blok-popover]:not([data-blok-popover-inline])");
+    });
+
+    it("is idempotent: calling loadFontStyles() twice does not inject two tags", () => {
+      const holder = document.createElement("div");
+      holder.id = "idempotent-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamily: "Times New Roman" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tags = document.querySelectorAll("#blok-font-idempotent-editor");
+      expect(tags).toHaveLength(1);
+    });
+
+    it("applies nonce attribute when config.style.nonce is set", () => {
+      const holder = document.createElement("div");
+      holder.id = "nonce-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamily: "Courier New", nonce: "abc-nonce-123" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-nonce-editor");
+      expect(tag?.getAttribute("nonce")).toBe("abc-nonce-123");
+    });
+
+    it("removes the font style tag when destroy() is called", () => {
+      const holder = document.createElement("div");
+      holder.id = "destroy-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { fontFamily: "Verdana" },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      // Verify tag exists before destroy
+      expect(document.getElementById("blok-font-destroy-editor")).not.toBeNull();
+
+      ui.destroy();
+
+      // Verify tag is removed after destroy
+      expect(document.getElementById("blok-font-destroy-editor")).toBeNull();
+    });
+  });
 });

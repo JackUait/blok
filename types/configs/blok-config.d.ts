@@ -152,5 +152,12 @@ export interface BlokConfig {
      * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
      */
     nonce?: string;
+
+    /**
+     * Custom font family for the entire editor UI (content area, toolbars, popovers).
+     * Accepts any valid CSS font-family value.
+     * @example 'Inter, sans-serif'
+     */
+    fontFamily?: string;
   }
 }

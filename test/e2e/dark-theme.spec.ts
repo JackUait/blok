@@ -11,6 +11,9 @@ declare global {
 }
 
 const HOLDER_ID = 'blok';
+const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable]`;
+const PLUS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="plus-button"]`;
+const POPOVER_SELECTOR = '[data-blok-popover]:not([data-blok-popover-inline])';
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
@@ -46,8 +49,27 @@ const createBlok = async (page: Page, blocks: OutputData['blocks']): Promise<voi
   );
 };
 
+const openToolbox = async (page: Page): Promise<void> => {
+  const firstBlock = page.locator(PARAGRAPH_SELECTOR).first();
+
+  await firstBlock.hover();
+
+  const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
+
+  await expect(plusButton).toBeVisible();
+  await plusButton.click();
+  await page.waitForSelector(`${POPOVER_SELECTOR}[data-blok-popover-opened]`, { state: 'attached' });
+};
+
 const getCustomProperty = async (page: Page, property: string): Promise<string> => {
   return page.locator(BLOK_INTERFACE_SELECTOR).evaluate(
+    (el, prop) => window.getComputedStyle(el).getPropertyValue(prop).trim(),
+    property
+  );
+};
+
+const getPopoverCustomProperty = async (page: Page, property: string): Promise<string> => {
+  return page.locator(POPOVER_SELECTOR).first().evaluate(
     (el, prop) => window.getComputedStyle(el).getPropertyValue(prop).trim(),
     property
   );
@@ -56,7 +78,8 @@ const getCustomProperty = async (page: Page, property: string): Promise<string> 
 /**
  * These tests verify that Blok's dark theme CSS variable system works correctly.
  *
- * Three theme scenarios are tested:
+ * Four theme scenarios are tested for both the editor wrapper and the body-mounted
+ * popover element (which is outside [data-blok-interface] in the DOM):
  * 1. Default light mode (no theme attribute, no system dark preference)
  * 2. Explicit dark mode via data-blok-theme="dark" on <html>
  * 3. System dark preference via colorScheme: 'dark' browser context
@@ -75,6 +98,15 @@ test.describe('Dark theme', () => {
 
     test('--blok-popover-bg resolves to light value (#ffffff)', async ({ page }) => {
       const value = await getCustomProperty(page, '--blok-popover-bg');
+
+      // Browsers may normalize #ffffff to #fff
+      expect(value.toLowerCase()).toMatch(/^#fff(fff)?$/);
+    });
+
+    test('body-mounted popover --blok-popover-bg resolves to light value (#ffffff)', async ({ page }) => {
+      await openToolbox(page);
+
+      const value = await getPopoverCustomProperty(page, '--blok-popover-bg');
 
       // Browsers may normalize #ffffff to #fff
       expect(value.toLowerCase()).toMatch(/^#fff(fff)?$/);
@@ -101,6 +133,14 @@ test.describe('Dark theme', () => {
 
       expect(value).toBe('#f0efed');
     });
+
+    test('body-mounted popover --blok-popover-bg resolves to dark value (#252525)', async ({ page }) => {
+      await openToolbox(page);
+
+      const value = await getPopoverCustomProperty(page, '--blok-popover-bg');
+
+      expect(value).toBe('#252525');
+    });
   });
 
   test.describe('System dark preference', () => {
@@ -117,12 +157,32 @@ test.describe('Dark theme', () => {
       expect(value).toBe('#252525');
     });
 
+    test('body-mounted popover --blok-popover-bg resolves to dark value (#252525)', async ({ page }) => {
+      await openToolbox(page);
+
+      const value = await getPopoverCustomProperty(page, '--blok-popover-bg');
+
+      expect(value).toBe('#252525');
+    });
+
     test('explicit data-blok-theme="light" overrides system dark preference', async ({ page }) => {
       await page.evaluate(() => {
         document.documentElement.setAttribute('data-blok-theme', 'light');
       });
 
       const value = await getCustomProperty(page, '--blok-popover-bg');
+
+      // Browsers may normalize #ffffff to #fff
+      expect(value.toLowerCase()).toMatch(/^#fff(fff)?$/);
+    });
+
+    test('body-mounted popover explicit data-blok-theme="light" overrides system dark preference', async ({ page }) => {
+      await page.evaluate(() => {
+        document.documentElement.setAttribute('data-blok-theme', 'light');
+      });
+      await openToolbox(page);
+
+      const value = await getPopoverCustomProperty(page, '--blok-popover-bg');
 
       // Browsers may normalize #ffffff to #fff
       expect(value.toLowerCase()).toMatch(/^#fff(fff)?$/);

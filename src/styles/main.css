@@ -30,9 +30,83 @@
 */
 
 /* --- Isolation boundaries --- */
-[data-blok-interface],
-[data-blok-popover] {
-  all: revert;
+/*
+  Top-level isolation roots each use a different reset strategy:
+
+  [data-blok-interface=blok]
+    `all: initial !important` — main editor wrapper (outermost boundary).
+    Resets every property to its CSS initial value with !important priority,
+    blocking even `!important` host-page styles from cascading in.
+    Blok's own Tailwind utility classes (applied to the same elements or
+    descendants) override this because they have equal or higher specificity
+    and appear later in the cascade.
+
+  [data-blok-popover]:not([data-blok-popover-inline])
+    Inherited-properties-only reset — toolbox/settings popovers, appended
+    to <body>. Unlike `[data-blok-interface=blok]`, the popover root receives
+    JS-applied inline styles (position, top, left, CSS variables) that must
+    NOT be overridden. Since only INHERITED CSS properties can flow in from
+    host page styles, we reset only inherited properties with `!important`
+    rather than using `all: initial !important` (which would override the
+    inline-normal layout styles set by JavaScript).
+
+  [data-blok-interface=tooltip]
+    `all: initial !important` — tooltip, appended directly to <body>.
+    The tooltip hides via JS inline style `visibility: hidden` with the
+    `!important` priority flag (inline !important > author !important in the
+    cascade), so the JS-applied hide always wins over this stylesheet rule.
+
+  [data-blok-interface=inline-toolbar] is intentionally excluded: it is a
+  positioned descendant inside the editor wrapper, not a top-level body
+  element. Applying `all: initial` there would undo Tailwind utilities
+  (e.g. `position: absolute`, `z-index`) that the inline toolbar relies on.
+
+  [data-blok-popover-inline] is also excluded: inline popovers (used by the
+  inline toolbar) live inside the editor wrapper and are already protected by
+  its isolation boundary. They must NOT be reset here — doing so breaks their
+  display/position/visibility. Only body-level popovers need isolation.
+*/
+[data-blok-interface=blok],
+[data-blok-interface=tooltip] {
+  all: initial !important;
+}
+
+/*
+  Reset inherited CSS properties on the body-level popover root.
+  Only inherited properties can cascade in from host-page styles;
+  non-inherited properties (position, top, left, display, width, etc.)
+  cannot cascade and must NOT be reset here because JavaScript sets them
+  as inline normal styles (inline-normal < author-!important in cascade).
+*/
+[data-blok-popover]:not([data-blok-popover-inline]) {
+  color: initial !important;
+  font-family: initial !important;
+  font-size: initial !important;
+  font-weight: initial !important;
+  font-style: initial !important;
+  font-variant: initial !important;
+  font-stretch: initial !important;
+  line-height: initial !important;
+  letter-spacing: initial !important;
+  word-spacing: initial !important;
+  text-align: initial !important;
+  text-indent: initial !important;
+  text-transform: initial !important;
+  text-decoration: initial !important;
+  text-shadow: initial !important;
+  white-space: initial !important;
+  word-break: initial !important;
+  overflow-wrap: initial !important;
+  cursor: initial !important;
+  pointer-events: initial !important;
+  user-select: initial !important;
+  direction: initial !important;
+  list-style: initial !important;
+  quotes: initial !important;
+  border-collapse: initial !important;
+  border-spacing: initial !important;
+  empty-cells: initial !important;
+  caption-side: initial !important;
 }
 
 /* --- Scoped preflight (replaces tailwindcss/preflight.css) --- */
@@ -454,7 +528,8 @@
 }
 
 /* ─── Light theme (default) ─────────────────────────── */
-[data-blok-interface] {
+[data-blok-interface],
+[data-blok-popover] {
   --blok-selection: #e1f2ff;
   --blok-selection-inline: #d4ecff;
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
@@ -501,7 +576,8 @@
 
 /* ─── Dark theme — system preference ────────────────── */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-blok-theme="light"]) [data-blok-interface] {
+  :root:not([data-blok-theme="light"]) [data-blok-interface],
+  :root:not([data-blok-theme="light"]) [data-blok-popover] {
     --blok-selection: rgba(35, 131, 226, 0.2);
     --blok-selection-inline: rgba(35, 131, 226, 0.3);
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
@@ -546,7 +622,8 @@
 }
 
 /* ─── Dark theme — explicit override ────────────────── */
-[data-blok-theme="dark"] [data-blok-interface] {
+[data-blok-theme="dark"] [data-blok-interface],
+[data-blok-theme="dark"] [data-blok-popover] {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);

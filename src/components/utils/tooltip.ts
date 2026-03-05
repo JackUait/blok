@@ -360,7 +360,17 @@ class Tooltip {
     const shownClass = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown[0] : this.CSS.tooltipShown;
     const isShown = this.nodes.wrapper.classList.contains(shownClass);
 
-    this.nodes.wrapper.style.setProperty(VISIBILITY_PROPERTY, isShown ? VISIBILITY_VISIBLE : VISIBILITY_HIDDEN);
+    /**
+     * Use `!important` priority when hiding so the inline style wins over the
+     * author stylesheet's `all: initial !important` rule (which sets visibility
+     * to `visible`). Inline `!important` > author `!important` in the cascade.
+     * When showing, normal priority is sufficient (no competing rule sets visible).
+     */
+    this.nodes.wrapper.style.setProperty(
+      VISIBILITY_PROPERTY,
+      isShown ? VISIBILITY_VISIBLE : VISIBILITY_HIDDEN,
+      isShown ? '' : 'important'
+    );
     this.nodes.wrapper.setAttribute(ARIA_HIDDEN_ATTRIBUTE, isShown ? ARIA_HIDDEN_FALSE : ARIA_HIDDEN_TRUE);
     this.nodes.wrapper.setAttribute('data-blok-shown', isShown ? 'true' : 'false');
   }

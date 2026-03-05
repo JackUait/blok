@@ -79,6 +79,27 @@
 }
 
 /*
+  Reset Tailwind CSS custom properties that host-page styles may override on :root.
+  `all: initial` does NOT reset CSS custom properties (per spec), so we must
+  explicitly restore each --radius-* token to Tailwind v4's built-in defaults.
+  Without these resets, a host page that sets e.g. `--radius-lg: 20px` on :root
+  will cause Blok's `rounded-lg` utility to resolve to 20px instead of 8px.
+*/
+[data-blok-interface=blok],
+[data-blok-interface=tooltip],
+[data-blok-popover] {
+  --radius: 0.25rem;
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+}
+
+/*
   Reset inherited CSS properties on the body-level popover root.
   Only inherited properties can cascade in from host-page styles;
   non-inherited properties (position, top, left, display, width, etc.)

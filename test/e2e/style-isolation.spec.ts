@@ -283,6 +283,30 @@ test.describe('Style isolation', () => {
     expect(scrollbarWidth).not.toBe('thin');
   });
 
+  test('host :root --radius-lg override does not leak into popover CSS custom properties', async ({ page }) => {
+    // Simulates docs site's variables.css: --radius-lg: 20px (vs Tailwind default 8px)
+    await page.addStyleTag({
+      content: `:root { --radius-lg: 100px; --radius-xl: 200px; --radius: 50px; --radius-md: 80px; }`,
+    });
+
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+    await openToolbox(page);
+
+    // Verify the popover element has its --radius-lg custom property reset to Tailwind's default (0.5rem = 8px)
+    // not the host page's overridden value (100px).
+    // `all: initial` does NOT reset CSS custom properties per spec, so Blok must explicitly re-declare them.
+    const radiusLgValue = await page
+      .locator(POPOVER_SELECTOR)
+      .first()
+      .evaluate((el) => window.getComputedStyle(el).getPropertyValue('--radius-lg').trim());
+
+    // Should be Tailwind's default (~0.5rem), not the host's injected 100px.
+    // Chromium may normalize "0.5rem" → ".5rem", so we check the value is rem-based
+    // and does not contain the host's overridden pixel value.
+    expect(radiusLgValue).toMatch(/rem$/);
+    expect(radiusLgValue).not.toBe('100px');
+  });
+
   test('host :focus-visible style does not override Blok popover item focus ring', async ({ page }) => {
     await page.addStyleTag({
       content: `:focus-visible { outline: 4px solid rgb(255, 0, 0) !important; outline-offset: 10px !important; }`,

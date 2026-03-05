@@ -68,9 +68,9 @@ export const ToolsPage: React.FC = () => {
   }, [toolSections]);
 
   return (
-    <div className="tools-docs" data-blok-testid="tools-docs">
+    <>
       <Nav links={NAV_LINKS} />
-      <div className="tools-content-wrapper">
+      <div className="tools-docs" data-blok-testid="tools-docs">
         <Sidebar
           sections={sidebarSections}
           activeSection={activeSection}
@@ -90,6 +90,6 @@ export const ToolsPage: React.FC = () => {
         </div>
       </div>
       <Footer />
-    </div>
+    </>
   );
 };

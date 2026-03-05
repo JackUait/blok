@@ -351,7 +351,12 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
-    const wrapperOffset = this.Blok.UI.nodes.wrapper.getBoundingClientRect();
+    const uiWrapper = this.Blok.UI.nodes.wrapper;
+    const offsetParent = this.nodes.wrapper.offsetParent as HTMLElement | null;
+    const isContainedByUiWrapper = offsetParent === uiWrapper;
+    const wrapperOffset = isContainedByUiWrapper
+      ? uiWrapper.getBoundingClientRect()
+      : new DOMRect(0, 0, 0, 0);
     const contentRect = this.Blok.UI.contentRect;
     const selectionRect = SelectionUtils.rect;
 

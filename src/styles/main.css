@@ -383,6 +383,20 @@
   display: none !important;
 }
 
+/* Suppress focus outline on mouse/pointer clicks inside Blok boundaries.
+   :focus-visible below will re-enable it for keyboard navigation only. */
+[data-blok-interface] :focus:not(:focus-visible),
+[data-blok-popover] :focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Never show a focus outline on contenteditable blocks — the text cursor
+   is sufficient affordance regardless of how focus was triggered. */
+[data-blok-interface] [contenteditable]:focus-visible,
+[data-blok-popover] [contenteditable]:focus-visible {
+  outline: none;
+}
+
 /* Restore browser-default :focus-visible styles inside Blok boundaries,
    preventing host-page outline/border-radius overrides. */
 [data-blok-interface] :focus-visible,
@@ -657,11 +671,11 @@
     --blok-tooltip-font: #ffffff;
     --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
     --blok-icon-active-text: #529cca;
-    --blok-text-primary: #ffffff;
+    --blok-text-primary: #f0efed;
     --blok-text-secondary: #a39e98;
     --blok-popover-border: rgba(255, 255, 255, 0.07);
     --blok-popover-shadow: rgba(0, 0, 0, 0.6);
-    --blok-popover-bg: #2f2f2f;
+    --blok-popover-bg: #252525;
     --blok-popover-border-icon: #37352f;
     --blok-popover-border-icon-disabled: #2f2d29;
     --blok-item-focus-bg: rgba(35, 131, 226, 0.2);
@@ -703,11 +717,11 @@
   --blok-tooltip-font: #ffffff;
   --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
   --blok-icon-active-text: #529cca;
-  --blok-text-primary: #ffffff;
+  --blok-text-primary: #f0efed;
   --blok-text-secondary: #a39e98;
   --blok-popover-border: rgba(255, 255, 255, 0.07);
   --blok-popover-shadow: rgba(0, 0, 0, 0.6);
-  --blok-popover-bg: #2f2f2f;
+  --blok-popover-bg: #252525;
   --blok-popover-border-icon: #37352f;
   --blok-popover-border-icon-disabled: #2f2d29;
   --blok-item-focus-bg: rgba(35, 131, 226, 0.2);

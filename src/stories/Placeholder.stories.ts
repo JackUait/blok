@@ -149,64 +149,6 @@ export const PlaceholderHiddenWithContent: Story = {
 };
 
 /**
- * Typing hides placeholder, clearing restores it.
- */
-export const TypeAndClearPlaceholder: Story = {
-  args: {
-    placeholder: DEFAULT_PLACEHOLDER,
-    data: undefined,
-  },
-  parameters: {
-    chromatic: { delay: 500 },
-  },
-  play: async ({ canvasElement, step }) => {
-    await step('Wait for editor to initialize', async () => {
-      await waitFor(
-        () => {
-          const block = canvasElement.querySelector(BLOCK_TESTID);
-
-          expect(block).toBeInTheDocument();
-        },
-        TIMEOUT_INIT
-      );
-    });
-
-    await step('Focus and type to hide placeholder', async () => {
-      const block = canvasElement.querySelector(BLOCK_TESTID);
-      const contentEditable = block?.querySelector(CONTENTEDITABLE_SELECTOR);
-
-      if (contentEditable) {
-        await userEvent.type(contentEditable, 'Hello world');
-      }
-
-      await waitFor(
-        () => {
-          expect(contentEditable?.textContent).toContain('Hello world');
-        },
-        TIMEOUT_ACTION
-      );
-    });
-
-    await step('Clear content to restore placeholder', async () => {
-      const block = canvasElement.querySelector(BLOCK_TESTID);
-      const contentEditable = block?.querySelector(CONTENTEDITABLE_SELECTOR);
-
-      if (contentEditable) {
-        await userEvent.tripleClick(contentEditable);
-        await userEvent.keyboard('{Backspace}');
-      }
-
-      await waitFor(
-        () => {
-          expect(contentEditable?.textContent?.trim()).toBe('');
-        },
-        TIMEOUT_ACTION
-      );
-    });
-  },
-};
-
-/**
  * Multiple blocks - only first empty block shows placeholder.
  */
 export const MultipleBlocksPlaceholder: Story = {

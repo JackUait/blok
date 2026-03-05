@@ -83,7 +83,7 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
-    expect(saveMethod?.description).toBe('Получает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента.');
+    expect(saveMethod?.description).toBe('Извлекает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента.');
 
     const renderMethod = coreSection?.methods?.find(m => m.name === 'render(data)');
     expect(renderMethod?.description).toBe('Отображает содержимое редактора из ранее сохранённых JSON-данных.');
@@ -106,7 +106,7 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const isReadyProp = coreSection?.properties?.find(p => p.name === 'isReady');
-    expect(isReadyProp?.description).toBe('Promise, который разрешается когда редактор готов');
+    expect(isReadyProp?.description).toBe('Promise, который разрешается, когда редактор готов');
 
     const blocksProp = coreSection?.properties?.find(p => p.name === 'blocks');
     expect(blocksProp?.description).toBe('Модуль API для работы с блоками');

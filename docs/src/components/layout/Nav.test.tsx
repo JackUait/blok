@@ -196,7 +196,7 @@ describe('Nav', () => {
         <Nav links={mockLinks} />
       </TestWrapper>
     );
-    expect(screen.getByLabelText('Меню навигации')).toBeInTheDocument();
+    expect(screen.getByLabelText('Открыть меню навигации')).toBeInTheDocument();
   });
 
   it('should render translated search aria-label when locale is Russian', () => {

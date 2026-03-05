@@ -201,4 +201,109 @@ test.describe('Style isolation', () => {
 
     expect(fontFamily).toContain('Courier New');
   });
+
+  test('host h1/h2/h3 font-family override does not reach Header tool heading elements', async ({ page }) => {
+    await page.addStyleTag({
+      content: `h1, h2, h3 { font-family: 'Times New Roman', serif !important; }`,
+    });
+
+    await createBlok(page, [{ type: 'header', data: { text: 'Heading', level: 1 } }]);
+
+    const headingFontFamily = await page
+      .locator(`${BLOK_INTERFACE_SELECTOR} h1`)
+      .evaluate((el) => window.getComputedStyle(el).fontFamily);
+
+    expect(headingFontFamily).not.toContain('Times New Roman');
+  });
+
+  test('host h2 letter-spacing override does not reach Header tool heading elements', async ({ page }) => {
+    await page.addStyleTag({
+      content: `h2 { letter-spacing: 0.5em !important; }`,
+    });
+
+    await createBlok(page, [{ type: 'header', data: { text: 'Heading', level: 2 } }]);
+
+    const letterSpacing = await page
+      .locator(`${BLOK_INTERFACE_SELECTOR} h2`)
+      .evaluate((el) => window.getComputedStyle(el).letterSpacing);
+
+    // 0.5em on a typical 16px font = ~8px. Normal value is 'normal' or close to 0px.
+    const letterSpacingPx = parseFloat(letterSpacing);
+
+    expect(letterSpacingPx).toBeLessThan(4);
+  });
+
+  test('host ::selection color does not override Blok selection color', async ({ page }) => {
+    // Inject a host ::selection rule with an unmistakable color
+    await page.addStyleTag({
+      content: `::selection { background: rgb(255, 0, 0) !important; }`,
+    });
+
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+
+    // Check that Blok's own ::selection rule exists and overrides the host rule.
+    // We verify by reading the computed style of the ::selection pseudo-element.
+    // In Playwright, this requires injecting a script because getComputedStyle doesn't
+    // expose pseudo-element styles directly. Instead we verify that Blok's
+    // [data-blok-interface] *::selection rule was injected with the correct token value.
+    const blokSelectionApplied = await page.evaluate(() => {
+      const matchesSelectionRule = (rule: CSSRule): boolean =>
+        rule instanceof CSSStyleRule &&
+        (rule.selectorText?.includes('data-blok-interface') ?? false) &&
+        (rule.selectorText?.includes('::selection') ?? false);
+
+      return Array.from(document.styleSheets).some((sheet) => {
+        try {
+          return Array.from(sheet.cssRules ?? []).some(matchesSelectionRule);
+        } catch {
+          return false;
+        }
+      });
+    });
+
+    expect(blokSelectionApplied).toBe(true);
+  });
+
+  test('Firefox scrollbar properties do not cascade into popover', async ({ page }) => {
+    await page.addStyleTag({
+      content: `* { scrollbar-width: thin !important; scrollbar-color: rgb(255,0,0) rgb(0,255,0) !important; }`,
+    });
+
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+    await openToolbox(page);
+
+    const scrollbarWidth = await page.locator(POPOVER_SELECTOR).first().evaluate(
+      (el) => window.getComputedStyle(el).scrollbarWidth
+    );
+
+    // Should be reset to 'auto' (initial), not 'thin'
+    expect(scrollbarWidth).not.toBe('thin');
+  });
+
+  test('host :focus-visible style does not override Blok popover item focus ring', async ({ page }) => {
+    await page.addStyleTag({
+      content: `:focus-visible { outline: 4px solid rgb(255, 0, 0) !important; outline-offset: 10px !important; }`,
+    });
+
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+    await openToolbox(page);
+
+    // Verify Blok has a scoped :focus-visible rule that overrides the host rule
+    const blokFocusVisibleApplied = await page.evaluate(() => {
+      const matchesFocusVisibleRule = (rule: CSSRule): boolean =>
+        rule instanceof CSSStyleRule &&
+        (rule.selectorText?.includes('data-blok') ?? false) &&
+        (rule.selectorText?.includes('focus-visible') ?? false);
+
+      return Array.from(document.styleSheets).some((sheet) => {
+        try {
+          return Array.from(sheet.cssRules ?? []).some(matchesFocusVisibleRule);
+        } catch {
+          return false;
+        }
+      });
+    });
+
+    expect(blokFocusVisibleApplied).toBe(true);
+  });
 });

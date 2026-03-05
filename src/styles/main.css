@@ -114,6 +114,8 @@
   border-spacing: initial !important;
   empty-cells: initial !important;
   caption-side: initial !important;
+  scrollbar-width: initial !important;
+  scrollbar-color: initial !important;
 }
 
 /* --- Scoped preflight (replaces tailwindcss/preflight.css) --- */

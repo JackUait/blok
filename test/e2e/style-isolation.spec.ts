@@ -307,6 +307,64 @@ test.describe('Style isolation', () => {
     expect(radiusLgValue).not.toBe('100px');
   });
 
+  /**
+   * Regression test: focus outlines must only appear on keyboard navigation,
+   * not on mouse/pointer clicks.
+   *
+   * Root cause: the original CSS only had `:focus-visible { outline: revert }` which,
+   * combined with the fact that contenteditable elements trigger `:focus-visible`
+   * even on mouse click (per spec), meant mouse clicks showed a focus ring.
+   *
+   * Fix: add `:focus:not(:focus-visible) { outline: none }` before the `:focus-visible`
+   * rule so mouse-triggered focus never shows an outline.
+   */
+  test('Blok stylesheet suppresses outline on pointer-click focus (:focus:not(:focus-visible) rule exists)', async ({ page }) => {
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+
+    // Verify the CSS rule that suppresses outlines for mouse/pointer focus exists
+    const mouseClickOutlineRuleExists = await page.evaluate(() => {
+      const isFocusNotFocusVisible = (rule: CSSRule): boolean =>
+        rule instanceof CSSStyleRule &&
+        (rule.selectorText?.includes('data-blok') ?? false) &&
+        (rule.selectorText?.includes(':focus') ?? false) &&
+        (rule.selectorText?.includes(':not(:focus-visible)') ?? false);
+
+      return Array.from(document.styleSheets).some((sheet) => {
+        try {
+          return Array.from(sheet.cssRules ?? []).some(isFocusNotFocusVisible);
+        } catch {
+          return false;
+        }
+      });
+    });
+
+    expect(mouseClickOutlineRuleExists).toBe(true);
+  });
+
+  test('Blok stylesheet suppresses outline on contenteditable elements during keyboard focus', async ({ page }) => {
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+
+    // Verify the CSS rule that suppresses outlines for contenteditable (text blocks)
+    // even during keyboard focus (the text cursor is sufficient affordance)
+    const contenteditableFocusVisibleRuleExists = await page.evaluate(() => {
+      const isContenteditableFocusVisible = (rule: CSSRule): boolean =>
+        rule instanceof CSSStyleRule &&
+        (rule.selectorText?.includes('data-blok') ?? false) &&
+        (rule.selectorText?.includes('[contenteditable]') ?? false) &&
+        (rule.selectorText?.includes(':focus-visible') ?? false);
+
+      return Array.from(document.styleSheets).some((sheet) => {
+        try {
+          return Array.from(sheet.cssRules ?? []).some(isContenteditableFocusVisible);
+        } catch {
+          return false;
+        }
+      });
+    });
+
+    expect(contenteditableFocusVisibleRuleExists).toBe(true);
+  });
+
   test('host :focus-visible style does not override Blok popover item focus ring', async ({ page }) => {
     await page.addStyleTag({
       content: `:focus-visible { outline: 4px solid rgb(255, 0, 0) !important; outline-offset: 10px !important; }`,

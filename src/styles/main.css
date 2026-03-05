@@ -383,6 +383,20 @@
   display: none !important;
 }
 
+/* Suppress focus outline on mouse/pointer clicks inside Blok boundaries.
+   :focus-visible below will re-enable it for keyboard navigation only. */
+[data-blok-interface] :focus:not(:focus-visible),
+[data-blok-popover] :focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Never show a focus outline on contenteditable blocks — the text cursor
+   is sufficient affordance regardless of how focus was triggered. */
+[data-blok-interface] [contenteditable]:focus-visible,
+[data-blok-popover] [contenteditable]:focus-visible {
+  outline: none;
+}
+
 /* Restore browser-default :focus-visible styles inside Blok boundaries,
    preventing host-page outline/border-radius overrides. */
 [data-blok-interface] :focus-visible,

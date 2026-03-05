@@ -5,7 +5,7 @@
  */
 export const css = {
   // Popover container - base styles
-  popoverContainer: 'absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-4 max-h-0 min-w-(--width) w-(--width) rounded-xl shadow-[0_4px_20px_-4px_var(--color-popover-shadow),0_0_0_0.5px_rgba(0,0,0,0.06)] left-(--popover-left) top-(--popover-top) bg-popover-bg',
+  popoverContainer: 'absolute flex flex-col overflow-hidden box-border opacity-0 pointer-events-none p-0 border-none z-4 max-h-0 min-w-(--width) w-(--width) rounded text-sm shadow-[0_4px_6px_-1px_var(--color-popover-shadow),0_2px_4px_-1px_rgba(0,0,0,0.06)] left-(--popover-left) top-(--popover-top) bg-popover-bg',
 
   // Popover container - mobile styles (applied conditionally)
   // Reset left/top from base class since inset shorthand may not properly override them in twMerge

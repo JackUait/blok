@@ -65,6 +65,12 @@ export class UI extends Module<UINodes> {
   private documentClickedHandler: ((event: MouseEvent) => void) | null = null;
   private redactorTouchHandler: ((event: Event) => void) | null = null;
 
+  /** Counter for generating unique style tag IDs across multiple instances */
+  private static instanceCounter = 0;
+
+  /** Unique ID for this instance, used to namespace the font style tag */
+  private readonly instanceId: number = ++UI.instanceCounter;
+
   /**
    * Reset the block hover state (used after drag cancellation to allow toolbar to show again)
    */
@@ -148,6 +154,7 @@ export class UI extends Module<UINodes> {
      * Load and append CSS
      */
     this.loadStyles();
+    this.loadFontStyles();
 
     /**
      * Register this Blok instance with the accessibility announcer
@@ -524,6 +531,45 @@ export class UI extends Module<UINodes> {
     /**
      * Append styles at the top of HEAD tag
      */
+    $.prepend(document.head, tag);
+  }
+
+  /**
+   * Injects a font-family override stylesheet when config.style.fontFamily is set.
+   * Uses a separate <style> tag so it applies even when blok-styles already exists
+   * (multiple editor instances on the same page).
+   */
+  private loadFontStyles(): void {
+    const fontFamily = this.config.style?.fontFamily;
+
+    if (!fontFamily) {
+      return;
+    }
+
+    const styleTagId = `blok-font-${this.instanceId}`;
+
+    if ($.get(styleTagId)) {
+      return;
+    }
+
+    const css = [
+      `[data-blok-interface=blok], [data-blok-interface=tooltip] {`,
+      `  --blok-font-family: ${fontFamily};`,
+      `}`,
+      `[data-blok-popover]:not([data-blok-popover-inline]) {`,
+      `  --blok-font-family: ${fontFamily};`,
+      `}`,
+    ].join('\n');
+
+    const tag = $.make('style', null, {
+      id: styleTagId,
+      textContent: css,
+    });
+
+    if (this.config.style?.nonce) {
+      tag.setAttribute('nonce', this.config.style.nonce);
+    }
+
     $.prepend(document.head, tag);
   }
 

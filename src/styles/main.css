@@ -738,7 +738,7 @@
 }
 @utility blok-inline-tool-button {
   /* Inline Tools styles */
-  @apply flex justify-center items-center border-0 rounded-sm h-full p-0 w-7 bg-transparent cursor-pointer leading-normal text-black;
+  @apply flex justify-center items-center border-0 rounded h-full p-0 w-7 bg-transparent cursor-pointer leading-normal text-black;
 }
 @utility blok-inline-tool-button--active {
   @apply bg-icon-active-bg text-icon-active-text;

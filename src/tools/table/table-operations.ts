@@ -282,8 +282,9 @@ export const mountCellBlocksReadOnly = (
 
       if (!isCellWithBlocks(cellContent)) {
         // Read-only render path must not mutate block state.
-        // Render legacy content (plain string) in-place.
-        container.textContent = cellContent;
+        // Use innerHTML so that legacy HTML markup (e.g. <b>bold</b>) is
+        // interpreted by the browser rather than shown as literal text.
+        container.innerHTML = cellContent;
 
         return;
       }

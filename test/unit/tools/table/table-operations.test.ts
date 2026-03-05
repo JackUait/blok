@@ -310,6 +310,48 @@ describe('table-operations', () => {
       expect(container).toHaveTextContent('Test content');
     });
 
+    it('should render legacy string HTML markup as real HTML, not as literal text', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn(),
+          getBlockByIndex: vi.fn(),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      // Legacy content containing HTML markup (e.g. bold text from a rich-text paste)
+      const legacyContent = [['Hello <b>world</b>']];
+
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, 'table-id');
+
+      // The text should be visible and correct
+      expect(container.textContent).toBe('Hello world');
+      // The HTML must be interpreted — a <b> element must exist in the DOM,
+      // NOT appear as the literal string "<b>world</b>"
+      expect(container.querySelector('b')).not.toBeNull();
+      expect(container.innerHTML).not.toContain('&lt;b&gt;');
+    });
+
     it('should not call setBlockParent or insert for legacy string cells in read-only mode', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
       const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');

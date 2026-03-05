@@ -194,11 +194,14 @@ test.describe('saver module', () => {
     });
 
     await page.locator(BLOCK_SELECTOR).filter({ hasText: BLOCK_TEXT })
-      .hover();
-    await page.locator(BLOCK_SELECTOR).filter({ hasText: BLOCK_TEXT })
       .click();
 
     const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    // After click, hover the block to trigger the toolbar to open.
+    // Toolbar.close() (called by mousedown) now resets lastHoveredBlockId,
+    // so hovering the same block re-emits BlockHovered and opens the toolbar.
+    await page.locator(BLOCK_SELECTOR).filter({ hasText: BLOCK_TEXT }).hover();
 
     await expect(settingsButton).toBeVisible();
     await settingsButton.click();

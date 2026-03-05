@@ -586,6 +586,15 @@ export class Toolbar extends Module<ToolbarNodes> {
     // Only set explicitlyClosed if not explicitly disabled (e.g., when called from toolbox after block insertion)
     if (options?.setExplicitlyClosed !== false) {
       this.explicitlyClosed = true;
+
+      /**
+       * Reset the BlockHoverController's lastHoveredBlockId so that the next
+       * mousemove over the same block re-emits BlockHovered.
+       * Without this, deduplication in BlockHoverController suppresses the event
+       * and the toolbar can never reopen on the same block after being closed by
+       * a mousedown (e.g. from RectangleSelection.startSelection).
+       */
+      this.Blok.UI.resetBlockHoverState();
     }
 
     /**

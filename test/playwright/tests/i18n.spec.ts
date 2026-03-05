@@ -500,6 +500,10 @@ test.describe('blok i18n', () => {
 
       await expect(block).toHaveCount(1);
       await block.click();
+
+      // After click, hover to open the toolbar (Toolbar.close() resets lastHoveredBlockId).
+      await block.hover();
+
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
       const deleteButton = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} [data-blok-item-name="delete"]`);
@@ -595,6 +599,10 @@ test.describe('blok i18n', () => {
 
       await expect(block).toHaveCount(1);
       await block.click();
+
+      // After click, hover to open the toolbar (Toolbar.close() resets lastHoveredBlockId).
+      await block.hover();
+
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
       // Open "Convert to" menu
@@ -677,6 +685,9 @@ test.describe('blok i18n', () => {
 
       await expect(block).toHaveCount(1);
       await block.click();
+
+      // After click, hover to open the toolbar (Toolbar.close() resets lastHoveredBlockId).
+      await block.hover();
 
       const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 
@@ -1036,6 +1047,9 @@ test.describe('blok i18n', () => {
       await expect(block).toHaveCount(1);
       await block.click();
 
+      // After click, hover to open the toolbar (Toolbar.close() resets lastHoveredBlockId).
+      await block.hover();
+
       // Open the settings menu
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
@@ -1207,8 +1221,12 @@ test.describe('blok i18n', () => {
       const block = page.locator(BLOCK_SELECTOR);
 
       await expect(block).toHaveCount(1);
-      await block.hover();
       await block.click();
+
+      // After click, hover the block to trigger the toolbar to open.
+      // Toolbar.close() (called by mousedown) now resets lastHoveredBlockId,
+      // so hovering the same block re-emits BlockHovered and opens the toolbar.
+      await block.hover();
 
       // Open block settings
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();

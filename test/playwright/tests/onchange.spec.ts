@@ -285,7 +285,11 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   const block = page.locator(`${BLOCK_SELECTOR}:nth-of-type(${index + 1})`);
 
   await block.scrollIntoViewIfNeeded();
-  await page.mouse.move(0, 0);
+  await block.click();
+
+  // After click, hover the block to trigger the toolbar to open.
+  // Toolbar.close() (called by mousedown) now resets lastHoveredBlockId,
+  // so hovering the same block re-emits BlockHovered and opens the toolbar.
   await block.hover();
 
   const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);

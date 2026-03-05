@@ -89,14 +89,19 @@ const focusHeaderBlock = async (page: Page): Promise<void> => {
 
   await expect(block).toHaveCount(1);
   await expect(block).toBeVisible();
-  await block.hover();
   await block.click();
 };
 
 const openBlockTunesViaToolbar = async (page: Page): Promise<void> => {
   await focusHeaderBlock(page);
 
+  const block = page.locator(HEADER_BLOCK_SELECTOR);
   const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+  // After click, hover the block to trigger the toolbar to open.
+  // Toolbar.close() (called by mousedown) now resets lastHoveredBlockId,
+  // so hovering the same block re-emits BlockHovered and opens the toolbar.
+  await block.hover();
 
   await expect(settingsButton).toBeVisible();
   await settingsButton.click();

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 
-const REACT_TEST_URL = 'http://localhost:3303/test/playwright/fixtures/react-test.html';
+const REACT_TEST_URL = 'http://localhost:4444/test/playwright/fixtures/react-test.html';
 
 test.describe('React adapter', () => {
   test.beforeAll(() => {

@@ -158,8 +158,8 @@ export default defineConfig({
   globalSetup: './test/playwright/global-setup.ts',
   testDir: 'test',
   webServer: {
-    command: 'npx serve . -l 3303 --no-clipboard',
-    port: 3303,
+    command: 'npx serve . -l 4444 --no-clipboard',
+    port: 4444,
     // Don't reuse existing server - it might be a Vite dev server which has
     // module resolution issues under concurrent test load
     reuseExistingServer: false,

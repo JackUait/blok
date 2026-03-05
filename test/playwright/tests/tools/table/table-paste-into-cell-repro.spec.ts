@@ -13,7 +13,7 @@ import type { Blok, OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
-const TEST_PAGE_URL = 'http://localhost:3303/test/playwright/fixtures/test.html';
+const TEST_PAGE_URL = 'http://localhost:4444/test/playwright/fixtures/test.html';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
 const CELL_SELECTOR = '[data-blok-table-cell]';
 

@@ -357,7 +357,9 @@ test.describe('paragraph tool', () => {
       const headerOption = page.locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`).filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
 
       await expect(headerOption).toBeVisible();
-      await headerOption.click();
+      // Use dispatchEvent instead of click() to avoid Playwright's pointer-move pre-click phase,
+      // which generates a mouseover event that can trigger handleHover and destroy the nested popover.
+      await headerOption.dispatchEvent('click');
 
       const header = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`);
 

@@ -369,6 +369,19 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
+    /**
+     * If the pointer moved into the nested popover (e.g. user is about to click
+     * an item in the sub-menu), do not destroy it.
+     */
+    if (
+      this.nestedPopover !== undefined &&
+      this.nestedPopover !== null &&
+      event.target instanceof Node &&
+      this.nestedPopover.hasNode(event.target)
+    ) {
+      return;
+    }
+
     this.destroyNestedPopoverIfExists();
 
     this.previouslyHoveredItem = item;

@@ -21,6 +21,7 @@ import {
   parseClipboardHtml,
   parseGenericHtmlTable,
   isDefaultBlack,
+  ALLOWED_MARK_STYLE_PROPS,
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
@@ -241,6 +242,22 @@ export class Table implements BlockTool {
         br: true,
         b: true,
         i: true,
+        strong: true,
+        em: true,
+        mark: (node: Element): { [attr: string]: boolean | string } => {
+          const el = node as HTMLElement;
+          const style = el.style;
+
+          const props = Array.from({ length: style.length }, (_, i) => style.item(i));
+
+          for (const prop of props) {
+            if (!ALLOWED_MARK_STYLE_PROPS.has(prop)) {
+              style.removeProperty(prop);
+            }
+          }
+
+          return style.length > 0 ? { style: true } : {};
+        },
         a: { href: true },
         input: { type: true, checked: true },
       },
@@ -1208,7 +1225,7 @@ export class Table implements BlockTool {
       });
 
       // Read-only legacy cells can render plain text without mounted block holders.
-      const text = blocks.length === 0 ? (container.textContent ?? '').trim() : '';
+      const text = blocks.length === 0 ? (container.innerHTML ?? '').trim() : '';
 
       if (blocks.length === 0 && text.length > 0) {
         blocks.push({

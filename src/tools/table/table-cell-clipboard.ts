@@ -154,7 +154,7 @@ export function buildClipboardPlainText(payload: TableCellsClipboard): string {
  * CSS properties allowed on <mark> elements inside table cells.
  * Matches MarkerInlineTool.ALLOWED_STYLE_PROPS.
  */
-const ALLOWED_MARK_STYLE_PROPS = new Set(['color', 'background-color']);
+export const ALLOWED_MARK_STYLE_PROPS = new Set(['color', 'background-color']);
 
 /**
  * Sanitizer config for cell content: allows bold, italic, line breaks, links,

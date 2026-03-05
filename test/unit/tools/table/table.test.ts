@@ -4274,4 +4274,66 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Bug fix: collectCellBlockData preserves inline HTML formatting in legacy cells
+  // ---------------------------------------------------------------------------
+  describe('collectCellBlockData — legacy cell inline HTML formatting', () => {
+    it('preserves inline HTML (e.g. <b>bold</b>) when copying a legacy read-only cell', () => {
+      // Legacy cells have no mounted block holders — they contain plain HTML text
+      // directly inside the cell-blocks container with no [data-blok-id] children.
+      // The bug: using container.textContent strips HTML tags, losing formatting.
+      // The fix: use container.innerHTML to preserve inline markup.
+      const options = createTableOptions();
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const sc = element.firstElementChild as HTMLElement;
+      const gridEl = sc.firstElementChild as HTMLElement;
+
+      // Grab the first cell and its blocks container
+      const firstCell = gridEl.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const container = firstCell.querySelector('[data-blok-table-cell-blocks]') as HTMLElement;
+
+      // Simulate a legacy read-only cell: inject rich HTML directly into the
+      // container without any [data-blok-id] block holders.
+      // Remove any existing block holders first.
+      container.innerHTML = '<b>bold</b> word';
+
+      // Invoke handleCellCopy via the internal cast pattern used elsewhere in this file.
+      const dataMap: Record<string, string> = {};
+      const mockClipboardData = {
+        setData: (type: string, value: string) => { dataMap[type] = value; },
+        getData: (type: string) => dataMap[type] ?? '',
+      } as unknown as DataTransfer;
+
+      (table as unknown as { handleCellCopy: (cells: HTMLElement[], cd: DataTransfer) => void })
+        .handleCellCopy([firstCell], mockClipboardData);
+
+      // The HTML clipboard payload should contain a paragraph block whose text
+      // preserves the inline HTML — not stripped plain text.
+      const htmlPayload = dataMap['text/html'];
+
+      expect(htmlPayload).toBeDefined();
+
+      // Parse the blok clipboard payload from the HTML
+      const match = htmlPayload?.match(/data-blok-table-cells='([^']*)'/);
+
+      expect(match).not.toBeNull();
+
+      const jsonStr = (match?.[1] ?? '').replace(/&#39;/g, "'");
+      const parsed = JSON.parse(jsonStr) as { cells: Array<Array<{ blocks: Array<{ tool: string; data: { text: string } }> }>> };
+      const blockText = parsed.cells[0][0].blocks[0].data.text;
+
+      // Must preserve the <b> tag — not strip it to plain "bold word"
+      expect(blockText).toContain('<b>bold</b>');
+      expect(blockText).not.toBe('bold word');
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+  });
 });

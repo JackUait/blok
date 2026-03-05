@@ -5,6 +5,7 @@
     "docs": "Docs",
     "recipes": "Recipes",
     "integrations": "Integrations",
+    "tools": "Tools",
     "migration": "Migration",
     "changelog": "Changelog",
     "github": "GitHub",
@@ -709,6 +710,32 @@
       "breaking": "Breaking",
       "deprecated": "Deprecated",
       "security": "Security"
+    }
+  },
+  "tools": {
+    "filterLabel": "Filter tools",
+    "import": "Import",
+    "configuration": "Configuration",
+    "option": "Option",
+    "type": "Type",
+    "default": "Default",
+    "description": "Description",
+    "saveData": "Save Data",
+    "usageExample": "Usage Example",
+    "sections": {
+      "blockTools": "Block Tools",
+      "inlineTools": "Inline Tools"
+    },
+    "links": {
+      "paragraph": "Paragraph",
+      "header": "Header",
+      "list": "List",
+      "table": "Table",
+      "toggle": "Toggle",
+      "bold": "Bold",
+      "italic": "Italic",
+      "link": "Link",
+      "marker": "Marker"
     }
   },
   "integrations": {

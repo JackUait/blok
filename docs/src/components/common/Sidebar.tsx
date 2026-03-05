@@ -11,7 +11,7 @@ export interface SidebarSection {
   links: SidebarLink[];
 }
 
-export type SidebarVariant = 'api' | 'recipes';
+export type SidebarVariant = 'api' | 'recipes' | 'tools';
 
 interface SidebarProps {
   sections: SidebarSection[];

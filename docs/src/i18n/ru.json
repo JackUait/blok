@@ -5,6 +5,7 @@
     "docs": "Документация",
     "recipes": "Рецепты",
     "integrations": "Интеграции",
+    "tools": "Инструменты",
     "migration": "Миграция",
     "changelog": "История изменений",
     "github": "GitHub",
@@ -709,6 +710,32 @@
       "breaking": "Ломающее изменение",
       "deprecated": "Устарело",
       "security": "Безопасность"
+    }
+  },
+  "tools": {
+    "filterLabel": "Фильтр инструментов",
+    "import": "Импорт",
+    "configuration": "Конфигурация",
+    "option": "Опция",
+    "type": "Тип",
+    "default": "По умолчанию",
+    "description": "Описание",
+    "saveData": "Формат данных",
+    "usageExample": "Пример использования",
+    "sections": {
+      "blockTools": "Блочные инструменты",
+      "inlineTools": "Строчные инструменты"
+    },
+    "links": {
+      "paragraph": "Параграф",
+      "header": "Заголовок",
+      "list": "Список",
+      "table": "Таблица",
+      "toggle": "Переключатель",
+      "bold": "Жирный",
+      "italic": "Курсив",
+      "link": "Ссылка",
+      "marker": "Маркер"
     }
   },
   "integrations": {

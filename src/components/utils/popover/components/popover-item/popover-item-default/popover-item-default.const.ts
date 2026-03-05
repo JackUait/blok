@@ -10,7 +10,7 @@ export const css = {
    * Note: noHover state is handled via [data-blok-popover-item-no-hover] which disables hover
    * Priority order: active < hover < focus (focus wins when navigating with keyboard)
    */
-  item: 'flex items-center select-none border-none bg-transparent rounded-lg px-2 py-(--item-padding) text-text-primary mb-0.5 outline-hidden transition-[color,background-color,border-color,opacity,max-height,padding,margin] duration-150 max-h-10 overflow-hidden data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
+  item: 'flex items-center select-none border-none bg-transparent rounded px-2 py-(--item-padding) text-text-primary mb-0.5 outline-hidden transition-[color,background-color,border-color,opacity,max-height,padding,margin] duration-150 max-h-8 overflow-hidden data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
 
   /**
    * Item disabled state
@@ -21,7 +21,7 @@ export const css = {
   /**
    * Icon container styles
    */
-  icon: 'flex items-center justify-center w-[26px] h-[26px] shrink-0 rounded-lg [&_svg]:w-icon [&_svg]:h-icon',
+  icon: 'flex items-center justify-center w-5 h-5 shrink-0 rounded bg-transparent [&_svg]:w-icon [&_svg]:h-icon',
 
   /**
    * Focused state class for DomIterator/Flipper keyboard navigation.
@@ -37,7 +37,7 @@ export const cssInline = {
   /**
    * Item in inline context - more compact styling
    */
-  item: 'rounded-sm p-1',
+  item: 'rounded p-1',
 };
 
 /**
@@ -47,5 +47,5 @@ export const cssNestedInline = {
   /**
    * Nested item - back to desktop popover styling
    */
-  item: 'rounded-md p-[3px] mobile:p-1',
+  item: 'rounded p-[3px] mobile:p-1',
 };

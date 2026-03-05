@@ -159,15 +159,15 @@
   Remove the default font size and weight for headings, and prevent host-page
   heading rules (e.g. `h1 { font-family: 'Times New Roman'; letter-spacing: 0.5em; }`)
   from overriding these — even when the host uses `!important`.
-  Specificity raised from (0,0,0) to (0,1,1) to beat host element-selector rules.
-  `font-family: inherit !important` and `letter-spacing: inherit !important` force
-  inheritance from the already-isolated boundary element (which has `all: initial
-  !important`), blocking display-font overrides regardless of host specificity.
+  Specificity raised from (0,0,1) to (0,1,1) to beat host element-selector rules.
+  All four properties use `!important` to force inheritance from the already-isolated
+  boundary element (which has `all: initial !important`), blocking host overrides
+  regardless of host specificity.
 */
 [data-blok-interface] :is(h1, h2, h3, h4, h5, h6),
 [data-blok-popover] :is(h1, h2, h3, h4, h5, h6) {
-  font-size: inherit;
-  font-weight: inherit;
+  font-size: inherit !important;
+  font-weight: inherit !important;
   font-family: inherit !important;
   letter-spacing: inherit !important;
 }

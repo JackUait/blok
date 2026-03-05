@@ -581,23 +581,23 @@
   --blok-bg-light: #eff2f5;
   --blok-gray-text: #707684;
   --blok-dark: #1d202b;
-  --blok-active-icon: #388ae5;
-  --blok-link: #388ae5;
+  --blok-active-icon: #2383e2;
+  --blok-link: #2383e2;
   --blok-line-gray: #eff0f1;
   --blok-tooltip-bg: #1d202b;
   --blok-tooltip-font: #cdd1e0;
-  --blok-icon-active-bg: rgba(56, 138, 229, 0.1);
-  --blok-icon-active-text: #388ae5;
+  --blok-icon-active-bg: rgba(35,131,226,0.14);
+  --blok-icon-active-text: #2383e2;
   --blok-text-primary: black;
   --blok-text-secondary: #707684;
-  --blok-popover-border: #eff0f1;
+  --blok-popover-border: rgba(55,53,47,0.09);
   --blok-popover-shadow: rgba(13, 20, 33, 0.1);
   --blok-popover-bg: #ffffff;
   --blok-popover-border-icon: rgb(201 201 204 / 48%);
   --blok-popover-border-icon-disabled: #eff0f1;
-  --blok-item-focus-bg: rgba(34, 186, 255, 0.08);
-  --blok-item-focus-shadow: rgba(7, 161, 227, 0.08);
-  --blok-item-hover-bg: #f8f8f8;
+  --blok-item-focus-bg: rgba(35,131,226,0.14);
+  --blok-item-focus-shadow: rgba(35,131,226,0.14);
+  --blok-item-hover-bg: rgba(55,53,47,0.08);
   --blok-icon-bg: rgba(0, 0, 0, 0.04);
   --blok-item-confirm-bg: #e24a4a;
   --blok-item-confirm-hover-bg: #ce4343;
@@ -615,7 +615,7 @@
   --blok-mobile-border: #e8e8eb;
   --blok-search-input-bg: #f8f8f8;
   --blok-search-input-border: rgba(226, 226, 229, 0.20);
-  --blok-search-input-focus-border: rgba(56, 138, 229, 0.3);
+  --blok-search-input-focus-border: rgba(35,131,226,0.5);
   --blok-link-input-border: rgba(226, 226, 229, 0.2);
 }
 

@@ -230,7 +230,9 @@ test.describe('Style isolation', () => {
     // 0.5em on a typical 16px font = ~8px. Normal value is 'normal' or close to 0px.
     const letterSpacingPx = parseFloat(letterSpacing);
 
-    expect(letterSpacingPx).toBeLessThan(4);
+    // Guard against browsers that return 'normal' (which parseFloat resolves to NaN)
+    // NaN means no numeric value was set — equivalent to 0 (normal), so isolation is working.
+    expect(Number.isNaN(letterSpacingPx) || letterSpacingPx < 4).toBe(true);
   });
 
   test('host ::selection color does not override Blok selection color', async ({ page }) => {
@@ -264,7 +266,8 @@ test.describe('Style isolation', () => {
     expect(blokSelectionApplied).toBe(true);
   });
 
-  test('Firefox scrollbar properties do not cascade into popover', async ({ page }) => {
+  test('Firefox scrollbar properties do not cascade into popover', async ({ page, browserName }) => {
+    test.skip(browserName !== 'firefox', 'scrollbar-width/scrollbar-color are Firefox-only CSS properties');
     await page.addStyleTag({
       content: `* { scrollbar-width: thin !important; scrollbar-color: rgb(255,0,0) rgb(0,255,0) !important; }`,
     });

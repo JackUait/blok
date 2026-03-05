@@ -89,6 +89,7 @@ const focusHeaderBlock = async (page: Page): Promise<void> => {
 
   await expect(block).toHaveCount(1);
   await expect(block).toBeVisible();
+  await block.hover();
   await block.click();
 };
 

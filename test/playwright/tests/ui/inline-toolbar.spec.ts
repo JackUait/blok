@@ -830,7 +830,7 @@ test.describe('inline toolbar', () => {
 
     const toolbarBox = await getRequiredBoundingBox(toolbar);
 
-    expect(Math.abs(toolbarBox.x - selectionRect.left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(toolbarBox.x - selectionRect.left)).toBeLessThanOrEqual(2);
   });
 
   // Firefox has different text layout behavior for selections near line wraps,

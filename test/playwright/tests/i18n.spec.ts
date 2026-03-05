@@ -1207,6 +1207,7 @@ test.describe('blok i18n', () => {
       const block = page.locator(BLOCK_SELECTOR);
 
       await expect(block).toHaveCount(1);
+      await block.hover();
       await block.click();
 
       // Open block settings

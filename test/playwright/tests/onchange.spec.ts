@@ -285,7 +285,7 @@ const openBlockSettings = async (page: Page, index: number = 0): Promise<void> =
   const block = page.locator(`${BLOCK_SELECTOR}:nth-of-type(${index + 1})`);
 
   await block.scrollIntoViewIfNeeded();
-  await block.click();
+  await page.mouse.move(0, 0);
   await block.hover();
 
   const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);

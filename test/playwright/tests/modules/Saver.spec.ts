@@ -194,6 +194,8 @@ test.describe('saver module', () => {
     });
 
     await page.locator(BLOCK_SELECTOR).filter({ hasText: BLOCK_TEXT })
+      .hover();
+    await page.locator(BLOCK_SELECTOR).filter({ hasText: BLOCK_TEXT })
       .click();
 
     const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);

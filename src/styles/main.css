@@ -155,10 +155,21 @@
   text-decoration: underline dotted;
 }
 
-/* Remove the default font size and weight for headings. */
-:where([data-blok-interface], [data-blok-popover]) :is(h1, h2, h3, h4, h5, h6) {
+/*
+  Remove the default font size and weight for headings, and prevent host-page
+  heading rules (e.g. `h1 { font-family: 'Times New Roman'; letter-spacing: 0.5em; }`)
+  from overriding these — even when the host uses `!important`.
+  Specificity raised from (0,0,0) to (0,1,1) to beat host element-selector rules.
+  `font-family: inherit !important` and `letter-spacing: inherit !important` force
+  inheritance from the already-isolated boundary element (which has `all: initial
+  !important`), blocking display-font overrides regardless of host specificity.
+*/
+[data-blok-interface] :is(h1, h2, h3, h4, h5, h6),
+[data-blok-popover] :is(h1, h2, h3, h4, h5, h6) {
   font-size: inherit;
   font-weight: inherit;
+  font-family: inherit !important;
+  letter-spacing: inherit !important;
 }
 
 /* Reset links to optimize for opt-in styling instead of opt-out. */

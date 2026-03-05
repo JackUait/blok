@@ -362,6 +362,31 @@
   display: none !important;
 }
 
+/* Restore browser-default :focus-visible styles inside Blok boundaries,
+   preventing host-page outline/border-radius overrides. */
+[data-blok-interface] :focus-visible,
+[data-blok-popover] :focus-visible {
+  outline: revert;
+  outline-offset: revert;
+  border-radius: revert;
+}
+
+/* Restore browser-default ::selection styles inside Blok boundaries. */
+[data-blok-interface] ::selection,
+[data-blok-popover] ::selection {
+  background-color: revert;
+  color: revert;
+}
+
+/* Restore browser-default scrollbar appearance inside Blok boundaries
+   (Chromium/Safari ::-webkit-scrollbar). */
+[data-blok-interface] ::-webkit-scrollbar,
+[data-blok-popover] ::-webkit-scrollbar {
+  width: revert;
+  height: revert;
+  background-color: revert;
+}
+
 /*
   Exclude non-source directories from Tailwind's automatic content detection.
   Without this, Tailwind v4 scans all non-gitignored files (including docs/,

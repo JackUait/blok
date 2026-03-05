@@ -75,6 +75,7 @@
 [data-blok-interface=blok],
 [data-blok-interface=tooltip] {
   font-family: var(--blok-font-family, ui-sans-serif, system-ui, sans-serif) !important;
+  color: var(--blok-text-primary) !important;
 }
 
 /*
@@ -587,27 +588,27 @@
     --blok-selection: rgba(35, 131, 226, 0.2);
     --blok-selection-inline: rgba(35, 131, 226, 0.3);
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
-    --blok-bg-light: #202020;
-    --blok-gray-text: #ada9a3;
-    --blok-dark: #191919;
-    --blok-active-icon: #2383e2;
-    --blok-link: #2383e2;
-    --blok-line-gray: #383836;
-    --blok-tooltip-bg: #191919;
-    --blok-tooltip-font: #f0efed;
-    --blok-icon-active-bg: rgba(35, 131, 226, 0.15);
-    --blok-icon-active-text: #2383e2;
-    --blok-text-primary: #f0efed;
-    --blok-text-secondary: #ada9a3;
-    --blok-popover-border: #383836;
-    --blok-popover-shadow: rgba(0, 0, 0, 0.5);
-    --blok-popover-bg: #252525;
-    --blok-popover-border-icon: #383836;
-    --blok-popover-border-icon-disabled: #2c2c2b;
-    --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
-    --blok-item-focus-shadow: rgba(35, 131, 226, 0.4);
-    --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
-    --blok-icon-bg: rgba(255, 255, 255, 0.055);
+    --blok-bg-light: #191918;
+    --blok-gray-text: #a39e98;
+    --blok-dark: #191918;
+    --blok-active-icon: #62aef0;
+    --blok-link: #62aef0;
+    --blok-line-gray: #37352f;
+    --blok-tooltip-bg: #191918;
+    --blok-tooltip-font: #ffffff;
+    --blok-icon-active-bg: rgba(98, 174, 240, 0.15);
+    --blok-icon-active-text: #62aef0;
+    --blok-text-primary: #ffffff;
+    --blok-text-secondary: #a39e98;
+    --blok-popover-border: #37352f;
+    --blok-popover-shadow: rgba(0, 0, 0, 0.6);
+    --blok-popover-bg: #191918;
+    --blok-popover-border-icon: #37352f;
+    --blok-popover-border-icon-disabled: #2f2d29;
+    --blok-item-focus-bg: rgba(255, 255, 255, 0.1);
+    --blok-item-focus-shadow: rgba(98, 174, 240, 0.35);
+    --blok-item-hover-bg: rgba(255, 255, 255, 0.07);
+    --blok-icon-bg: rgba(255, 255, 255, 0.07);
     --blok-item-confirm-bg: #3d1f1f;
     --blok-item-confirm-hover-bg: #4a2020;
     --blok-item-destructive-text: #fb5d5d;
@@ -616,14 +617,14 @@
     --blok-notify-success-bar: #41ffb1;
     --blok-notify-error-bg: #2e1a1a;
     --blok-notify-error-bar: #fb5d5d;
-    --blok-notify-btn-cancel-bg: #2f2f2f;
-    --blok-notify-btn-cancel-text: #ada9a3;
+    --blok-notify-btn-cancel-bg: #2f2d29;
+    --blok-notify-btn-cancel-text: #a39e98;
     --blok-notify-btn-confirm-bg: #34c992;
-    --blok-mobile-border: #383836;
-    --blok-search-input-bg: #202020;
-    --blok-search-input-border: #2c2c2b;
-    --blok-search-input-focus-border: #2383e2;
-    --blok-link-input-border: #383836;
+    --blok-mobile-border: #37352f;
+    --blok-search-input-bg: #191918;
+    --blok-search-input-border: #37352f;
+    --blok-search-input-focus-border: #62aef0;
+    --blok-link-input-border: #37352f;
   }
 }
 
@@ -633,27 +634,27 @@
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
-  --blok-bg-light: #202020;
-  --blok-gray-text: #ada9a3;
-  --blok-dark: #191919;
-  --blok-active-icon: #2383e2;
-  --blok-link: #2383e2;
-  --blok-line-gray: #383836;
-  --blok-tooltip-bg: #191919;
-  --blok-tooltip-font: #f0efed;
-  --blok-icon-active-bg: rgba(35, 131, 226, 0.15);
-  --blok-icon-active-text: #2383e2;
-  --blok-text-primary: #f0efed;
-  --blok-text-secondary: #ada9a3;
-  --blok-popover-border: #383836;
-  --blok-popover-shadow: rgba(0, 0, 0, 0.5);
-  --blok-popover-bg: #252525;
-  --blok-popover-border-icon: #383836;
-  --blok-popover-border-icon-disabled: #2c2c2b;
-  --blok-item-focus-bg: rgba(255, 255, 255, 0.055);
-  --blok-item-focus-shadow: rgba(35, 131, 226, 0.4);
-  --blok-item-hover-bg: rgba(255, 255, 255, 0.055);
-  --blok-icon-bg: rgba(255, 255, 255, 0.055);
+  --blok-bg-light: #191918;
+  --blok-gray-text: #a39e98;
+  --blok-dark: #191918;
+  --blok-active-icon: #62aef0;
+  --blok-link: #62aef0;
+  --blok-line-gray: #37352f;
+  --blok-tooltip-bg: #191918;
+  --blok-tooltip-font: #ffffff;
+  --blok-icon-active-bg: rgba(98, 174, 240, 0.15);
+  --blok-icon-active-text: #62aef0;
+  --blok-text-primary: #ffffff;
+  --blok-text-secondary: #a39e98;
+  --blok-popover-border: #37352f;
+  --blok-popover-shadow: rgba(0, 0, 0, 0.6);
+  --blok-popover-bg: #191918;
+  --blok-popover-border-icon: #37352f;
+  --blok-popover-border-icon-disabled: #2f2d29;
+  --blok-item-focus-bg: rgba(255, 255, 255, 0.1);
+  --blok-item-focus-shadow: rgba(98, 174, 240, 0.35);
+  --blok-item-hover-bg: rgba(255, 255, 255, 0.07);
+  --blok-icon-bg: rgba(255, 255, 255, 0.07);
   --blok-item-confirm-bg: #3d1f1f;
   --blok-item-confirm-hover-bg: #4a2020;
   --blok-item-destructive-text: #fb5d5d;
@@ -662,14 +663,14 @@
   --blok-notify-success-bar: #41ffb1;
   --blok-notify-error-bg: #2e1a1a;
   --blok-notify-error-bar: #fb5d5d;
-  --blok-notify-btn-cancel-bg: #2f2f2f;
-  --blok-notify-btn-cancel-text: #ada9a3;
+  --blok-notify-btn-cancel-bg: #2f2d29;
+  --blok-notify-btn-cancel-text: #a39e98;
   --blok-notify-btn-confirm-bg: #34c992;
-  --blok-mobile-border: #383836;
-  --blok-search-input-bg: #202020;
-  --blok-search-input-border: #2c2c2b;
-  --blok-search-input-focus-border: #2383e2;
-  --blok-link-input-border: #383836;
+  --blok-mobile-border: #37352f;
+  --blok-search-input-bg: #191918;
+  --blok-search-input-border: #37352f;
+  --blok-search-input-focus-border: #62aef0;
+  --blok-link-input-border: #37352f;
 }
 
 /*

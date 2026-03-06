@@ -30,6 +30,8 @@ export interface BlockManagerAdapter {
     index: number;
     needToFocus: boolean;
   }): Block;
+  setBlockParent?(block: Block, parentId: string | null): void;
+  getBlockById?(id: string): Block | undefined;
 }
 
 export interface YjsManagerAdapter {
@@ -130,6 +132,32 @@ export class DragOperations {
         needToFocus: false,
       })
     );
+
+    // Re-establish internal parent-child relationships among duplicated blocks.
+    // Build a map: original block id → duplicated block id, so children whose
+    // original parent is also being duplicated can be reparented to their
+    // corresponding duplicate parent rather than inheriting the drop context.
+    if (this.blockManager.setBlockParent !== undefined) {
+      const originalIdToDupId = new Map<string, string>();
+      const sourceIds = new Set(sortedBlocks.map(b => b.id));
+
+      sortedBlocks.forEach((originalBlock, i) => {
+        originalIdToDupId.set(originalBlock.id, duplicatedBlocks[i].id);
+      });
+
+      sortedBlocks.forEach((originalBlock, i) => {
+        const originalParentId = originalBlock.parentId;
+
+        // Only reparent if the original parent is also part of the duplicated set
+        if (originalParentId !== null && sourceIds.has(originalParentId)) {
+          const dupParentId = originalIdToDupId.get(originalParentId);
+
+          if (dupParentId !== undefined && this.blockManager.setBlockParent !== undefined) {
+            this.blockManager.setBlockParent(duplicatedBlocks[i], dupParentId);
+          }
+        }
+      });
+    }
 
     // Select all duplicated blocks
     const blockSelection = this.blockSelection;

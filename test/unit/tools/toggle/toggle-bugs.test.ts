@@ -108,10 +108,12 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     const callback = vi.fn();
     const arrow = buildArrow(true, callback);
 
-    arrow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    arrow.click();
 
     // Verify the callback was invoked — proves click listener is attached
     expect(callback).toHaveBeenCalledTimes(1);
+    // Verify the arrow is a real DOM element with the expected role
+    expect(arrow.getAttribute('role')).toBe('button');
   });
 
   it('toggle render does not toggle open state on arrow click in read-only mode', () => {
@@ -124,7 +126,7 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     // In read-only mode the toggle starts closed (!readOnly = false).
     // After arrow click, the attribute must remain unchanged.
     const attrBefore = element.getAttribute('data-blok-toggle-open');
-    arrow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    arrow.click();
     const attrAfter = element.getAttribute('data-blok-toggle-open');
 
     expect(attrAfter).toBe(attrBefore);
@@ -141,7 +143,7 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     expect(arrow).not.toBeNull();
 
     const attrBefore = element.getAttribute('data-blok-toggle-open');
-    arrow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    arrow.click();
     const attrAfter = element.getAttribute('data-blok-toggle-open');
 
     expect(attrAfter).toBe(attrBefore);

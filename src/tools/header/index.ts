@@ -578,16 +578,7 @@ export class Header implements BlockTool {
          * Toggle was just enabled: wrap the heading in a new wrapper div and
          * prepend the arrow to the wrapper (not to the heading).
          */
-        const parent = this._element.parentNode;
-        this._wrapper = document.createElement('div');
-        this._wrapper.className = 'relative';
-        const arrow = this.buildArrow();
-        this._arrowElement = arrow;
-        this._wrapper.appendChild(arrow);
-        if (parent) {
-          parent.replaceChild(this._wrapper, this._element);
-        }
-        this._wrapper.appendChild(this._element);
+        this.createToggleWrapper();
       } else if (!this._wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)) {
         /**
          * Wrapper exists but arrow was removed (e.g. after innerHTML reset) — re-add it.
@@ -613,6 +604,26 @@ export class Header implements BlockTool {
         this._wrapper = null;
       }
     }
+  }
+
+  /**
+   * Resolve the placeholder text for the heading element.
+   * Returns the settings placeholder (translated) if set, otherwise falls back
+   * to the translated level name when a translation exists, or the bare level name.
+   *
+   * @param translatedName - The already-translated level name key value
+   * @returns The resolved placeholder string
+   */
+  private resolvePlaceholderText(translatedName: string): string {
+    if (this._settings.placeholder) {
+      return this.api.i18n.t(this._settings.placeholder);
+    }
+
+    if (translatedName !== this.currentLevel.nameKey) {
+      return translatedName;
+    }
+
+    return this.currentLevel.name;
   }
 
   /**
@@ -667,9 +678,7 @@ export class Header implements BlockTool {
     }
 
     const translatedName = this.api.i18n.t(this.currentLevel.nameKey);
-    const placeholderText = this._settings.placeholder
-      ? this.api.i18n.t(this._settings.placeholder)
-      : translatedName !== this.currentLevel.nameKey ? translatedName : this.currentLevel.name;
+    const placeholderText = this.resolvePlaceholderText(translatedName);
 
     if (!this.readOnly) {
       setupPlaceholder(tag, placeholderText);
@@ -711,6 +720,27 @@ export class Header implements BlockTool {
     wrapper.appendChild(arrow);
     wrapper.appendChild(this._element);
     return wrapper;
+  }
+
+  /**
+   * Wrap the heading element in a new wrapper div containing the toggle arrow,
+   * replacing the heading's current position in the DOM.
+   * Extracted to keep set data()'s nesting within the max-depth limit.
+   */
+  private createToggleWrapper(): void {
+    const parent = this._element.parentNode;
+
+    this._wrapper = document.createElement('div');
+    this._wrapper.className = 'relative';
+    const arrow = this.buildArrow();
+
+    this._arrowElement = arrow;
+    this._wrapper.appendChild(arrow);
+
+    if (parent) {
+      parent.replaceChild(this._wrapper, this._element);
+    }
+    this._wrapper.appendChild(this._element);
   }
 
   /**

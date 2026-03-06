@@ -277,8 +277,6 @@ test.describe('Toggle Headings', () => {
       await createBlok(page, createHeaderData('Remove Toggle', 2, true));
 
       // Verify toggle exists
-      const header = page.getByRole('heading', { level: 2, name: 'Remove Toggle' });
-
       await expect(page.locator('[data-blok-toggle-arrow]')).toBeVisible();
 
       await openBlockTunesViaToolbar(page);

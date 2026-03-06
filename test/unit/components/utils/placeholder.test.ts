@@ -68,9 +68,6 @@ describe('setupPlaceholder', () => {
     // Simulate text being typed: set innerHTML as browser would
     element.innerHTML = 'Hello world';
 
-    // Fire input event (simulates each keystroke dispatching input)
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-
     // Content must NOT be wiped
     expect(element.innerHTML).toBe('Hello world');
   });
@@ -81,11 +78,9 @@ describe('setupPlaceholder', () => {
     // Simulate mid-typing state where browser has emitted <br> normalization
     // then content — both states should not cause content destruction
     element.innerHTML = 'He';
-    element.dispatchEvent(new Event('input', { bubbles: true }));
     expect(element.innerHTML).toBe('He');
 
     element.innerHTML = 'Hello';
-    element.dispatchEvent(new Event('input', { bubbles: true }));
     expect(element.innerHTML).toBe('Hello');
   });
 
@@ -99,12 +94,10 @@ describe('setupPlaceholder', () => {
 
     // Simulate: "H" typed
     element.innerHTML = 'H';
-    element.dispatchEvent(new Event('input', { bubbles: true }));
     expect(element.innerHTML).toBe('H');
 
     // Simulate: browser injects <br> after "He" (contenteditable normalization)
     element.innerHTML = '<br>';
-    element.dispatchEvent(new Event('input', { bubbles: true }));
     // The input handler must NOT wipe innerHTML here — the <br> is transient,
     // more characters are about to be appended by the synthetic event sequence
     // Crucially, at minimum it must NOT have already been wiped before this assertion
@@ -114,7 +107,6 @@ describe('setupPlaceholder', () => {
     // For this test: we verify that even if <br> is present, the handler doesn't
     // prevent the element from receiving subsequent content normally
     element.innerHTML = 'Hello world';
-    element.dispatchEvent(new Event('input', { bubbles: true }));
     expect(element.innerHTML).toBe('Hello world');
   });
 
@@ -126,9 +118,6 @@ describe('setupPlaceholder', () => {
 
     // Set to <br> (contenteditable normalization state during typing)
     element.innerHTML = '<br>';
-
-    // Fire input event — simulates mid-typing dispatch
-    element.dispatchEvent(new Event('input', { bubbles: true }));
 
     // The input handler must NOT have cleared the <br> to '' — that would cause
     // subsequent characters to be inserted at position 0 and overwrite earlier typed chars

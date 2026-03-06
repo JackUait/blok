@@ -1,6 +1,6 @@
 {
   "blockSettings.dragToMove": "Ziehen zum Verschieben",
-  "blockSettings.clickToOpenMenu": "Klicken zum Menü",
+  "blockSettings.clickToOpenMenu": "Klicken zum Öffnen des Menüs",
   "toolbox.addBelow": "Block hinzufügen",
   "toolbox.optionAddAbove": "⌥ — darüber einfügen",
   "toolbox.ctrlAddAbove": "Strg — darüber einfügen",
@@ -67,6 +67,6 @@
   "a11y.blocksDuplicated": "{count} Blöcke ab Position {position} dupliziert",
   "a11y.movedUp": "Block nach oben verschoben, Position {position} von {total}",
   "a11y.movedDown": "Block nach unten verschoben, Position {position} von {total}",
-  "a11y.atTop": "Block ist ganz oben",
-  "a11y.atBottom": "Block ist ganz unten"
+  "a11y.atTop": "Block ist ganz oben, kann nicht weiter nach oben verschoben werden",
+  "a11y.atBottom": "Block ist ganz unten, kann nicht weiter nach unten verschoben werden"
 }

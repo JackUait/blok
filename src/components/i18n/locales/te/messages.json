@@ -1,6 +1,6 @@
 {
   "blockSettings.dragToMove": "తరలించడానికి లాగండి",
-  "blockSettings.clickToOpenMenu": "జాబితా తెరవడానికి నొక్కండి",
+  "blockSettings.clickToOpenMenu": "మెనూ తెరవడానికి నొక్కండి",
   "toolbox.addBelow": "క్రింద జోడించడానికి నొక్కండి",
   "toolbox.optionAddAbove": "పైన జోడించడానికి Option-నొక్కండి",
   "toolbox.ctrlAddAbove": "పైన జోడించడానికి Ctrl-నొక్కండి",
@@ -37,8 +37,8 @@
   "tools.header.toggleHeading3": "మడత శీర్షిక 3",
   "tools.list.placeholder": "జాబితా",
   "blockSettings.delete": "తొలగించు",
-  "a11y.dragHandle": "విభాగం తరలించడానికి లాగండి లేదా జాబితా కోసం నొక్కండి",
-  "a11y.dragHandleRole": "లాగు పట్టిక",
+  "a11y.dragHandle": "విభాగం తరలించడానికి లాగండి లేదా మెనూ కోసం నొక్కండి",
+  "a11y.dragHandleRole": "లాగు హ్యాండిల్",
   "a11y.dragStarted": "విభాగం తరలుతోంది",
   "a11y.dragStartedMultiple": "{count} విభాగాలు తరలుతున్నాయి",
   "a11y.dropPosition": "{total} లో {position} స్థానంలో వదులుతుంది",

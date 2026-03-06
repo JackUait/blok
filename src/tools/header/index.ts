@@ -666,9 +666,10 @@ export class Header implements BlockTool {
       tag.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
     }
 
+    const translatedName = this.api.i18n.t(this.currentLevel.nameKey);
     const placeholderText = this._settings.placeholder
       ? this.api.i18n.t(this._settings.placeholder)
-      : this.currentLevel.name;
+      : translatedName !== this.currentLevel.nameKey ? translatedName : this.currentLevel.name;
 
     if (!this.readOnly) {
       setupPlaceholder(tag, placeholderText);

@@ -620,7 +620,7 @@
         marker: Marker,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
-      if (state.tools.header) tools.header = { class: Header, placeholder: 'Header' };
+      if (state.tools.header) tools.header = { class: Header };
       if (state.tools.list) tools.list = List;
       if (state.tools.table) tools.table = Table;
       if (state.tools.toggle) tools.toggle = { class: Toggle, inlineToolbar: true };

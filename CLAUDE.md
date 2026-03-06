@@ -8,45 +8,23 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 **STOP! Before saying "done" or "complete", verify ALL of the following:**
 
-### For ANY Code Change (No Exceptions)
-
 ```
 [ ] 1. Did I write tests FIRST, watch them FAIL, THEN write code? (IRON RULE)
-[ ] 2. Did I `git push` successfully? (Work NOT complete until push succeeds)
+        Bug fixes: also watch the fix PASS, then re-run the full suite.
+[ ] 2. `git pull --rebase` and `git push` succeeded
+[ ] 3. `git status` shows "up to date with origin"
 ```
 
 **If ANY box is unchecked:** Work is NOT complete. Do it NOW.
 
 **No rationalizations:**
-- "Chat is too long, instructions are far down" → INVALID. You're reading them right now.
+- "Chat is too long" → INVALID. You're reading them right now.
 - "User is in a hurry" → INVALID. Half-done work wastes MORE time later.
 - "It's just a small change" → INVALID. Small changes break things too.
 - "I'll do it in next session" → INVALID. That leaves work stranded.
 - "Tests already cover it" → INVALID. Write test FIRST, watch it FAIL.
-
-### For Session End
-
-```
-[ ] 1. All code tested (test first → fail → code → pass)
-[ ] 2. `git push` succeeded
-[ ] 3. `git status` shows "up to date with origin"
-```
-
-**Work is DEFINITELY NOT complete if:**
-- Changes exist only locally (not pushed)
-- No test was written before code
-
-### Bug Fix IRON RULE
-
-```
-[ ] 1. Write regression test FIRST
-[ ] 2. Run test → watch it FAIL (proves bug exists)
-[ ] 3. Fix bug
-[ ] 4. Run test → watch it PASS
-[ ] 5. Re-run tests to confirm pass
-```
-
-**Write code before test?** Delete it. Start over.
+- "I already manually verified it works" → INVALID. Tests first.
+- "The push can wait, user can do it" → INVALID. Push before declaring done.
 
 ### Failure Recovery Protocol
 
@@ -66,45 +44,13 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 - "Subagents are overkill for one error" → Use them anyway. Consistency matters.
 - "I'll just use --no-verify" → ONLY allowed after git diff proves failures are pre-existing.
 
-### Session End Commands
-
-```bash
-git pull --rebase
-git push
-git status  # MUST show "up to date with origin"
-```
-
 **This checklist is ALWAYS executed. NO MATTER how long the chat is.**
-
-### Red Flags - You're About to Violate The Rules
-
-If you catch yourself thinking ANY of these, STOP and DO THE CHECKLIST:
-
-- "Chat is too long, I can't find the instructions"
-- "User is in a hurry, I'll skip verification this time"
-- "It's just a small change, doesn't need full process"
-- "Tests already exist, I don't need to write one first"
-- "I already manually verified it works"
-- "The push can wait, user can do it"
-
-**ALL of these mean: You're rationalizing. Run the checklist NOW.**
 
 ---
 
 ## Landing the Plane (Session Completion)
 
-**⚠️ CRITICAL: The completion checklist at the TOP of this file MUST be followed.**
-
-Scroll up to "IMMEDIATE COMPLETION CHECKLIST" and verify ALL items before declaring work done.
-
-**If you're reading this section instead of the checklist:** Go to the TOP of the file.
-
-**Summary (detail is at top):**
-1. Run quality gates (tests, lint, build)
-2. **PUSH TO REMOTE** (MANDATORY)
-3. Clean up
-4. Verify `git status` shows "up to date with origin"
-5. Hand off context
+Before declaring done: run quality gates (`yarn lint`, `yarn test`), push, clean up local state, and hand off context. Run the checklist above.
 
 ## Project Overview
 
@@ -127,7 +73,7 @@ yarn serve:docs     # Docs dev server
 yarn serve:docs:prod # Serve production docs build
 ```
 
-Single test: `yarn test [file]` or `yarn e2e [file] -g "pattern"`
+Single test: `yarn test [file]`, `yarn test -t "pattern"`, or `yarn e2e [file] -g "pattern"`
 
 ## Releasing
 
@@ -136,18 +82,7 @@ yarn release 1.0.0                # stable release
 yarn release 1.0.0-beta.1         # beta release (auto-detected from version)
 ```
 
-The release script (`scripts/release.mjs`) runs these steps in order:
-
-1. Validates version arg, clean working tree, npm auth
-2. Runs `yarn release:preflight` (lint + tests)
-3. Bumps `package.json` version
-4. Publishes to npm (triggers `prepublishOnly` → build)
-5. Commits version bump, creates git tag, pushes
-6. Creates GitHub release (`--prerelease` for beta)
-
-Publish happens **before** git push — if publish fails, nothing is pushed.
-
-**Fallback:** Pushing a `v*` tag manually also triggers the CI release workflow (`.github/workflows/release.yml`): lint → test → build → E2E → npm publish → GitHub release. Beta tags publish to npm with `--tag beta`.
+See `scripts/release.mjs` for the full workflow. Publish happens **before** git push. The GitHub release is created as a **draft** — edit it to add categorized release notes before publishing.
 
 ### GitHub Release Notes
 
@@ -216,34 +151,6 @@ See `src/tools/` for examples: paragraph/, header/, list/
 
 
 ## Testing
-
-### IRON RULE: No Code Without Tests
-
-**⚠️ This is also in the completion checklist at the TOP of this file.**
-
-**ALL code changes require behavior tests.**
-
-**Bug fixes MUST follow this exact order:**
-1. Write regression test
-2. Run it → watch it FAIL (proves bug exists)
-3. Fix the bug
-4. Run it → watch it PASS
-5. Only THEN is the fix complete
-
-**No exceptions. No "I'll test later". No "it's obvious".**
-
-Write test first. If you write code before test, delete it and start over.
-
-**See "IMMEDIATE COMPLETION CHECKLIST" at TOP of file for the full workflow.**
-
-### Commands
-```bash
-yarn test [file]              # Single unit test
-yarn test -t "pattern"        # By name
-yarn e2e [file] -g "pattern"  # Single E2E test
-```
-
-**NOTE**: E2E tests automatically build before running (`yarn build:test`). No manual build needed.
 
 ### Critical Rules (Violations = Wrong Work)
 
@@ -331,24 +238,9 @@ const CUSTOM_TOOL = `(() => {
 | Flaky E2E with arbitrary waits | Use Playwright's auto-waiting |
 | Mock pollution between tests | `vi.clearAllMocks()` in beforeEach, `vi.restoreAllMocks()` in afterEach |
 | DOM elements leak | Clean up in afterEach or use destroy() |
-| Testing stale bundle | Build runs automatically - just run `yarn e2e` |
 | Over-mocking | Mock dependencies, test real behavior |
 | Forgetting assertions | Always verify expected outcome |
 | Not testing errors | Test both happy path and error cases |
-
-### Red Flags - You're About to Violate The Rules
-
-**⚠️ More red flags are in the completion checklist at the TOP of this file.**
-
-If you catch yourself thinking ANY of these, STOP:
-- "This is too simple to test"
-- "I'll test it after"
-- "Tests would just duplicate the code"
-- "It's about the spirit, not the letter"
-- "This case is different"
-- "I already verified it manually"
-
-**These thoughts mean you're rationalizing. Write the test first.**
 
 ## Accessibility
 
@@ -370,27 +262,6 @@ yarn serve:docs         # Dev server with proxy to blok demo
 # From docs/ directory
 yarn test
 ```
-
-### Docs Architecture
-
-**Tech Stack**: React 18, TypeScript, React Router, Vite
-
-**Routes**:
-- `/` - HomePage (hero, features, quick start, API preview)
-- `/demo` - Interactive editor demo
-- `/docs` - API documentation with sidebar navigation
-- `/migration` - Migration guide from Editor.js
-
-**Component Structure**:
-- `pages/` - Route components (HomePage, DemoPage, ApiPage, MigrationPage)
-- `components/common/` - Shared components (Logo, Toast, Search, CodeBlock)
-- `components/home/` - Homepage sections (Hero, Features, QuickStart, ApiPreview)
-- `components/api/` - API docs (ApiSidebar, ApiSection)
-- `components/demo/` - Demo page (Toolbar, OutputPanel, EditorWrapper)
-- `components/layout/` - Layout (Nav, Footer)
-- `components/migration/` - Migration guide (CodemodCard, MigrationSteps)
-
-**Styling**: Plain CSS with modular styles (`.module.css`), Tailwind for some components
 
 ### Docs Testing
 
@@ -419,6 +290,3 @@ cd docs && yarn test
 
 1. **Event-Driven**: Custom EventsDispatcher for typed events (`src/components/events/`)
 2. **JSON Format**: Clean structured output, each block: `{ id, type, data, tunes }`
-3. **Hierarchical Model**: Blocks can have `parentId` and `contentIds` (flat structure with references)
-4. **Progressive Enhancement**: Uses `requestIdleCallback` for non-critical setup
-5. **Sanitization**: HTML Janitor for cleaning pasted content

@@ -94,6 +94,6 @@ run(`git push origin ${gitTag}`);
 
 const prereleaseFlag = isBeta ? ' --prerelease' : '';
 
-run(`gh release create ${gitTag} --generate-notes${prereleaseFlag}`);
+run(`gh release create ${gitTag} --draft${prereleaseFlag}`);
 
 console.log(`\nReleased ${version} successfully.`);

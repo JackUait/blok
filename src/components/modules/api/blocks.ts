@@ -453,10 +453,10 @@ export class BlocksAPI extends Module {
       insertIndex
     );
 
-    // Use requestAnimationFrame to delay stopCapturing until after MutationObserver callbacks
+    // Use queueMicrotask to delay stopCapturing until after MutationObserver callbacks
     // have been processed. This ensures any DOM sync operations from the split complete first,
     // keeping them in the same undo entry as the split itself.
-    requestAnimationFrame(() => {
+    queueMicrotask(() => {
       this.Blok.YjsManager.stopCapturing();
     });
 

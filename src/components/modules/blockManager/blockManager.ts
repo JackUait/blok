@@ -689,7 +689,7 @@ export class BlockManager extends Module {
     } finally {
       this.operations.suppressStopCapturing = prevSuppress;
 
-      requestAnimationFrame(() => {
+      queueMicrotask(() => {
         this.Blok.YjsManager.stopCapturing();
       });
     }

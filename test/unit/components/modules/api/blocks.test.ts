@@ -856,6 +856,25 @@ describe('BlocksAPI', () => {
         blocksApi.methods.splitBlock('missing', { text: 'a' }, 'paragraph', { text: 'b' }, 1);
       }).toThrow('Block with id "missing" not found');
     });
+
+    it('defers the boundary stopCapturing to a microtask after splitBlock', async () => {
+      const block = createBlockStub({ id: 'para-1', name: 'paragraph', data: { text: 'Hello World' } });
+      const { blocksApi, blok } = createBlocksApi({ blocks: [ block ] });
+
+      const result = blocksApi.methods.splitBlock('para-1', { text: 'Hello' }, 'paragraph', { text: 'World' }, 1);
+
+      // splitBlock must return a BlockAPI-wrapped block
+      expect(result).toEqual({ wrappedBlock: expect.objectContaining({ name: 'paragraph' }) as unknown });
+
+      // Synchronously after call: only the initial stopCapturing (force-new-undo-group) fires
+      expect(blok.YjsManager.stopCapturing).toHaveBeenCalledTimes(1);
+
+      // Flush the microtask queue
+      await Promise.resolve();
+
+      // After microtask flush: the deferred boundary stopCapturing fires as well
+      expect(blok.YjsManager.stopCapturing).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('insert with table cell restrictions', () => {

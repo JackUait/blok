@@ -682,10 +682,15 @@ export class Header implements BlockTool {
   /**
    * Build the arrow element for toggle heading.
    *
+   * The arrow uses order:-1 so it appears before the ::before placeholder
+   * pseudo-element in the flex container (::before defaults to order:0).
+   *
    * @returns The arrow element
    */
   private buildArrow(): HTMLElement {
-    return buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen(), { contentEditableFalse: true });
+    const arrow = buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen(), { contentEditableFalse: true });
+    arrow.classList.add('order-[-1]');
+    return arrow;
   }
 
   /**

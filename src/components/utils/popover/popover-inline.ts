@@ -226,7 +226,7 @@ export class PopoverInline extends PopoverDesktop {
       this.nodes.popover.style.height = heightPx;
     }
 
-    requestAnimationFrame(() => {
+    queueMicrotask(() => {
       this.flipper?.deactivate();
       this.flipper?.activate(this.flippableElements);
     });

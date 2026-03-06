@@ -565,6 +565,18 @@ describe('PopoverDesktop', () => {
       expect(popoverElement.style.getPropertyValue(CSSVariables.PopoverHeight)).toBe('120px');
       expect(flipper.activate).toHaveBeenCalledWith(instance.flippableElements);
     });
+
+    it('defers focusInitialElement to microtask after show()', async () => {
+      const popover = createPopover();
+      const instance = popover as unknown as { focusInitialElement(): void };
+      const focusSpy = vi.spyOn(instance, 'focusInitialElement');
+
+      popover.show();
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      await Promise.resolve();
+      expect(focusSpy).toHaveBeenCalledOnce();
+    });
   });
 
   describe('hide', () => {

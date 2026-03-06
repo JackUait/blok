@@ -231,7 +231,7 @@ export class PopoverDesktop extends PopoverAbstract {
     this.flipper?.activate(this.flippableElements);
 
     // Focus the first item: search field if present, otherwise first menu item
-    requestAnimationFrame(() => {
+    queueMicrotask(() => {
       this.focusInitialElement();
     });
   }

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { Flipper } from '../../../src/components/flipper';
 import { PopoverInline } from '../../../src/components/utils/popover/popover-inline';
 import { PopoverItemType } from '../../../src/components/utils/popover/components/popover-item';
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
@@ -203,6 +204,20 @@ describe('PopoverInline', () => {
       // Verify flipper was activated
       // (This tests the behavior - flipper activation happens asynchronously)
       vi.useRealTimers();
+    });
+
+    it('defers flipper deactivate to microtask after show()', async () => {
+      const popover = createPopoverInline();
+
+      // Spy set up after construction to ignore constructor-time deactivate call
+      const deactivateSpy = vi.spyOn(Flipper.prototype, 'deactivate');
+
+      popover.show();
+
+      // deactivate is only called in the deferred callback, never synchronously
+      expect(deactivateSpy).not.toHaveBeenCalled();
+      await Promise.resolve();
+      expect(deactivateSpy).toHaveBeenCalledOnce();
     });
   });
 

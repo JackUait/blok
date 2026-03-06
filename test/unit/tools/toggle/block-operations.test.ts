@@ -30,7 +30,7 @@ describe('Toggle Block Operations', () => {
       contentElement.innerHTML = 'updated text';
       const getContentElement = (): HTMLElement => contentElement;
 
-      const result = saveToggleItem(data, element, getContentElement);
+      const result = saveToggleItem(data, element, getContentElement, true);
 
       expect(result.text).toBe('updated text');
     });
@@ -39,7 +39,7 @@ describe('Toggle Block Operations', () => {
       const data: ToggleItemData = { text: 'fallback text' };
       const getContentElement = (): HTMLElement | null => null;
 
-      const result = saveToggleItem(data, null, getContentElement);
+      const result = saveToggleItem(data, null, getContentElement, true);
 
       expect(result.text).toBe('fallback text');
     });
@@ -49,7 +49,7 @@ describe('Toggle Block Operations', () => {
       const element = document.createElement('div');
       const getContentElement = (): HTMLElement | null => null;
 
-      const result = saveToggleItem(data, element, getContentElement);
+      const result = saveToggleItem(data, element, getContentElement, false);
 
       expect(result.text).toBe('fallback text');
     });
@@ -63,7 +63,7 @@ describe('Toggle Block Operations', () => {
       contentElement.innerHTML = 'some content';
       const getContentElement = (): HTMLElement => contentElement;
 
-      saveToggleItem(data, element, getContentElement);
+      saveToggleItem(data, element, getContentElement, true);
 
       expect(stripFakeBackgroundElements).toHaveBeenCalledWith('some content');
     });

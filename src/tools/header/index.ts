@@ -37,6 +37,8 @@ export interface HeaderData extends BlockToolData {
   level: number;
   /** Whether this header has toggle (collapse/expand) behavior */
   isToggleable?: boolean;
+  /** Whether the toggle heading is open (expanded). Persisted on save so state is restored on reload. */
+  isOpen?: boolean;
 }
 
 /**
@@ -158,10 +160,9 @@ export class Header implements BlockTool {
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<HeaderData, HeaderConfig>) {
     this.api = api;
     this.readOnly = readOnly;
-    this._isOpen = !readOnly;
-
     this._settings = config || {};
     this._data = this.normalizeData(data);
+    this._isOpen = this._data.isOpen ?? !readOnly;
     this._element = this.getTag();
 
     if (block) {
@@ -216,6 +217,10 @@ export class Header implements BlockTool {
 
     if (data.isToggleable === true) {
       normalized.isToggleable = true;
+    }
+
+    if (typeof data.isOpen === 'boolean') {
+      normalized.isOpen = data.isOpen;
     }
 
     /**
@@ -478,6 +483,7 @@ export class Header implements BlockTool {
 
     if (this._data.isToggleable === true) {
       data.isToggleable = true;
+      data.isOpen = this._isOpen;
     }
 
     return data;
@@ -501,6 +507,7 @@ export class Header implements BlockTool {
       level: false,
       text: {},
       isToggleable: false,
+      isOpen: false,
     };
   }
 
@@ -678,7 +685,7 @@ export class Header implements BlockTool {
    * @returns The arrow element
    */
   private buildArrow(): HTMLElement {
-    return buildArrow(this._isOpen, () => this.toggleOpen(), { contentEditableFalse: true });
+    return buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen(), { contentEditableFalse: true });
   }
 
   /**

@@ -22,6 +22,11 @@ const createMockAPI = (): API => ({
     t: (key: string) => key,
     has: () => false,
   },
+  events: {
+    on: vi.fn(),
+    off: vi.fn(),
+    emit: vi.fn(),
+  },
   blocks: {
     splitBlock: vi.fn(),
     convert: vi.fn(),

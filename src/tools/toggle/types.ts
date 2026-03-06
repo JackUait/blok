@@ -10,6 +10,8 @@ import type { BlockToolData } from '../../../types';
 export interface ToggleItemData extends BlockToolData {
   /** Toggle item text content (can include HTML) */
   text: string;
+  /** Whether the toggle is open (expanded). Persisted on save so state is restored on reload. */
+  isOpen?: boolean;
 }
 
 /**

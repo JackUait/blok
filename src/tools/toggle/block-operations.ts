@@ -30,19 +30,21 @@ export const parseHTML = (html: string): DocumentFragment => {
  * @param data - Current toggle item data
  * @param element - The toggle wrapper element (or null)
  * @param getContentElement - Function to get the content element
+ * @param isOpen - Current open/closed state of the toggle
  * @returns The saved toggle item data
  */
 export const saveToggleItem = (
   data: ToggleItemData,
   element: HTMLElement | null,
-  getContentElement: () => HTMLElement | null
+  getContentElement: () => HTMLElement | null,
+  isOpen: boolean
 ): ToggleItemData => {
   if (!element) return data;
 
   const contentEl = getContentElement();
   const text = contentEl ? stripFakeBackgroundElements(contentEl.innerHTML) : data.text;
 
-  return { text };
+  return { text, isOpen };
 };
 
 /**

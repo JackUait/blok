@@ -45,20 +45,30 @@ export class ToggleItem implements BlockTool {
   constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig>) {
     this.api = api;
     this.readOnly = readOnly;
-    this._isOpen = !readOnly;
     this._settings = config || {};
     this._data = this.normalizeData(data);
+    this._isOpen = this._data.isOpen ?? !readOnly;
 
     if (block) {
       this.blockId = block.id;
+    }
+
+    if (!readOnly) {
+      this.api.events.on('block changed', this.handleBlockChanged);
     }
   }
 
   private normalizeData(data: ToggleItemData | Record<string, never>): ToggleItemData {
     if (typeof data === 'object' && data !== null && 'text' in data) {
-      return {
+      const normalized: ToggleItemData = {
         text: typeof data.text === 'string' ? data.text : '',
       };
+
+      if (typeof (data as ToggleItemData).isOpen === 'boolean') {
+        normalized.isOpen = (data as ToggleItemData).isOpen;
+      }
+
+      return normalized;
     }
 
     return { text: '' };
@@ -85,7 +95,7 @@ export class ToggleItem implements BlockTool {
       isOpen: this._isOpen,
       placeholder: this.placeholder,
       keydownHandler: this.readOnly ? null : this.handleKeyDown.bind(this),
-      onArrowClick: () => this.toggleOpen(),
+      onArrowClick: this.readOnly ? null : () => this.toggleOpen(),
       onBodyPlaceholderClick: this.readOnly ? null : () => this.handleBodyPlaceholderClick(),
     });
 
@@ -103,7 +113,7 @@ export class ToggleItem implements BlockTool {
   }
 
   public save(): ToggleItemData {
-    return saveToggleItem(this._data, this._element, this.getContentElement.bind(this));
+    return saveToggleItem(this._data, this._element, this.getContentElement.bind(this), this._isOpen);
   }
 
   public validate(_blockData: ToggleItemData): boolean {
@@ -182,6 +192,32 @@ export class ToggleItem implements BlockTool {
     }
 
     this.setOpenState(false);
+  }
+
+  public removed(): void {
+    this.api.events.off('block changed', this.handleBlockChanged);
+  }
+
+  private handleBlockChanged = (data: unknown): void => {
+    if (!this.isBlockChangedPayload(data)) {
+      return;
+    }
+
+    if (data.event.type === 'block-removed') {
+      this.updateBodyPlaceholderVisibility();
+    }
+  };
+
+  private isBlockChangedPayload(data: unknown): data is { event: { type: string } } {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'event' in data &&
+      typeof (data as { event: unknown }).event === 'object' &&
+      (data as { event: unknown }).event !== null &&
+      'type' in (data as { event: { type: unknown } }).event &&
+      typeof (data as { event: { type: unknown } }).event.type === 'string'
+    );
   }
 
   private getContentElement(): HTMLElement | null {

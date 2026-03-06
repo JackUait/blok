@@ -278,6 +278,63 @@ describe('BlockHierarchy', () => {
       expect(onParentChanged).not.toHaveBeenCalled();
     });
 
+    it('hides new child block when parent toggle is collapsed (existing children have hidden class)', () => {
+      // Simulate a collapsed toggle: parent-1 has an existing child with 'hidden' class
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: ['existing-child'] },
+        { id: 'existing-child', parentId: 'toggle', contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+        { id: 'after-toggle', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      // Mark the existing child as hidden (toggle is collapsed)
+      const existingChild = requireBlock('existing-child');
+      existingChild.holder.classList.add('hidden');
+
+      const newChild = requireBlock('new-child');
+
+      // Assign new-child to the collapsed toggle
+      hierarchy.setBlockParent(newChild, 'toggle');
+
+      // new-child should be hidden because the toggle is collapsed
+      expect(newChild.holder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('does not hide new child block when parent toggle is expanded (existing children are visible)', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: ['existing-child'] },
+        { id: 'existing-child', parentId: 'toggle', contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      // Existing child is visible (toggle is expanded)
+      // new-child's holder has no 'hidden' class to start with
+
+      const newChild = requireBlock('new-child');
+
+      hierarchy.setBlockParent(newChild, 'toggle');
+
+      // new-child should remain visible because the toggle is expanded
+      expect(newChild.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('does not hide new child block when parent has no existing children (cannot determine state)', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const newChild = requireBlock('new-child');
+
+      hierarchy.setBlockParent(newChild, 'toggle');
+
+      // No existing children to infer collapsed state from, so leave visible
+      expect(newChild.holder.classList.contains('hidden')).toBe(false);
+    });
+
     it('calls onParentChanged for each setBlockParent call', () => {
       const onParentChanged = vi.fn();
 

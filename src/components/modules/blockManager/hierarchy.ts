@@ -74,6 +74,22 @@ export class BlockHierarchy {
     // eslint-disable-next-line no-param-reassign
     block.parentId = newParentId;
 
+    // If the new parent's existing children are hidden (toggle is collapsed),
+    // hide this newly added child too so Tab navigation skips it.
+    if (newParentId !== null && newParent !== undefined) {
+      const existingChildren = newParent.contentIds
+        .filter(id => id !== block.id)
+        .map(id => this.repository.getBlockById(id))
+        .filter((b): b is NonNullable<typeof b> => b !== undefined);
+
+      const parentIsCollapsed = existingChildren.length > 0 &&
+        existingChildren.every(b => b.holder.classList.contains('hidden'));
+
+      if (parentIsCollapsed) {
+        block.holder.classList.add('hidden');
+      }
+    }
+
     // Update visual indentation
     this.updateBlockIndentation(block);
 

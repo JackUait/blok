@@ -34,8 +34,8 @@ export interface ToggleDOMBuilderContext {
   isOpen: boolean;
   /** Optional keydown event handler */
   keydownHandler: ((event: KeyboardEvent) => void) | null;
-  /** Callback when the arrow is clicked */
-  onArrowClick: () => void;
+  /** Callback when the arrow is clicked. Null/undefined disables interaction (read-only mode). */
+  onArrowClick: (() => void) | null | undefined;
   /** Callback when the body placeholder is clicked */
   onBodyPlaceholderClick: (() => void) | null;
 }
@@ -97,13 +97,13 @@ export interface BuildArrowOptions {
  * Build the arrow element for toggling open/closed state.
  *
  * @param isOpen - Whether the toggle is currently open
- * @param onArrowClick - Callback when arrow is clicked
+ * @param onArrowClick - Callback when arrow is clicked. Pass null/undefined to disable click interaction (e.g. read-only mode).
  * @param options - Optional configuration
  * @returns The arrow element
  */
 export const buildArrow = (
   isOpen: boolean,
-  onArrowClick: () => void,
+  onArrowClick: (() => void) | null | undefined,
   options: BuildArrowOptions = {}
 ): HTMLElement => {
   const arrow = document.createElement('span');
@@ -131,18 +131,20 @@ export const buildArrow = (
     }
   }
 
-  arrow.addEventListener('click', (event: MouseEvent) => {
-    event.stopPropagation();
-    onArrowClick();
-  });
-
-  arrow.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
+  if (onArrowClick) {
+    arrow.addEventListener('click', (event: MouseEvent) => {
       event.stopPropagation();
       onArrowClick();
-    }
-  });
+    });
+
+    arrow.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        onArrowClick();
+      }
+    });
+  }
 
   return arrow;
 };

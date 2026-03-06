@@ -51,10 +51,14 @@
     inline-normal layout styles set by JavaScript).
 
   [data-blok-interface=tooltip]
-    `all: initial !important` — tooltip, appended directly to <body>.
-    The tooltip hides via JS inline style `visibility: hidden` with the
-    `!important` priority flag (inline !important > author !important in the
-    cascade), so the JS-applied hide always wins over this stylesheet rule.
+    Inherited-properties-only reset — tooltip element, appended directly to
+    <body>. Uses the same strategy as [data-blok-popover]: reset only inherited
+    CSS properties, not layout properties. The tooltip sets position, top, left,
+    z-index, and opacity via Tailwind utility classes and JS inline styles; using
+    `all: initial !important` here would reset `position` to `static`, which
+    removes the wrapper as a containing block. Without a positioned wrapper, the
+    `::before` pseudo-element (position:absolute; inset:0) would expand to fill
+    the entire viewport, darkening the page on hover of inline toolbar buttons.
 
   [data-blok-interface=inline-toolbar] is intentionally excluded: it is a
   positioned descendant inside the editor wrapper, not a top-level body
@@ -66,8 +70,7 @@
   its isolation boundary. They must NOT be reset here — doing so breaks their
   display/position/visibility. Only body-level popovers need isolation.
 */
-[data-blok-interface=blok],
-[data-blok-interface=tooltip] {
+[data-blok-interface=blok] {
   all: initial !important;
 }
 
@@ -100,13 +103,15 @@
 }
 
 /*
-  Reset inherited CSS properties on the body-level popover root.
+  Reset inherited CSS properties on body-level popover and tooltip roots.
   Only inherited properties can cascade in from host-page styles;
   non-inherited properties (position, top, left, display, width, etc.)
-  cannot cascade and must NOT be reset here because JavaScript sets them
-  as inline normal styles (inline-normal < author-!important in cascade).
+  cannot cascade and must NOT be reset here because JavaScript and Tailwind
+  utility classes set them as normal author/inline styles, which would be
+  overridden by author-!important.
 */
-[data-blok-popover]:not([data-blok-popover-inline]) {
+[data-blok-popover]:not([data-blok-popover-inline]),
+[data-blok-interface=tooltip] {
   color: initial !important;
   font-family: var(--blok-font-family, ui-sans-serif, system-ui, sans-serif) !important;
   font-size: initial !important;

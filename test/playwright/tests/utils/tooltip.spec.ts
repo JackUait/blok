@@ -1399,4 +1399,46 @@ test.describe('tooltip API', () => {
       expect(rightPlacementWithMargin as number).toBeGreaterThan(rightPlacement?.left ?? Number.NEGATIVE_INFINITY);
     });
   });
+
+  test.describe('CSS cascade isolation', () => {
+    test('tooltip wrapper has position:absolute so its ::before does not expand to fill the viewport', async ({ page }) => {
+      const testElement = await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
+        const button = document.createElement('button');
+
+        button.textContent = 'Hover me';
+        button.id = 'cascade-test-btn';
+        button.style.margin = '100px';
+        container?.appendChild(button);
+
+        return { id: button.id };
+      }, { holder: HOLDER_ID });
+
+      await page.evaluate(({ elementId }) => {
+        const blok = window.blokInstance;
+        const element = document.getElementById(elementId);
+
+        if (element && blok?.tooltip) {
+          blok.tooltip.show(element, 'cascade test');
+        }
+      }, { elementId: testElement.id });
+
+      await waitForTooltip(page);
+
+      const position = await page.evaluate((selector) => {
+        const tooltip = document.querySelector(selector) as HTMLElement;
+
+        return tooltip ? getComputedStyle(tooltip).position : null;
+      }, TOOLTIP_INTERFACE_SELECTOR);
+
+      /**
+       * When `all: initial !important` in main.css applied to [data-blok-interface=tooltip],
+       * it reset `position` to `static`, removing the wrapper as a containing block.
+       * The ::before pseudo-element (position:absolute; inset:0) then expanded to fill
+       * the entire viewport with a dark bg-tooltip-bg background, darkening the page
+       * on hover of inline toolbar buttons.
+       */
+      expect(position).toBe('absolute');
+    });
+  });
 });

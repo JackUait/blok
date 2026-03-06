@@ -773,6 +773,83 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(newBlock, 0);
       });
 
+      it('reconciles orphaned children whose Yjs parentId matches restored block (Bug 3 regression)', () => {
+        /**
+         * Regression test for Bug 3:
+         * When replace() converts a toggle to paragraph:
+         *   - toggle (id A) is removed from Yjs; paragraph (id B) is added
+         *   - in JS memory: child.parentId is set to B OUTSIDE the Yjs transaction
+         *
+         * After undo:
+         *   - Yjs re-adds block A (toggle) via handleYjsAdd
+         *   - Yjs removes block B (paragraph) via handleYjsRemove
+         *
+         * Child blocks still have parentId = B in memory (orphaned).
+         * The Yjs state for the child still records parentId = A (correct).
+         *
+         * Fix: handleYjsAdd must scan existing blocks and reconcile any
+         * whose Yjs parentId = A but in-memory parentId ≠ A.
+         */
+
+        // Set up: child block exists in repository with stale in-memory parentId = 'paragraph-id'
+        const childBlock = createMockBlock({ id: 'child-id', parentId: 'paragraph-id' });
+        const testBlocksStore = createBlocksStore([childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // Yjs state: child block has parentId = 'toggle-id' (correct/original)
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'toggle-id',
+        });
+
+        // toggle yblock has no parentId
+        const toggleYblock = createMockYMap({
+          type: 'toggle',
+          data: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'toggle-id') return toggleYblock;
+          if (id === 'child-id') return childYblock;
+          return undefined;
+        });
+
+        // Yjs toJSON: toggle is now restored at index 0
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'toggle-id', type: 'toggle' },
+          { id: 'child-id', type: 'paragraph', parentId: 'toggle-id' },
+        ]);
+
+        const restoredToggle = createMockBlock({ id: 'toggle-id' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(restoredToggle);
+
+        // Before undo: child has stale parentId pointing to removed paragraph
+        expect(childBlock.parentId).toBe('paragraph-id');
+
+        // Simulate undo: Yjs re-adds the toggle
+        callback({ blockId: 'toggle-id', type: 'add', origin: 'undo' });
+
+        // After undo: child's parentId must be reconciled to 'toggle-id'
+        expect(childBlock.parentId).toBe('toggle-id');
+      });
+
       it('does not create block if it already exists', () => {
         const existingBlock = createMockBlock({ id: 'existing' });
         repository = new BlockRepository();

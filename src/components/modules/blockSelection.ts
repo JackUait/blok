@@ -330,15 +330,49 @@ export class BlockSelection extends Module {
      *
      * Using preservedData (cached from last save) instead of calling async block.save()
      * because setData() must be called synchronously in the clipboard event handler.
+     *
+     * Child blocks of selected blocks are included even when not explicitly selected
+     * (e.g. when a collapsed toggle is copied — its hidden children must travel with it
+     * so paste can restore the full toggle with its children).
      */
-    const savedData = this.selectedBlocks.map((block) => ({
+    const serializeBlock = (block: Block): { id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[] } => ({
       id: block.id,
       tool: block.name,
       data: block.preservedData,
       tunes: block.preservedTunes,
       parentId: block.parentId,
       contentIds: block.contentIds,
-    }));
+    });
+
+    const collectBlocksWithChildren = (blocks: Block[]): Block[] => {
+      const collected: Block[] = [];
+      const seen = new Set<string>();
+
+      const collect = (block: Block): void => {
+        if (seen.has(block.id)) {
+          return;
+        }
+        seen.add(block.id);
+        collected.push(block);
+
+        for (const childId of block.contentIds) {
+          const child = this.Blok.BlockManager.getBlockById(childId);
+
+          if (child !== undefined && !seen.has(child.id)) {
+            collect(child);
+          }
+        }
+      };
+
+      for (const block of blocks) {
+        collect(block);
+      }
+
+      return collected;
+    };
+
+    const allBlocksToSerialize = collectBlocksWithChildren(this.selectedBlocks);
+    const savedData = allBlocksToSerialize.map(serializeBlock);
 
     this.selectedBlocks.forEach((block) => {
       const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);

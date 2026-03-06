@@ -96,6 +96,7 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     currentBlock: blocks[0],
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
     getBlock: vi.fn((element: HTMLElement) => blocks.find((block) => block.holder === element) ?? null),
+    getBlockById: vi.fn((id: string) => blocks.find((block) => block.id === id) ?? undefined),
     removeSelectedBlocks: vi.fn(() => 0),
     insertDefaultBlockAtIndex: vi.fn(),
     deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -446,12 +447,14 @@ describe('BlockSelection', () => {
         parentId: 'parent-1',
       });
 
+      const allHierarchyBlocks = [parentBlock, childBlock1, childBlock2];
       const { blockSelection, modules } = createBlockSelection({
         BlockManager: {
-          blocks: [parentBlock, childBlock1, childBlock2],
+          blocks: allHierarchyBlocks,
           currentBlock: parentBlock,
-          getBlockByIndex: vi.fn((index: number) => [parentBlock, childBlock1, childBlock2][index]),
+          getBlockByIndex: vi.fn((index: number) => allHierarchyBlocks[index]),
           getBlock: vi.fn(),
+          getBlockById: vi.fn((id: string) => allHierarchyBlocks.find(b => b.id === id) ?? undefined),
           removeSelectedBlocks: vi.fn(),
           insertDefaultBlockAtIndex: vi.fn(),
           deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -498,6 +501,97 @@ describe('BlockSelection', () => {
 
       expect(child1Data?.parentId).toBe('parent-1');
       expect(child2Data?.parentId).toBe('parent-1');
+    });
+  });
+
+  describe('Bug 4 regression: copying a toggle includes its unselected children', () => {
+    it('includes child blocks in clipboard data when only the parent toggle is selected', async () => {
+      /**
+       * Regression test for Bug 4:
+       * When only the toggle block is selected (children are hidden/unselected),
+       * copying it should serialize the children too so paste can restore them.
+       *
+       * Previously: only selected blocks were serialized, so pasting a toggle
+       * produced an empty toggle with no children.
+       *
+       * Fix: copySelectedBlocks must include child blocks of selected blocks,
+       * even if those children are not themselves selected.
+       */
+      const toggleBlock = createBlockStub({
+        id: 'toggle-id',
+        html: '<p>Toggle text</p>',
+        contentIds: ['child-1', 'child-2'],
+      });
+      const childBlock1 = createBlockStub({
+        id: 'child-1',
+        html: '<p>Child 1</p>',
+        parentId: 'toggle-id',
+      });
+      const childBlock2 = createBlockStub({
+        id: 'child-2',
+        html: '<p>Child 2</p>',
+        parentId: 'toggle-id',
+      });
+
+      const allBlocks = [toggleBlock, childBlock1, childBlock2];
+
+      const { blockSelection, modules } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: toggleBlock,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn(),
+          getBlockById: vi.fn((id: string) => allBlocks.find(b => b.id === id) ?? undefined),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      // Only the toggle is selected — children are hidden and NOT selected
+      toggleBlock.selected = true;
+      childBlock1.selected = false;
+      childBlock2.selected = false;
+
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      const mimeType = (modules.Paste as unknown as { MIME_TYPE: string }).MIME_TYPE;
+      const blokDataCall = (clipboardData.setData.mock.calls as Array<[string, string]>).find(
+        (call) => call[0] === mimeType
+      );
+
+      if (blokDataCall === undefined) {
+        throw new Error('Expected blok MIME_TYPE clipboard data to be set');
+      }
+
+      const serializedData = JSON.parse(blokDataCall[1]) as Array<{
+        id: string;
+        tool: string;
+        parentId?: string | null;
+        contentIds?: string[];
+      }>;
+
+      // The serialized data must include toggle AND its children
+      const ids = serializedData.map(b => b.id);
+      expect(ids).toContain('toggle-id');
+      expect(ids).toContain('child-1');
+      expect(ids).toContain('child-2');
+
+      // Toggle must reference its children
+      const toggleData = serializedData.find(b => b.id === 'toggle-id');
+      expect(toggleData?.contentIds).toEqual(['child-1', 'child-2']);
+
+      // Children must reference the toggle as their parent
+      const child1Data = serializedData.find(b => b.id === 'child-1');
+      const child2Data = serializedData.find(b => b.id === 'child-2');
+      expect(child1Data?.parentId).toBe('toggle-id');
+      expect(child2Data?.parentId).toBe('toggle-id');
     });
   });
 

@@ -343,7 +343,49 @@ export class BlockYjsSync {
       if (parentId !== undefined) {
         this.handlers.updateIndentation(block);
       }
+
+      // Reconcile orphaned children: when a parent block is restored via undo,
+      // children may have stale in-memory parentId pointing to the block that
+      // replaced it (e.g. after replace() mutated children's parentId outside
+      // the Yjs transaction). Fix their in-memory parentId to match Yjs state.
+      this.reconcileOrphanedChildren(blockId);
     }, { extendThroughRAF: true });
+  }
+
+  /**
+   * Reconcile orphaned children after a parent block is restored via undo/redo.
+   *
+   * When replace() converts a block (e.g. toggle → paragraph), it updates
+   * children's in-memory parentId to the new block ID OUTSIDE the Yjs transaction.
+   * After undo, Yjs restores the original parent (this block) but children in
+   * memory still reference the now-removed replacement block — they are orphaned.
+   *
+   * This method scans all blocks in the repository and fixes any whose Yjs
+   * parentId matches the restored blockId but whose in-memory parentId does not.
+   *
+   * @param restoredBlockId - the ID of the block that was just re-added to the DOM
+   */
+  private reconcileOrphanedChildren(restoredBlockId: string): void {
+    for (const block of this.repository.blocks) {
+      if (block.parentId === restoredBlockId) {
+        // Already pointing to the correct parent — no action needed.
+        continue;
+      }
+
+      // Check the authoritative Yjs state for this block's parentId.
+      const yblock = this.dependencies.YjsManager.getBlockById(block.id);
+
+      if (yblock === undefined) {
+        continue;
+      }
+
+      const yjsParentId = yblock.get('parentId') as string | undefined;
+
+      if (yjsParentId === restoredBlockId) {
+        // In-memory state is stale — fix it to match Yjs.
+        block.parentId = restoredBlockId;
+      }
+    }
   }
 
   /**

@@ -23,6 +23,8 @@ import {
   setToggleItemData,
   parseHTML,
 } from './block-operations';
+import { clean } from '../../components/utils/sanitizer';
+import type { SanitizerConfig } from '../../../types';
 import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
 import { renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility } from './toggle-lifecycle';
@@ -140,7 +142,8 @@ export class ToggleItem implements BlockTool {
 
     const content = detail.data as HTMLElement;
     const summary = content.querySelector('summary');
-    const text = summary !== null ? summary.innerHTML : content.innerHTML;
+    const rawText = summary !== null ? summary.innerHTML : content.innerHTML;
+    const text = clean(rawText, ToggleItem.sanitize.text as SanitizerConfig);
 
     this._data = { text };
 

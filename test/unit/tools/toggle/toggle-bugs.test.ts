@@ -277,6 +277,76 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
 });
 
 // ---------------------------------------------------------------------------
+// BUG: onPaste() assigns unsanitized innerHTML — XSS via pasted DETAILS element
+// ---------------------------------------------------------------------------
+
+describe('Bug: onPaste() sanitizes pasted HTML before assigning to contentEl and _data', () => {
+  it('strips onerror attribute from img tag inside pasted summary', () => {
+    const { toggle } = createToggle();
+    const element = toggle.render();
+
+    // Build a <details> element with a <summary> containing a malicious img tag
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.innerHTML = '<img src="x" onerror="evil()">';
+    details.appendChild(summary);
+
+    const pasteEvent = {
+      detail: { data: details },
+    } as unknown as import('@/types').PasteEvent;
+
+    toggle.onPaste(pasteEvent);
+
+    const contentEl = element.querySelector('[data-blok-toggle-content]') as HTMLElement;
+    expect(contentEl).not.toBeNull();
+    expect(contentEl.innerHTML).not.toContain('onerror');
+    expect(contentEl.innerHTML).not.toContain('evil');
+  });
+
+  it('strips onerror attribute from img tag inside pasted details (no summary)', () => {
+    const { toggle } = createToggle();
+    const element = toggle.render();
+
+    // Build a <details> element without <summary>, content directly inside
+    const details = document.createElement('details');
+    details.innerHTML = '<img src="x" onerror="evil()">';
+
+    const pasteEvent = {
+      detail: { data: details },
+    } as unknown as import('@/types').PasteEvent;
+
+    toggle.onPaste(pasteEvent);
+
+    const contentEl = element.querySelector('[data-blok-toggle-content]') as HTMLElement;
+    expect(contentEl).not.toBeNull();
+    expect(contentEl.innerHTML).not.toContain('onerror');
+    expect(contentEl.innerHTML).not.toContain('evil');
+  });
+
+  it('preserves allowed tags (b, i, a) after sanitization', () => {
+    const { toggle } = createToggle();
+    const element = toggle.render();
+
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.innerHTML = '<b>bold</b> and <i>italic</i> and <a href="https://example.com">link</a>';
+    details.appendChild(summary);
+
+    const pasteEvent = {
+      detail: { data: details },
+    } as unknown as import('@/types').PasteEvent;
+
+    toggle.onPaste(pasteEvent);
+
+    const contentEl = element.querySelector('[data-blok-toggle-content]') as HTMLElement;
+    expect(contentEl).not.toBeNull();
+    expect(contentEl.innerHTML).toContain('<b>bold</b>');
+    expect(contentEl.innerHTML).toContain('<i>italic</i>');
+    expect(contentEl.innerHTML).toContain('<a');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // BUG 5: isOpen not persisted in save data
 // ---------------------------------------------------------------------------
 

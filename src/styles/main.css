@@ -179,18 +179,17 @@
 }
 
 /*
-  Remove the default font size and weight for headings, and prevent host-page
-  heading rules (e.g. `h1 { font-family: 'Times New Roman'; letter-spacing: 0.5em; }`)
-  from overriding these — even when the host uses `!important`.
+  Reset font-family and letter-spacing for headings so host-page heading rules
+  (e.g. `h1 { font-family: 'Times New Roman'; letter-spacing: 0.5em; }`) cannot
+  override Blok's styling — even when the host uses `!important`.
   Specificity raised from (0,0,1) to (0,1,1) to beat host element-selector rules.
-  All four properties use `!important` to force inheritance from the already-isolated
-  boundary element (which has `all: initial !important`), blocking host overrides
-  regardless of host specificity.
+  font-size and font-weight are intentionally omitted from this rule so that the
+  Header tool's own Tailwind utility classes (text-4xl, font-bold, etc.) remain
+  effective in the normal cascade. The all:initial !important on the root boundary
+  already neutralizes the UA stylesheet's default heading sizes inside the editor.
 */
 [data-blok-interface] :is(h1, h2, h3, h4, h5, h6),
 [data-blok-popover] :is(h1, h2, h3, h4, h5, h6) {
-  font-size: inherit !important;
-  font-weight: inherit !important;
   font-family: inherit !important;
   letter-spacing: inherit !important;
 }

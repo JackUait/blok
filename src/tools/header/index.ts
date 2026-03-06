@@ -23,7 +23,7 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggle
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
-import { ARROW_ICON, TOGGLE_ATTR, TOGGLE_WRAPPER_STYLES } from '../toggle/constants';
+import { ARROW_ICON, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 
@@ -138,6 +138,13 @@ export class Header implements BlockTool {
   private _arrowElement: HTMLElement | null = null;
 
   /**
+   * Wrapper div containing the arrow + heading element for toggle headings.
+   * The arrow lives here (not inside the heading) to avoid Blink's behavior
+   * of clearing the selection when a SPAN child is present in a contenteditable.
+   */
+  private _wrapper: HTMLElement | null = null;
+
+  /**
    * Whether the toggle is currently open (expanded)
    */
   private _isOpen: boolean;
@@ -243,11 +250,18 @@ export class Header implements BlockTool {
   }
 
   /**
-   * Return Tool's view
+   * Return Tool's view.
+   * For toggle headings, returns a wrapper div that contains the arrow and the heading.
+   * The arrow is a sibling of the heading (not inside it), which is required to avoid
+   * Blink's behavior of clearing the selection when a SPAN is present in a contenteditable.
    *
-   * @returns HTMLHeadingElement
+   * @returns HTMLElement (wrapper div for toggle headings, heading element otherwise)
    */
-  public render(): HTMLHeadingElement {
+  public render(): HTMLElement {
+    if (this._data.isToggleable) {
+      this._wrapper = this.buildWrapper();
+      return this._wrapper;
+    }
     return this._element;
   }
 
@@ -418,6 +432,7 @@ export class Header implements BlockTool {
   public merge(data: HeaderData): void {
     /**
      * Strip any arrow HTML from incoming data to prevent injection of toggle markup
+     * (backwards compatibility: old saved data may have had the arrow inside the text).
      */
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = data.text;
@@ -427,23 +442,7 @@ export class Header implements BlockTool {
       arrowInData.remove();
     }
 
-    const cleanText = tempDiv.innerHTML;
-
-    /**
-     * Strip arrow from current element, append text, then re-add arrow.
-     * This ensures text is appended to the content, not interleaved with toggle markup.
-     */
-    const arrowEl = this._element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
-
-    if (arrowEl) {
-      arrowEl.remove();
-    }
-
-    this._element.insertAdjacentHTML('beforeend', cleanText);
-
-    if (arrowEl && this._data.isToggleable) {
-      this._element.prepend(arrowEl);
-    }
+    this._element.insertAdjacentHTML('beforeend', tempDiv.innerHTML);
   }
 
   /**
@@ -458,26 +457,15 @@ export class Header implements BlockTool {
   }
 
   /**
-   * Extract Tool's data from the view
+   * Extract Tool's data from the view.
+   * Reads directly from this._element (the heading) which never contains the arrow —
+   * the arrow lives in the wrapper div (sibling), so no cloning/stripping is needed.
    *
-   * @param toolsContent - Text tools rendered view
    * @returns saved data
    */
-  public save(toolsContent: HTMLHeadingElement): HeaderData {
-    /**
-     * Clone the element and strip the arrow from the clone to read innerHTML
-     * without mutating the live DOM — DOM mutations during save would trigger
-     * the MutationObserver → didMutated → syncBlockDataToYjs → save() loop.
-     */
-    const clone = toolsContent.cloneNode(true) as HTMLHeadingElement;
-    const arrowEl = clone.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
-
-    if (arrowEl) {
-      arrowEl.remove();
-    }
-
+  public save(_toolsContent: HTMLElement): HeaderData {
     const data: HeaderData = {
-      text: clone.innerHTML,
+      text: this._element.innerHTML,
       level: this.currentLevel.number,
     };
 
@@ -521,29 +509,14 @@ export class Header implements BlockTool {
   }
 
   /**
-   * Get current Tool's data
+   * Get current Tool's data.
+   * The heading element never contains the arrow (it lives in the wrapper sibling),
+   * so innerHTML can be read directly without any stripping.
    *
    * @returns Current data
    */
   public get data(): HeaderData {
-    /**
-     * Strip arrow element before reading innerHTML to avoid capturing toggle markup
-     */
-    const arrowEl = this._element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
-
-    if (arrowEl) {
-      arrowEl.remove();
-    }
-
     this._data.text = this._element.innerHTML;
-
-    /**
-     * Re-add arrow after reading so the DOM is not mutated
-     */
-    if (arrowEl && this._data.isToggleable) {
-      this._element.prepend(arrowEl);
-    }
-
     this._data.level = this.currentLevel.number;
 
     return this._data;
@@ -593,24 +566,52 @@ export class Header implements BlockTool {
     }
 
     /**
-     * Re-add toggle arrow after innerHTML assignments (which destroy it).
-     * Also update toggle styles and attributes.
+     * Update toggle state: manage the wrapper div that holds the arrow as a sibling
+     * of the heading element (keeping arrow outside the contenteditable h2).
      */
     if (this._data.isToggleable) {
       this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-7');
 
-      if (!this._element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)) {
+      if (!this._wrapper) {
+        /**
+         * Toggle was just enabled: wrap the heading in a new wrapper div and
+         * prepend the arrow to the wrapper (not to the heading).
+         */
+        const parent = this._element.parentNode;
+        this._wrapper = document.createElement('div');
+        this._wrapper.className = 'relative';
         const arrow = this.buildArrow();
-
         this._arrowElement = arrow;
-        this._element.prepend(arrow);
+        this._wrapper.appendChild(arrow);
+        if (parent) {
+          parent.replaceChild(this._wrapper, this._element);
+        }
+        this._wrapper.appendChild(this._element);
+      } else if (!this._wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)) {
+        /**
+         * Wrapper exists but arrow was removed (e.g. after innerHTML reset) — re-add it.
+         */
+        const arrow = this.buildArrow();
+        this._arrowElement = arrow;
+        this._wrapper.prepend(arrow);
       }
-
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, TOGGLE_WRAPPER_STYLES);
     } else {
       this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
-      this._arrowElement = null;
       this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+      this._arrowElement = null;
+
+      if (this._wrapper) {
+        /**
+         * Toggle was just disabled: remove the wrapper and put the heading directly
+         * in the wrapper's parent.
+         */
+        const parent = this._wrapper.parentNode;
+        if (parent) {
+          parent.replaceChild(this._element, this._wrapper);
+        }
+        this._wrapper = null;
+      }
     }
   }
 
@@ -633,9 +634,10 @@ export class Header implements BlockTool {
 
     /**
      * Add styles class using twMerge to combine base and level-specific styles.
-     * When isToggleable, add flex layout to align arrow and text.
+     * When isToggleable, add left padding to leave room for the arrow (which lives
+     * in the wrapper div as a sibling, not inside this element).
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, this._data.isToggleable ? TOGGLE_WRAPPER_STYLES : '');
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, this._data.isToggleable ? 'pl-7' : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -657,23 +659,21 @@ export class Header implements BlockTool {
     tag.contentEditable = this.readOnly ? 'false' : 'true';
 
     /**
-     * Add toggle arrow if isToggleable
+     * Set toggle attribute on the heading element itself (not on the wrapper).
+     * The wrapper is managed separately in render() / set data().
      */
     if (this._data.isToggleable) {
       tag.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-
-      const arrow = this.buildArrow();
-      this._arrowElement = arrow;
-      tag.prepend(arrow);
     }
 
-    /**
-     * Add Placeholder with caret positioning support
-     */
+    const placeholderText = this._settings.placeholder
+      ? this.api.i18n.t(this._settings.placeholder)
+      : this.currentLevel.name;
+
     if (!this.readOnly) {
-      setupPlaceholder(tag, this.api.i18n.t(this._settings.placeholder || ''));
+      setupPlaceholder(tag, placeholderText);
     } else {
-      tag.setAttribute('data-placeholder', this.api.i18n.t(this._settings.placeholder || ''));
+      tag.setAttribute('data-placeholder', placeholderText);
     }
 
     return tag;
@@ -682,15 +682,34 @@ export class Header implements BlockTool {
   /**
    * Build the arrow element for toggle heading.
    *
-   * The arrow uses order:-1 so it appears before the ::before placeholder
-   * pseudo-element in the flex container (::before defaults to order:0).
+   * The arrow is absolutely positioned within the wrapper div, sitting in the area
+   * to the left of the heading text (which has pl-7 padding). This keeps the arrow
+   * completely outside the heading's contenteditable scope, allowing Chrome to
+   * place a cursor and insert text without interference.
    *
    * @returns The arrow element
    */
   private buildArrow(): HTMLElement {
-    const arrow = buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen(), { contentEditableFalse: true });
-    arrow.classList.add('order-[-1]');
+    const arrow = buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen());
+    arrow.classList.add('absolute', 'left-0', 'top-1/2', '-translate-y-1/2');
     return arrow;
+  }
+
+  /**
+   * Build the wrapper div that contains the arrow and heading as siblings.
+   * The wrapper has relative positioning so the absolutely-positioned arrow
+   * is anchored to it. The heading occupies the full width with pl-7 padding.
+   *
+   * @returns The wrapper element (with arrow and heading already appended)
+   */
+  private buildWrapper(): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'relative';
+    const arrow = this.buildArrow();
+    this._arrowElement = arrow;
+    wrapper.appendChild(arrow);
+    wrapper.appendChild(this._element);
+    return wrapper;
   }
 
   /**

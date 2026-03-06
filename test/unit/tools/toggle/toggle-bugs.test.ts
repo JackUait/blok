@@ -238,9 +238,11 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
         { text: 'H', level: 2, isToggleable: true, isOpen: true },
         { readOnly: true }
       );
-      const element = header.render();
+      // render() returns wrapper div; data-blok-toggle-open is on the heading inside it
+      const wrapper = header.render();
+      const heading = wrapper.querySelector('[data-blok-toggle-open]');
 
-      expect(element.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(heading?.getAttribute('data-blok-toggle-open')).toBe('true');
     });
 
     it('uses data.isOpen=false even when readOnly=false', () => {
@@ -248,9 +250,10 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
         { text: 'H', level: 2, isToggleable: true, isOpen: false },
         { readOnly: false }
       );
-      const element = header.render();
+      const wrapper = header.render();
+      const heading = wrapper.querySelector('[data-blok-toggle-open]');
 
-      expect(element.getAttribute('data-blok-toggle-open')).toBe('false');
+      expect(heading?.getAttribute('data-blok-toggle-open')).toBe('false');
     });
 
     it('falls back to !readOnly when data.isOpen is undefined', () => {
@@ -258,13 +261,15 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
         { text: 'H', level: 2, isToggleable: true },
         { readOnly: false }
       );
-      expect(hEdit.render().getAttribute('data-blok-toggle-open')).toBe('true');
+      const wEdit = hEdit.render();
+      expect(wEdit.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('true');
 
       const { header: hRO } = createHeader(
         { text: 'H', level: 2, isToggleable: true },
         { readOnly: true }
       );
-      expect(hRO.render().getAttribute('data-blok-toggle-open')).toBe('false');
+      const wRO = hRO.render();
+      expect(wRO.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('false');
     });
   });
 });

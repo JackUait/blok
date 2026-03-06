@@ -129,8 +129,8 @@ test.describe('Toggle Headings', () => {
       // Should have toggle attributes
       await expect(header).toHaveAttribute('data-blok-toggle-open');
 
-      // Should have arrow
-      const arrow = header.locator('[data-blok-toggle-arrow]');
+      // Should have arrow (lives in the wrapper div, sibling of the heading)
+      const arrow = page.locator('[data-blok-toggle-arrow]');
 
       await expect(arrow).toBeVisible();
     });
@@ -156,27 +156,70 @@ test.describe('Toggle Headings', () => {
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
-    test('arrow has negative flex order so it renders before the placeholder pseudo-element', async ({ page }) => {
-      // The heading uses flex layout. The ::before placeholder pseudo-element defaults
-      // to order:0 and appears before real children in source order.
-      // The arrow must have order:-1 to appear before the placeholder when empty.
+    test('arrow is vertically centered in toggle heading', async ({ page }) => {
+      await createBlok(page, createHeaderData('Arrow Centering Test', 2, true));
+
+      const isCentered = await page.evaluate(() => {
+        const header = document.querySelector('h2[data-blok-toggle-open]');
+        // Arrow lives in the wrapper div (header's parent), not inside the heading
+        const arrow = header?.parentElement?.querySelector('[data-blok-toggle-arrow]') as HTMLElement | null;
+
+        if (!header || !arrow) {
+          return false;
+        }
+
+        const headerRect = header.getBoundingClientRect();
+        const arrowRect = arrow.getBoundingClientRect();
+        const headerMidY = headerRect.top + headerRect.height / 2;
+        const arrowMidY = arrowRect.top + arrowRect.height / 2;
+
+        return Math.abs(headerMidY - arrowMidY) <= 3;
+      });
+
+      expect(isCentered).toBe(true);
+    });
+
+    test('toggle heading placeholder shows the heading level name', async ({ page }) => {
+      await createBlok(page, createHeaderData('', 2, true));
+
+      const placeholder = await page.evaluate(() => {
+        return document.querySelector('h2[data-blok-toggle-open]')?.getAttribute('data-placeholder');
+      });
+
+      expect(placeholder).toBe('Heading 2');
+    });
+
+    test('regular header placeholder shows the heading level name', async ({ page }) => {
+      await createBlok(page, createHeaderData('', 3));
+
+      const placeholder = await page.evaluate(() => {
+        return document.querySelector('h3')?.getAttribute('data-placeholder');
+      });
+
+      expect(placeholder).toBe('Heading 3');
+    });
+
+    test('arrow is absolutely positioned so it renders before the text without affecting text flow', async ({ page }) => {
+      // The arrow uses position:absolute so it sits in the heading's padding-left area
+      // without participating in the text flow. This allows Chrome to place a cursor
+      // and insert text without fighting a contenteditable=false sibling in the flow.
       await createBlok(page, createHeaderData('Arrow Order Test', 2, true));
 
       const arrow = page.locator('[data-blok-toggle-arrow]');
 
       await expect(arrow).toBeVisible();
 
-      const hasNegativeOrder = await page.evaluate(() => {
+      const isAbsolutelyPositioned = await page.evaluate(() => {
         const el = document.querySelector('[data-blok-toggle-arrow]');
 
         if (!el) {
           return false;
         }
 
-        return window.getComputedStyle(el).order === '-1';
+        return window.getComputedStyle(el).position === 'absolute';
       });
 
-      expect(hasNegativeOrder).toBe(true);
+      expect(isAbsolutelyPositioned).toBe(true);
     });
   });
 
@@ -185,7 +228,7 @@ test.describe('Toggle Headings', () => {
       await createBlok(page, createHeaderData('Collapsible H2', 2, true));
 
       const header = page.getByRole('heading', { level: 2, name: 'Collapsible H2' });
-      const arrow = header.locator('[data-blok-toggle-arrow]');
+      const arrow = page.locator('[data-blok-toggle-arrow]');
 
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
 
@@ -198,7 +241,7 @@ test.describe('Toggle Headings', () => {
       await createBlok(page, createHeaderData('Re-expandable H2', 2, true));
 
       const header = page.getByRole('heading', { level: 2, name: 'Re-expandable H2' });
-      const arrow = header.locator('[data-blok-toggle-arrow]');
+      const arrow = page.locator('[data-blok-toggle-arrow]');
 
       // Collapse (starts expanded)
       await arrow.click();
@@ -224,7 +267,7 @@ test.describe('Toggle Headings', () => {
 
       // Header should now have toggle features
       const header = page.getByRole('heading', { level: 2, name: 'Make Toggleable' });
-      const arrow = header.locator('[data-blok-toggle-arrow]');
+      const arrow = page.locator('[data-blok-toggle-arrow]');
 
       await expect(arrow).toBeVisible();
       await expect(header).toHaveAttribute('data-blok-toggle-open');
@@ -236,7 +279,7 @@ test.describe('Toggle Headings', () => {
       // Verify toggle exists
       const header = page.getByRole('heading', { level: 2, name: 'Remove Toggle' });
 
-      await expect(header.locator('[data-blok-toggle-arrow]')).toBeVisible();
+      await expect(page.locator('[data-blok-toggle-arrow]')).toBeVisible();
 
       await openBlockTunesViaToolbar(page);
 
@@ -246,7 +289,7 @@ test.describe('Toggle Headings', () => {
       await toggleOption.click();
 
       // Arrow should be gone
-      await expect(header.locator('[data-blok-toggle-arrow]')).toHaveCount(0);
+      await expect(page.locator('[data-blok-toggle-arrow]')).toHaveCount(0);
     });
   });
 
@@ -296,7 +339,38 @@ test.describe('Toggle Headings', () => {
 
       await expect(header).toBeVisible();
       await expect(header).toHaveAttribute('data-blok-toggle-open');
-      await expect(header.locator('[data-blok-toggle-arrow]')).toBeVisible();
+      await expect(page.locator('[data-blok-toggle-arrow]')).toBeVisible();
+    });
+  });
+
+  test.describe('typing', () => {
+    test('typing in an empty toggle heading inserts text', async ({ page }) => {
+      await createBlok(page, createHeaderData('', 2, true));
+
+      const header = page.getByRole('heading', { level: 2 });
+
+      await header.click();
+      await page.keyboard.type('Hello');
+
+      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const blockData = savedData?.blocks[0].data as { text: string };
+
+      expect(blockData.text).toBe('Hello');
+    });
+
+    test('typing in a non-empty toggle heading appends text correctly', async ({ page }) => {
+      await createBlok(page, createHeaderData('Hi', 2, true));
+
+      const header = page.getByRole('heading', { level: 2 });
+
+      await header.click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' there');
+
+      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+      const blockData = savedData?.blocks[0].data as { text: string };
+
+      expect(blockData.text).toBe('Hi there');
     });
   });
 });

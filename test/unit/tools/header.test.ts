@@ -54,12 +54,12 @@ describe('Header Tool - Custom Configurations', () => {
       expect(element).toHaveAttribute('data-placeholder', 'Enter heading...');
     });
 
-    it('uses empty placeholder when not provided', () => {
+    it('uses level name as placeholder when not provided', () => {
       const options = createHeaderOptions({}, {});
       const header = new Header(options);
       const element = header.render();
 
-      expect(element).toHaveAttribute('data-placeholder', '');
+      expect(element).toHaveAttribute('data-placeholder', 'Heading 2');
     });
   });
 
@@ -551,9 +551,11 @@ describe('Header Tool - Custom Configurations', () => {
       it('starts expanded when isToggleable is true in editing mode', () => {
         const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
         const header = new Header(options);
-        const element = header.render();
+        const wrapper = header.render();
+        // data-blok-toggle-open is on the heading element inside the wrapper
+        const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
 
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
       });
 
       it('starts collapsed when isToggleable is true in readOnly mode', () => {
@@ -565,20 +567,25 @@ describe('Header Tool - Custom Configurations', () => {
           block: { id: 'test-block-id' } as never,
         };
         const header = new Header(options);
-        const element = header.render();
+        const wrapper = header.render();
+        const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
 
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       });
 
-      it('arrow element has contentEditable="false" in toggle heading', () => {
+      it('arrow element is outside the contenteditable heading (wrapper sibling)', () => {
         const options = createHeaderOptions({ text: 'Test', level: 2, isToggleable: true });
         const header = new Header(options);
-        const element = header.render();
+        const wrapper = header.render();
 
-        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+        const arrow = wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+        const heading = wrapper.querySelector('h2') as HTMLElement;
 
         expect(arrow).not.toBeNull();
-        expect(arrow.contentEditable).toBe('false');
+        expect(heading).not.toBeNull();
+        // Arrow must be a direct child of the wrapper, not inside the heading
+        expect(wrapper.children[0]).toBe(arrow);
+        expect(wrapper.children[1]).toBe(heading);
       });
 
       it('preserves heading text content when isToggleable is true', () => {
@@ -942,12 +949,13 @@ describe('Header Tool - Custom Configurations', () => {
 
       it('expand() expands a collapsed toggle heading', () => {
         const { header, childHolders } = setupToggleHeaderForExpandCollapse();
-        const element = header.render();
+        const wrapper = header.render();
+        const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
         header.rendered();
 
         // Collapse first (starts expanded in editing mode)
         header.collapse();
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(true);
         }
@@ -955,7 +963,7 @@ describe('Header Tool - Custom Configurations', () => {
         // Expand via public method
         header.expand();
 
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(false);
         }
@@ -963,15 +971,16 @@ describe('Header Tool - Custom Configurations', () => {
 
       it('expand() is a no-op if already expanded', () => {
         const { header, childHolders } = setupToggleHeaderForExpandCollapse();
-        const element = header.render();
+        const wrapper = header.render();
+        const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
         header.rendered();
 
         header.expand();
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
 
         // Expand again - should remain expanded
         header.expand();
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(false);
         }
@@ -979,17 +988,18 @@ describe('Header Tool - Custom Configurations', () => {
 
       it('collapse() collapses an expanded toggle heading', () => {
         const { header, childHolders } = setupToggleHeaderForExpandCollapse();
-        const element = header.render();
+        const wrapper = header.render();
+        const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
         header.rendered();
 
         // Expand first
         header.expand();
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
 
         // Collapse via public method
         header.collapse();
 
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
         for (const holder of childHolders) {
           expect(holder.classList.contains('hidden')).toBe(true);
         }
@@ -997,16 +1007,17 @@ describe('Header Tool - Custom Configurations', () => {
 
       it('collapse() is a no-op if already collapsed', () => {
         const { header } = setupToggleHeaderForExpandCollapse();
-        const element = header.render();
+        const wrapper = header.render();
+        const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
         header.rendered();
 
         // Collapse first (starts expanded in editing mode)
         header.collapse();
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
 
         // Collapse again - no-op
         header.collapse();
-        expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+        expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
       });
 
       it('expand() is a no-op on a non-toggleable header', () => {
@@ -1069,17 +1080,13 @@ describe('Header Tool - Custom Configurations', () => {
     it('appends text after existing content, not after arrow element', () => {
       const options = createHeaderOptions({ text: 'Hello', level: 2, isToggleable: true });
       const header = new Header(options);
-      const element = header.render();
+      const wrapper = header.render();
 
       header.merge({ text: ' World', level: 2 });
 
-      // Strip arrow and check text content
-      const arrowEl = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
-
-      if (arrowEl) {
-        arrowEl.remove();
-      }
-      expect(element.innerHTML).toBe('Hello World');
+      // Arrow is in the wrapper (sibling of heading), not inside the heading
+      const heading = wrapper.querySelector('h2') as HTMLElement;
+      expect(heading.innerHTML).toBe('Hello World');
     });
   });
 

@@ -214,31 +214,6 @@ See `src/tools/` for examples: paragraph/, header/, list/
 - Three similar lines > premature abstraction
 - Only comment where logic isn't self-evident
 
-### TypeScript
-
-**NEVER use `@ts-ignore`, `any`, or `!` assertions.** These bypass TypeScript's safety and cause crashes.
-
-```typescript
-// ❌ WRONG - Bypasses safety, crashes at runtime
-const value = potentiallyNull!.toString();
-
-// ✅ CORRECT - Proper handling
-const value = potentiallyNull?.toString() ?? defaultValue;
-```
-
-If you feel the urge to use `!`, `any`, or `@ts-ignore`, you're missing a type guard. Fix the type, don't suppress the error.
-
-Import types with `type` keyword: `import type { BlokConfig } from '../../types'`
-
-### DOM & Styling
-- Use `$` from `src/components/utils/dom` for DOM operations
-- Use `data-blok-*` attributes for behavior (not CSS classes)
-- **Tailwind CSS only** - use `twMerge`/`twJoin` for combining classes
-
-### File Naming
-- Modules: camelCase (`blockManager.ts`)
-- Tests: `.test.ts` (unit), `.spec.ts` (E2E)
-- Types: `.d.ts` in `types/`
 
 ## Testing
 

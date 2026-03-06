@@ -221,6 +221,13 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
+    // Check if inside table cell
+    const isInsideTableCell = currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    if (isInsideTableCell) {
+      return false;
+    }
+
     if (!currentBlock.tool.isDefault) {
       return false;
     }
@@ -282,6 +289,13 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const currentBlock = BlockManager.currentBlock;
 
     if (!currentBlock) {
+      return false;
+    }
+
+    // Check if inside table cell
+    const isInsideTableCell = currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    if (isInsideTableCell) {
       return false;
     }
 
@@ -358,10 +372,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
 
   /**
    * Place caret right after the toggle arrow element in a toggle header block.
-   * The arrow is a contentEditable="false" span prepended inside the editable h1,
-   * so the generic setToBlock(START) descends into it. This method appends a
-   * temporary BR after the arrow and places the caret before it, giving
-   * browsers a valid caret position that they replace with text on first keystroke.
+   * The arrow is a contentEditable="false" span prepended inside the editable heading,
+   * so the generic setToBlock(START) descends into it. This method positions the caret
+   * directly after the arrow node without inserting any DOM nodes.
    */
   private setCaretAfterToggleArrow(block: Block): void {
     const { Caret } = this.Blok;
@@ -373,13 +386,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return;
     }
 
-    const br = document.createElement('br');
-
-    input.appendChild(br);
-
     const range = document.createRange();
 
-    range.setStartBefore(br);
+    range.setStartAfter(input.firstChild);
     range.collapse(true);
 
     const selection = window.getSelection();

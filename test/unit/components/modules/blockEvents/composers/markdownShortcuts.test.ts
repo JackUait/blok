@@ -988,4 +988,354 @@ describe('MarkdownShortcuts', () => {
       expect(replace).not.toHaveBeenCalled();
     });
   });
+
+  // Bug 2: Tests for handleToggleHeaderShortcut()
+  describe('toggle header shortcut', () => {
+    it('converts ">## text" to H2 toggle header with isToggleable: true', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '>## Some text';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'header',
+        expect.objectContaining({
+          level: 2,
+          isToggleable: true,
+          text: 'Some text',
+        })
+      );
+    });
+
+    it('converts ">### text" to H3 toggle header', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '>### Some text';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'header',
+        expect.objectContaining({
+          level: 3,
+          isToggleable: true,
+        })
+      );
+    });
+
+    it('converts "># text" to H1 toggle header', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '># Some text';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'header',
+        expect.objectContaining({
+          level: 1,
+          isToggleable: true,
+        })
+      );
+    });
+
+    // Bug 1: Stray <br> left in DOM after ">##" shortcut with empty content
+    it('does not leave a stray <br> in the DOM when shortcut has no trailing text (caretOffset = 0)', () => {
+      const mockBlock = createBlock();
+      // Build a block that mimics the post-conversion state:
+      // firstInput has a contenteditable=false toggle arrow as its first child
+      const toggleArrow = document.createElement('span');
+      toggleArrow.setAttribute('data-blok-toggle-arrow', '');
+      toggleArrow.contentEditable = 'false';
+
+      const input = document.createElement('div');
+      input.contentEditable = 'true';
+      input.appendChild(toggleArrow);
+
+      const holder = document.createElement('div');
+      holder.appendChild(input);
+
+      const newBlock = createBlock({
+        holder,
+        currentInput: input,
+        firstInput: input,
+      });
+
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '>## ';
+      }
+      const replace = vi.fn(() => newBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      markdownShortcuts.handleInput(event);
+
+      // After conversion the input must not contain any <br> elements
+      expect(input.querySelector('br')).toBeNull();
+    });
+
+    it('preserves HTML content like "<strong>Bold</strong>" after ">## " shortcut', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.innerHTML = '>## <strong>Bold</strong>';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
+      expect(replaceCall[2].text).toContain('Bold');
+    });
+
+    it('returns false when current block is not default tool (e.g. list item)', () => {
+      const mockBlock = createBlock({
+        tool: {
+          isDefault: false,
+          isLineBreaksEnabled: false,
+          name: 'list',
+        } as unknown as Block['tool'],
+      });
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '>## Some text';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('returns false when header tool is not available', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '>## Some text';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['toggle', { settings: {} }],
+            // No header tool
+          ]),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    // Bug 4: Regex allows H4-H6 but the toggle heading toolbox only supports H1-H3.
+    // The levels config check in handleToggleHeaderShortcut() already rejects unsupported
+    // levels — this test verifies that ">#### text" is rejected when levels = [1, 2, 3].
+    it('returns false for ">#### text" when configured levels only include 1-3', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '>#### Some text';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['header', { settings: { levels: [1, 2, 3] } }],
+            ['toggle', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
+
+  // Bug 8: Missing table cell guard in "> " and ">##" shortcuts
+  describe('toggle and toggle header shortcuts in table cells', () => {
+    it('does not convert "> " to toggle block inside a table cell', () => {
+      const cellBlocks = document.createElement('div');
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+      const input = document.createElement('div');
+      input.setAttribute('contenteditable', 'true');
+      input.textContent = '> ';
+      holder.appendChild(input);
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const mockBlock = createBlock({
+        holder,
+        currentInput: input,
+      });
+
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+
+      cellBlocks.remove();
+    });
+
+    it('does not convert ">## text" to toggle header inside a table cell', () => {
+      const cellBlocks = document.createElement('div');
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+      const holder = document.createElement('div');
+      const input = document.createElement('div');
+      input.setAttribute('contenteditable', 'true');
+      input.textContent = '>## Heading text';
+      holder.appendChild(input);
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const mockBlock = createBlock({
+        holder,
+        currentInput: input,
+      });
+
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+
+      cellBlocks.remove();
+    });
+
+    it('converts "> " to toggle block outside a table cell', () => {
+      const holder = document.createElement('div');
+      const input = document.createElement('div');
+      input.setAttribute('contenteditable', 'true');
+      input.textContent = '> ';
+      holder.appendChild(input);
+      document.body.appendChild(holder);
+
+      const mockBlock = createBlock({
+        holder,
+        currentInput: input,
+      });
+
+      const replace = vi.fn(() => mockBlock);
+      const stopCapturing = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(mockBlock, 'toggle', expect.any(Object));
+
+      holder.remove();
+    });
+  });
 });

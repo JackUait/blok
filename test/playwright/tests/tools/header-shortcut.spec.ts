@@ -36,11 +36,21 @@ const hasTextProperty = (data: unknown): data is { text: string } & Record<strin
  * Get block data with narrowed type for header blocks
  * Returns the data if it has the expected properties, throws otherwise
  */
-const getHeaderBlockData = (block: BlockWithUnknownData): { level: number; text: string } => {
+const hasIsToggleableProperty = (data: unknown): data is { isToggleable: boolean } & Record<string, unknown> => {
+  return typeof data === 'object' && data !== null && 'isToggleable' in data;
+};
+
+const getHeaderBlockData = (block: BlockWithUnknownData): { level: number; text: string; isToggleable?: boolean } => {
   if (!hasLevelProperty(block.data) || !hasTextProperty(block.data)) {
     throw new Error(`Block data does not have expected header properties: ${JSON.stringify(block.data)}`);
   }
-  return { level: block.data.level, text: block.data.text };
+  const result: { level: number; text: string; isToggleable?: boolean } = { level: block.data.level, text: block.data.text };
+
+  if (hasIsToggleableProperty(block.data)) {
+    result.isToggleable = block.data.isToggleable;
+  }
+
+  return result;
 };
 
 /**
@@ -775,6 +785,186 @@ test.describe('header shortcuts', () => {
       // Second block should be H2
       const data = assertSavedDataExists(savedData);
       expect(getBlockLevel(data.blocks[1])).toBe(2);
+    });
+  });
+
+  test.describe('toggle header shortcuts', () => {
+    test('converts "># " to toggle H1', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      await page.keyboard.type('># Heading');
+
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(0);
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      const data = assertSavedDataExists(savedData);
+      const blockData = getHeaderBlockData(data.blocks[0]);
+      expect(blockData.level).toBe(1);
+      expect(blockData.text).toBe('Heading');
+      expect(blockData.isToggleable).toBe(true);
+    });
+
+    test('converts ">## " to toggle H2', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      await page.keyboard.type('>## Heading');
+
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      const data = assertSavedDataExists(savedData);
+      const blockData = getHeaderBlockData(data.blocks[0]);
+      expect(blockData.level).toBe(2);
+      expect(blockData.isToggleable).toBe(true);
+    });
+
+    test('converts ">### " to toggle H3', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      await page.keyboard.type('>### Heading');
+
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      const data = assertSavedDataExists(savedData);
+      const blockData = getHeaderBlockData(data.blocks[0]);
+      expect(blockData.level).toBe(3);
+      expect(blockData.isToggleable).toBe(true);
+    });
+
+    test('preserves text after toggle header shortcut', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+        data: {
+          blocks: [{
+            id: 'test-para',
+            type: 'paragraph',
+            data: { text: 'Hello World' },
+          }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+      await page.evaluate(() => {
+        const para = document.querySelector('[data-blok-tool="paragraph"]');
+        if (para) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.setStart(para, 0);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      });
+
+      await page.keyboard.type('>## ');
+
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
+
+      const savedData = await page.evaluate(async () => {
+        return await window.blokInstance?.save();
+      });
+
+      const data = assertSavedDataExists(savedData);
+      const blockData = getHeaderBlockData(data.blocks[0]);
+      expect(blockData.text).toBe('Hello World');
+      expect(blockData.level).toBe(2);
+      expect(blockData.isToggleable).toBe(true);
+    });
+
+    test('does not convert ">#{7} " to toggle header', async ({ page }) => {
+      await createBlok(page, {
+        tools: defaultTools,
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      await page.keyboard.type('>####### ');
+
+      // Should remain a paragraph (or become a toggle, but not a toggle header)
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
+    });
+
+    test('respects levels config for toggle header shortcuts', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+            config: {
+              levels: [2, 3],
+            },
+          },
+          paragraph: { className: 'Blok.Paragraph' },
+        },
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      // H1 is not in allowed levels
+      await page.keyboard.type('># Should Not Convert');
+
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
+    });
+
+    test('does not convert toggle header when header tool is not registered', async ({ page }) => {
+      await createBlok(page, {
+        useOriginalBlok: true,
+        tools: {
+          paragraph: { className: 'BlokParagraph' },
+        },
+        data: {
+          blocks: [{ id: 'test-para', type: 'paragraph', data: { text: '' } }],
+        },
+      });
+
+      const paragraph = page.locator(PARAGRAPH_BLOCK_SELECTOR);
+      await paragraph.click();
+
+      await page.keyboard.type('>## ');
+
+      await expect(page.locator(PARAGRAPH_BLOCK_SELECTOR)).toHaveCount(1);
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(0);
     });
   });
 });

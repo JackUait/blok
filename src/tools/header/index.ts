@@ -919,6 +919,7 @@ export class Header implements BlockTool {
         name: `toggle-header-${level.number}`,
         data: { level: level.number, isToggleable: true },
         searchTerms: ['toggle', 'heading', `h${level.number}`, 'collapsible'],
+        shortcut: '>' + '#'.repeat(level.number),
       }));
 
     return [...headingEntries, ...toggleHeadingEntries];

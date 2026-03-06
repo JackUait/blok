@@ -70,6 +70,13 @@ export const HEADER_PATTERN = /^(#{1,6})\s([\s\S]*)$/;
 export const TOGGLE_TOOL_NAME = 'toggle';
 
 /**
+ * Regex pattern for detecting toggle header shortcuts.
+ * Matches ">" followed by 1-6 hashes and a space at the start of text.
+ * Captures the hashes in group 1 and remaining content in group 2.
+ */
+export const TOGGLE_HEADER_PATTERN = /^>(#{1,6})\s([\s\S]*)$/;
+
+/**
  * Regex pattern for detecting toggle shortcuts.
  * Matches ">" followed by a space at the start of text.
  * Captures remaining content after the shortcut in group 1.

@@ -1,5 +1,5 @@
 import type { Block } from '../../../block';
-import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME } from '../constants';
+import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
 
@@ -26,9 +26,10 @@ export class MarkdownShortcuts extends BlockEventComposer {
 
     const handledList = this.handleListShortcut();
     const handledHeader = this.handleHeaderShortcut();
+    const handledToggleHeader = this.handleToggleHeaderShortcut();
     const handledToggle = this.handleToggleShortcut();
 
-    return handledList || handledHeader || handledToggle;
+    return handledList || handledHeader || handledToggleHeader || handledToggle;
   }
 
   /**
@@ -209,6 +210,71 @@ export class MarkdownShortcuts extends BlockEventComposer {
   }
 
   /**
+   * Check if current block matches a toggle header shortcut pattern ("># ", ">## ", etc.)
+   * and convert it to a header with isToggleable: true.
+   */
+  private handleToggleHeaderShortcut(): boolean {
+    const { BlockManager, Tools } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return false;
+    }
+
+    if (!currentBlock.tool.isDefault) {
+      return false;
+    }
+
+    const headerTool = Tools.blockTools.get(HEADER_TOOL_NAME);
+
+    if (!headerTool) {
+      return false;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (!currentInput) {
+      return false;
+    }
+
+    const textContent = currentInput.textContent || '';
+    const match = TOGGLE_HEADER_PATTERN.exec(textContent);
+
+    if (!match) {
+      return false;
+    }
+
+    const level = match[1].length;
+    const { levels } = headerTool.settings as { levels?: number[] };
+
+    if (levels && !levels.includes(level)) {
+      return false;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    const shortcutLength = 1 + level + 1; // ">" + hashes + " "
+    const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
+    const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
+
+    const newBlock = BlockManager.replace(currentBlock, HEADER_TOOL_NAME, {
+      text: remainingHtml,
+      level,
+      isToggleable: true,
+    });
+
+    if (caretOffset > 0) {
+      this.setCaretAfterConversion(newBlock, caretOffset);
+    } else {
+      this.setCaretAfterToggleArrow(newBlock);
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
    * Check if current block matches a toggle shortcut pattern ("> ") and convert it.
    */
   private handleToggleShortcut(): boolean {
@@ -288,6 +354,38 @@ export class MarkdownShortcuts extends BlockEventComposer {
     }
 
     return null;
+  }
+
+  /**
+   * Place caret right after the toggle arrow element in a toggle header block.
+   * The arrow is a contentEditable="false" span prepended inside the editable h1,
+   * so the generic setToBlock(START) descends into it. This method appends a
+   * temporary BR after the arrow and places the caret before it, giving
+   * browsers a valid caret position that they replace with text on first keystroke.
+   */
+  private setCaretAfterToggleArrow(block: Block): void {
+    const { Caret } = this.Blok;
+    const input = block.firstInput;
+
+    if (!input?.firstChild) {
+      Caret.setToBlock(block, Caret.positions.START);
+
+      return;
+    }
+
+    const br = document.createElement('br');
+
+    input.appendChild(br);
+
+    const range = document.createRange();
+
+    range.setStartBefore(br);
+    range.collapse(true);
+
+    const selection = window.getSelection();
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
   }
 
   /**

@@ -346,7 +346,7 @@ export class Paragraph implements BlockTool {
 
     this._data = data;
 
-    window.requestAnimationFrame(() => {
+    queueMicrotask(() => {
       if (this._element) {
         this._element.innerHTML = this._data.text || '';
       }

@@ -185,9 +185,7 @@ export class ListItem implements BlockTool {
 
     this.api.events.off('block changed', this.handleBlockChanged);
 
-    requestAnimationFrame(() => {
-      this.updateAllOrderedListMarkers();
-    });
+    this.markerManager?.scheduleUpdateAll();
   }
 
   private updateAllOrderedListMarkers(): void {
@@ -371,9 +369,7 @@ export class ListItem implements BlockTool {
     this.rerender();
 
     if (previousStyle !== style) {
-      requestAnimationFrame(() => {
-        this.updateAllOrderedListMarkers();
-      });
+      this.markerManager?.scheduleUpdateAll();
     }
   }
 

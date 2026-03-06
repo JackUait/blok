@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Paragraph, type ParagraphConfig, type ParagraphData } from '../../../src/tools/paragraph';
-import type { API, BlockToolConstructorOptions } from '../../../types';
+import type { API, BlockToolConstructorOptions, PasteEvent } from '../../../types';
 import { sanitizeBlocks } from '../../../src/components/utils/sanitizer';
 
 const createMockAPI = (): API => ({
@@ -390,6 +390,40 @@ describe('Paragraph Tool - Custom Configurations', () => {
           li: true,
         },
       });
+    });
+  });
+
+  describe('onPaste', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('updates element innerHTML after microtask flush on paste', async () => {
+      const options = createParagraphOptions({ text: 'original' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      const pastedElement = document.createElement('div');
+      pastedElement.innerHTML = '<b>hello</b>';
+
+      const pasteEvent = {
+        detail: {
+          data: pastedElement,
+        },
+      } as unknown as PasteEvent;
+
+      paragraph.onPaste(pasteEvent);
+
+      // NOT updated synchronously — save() still reads old content
+      expect(paragraph.save(element).text).not.toBe('<b>hello</b>');
+
+      // Updated after microtask — save() reflects new content
+      await Promise.resolve();
+      expect(paragraph.save(element).text).toBe('<b>hello</b>');
     });
   });
 

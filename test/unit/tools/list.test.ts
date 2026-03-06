@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ListItem as List, type ListItemConfig, type ListItemData } from '../../../src/tools/list';
 import defaultDictionary from '../../../src/components/i18n/locales/en/messages.json';
 import type { API, BlockToolConstructorOptions } from '../../../types';
@@ -59,6 +59,82 @@ const createListOptions = (
 const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
   return (Array.isArray(config) ? config : [config]) as Array<Record<string, unknown>>;
 };
+
+describe('List Tool - rAF timing fixes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('calls markerManager.scheduleUpdateAll() on removed() for ordered list and unregisters event handler', () => {
+    const options = createListOptions({ text: 'item', style: 'ordered' });
+    const offSpy = vi.spyOn(options.api.events, 'off');
+
+    const list = new List(options);
+    list.render();
+
+    const scheduleUpdateAllSpy = vi.fn();
+    const markerManager = (list as unknown as { markerManager: { scheduleUpdateAll: () => void } | null }).markerManager;
+
+    if (markerManager) {
+      markerManager.scheduleUpdateAll = scheduleUpdateAllSpy;
+    }
+
+    list.removed();
+
+    // Observable behavior: event handler is unregistered
+    expect(offSpy).toHaveBeenCalledWith('block changed', expect.any(Function));
+    // Marker update is scheduled via the deduplication utility
+    expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls markerManager.scheduleUpdateAll() when setStyle changes to a different style and rerenders the element', () => {
+    const options = createListOptions({ text: 'item', style: 'ordered' });
+    const list = new List(options);
+    list.render();
+
+    const scheduleUpdateAllSpy = vi.fn();
+    const markerManager = (list as unknown as { markerManager: { scheduleUpdateAll: () => void } | null }).markerManager;
+
+    if (markerManager) {
+      markerManager.scheduleUpdateAll = scheduleUpdateAllSpy;
+    }
+
+    const privateSetter = (list as unknown as { setStyle: (style: string) => void }).setStyle.bind(list);
+
+    privateSetter('unordered');
+
+    // Observable behavior: the saved data reflects the new style
+    expect(list.save().style).toBe('unordered');
+    // Marker update is scheduled via the deduplication utility
+    expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call scheduleUpdateAll() when setStyle is called with the same style', () => {
+    const options = createListOptions({ text: 'item', style: 'ordered' });
+    const list = new List(options);
+    list.render();
+
+    const scheduleUpdateAllSpy = vi.fn();
+    const markerManager = (list as unknown as { markerManager: { scheduleUpdateAll: () => void } | null }).markerManager;
+
+    if (markerManager) {
+      markerManager.scheduleUpdateAll = scheduleUpdateAllSpy;
+    }
+
+    const privateSetter = (list as unknown as { setStyle: (style: string) => void }).setStyle.bind(list);
+
+    privateSetter('ordered');
+
+    // Style unchanged: save still returns ordered
+    expect(list.save().style).toBe('ordered');
+    // No marker update needed when style doesn't change
+    expect(scheduleUpdateAllSpy).not.toHaveBeenCalled();
+  });
+});
 
 describe('List Tool - i18n', () => {
   describe('default dictionary contains list translations', () => {

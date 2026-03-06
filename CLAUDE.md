@@ -12,9 +12,7 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 ```
 [ ] 1. Did I write tests FIRST, watch them FAIL, THEN write code? (IRON RULE)
-[ ] 2. Did I run `/refactor` after code changes? (MANDATORY)
-[ ] 3. Did I run final verification against master? (MANDATORY after refactor)
-[ ] 4. Did I `git push` successfully? (Work NOT complete until push succeeds)
+[ ] 2. Did I `git push` successfully? (Work NOT complete until push succeeds)
 ```
 
 **If ANY box is unchecked:** Work is NOT complete. Do it NOW.
@@ -30,16 +28,12 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 ```
 [ ] 1. All code tested (test first → fail → code → pass)
-[ ] 2. `/refactor` run
-[ ] 3. Final verification against master completed
-[ ] 4. `git push` succeeded
-[ ] 5. `git status` shows "up to date with origin"
+[ ] 2. `git push` succeeded
+[ ] 3. `git status` shows "up to date with origin"
 ```
 
 **Work is DEFINITELY NOT complete if:**
 - Changes exist only locally (not pushed)
-- `/refactor` was never run
-- Final verification was skipped
 - No test was written before code
 
 ### Bug Fix IRON RULE
@@ -49,7 +43,7 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 [ ] 2. Run test → watch it FAIL (proves bug exists)
 [ ] 3. Fix bug
 [ ] 4. Run test → watch it PASS
-[ ] 5. Re-run final verification
+[ ] 5. Re-run tests to confirm pass
 ```
 
 **Write code before test?** Delete it. Start over.
@@ -74,8 +68,6 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 ### Session End Commands
 
-Run `/final-verification` for verification commands. Then:
-
 ```bash
 git pull --rebase
 git push
@@ -91,11 +83,9 @@ If you catch yourself thinking ANY of these, STOP and DO THE CHECKLIST:
 - "Chat is too long, I can't find the instructions"
 - "User is in a hurry, I'll skip verification this time"
 - "It's just a small change, doesn't need full process"
-- "I'll do the refactor in the next session"
 - "Tests already exist, I don't need to write one first"
 - "I already manually verified it works"
 - "The push can wait, user can do it"
-- "Final verification takes too long"
 
 **ALL of these mean: You're rationalizing. Run the checklist NOW.**
 
@@ -111,13 +101,10 @@ Scroll up to "IMMEDIATE COMPLETION CHECKLIST" and verify ALL items before declar
 
 **Summary (detail is at top):**
 1. Run quality gates (tests, lint, build)
-2. Final verification against master - run `/final-verification`
-3. **PUSH TO REMOTE** (MANDATORY)
-4. Clean up
-5. Verify `git status` shows "up to date with origin"
-6. Hand off context
-
-**Remember:** Every code change needs `/refactor` → `/final-verification` → push. No exceptions.
+2. **PUSH TO REMOTE** (MANDATORY)
+3. Clean up
+4. Verify `git status` shows "up to date with origin"
+5. Hand off context
 
 ## Project Overview
 

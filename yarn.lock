@@ -1002,7 +1002,7 @@ __metadata:
     eslint-plugin-jest: "npm:29.15.0"
     eslint-plugin-jest-dom: "npm:^5.5.0"
     eslint-plugin-jsdoc: "npm:62.7.1"
-    eslint-plugin-playwright: "npm:2.7.1"
+    eslint-plugin-playwright: "npm:2.9.0"
     eslint-plugin-react-hooks: "npm:^7.0.1"
     eslint-plugin-sonarjs: "npm:4.0.0"
     eslint-plugin-storybook: "npm:10.2.15"
@@ -4790,14 +4790,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-playwright@npm:2.7.1":
-  version: 2.7.1
-  resolution: "eslint-plugin-playwright@npm:2.7.1"
+"eslint-plugin-playwright@npm:2.9.0":
+  version: 2.9.0
+  resolution: "eslint-plugin-playwright@npm:2.9.0"
   dependencies:
     globals: "npm:^17.3.0"
   peerDependencies:
     eslint: ">=8.40.0"
-  checksum: 10c0/efd45122b4d4e77608862f0f25a95200a0e367abbe6d53bdce38c59009c4b90edcf12b6f1c2b50e86b0addea56c68ad0c7767768b0a2a73d7f09a814b827df72
+  checksum: 10c0/8f5528547c7d731b9ff4afad7a8b98ede86d93342842be9f06a5428358180c17f7b7624e4dcaae331f211345bcecf9f3cc48f8a995549f30dfd633b8300e5a08
   languageName: node
   linkType: hard
 

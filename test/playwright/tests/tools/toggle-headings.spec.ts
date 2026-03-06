@@ -155,6 +155,29 @@ test.describe('Toggle Headings', () => {
 
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
     });
+
+    test('arrow has negative flex order so it renders before the placeholder pseudo-element', async ({ page }) => {
+      // The heading uses flex layout. The ::before placeholder pseudo-element defaults
+      // to order:0 and appears before real children in source order.
+      // The arrow must have order:-1 to appear before the placeholder when empty.
+      await createBlok(page, createHeaderData('Arrow Order Test', 2, true));
+
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+
+      await expect(arrow).toBeVisible();
+
+      const hasNegativeOrder = await page.evaluate(() => {
+        const el = document.querySelector('[data-blok-toggle-arrow]');
+
+        if (!el) {
+          return false;
+        }
+
+        return window.getComputedStyle(el).order === '-1';
+      });
+
+      expect(hasNegativeOrder).toBe(true);
+    });
   });
 
   test.describe('expand/collapse', () => {

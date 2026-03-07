@@ -47,6 +47,14 @@ const BlockAPIConstructor = function BlockAPI(
     },
 
     /**
+     * Id of the parent block, or null if this block has no parent
+     * @returns {string | null}
+     */
+    get parentId(): string | null {
+      return block.parentId;
+    },
+
+    /**
      * True if Block content is empty
      * @returns {boolean}
      */

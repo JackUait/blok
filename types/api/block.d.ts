@@ -27,6 +27,11 @@ export interface BlockAPI {
   readonly holder: HTMLElement;
 
   /**
+   * Id of the parent block, or null if this block has no parent
+   */
+  readonly parentId: string | null;
+
+  /**
    * True if Block content is empty
    */
   readonly isEmpty: boolean;

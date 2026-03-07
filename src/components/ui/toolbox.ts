@@ -587,6 +587,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return;
     }
 
+    const currentBlockParentId: string | null = currentBlock.parentId ?? null;
+
     /**
      * Check if the block contains only slash search text (e.g., "/head").
      * If so, treat it as empty and replace it with the new block.
@@ -605,6 +607,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       ? Object.assign(await this.api.blocks.composeBlockData(toolName), blockDataOverrides)
       : undefined;
 
+    /**
+     * When replacing a block that is a toggle child, remove it from the parent's
+     * contentIds BEFORE replacing so we don't leave a stale id behind.
+     * The new block will be reparented after insertion.
+     */
+    if (shouldReplaceBlock && currentBlockParentId !== null) {
+      this.api.blocks.setBlockParent(currentBlock.id, null);
+    }
+
     const newBlock = this.api.blocks.insert(
       toolName,
       blockData,
@@ -613,6 +624,10 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       undefined,
       shouldReplaceBlock
     );
+
+    if (currentBlockParentId !== null) {
+      this.api.blocks.setBlockParent(newBlock.id, currentBlockParentId);
+    }
 
     this.api.caret.setToBlock(index);
 

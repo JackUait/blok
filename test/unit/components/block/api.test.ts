@@ -16,6 +16,7 @@ type MockBlockShape = {
   selected: boolean;
   stretched: boolean;
   focusable: boolean;
+  parentId: string | null;
   preservedData: BlockToolData;
   preservedTunes: { [name: string]: BlockTuneData };
   setStretchState: (state: boolean) => void;
@@ -81,6 +82,7 @@ const createMockBlock = (): {
     selected: false,
     stretched: false,
     focusable: true,
+    parentId: null,
     preservedData,
     preservedTunes,
     setStretchState: (state: boolean) => {
@@ -198,6 +200,29 @@ describe('BlockAPI', () => {
 
     expect(apiInterface.id).toBe(blockAPI.id);
     expect(apiInterface.name).toBe(blockAPI.name);
+  });
+
+  it('exposes parentId from the underlying block', () => {
+    const { block, shape } = createMockBlock();
+    shape.parentId = 'parent-block-id';
+    const blockAPI = new BlockAPIConstructor(block);
+
+    expect(blockAPI.parentId).toBe('parent-block-id');
+
+    shape.parentId = null;
+    const blockAPINull = new BlockAPIConstructor(block);
+
+    expect(blockAPINull.parentId).toBeNull();
+  });
+
+  it('BlockAPI.parentId is included in the BlockAPIInterface type', () => {
+    const { block, shape } = createMockBlock();
+    shape.parentId = 'parent-block-id';
+    const blockAPI = new BlockAPIConstructor(block);
+
+    const apiInterface: BlockAPIInterface = blockAPI;
+
+    expect(apiInterface.parentId).toBe('parent-block-id');
   });
 });
 

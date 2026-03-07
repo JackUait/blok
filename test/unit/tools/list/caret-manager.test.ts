@@ -71,6 +71,7 @@ const createMockBlock = (holder: HTMLElement): BlockAPI => ({
   selected: false,
   focusable: true,
   stretched: false,
+  parentId: null,
   preservedData: {},
   preservedTunes: {},
   call: vi.fn(),

@@ -82,6 +82,7 @@ describe('Paste handler table cell restrictions', () => {
         insert: vi.fn().mockReturnValue({ id: 'test' }),
         paste: vi.fn().mockResolvedValue({ id: 'test' }),
         setCurrentBlockByChildNode,
+        setBlockParent: vi.fn(),
       },
       Caret: {
         setToBlock: vi.fn(),

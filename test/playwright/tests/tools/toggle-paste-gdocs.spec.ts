@@ -239,6 +239,51 @@ test.describe('Toggle paste from Google Docs', () => {
       // Expect: 1 toggle + 2 children = 3 blocks total
       expect(saved?.blocks).toHaveLength(3);
     });
+
+    test('pastes <details> followed by regular paragraph correctly', async ({ page }) => {
+      await createBlok(page);
+
+      const paragraphInput = page.locator(PARAGRAPH_BLOCK_SELECTOR).locator('[contenteditable]');
+
+      await paragraphInput.click();
+
+      const html =
+        '<b id="docs-internal-guid-y">' +
+        '<details><summary><span>Toggle</span></summary><p><span>Child content</span></p></details>' +
+        '<p><span>Regular paragraph after toggle</span></p>' +
+        '</b>';
+
+      await simulatePaste(page, html);
+
+      // Toggle block must be present
+      const toggle = page.locator(TOGGLE_BLOCK_SELECTOR);
+
+      await expect(toggle).toBeVisible();
+
+      // Child content must be inside the toggle children container
+      const childrenContainer = page.locator(TOGGLE_CHILDREN_SELECTOR);
+
+      await expect(childrenContainer).toBeAttached();
+
+      const child = childrenContainer.locator('[contenteditable]').filter({ hasText: 'Child content' });
+
+      await expect(child).toBeVisible();
+
+      // "Regular paragraph after toggle" must be a root-level block (no parent field)
+      const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+      expect(saved).toBeDefined();
+
+      const rootParagraph = saved?.blocks.find(
+        b => b.type === 'paragraph' &&
+          typeof b.data === 'object' && b.data !== null &&
+          typeof (b.data as Record<string, unknown>).text === 'string' &&
+          ((b.data as Record<string, unknown>).text as string).includes('Regular paragraph after toggle') &&
+          !b.parent
+      );
+
+      expect(rootParagraph).toBeDefined();
+    });
   });
 
   test.describe('pasting plain <details> (no Google Docs wrapper)', () => {

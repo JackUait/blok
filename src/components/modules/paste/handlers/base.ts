@@ -142,6 +142,10 @@ export abstract class BasePasteHandler implements PasteHandler {
           if (parentBlock) {
             BlockManager.setBlockParent(block, parentBlock.id);
           }
+        } else if (block.parentId != null) {
+          // Root-level pasted block: clear any parent that was inherited from
+          // the predecessor (e.g. the previous child block that had a parent).
+          BlockManager.setBlockParent(block, null);
         }
       }
 

@@ -94,6 +94,7 @@ type BlockManagerMock = {
   paste: ReturnType<typeof vi.fn<(tool: string, event: CustomEvent, replace?: boolean) => unknown>>;
   insert: ReturnType<typeof vi.fn<(payload: { tool: string; data: unknown; replace: boolean }) => unknown>>;
   setCurrentBlockByChildNode: ReturnType<typeof vi.fn<(node: HTMLElement) => unknown>>;
+  setBlockParent: ReturnType<typeof vi.fn<(block: unknown, parentId: string | null) => void>>;
 };
 
 type CaretMock = {
@@ -144,6 +145,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     paste: vi.fn<(tool: string, event: CustomEvent, replace?: boolean) => unknown>(),
     insert: vi.fn<(payload: { tool: string; data: unknown; replace: boolean }) => unknown>(),
     setCurrentBlockByChildNode: vi.fn<(node: HTMLElement) => unknown>(),
+    setBlockParent: vi.fn<(block: unknown, parentId: string | null) => void>(),
   };
 
   const caret: CaretMock = {

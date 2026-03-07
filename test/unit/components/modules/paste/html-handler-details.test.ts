@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { HtmlHandler } from '../../../../../src/components/modules/paste/handlers/html-handler';
 import type { ToolRegistry } from '../../../../../src/components/modules/paste/tool-registry';
@@ -59,7 +59,10 @@ describe('HtmlHandler — DETAILS treated as atomic block', () => {
 
   beforeEach(() => {
     insertedBlocks = [];
+    vi.clearAllMocks();
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   function makeBlok(tools: ReturnType<typeof makeToolStub>[]) {
     const defaultTool = tools.find((t) => t.isDefault) ?? tools[0];
@@ -122,32 +125,11 @@ describe('HtmlHandler — DETAILS treated as atomic block', () => {
     expect(insertedBlocks[2].tool).toBe('paragraph');
   });
 
-  it('expands DETAILS into toggle block + child paragraph blocks', async () => {
-    const toggle = makeToolStub('toggle', ['DETAILS']);
-    const paragraph = makeToolStub('paragraph', ['P']);
-    const registry = makeRegistry([toggle, paragraph]);
-    const blok = makeBlok([toggle, paragraph]);
-
-    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
-
-    const html = '<details><summary><b>Toggle Title</b></summary><p>Child paragraph 1</p><p>Child paragraph 2</p></details>';
-    const context = { canReplaceCurrentBlock: false };
-
-    await handler.handle(html, context);
-
-    // Total: 1 toggle + 2 child paragraphs = 3 blocks
-    expect(insertedBlocks).toHaveLength(3);
-    expect(insertedBlocks[0].tool).toBe('toggle');
-    expect(insertedBlocks[1].tool).toBe('paragraph');
-    expect(insertedBlocks[2].tool).toBe('paragraph');
-  });
-
   it('calls setBlockParent for each child paragraph with the toggle as parent', async () => {
     const toggle = makeToolStub('toggle', ['DETAILS']);
     const paragraph = makeToolStub('paragraph', ['P']);
     const registry = makeRegistry([toggle, paragraph]);
     const blok = makeBlok([toggle, paragraph]);
-    const setBlockParentSpy = vi.spyOn(blok.BlockManager, 'setBlockParent');
 
     const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
 
@@ -157,12 +139,12 @@ describe('HtmlHandler — DETAILS treated as atomic block', () => {
     await handler.handle(html, context);
 
     // setBlockParent should be called twice (for each child) with the toggle block's id
-    expect(setBlockParentSpy).toHaveBeenCalledTimes(2);
-    expect(setBlockParentSpy).toHaveBeenCalledWith(
+    expect(blok.BlockManager.setBlockParent).toHaveBeenCalledTimes(2);
+    expect(blok.BlockManager.setBlockParent).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'block-2' }),
       'block-1'
     );
-    expect(setBlockParentSpy).toHaveBeenCalledWith(
+    expect(blok.BlockManager.setBlockParent).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'block-3' }),
       'block-1'
     );

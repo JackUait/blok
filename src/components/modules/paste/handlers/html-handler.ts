@@ -87,7 +87,8 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
       expandedNodes.push({ node });
 
-      // Collect non-summary direct children from the original DOM element
+      // Only direct children are extracted (not deeply nested structures), which
+      // is correct for Google Docs DETAILS format where children are flat siblings.
       const childElements = Array.from((node as HTMLElement).children).filter(
         (child) => child.tagName !== 'SUMMARY'
       );
@@ -184,6 +185,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     // Remap parentPasteIndex from expandedNodes indices to final filtered indices.
     for (const item of filtered) {
       if (item.parentPasteIndex !== undefined) {
+        // undefined means parent was filtered out → child becomes root-level
         item.parentPasteIndex = oldToNewIndex.get(item.parentPasteIndex);
       }
     }

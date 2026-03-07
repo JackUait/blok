@@ -21,6 +21,8 @@ export const SAFE_STRUCTURAL_TAGS = new Set<string>([
   'dl',
   'dt',
   'dd',
+  'details',
+  'summary',
 ]);
 
 /**

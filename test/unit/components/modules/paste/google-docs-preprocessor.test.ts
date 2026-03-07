@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { preprocessGoogleDocsHtml } from '../../../../../src/components/modules/paste/google-docs-preprocessor';
 import { clean } from '../../../../../src/components/utils/sanitizer';
+import { SAFE_STRUCTURAL_TAGS } from '../../../../../src/components/modules/paste/constants';
 
 describe('preprocessGoogleDocsHtml', () => {
   it('converts bold style spans to <b> tags', () => {
@@ -678,5 +679,27 @@ describe('preprocessGoogleDocsHtml', () => {
 
       expect(result).toContain('<mark style="color: #d44c47; background-color: transparent;">red rgb</mark>');
     });
+  });
+});
+
+describe('SAFE_STRUCTURAL_TAGS', () => {
+  it('includes details', () => {
+    expect(SAFE_STRUCTURAL_TAGS.has('details')).toBe(true);
+  });
+
+  it('includes summary', () => {
+    expect(SAFE_STRUCTURAL_TAGS.has('summary')).toBe(true);
+  });
+
+  it('first-pass config with structural tags preserves <summary> inside <details>', () => {
+    // Simulate the first-pass sanitization config that includes structural tags
+    const structuralConfig = Object.fromEntries([...SAFE_STRUCTURAL_TAGS].map(t => [t, {}]));
+    const config = { ...structuralConfig, b: {}, p: {} };
+    const html = '<details open=""><summary><b>Toggle Title</b></summary><p>Child</p></details>';
+    const result = clean(html, config);
+
+    expect(result).toContain('<summary>');
+    expect(result).toContain('Toggle Title');
+    expect(result).toContain('<details');
   });
 });

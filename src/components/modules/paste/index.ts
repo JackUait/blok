@@ -3,6 +3,7 @@ import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 
+import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
 import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
@@ -202,9 +203,13 @@ export class Paste extends Module {
     // Build sanitize config first
     const toolsTags = this.sanitizerBuilder.buildToolsTagsConfig(this.toolRegistry.toolsTags);
     const inlineSanitizeConfig = this.Blok.Tools.getAllInlineToolsSanitizeConfig();
+    const structuralTagsConfig = Object.fromEntries(
+      [...SAFE_STRUCTURAL_TAGS].map((tag) => [tag, {}])
+    ) as SanitizerConfig;
     const customConfig = composeSanitizerConfig(
       this.config.sanitizer as SanitizerConfig,
       toolsTags,
+      structuralTagsConfig,
       inlineSanitizeConfig,
       { br: {} }
     );

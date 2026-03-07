@@ -189,6 +189,16 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const toolTags = tool ? this.toolRegistry.getToolTags(tool.name) : [];
 
     const isSubstitutable = tags.includes(element.tagName);
+
+    // DETAILS is a container-type substitutable element. Always return it as an
+    // atomic block so the toggle tool's onPaste receives the full <details>
+    // element (including <summary> and children), rather than having them split
+    // into flat blocks when the paragraph tool's <p> registration triggers
+    // containsAnotherToolTags = true.
+    if (isSubstitutable && element.tagName === 'DETAILS') {
+      return [...nodes, destNode, element];
+    }
+
     const isBlockElement = dom$.blockElements.includes(element.tagName.toLowerCase());
     const isStructuralElement = SAFE_STRUCTURAL_TAGS.has(element.tagName.toLowerCase());
     const containsAnotherToolTags = Array

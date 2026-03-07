@@ -698,15 +698,6 @@ describe('ToggleItem', () => {
       document.body.removeChild(element);
     });
 
-    // Fix 5: Indent guide lines via border-l class
-    it('toggle children container has border-l-2 class for indent guide', async () => {
-      const { ToggleItem } = await import('../../../../src/tools/toggle');
-      const toggle = new ToggleItem(createToggleOptions());
-      const element = toggle.render();
-      const childContainer = element.querySelector('[data-blok-toggle-children]') as HTMLElement;
-
-      expect(childContainer.className).toContain('border-l-2');
-    });
   });
 
   describe('buildToggleItem() - childContainerElement', () => {

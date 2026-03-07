@@ -53,7 +53,7 @@ export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 py-1 text-gray-text text-sm 
  * Styles for the children container element.
  * pl-7 (28px) aligns children with the toggle text (arrow is w-6=24px + gap).
  */
-export const TOGGLE_CHILDREN_STYLES = 'pl-7 border-l-2 border-gray-100 ml-3';
+export const TOGGLE_CHILDREN_STYLES = 'pl-7';
 
 /**
  * Data attributes specific to the toggle tool

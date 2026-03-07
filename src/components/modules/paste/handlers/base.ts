@@ -115,6 +115,8 @@ export abstract class BasePasteHandler implements PasteHandler {
     if (isMultipleItems) {
       this.redirectToTableParentIfNeeded(data, BlockManager);
 
+      const insertedByIndex: Array<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>> = [];
+
       for (const [index, pasteData] of data.entries()) {
         /**
          * Force each pasted block into its own Yjs undo entry so that
@@ -126,7 +128,21 @@ export abstract class BasePasteHandler implements PasteHandler {
          * captureTimeout get merged into a single undo entry.
          */
         this.Blok.YjsManager.stopCapturing();
-        await this.insertBlock(pasteData, index === 0 && canReplaceCurrentBlock);
+        const shouldReplace = index === 0 && canReplaceCurrentBlock && BlockManager.currentBlock?.isEmpty === true;
+        const block = shouldReplace
+          ? await BlockManager.paste(pasteData.tool, pasteData.event, true)
+          : await BlockManager.paste(pasteData.tool, pasteData.event);
+
+        Caret.setToBlock(block, Caret.positions.END);
+        insertedByIndex.push(block);
+
+        if (pasteData.parentPasteIndex !== undefined) {
+          const parentBlock = insertedByIndex[pasteData.parentPasteIndex];
+
+          if (parentBlock) {
+            BlockManager.setBlockParent(block, parentBlock.id);
+          }
+        }
       }
 
       BlockManager.currentBlock && Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);

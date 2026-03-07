@@ -36,6 +36,11 @@ export interface PasteData {
   content: HTMLElement;
   event: PasteEvent;
   isBlock: boolean;
+  /**
+   * Index into the current paste batch that is this block's parent.
+   * When set, `insertPasteData` will call `setBlockParent` after inserting.
+   */
+  parentPasteIndex?: number;
 }
 
 /**

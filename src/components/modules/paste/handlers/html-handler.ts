@@ -66,74 +66,129 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
     const nodes = this.getNodes(wrapper);
 
-    return nodes
-      .map((node) => {
-        const nodeData = (() => {
-          switch (node.nodeType) {
-            case Node.DOCUMENT_FRAGMENT_NODE: {
-              const fragmentWrapper = dom$.make('div');
+    // Pre-expand DETAILS nodes: extract child elements (non-summary) before
+    // sanitization strips them, and carry a parentExpandedIndex reference so
+    // we can remap to final post-filter indices later.
+    type NodeEntry = { node: Node; parentExpandedIndex?: number };
 
-              fragmentWrapper.appendChild(node);
+    const expandedNodes: NodeEntry[] = [];
 
-              return {
-                content: fragmentWrapper,
-                tool: Tools.defaultTool,
-                isBlock: false,
-              };
-            }
+    for (const node of nodes) {
+      const isDetailsElement =
+        node.nodeType === Node.ELEMENT_NODE &&
+        (node as HTMLElement).tagName === 'DETAILS';
 
-            case Node.ELEMENT_NODE: {
-              const elementContent = node as HTMLElement;
-              const tagSubstitute = this.toolRegistry.findToolForTag(elementContent.tagName) ?? undefined;
+      if (!isDetailsElement) {
+        expandedNodes.push({ node });
+        continue;
+      }
 
-              return {
-                content: elementContent,
-                tool: tagSubstitute?.tool ?? Tools.defaultTool,
-                isBlock: true,
-              };
-            }
+      const toggleExpandedIndex = expandedNodes.length;
 
-            default:
-              return null;
+      expandedNodes.push({ node });
+
+      // Collect non-summary direct children from the original DOM element
+      const childElements = Array.from((node as HTMLElement).children).filter(
+        (child) => child.tagName !== 'SUMMARY'
+      );
+
+      for (const child of childElements) {
+        expandedNodes.push({ node: child, parentExpandedIndex: toggleExpandedIndex });
+      }
+    }
+
+    // Map expanded nodes to intermediate results, preserving original index.
+    type MappedEntry = { data: PasteData; originalIndex: number } | null;
+
+    const mapped: MappedEntry[] = expandedNodes.map(({ node, parentExpandedIndex }, originalIndex) => {
+      const nodeData = (() => {
+        switch (node.nodeType) {
+          case Node.DOCUMENT_FRAGMENT_NODE: {
+            const fragmentWrapper = dom$.make('div');
+
+            fragmentWrapper.appendChild(node);
+
+            return {
+              content: fragmentWrapper,
+              tool: Tools.defaultTool,
+              isBlock: false,
+            };
           }
-        })();
 
-        if (!nodeData) {
-          return null;
+          case Node.ELEMENT_NODE: {
+            const elementContent = node as HTMLElement;
+            const tagSubstitute = this.toolRegistry.findToolForTag(elementContent.tagName) ?? undefined;
+
+            return {
+              content: elementContent,
+              tool: tagSubstitute?.tool ?? Tools.defaultTool,
+              isBlock: true,
+            };
+          }
+
+          default:
+            return null;
         }
+      })();
 
-        const { content, tool, isBlock } = nodeData;
+      if (!nodeData) {
+        return null;
+      }
 
-        const toolTags = this.buildToolTags(tool);
+      const { content, tool, isBlock } = nodeData;
 
-        const structuralSanitizeConfig = this.sanitizerBuilder.getStructuralTagsConfig(content);
-        const customConfig: SanitizerConfig = { ...structuralSanitizeConfig, ...toolTags, ...tool.baseSanitizeConfig, br: {} };
-        const sanitizedContent = this.sanitizeContent(content, customConfig);
+      const toolTags = this.buildToolTags(tool);
 
-        if (!sanitizedContent) {
-          return null;
-        }
+      const structuralSanitizeConfig = this.sanitizerBuilder.getStructuralTagsConfig(content);
+      const customConfig: SanitizerConfig = { ...structuralSanitizeConfig, ...toolTags, ...tool.baseSanitizeConfig, br: {} };
+      const sanitizedContent = this.sanitizeContent(content, customConfig);
 
-        const event = this.composePasteEvent('tag', {
-          data: sanitizedContent,
-        });
+      if (!sanitizedContent) {
+        return null;
+      }
 
-        return {
+      const event = this.composePasteEvent('tag', {
+        data: sanitizedContent,
+      });
+
+      return {
+        data: {
           content: sanitizedContent,
           isBlock,
           tool: tool.name,
           event,
-        };
-      })
-      .filter((data): data is PasteData => {
-        if (!data) {
-          return false;
-        }
-        const isContentEmpty = dom$.isEmpty(data.content);
-        const isSingleTag = dom$.isSingleTag(data.content);
+          parentPasteIndex: parentExpandedIndex,
+        },
+        originalIndex,
+      };
+    });
 
-        return !isContentEmpty || isSingleTag;
-      });
+    // Filter, tracking the mapping from original (expandedNodes) index → final index.
+    const oldToNewIndex = new Map<number, number>();
+    const filtered: PasteData[] = [];
+
+    for (const entry of mapped) {
+      if (!entry) {
+        continue;
+      }
+      const { data, originalIndex } = entry;
+      const isContentEmpty = dom$.isEmpty(data.content);
+      const isSingleTag = dom$.isSingleTag(data.content);
+
+      if (!isContentEmpty || isSingleTag) {
+        oldToNewIndex.set(originalIndex, filtered.length);
+        filtered.push(data);
+      }
+    }
+
+    // Remap parentPasteIndex from expandedNodes indices to final filtered indices.
+    for (const item of filtered) {
+      if (item.parentPasteIndex !== undefined) {
+        item.parentPasteIndex = oldToNewIndex.get(item.parentPasteIndex);
+      }
+    }
+
+    return filtered;
   }
 
   /**

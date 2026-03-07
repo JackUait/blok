@@ -101,7 +101,7 @@ describe('HtmlHandler — DETAILS treated as atomic block', () => {
     expect(toggleBlocks[0].content.tagName).toBe('DETAILS');
   });
 
-  it('does not insert any paragraph blocks from inside DETAILS at root level', async () => {
+  it('inserts DETAILS children as separate child blocks (not unparented at root level)', async () => {
     const toggle = makeToolStub('toggle', ['DETAILS']);
     const paragraph = makeToolStub('paragraph', ['P']);
     const registry = makeRegistry([toggle, paragraph]);
@@ -113,7 +113,58 @@ describe('HtmlHandler — DETAILS treated as atomic block', () => {
 
     await handler.handle(html, context);
 
-    // Before the fix: 3 blocks (bold fragment + P + P). After fix: 1 block.
-    expect(insertedBlocks).toHaveLength(1);
+    // Toggle + 2 child paragraphs = 3 blocks total (children are parented to the toggle)
+    expect(insertedBlocks).toHaveLength(3);
+    // The toggle block receives the full DETAILS element
+    expect(insertedBlocks[0].content.tagName).toBe('DETAILS');
+    // Children are inserted as separate blocks
+    expect(insertedBlocks[1].tool).toBe('paragraph');
+    expect(insertedBlocks[2].tool).toBe('paragraph');
+  });
+
+  it('expands DETAILS into toggle block + child paragraph blocks', async () => {
+    const toggle = makeToolStub('toggle', ['DETAILS']);
+    const paragraph = makeToolStub('paragraph', ['P']);
+    const registry = makeRegistry([toggle, paragraph]);
+    const blok = makeBlok([toggle, paragraph]);
+
+    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
+
+    const html = '<details><summary><b>Toggle Title</b></summary><p>Child paragraph 1</p><p>Child paragraph 2</p></details>';
+    const context = { canReplaceCurrentBlock: false };
+
+    await handler.handle(html, context);
+
+    // Total: 1 toggle + 2 child paragraphs = 3 blocks
+    expect(insertedBlocks).toHaveLength(3);
+    expect(insertedBlocks[0].tool).toBe('toggle');
+    expect(insertedBlocks[1].tool).toBe('paragraph');
+    expect(insertedBlocks[2].tool).toBe('paragraph');
+  });
+
+  it('calls setBlockParent for each child paragraph with the toggle as parent', async () => {
+    const toggle = makeToolStub('toggle', ['DETAILS']);
+    const paragraph = makeToolStub('paragraph', ['P']);
+    const registry = makeRegistry([toggle, paragraph]);
+    const blok = makeBlok([toggle, paragraph]);
+    const setBlockParentSpy = vi.spyOn(blok.BlockManager, 'setBlockParent');
+
+    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
+
+    const html = '<details><summary><b>Title</b></summary><p>Child 1</p><p>Child 2</p></details>';
+    const context = { canReplaceCurrentBlock: false };
+
+    await handler.handle(html, context);
+
+    // setBlockParent should be called twice (for each child) with the toggle block's id
+    expect(setBlockParentSpy).toHaveBeenCalledTimes(2);
+    expect(setBlockParentSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'block-2' }),
+      'block-1'
+    );
+    expect(setBlockParentSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'block-3' }),
+      'block-1'
+    );
   });
 });

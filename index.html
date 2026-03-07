@@ -534,29 +534,35 @@
         id: "toggle-example-1",
         type: "toggle",
         data: {
-          text: "Click the arrow to expand this toggle"
-        }
+          text: "Click the arrow to expand this toggle",
+          isOpen: true
+        },
+        content: ["toggle-child-1"]
       },
       {
         id: "toggle-child-1",
         type: "paragraph",
         data: {
           text: "This content is inside the toggle. It can contain any block type."
-        }
+        },
+        parent: "toggle-example-1"
       },
       {
         id: "toggle-example-2",
         type: "toggle",
         data: {
-          text: "Another toggle with nested content"
-        }
+          text: "Another toggle with nested content",
+          isOpen: true
+        },
+        content: ["toggle-child-2"]
       },
       {
         id: "toggle-child-2",
         type: "paragraph",
         data: {
           text: "Toggles are great for FAQs, documentation, and collapsible sections."
-        }
+        },
+        parent: "toggle-example-2"
       },
       {
         type: "header",

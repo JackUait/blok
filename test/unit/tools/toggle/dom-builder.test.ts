@@ -349,11 +349,11 @@ describe('Toggle DOM Builder', () => {
         expect(result.wrapper.children[1]).toBe(result.bodyPlaceholderElement);
       });
 
-      it('wrapper has exactly two children (header row + body placeholder)', () => {
+      it('wrapper has exactly three children (header row + body placeholder + child container)', () => {
         const context = createDefaultContext();
         const result = buildToggleItem(context);
 
-        expect(result.wrapper.children.length).toBe(2);
+        expect(result.wrapper.children.length).toBe(3);
       });
 
       it('body placeholder has correct data attribute', () => {

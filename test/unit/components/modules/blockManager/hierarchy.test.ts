@@ -424,5 +424,101 @@ describe('BlockHierarchy', () => {
       expect(cellBlock.holder.style.marginLeft).toBe('');
       expect(cellBlock.holder).toHaveAttribute('data-blok-depth', '0');
     });
+
+    it('does NOT apply margin-left when block.holder is inside [data-blok-toggle-children]', () => {
+      // child has parentId = 'root', so depth = 1, which would normally yield 24px.
+      // But because its holder is physically inside a toggle-children container it
+      // should receive '' instead.
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute('data-blok-toggle-children', '');
+
+      const block = requireBlock('child'); // depth 1 normally → 24px
+      toggleContainer.appendChild(block.holder);
+
+      hierarchy.updateBlockIndentation(block);
+
+      expect(block.holder.style.marginLeft).toBe('');
+    });
+  });
+
+  describe('setBlockParent() DOM placement', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('moves block.holder into the [data-blok-toggle-children] container when the parent has one', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle-parent', parentId: null, contentIds: [] },
+        { id: 'new-child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggleParent = requireBlock('toggle-parent');
+      const newChild = requireBlock('new-child');
+
+      // Attach a toggle-children container to the parent holder
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute('data-blok-toggle-children', '');
+      toggleParent.holder.appendChild(toggleContainer);
+
+      // Place the child somewhere outside the parent
+      const externalWrapper = document.createElement('div');
+      externalWrapper.appendChild(newChild.holder);
+
+      hierarchy.setBlockParent(newChild, 'toggle-parent');
+
+      expect(toggleContainer.contains(newChild.holder)).toBe(true);
+      expect(externalWrapper.contains(newChild.holder)).toBe(false);
+    });
+
+    it('moves block.holder back after old parent holder when clearing parent and block was inside [data-blok-toggle-children]', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'old-toggle', parentId: null, contentIds: ['child-in-toggle'] },
+        { id: 'child-in-toggle', parentId: 'old-toggle', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const oldToggle = requireBlock('old-toggle');
+      const child = requireBlock('child-in-toggle');
+
+      // Set up DOM: old toggle holder and the child sit in an editor wrapper;
+      // the child's holder is inside the toggle-children container
+      const editorWrapper = document.createElement('div');
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute('data-blok-toggle-children', '');
+      oldToggle.holder.appendChild(toggleContainer);
+      toggleContainer.appendChild(child.holder);
+
+      const sibling = document.createElement('div');
+      editorWrapper.appendChild(oldToggle.holder);
+      editorWrapper.appendChild(sibling);
+
+      hierarchy.setBlockParent(child, null);
+
+      // child.holder should be immediately after oldToggle.holder, not inside it
+      expect(oldToggle.holder.nextSibling).toBe(child.holder);
+      expect(toggleContainer.contains(child.holder)).toBe(false);
+    });
+
+    it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'plain-parent', parentId: null, contentIds: [] },
+        { id: 'child', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const plainParent = requireBlock('plain-parent');
+      const child = requireBlock('child');
+
+      // No toggle container — plain-parent.holder has no special child
+      const externalWrapper = document.createElement('div');
+      externalWrapper.appendChild(child.holder);
+
+      hierarchy.setBlockParent(child, 'plain-parent');
+
+      // child.holder should remain in the external wrapper, not pulled into parent.holder
+      expect(externalWrapper.contains(child.holder)).toBe(true);
+      expect(plainParent.holder.contains(child.holder)).toBe(false);
+    });
   });
 });

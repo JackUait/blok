@@ -11,6 +11,7 @@ import type {
   BlockToolConstructorOptions,
   ToolboxConfig,
   ConversionConfig,
+  SanitizerConfig,
   ToolSanitizerConfig,
   PasteConfig,
   PasteEvent,
@@ -24,7 +25,6 @@ import {
   parseHTML,
 } from './block-operations';
 import { clean } from '../../components/utils/sanitizer';
-import type { SanitizerConfig } from '../../../types';
 import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
 import { renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility } from './toggle-lifecycle';
@@ -40,6 +40,7 @@ export class ToggleItem implements BlockTool {
   private _contentElement: HTMLElement | null = null;
   private _arrowElement: HTMLElement | null = null;
   private _bodyPlaceholderElement: HTMLElement | null = null;
+  private _childContainerElement: HTMLElement | null = null;
   private _isOpen: boolean;
 
   private blockId?: string;
@@ -105,6 +106,7 @@ export class ToggleItem implements BlockTool {
     this._contentElement = result.contentElement;
     this._arrowElement = result.arrowElement;
     this._bodyPlaceholderElement = result.bodyPlaceholderElement;
+    this._childContainerElement = result.childContainerElement;
 
     return this._element;
   }
@@ -247,7 +249,7 @@ export class ToggleItem implements BlockTool {
       return;
     }
 
-    updateChildrenVisibility(this.api, this.blockId, this._isOpen);
+    updateChildrenVisibility(this.api, this.blockId, this._isOpen, this._childContainerElement);
   }
 
   private updateBodyPlaceholderVisibility(): void {

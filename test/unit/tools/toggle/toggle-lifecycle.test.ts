@@ -1,7 +1,8 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
+import type { API } from '../../../../types';
 import { TOGGLE_ATTR } from '../../../../src/tools/toggle/constants';
-import { updateArrowState } from '../../../../src/tools/toggle/toggle-lifecycle';
+import { updateArrowState, updateChildrenVisibility } from '../../../../src/tools/toggle/toggle-lifecycle';
 
 describe('Toggle Lifecycle', () => {
   beforeEach(() => {
@@ -10,6 +11,95 @@ describe('Toggle Lifecycle', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe('updateChildrenVisibility', () => {
+    const createMockChild = () => ({ holder: document.createElement('div') });
+
+    const createMockApi = (children: { holder: HTMLElement }[]): API => ({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue(children),
+      },
+    } as unknown as API);
+
+    it('moves child holders into childContainer when isOpen = true', () => {
+      const child1 = createMockChild();
+      const child2 = createMockChild();
+      const api = createMockApi([child1, child2]);
+      const childContainer = document.createElement('div');
+
+      updateChildrenVisibility(api, 'block-1', true, childContainer);
+
+      expect(childContainer.contains(child1.holder)).toBe(true);
+      expect(childContainer.contains(child2.holder)).toBe(true);
+    });
+
+    it('removes hidden class from child holders when isOpen = true with childContainer', () => {
+      const child = createMockChild();
+      child.holder.classList.add('hidden');
+      const api = createMockApi([child]);
+      const childContainer = document.createElement('div');
+
+      updateChildrenVisibility(api, 'block-1', true, childContainer);
+
+      expect(child.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('moves child holders into childContainer and adds hidden class when isOpen = false', () => {
+      const child1 = createMockChild();
+      const child2 = createMockChild();
+      const api = createMockApi([child1, child2]);
+      const childContainer = document.createElement('div');
+
+      updateChildrenVisibility(api, 'block-1', false, childContainer);
+
+      expect(childContainer.contains(child1.holder)).toBe(true);
+      expect(childContainer.contains(child2.holder)).toBe(true);
+      expect(child1.holder.classList.contains('hidden')).toBe(true);
+      expect(child2.holder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('does not re-append a child holder already inside childContainer', () => {
+      const child = createMockChild();
+      const childContainer = document.createElement('div');
+      childContainer.appendChild(child.holder);
+      const api = createMockApi([child]);
+
+      const appendChildSpy = vi.spyOn(childContainer, 'appendChild');
+
+      updateChildrenVisibility(api, 'block-1', true, childContainer);
+
+      expect(appendChildSpy).not.toHaveBeenCalled();
+    });
+
+    it('still shows/hides children without childContainer (backward compatible, isOpen = true)', () => {
+      const child = createMockChild();
+      child.holder.classList.add('hidden');
+      const api = createMockApi([child]);
+
+      updateChildrenVisibility(api, 'block-1', true);
+
+      expect(child.holder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('still shows/hides children without childContainer (backward compatible, isOpen = false)', () => {
+      const child = createMockChild();
+      const api = createMockApi([child]);
+
+      updateChildrenVisibility(api, 'block-1', false);
+
+      expect(child.holder.classList.contains('hidden')).toBe(true);
+    });
+
+    it('still shows/hides children when childContainer is null (backward compatible)', () => {
+      const child = createMockChild();
+      child.holder.classList.add('hidden');
+      const api = createMockApi([child]);
+
+      updateChildrenVisibility(api, 'block-1', true, null);
+
+      expect(child.holder.classList.contains('hidden')).toBe(false);
+    });
   });
 
   describe('updateArrowState', () => {

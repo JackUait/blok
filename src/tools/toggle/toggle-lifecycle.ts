@@ -27,6 +27,7 @@ export interface ToggleRenderResult {
   contentElement: HTMLElement;
   arrowElement: HTMLElement;
   bodyPlaceholderElement: HTMLElement;
+  childContainerElement: HTMLElement;
 }
 
 /**
@@ -72,10 +73,19 @@ export const updateArrowState = (arrowEl: HTMLElement, wrapper: HTMLElement, isO
  * @param blockId - The toggle block's id
  * @param isOpen - Whether the toggle is currently open (expanded)
  */
-export const updateChildrenVisibility = (api: API, blockId: string, isOpen: boolean): void => {
+export const updateChildrenVisibility = (
+  api: API,
+  blockId: string,
+  isOpen: boolean,
+  childContainer?: HTMLElement | null
+): void => {
   const children = api.blocks.getChildren(blockId);
 
   for (const child of children) {
+    if (childContainer && child.holder.parentElement !== childContainer) {
+      childContainer.appendChild(child.holder);
+    }
+
     if (isOpen) {
       child.holder.classList.remove('hidden');
     } else {

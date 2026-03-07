@@ -591,6 +591,41 @@ describe('ToggleItem', () => {
     });
   });
 
+  describe('buildToggleItem() - childContainerElement', () => {
+    it('returns a childContainerElement property', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+
+      // Access the childContainerElement via the data attribute it must carry
+      const childContainer = element.querySelector('[data-blok-toggle-children]');
+
+      expect(childContainer).not.toBeNull();
+    });
+
+    it('childContainerElement has attribute data-blok-toggle-children', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+
+      const childContainer = element.querySelector('[data-blok-toggle-children]');
+
+      expect(childContainer).not.toBeNull();
+      expect(childContainer?.hasAttribute('data-blok-toggle-children')).toBe(true);
+    });
+
+    it('childContainerElement is a child of the wrapper element', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+
+      const childContainer = element.querySelector('[data-blok-toggle-children]');
+
+      expect(childContainer).not.toBeNull();
+      expect(element.contains(childContainer)).toBe(true);
+    });
+  });
+
   describe('onPaste()', () => {
     it('extracts text from DETAILS summary element', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');

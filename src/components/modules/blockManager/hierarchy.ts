@@ -62,6 +62,14 @@ export class BlockHierarchy {
       oldParent.contentIds = oldParent.contentIds.filter(id => id !== block.id);
     }
 
+    // If old parent had a toggle child container and this block was in it, move it back out
+    if (oldParent !== undefined) {
+      const oldContainer = oldParent.holder.querySelector('[data-blok-toggle-children]');
+      if (oldContainer && block.holder.parentElement === oldContainer) {
+        oldParent.holder.after(block.holder);
+      }
+    }
+
     // Add to new parent's contentIds
     const newParent = newParentId !== null ? this.repository.getBlockById(newParentId) : undefined;
     const shouldAddToNewParent = newParent !== undefined && !newParent.contentIds.includes(block.id);
@@ -90,6 +98,14 @@ export class BlockHierarchy {
       }
     }
 
+    // Move block holder into toggle child container if the new parent has one
+    if (newParentId !== null && newParent !== undefined) {
+      const newContainer = newParent.holder.querySelector('[data-blok-toggle-children]');
+      if (newContainer) {
+        newContainer.appendChild(block.holder);
+      }
+    }
+
     // Update visual indentation
     this.updateBlockIndentation(block);
 
@@ -111,6 +127,14 @@ export class BlockHierarchy {
     if (holder.closest('[data-blok-table-cell-blocks]')) {
       holder.style.marginLeft = '';
       holder.setAttribute('data-blok-depth', '0');
+
+      return;
+    }
+
+    // Blocks inside toggle child containers should not receive margin-left indentation.
+    if (holder.closest('[data-blok-toggle-children]')) {
+      holder.style.marginLeft = '';
+      holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
 
       return;
     }

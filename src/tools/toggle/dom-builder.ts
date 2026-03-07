@@ -17,6 +17,7 @@ import {
   BODY_PLACEHOLDER_TEXT,
   CONTENT_STYLES,
   TOGGLE_ATTR,
+  TOGGLE_CHILDREN_STYLES,
   TOGGLE_WRAPPER_STYLES,
   TOOL_NAME,
 } from './constants';
@@ -52,6 +53,8 @@ export interface ToggleBuildResult {
   contentElement: HTMLElement;
   /** The body placeholder element */
   bodyPlaceholderElement: HTMLElement;
+  /** The child container element */
+  childContainerElement: HTMLElement;
 }
 
 /**
@@ -79,10 +82,15 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
 
   const bodyPlaceholderElement = buildBodyPlaceholder(onBodyPlaceholderClick);
 
+  const childContainerElement = document.createElement('div');
+  childContainerElement.className = TOGGLE_CHILDREN_STYLES;
+  childContainerElement.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+
   wrapper.appendChild(headerRow);
   wrapper.appendChild(bodyPlaceholderElement);
+  wrapper.appendChild(childContainerElement);
 
-  return { wrapper, arrowElement, contentElement, bodyPlaceholderElement };
+  return { wrapper, arrowElement, contentElement, bodyPlaceholderElement, childContainerElement };
 };
 
 /**

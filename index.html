@@ -566,6 +566,79 @@
       },
       {
         type: "header",
+        id: "toggle-heading-section-header",
+        data: {
+          text: "Toggle Headings",
+          level: 2
+        }
+      },
+      {
+        id: "toggle-h1-example",
+        type: "header",
+        data: {
+          text: "Toggle Heading 1",
+          level: 1,
+          isToggleable: true,
+          isOpen: true
+        },
+        content: ["toggle-h1-child-1", "toggle-h1-child-2"]
+      },
+      {
+        id: "toggle-h1-child-1",
+        type: "paragraph",
+        data: {
+          text: "Toggle headings collapse and expand child blocks. Click the arrow to toggle."
+        },
+        parent: "toggle-h1-example"
+      },
+      {
+        id: "toggle-h1-child-2",
+        type: "paragraph",
+        data: {
+          text: "Any block type can be nested inside a toggle heading."
+        },
+        parent: "toggle-h1-example"
+      },
+      {
+        id: "toggle-h2-example",
+        type: "header",
+        data: {
+          text: "Toggle Heading 2",
+          level: 2,
+          isToggleable: true,
+          isOpen: true
+        },
+        content: ["toggle-h2-child-1"]
+      },
+      {
+        id: "toggle-h2-child-1",
+        type: "paragraph",
+        data: {
+          text: "Toggle headings are available for H1, H2, and H3 levels."
+        },
+        parent: "toggle-h2-example"
+      },
+      {
+        id: "toggle-h3-example",
+        type: "header",
+        data: {
+          text: "Toggle Heading 3",
+          level: 3,
+          isToggleable: true,
+          isOpen: false
+        },
+        content: ["toggle-h3-child-1"]
+      },
+      {
+        id: "toggle-h3-child-1",
+        type: "paragraph",
+        data: {
+          text: "This toggle heading starts collapsed. Click the arrow to expand."
+        },
+        parent: "toggle-h3-example"
+      },
+      {
+        type: "header",
         id: "table-section-header",
         data: {
           text: "Tables",

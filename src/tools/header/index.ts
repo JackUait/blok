@@ -23,7 +23,7 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggle
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
-import { ARROW_ICON, TOGGLE_ATTR } from '../toggle/constants';
+import { ARROW_ICON, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 
@@ -143,6 +143,13 @@ export class Header implements BlockTool {
    * of clearing the selection when a SPAN child is present in a contenteditable.
    */
   private _wrapper: HTMLElement | null = null;
+
+  /**
+   * Container element for child blocks when the heading is toggleable.
+   * Mirrors the [data-blok-toggle-children] container used by the toggle list
+   * tool so that BlockHierarchy can place child blocks inside it.
+   */
+  private _childContainerElement: HTMLElement | null = null;
 
   /**
    * Whether the toggle is currently open (expanded)
@@ -719,6 +726,13 @@ export class Header implements BlockTool {
     this._arrowElement = arrow;
     wrapper.appendChild(arrow);
     wrapper.appendChild(this._element);
+
+    const childContainer = document.createElement('div');
+    childContainer.className = TOGGLE_CHILDREN_STYLES;
+    childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+    this._childContainerElement = childContainer;
+    wrapper.appendChild(childContainer);
+
     return wrapper;
   }
 
@@ -786,7 +800,7 @@ export class Header implements BlockTool {
       return;
     }
 
-    updateChildrenVisibility(this.api, this.blockId, this._isOpen);
+    updateChildrenVisibility(this.api, this.blockId, this._isOpen, this._childContainerElement);
   }
 
   /**

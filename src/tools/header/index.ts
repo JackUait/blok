@@ -145,6 +145,14 @@ export class Header implements BlockTool {
   private _wrapper: HTMLElement | null = null;
 
   /**
+   * The inner row div that wraps only the arrow and heading element.
+   * This is the `position: relative` context for the arrow so that `top: 50%`
+   * resolves against the heading height only — not the full wrapper height
+   * that includes the [data-blok-toggle-children] container.
+   */
+  private _headerRow: HTMLElement | null = null;
+
+  /**
    * Container element for child blocks when the heading is toggleable.
    * Mirrors the [data-blok-toggle-children] container used by the toggle list
    * tool so that BlockHierarchy can place child blocks inside it.
@@ -592,7 +600,7 @@ export class Header implements BlockTool {
          */
         const arrow = this.buildArrow();
         this._arrowElement = arrow;
-        this._wrapper.prepend(arrow);
+        (this._headerRow ?? this._wrapper).prepend(arrow);
       }
     } else {
       this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
@@ -609,6 +617,7 @@ export class Header implements BlockTool {
           parent.replaceChild(this._element, this._wrapper);
         }
         this._wrapper = null;
+        this._headerRow = null;
       }
     }
   }
@@ -721,11 +730,17 @@ export class Header implements BlockTool {
    */
   private buildWrapper(): HTMLElement {
     const wrapper = document.createElement('div');
-    wrapper.className = 'relative';
+
+    // Inner row: positioning context for the arrow (only heading height, not children).
+    const headerRow = document.createElement('div');
+    headerRow.className = 'relative';
+    this._headerRow = headerRow;
+
     const arrow = this.buildArrow();
     this._arrowElement = arrow;
-    wrapper.appendChild(arrow);
-    wrapper.appendChild(this._element);
+    headerRow.appendChild(arrow);
+    headerRow.appendChild(this._element);
+    wrapper.appendChild(headerRow);
 
     const childContainer = document.createElement('div');
     childContainer.className = TOGGLE_CHILDREN_STYLES;
@@ -745,16 +760,23 @@ export class Header implements BlockTool {
     const parent = this._element.parentNode;
 
     this._wrapper = document.createElement('div');
-    this._wrapper.className = 'relative';
+
+    // Inner row: positioning context for the arrow (only heading height, not children).
+    const headerRow = document.createElement('div');
+    headerRow.className = 'relative';
+    this._headerRow = headerRow;
+
     const arrow = this.buildArrow();
-
     this._arrowElement = arrow;
-    this._wrapper.appendChild(arrow);
+    headerRow.appendChild(arrow);
 
+    // Replace the heading in the DOM with the new outer wrapper first (while
+    // this._element is still attached), then move the heading into the inner row.
     if (parent) {
       parent.replaceChild(this._wrapper, this._element);
     }
-    this._wrapper.appendChild(this._element);
+    headerRow.appendChild(this._element);
+    this._wrapper.appendChild(headerRow);
   }
 
   /**

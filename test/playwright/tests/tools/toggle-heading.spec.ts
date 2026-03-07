@@ -796,4 +796,55 @@ test.describe('Toggle Heading', () => {
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
   });
+
+  // =========================================================================
+  // 9. Arrow positioning
+  // =========================================================================
+
+  test.describe('arrow positioning', () => {
+    test('arrow stays vertically aligned to heading when multiple children are visible', async ({ page }) => {
+      /**
+       * Regression test: the arrow must remain aligned to the heading text row,
+       * not drift to the vertical midpoint of (heading + all visible children).
+       *
+       * Previously the wrapper with `position:relative` contained both the heading
+       * AND the [data-blok-toggle-children] container, so `top:50%` resolved to
+       * the midpoint of the entire expanded block — not just the heading.
+       */
+      await createBlokWithData(page, [
+        {
+          id: 'h1',
+          type: 'header',
+          data: { text: 'Toggle H2 With Children', level: 2, isToggleable: true, isOpen: true },
+          content: ['p1', 'p2', 'p3', 'p4', 'p5'],
+        },
+        { id: 'p1', type: 'paragraph', data: { text: 'Child paragraph 1' }, parent: 'h1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'Child paragraph 2' }, parent: 'h1' },
+        { id: 'p3', type: 'paragraph', data: { text: 'Child paragraph 3' }, parent: 'h1' },
+        { id: 'p4', type: 'paragraph', data: { text: 'Child paragraph 4' }, parent: 'h1' },
+        { id: 'p5', type: 'paragraph', data: { text: 'Child paragraph 5' }, parent: 'h1' },
+      ]);
+
+      // All children must be visible so the wrapper is fully expanded.
+      await expect(page.getByText('Child paragraph 5')).toBeVisible();
+
+      const alignment = await page.evaluate(() => {
+        const heading = document.querySelector('h2[data-blok-toggle-open]');
+        const arrow = document.querySelector('[data-blok-toggle-arrow]');
+        const headingRect = heading?.getBoundingClientRect() ?? new DOMRect();
+        const arrowRect = arrow?.getBoundingClientRect() ?? new DOMRect();
+        const headingMidY = headingRect.top + headingRect.height / 2;
+        const arrowMidY = arrowRect.top + arrowRect.height / 2;
+
+        return {
+          found: heading !== null && arrow !== null,
+          diff: Math.abs(headingMidY - arrowMidY),
+        };
+      });
+
+      expect(alignment.found).toBe(true);
+      // Arrow midpoint must be within 3 px of the heading text midpoint.
+      expect(alignment.diff).toBeLessThanOrEqual(3);
+    });
+  });
 });

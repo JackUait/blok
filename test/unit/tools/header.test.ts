@@ -583,9 +583,12 @@ describe('Header Tool - Custom Configurations', () => {
 
         expect(arrow).not.toBeNull();
         expect(heading).not.toBeNull();
-        // Arrow must be a direct child of the wrapper, not inside the heading
-        expect(wrapper.children[0]).toBe(arrow);
-        expect(wrapper.children[1]).toBe(heading);
+        // Arrow and heading must be siblings in the inner header row, not inside each other.
+        // The outer wrapper's first child is the inner row (positioning context for the arrow).
+        const headerRow = wrapper.children[0] as HTMLElement;
+        expect(headerRow.children[0]).toBe(arrow);
+        expect(headerRow.children[1]).toBe(heading);
+        expect(heading.contains(arrow)).toBe(false);
       });
 
       it('preserves heading text content when isToggleable is true', () => {

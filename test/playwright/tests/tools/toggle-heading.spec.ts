@@ -248,10 +248,19 @@ test.describe('Toggle Heading', () => {
       expect(toggleAttr).toBe(false);
     });
 
-    test('toggle heading does not render a body placeholder (that is only for toggle list)', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('No Body Placeholder', 2)]);
+    test('shows body placeholder when open toggle heading has no children', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle', 2)]);
 
-      await expect(page.locator('[data-blok-toggle-body-placeholder]')).toHaveCount(0);
+      // The toggle is open by default and has no children — placeholder must be visible
+      await expect(page.locator('[data-blok-toggle-body-placeholder]')).toBeVisible();
+    });
+
+    test('body placeholder is hidden when toggle heading is collapsed', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsed No Placeholder', 2)]);
+
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
+
+      await expect(page.locator('[data-blok-toggle-body-placeholder]')).not.toBeVisible();
     });
 
     test('toggle heading defaults to open in edit mode when isOpen is absent from saved data', async ({ page }) => {
@@ -798,7 +807,36 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 9. Arrow positioning
+  // 9. Keyboard interactions
+  // =========================================================================
+
+  test.describe('keyboard interactions', () => {
+    test('pressing Enter at end of open toggle heading creates a child block inside the toggle', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('My Toggle', 2)]);
+
+      const heading = page.getByRole('heading', { level: 2, name: 'My Toggle' });
+
+      await heading.click();
+      // Move caret to end of heading text
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // A new paragraph block should exist inside the toggle
+      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+
+      expect(savedData?.blocks).toHaveLength(2);
+      expect(savedData?.blocks[1].type).toBe('paragraph');
+
+      // The child block must have the toggle heading as parent
+      const childBlock = savedData?.blocks[1];
+
+      expect(childBlock?.parent).toBeDefined();
+      expect(childBlock?.parent).toBe(savedData?.blocks[0].id);
+    });
+  });
+
+  // =========================================================================
+  // 10. Arrow positioning
   // =========================================================================
 
   test.describe('arrow positioning', () => {

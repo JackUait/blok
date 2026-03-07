@@ -23,9 +23,9 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggle
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
-import { ARROW_ICON, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
+import { ARROW_ICON, BODY_PLACEHOLDER_STYLES, BODY_PLACEHOLDER_TEXT, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
-import { updateArrowState, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
+import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 
 /**
  * Tool's input and output data format
@@ -160,6 +160,11 @@ export class Header implements BlockTool {
   private _childContainerElement: HTMLElement | null = null;
 
   /**
+   * Body placeholder element shown when toggle is open and has no children.
+   */
+  private _bodyPlaceholderElement: HTMLElement | null = null;
+
+  /**
    * Whether the toggle is currently open (expanded)
    */
   private _isOpen: boolean;
@@ -189,6 +194,10 @@ export class Header implements BlockTool {
 
     if (block) {
       this.blockId = block.id;
+    }
+
+    if (!readOnly && this._data.isToggleable) {
+      this.api.events.on('block changed', this.handleBlockChanged);
     }
   }
 
@@ -287,7 +296,15 @@ export class Header implements BlockTool {
   public rendered(): void {
     if (this._data.isToggleable) {
       this.updateChildrenVisibility();
+      this.updateBodyPlaceholderVisibility();
     }
+  }
+
+  /**
+   * Called when the block is removed. Cleans up event listeners.
+   */
+  public removed(): void {
+    this.api.events.off('block changed', this.handleBlockChanged);
   }
 
   /**
@@ -306,6 +323,7 @@ export class Header implements BlockTool {
     }
 
     this.updateChildrenVisibility();
+    this.updateBodyPlaceholderVisibility();
   }
 
   /**
@@ -324,6 +342,7 @@ export class Header implements BlockTool {
     }
 
     this.updateChildrenVisibility();
+    this.updateBodyPlaceholderVisibility();
   }
 
   /**
@@ -742,6 +761,13 @@ export class Header implements BlockTool {
     headerRow.appendChild(this._element);
     wrapper.appendChild(headerRow);
 
+    const bodyPlaceholder = document.createElement('div');
+    bodyPlaceholder.className = BODY_PLACEHOLDER_STYLES;
+    bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
+    bodyPlaceholder.textContent = BODY_PLACEHOLDER_TEXT;
+    this._bodyPlaceholderElement = bodyPlaceholder;
+    wrapper.appendChild(bodyPlaceholder);
+
     const childContainer = document.createElement('div');
     childContainer.className = TOGGLE_CHILDREN_STYLES;
     childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
@@ -792,6 +818,9 @@ export class Header implements BlockTool {
     if (wasToggleable) {
       updateChildrenVisibility(this.api, this.blockId ?? '', true);
       this._isOpen = false;
+      this.api.events.off('block changed', this.handleBlockChanged);
+    } else if (!this.readOnly) {
+      this.api.events.on('block changed', this.handleBlockChanged);
     }
 
     this.data = {
@@ -812,6 +841,7 @@ export class Header implements BlockTool {
     }
 
     this.updateChildrenVisibility();
+    this.updateBodyPlaceholderVisibility();
   }
 
   /**
@@ -822,7 +852,52 @@ export class Header implements BlockTool {
       return;
     }
 
-    updateChildrenVisibility(this.api, this.blockId, this._isOpen, this._childContainerElement);
+    updateChildrenVisibility(this.api, this.blockId, this._isOpen, this._childContainerElement, this._arrowElement);
+  }
+
+  /**
+   * Show or hide the body placeholder based on open state and children count.
+   */
+  private updateBodyPlaceholderVisibility(): void {
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    updateBodyPlaceholderVisibility(
+      this._bodyPlaceholderElement,
+      this.api,
+      this.blockId,
+      this._isOpen,
+      this.readOnly
+    );
+  }
+
+  /**
+   * Handle 'block changed' events to refresh body placeholder visibility.
+   */
+  private handleBlockChanged = (data: unknown): void => {
+    if (!this.isBlockChangedPayload(data)) {
+      return;
+    }
+
+    if (data.event.type === 'block-removed') {
+      this.updateBodyPlaceholderVisibility();
+    }
+  };
+
+  /**
+   * Type guard for block changed payload.
+   */
+  private isBlockChangedPayload(data: unknown): data is { event: { type: string } } {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'event' in data &&
+      typeof (data as { event: unknown }).event === 'object' &&
+      (data as { event: unknown }).event !== null &&
+      'type' in (data as { event: { type: unknown } }).event &&
+      typeof (data as { event: { type: unknown } }).event.type === 'string'
+    );
   }
 
   /**

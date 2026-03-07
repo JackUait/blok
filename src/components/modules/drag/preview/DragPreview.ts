@@ -14,9 +14,10 @@ export class DragPreview {
    * Create a single-block preview element
    * @param contentElement - Element to clone for preview
    * @param isStretched - Whether block is stretched
+   * @param block - Optional block being dragged (used to show children badge)
    * @returns Preview element
    */
-  createSingle(contentElement: HTMLElement, isStretched: boolean): HTMLElement {
+  createSingle(contentElement: HTMLElement, isStretched: boolean, block?: Block): HTMLElement {
     const preview = $.make('div', PREVIEW_STYLES.base);
     const clone = contentElement.cloneNode(true) as HTMLElement;
 
@@ -39,6 +40,18 @@ export class DragPreview {
     }
 
     preview.appendChild(clone);
+
+    // Show a subtle badge when dragging a block that has hidden children
+    const childCount = block?.contentIds?.length ?? 0;
+
+    if (childCount > 0) {
+      const badge = $.make('span', 'absolute bottom-1 right-1 text-xs text-gray-400 bg-white/80 px-1 rounded');
+      badge.setAttribute('data-blok-children-badge', '');
+      badge.textContent = `+${childCount}`;
+      preview.style.position = 'relative';
+      preview.appendChild(badge);
+    }
+
     this.element = preview;
 
     return preview;

@@ -340,6 +340,23 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           onActivate: async () => {
             const { Caret, Toolbar } = this.Blok;
 
+            // Warn before converting a block that has nested children — they will be
+            // promoted to sibling level (or lost if the host cannot hold children).
+            const childCount = currentBlock.contentIds.length;
+
+            if (childCount > 0) {
+              const message = this.Blok.I18n.t('blockSettings.convertWithChildrenWarning', {
+                count: childCount,
+              });
+              const fallback = `This block has ${childCount} nested block${childCount === 1 ? '' : 's'}. Converting it will promote them to the top level. Continue?`;
+              // eslint-disable-next-line no-alert
+              const confirmed = window.confirm(message !== 'blockSettings.convertWithChildrenWarning' ? message : fallback);
+
+              if (!confirmed) {
+                return;
+              }
+            }
+
             const newBlock = await this.convertBlock(
               currentBlock,
               selectedBlocks,

@@ -227,6 +227,10 @@ const createMockBlockFactory = (): BlockFactory => {
   const defaultAdapter = createMockBlockToolAdapter('paragraph');
   mockTools.set('paragraph', defaultAdapter);
 
+  // Add toggle tool (needed for hierarchy-aware replace tests)
+  const toggleAdapter = createMockBlockToolAdapter('toggle');
+  mockTools.set('toggle', toggleAdapter);
+
   const bindBlockEvents = vi.fn();
 
   return new BlockFactory({
@@ -817,6 +821,72 @@ describe('BlockOperations', () => {
 
       expect(transactSpy).toHaveBeenCalled();
       expect(newBlock).toBeDefined();
+    });
+
+    it('promotes children to sibling level after new block when replacing toggle with non-hosting tool', () => {
+      // Set up a toggle block with 2 child blocks
+      const child1 = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'toggle-1' });
+      const child2 = createMockBlock({ id: 'child-2', name: 'paragraph', parentId: 'toggle-1' });
+      const toggleBlock = createMockBlock({ id: 'toggle-1', name: 'toggle', contentIds: ['child-1', 'child-2'] });
+
+      const testBlocks = [toggleBlock, child1, child2];
+      const testStore = createBlocksStore(testBlocks);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Replace the toggle with a paragraph (a non-hosting tool)
+      const newBlock = testOps.replace(toggleBlock, 'paragraph', { text: '' }, testStore);
+
+      // The new block should not have contentIds pointing to children
+      expect(newBlock.contentIds).toHaveLength(0);
+
+      // Children should have parentId set to null (promoted to root level)
+      expect(child1.parentId).toBeNull();
+      expect(child2.parentId).toBeNull();
+
+      // Children should appear after the new paragraph in the block list
+      const newBlockIndex = testRepo.getBlockIndex(newBlock);
+      const child1Index = testRepo.getBlockIndex(child1);
+      const child2Index = testRepo.getBlockIndex(child2);
+
+      expect(child1Index).toBeGreaterThan(newBlockIndex);
+      expect(child2Index).toBeGreaterThan(child1Index);
+    });
+
+    it('keeps children when replacing toggle with another hosting tool (toggle→toggle)', () => {
+      const child1 = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'toggle-1' });
+      const toggleBlock = createMockBlock({ id: 'toggle-1', name: 'toggle', contentIds: ['child-1'] });
+
+      const testStore = createBlocksStore([toggleBlock, child1]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Replace the toggle with another toggle (a hosting tool) — children stay
+      const newBlock = testOps.replace(toggleBlock, 'toggle', { text: '' }, testStore);
+
+      // Children should remain attached to the new toggle block
+      expect(newBlock.contentIds).toHaveLength(1);
+      expect(child1.parentId).toBe(newBlock.id);
     });
   });
 

@@ -45,6 +45,53 @@ describe('DragPreview', () => {
       expect(dragPreview.exists()).toBe(true);
     });
 
+    it('should show child count badge when dragging a block with children', () => {
+      const contentElement = document.createElement('div');
+      contentElement.innerHTML = '<p>Toggle title</p>';
+
+      const block = {
+        id: 'toggle-1',
+        holder: document.createElement('div'),
+        name: 'toggle',
+        stretched: false,
+        contentIds: ['child-1', 'child-2', 'child-3'],
+      } as unknown as import('../../../../../../src/components/block').Block;
+
+      const preview = dragPreview.createSingle(contentElement, false, block);
+
+      // Badge element with child count should be present in the preview
+      const badge = preview.querySelector('[data-blok-children-badge]');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('3');
+    });
+
+    it('should not show badge when block has no children', () => {
+      const contentElement = document.createElement('div');
+      contentElement.innerHTML = '<p>Paragraph</p>';
+
+      const block = {
+        id: 'para-1',
+        holder: document.createElement('div'),
+        name: 'paragraph',
+        stretched: false,
+        contentIds: [],
+      } as unknown as import('../../../../../../src/components/block').Block;
+
+      const preview = dragPreview.createSingle(contentElement, false, block);
+
+      const badge = preview.querySelector('[data-blok-children-badge]');
+      expect(badge).toBeNull();
+    });
+
+    it('should not show badge when block parameter is omitted', () => {
+      const contentElement = document.createElement('div');
+
+      const preview = dragPreview.createSingle(contentElement, false);
+
+      const badge = preview.querySelector('[data-blok-children-badge]');
+      expect(badge).toBeNull();
+    });
+
     it('should set explicit width on clone to preserve percentage-based layouts', () => {
       const contentElement = document.createElement('div');
 

@@ -907,7 +907,7 @@ describe('BlockManager', () => {
       expect(childBlock2.holder.classList.contains('hidden')).toBe(false);
     });
 
-    it('replace() transfers parentId and contentIds to the new block', () => {
+    it('replace() transfers parentId to the new block and promotes children when new tool cannot host them', () => {
       const parentBlock = createBlockStub({ id: 'grandparent' });
       const blockToReplace = createBlockStub({ id: 'toggle-parent' });
       const childBlock = createBlockStub({ id: 'child-1' });
@@ -932,15 +932,14 @@ describe('BlockManager', () => {
       // New block should inherit parentId from the old block
       expect(result.parentId).toBe('grandparent');
 
-      // New block should inherit contentIds from the old block
-      expect(result.contentIds).toEqual(['child-1']);
-
       // Parent's contentIds should reference the new block, not the old one
       expect(parentBlock.contentIds).toContain('new-block');
       expect(parentBlock.contentIds).not.toContain('toggle-parent');
 
-      // Child's parentId should reference the new block
-      expect(childBlock.parentId).toBe('new-block');
+      // Since paragraph cannot host children, children are promoted to root level
+      // (not orphaned inside the paragraph's contentIds)
+      expect(result.contentIds).toHaveLength(0);
+      expect(childBlock.parentId).toBeNull();
     });
 
     it('update() preserves parentId and contentIds on the recreated block', async () => {

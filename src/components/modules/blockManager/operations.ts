@@ -502,6 +502,21 @@ export class BlockOperations {
   }
 
   /**
+   * Update the parentId of each child block to the given parent id.
+   * @param childIds - Array of child block IDs to reparent
+   * @param newParentId - New parent block ID
+   */
+  private reparentChildren(childIds: string[], newParentId: string): void {
+    for (const childId of childIds) {
+      const childBlock = this.repository.getBlockById(childId);
+
+      if (childBlock !== undefined) {
+        childBlock.parentId = newParentId;
+      }
+    }
+  }
+
+  /**
    * Replace passed Block with the new one with specified Tool and data
    * @param block - Block to replace
    * @param newTool - New Tool name
@@ -547,14 +562,34 @@ export class BlockOperations {
       }
     }
 
-    for (const childId of oldContentIds) {
-      const childBlock = this.repository.getBlockById(childId);
+    /**
+     * Tools that can host children (have a toggle-children container in their DOM).
+     * When replacing with a non-hosting tool, children must be promoted to root level
+     * rather than orphaned inside a block that has no children container.
+     */
+    const HOSTING_TOOLS = new Set(['toggle', 'header']);
+    const newToolCanHostChildren = HOSTING_TOOLS.has(newTool);
 
-      if (childBlock !== undefined) {
-        childBlock.parentId = newBlock.id;
-      }
+    if (oldContentIds.length > 0 && !newToolCanHostChildren) {
+      // Promote each child to root level, inserting after the new block
+      const insertAfterIndex = this.repository.getBlockIndex(newBlock);
+
+      oldContentIds.forEach((childId, offset) => {
+        const childBlock = this.repository.getBlockById(childId);
+
+        if (childBlock === undefined) {
+          return;
+        }
+
+        childBlock.parentId = null;
+        blocksStore.insert(insertAfterIndex + 1 + offset, childBlock, false, false);
+      });
+
+      newBlock.contentIds = [];
+    } else {
+      this.reparentChildren(oldContentIds, newBlock.id);
+      newBlock.contentIds = oldContentIds;
     }
-    newBlock.contentIds = oldContentIds;
 
     return newBlock;
   }

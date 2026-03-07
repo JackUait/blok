@@ -96,7 +96,7 @@ const simulatePaste = async (page: Page, html: string): Promise<void> => {
     }));
   }, html);
 
-  // Allow the async paste pipeline to complete
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- Allow the async paste pipeline to complete
   await page.waitForTimeout(300);
 };
 

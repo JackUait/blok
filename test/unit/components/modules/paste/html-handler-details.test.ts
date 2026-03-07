@@ -19,7 +19,7 @@ function makeRegistry(tools: ReturnType<typeof makeToolStub>[]): ToolRegistry {
   const tagsByTool: Record<string, string[]> = {};
 
   for (const tool of tools) {
-    const tags = (tool.pasteConfig?.tags ?? []) as string[];
+    const tags = tool.pasteConfig?.tags ?? [];
 
     for (const tag of tags) {
       toolsTags[tag.toUpperCase()] = { tool, sanitizationConfig: null };
@@ -48,7 +48,7 @@ function makeSanitizerBuilder(): SanitizerConfigBuilder {
     getStructuralTagsConfig: () => ({}),
     buildToolsTagsConfig: () => ({}),
     buildToolConfig: () => ({}),
-    composeConfigs: (...configs: object[]) => Object.assign({}, ...configs),
+    composeConfigs: (...configs: Record<string, unknown>[]) => Object.assign({}, ...configs) as Record<string, unknown>,
     sanitizeTable: (el: HTMLElement) => el,
     isStructuralTag: () => false,
   } as unknown as SanitizerConfigBuilder;

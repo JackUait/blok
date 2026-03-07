@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { API, BlockAPI } from '@/types';
+import type { API, BlockAPI, PasteEvent } from '@/types';
 import type { BlockToolConstructorOptions } from '@/types/tools/block-tool';
 import { ToggleItem } from '../../../../src/tools/toggle/index';
 import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
@@ -293,7 +293,7 @@ describe('Bug: onPaste() sanitizes pasted HTML before assigning to contentEl and
 
     const pasteEvent = {
       detail: { data: details },
-    } as unknown as import('@/types').PasteEvent;
+    } as unknown as PasteEvent;
 
     toggle.onPaste(pasteEvent);
 
@@ -313,7 +313,7 @@ describe('Bug: onPaste() sanitizes pasted HTML before assigning to contentEl and
 
     const pasteEvent = {
       detail: { data: details },
-    } as unknown as import('@/types').PasteEvent;
+    } as unknown as PasteEvent;
 
     toggle.onPaste(pasteEvent);
 
@@ -334,7 +334,7 @@ describe('Bug: onPaste() sanitizes pasted HTML before assigning to contentEl and
 
     const pasteEvent = {
       detail: { data: details },
-    } as unknown as import('@/types').PasteEvent;
+    } as unknown as PasteEvent;
 
     toggle.onPaste(pasteEvent);
 

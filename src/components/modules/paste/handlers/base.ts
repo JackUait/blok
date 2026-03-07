@@ -136,17 +136,7 @@ export abstract class BasePasteHandler implements PasteHandler {
         Caret.setToBlock(block, Caret.positions.END);
         insertedByIndex.push(block);
 
-        if (pasteData.parentPasteIndex !== undefined) {
-          const parentBlock = insertedByIndex[pasteData.parentPasteIndex];
-
-          if (parentBlock) {
-            BlockManager.setBlockParent(block, parentBlock.id);
-          }
-        } else if (block.parentId != null) {
-          // Root-level pasted block: clear any parent that was inherited from
-          // the predecessor (e.g. the previous child block that had a parent).
-          BlockManager.setBlockParent(block, null);
-        }
+        this.applyPastedBlockParent(block, pasteData, insertedByIndex, BlockManager);
       }
 
       BlockManager.currentBlock && Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);
@@ -164,6 +154,28 @@ export abstract class BasePasteHandler implements PasteHandler {
     }
 
     await this.processInlinePaste(singleItem, canReplaceCurrentBlock);
+  }
+
+  /**
+   * Wire up the parent relationship for a pasted block.
+   */
+  private applyPastedBlockParent(
+    block: Awaited<ReturnType<BlokModules['BlockManager']['paste']>>,
+    pasteData: PasteData,
+    insertedByIndex: Array<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>>,
+    BlockManager: BlokModules['BlockManager']
+  ): void {
+    if (pasteData.parentPasteIndex !== undefined) {
+      const parentBlock = insertedByIndex[pasteData.parentPasteIndex];
+
+      if (parentBlock) {
+        BlockManager.setBlockParent(block, parentBlock.id);
+      }
+    } else if (block.parentId != null) {
+      // Root-level pasted block: clear any parent that was inherited from
+      // the predecessor (e.g. the previous child block that had a parent).
+      BlockManager.setBlockParent(block, null);
+    }
   }
 
   /**

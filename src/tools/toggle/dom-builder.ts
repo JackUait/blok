@@ -85,6 +85,8 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
   const childContainerElement = document.createElement('div');
   childContainerElement.className = TOGGLE_CHILDREN_STYLES;
   childContainerElement.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+  childContainerElement.id = `toggle-children-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  arrowElement.setAttribute('aria-controls', childContainerElement.id);
 
   wrapper.appendChild(headerRow);
   wrapper.appendChild(bodyPlaceholderElement);

@@ -179,6 +179,33 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @param currentBlock - the block where Enter was pressed
    * @returns the block that should receive focus after the operation
    */
+  /**
+   * If the current block is an empty last child of a toggle, promotes it to a
+   * sibling after the toggle (like pressing Enter on an empty last list item).
+   * Returns the promoted block, or null if no promotion occurred.
+   */
+  private promoteLastEmptyToggleChild(currentBlock: Block): Block | null {
+    if (!currentBlock.isEmpty || currentBlock.parentId == null || this.isCurrentBlockInsideTableCell) {
+      return null;
+    }
+
+    const parentBlock = this.Blok.BlockManager.getBlockById(currentBlock.parentId);
+    const isLastChild = parentBlock !== undefined &&
+      parentBlock.contentIds[parentBlock.contentIds.length - 1] === currentBlock.id;
+
+    if (!isLastChild || parentBlock === undefined) {
+      return null;
+    }
+
+    this.Blok.BlockManager.setBlockParent(currentBlock, null);
+    const parentIndex = this.Blok.BlockManager.getBlockIndex(parentBlock);
+    const currentIndex = this.Blok.BlockManager.getBlockIndex(currentBlock);
+
+    this.Blok.BlockManager.move(parentIndex + 1, currentIndex, false);
+
+    return currentBlock;
+  }
+
   private createBlockOnEnter(currentBlock: Block): Block {
     // Case 1: Caret at start - insert block above
     if (currentBlock.currentInput !== undefined && isCaretAtStartOfInput(currentBlock.currentInput) && !currentBlock.hasMedia && (currentBlock.parentId === null || !currentBlock.isEmpty)) {
@@ -197,6 +224,17 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     // Case 2: Caret at end - insert block below
     if (currentBlock.currentInput && isCaretAtEndOfInput(currentBlock.currentInput)) {
+      /**
+       * When the current block is an empty last child of a toggle, pressing Enter
+       * should exit the toggle — promote the block to be a sibling after the toggle,
+       * similar to how pressing Enter on an empty list item exits the list.
+       */
+      const promotedBlock = this.promoteLastEmptyToggleChild(currentBlock);
+
+      if (promotedBlock !== null) {
+        return promotedBlock;
+      }
+
       const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(this.Blok.BlockManager.currentBlockIndex + 1);
 
       /**
@@ -262,6 +300,26 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     if (!isFirstInputFocused) {
       Caret.navigatePrevious();
+
+      return;
+    }
+
+    /**
+     * When the caret is at the start of a toggle child block, Backspace should
+     * promote (un-nest) the block to be a sibling after the toggle parent,
+     * equivalent to Shift+Tab. Skip this for table cell blocks — they use
+     * a separate parent-child mechanism that should not be affected.
+     */
+    if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell) {
+      const parentBlock = BlockManager.getBlockById(currentBlock.parentId);
+
+      if (parentBlock !== undefined) {
+        BlockManager.setBlockParent(currentBlock, null);
+        const parentIndex = BlockManager.getBlockIndex(parentBlock);
+        const currentIndex = BlockManager.getBlockIndex(currentBlock);
+
+        BlockManager.move(parentIndex + 1, currentIndex, false);
+      }
 
       return;
     }

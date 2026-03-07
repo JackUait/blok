@@ -55,7 +55,7 @@ describe('DragPreview', () => {
         name: 'toggle',
         stretched: false,
         contentIds: ['child-1', 'child-2', 'child-3'],
-      } as unknown as import('../../../../../../src/components/block').Block;
+      } as unknown as Block;
 
       const preview = dragPreview.createSingle(contentElement, false, block);
 
@@ -75,7 +75,7 @@ describe('DragPreview', () => {
         name: 'paragraph',
         stretched: false,
         contentIds: [],
-      } as unknown as import('../../../../../../src/components/block').Block;
+      } as unknown as Block;
 
       const preview = dragPreview.createSingle(contentElement, false, block);
 

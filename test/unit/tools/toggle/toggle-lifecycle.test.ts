@@ -100,6 +100,74 @@ describe('Toggle Lifecycle', () => {
 
       expect(child.holder.classList.contains('hidden')).toBe(false);
     });
+
+    // Fix 3: aria-hidden on childContainer when collapsed
+    it('sets aria-hidden="true" on childContainer when isOpen = false', () => {
+      const child = createMockChild();
+      const api = createMockApi([child]);
+      const childContainer = document.createElement('div');
+
+      updateChildrenVisibility(api, 'block-1', false, childContainer);
+
+      expect(childContainer.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('removes aria-hidden from childContainer when isOpen = true', () => {
+      const child = createMockChild();
+      child.holder.classList.add('hidden');
+      const api = createMockApi([child]);
+      const childContainer = document.createElement('div');
+      childContainer.setAttribute('aria-hidden', 'true');
+
+      updateChildrenVisibility(api, 'block-1', true, childContainer);
+
+      expect(childContainer.getAttribute('aria-hidden')).not.toBe('true');
+    });
+
+    // Fix 4: Focus moves to arrow when collapsing with focus inside children
+    it('moves focus to arrowElement when collapsing with focus inside childContainer', () => {
+      const child = createMockChild();
+      const innerInput = document.createElement('input');
+      child.holder.appendChild(innerInput);
+
+      const api = createMockApi([child]);
+      const childContainer = document.createElement('div');
+      const arrowElement = document.createElement('span');
+      arrowElement.setAttribute('tabindex', '0');
+
+      document.body.appendChild(childContainer);
+      document.body.appendChild(arrowElement);
+      childContainer.appendChild(child.holder);
+      innerInput.focus();
+
+      expect(innerInput).toHaveFocus();
+
+      updateChildrenVisibility(api, 'block-1', false, childContainer, arrowElement);
+
+      expect(arrowElement).toHaveFocus();
+
+      document.body.removeChild(childContainer);
+      document.body.removeChild(arrowElement);
+    });
+
+    it('does not move focus when collapsing without focus inside childContainer', () => {
+      const child = createMockChild();
+      const api = createMockApi([child]);
+      const childContainer = document.createElement('div');
+      const arrowElement = document.createElement('span');
+      arrowElement.setAttribute('tabindex', '0');
+
+      // Focus somewhere else
+      const otherEl = document.createElement('input');
+      document.body.appendChild(otherEl);
+      otherEl.focus();
+
+      updateChildrenVisibility(api, 'block-1', false, childContainer, arrowElement);
+
+      expect(arrowElement).not.toHaveFocus();
+
+      document.body.removeChild(otherEl);
+    });
   });
 
   describe('updateArrowState', () => {

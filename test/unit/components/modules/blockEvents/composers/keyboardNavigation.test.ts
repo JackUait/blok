@@ -311,6 +311,84 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
+    it('promotes empty last toggle child to sibling after toggle on Enter', () => {
+      const toggleParentId = 'toggle-parent';
+      const childBlockId = 'child-block';
+
+      const toggleParent = createBlock({
+        id: toggleParentId,
+        contentIds: [childBlockId],
+      });
+
+      const emptyChildBlock = createBlock({
+        id: childBlockId,
+        isEmpty: true,
+        parentId: toggleParentId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+          input.contentEditable = 'true';
+          return input;
+        })(),
+      });
+
+      const setBlockParent = vi.fn();
+      const move = vi.fn();
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === toggleParent) return 0;
+        if (block === emptyChildBlock) return 1;
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === toggleParentId) return toggleParent;
+        if (id === childBlockId) return emptyChildBlock;
+        return undefined;
+      });
+      const setToBlock = vi.fn();
+      const moveAndOpen = vi.fn();
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyChildBlock,
+          currentBlockIndex: 1,
+          insertDefaultBlockAtIndex: vi.fn(),
+          split: vi.fn(),
+          setBlockParent,
+          move,
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen,
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // The child block should be un-parented from the toggle
+      expect(setBlockParent).toHaveBeenCalledWith(emptyChildBlock, null);
+      // The block should be moved after the toggle parent
+      expect(move).toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
     it('inserts block below (not above) when the current block is empty', () => {
       const emptyBlock = createBlock({ isEmpty: true });
       const insertedBlock = createBlock({ id: 'inserted-block' });
@@ -615,6 +693,74 @@ describe('KeyboardNavigation', () => {
 
       expect(close).toHaveBeenCalled();
       expect(mergeBlocks).toHaveBeenCalledWith(previousBlock, mockBlock);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    it('promotes toggle child to sibling after toggle on Backspace at start of block', () => {
+      const toggleParentId = 'toggle-parent';
+      const childBlockId = 'child-block';
+
+      const toggleParent = createBlock({
+        id: toggleParentId,
+        contentIds: [childBlockId],
+      });
+
+      const childBlock = createBlock({
+        id: childBlockId,
+        isEmpty: false,
+        parentId: toggleParentId,
+      });
+
+      const setBlockParent = vi.fn();
+      const move = vi.fn();
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === toggleParent) return 0;
+        if (block === childBlock) return 1;
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === toggleParentId) return toggleParent;
+        if (id === childBlockId) return childBlock;
+        return undefined;
+      });
+      const close = vi.fn();
+      const setToBlock = vi.fn();
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: childBlock,
+          previousBlock: toggleParent,
+          currentBlockIndex: 1,
+          setBlockParent,
+          move,
+          getBlockIndex,
+          getBlockById,
+          removeBlock: vi.fn(),
+          mergeBlocks: vi.fn(() => Promise.resolve()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          navigatePrevious: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      // Block should be un-parented from the toggle
+      expect(setBlockParent).toHaveBeenCalledWith(childBlock, null);
+      // Block should be repositioned after the toggle parent
+      expect(move).toHaveBeenCalled();
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
       isCaretAtStartOfInputSpy.mockRestore();

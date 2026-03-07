@@ -249,7 +249,7 @@ export class ToggleItem implements BlockTool {
       return;
     }
 
-    updateChildrenVisibility(this.api, this.blockId, this._isOpen, this._childContainerElement);
+    updateChildrenVisibility(this.api, this.blockId, this._isOpen, this._childContainerElement, this._arrowElement);
   }
 
   private updateBodyPlaceholderVisibility(): void {

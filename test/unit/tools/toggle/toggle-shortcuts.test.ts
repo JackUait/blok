@@ -205,10 +205,14 @@ describe('ToggleShortcuts', () => {
 
     // Clean up shortcuts that may be left over
     Shortcuts.remove(document, 'CMD+ALT+T');
+    Shortcuts.remove(document, 'CMD+SHIFT+[');
+    Shortcuts.remove(document, 'CMD+ALT+SHIFT+T');
   });
 
   afterEach(() => {
     Shortcuts.remove(document, 'CMD+ALT+T');
+    Shortcuts.remove(document, 'CMD+SHIFT+[');
+    Shortcuts.remove(document, 'CMD+ALT+SHIFT+T');
     vi.restoreAllMocks();
   });
 
@@ -655,6 +659,452 @@ describe('ToggleShortcuts', () => {
       shortcuts.unregister();
       wrapper.remove();
       outsideElement.remove();
+    });
+  });
+
+  describe('CMD+SHIFT+[ — toggle current block', () => {
+    /**
+     * Helper to create a mock block that looks like a toggle block.
+     */
+    const createMockToggleBlock = (id: string, isOpen: boolean, parentId: string | null = null): BlockAPI => {
+      const holder = document.createElement('div');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
+      holder.appendChild(wrapper);
+
+      return {
+        id,
+        name: TOOL_NAME,
+        holder,
+        parentId,
+        call: vi.fn(),
+      } as unknown as BlockAPI;
+    };
+
+    const createMockParagraphBlock = (id: string, parentId: string | null = null): BlockAPI => {
+      const holder = document.createElement('div');
+
+      return {
+        id,
+        name: 'paragraph',
+        holder,
+        parentId,
+        call: vi.fn(),
+      } as unknown as BlockAPI;
+    };
+
+    it('collapses the toggle block that currently has focus (block IS a toggle)', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggleBlock = createMockToggleBlock('t1', true);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(0);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(toggleBlock);
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'BracketLeft',
+        key: '[',
+        metaKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      expect(toggleBlock.call).toHaveBeenCalledWith('collapse');
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('expands a collapsed toggle block that currently has focus', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggleBlock = createMockToggleBlock('t1', false);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(0);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(toggleBlock);
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'BracketLeft',
+        key: '[',
+        metaKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      expect(toggleBlock.call).toHaveBeenCalledWith('expand');
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('toggles the parent toggle when focus is on a child block inside a toggle', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const parentToggle = createMockToggleBlock('parent', true, null);
+      const childParagraph = createMockParagraphBlock('child', 'parent');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(1);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockImplementation((index: number) => {
+        return [parentToggle, childParagraph][index];
+      });
+      (mockAPI.blocks as unknown as Record<string, unknown>).getById = vi.fn().mockImplementation((id: string) => {
+        return id === 'parent' ? parentToggle : null;
+      });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'BracketLeft',
+        key: '[',
+        metaKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // The parent toggle should be called, not the child paragraph
+      expect(parentToggle.call).toHaveBeenCalledWith('collapse');
+      expect(childParagraph.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('does nothing when the current block is not a toggle and has no parent', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const paragraphBlock = createMockParagraphBlock('p1', null);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(0);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(paragraphBlock);
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'BracketLeft',
+        key: '[',
+        metaKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      expect(() => {
+        document.dispatchEvent(event);
+      }).not.toThrow();
+
+      expect(paragraphBlock.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('ignores the shortcut when the target is outside the editor wrapper', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggleBlock = createMockToggleBlock('t1', true);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(0);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockReturnValue(toggleBlock);
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const outsideElement = document.createElement('div');
+      document.body.appendChild(outsideElement);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'BracketLeft',
+        key: '[',
+        metaKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: outsideElement, writable: false });
+
+      document.dispatchEvent(event);
+
+      expect(toggleBlock.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+      outsideElement.remove();
+    });
+  });
+
+  describe('CMD+ALT+SHIFT+T — scoped expand/collapse', () => {
+    /**
+     * Helper to create a mock block that looks like a toggle block.
+     */
+    const createMockToggleBlock = (id: string, isOpen: boolean, parentId: string | null = null): BlockAPI => {
+      const holder = document.createElement('div');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
+      holder.appendChild(wrapper);
+
+      return {
+        id,
+        name: TOOL_NAME,
+        holder,
+        parentId,
+        call: vi.fn(),
+      } as unknown as BlockAPI;
+    };
+
+    const createMockParagraphBlock = (id: string, parentId: string | null = null): BlockAPI => {
+      const holder = document.createElement('div');
+
+      return {
+        id,
+        name: 'paragraph',
+        holder,
+        parentId,
+        call: vi.fn(),
+      } as unknown as BlockAPI;
+    };
+
+    it('collapses only descendant toggles of the current toggle when cursor is on a toggle', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      // root toggle (expanded) contains two child toggles (both expanded)
+      const rootToggle = createMockToggleBlock('root', true, null);
+      const childToggle1 = createMockToggleBlock('child1', true, 'root');
+      const childToggle2 = createMockToggleBlock('child2', true, 'root');
+      const unrelatedToggle = createMockToggleBlock('unrelated', true, null);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(0);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(4);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockImplementation((index: number) => {
+        return [rootToggle, childToggle1, childToggle2, unrelatedToggle][index];
+      });
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockImplementation((id: string) => {
+        if (id === 'root') {
+          return [childToggle1, childToggle2];
+        }
+        return [];
+      });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // Only the children of rootToggle should be collapsed (they are toggles)
+      expect(childToggle1.call).toHaveBeenCalledWith('collapse');
+      expect(childToggle2.call).toHaveBeenCalledWith('collapse');
+      // The unrelated toggle should NOT be touched
+      expect(unrelatedToggle.call).not.toHaveBeenCalled();
+      // The root toggle itself should NOT be collapsed (we only collapse descendants)
+      expect(rootToggle.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('expands only descendant toggles when any child toggle is collapsed', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const rootToggle = createMockToggleBlock('root', true, null);
+      const childToggle1 = createMockToggleBlock('child1', false, 'root'); // collapsed
+      const childToggle2 = createMockToggleBlock('child2', true, 'root');  // expanded
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(0);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(3);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockImplementation((index: number) => {
+        return [rootToggle, childToggle1, childToggle2][index];
+      });
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockImplementation((id: string) => {
+        if (id === 'root') {
+          return [childToggle1, childToggle2];
+        }
+        return [];
+      });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // Since one child is collapsed, all children should expand
+      expect(childToggle1.call).toHaveBeenCalledWith('expand');
+      expect(childToggle2.call).toHaveBeenCalledWith('expand');
+      expect(rootToggle.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('falls back to page-wide toggleAll when cursor is not inside any toggle', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const toggle1 = createMockToggleBlock('t1', true, null);
+      const toggle2 = createMockToggleBlock('t2', true, null);
+      const paragraphAtRoot = createMockParagraphBlock('p1', null);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(3);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockImplementation((index: number) => {
+        return [toggle1, toggle2, paragraphAtRoot][index];
+      });
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // Falls back to page-wide: all toggles are expanded so collapse all
+      expect(toggle1.call).toHaveBeenCalledWith('collapse');
+      expect(toggle2.call).toHaveBeenCalledWith('collapse');
+      expect(paragraphAtRoot.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
+    });
+
+    it('uses root ancestor toggle when cursor is inside a nested child block', async () => {
+      const { ToggleShortcuts } = await import('../../../../src/tools/toggle/toggle-shortcuts');
+
+      const rootToggle = createMockToggleBlock('root', true, null);
+      const childToggle = createMockToggleBlock('childToggle', true, 'root');
+      const grandchildParagraph = createMockParagraphBlock('grandchild', 'childToggle');
+
+      const mockAPI = createMockAPI();
+      // cursor is on grandchild
+      (mockAPI.blocks as unknown as Record<string, unknown>).getCurrentBlockIndex = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlocksCount = vi.fn().mockReturnValue(3);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockByIndex = vi.fn().mockImplementation((index: number) => {
+        return [rootToggle, childToggle, grandchildParagraph][index];
+      });
+      (mockAPI.blocks as unknown as Record<string, unknown>).getById = vi.fn().mockImplementation((id: string) => {
+        if (id === 'root') return rootToggle;
+        if (id === 'childToggle') return childToggle;
+        return null;
+      });
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockImplementation((id: string) => {
+        if (id === 'root') return [childToggle, grandchildParagraph];
+        if (id === 'childToggle') return [grandchildParagraph];
+        return [];
+      });
+
+      const wrapper = document.createElement('div');
+      document.body.appendChild(wrapper);
+
+      const shortcuts = new ToggleShortcuts(mockAPI, wrapper);
+      shortcuts.register();
+
+      const child = document.createElement('div');
+      wrapper.appendChild(child);
+
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyT',
+        key: 'T',
+        metaKey: true,
+        altKey: true,
+        shiftKey: true,
+      });
+      Object.defineProperty(event, 'target', { value: child, writable: false });
+
+      document.dispatchEvent(event);
+
+      // childToggle is a descendant toggle of root and should be collapsed
+      expect(childToggle.call).toHaveBeenCalledWith('collapse');
+      // rootToggle itself is not a descendant, should NOT be touched
+      expect(rootToggle.call).not.toHaveBeenCalled();
+
+      shortcuts.unregister();
+      wrapper.remove();
     });
   });
 });

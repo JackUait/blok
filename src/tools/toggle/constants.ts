@@ -32,7 +32,7 @@ export const TOGGLE_WRAPPER_STYLES = 'flex items-start';
 /**
  * Styles for the toggle arrow button
  */
-export const ARROW_STYLES = 'flex-shrink-0 w-6 h-6 flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-colors duration-200 ease-in-out mt-px focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none';
+export const ARROW_STYLES = 'flex-shrink-0 p-[10px] flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-colors duration-200 ease-in-out mt-px focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none';
 
 /**
  * SVG icon for the toggle arrow
@@ -53,7 +53,7 @@ export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 py-1 text-gray-text text-sm 
  * Styles for the children container element.
  * pl-7 (28px) aligns children with the toggle text (arrow is w-6=24px + gap).
  */
-export const TOGGLE_CHILDREN_STYLES = 'pl-7';
+export const TOGGLE_CHILDREN_STYLES = 'pl-7 border-l-2 border-gray-100 ml-3';
 
 /**
  * Data attributes specific to the toggle tool

@@ -591,6 +591,124 @@ describe('ToggleItem', () => {
     });
   });
 
+  describe('accessibility and visual fixes', () => {
+    // Fix 1: Touch target minimum 44px
+    it('arrow element has p-[10px] padding class for 44px touch target', async () => {
+      const { buildArrow } = await import('../../../../src/tools/toggle/dom-builder');
+      const arrow = buildArrow(true, null);
+
+      expect(arrow.className).toContain('p-[10px]');
+      expect(arrow.className).not.toContain('w-6');
+      expect(arrow.className).not.toContain('h-6');
+    });
+
+    // Fix 2: aria-controls on arrow pointing to child container
+    it('arrow element has aria-controls attribute pointing to child container id', async () => {
+      const { buildToggleItem } = await import('../../../../src/tools/toggle/dom-builder');
+      const result = buildToggleItem({
+        data: { text: '' },
+        readOnly: false,
+        isOpen: true,
+        keydownHandler: null,
+        onArrowClick: null,
+        onBodyPlaceholderClick: null,
+      });
+
+      const ariaControls = result.arrowElement.getAttribute('aria-controls');
+
+      expect(ariaControls).toBeTruthy();
+      expect(result.childContainerElement.id).toBeTruthy();
+      expect(ariaControls).toBe(result.childContainerElement.id);
+    });
+
+    // Fix 3: aria-hidden on collapsed container
+    it('child container has aria-hidden="true" when toggle is collapsed', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+      // Toggle starts expanded — collapse it
+      arrow.click();
+
+      const childContainer = element.querySelector('[data-blok-toggle-children]') as HTMLElement;
+
+      expect(childContainer.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('child container has aria-hidden removed when toggle is expanded', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+      // Collapse then re-expand
+      arrow.click(); // collapse
+      arrow.click(); // expand
+
+      const childContainer = element.querySelector('[data-blok-toggle-children]') as HTMLElement;
+
+      expect(childContainer.getAttribute('aria-hidden')).not.toBe('true');
+    });
+
+    // Fix 4: Focus moved to arrow when collapsing with focus inside
+    it('moves focus to arrow when toggle collapses while focus is inside a child', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const childHolder = document.createElement('div');
+      const innerInput = document.createElement('input');
+      childHolder.appendChild(innerInput);
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([
+        { id: 'child-1', holder: childHolder },
+      ]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      document.body.appendChild(element);
+      toggle.rendered();
+
+      // Focus inside the child
+      innerInput.focus();
+      expect(innerInput).toHaveFocus();
+
+      // Collapse the toggle
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+      arrow.click();
+
+      expect(arrow).toHaveFocus();
+
+      document.body.removeChild(element);
+    });
+
+    // Fix 5: Indent guide lines via border-l class
+    it('toggle children container has border-l-2 class for indent guide', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const childContainer = element.querySelector('[data-blok-toggle-children]') as HTMLElement;
+
+      expect(childContainer.className).toContain('border-l-2');
+    });
+  });
+
   describe('buildToggleItem() - childContainerElement', () => {
     it('returns a childContainerElement property', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');

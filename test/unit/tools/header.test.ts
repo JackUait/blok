@@ -24,6 +24,11 @@ const createMockAPI = (): API => ({
   blocks: {
     getChildren: vi.fn().mockReturnValue([]),
   },
+  events: {
+    on: vi.fn(),
+    off: vi.fn(),
+    emit: vi.fn(),
+  },
 } as unknown as API);
 
 const createHeaderOptions = (

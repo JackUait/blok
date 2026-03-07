@@ -57,6 +57,8 @@ const KEY_CODES: Record<string, string> = {
   'INSERT': 'Insert',
   'DELETE': 'Delete',
   '.': 'Period',
+  '[': 'BracketLeft',
+  ']': 'BracketRight',
 };
 
 type ModifierKey = keyof typeof SUPPORTED_COMMANDS;

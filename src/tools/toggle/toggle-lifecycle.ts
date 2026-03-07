@@ -72,14 +72,22 @@ export const updateArrowState = (arrowEl: HTMLElement, wrapper: HTMLElement, isO
  * @param api - Blok API instance
  * @param blockId - The toggle block's id
  * @param isOpen - Whether the toggle is currently open (expanded)
+ * @param childContainer - Optional child container element for aria-hidden management
+ * @param arrowElement - Optional arrow element to receive focus when collapsing with focus inside children
  */
 export const updateChildrenVisibility = (
   api: API,
   blockId: string,
   isOpen: boolean,
-  childContainer?: HTMLElement | null
+  childContainer?: HTMLElement | null,
+  arrowElement?: HTMLElement | null
 ): void => {
   const children = api.blocks.getChildren(blockId);
+
+  // Before hiding, check if focus is inside the child container and move it to arrow
+  if (!isOpen && childContainer && arrowElement && childContainer.contains(document.activeElement)) {
+    arrowElement.focus();
+  }
 
   for (const child of children) {
     if (childContainer && child.holder.parentElement !== childContainer) {
@@ -90,6 +98,14 @@ export const updateChildrenVisibility = (
       child.holder.classList.remove('hidden');
     } else {
       child.holder.classList.add('hidden');
+    }
+  }
+
+  if (childContainer) {
+    if (isOpen) {
+      childContainer.removeAttribute('aria-hidden');
+    } else {
+      childContainer.setAttribute('aria-hidden', 'true');
     }
   }
 };

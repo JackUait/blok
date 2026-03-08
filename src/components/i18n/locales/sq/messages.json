@@ -69,5 +69,5 @@
   "a11y.movedDown": "Blloku u lëviz poshtë në pozicionin {position} nga {total}",
   "a11y.atTop": "Blloku është në krye, nuk mund të lëvizet lart",
   "a11y.atBottom": "Blloku është në fund, nuk mund të lëvizet poshtë",
-  "blockSettings.convertWithChildrenWarning": "Ky bllok ka {count} bllokë të ndërlidhur. Konvertimi i tij do t'i zhvendosë ato në nivelin e sipërm. Vazhdoni?"
+  "blockSettings.convertWithChildrenWarning": "Ky bllok ka {count} bllokë të ndërfutur. Konvertimi i tij do t'i zhvendosë ato në nivelin e sipërm. Vazhdoni?"
 }

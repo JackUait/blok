@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "ረድፎችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
   "tools.table.clickToAddColumn": "አዲስ አምድ ለመጨመር ጠቅ ያድርጉ",
   "tools.table.dragToAddRemoveColumns": "አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
-  "blockSettings.convertWithChildrenWarning": "ይህ ብሎክ {count} የተከተቱ ብሎኮች አሉት። ሲቀይሩ ወደ ከፍተኛ ደረጃ ይዛወራሉ። መቀጠል ይፈልጋሉ?"
+  "blockSettings.convertWithChildrenWarning": "ይህ ብሎክ {count} የተካተቱ ብሎኮች አሉት። ሲቀይሩ ወደ ከፍተኛ ደረጃ ይዛወራሉ። መቀጠል ይፈልጋሉ?"
 }

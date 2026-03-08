@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "ރޯ އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
   "tools.table.clickToAddColumn": "އާ ކޮލަމެއް އިތުރުކުރަން ކްލިކް ކުރޭ",
   "tools.table.dragToAddRemoveColumns": "ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
-  "blockSettings.convertWithChildrenWarning": "މި ބްލޮކްގައި {count} ނެސްޓެޑް ބްލޮކް އެބަހުއްޓެވެ. ބަދަލު ކުރުމަށް ހުރިހާ ނެސްޓެޑް ބްލޮކްތައް ފެންވަރުގެ ލެވެލަށް ގެނެވޭނެ. ކުރިޔަށް ދާންވީތަ؟"
+  "blockSettings.convertWithChildrenWarning": "މި ބްލޮކްގައި {count} ނެސްޓެޑް ބްލޮކް އެބަހުއްޓެވެ. ބަދަލު ކުރުމުން ނެސްޓެޑް ބްލޮކްތައް އެންމެ މަތީ ލެވެލަށް ގެނެވޭނެ. ކުރިޔަށް ދާންވީތަ?"
 }

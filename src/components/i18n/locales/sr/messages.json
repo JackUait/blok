@@ -69,5 +69,5 @@
   "a11y.movedDown": "Блок премештен доле на позицију {position} од {total}",
   "a11y.atTop": "Блок је на врху, не може се померити горе",
   "a11y.atBottom": "Блок је на дну, не може се померити доле",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Овај блок садржи {count} угнежђених блокова. Конверзијом ће бити премештени на највиши ниво. Наставити?"
 }

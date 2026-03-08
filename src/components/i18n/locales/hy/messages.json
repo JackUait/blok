@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Քաշեք տողեր ավելացնելու կամ հեռացնելու",
   "tools.table.clickToAddColumn": "Սեղմեք նոր սյունակ ավելացնելու",
   "tools.table.dragToAddRemoveColumns": "Քաշեք սյունակներ ավելացնելու կամ հեռացնելու",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Այս բլոկն ունի {count} ներդրված բլոկ: Փոխարկելու դեպքում դրանք կտեղափոխվեն բարձրագույն մակարդակ: Շարունակե՞լ:"
 }

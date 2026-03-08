@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "ลากเพื่อเพิ่มหรือลบแถว",
   "tools.table.clickToAddColumn": "คลิกเพื่อเพิ่มคอลัมน์ใหม่",
   "tools.table.dragToAddRemoveColumns": "ลากเพื่อเพิ่มหรือลบคอลัมน์",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "บล็อกนี้มี {count} บล็อกที่ซ้อนอยู่ การแปลงจะย้ายบล็อกเหล่านั้นขึ้นสู่ระดับบนสุด ต้องการดำเนินการต่อไหม?"
 }

@@ -69,5 +69,5 @@
   "a11y.movedDown": "בלאָק באַוועגט אַראָפּ צו פּאָזיציע {position} פֿון {total}",
   "a11y.atTop": "בלאָק איז אויבן, קען נישט אַרויפֿגיין",
   "a11y.atBottom": "בלאָק איז אונטן, קען נישט אַראָפּגיין",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "דער בלאָק האָט {count} אַרײַנגענעסטלטע בלאָקן. זיין איבערמאַכן וועט זיי אַרױפֿרוקן צום ערשטן מדרגה. פֿאָרזעצן?"
 }

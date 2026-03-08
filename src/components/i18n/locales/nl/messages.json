@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Sleep om rijen toe te voegen of te verwijderen",
   "tools.table.clickToAddColumn": "Klik om een nieuwe kolom toe te voegen",
   "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Dit blok bevat {count} geneste blokken. Door het te converteren worden ze naar het hoogste niveau verplaatst. Wilt u doorgaan?"
 }

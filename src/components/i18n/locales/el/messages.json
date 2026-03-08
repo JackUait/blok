@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Σύρετε για προσθήκη ή αφαίρεση γραμμών",
   "tools.table.clickToAddColumn": "Κλικ για προσθήκη στήλης",
   "tools.table.dragToAddRemoveColumns": "Σύρετε για προσθήκη ή αφαίρεση στηλών",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Αυτό το μπλοκ έχει {count} ένθετα μπλοκ. Η μετατροπή του θα τα μετακινήσει στο ανώτατο επίπεδο. Συνέχεια;"
 }

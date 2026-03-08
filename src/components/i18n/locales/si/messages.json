@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "පේළි එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
   "tools.table.clickToAddColumn": "නව තීරුවක් එක් කිරීමට ක්ලික් කරන්න",
   "tools.table.dragToAddRemoveColumns": "තීරු එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "මෙම බ්ලොක් එකේ {count} කූඩු කළ බ්ලොක් ඇත. පරිවර්තනය කිරීමෙන් ඒවා ඉහළ මට්ටමට ගෙන යනු ලැබේ. ඉදිරියට යන්නද?"
 }

@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Prevucite za dodavanje ili uklanjanje redova",
   "tools.table.clickToAddColumn": "Kliknite za dodavanje nove kolone",
   "tools.table.dragToAddRemoveColumns": "Prevucite za dodavanje ili uklanjanje kolona",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Ovaj blok sadrži {count} ugniježđenih blokova. Konverzijom će biti premješteni na najviši nivo. Nastaviti?"
 }

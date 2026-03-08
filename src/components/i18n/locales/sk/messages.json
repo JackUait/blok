@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Potiahnutím pridáte alebo odoberiete riadky",
   "tools.table.clickToAddColumn": "Kliknutím pridáte nový stĺpec",
   "tools.table.dragToAddRemoveColumns": "Potiahnutím pridáte alebo odoberiete stĺpce",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Tento blok obsahuje {count} vnorených blokov. Po konverzii budú presunuté na najvyššiu úroveň. Pokračovať?"
 }

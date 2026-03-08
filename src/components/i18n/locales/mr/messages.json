@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "पंक्ती जोडण्यासाठी किंवा काढण्यासाठी ओढा",
   "tools.table.clickToAddColumn": "नवीन स्तंभ जोडण्यासाठी क्लिक करा",
   "tools.table.dragToAddRemoveColumns": "स्तंभ जोडण्यासाठी किंवा काढण्यासाठी ओढा",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "या ब्लॉकमध्ये {count} नेस्टेड ब्लॉक आहेत. रूपांतरित केल्यास ते शीर्ष स्तरावर येतील. पुढे जायचे का?"
 }

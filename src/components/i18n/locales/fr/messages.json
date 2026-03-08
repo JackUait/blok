@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Glisser pour ajouter ou supprimer des lignes",
   "tools.table.clickToAddColumn": "Cliquer pour ajouter une colonne",
   "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer\u00a0?"
 }

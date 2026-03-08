@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "వరుసలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
   "tools.table.clickToAddColumn": "కొత్త స్తంభం జోడించడానికి నొక్కండి",
   "tools.table.dragToAddRemoveColumns": "స్తంభాలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "ఈ బ్లాక్‌లో {count} నెస్టెడ్ బ్లాక్‌లు ఉన్నాయి. మార్చినట్లయితే అవి అగ్రస్థాయికి తరలించబడతాయి. కొనసాగించాలా?"
 }

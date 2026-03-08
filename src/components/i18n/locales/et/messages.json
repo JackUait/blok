@@ -69,5 +69,5 @@
   "a11y.movedDown": "Plokk teisaldatud alla positsioonile {position}/{total}",
   "a11y.atTop": "Plokk on üleval, ei saa üles liigutada",
   "a11y.atBottom": "Plokk on all, ei saa alla liigutada",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Sellel plokil on {count} pesastatud plokki. Teisendamisel tõstetakse need ülemisele tasemele. Jätkan?"
 }

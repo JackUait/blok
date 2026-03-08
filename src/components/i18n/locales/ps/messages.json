@@ -69,5 +69,5 @@
   "a11y.movedDown": "بلاک ښکته موقعیت {position} له {total} ته ولاړ",
   "a11y.atTop": "بلاک په سر کې دی، پورته نشي تللی",
   "a11y.atBottom": "بلاک په پای کې دی، ښکته نشي تللی",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "دا بلاک {count} ننوتي بلاکونه لري. د هغه بدلول به دوی لوړ کچې ته وړاندې کړي. ادامه ورکوئ؟"
 }

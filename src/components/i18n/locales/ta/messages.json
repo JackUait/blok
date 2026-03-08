@@ -69,5 +69,5 @@
   "a11y.movedDown": "தொகுதி {total} இல் {position} நிலைக்கு கீழே நகர்த்தப்பட்டது",
   "a11y.atTop": "தொகுதி மேலே உள்ளது, மேலே நகர்த்த முடியாது",
   "a11y.atBottom": "தொகுதி கீழே உள்ளது, கீழே நகர்த்த முடியாது",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "இந்த தொகுதியில் {count} உட்பொதிக்கப்பட்ட தொகுதிகள் உள்ளன. மாற்றினால் அவை மேல் நிலைக்கு நகர்த்தப்படும். தொடரவா?"
 }

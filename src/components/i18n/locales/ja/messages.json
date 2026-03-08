@@ -69,5 +69,5 @@
   "a11y.movedDown": "ブロックを下に移動しました（{total}個中{position}番目）",
   "a11y.atTop": "一番上のため、上に移動できません",
   "a11y.atBottom": "一番下のため、下に移動できません",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "このブロックには {count} 個のネストされたブロックがあります。変換すると、それらはトップレベルに移動されます。続けますか？"
 }

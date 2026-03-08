@@ -69,5 +69,5 @@
   "a11y.movedDown": "Blok dipindahkan ke bawah, posisi {position} dari {total}",
   "a11y.atTop": "Blok sudah di paling atas, tidak bisa dipindahkan ke atas",
   "a11y.atBottom": "Blok sudah di paling bawah, tidak bisa dipindahkan ke bawah",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Blok ini memiliki {count} blok bersarang. Mengubahnya akan memindahkan blok-blok tersebut ke tingkat teratas. Lanjutkan?"
 }

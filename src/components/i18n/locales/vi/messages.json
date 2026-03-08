@@ -69,5 +69,5 @@
   "a11y.movedDown": "Khối đã di chuyển xuống đến vị trí {position} trong {total}",
   "a11y.atTop": "Khối đang ở trên cùng, không thể di chuyển lên",
   "a11y.atBottom": "Khối đang ở dưới cùng, không thể di chuyển xuống",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Khối này có {count} khối lồng nhau. Khi chuyển đổi, các khối đó sẽ được đưa lên cấp cao nhất. Tiếp tục?"
 }

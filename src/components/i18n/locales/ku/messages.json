@@ -69,5 +69,5 @@
   "a11y.movedDown": "بلۆک چووە خوارەوە بۆ شوێن {position} لە {total}",
   "a11y.atTop": "بلۆک لە سەرەوەیە، ناتوانێت بچێتە سەرەوە",
   "a11y.atBottom": "بلۆک لە خوارەوەیە، ناتوانێت بچێتە خوارەوە",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "ئەم بلۆکە {count} بلۆکی ناوخۆی هەیە. گۆڕینەکە ئەوانەی بۆ ئاستی سەرەوە دەبات. بەردەوام بی؟"
 }

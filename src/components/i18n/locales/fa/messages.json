@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "برای افزودن یا حذف سطرها بکشید",
   "tools.table.clickToAddColumn": "برای افزودن ستون جدید کلیک کنید",
   "tools.table.dragToAddRemoveColumns": "برای افزودن یا حذف ستون‌ها بکشید",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "این بلوک دارای {count} بلوک تو در تو است. تبدیل آن، بلوک‌های تو در تو را به سطح اصلی منتقل می‌کند. آیا می‌خواهید ادامه دهید؟"
 }

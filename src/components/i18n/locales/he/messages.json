@@ -69,5 +69,5 @@
   "a11y.movedDown": "הבלוק הועבר למטה למיקום {position} מתוך {total}",
   "a11y.atTop": "הבלוק בראש הרשימה, לא ניתן להעלות",
   "a11y.atBottom": "הבלוק בתחתית הרשימה, לא ניתן להוריד",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "לבלוק זה יש {count} בלוקים מקוננים. המרתו תעביר אותם לרמה העליונה. להמשיך?"
 }

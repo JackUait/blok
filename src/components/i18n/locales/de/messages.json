@@ -69,5 +69,5 @@
   "a11y.movedDown": "Block nach unten verschoben, Position {position} von {total}",
   "a11y.atTop": "Block ist ganz oben, kann nicht weiter nach oben verschoben werden",
   "a11y.atBottom": "Block ist ganz unten, kann nicht weiter nach unten verschoben werden",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"
 }

@@ -69,5 +69,5 @@
   "a11y.movedDown": "Block flyttat nedåt till position {position} av {total}",
   "a11y.atTop": "Blocket är högst upp, kan inte flyttas uppåt",
   "a11y.atBottom": "Blocket är längst ner, kan inte flyttas nedåt",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Det här blocket innehåller {count} nästlade block. Om du konverterar det flyttas de till den översta nivån. Vill du fortsätta?"
 }

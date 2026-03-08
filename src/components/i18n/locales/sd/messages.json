@@ -69,5 +69,5 @@
   "a11y.movedDown": "بلاڪ ھيٺ پوزيشن {position} مان {total} تي ويو",
   "a11y.atTop": "بلاڪ مٿي آھي، مٿي نٿو وڃي سگھي",
   "a11y.atBottom": "بلاڪ ھيٺ آھي، ھيٺ نٿو وڃي سگھي",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "هن بلاڪ ۾ {count} نيسٽيڊ بلاڪ آهن. ان کي تبديل ڪرڻ سان اهي مٿيان سطح تي اچي ويندا. ڇا توهان جاري رکڻ چاهيو ٿا؟"
 }

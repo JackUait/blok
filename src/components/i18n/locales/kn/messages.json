@@ -69,5 +69,5 @@
   "a11y.movedDown": "ಬ್ಲಾಕ್ {total} ರಲ್ಲಿ {position} ಸ್ಥಾನಕ್ಕೆ ಕೆಳಗೆ ಸರಿಸಲಾಗಿದೆ",
   "a11y.atTop": "ಬ್ಲಾಕ್ ಮೇಲ್ಭಾಗದಲ್ಲಿದೆ, ಮೇಲೆ ಸರಿಸಲಾಗುವುದಿಲ್ಲ",
   "a11y.atBottom": "ಬ್ಲಾಕ್ ಕೆಳಭಾಗದಲ್ಲಿದೆ, ಕೆಳಗೆ ಸರಿಸಲಾಗುವುದಿಲ್ಲ",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "ಈ ಬ್ಲಾಕ್‌ನಲ್ಲಿ {count} ನೆಸ್ಟೆಡ್ ಬ್ಲಾಕ್‌ಗಳಿವೆ. ಪರಿವರ್ತಿಸಿದರೆ ಅವು ಮೇಲ್ಮಟ್ಟಕ್ಕೆ ಸ್ಥಳಾಂತರಗೊಳ್ಳುತ್ತವೆ. ಮುಂದುವರಿಯಲೇ?"
 }

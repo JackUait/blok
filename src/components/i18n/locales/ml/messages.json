@@ -69,5 +69,5 @@
   "a11y.movedDown": "ബ്ലോക്ക് {total} ൽ {position} സ്ഥാനത്തേക്ക് താഴേക്ക് നീക്കി",
   "a11y.atTop": "ബ്ലോക്ക് മുകളിലാണ്, മുകളിലേക്ക് നീക്കാൻ കഴിയില്ല",
   "a11y.atBottom": "ബ്ലോക്ക് താഴെയാണ്, താഴേക്ക് നീക്കാൻ കഴിയില്ല",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "ഈ ബ്ലോക്കിൽ {count} നെസ്റ്റഡ് ബ്ലോക്കുകൾ ഉണ്ട്. പരിവർത്തനം ചെയ്‌താൽ അവ ഉന്നത തലത്തിലേക്ക് മാറ്റപ്പെടും. തുടരണോ?"
 }

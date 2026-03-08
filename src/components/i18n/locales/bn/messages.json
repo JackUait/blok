@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "সারি যোগ বা সরাতে টানুন",
   "tools.table.clickToAddColumn": "নতুন কলাম যোগ করতে ক্লিক করুন",
   "tools.table.dragToAddRemoveColumns": "কলাম যোগ বা সরাতে টানুন",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "এই ব্লকে {count}টি নেস্টেড ব্লক রয়েছে। রূপান্তর করলে সেগুলি শীর্ষ স্তরে চলে আসবে। চালিয়ে যাবেন?"
 }

@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "पङ्क्ति थप्न वा हटाउन तान्नुहोस्",
   "tools.table.clickToAddColumn": "नयाँ स्तम्भ थप्न क्लिक गर्नुहोस्",
   "tools.table.dragToAddRemoveColumns": "स्तम्भ थप्न वा हटाउन तान्नुहोस्",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "यस ब्लकमा {count} नेस्टेड ब्लकहरू छन्। रूपान्तरण गर्दा ती शीर्ष स्तरमा आउनेछन्। जारी राख्ने?"
 }

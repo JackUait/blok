@@ -52,7 +52,6 @@ export class DragPreview {
       const badge = $.make('span', 'absolute bottom-1 right-1 text-xs text-gray-400 bg-white/80 px-1 rounded');
       badge.setAttribute('data-blok-children-badge', '');
       badge.textContent = `+${childCount}`;
-      preview.style.position = 'relative';
       preview.appendChild(badge);
     }
 

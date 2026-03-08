@@ -45,6 +45,22 @@ describe('DragPreview', () => {
       expect(dragPreview.exists()).toBe(true);
     });
 
+    it('should not override fixed positioning when block has children', () => {
+      const contentElement = document.createElement('div');
+      const block = {
+        id: 'toggle-1',
+        holder: document.createElement('div'),
+        name: 'toggle',
+        stretched: false,
+        contentIds: ['child-1', 'child-2'],
+      } as unknown as Block;
+
+      const preview = dragPreview.createSingle(contentElement, false, block);
+
+      // preview.style.position must remain empty so the fixed CSS class takes effect
+      expect(preview.style.position).toBe('');
+    });
+
     it('should show child count badge when dragging a block with children', () => {
       const contentElement = document.createElement('div');
       contentElement.innerHTML = '<p>Toggle title</p>';

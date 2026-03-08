@@ -87,7 +87,10 @@ export function extractKeysFromSource(source) {
   const regex = /\.t\((['"])([^'"]+)\1/g;
   let match;
   while ((match = regex.exec(source)) !== null) {
-    keys.add(match[2]);
+    const key = match[2];
+    if (key.includes('.')) {
+      keys.add(key);
+    }
   }
   return keys;
 }

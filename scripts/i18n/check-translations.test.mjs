@@ -34,6 +34,12 @@ describe('extractKeysFromSource', () => {
     assert.equal(keys.size, 0);
   });
 
+  it('skips strings without a dot (not valid i18n key format)', () => {
+    const source = `api.i18n.t('key')`;
+    const keys = extractKeysFromSource(source);
+    assert.equal(keys.size, 0);
+  });
+
   it('extracts multiple keys from multi-line source', () => {
     const source = `
       this.t('blockSettings.delete')

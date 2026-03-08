@@ -2534,4 +2534,92 @@ test.describe('drag and drop', () => {
       await page.mouse.up();
     });
   });
+
+  test.describe('drag toggle block itself', () => {
+    test('should keep children inside toggle-list when toggle is dragged to a new position', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'para-above', type: 'paragraph', data: { text: 'Above block' } },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Toggle Header', isOpen: true }, content: ['child-1', 'child-2'] },
+            { id: 'child-1', type: 'paragraph', data: { text: 'Child One' }, parent: 'toggle-1' },
+            { id: 'child-2', type: 'paragraph', data: { text: 'Child Two' }, parent: 'toggle-1' },
+          ],
+        },
+      });
+
+      // Hover over the toggle's header content area (not the whole block-wrapper which
+      // includes children) to ensure we reveal the toggle's own drag handle, not a child's
+      const toggleContent = page.locator('[data-blok-toggle-content]');
+
+      await toggleContent.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag toggle above "Above block"
+      const aboveBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Above block' });
+
+      await performDragDrop(page, settingsButton, aboveBlock, 'top');
+
+      // Verify: children's DOM holders are still inside the toggle container.
+      // Query block-wrappers WITHIN the toggle container to avoid false positives from
+      // the toggle's outer block-wrapper (whose textContent includes all children's text).
+      const childrenInContainer = await page.evaluate(() => {
+        const toggleContainer = document.querySelector('[data-blok-toggle-children]');
+        const childBlocksInContainer = toggleContainer
+          ? Array.from(toggleContainer.querySelectorAll('[data-blok-testid="block-wrapper"]'))
+          : [];
+
+        return {
+          child1InContainer: childBlocksInContainer.some(el => el.textContent?.trim() === 'Child One'),
+          child2InContainer: childBlocksInContainer.some(el => el.textContent?.trim() === 'Child Two'),
+        };
+      });
+
+      expect(childrenInContainer.child1InContainer).toBe(true);
+      expect(childrenInContainer.child2InContainer).toBe(true);
+    });
+
+    test('should keep children inside toggle-heading when toggle is dragged to a new position', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'para-above', type: 'paragraph', data: { text: 'Above block' } },
+            { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true, isOpen: true }, content: ['child-1'] },
+            { id: 'child-1', type: 'paragraph', data: { text: 'Heading Child' }, parent: 'header-1' },
+          ],
+        },
+      });
+
+      // Hover over the toggle arrow (present in both toggle-list and toggle-heading)
+      // to reveal the heading block's drag handle, not a child block's
+      const toggleArrow = page.locator('[data-blok-toggle-arrow]');
+
+      await toggleArrow.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drag toggle heading above "Above block"
+      const aboveBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Above block' });
+
+      await performDragDrop(page, settingsButton, aboveBlock, 'top');
+
+      // Verify: child's DOM holder is still inside the toggle container.
+      // Query within the toggle container to avoid false positives.
+      const childInContainer = await page.evaluate(() => {
+        const toggleContainer = document.querySelector('[data-blok-toggle-children]');
+        const childBlocksInContainer = toggleContainer
+          ? Array.from(toggleContainer.querySelectorAll('[data-blok-testid="block-wrapper"]'))
+          : [];
+
+        return childBlocksInContainer.some(el => el.textContent?.trim() === 'Heading Child');
+      });
+
+      expect(childInContainer).toBe(true);
+    });
+  });
 });

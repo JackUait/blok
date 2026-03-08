@@ -355,6 +355,10 @@ export class DragController extends Module {
       const parentIsBeingMoved = movedBlock.parentId !== null && movedBlockIds.has(movedBlock.parentId);
 
       if (parentIsBeingMoved) {
+        // The physical move() displaced this block's DOM holder from its parent's
+        // [data-blok-toggle-children] container. Re-establish DOM placement without
+        // changing the logical parent relationship.
+        this.Blok.BlockManager.setBlockParent(movedBlock, movedBlock.parentId);
         continue;
       }
       if (movedBlock.parentId === newParentId) {

@@ -1213,18 +1213,25 @@ describe("DragManager - Component Integration", () => {
         "bottom",
       );
 
-      // setBlockParent should NOT be called for child-a or child-b
-      // because their parentId (toggle-1) is also being moved
+      // setBlockParent SHOULD be called for child-a and child-b with their existing parentId
+      // to restore their DOM placement inside the toggle container (which move() displaces).
+      // The logical parent relationship is unchanged — only the DOM is being fixed.
       const setBlockParentCalls = vi.mocked(
         modules.BlockManager.setBlockParent,
       ).mock.calls;
 
-      for (const [block] of setBlockParentCalls) {
-        const calledBlock = block as unknown as Block;
+      const child_a_call = setBlockParentCalls.find(
+        ([block]) => (block as unknown as Block).id === "child-a",
+      );
+      const child_b_call = setBlockParentCalls.find(
+        ([block]) => (block as unknown as Block).id === "child-b",
+      );
 
-        expect(calledBlock.id).not.toBe("child-a");
-        expect(calledBlock.id).not.toBe("child-b");
-      }
+      // Called with their own parentId (toggle-1), not with the new drop parentId
+      expect(child_a_call).toBeDefined();
+      expect(child_a_call?.[1]).toBe("toggle-1");
+      expect(child_b_call).toBeDefined();
+      expect(child_b_call?.[1]).toBe("toggle-1");
     });
 
     it("should hide dropped block when parent toggle is collapsed", () => {

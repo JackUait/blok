@@ -14,7 +14,6 @@ import {
   ARROW_STYLES,
   BASE_STYLES,
   BODY_PLACEHOLDER_STYLES,
-  BODY_PLACEHOLDER_TEXT,
   CONTENT_STYLES,
   TOGGLE_ATTR,
   TOGGLE_CHILDREN_STYLES,
@@ -39,6 +38,10 @@ export interface ToggleDOMBuilderContext {
   onArrowClick: (() => void) | null | undefined;
   /** Callback when the body placeholder is clicked */
   onBodyPlaceholderClick: (() => void) | null;
+  /** Translated text for the body placeholder */
+  bodyPlaceholderText: string;
+  /** Translated aria labels for the toggle arrow */
+  ariaLabels: { collapse: string; expand: string };
 }
 
 /**
@@ -74,13 +77,13 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
   const headerRow = document.createElement('div');
   headerRow.className = TOGGLE_WRAPPER_STYLES;
 
-  const arrowElement = buildArrow(isOpen, onArrowClick);
+  const arrowElement = buildArrow(isOpen, onArrowClick, {}, context.ariaLabels);
   const contentElement = buildContent(data, readOnly, keydownHandler);
 
   headerRow.appendChild(arrowElement);
   headerRow.appendChild(contentElement);
 
-  const bodyPlaceholderElement = buildBodyPlaceholder(onBodyPlaceholderClick);
+  const bodyPlaceholderElement = buildBodyPlaceholder(onBodyPlaceholderClick, context.bodyPlaceholderText);
 
   const childContainerElement = document.createElement('div');
   childContainerElement.className = TOGGLE_CHILDREN_STYLES;
@@ -114,7 +117,8 @@ export interface BuildArrowOptions {
 export const buildArrow = (
   isOpen: boolean,
   onArrowClick: (() => void) | null | undefined,
-  options: BuildArrowOptions = {}
+  options: BuildArrowOptions = {},
+  ariaLabels: { collapse: string; expand: string } = { collapse: 'Collapse', expand: 'Expand' }
 ): HTMLElement => {
   const arrow = document.createElement('span');
   arrow.className = ARROW_STYLES;
@@ -122,7 +126,7 @@ export const buildArrow = (
   arrow.setAttribute(DATA_ATTR.mutationFree, 'true');
   arrow.setAttribute('role', 'button');
   arrow.setAttribute('tabindex', '0');
-  arrow.setAttribute('aria-label', isOpen ? 'Collapse' : 'Expand');
+  arrow.setAttribute('aria-label', isOpen ? ariaLabels.collapse : ariaLabels.expand);
   arrow.setAttribute('aria-expanded', String(isOpen));
 
   if (options.contentEditableFalse === true) {
@@ -165,11 +169,11 @@ export const buildArrow = (
  * @param onClick - Optional click handler (creates a child block)
  * @returns The body placeholder element
  */
-const buildBodyPlaceholder = (onClick: (() => void) | null): HTMLElement => {
+const buildBodyPlaceholder = (onClick: (() => void) | null, text: string): HTMLElement => {
   const placeholder = document.createElement('div');
   placeholder.className = BODY_PLACEHOLDER_STYLES;
   placeholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
-  placeholder.textContent = BODY_PLACEHOLDER_TEXT;
+  placeholder.textContent = text;
 
   if (onClick) {
     placeholder.addEventListener('click', onClick);

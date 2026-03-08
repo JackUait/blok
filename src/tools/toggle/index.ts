@@ -25,7 +25,7 @@ import {
   parseHTML,
 } from './block-operations';
 import { clean } from '../../components/utils/sanitizer';
-import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
+import { ARIA_LABEL_COLLAPSE_KEY, ARIA_LABEL_EXPAND_KEY, BODY_PLACEHOLDER_KEY, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
 import { renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
@@ -100,6 +100,11 @@ export class ToggleItem implements BlockTool {
       keydownHandler: this.readOnly ? null : this.handleKeyDown.bind(this),
       onArrowClick: this.readOnly ? null : () => this.toggleOpen(),
       onBodyPlaceholderClick: this.readOnly ? null : () => this.handleBodyPlaceholderClick(),
+      bodyPlaceholderText: this.api.i18n.t(BODY_PLACEHOLDER_KEY),
+      ariaLabels: {
+        collapse: this.api.i18n.t(ARIA_LABEL_COLLAPSE_KEY),
+        expand: this.api.i18n.t(ARIA_LABEL_EXPAND_KEY),
+      },
     });
 
     this._element = result.wrapper;
@@ -233,7 +238,10 @@ export class ToggleItem implements BlockTool {
     this._isOpen = open;
 
     if (this._arrowElement && this._element) {
-      updateArrowState(this._arrowElement, this._element, this._isOpen);
+      updateArrowState(this._arrowElement, this._element, this._isOpen, {
+        collapse: this.api.i18n.t(ARIA_LABEL_COLLAPSE_KEY),
+        expand: this.api.i18n.t(ARIA_LABEL_EXPAND_KEY),
+      });
     }
 
     this.updateChildrenVisibility();

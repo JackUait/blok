@@ -13,6 +13,17 @@ export const TOOL_NAME = 'toggle';
 export const PLACEHOLDER_KEY = 'tools.toggle.placeholder';
 
 /**
+ * Body placeholder translation key (shown when toggle is open and has no children)
+ */
+export const BODY_PLACEHOLDER_KEY = 'tools.toggle.bodyPlaceholder';
+
+/**
+ * Aria label translation keys for the toggle arrow
+ */
+export const ARIA_LABEL_COLLAPSE_KEY = 'tools.toggle.ariaLabelCollapse';
+export const ARIA_LABEL_EXPAND_KEY = 'tools.toggle.ariaLabelExpand';
+
+/**
  * Base styles for toggle wrapper
  *
  * Matches paragraph spacing: py-[3px] from blok-block + mt-[2px] mb-px
@@ -38,11 +49,6 @@ export const ARROW_STYLES = 'flex-shrink-0 p-[10px] flex items-center justify-ce
  * SVG icon for the toggle arrow
  */
 export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-/**
- * Default body placeholder text shown when the toggle has no children
- */
-export const BODY_PLACEHOLDER_TEXT = 'Empty toggle. Click or drop blocks inside.';
 
 /**
  * Styles for the body placeholder element

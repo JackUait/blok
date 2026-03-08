@@ -16,6 +16,8 @@ const createDefaultContext = (overrides: Partial<ToggleDOMBuilderContext> = {}):
   keydownHandler: null,
   onArrowClick: vi.fn(),
   onBodyPlaceholderClick: null,
+  bodyPlaceholderText: 'Empty toggle. Click or drop blocks inside.',
+  ariaLabels: { collapse: 'Collapse', expand: 'Expand' },
   ...overrides,
 });
 

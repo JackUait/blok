@@ -23,7 +23,7 @@ import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggle
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
-import { ARROW_ICON, BODY_PLACEHOLDER_STYLES, BODY_PLACEHOLDER_TEXT, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
+import { ARROW_ICON, BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 
@@ -319,7 +319,10 @@ export class Header implements BlockTool {
     this._isOpen = true;
 
     if (this._arrowElement && this._element) {
-      updateArrowState(this._arrowElement, this._element, this._isOpen);
+      updateArrowState(this._arrowElement, this._element, this._isOpen, {
+        collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
+        expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
+      });
     }
 
     this.updateChildrenVisibility();
@@ -338,7 +341,10 @@ export class Header implements BlockTool {
     this._isOpen = false;
 
     if (this._arrowElement && this._element) {
-      updateArrowState(this._arrowElement, this._element, this._isOpen);
+      updateArrowState(this._arrowElement, this._element, this._isOpen, {
+        collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
+        expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
+      });
     }
 
     this.updateChildrenVisibility();
@@ -735,7 +741,10 @@ export class Header implements BlockTool {
    * @returns The arrow element
    */
   private buildArrow(): HTMLElement {
-    const arrow = buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen());
+    const arrow = buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen(), {}, {
+      collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
+      expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
+    });
     arrow.classList.add('absolute', 'left-0', 'top-1/2', '-translate-y-1/2');
     return arrow;
   }
@@ -764,7 +773,7 @@ export class Header implements BlockTool {
     const bodyPlaceholder = document.createElement('div');
     bodyPlaceholder.className = BODY_PLACEHOLDER_STYLES;
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
-    bodyPlaceholder.textContent = BODY_PLACEHOLDER_TEXT;
+    bodyPlaceholder.textContent = this.api.i18n.t('tools.toggle.bodyPlaceholder');
     this._bodyPlaceholderElement = bodyPlaceholder;
     wrapper.appendChild(bodyPlaceholder);
 
@@ -837,7 +846,10 @@ export class Header implements BlockTool {
     this._isOpen = !this._isOpen;
 
     if (this._arrowElement && this._element) {
-      updateArrowState(this._arrowElement, this._element, this._isOpen);
+      updateArrowState(this._arrowElement, this._element, this._isOpen, {
+        collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
+        expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
+      });
     }
 
     this.updateChildrenVisibility();

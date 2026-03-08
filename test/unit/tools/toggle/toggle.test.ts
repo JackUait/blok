@@ -19,7 +19,15 @@ const createMockAPI = (): API => ({
     settingsButtonActive: 'blok-settings-button--active',
   },
   i18n: {
-    t: (key: string) => key,
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'tools.toggle.bodyPlaceholder': 'Empty toggle. Click or drop blocks inside.',
+        'tools.toggle.ariaLabelCollapse': 'Collapse',
+        'tools.toggle.ariaLabelExpand': 'Expand',
+      };
+
+      return translations[key] ?? key;
+    },
     has: () => false,
   },
   events: {
@@ -612,6 +620,8 @@ describe('ToggleItem', () => {
         keydownHandler: null,
         onArrowClick: null,
         onBodyPlaceholderClick: null,
+        bodyPlaceholderText: 'Empty toggle. Click or drop blocks inside.',
+        ariaLabels: { collapse: 'Collapse', expand: 'Expand' },
       });
 
       const ariaControls = result.arrowElement.getAttribute('aria-controls');

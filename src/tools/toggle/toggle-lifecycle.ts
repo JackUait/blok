@@ -53,14 +53,19 @@ export const renderToggleItem = (context: ToggleRenderContext): ToggleRenderResu
  * @param wrapper - The wrapper element to update the open attribute on
  * @param isOpen - Whether the toggle is open
  */
-export const updateArrowState = (arrowEl: HTMLElement, wrapper: HTMLElement, isOpen: boolean): void => {
+export const updateArrowState = (
+  arrowEl: HTMLElement,
+  wrapper: HTMLElement,
+  isOpen: boolean,
+  ariaLabels: { collapse: string; expand: string } = { collapse: 'Collapse', expand: 'Expand' }
+): void => {
   const svg = arrowEl.querySelector('svg');
 
   if (svg) {
     svg.style.transform = isOpen ? 'rotate(90deg)' : '';
   }
 
-  arrowEl.setAttribute('aria-label', isOpen ? 'Collapse' : 'Expand');
+  arrowEl.setAttribute('aria-label', isOpen ? ariaLabels.collapse : ariaLabels.expand);
   arrowEl.setAttribute('aria-expanded', String(isOpen));
   wrapper.setAttribute(TOGGLE_ATTR.toggleOpen, String(isOpen));
 };

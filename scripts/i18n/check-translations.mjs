@@ -74,6 +74,24 @@ function getAvailableLocales() {
 }
 
 /**
+ * Extracts all statically-known i18n keys from a TypeScript source string.
+ * Matches .t('key') and .t("key") — skips dynamic arguments.
+ *
+ * @param {string} source - File contents as a string
+ * @returns {Set<string>} Set of key strings found
+ */
+export function extractKeysFromSource(source) {
+  const keys = new Set();
+  // Match .t('key') or .t("key") — require opening paren immediately after t
+  const regex = /\.t\((['"])([^'"]+)\1/g;
+  let match;
+  while ((match = regex.exec(source)) !== null) {
+    keys.add(match[2]);
+  }
+  return keys;
+}
+
+/**
  * Main validation function
  */
 function main() {
@@ -144,4 +162,8 @@ function main() {
   }
 }
 
-main();
+// Only run when executed directly (not imported by tests)
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isMain) {
+  main();
+}

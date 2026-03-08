@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = join(__dirname, '../../src/components/i18n/locales');
 const SOURCE_LOCALE = 'en';
+const SRC_DIR = join(__dirname, '../../src');
 
 // ANSI color codes
 const colors = {
@@ -119,6 +120,52 @@ export function scanSourceKeys(dir) {
 }
 
 /**
+ * Phase 2: Verifies that all static i18n keys used in source code exist in en/messages.json.
+ *
+ * @param {Set<string>} sourceKeys - Keys defined in en/messages.json
+ * @returns {boolean} True if errors were found
+ */
+function checkKeyCoverage(sourceKeys) {
+  console.log(`${colors.dim}Scanning source code for i18n key usage...${colors.reset}\n`);
+
+  const usedKeys = scanSourceKeys(SRC_DIR);
+
+  console.log(`${colors.dim}Found ${usedKeys.size} unique static key references in source${colors.reset}\n`);
+
+  // Keys used in code but not defined in en/messages.json
+  const missingFromSource = [...usedKeys].filter((key) => !sourceKeys.has(key));
+
+  // Keys defined in en/messages.json but not referenced in code (warning only)
+  const unusedInCode = [...sourceKeys].filter((key) => !usedKeys.has(key));
+
+  let hasErrors = false;
+
+  if (missingFromSource.length === 0) {
+    console.log(`${colors.green}✓${colors.reset} All source keys are defined in en/messages.json`);
+  } else {
+    hasErrors = true;
+    console.log(
+      `${colors.red}✗${colors.reset} ${missingFromSource.length} key${missingFromSource.length === 1 ? '' : 's'} used in source but missing from en/messages.json:`
+    );
+    for (const key of missingFromSource.sort()) {
+      console.log(`  ${colors.red}-${colors.reset} ${key}`);
+    }
+  }
+
+  if (unusedInCode.length > 0) {
+    console.log(
+      `\n${colors.yellow}⚠${colors.reset} ${unusedInCode.length} key${unusedInCode.length === 1 ? '' : 's'} in en/messages.json not found in static source scan (may be dynamic):`
+    );
+    for (const key of unusedInCode.sort()) {
+      console.log(`  ${colors.yellow}?${colors.reset} ${key}`);
+    }
+  }
+
+  console.log('');
+  return hasErrors;
+}
+
+/**
  * Main validation function
  */
 function main() {
@@ -131,7 +178,8 @@ function main() {
 
   console.log(`${colors.dim}Found ${sourceKeys.size} keys in source${colors.reset}\n`);
 
-  // Get all locales except source
+  // --- Phase 1: locale completeness ---
+
   const locales = getAvailableLocales().filter((locale) => locale !== SOURCE_LOCALE);
 
   let hasErrors = false;
@@ -141,10 +189,7 @@ function main() {
     const translation = loadTranslation(locale);
     const translationKeys = extractKeys(translation);
 
-    // Find missing keys (in source but not in translation)
     const missingKeys = [...sourceKeys].filter((key) => !translationKeys.has(key));
-
-    // Find extra keys (in translation but not in source)
     const extraKeys = [...translationKeys].filter((key) => !sourceKeys.has(key));
 
     if (missingKeys.length === 0 && extraKeys.length === 0) {
@@ -179,13 +224,32 @@ function main() {
     console.log(
       `${colors.red}Translation check failed.${colors.reset} Add missing keys to the translation files.\n`
     );
-    process.exit(1);
   } else if (hasWarnings) {
     console.log(
       `${colors.yellow}Translation check passed with warnings.${colors.reset} Consider removing extra keys.\n`
     );
   } else {
     console.log(`${colors.green}All translations are complete!${colors.reset}\n`);
+  }
+
+  // --- Phase 2: source key coverage ---
+
+  console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}\n`);
+  console.log(`${colors.dim}Checking source key coverage...${colors.reset}\n`);
+
+  const coverageErrors = checkKeyCoverage(sourceKeys);
+
+  if (coverageErrors) {
+    console.log(
+      `${colors.red}Source coverage check failed.${colors.reset} Add missing keys to en/messages.json.\n`
+    );
+    hasErrors = true;
+  } else {
+    console.log(`${colors.green}Source coverage check passed!${colors.reset}\n`);
+  }
+
+  if (hasErrors) {
+    process.exit(1);
   }
 }
 

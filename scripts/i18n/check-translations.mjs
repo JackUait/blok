@@ -92,6 +92,33 @@ export function extractKeysFromSource(source) {
 }
 
 /**
+ * Recursively scans a directory for .ts files and collects all static i18n keys.
+ *
+ * @param {string} dir - Directory to scan
+ * @returns {Set<string>} Combined set of all keys found
+ */
+export function scanSourceKeys(dir) {
+  const keys = new Set();
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      for (const key of scanSourceKeys(fullPath)) {
+        keys.add(key);
+      }
+    } else if (entry.isFile() && entry.name.endsWith('.ts')) {
+      const source = readFileSync(fullPath, 'utf-8');
+      for (const key of extractKeysFromSource(source)) {
+        keys.add(key);
+      }
+    }
+  }
+
+  return keys;
+}
+
+/**
  * Main validation function
  */
 function main() {

@@ -4,7 +4,10 @@
  */
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
-import { extractKeysFromSource } from './check-translations.mjs';
+import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { extractKeysFromSource, scanSourceKeys } from './check-translations.mjs';
 
 describe('extractKeysFromSource', () => {
   it('extracts single-quoted static keys', () => {
@@ -39,5 +42,35 @@ describe('extractKeysFromSource', () => {
     `;
     const keys = extractKeysFromSource(source);
     assert.deepEqual([...keys].sort(), ['blockSettings.delete', 'popover.search']);
+  });
+});
+
+describe('scanSourceKeys', () => {
+  it('collects keys from all .ts files in a directory', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-i18n-test-'));
+    writeFileSync(join(dir, 'a.ts'), `i18n.t('tools.stub.error')`);
+    writeFileSync(join(dir, 'b.ts'), `i18n.t("popover.search")`);
+
+    const keys = scanSourceKeys(dir);
+    assert.ok(keys.has('tools.stub.error'));
+    assert.ok(keys.has('popover.search'));
+  });
+
+  it('recurses into subdirectories', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-i18n-test-'));
+    const sub = join(dir, 'sub');
+    mkdirSync(sub);
+    writeFileSync(join(sub, 'c.ts'), `i18n.t('a11y.dragHandle')`);
+
+    const keys = scanSourceKeys(dir);
+    assert.ok(keys.has('a11y.dragHandle'));
+  });
+
+  it('ignores non-.ts files', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'blok-i18n-test-'));
+    writeFileSync(join(dir, 'readme.md'), `i18n.t('should.be.ignored')`);
+
+    const keys = scanSourceKeys(dir);
+    assert.equal(keys.size, 0);
   });
 });

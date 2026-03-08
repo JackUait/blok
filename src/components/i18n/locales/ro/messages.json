@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Trageți pentru a adăuga sau elimina rânduri",
   "tools.table.clickToAddColumn": "Clic pentru a adăuga o coloană nouă",
   "tools.table.dragToAddRemoveColumns": "Trageți pentru a adăuga sau elimina coloane",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Acest bloc are {count} blocuri incluse. Convertirea le va promova la nivelul principal. Continuați?"
 }

@@ -69,5 +69,5 @@
   "tools.table.dragToAddRemoveRows": "Vilkite norėdami pridėti arba pašalinti eilutes",
   "tools.table.clickToAddColumn": "Spustelėkite norėdami pridėti naują stulpelį",
   "tools.table.dragToAddRemoveColumns": "Vilkite norėdami pridėti arba pašalinti stulpelius",
-  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
+  "blockSettings.convertWithChildrenWarning": "Šiame bloke yra {count} įdėtinių blokų. Konvertavus jie bus perkelti į aukščiausią lygį. Tęsti?"
 }

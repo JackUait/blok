@@ -23,7 +23,7 @@ export const setCaretToBlockContent = (
   block: ReturnType<API['blocks']['insert']>,
   position: 'start' | 'end' = 'end'
 ): void => {
-  const applyFocus = (deferred: boolean): void => {
+  const applyFocus = (): void => {
     const holder = block.holder;
     if (!holder) return;
 
@@ -32,10 +32,7 @@ export const setCaretToBlockContent = (
     if (!(contentEl instanceof HTMLElement)) {
       // Fallback to setToBlock if no content element found
       api.caret.setToBlock(block, position);
-
-      if (deferred) {
-        api.caret.updateLastCaretAfterPosition();
-      }
+      api.caret.updateLastCaretAfterPosition();
 
       return;
     }
@@ -60,11 +57,11 @@ export const setCaretToBlockContent = (
     selection.removeAllRanges();
     selection.addRange(range);
 
-    if (deferred) {
-      // Update the caret "after" position for undo/redo since we moved the caret
-      // asynchronously via requestAnimationFrame after the Yjs transaction committed
-      api.caret.updateLastCaretAfterPosition();
-    }
+    // Update the "after" caret position for undo/redo.
+    // Yjs stack-item-added fires inside splitBlock() before control returns to
+    // handleEnter, so the snapshot captured at that point is stale (pointing to
+    // the first block). We must update it after focus has moved to the new block.
+    api.caret.updateLastCaretAfterPosition();
   };
 
   // Try synchronous focus first — the block is already in the DOM after insert()
@@ -72,9 +69,9 @@ export const setCaretToBlockContent = (
   const contentEl = holder?.querySelector('[contenteditable="true"]');
 
   if (contentEl instanceof HTMLElement) {
-    applyFocus(false);
+    applyFocus();
   } else {
     // Content element not available yet — fall back to next frame
-    requestAnimationFrame(() => applyFocus(true));
+    requestAnimationFrame(() => applyFocus());
   }
 }

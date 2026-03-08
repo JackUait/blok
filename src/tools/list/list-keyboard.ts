@@ -66,7 +66,7 @@ export const handleEnter = async (context: KeyboardContext): Promise<void> => {
     const newBlock = api.blocks.insert(TOOL_NAME, {
       text: afterContent,
       style: data.style,
-      checked: false,
+      ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
       depth: data.depth,
     }, undefined, currentBlockIndex + 1, true);
 
@@ -82,7 +82,7 @@ export const handleEnter = async (context: KeyboardContext): Promise<void> => {
     {
       text: afterContent,
       style: data.style,
-      checked: false,
+      ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
       depth: data.depth,
     },
     currentBlockIndex + 1

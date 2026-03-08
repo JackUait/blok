@@ -123,9 +123,9 @@ describe("caret-manager", () => {
       const selection = window.getSelection();
       expect(selection?.rangeCount).toBeGreaterThan(0);
 
-      // updateLastCaretAfterPosition is NOT called synchronously
-      // (it's only called in the deferred fallback path)
-      expect(mockAPI.caret.updateLastCaretAfterPosition).not.toHaveBeenCalled();
+      // updateLastCaretAfterPosition is called to record the caret position
+      // for redo restoration
+      expect(mockAPI.caret.updateLastCaretAfterPosition).toHaveBeenCalledOnce();
     });
 
     it("sets selection at end position synchronously", () => {

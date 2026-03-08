@@ -217,6 +217,12 @@ export class BlockManager extends Module {
   private parentsSyncScheduled = new Set<string>();
 
   /**
+   * Tracks the in-flight promise from flushParentSyncs so that transactForTool
+   * can chain stopCapturing after all parent data has been written to Yjs.
+   */
+  private pendingParentSyncPromise: Promise<void> | null = null;
+
+  /**
    * Operations handler for state changes
    */
   private operations!: BlockOperations;
@@ -690,7 +696,13 @@ export class BlockManager extends Module {
       this.operations.suppressStopCapturing = prevSuppress;
 
       queueMicrotask(() => {
-        this.Blok.YjsManager.stopCapturing();
+        if (this.pendingParentSyncPromise !== null) {
+          void this.pendingParentSyncPromise.then(() => {
+            this.Blok.YjsManager.stopCapturing();
+          });
+        } else {
+          this.Blok.YjsManager.stopCapturing();
+        }
       });
     }
   }
@@ -1013,14 +1025,22 @@ export class BlockManager extends Module {
    * Called from the microtask scheduled by scheduleParentSync.
    */
   private flushParentSyncs(): void {
+    const promises: Promise<void>[] = [];
+
     for (const parentId of this.parentsSyncScheduled) {
       const parent = this.repository.getBlockById(parentId);
 
       if (parent !== undefined) {
-        void this.syncBlockDataToYjs(parent);
+        promises.push(this.syncBlockDataToYjs(parent));
       }
     }
     this.parentsSyncScheduled.clear();
+
+    if (promises.length > 0) {
+      this.pendingParentSyncPromise = Promise.all(promises).then(() => {
+        this.pendingParentSyncPromise = null;
+      });
+    }
   }
 
   /**

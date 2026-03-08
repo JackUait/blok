@@ -2285,7 +2285,7 @@ test.describe('drag and drop', () => {
       await expect(settingsButton).toBeVisible();
 
       // Drag to the top of Child B (which normalizes to bottom of Child A — same parent)
-      const childB = page.getByTestId('block-wrapper').filter({ hasText: 'Child B' });
+      const childB = page.locator('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"]').filter({ hasText: 'Child B' });
 
       await performDragDrop(page, settingsButton, childB, 'top');
 
@@ -2310,7 +2310,7 @@ test.describe('drag and drop', () => {
       });
 
       // Hover over the child block
-      const childBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Trapped child' });
+      const childBlock = page.locator('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"]').filter({ hasText: 'Trapped child' });
 
       await childBlock.hover();
 
@@ -2417,7 +2417,7 @@ test.describe('drag and drop', () => {
       });
 
       // Get initial state of the paragraph block
-      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Indent me' });
+      const paraBlock = page.locator('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"]').filter({ hasText: 'Indent me' });
       const initialMargin = await paraBlock.evaluate((el: HTMLElement) => el.style.marginLeft);
 
       // Root block should have no margin
@@ -2435,12 +2435,16 @@ test.describe('drag and drop', () => {
 
       await performDragDrop(page, settingsButton, toggleInner, 'bottom');
 
-      // Verify: the block now has depth 1 (indented)
+      // Verify: the block is now nested inside the toggle children container (depth 1).
+      // Toggle children are indented via DOM nesting, not margin-left inline style.
       await expect(async () => {
-        const afterMargin = await paraBlock.evaluate((el: HTMLElement) => el.style.marginLeft);
+        const depth = await paraBlock.evaluate((el: HTMLElement) => el.getAttribute('data-blok-depth'));
 
-        expect(afterMargin).toBe('24px');
+        expect(depth).toBe('1');
       }).toPass({ timeout: 2000 });
+
+      // Verify: block is physically placed inside the toggle children container
+      await expect(page.locator('[data-blok-toggle-children]').locator('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"]').filter({ hasText: 'Indent me' })).toBeVisible();
     });
 
     test('should show body placeholder after dragging last child out of a toggle', async ({ page }) => {
@@ -2460,7 +2464,7 @@ test.describe('drag and drop', () => {
       await expect(bodyPlaceholder).toBeHidden();
 
       // Hover over the child block
-      const childBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Only child' });
+      const childBlock = page.locator('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"]').filter({ hasText: 'Only child' });
 
       await childBlock.hover();
 

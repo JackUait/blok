@@ -208,8 +208,8 @@ export class Paste extends Module {
     ) as SanitizerConfig;
     const customConfig = composeSanitizerConfig(
       this.config.sanitizer as SanitizerConfig,
-      toolsTags,
       structuralTagsConfig,
+      toolsTags,
       inlineSanitizeConfig,
       { br: {} }
     );

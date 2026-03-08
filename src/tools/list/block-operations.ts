@@ -78,7 +78,7 @@ export const saveListItem = (
   const result: ListItemData = {
     text,
     style: data.style,
-    checked: data.checked,
+    ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
   };
 
   if (data.start !== undefined && data.start !== 1) {

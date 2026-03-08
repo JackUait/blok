@@ -21,6 +21,10 @@ export class DragPreview {
     const preview = $.make('div', PREVIEW_STYLES.base);
     const clone = contentElement.cloneNode(true) as HTMLElement;
 
+    // Remove toggle children container — it causes visual duplication in the ghost
+    // since the children are also dragged as separate blocks
+    clone.querySelector('[data-blok-toggle-children]')?.remove();
+
     // Reset styles on clone
     clone.className = twMerge(PREVIEW_STYLES.content, isStretched ? 'max-w-none' : '');
 
@@ -114,6 +118,10 @@ export class DragPreview {
       }
 
       const clone = info.element.cloneNode(true) as HTMLElement;
+
+      // Remove toggle children container — children are already represented as separate
+      // stacked blocks in the multi-block preview
+      clone.querySelector('[data-blok-toggle-children]')?.remove();
 
       clone.className = twMerge(PREVIEW_STYLES.content, block.stretched ? 'max-w-none' : '');
 

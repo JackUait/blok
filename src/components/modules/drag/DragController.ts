@@ -126,11 +126,14 @@ export class DragController extends Module {
       ? [block, ...descendants]
       : initialBlocks;
 
-    // Create appropriate preview (single or multi-block)
-    if (blocksToMove.length > 1) {
+    // Create appropriate preview (single or multi-block).
+    // For toggles with hierarchy children, use a single-block preview with a badge
+    // rather than a stacked multi preview — the toggle is conceptually one unit,
+    // and the multi preview would show children twice (nested in the clone + stacked).
+    if (blocksToMove.length > 1 && hierarchyDescendants.length === 0) {
       this.preview.createMulti(blocksToMove);
     } else {
-      this.preview.createSingle(contentElement, block.stretched);
+      this.preview.createSingle(contentElement, block.stretched, block);
     }
 
     // Initially hide preview

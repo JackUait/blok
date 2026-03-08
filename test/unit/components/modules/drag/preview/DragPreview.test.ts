@@ -92,6 +92,21 @@ describe('DragPreview', () => {
       expect(badge).toBeNull();
     });
 
+    it('should strip toggle children container from the preview clone', () => {
+      const contentElement = document.createElement('div');
+      const toolWrapper = document.createElement('div');
+      toolWrapper.innerHTML = '<div>Toggle Text</div>';
+      const toggleChildren = document.createElement('div');
+      toggleChildren.setAttribute('data-blok-toggle-children', '');
+      toggleChildren.innerHTML = '<div>Child Block</div>';
+      toolWrapper.appendChild(toggleChildren);
+      contentElement.appendChild(toolWrapper);
+
+      const preview = dragPreview.createSingle(contentElement, false);
+
+      expect(preview.querySelector('[data-blok-toggle-children]')).toBeNull();
+    });
+
     it('should set explicit width on clone to preserve percentage-based layouts', () => {
       const contentElement = document.createElement('div');
 
@@ -217,6 +232,24 @@ describe('DragPreview', () => {
       const preview = dragPreview.getElement();
       // Both blocks should be included
       expect(preview?.children.length).toBe(2);
+    });
+
+    it('should strip toggle children container from each block clone', () => {
+      const block = createMockBlock('toggle-1', 100, 50, false);
+      // Add a [data-blok-toggle-children] inside the content element
+      const contentElement = block.holder.querySelector('[data-blok-element-content]') as HTMLElement;
+      const toggleChildren = document.createElement('div');
+      toggleChildren.setAttribute('data-blok-toggle-children', '');
+      toggleChildren.innerHTML = '<div>Child Block</div>';
+      contentElement.appendChild(toggleChildren);
+
+      mockBlockRects(block, {
+        left: 0, top: 0, width: 100, height: 60, right: 100, bottom: 60, x: 0, y: 0, toJSON: () => ({}) },
+        { left: 0, top: 0, width: 100, height: 50, right: 100, bottom: 50, x: 0, y: 0, toJSON: () => ({}) });
+
+      const preview = dragPreview.createMulti([block]);
+
+      expect(preview.querySelector('[data-blok-toggle-children]')).toBeNull();
     });
 
     it('should skip blocks without content element', () => {

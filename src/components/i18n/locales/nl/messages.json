@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Klik om een nieuwe rij toe te voegen",
   "tools.table.dragToAddRemoveRows": "Sleep om rijen toe te voegen of te verwijderen",
   "tools.table.clickToAddColumn": "Klik om een nieuwe kolom toe te voegen",
-  "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen"
+  "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

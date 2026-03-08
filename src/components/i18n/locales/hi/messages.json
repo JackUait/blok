@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "नई पंक्ति जोड़ने के लिए क्लिक करें",
   "tools.table.dragToAddRemoveRows": "पंक्तियाँ जोड़ने या हटाने के लिए खींचें",
   "tools.table.clickToAddColumn": "नया स्तंभ जोड़ने के लिए क्लिक करें",
-  "tools.table.dragToAddRemoveColumns": "स्तंभ जोड़ने या हटाने के लिए खींचें"
+  "tools.table.dragToAddRemoveColumns": "स्तंभ जोड़ने या हटाने के लिए खींचें",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

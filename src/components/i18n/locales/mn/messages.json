@@ -68,5 +68,6 @@
   "a11y.movedUp": "Блок {total}-ын {position} байрлал руу дээш зөөгдлөө",
   "a11y.movedDown": "Блок {total}-ын {position} байрлал руу доош зөөгдлөө",
   "a11y.atTop": "Блок хамгийн дээд талд байна, дээш зөөх боломжгүй",
-  "a11y.atBottom": "Блок хамгийн доод талд байна, доош зөөх боломжгүй"
+  "a11y.atBottom": "Блок хамгийн доод талд байна, доош зөөх боломжгүй",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

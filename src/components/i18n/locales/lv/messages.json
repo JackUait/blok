@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Noklikšķiniet, lai pievienotu jaunu rindu",
   "tools.table.dragToAddRemoveRows": "Velciet, lai pievienotu vai noņemtu rindas",
   "tools.table.clickToAddColumn": "Noklikšķiniet, lai pievienotu jaunu kolonnu",
-  "tools.table.dragToAddRemoveColumns": "Velciet, lai pievienotu vai noņemtu kolonnas"
+  "tools.table.dragToAddRemoveColumns": "Velciet, lai pievienotu vai noņemtu kolonnas",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

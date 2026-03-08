@@ -1,6 +1,7 @@
 {
   "blockSettings.dragToMove": "Drag to move",
   "blockSettings.clickToOpenMenu": "Click to open the menu",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?",
   "toolbox.addBelow": "Click to add below",
   "toolbox.optionAddAbove": "Option-click to add above",
   "toolbox.ctrlAddAbove": "Ctrl-click to add above",

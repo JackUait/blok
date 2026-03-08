@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "نئی قطار شامل کرنے کے لیے کلک کریں",
   "tools.table.dragToAddRemoveRows": "قطاریں شامل یا حذف کرنے کے لیے گھسیٹیں",
   "tools.table.clickToAddColumn": "نیا کالم شامل کرنے کے لیے کلک کریں",
-  "tools.table.dragToAddRemoveColumns": "کالم شامل یا حذف کرنے کے لیے گھسیٹیں"
+  "tools.table.dragToAddRemoveColumns": "کالم شامل یا حذف کرنے کے لیے گھسیٹیں",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

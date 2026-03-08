@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "އާ ރޯއެއް އިތުރުކުރަން ކްލިކް ކުރޭ",
   "tools.table.dragToAddRemoveRows": "ރޯ އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
   "tools.table.clickToAddColumn": "އާ ކޮލަމެއް އިތުރުކުރަން ކްލިކް ކުރޭ",
-  "tools.table.dragToAddRemoveColumns": "ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ"
+  "tools.table.dragToAddRemoveColumns": "ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

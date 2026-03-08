@@ -68,5 +68,6 @@
   "a11y.movedUp": "Блок перемещён вверх, позиция {position} из {total}",
   "a11y.movedDown": "Блок перемещён вниз, позиция {position} из {total}",
   "a11y.atTop": "Блок уже вверху",
-  "a11y.atBottom": "Блок уже внизу"
+  "a11y.atBottom": "Блок уже внизу",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

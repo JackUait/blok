@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "点击添加新行",
   "tools.table.dragToAddRemoveRows": "拖动以添加或删除行",
   "tools.table.clickToAddColumn": "点击添加新列",
-  "tools.table.dragToAddRemoveColumns": "拖动以添加或删除列"
+  "tools.table.dragToAddRemoveColumns": "拖动以添加或删除列",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

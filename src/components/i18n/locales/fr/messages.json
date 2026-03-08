@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Cliquer pour ajouter une ligne",
   "tools.table.dragToAddRemoveRows": "Glisser pour ajouter ou supprimer des lignes",
   "tools.table.clickToAddColumn": "Cliquer pour ajouter une colonne",
-  "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes"
+  "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

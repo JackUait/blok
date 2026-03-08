@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Kliknite za dodavanje novog reda",
   "tools.table.dragToAddRemoveRows": "Prevucite za dodavanje ili uklanjanje redova",
   "tools.table.clickToAddColumn": "Kliknite za dodavanje nove kolone",
-  "tools.table.dragToAddRemoveColumns": "Prevucite za dodavanje ili uklanjanje kolona"
+  "tools.table.dragToAddRemoveColumns": "Prevucite za dodavanje ili uklanjanje kolona",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

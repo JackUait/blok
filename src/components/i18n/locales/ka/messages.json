@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "დააწკაპუნეთ ახალი სტრიქონის დასამატებლად",
   "tools.table.dragToAddRemoveRows": "გადაიტანეთ სტრიქონების დასამატებლად ან წასაშლელად",
   "tools.table.clickToAddColumn": "დააწკაპუნეთ ახალი სვეტის დასამატებლად",
-  "tools.table.dragToAddRemoveColumns": "გადაიტანეთ სვეტების დასამატებლად ან წასაშლელად"
+  "tools.table.dragToAddRemoveColumns": "გადაიტანეთ სვეტების დასამატებლად ან წასაშლელად",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

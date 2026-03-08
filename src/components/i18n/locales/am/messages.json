@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "አዲስ ረድፍ ለመጨመር ጠቅ ያድርጉ",
   "tools.table.dragToAddRemoveRows": "ረድፎችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
   "tools.table.clickToAddColumn": "አዲስ አምድ ለመጨመር ጠቅ ያድርጉ",
-  "tools.table.dragToAddRemoveColumns": "አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ"
+  "tools.table.dragToAddRemoveColumns": "አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

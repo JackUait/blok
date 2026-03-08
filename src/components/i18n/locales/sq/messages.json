@@ -68,5 +68,6 @@
   "a11y.movedUp": "Blloku u lëviz lart në pozicionin {position} nga {total}",
   "a11y.movedDown": "Blloku u lëviz poshtë në pozicionin {position} nga {total}",
   "a11y.atTop": "Blloku është në krye, nuk mund të lëvizet lart",
-  "a11y.atBottom": "Blloku është në fund, nuk mund të lëvizet poshtë"
+  "a11y.atBottom": "Blloku është në fund, nuk mund të lëvizet poshtë",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

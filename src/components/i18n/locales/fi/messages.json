@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Napsauta lisätäksesi rivin",
   "tools.table.dragToAddRemoveRows": "Vedä lisätäksesi tai poistaaksesi rivejä",
   "tools.table.clickToAddColumn": "Napsauta lisätäksesi sarakkeen",
-  "tools.table.dragToAddRemoveColumns": "Vedä lisätäksesi tai poistaaksesi sarakkeita"
+  "tools.table.dragToAddRemoveColumns": "Vedä lisätäksesi tai poistaaksesi sarakkeita",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

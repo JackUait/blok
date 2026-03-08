@@ -68,5 +68,6 @@
   "a11y.movedUp": "Kizuizi kimesogezwa juu hadi nafasi {position} ya {total}",
   "a11y.movedDown": "Kizuizi kimesogezwa chini hadi nafasi {position} ya {total}",
   "a11y.atTop": "Kizuizi kiko juu, hakiwezi kusogezwa juu",
-  "a11y.atBottom": "Kizuizi kiko chini, hakiwezi kusogezwa chini"
+  "a11y.atBottom": "Kizuizi kiko chini, hakiwezi kusogezwa chini",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

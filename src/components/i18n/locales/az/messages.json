@@ -68,5 +68,6 @@
   "a11y.movedUp": "Blok yuxarı köçürüldü ({total} içindən {position}-ci)",
   "a11y.movedDown": "Blok aşağı köçürüldü ({total} içindən {position}-ci)",
   "a11y.atTop": "Blok ən yuxarıdadır, yuxarı köçürülə bilməz",
-  "a11y.atBottom": "Blok ən aşağıdadır, aşağı köçürülə bilməz"
+  "a11y.atBottom": "Blok ən aşağıdadır, aşağı köçürülə bilməz",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

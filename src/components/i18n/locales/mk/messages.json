@@ -68,5 +68,6 @@
   "a11y.movedUp": "Блокот е преместен нагоре на позиција {position} од {total}",
   "a11y.movedDown": "Блокот е преместен надолу на позиција {position} од {total}",
   "a11y.atTop": "Блокот е на врвот, не може да се премести нагоре",
-  "a11y.atBottom": "Блокот е на дното, не може да се премести надолу"
+  "a11y.atBottom": "Блокот е на дното, не може да се премести надолу",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

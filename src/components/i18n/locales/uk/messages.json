@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Натисніть, щоб додати новий рядок",
   "tools.table.dragToAddRemoveRows": "Перетягніть, щоб додати або видалити рядки",
   "tools.table.clickToAddColumn": "Натисніть, щоб додати нову колонку",
-  "tools.table.dragToAddRemoveColumns": "Перетягніть, щоб додати або видалити колонки"
+  "tools.table.dragToAddRemoveColumns": "Перетягніть, щоб додати або видалити колонки",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

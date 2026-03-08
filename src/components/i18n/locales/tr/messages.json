@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Yeni satır eklemek için tıkla",
   "tools.table.dragToAddRemoveRows": "Satır eklemek veya kaldırmak için sürükle",
   "tools.table.clickToAddColumn": "Yeni sütun eklemek için tıkla",
-  "tools.table.dragToAddRemoveColumns": "Sütun eklemek veya kaldırmak için sürükle"
+  "tools.table.dragToAddRemoveColumns": "Sütun eklemek veya kaldırmak için sürükle",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

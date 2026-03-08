@@ -68,5 +68,6 @@
   "a11y.movedUp": "Bloque movido arriba, posición {position} de {total}",
   "a11y.movedDown": "Bloque movido abajo, posición {position} de {total}",
   "a11y.atTop": "No se puede subir más",
-  "a11y.atBottom": "No se puede bajar más"
+  "a11y.atBottom": "No se puede bajar más",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

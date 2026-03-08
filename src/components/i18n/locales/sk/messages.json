@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "Kliknutím pridáte nový riadok",
   "tools.table.dragToAddRemoveRows": "Potiahnutím pridáte alebo odoberiete riadky",
   "tools.table.clickToAddColumn": "Kliknutím pridáte nový stĺpec",
-  "tools.table.dragToAddRemoveColumns": "Potiahnutím pridáte alebo odoberiete stĺpce"
+  "tools.table.dragToAddRemoveColumns": "Potiahnutím pridáte alebo odoberiete stĺpce",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

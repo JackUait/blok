@@ -68,5 +68,6 @@
   "a11y.movedUp": "بۆلەك ئۈستىگە ئورۇن {position} دىن {total} غا يۆتكەلدى",
   "a11y.movedDown": "بۆلەك ئاستىغا ئورۇن {position} دىن {total} غا يۆتكەلدى",
   "a11y.atTop": "بۆلەك ئەڭ ئۈستىدە، ئۈستىگە يۆتكىگىلى بولمايدۇ",
-  "a11y.atBottom": "بۆلەك ئەڭ ئاستىدا، ئاستىغا يۆتكىگىلى بولمايدۇ"
+  "a11y.atBottom": "بۆلەك ئەڭ ئاستىدا، ئاستىغا يۆتكىگىلى بولمايدۇ",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

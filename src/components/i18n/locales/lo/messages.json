@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "ຄລິກເພື່ອເພີ່ມແຖວໃໝ່",
   "tools.table.dragToAddRemoveRows": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບແຖວ",
   "tools.table.clickToAddColumn": "ຄລິກເພື່ອເພີ່ມຖັນໃໝ່",
-  "tools.table.dragToAddRemoveColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບຖັນ"
+  "tools.table.dragToAddRemoveColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບຖັນ",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

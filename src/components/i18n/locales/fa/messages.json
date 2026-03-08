@@ -68,5 +68,6 @@
   "tools.table.clickToAddRow": "برای افزودن سطر جدید کلیک کنید",
   "tools.table.dragToAddRemoveRows": "برای افزودن یا حذف سطرها بکشید",
   "tools.table.clickToAddColumn": "برای افزودن ستون جدید کلیک کنید",
-  "tools.table.dragToAddRemoveColumns": "برای افزودن یا حذف ستون‌ها بکشید"
+  "tools.table.dragToAddRemoveColumns": "برای افزودن یا حذف ستون‌ها بکشید",
+  "blockSettings.convertWithChildrenWarning": "This block has {count} nested blocks. Converting it will promote them to the top level. Continue?"
 }

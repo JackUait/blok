@@ -53,7 +53,7 @@ export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBo
 /**
  * Styles for the body placeholder element
  */
-export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 py-1 text-gray-text text-sm cursor-pointer select-none';
+export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 py-[3px] text-gray-text leading-[1.6em] cursor-pointer select-none';
 
 /**
  * Styles for the children container element.

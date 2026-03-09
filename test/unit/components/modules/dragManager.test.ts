@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
 import { DragController as DragManager } from '../../../../src/components/modules/drag/DragController';
+import { DragPreview } from '../../../../src/components/modules/drag/preview/DragPreview';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
@@ -759,7 +760,67 @@ describe('DragManager', () => {
       expect(modules.BlockSelection.clearSelection).not.toHaveBeenCalled();
 
       // Clean up
-       
+
+      document.dispatchEvent(createMouseEvent('mouseup'));
+    });
+
+    it('excludes nested cell blocks from the drag preview when table and cells are selected alongside other blocks', () => {
+      const { dragManager, modules, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+
+      // A paragraph before the table (root-level, no parentId)
+      const paraBlock = createBlockStub({ id: 'para-before', selected: true });
+
+      (paraBlock as unknown as { parentId: null }).parentId = null;
+
+      // Table block with cell blocks registered as hierarchy children
+      const tableBlock = createBlockStub({ id: 'table-block', selected: true });
+
+      (tableBlock as unknown as { contentIds: string[] }).contentIds = ['cell-1', 'cell-2'];
+      (tableBlock as unknown as { parentId: null }).parentId = null;
+      (tableBlock as unknown as { name: string }).name = 'table';
+
+      // Cell blocks nested inside the table (parentId points to tableBlock)
+      const cellBlock1 = createBlockStub({ id: 'cell-1', selected: true });
+
+      (cellBlock1 as unknown as { parentId: string }).parentId = 'table-block';
+
+      const cellBlock2 = createBlockStub({ id: 'cell-2', selected: true });
+
+      (cellBlock2 as unknown as { parentId: string }).parentId = 'table-block';
+
+      // Simulate Cmd+A: selectedBlocks includes the para, table, AND its cell blocks
+      (modules.BlockSelection as unknown as { selectedBlocks: Block[] }).selectedBlocks =
+        [paraBlock, tableBlock, cellBlock1, cellBlock2];
+
+      wrapper.appendChild(paraBlock.holder);
+      wrapper.appendChild(tableBlock.holder);
+      // Cell holders are inside the table's DOM (simulating table structure)
+      tableBlock.holder.appendChild(cellBlock1.holder);
+      tableBlock.holder.appendChild(cellBlock2.holder);
+
+      const createMultiSpy = vi.spyOn(
+        (dragManager as unknown as { preview: DragPreview }).preview,
+        'createMulti'
+      );
+
+      const dragHandle = document.createElement('div');
+
+      dragManager.setupDragHandle(dragHandle, paraBlock);
+
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+      dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
+
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
+      document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
+
+      // createMulti should be called with ONLY the root blocks (para + table),
+      // not the cell blocks whose parentId is in the selection set
+      expect(createMultiSpy).toHaveBeenCalledOnce();
+      expect(createMultiSpy).toHaveBeenCalledWith([paraBlock, tableBlock]);
+
+      // Clean up
       document.dispatchEvent(createMouseEvent('mouseup'));
     });
   });

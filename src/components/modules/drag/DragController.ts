@@ -130,8 +130,19 @@ export class DragController extends Module {
     // For toggles with hierarchy children, use a single-block preview with a badge
     // rather than a stacked multi preview — the toggle is conceptually one unit,
     // and the multi preview would show children twice (nested in the clone + stacked).
-    if (blocksToMove.length > 1 && hierarchyDescendants.length === 0) {
-      this.preview.createMulti(blocksToMove);
+    //
+    // For multi-block selections (e.g. after Cmd+A), selectedBlocks includes nested
+    // blocks such as table cell blocks (parentId points to another selected block).
+    // Filter them out before building the preview so they don't appear as separate
+    // stacked clones outside their parent's clone (which already contains them via
+    // cloneNode). This mirrors the identical filter in DragOperations.moveMultipleBlocks.
+    const sourceIds = new Set(blocksToMove.map(b => b.id));
+    const previewBlocks = blocksToMove.filter(
+      b => b.parentId === null || !sourceIds.has(b.parentId)
+    );
+
+    if (previewBlocks.length > 1 && hierarchyDescendants.length === 0) {
+      this.preview.createMulti(previewBlocks);
     } else {
       this.preview.createSingle(contentElement, block.stretched, block);
     }

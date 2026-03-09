@@ -10,6 +10,7 @@ import { DragPreview } from './preview/DragPreview';
 import { DragStateMachine, isActuallyDragging, isDragActive } from './state/DragStateMachine';
 import { DropTargetDetector } from './target/DropTargetDetector';
 import { AutoScroll } from './utils/AutoScroll';
+import { ToggleSpringLoader } from './utils/ToggleSpringLoader';
 import { hasPassedThreshold } from './utils/drag.constants';
 import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
@@ -28,6 +29,7 @@ export class DragController extends Module {
   private operations: DragOperations | null = null;
   private a11y: DragA11y | null = null;
   private autoScroll: AutoScroll | null = null;
+  private springLoader: ToggleSpringLoader = new ToggleSpringLoader();
   private listItemDescendants: ListItemDescendants | null = null;
   private boundHandlers: BoundHandlers | null = null;
 
@@ -282,6 +284,7 @@ export class DragController extends Module {
 
     if (!elementUnderCursor) {
       this.stateMachine.updateTarget(null, null);
+      this.springLoader.update(null);
       return;
     }
 
@@ -295,11 +298,14 @@ export class DragController extends Module {
 
     if (!dropTarget) {
       this.stateMachine.updateTarget(null, null);
+      this.springLoader.update(null);
       return;
     }
 
     // Update state with new target
     this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge);
+    // Spring-load closed toggles: auto-expand after 500ms hover
+    this.springLoader.update(dropTarget.block);
 
     // Show drop indicator
     dropTarget.block.holder.setAttribute('data-drop-indicator', dropTarget.edge);
@@ -601,6 +607,7 @@ export class DragController extends Module {
       state.targetBlock.holder.style.removeProperty('--drop-indicator-depth');
     }
 
+    this.springLoader.cancel();
     this.preview.destroy();
 
     const wrapper = this.Blok.UI.nodes.wrapper;

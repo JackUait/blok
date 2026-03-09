@@ -1170,3 +1170,152 @@ describe('Header Tool - Custom Configurations', () => {
     });
   });
 });
+
+describe('Header Tool - Toggle heading body placeholder click', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('clicking body placeholder inserts a child paragraph at the correct index', () => {
+    const mockNewBlock = { id: 'new-child-block' };
+    const mockSetToBlock = vi.fn();
+    const mockAPI = (() => {
+      const api: API = {
+        styles: {
+          block: 'blok-block',
+          inlineToolbar: 'blok-inline-toolbar',
+          inlineToolButton: 'blok-inline-tool-button',
+          inlineToolButtonActive: 'blok-inline-tool-button--active',
+          input: 'blok-input',
+          loader: 'blok-loader',
+          button: 'blok-button',
+          settingsButton: 'blok-settings-button',
+          settingsButtonActive: 'blok-settings-button--active',
+        },
+        i18n: { t: (key: string) => key, has: () => false },
+        blocks: {
+          getChildren: vi.fn().mockReturnValue([]),
+          getBlockIndex: vi.fn().mockReturnValue(2),
+          insert: vi.fn().mockReturnValue(mockNewBlock),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+      } as unknown as API;
+      (api as unknown as Record<string, unknown>).caret = { setToBlock: mockSetToBlock };
+      return api;
+    })();
+
+    const header = new Header({
+      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      config: {},
+      api: mockAPI,
+      readOnly: false,
+      block: { id: 'test-block-id' } as never,
+    });
+    const wrapper = header.render();
+    header.rendered();
+
+    const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
+
+    expect(bodyPlaceholder).not.toBeNull();
+
+    bodyPlaceholder.click();
+
+    expect(mockAPI.blocks.insert).toHaveBeenCalledWith('paragraph', { text: '' }, {}, 3, true);
+    expect(mockAPI.blocks.setBlockParent).toHaveBeenCalledWith('new-child-block', 'test-block-id');
+    expect(mockSetToBlock).toHaveBeenCalledWith('new-child-block', 'start');
+  });
+
+  it('clicking body placeholder hides the placeholder', () => {
+    const mockNewBlock = { id: 'new-child-block' };
+    const mockSetToBlock = vi.fn();
+    const mockAPI = (() => {
+      const api: API = {
+        styles: {
+          block: 'blok-block',
+          inlineToolbar: 'blok-inline-toolbar',
+          inlineToolButton: 'blok-inline-tool-button',
+          inlineToolButtonActive: 'blok-inline-tool-button--active',
+          input: 'blok-input',
+          loader: 'blok-loader',
+          button: 'blok-button',
+          settingsButton: 'blok-settings-button',
+          settingsButtonActive: 'blok-settings-button--active',
+        },
+        i18n: { t: (key: string) => key, has: () => false },
+        blocks: {
+          getChildren: vi.fn().mockReturnValue([]),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          insert: vi.fn().mockReturnValue(mockNewBlock),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+      } as unknown as API;
+      (api as unknown as Record<string, unknown>).caret = { setToBlock: mockSetToBlock };
+      return api;
+    })();
+
+    const header = new Header({
+      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      config: {},
+      api: mockAPI,
+      readOnly: false,
+      block: { id: 'test-block-id' } as never,
+    });
+    const wrapper = header.render();
+    header.rendered();
+
+    const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
+
+    expect(bodyPlaceholder).not.toBeNull();
+    bodyPlaceholder.click();
+
+    expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
+  });
+
+  it('does not insert a block when blockId is undefined', () => {
+    const mockInsert = vi.fn();
+    const mockAPI: API = {
+      styles: {
+        block: 'blok-block',
+        inlineToolbar: 'blok-inline-toolbar',
+        inlineToolButton: 'blok-inline-tool-button',
+        inlineToolButtonActive: 'blok-inline-tool-button--active',
+        input: 'blok-input',
+        loader: 'blok-loader',
+        button: 'blok-button',
+        settingsButton: 'blok-settings-button',
+        settingsButtonActive: 'blok-settings-button--active',
+      },
+      i18n: { t: (key: string) => key, has: () => false },
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        insert: mockInsert,
+        setBlockParent: vi.fn(),
+      },
+      events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+    } as unknown as API;
+
+    // No block id passed — use undefined cast to simulate missing block
+    const header = new Header({
+      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      config: {},
+      api: mockAPI,
+      readOnly: false,
+      block: undefined as never,
+    });
+    const wrapper = header.render();
+    header.rendered();
+
+    const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
+
+    expect(bodyPlaceholder).not.toBeNull();
+    bodyPlaceholder.click();
+
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+});

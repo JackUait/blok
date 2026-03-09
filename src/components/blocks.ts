@@ -124,7 +124,14 @@ export class Blocks {
      */
     const block = this.blocks.splice(fromIndex, 1)[0];
 
-    if (!skipDOM) {
+    // Blocks whose holders are nested inside another block's container (e.g., table cell
+    // blocks inside the table's rendered container) must not have their DOM position
+    // changed — they stay inside the parent container and follow it automatically when
+    // the parent block is repositioned. Only direct workingArea children need DOM moves.
+    const isNested = block.holder.parentElement !== null &&
+      block.holder.parentElement !== this.workingArea;
+
+    if (!skipDOM && !isNested) {
       const previousBlockIndex = Math.max(0, toIndex - 1);
       const position: InsertPosition = toIndex > 0 ? 'afterend' : 'beforebegin';
 
@@ -133,6 +140,10 @@ export class Blocks {
 
     // move in array
     this.blocks.splice(toIndex, 0, block);
+
+    // Re-sort any nested blocks (whose holders live inside block.holder) so they
+    // immediately follow the moved block in the flat array, matching DOM nesting.
+    this.resortNestedBlocks(block, this.blocks.indexOf(block));
 
     // invoke hook
     block.call(BlockToolAPI.MOVED, {
@@ -432,13 +443,56 @@ export class Blocks {
   private moveHolderInDOM(block: Block, referenceHolder: Element, position: InsertPosition): void {
     const referenceNode = this.findWorkingAreaChild(referenceHolder);
 
-    if (referenceNode !== null) {
+    if (referenceNode === block.holder) {
+      /**
+       * Self-reference: the resolved reference is the block being moved itself,
+       * which happens when the previousBlock's holder is nested inside block.holder.
+       * Use the next workingArea sibling to avoid undefined behavior.
+       */
+      const nextSibling = block.holder.nextElementSibling;
+
+      if (nextSibling) {
+        nextSibling.insertAdjacentElement('beforebegin', block.holder);
+      }
+    } else if (referenceNode !== null) {
       referenceNode.insertAdjacentElement(position, block.holder);
     } else {
       this.workingArea.appendChild(block.holder);
     }
 
     block.call(BlockToolAPI.RENDERED);
+  }
+
+  /**
+   * After moving a block in the flat array, ensure that any blocks whose holders
+   * are physically nested inside the moved block's holder immediately follow it
+   * in the flat array. This keeps the array order consistent with DOM nesting.
+   *
+   * @param block - The block that was just moved
+   * @param blockIndex - Current index of the block in this.blocks
+   */
+  private resortNestedBlocks(block: Block, blockIndex: number): void {
+    const nested: Block[] = [];
+    const indices: number[] = [];
+
+    this.blocks.forEach((b, i) => {
+      if (i !== blockIndex && block.holder.contains(b.holder)) {
+        nested.push(b);
+        indices.push(i);
+      }
+    });
+
+    if (nested.length === 0) {
+      return;
+    }
+
+    // Remove from current positions — highest index first to avoid index shifting
+    [...indices].sort((a, b) => b - a).forEach((i) => this.blocks.splice(i, 1));
+
+    // Find block's new index (may have shifted after removals) and re-insert right after it
+    const newIdx = this.blocks.indexOf(block);
+
+    this.blocks.splice(newIdx + 1, 0, ...nested);
   }
 
   private findWorkingAreaChild(element: Element): Element | null {

@@ -195,16 +195,17 @@ export class DragOperations {
 
     this.blockManager.move(toIndex, fromIndex, false);
 
-    // Select the moved block to provide visual feedback
-    const movedBlock = this.blockManager.getBlockByIndex(toIndex);
+    // After the move, sourceBlock may be at a different index than toIndex
+    // (e.g. if nested blocks were re-sorted). Use sourceBlock directly.
+    const actualIndex = this.blockManager.getBlockIndex(sourceBlock);
 
-    if (!movedBlock || !this.blockSelection) {
-      return { movedBlocks: movedBlock ? [movedBlock] : [], targetIndex: toIndex };
+    if (!this.blockSelection) {
+      return { movedBlocks: [sourceBlock], targetIndex: actualIndex };
     }
 
-    this.blockSelection.selectBlock(movedBlock);
+    this.blockSelection.selectBlock(sourceBlock);
 
-    return { movedBlocks: [movedBlock], targetIndex: toIndex };
+    return { movedBlocks: [sourceBlock], targetIndex: actualIndex };
   }
 
   /**
@@ -224,17 +225,27 @@ export class DragOperations {
     const targetIndex = this.blockManager.getBlockIndex(targetBlock);
     const insertIndex = edge === 'top' ? targetIndex : targetIndex + 1;
 
+    // When the move set includes parent-child groups (e.g., table + its cell blocks),
+    // only explicitly move the root blocks (those whose parentId is not another block
+    // in the same set). DOM-nested children follow their parent automatically, and
+    // resortNestedBlocks (called inside blocks.move) re-sorts them in the flat array.
+    const sourceIds = new Set(sourceBlocks.map(b => b.id));
+    const blocksToMove = sortedBlocks.filter(
+      b => b.parentId === null || !sourceIds.has(b.parentId)
+    );
+
     // Determine if we're moving blocks up or down
-    const firstBlockIndex = this.blockManager.getBlockIndex(sortedBlocks[0]);
+    const firstBlock = blocksToMove[0] ?? sortedBlocks[0];
+    const firstBlockIndex = this.blockManager.getBlockIndex(firstBlock);
     const movingDown = insertIndex > firstBlockIndex;
 
     // For multi-block moves, group them as a single undo entry using transactMoves
     const isMultiBlockMove = sortedBlocks.length > 1;
     const executeMoves = (): void => {
       if (movingDown) {
-        this.moveBlocksDown(sortedBlocks, insertIndex);
+        this.moveBlocksDown(blocksToMove, insertIndex);
       } else {
-        this.moveBlocksUp(sortedBlocks, insertIndex);
+        this.moveBlocksUp(blocksToMove, insertIndex);
       }
     };
 

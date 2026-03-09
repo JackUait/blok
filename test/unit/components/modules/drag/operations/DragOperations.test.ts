@@ -68,49 +68,37 @@ describe('DragOperations', () => {
     it('should move block to bottom of target', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
-      const movedBlock = createMockBlock('moved', 'paragraph', { text: 'moved' });
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === sourceBlock) return 0;
-        if (block === targetBlock) return 2;
-        return -1;
-      });
-
-      mockBlockManager.getBlockByIndex = vi.fn((index) => {
-        if (index === 2) return movedBlock; // After move, block is at index 2
-        return undefined;
-      });
+      // getBlockIndex is called 3 times: sourceBlock (pre-move), targetBlock, sourceBlock (post-move)
+      mockBlockManager.getBlockIndex = vi.fn()
+        .mockReturnValueOnce(0)  // sourceBlock pre-move
+        .mockReturnValueOnce(2)  // targetBlock
+        .mockReturnValueOnce(2); // sourceBlock post-move (moved to index 2)
 
       const result = operations.moveBlocks([sourceBlock], targetBlock, 'bottom');
 
       // targetIndex(2) + 1 = 3, but source is at 0 which is < 3, so toIndex = 3 - 1 = 2
       expect(mockBlockManager.move).toHaveBeenCalledWith(2, 0, false);
-      expect(mockBlockSelection.selectBlock).toHaveBeenCalledWith(movedBlock);
-      expect(result.movedBlocks).toEqual([movedBlock]);
+      expect(mockBlockSelection.selectBlock).toHaveBeenCalledWith(sourceBlock);
+      expect(result.movedBlocks).toEqual([sourceBlock]);
       expect(result.targetIndex).toBe(2);
     });
 
     it('should move block to top of target', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
-      const movedBlock = createMockBlock('moved', 'paragraph', { text: 'moved' });
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === sourceBlock) return 5;
-        if (block === targetBlock) return 2;
-        return -1;
-      });
-
-      mockBlockManager.getBlockByIndex = vi.fn((index) => {
-        if (index === 2) return movedBlock;
-        return undefined;
-      });
+      // getBlockIndex is called 3 times: sourceBlock (pre-move), targetBlock, sourceBlock (post-move)
+      mockBlockManager.getBlockIndex = vi.fn()
+        .mockReturnValueOnce(5)  // sourceBlock pre-move
+        .mockReturnValueOnce(2)  // targetBlock
+        .mockReturnValueOnce(2); // sourceBlock post-move (moved to index 2)
 
       const result = operations.moveBlocks([sourceBlock], targetBlock, 'top');
 
       // targetIndex(2), source is at 5 which is >= 2, so toIndex = 2
       expect(mockBlockManager.move).toHaveBeenCalledWith(2, 5, false);
-      expect(result.movedBlocks).toEqual([movedBlock]);
+      expect(result.movedBlocks).toEqual([sourceBlock]);
       expect(result.targetIndex).toBe(2);
     });
 

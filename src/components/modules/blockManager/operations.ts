@@ -632,9 +632,18 @@ export class BlockOperations {
       /** Move up current Block */
       blocksStore.move(toIndex, fromIndex, skipDOM);
 
-      /** Now actual block moved so that current block index changed */
-      this.currentBlockIndexValue = toIndex;
-      const movedBlock = this.currentBlock;
+      /**
+       * After the move, the moved block may be at a different index than toIndex
+       * if nested blocks (e.g. table cell blocks) were re-sorted by resortNestedBlocks.
+       * Use the saved block reference to find its actual new position.
+       */
+      const actualIndex = movingBlock !== undefined
+        ? this.repository.getBlockIndex(movingBlock)
+        : -1;
+      const resolvedIndex = actualIndex >= 0 ? actualIndex : toIndex;
+
+      this.currentBlockIndexValue = resolvedIndex;
+      const movedBlock = movingBlock ?? this.currentBlock;
 
       if (movedBlock === undefined) {
         throw new Error(`Could not move Block. Block at index ${toIndex} is not available.`);
@@ -645,11 +654,11 @@ export class BlockOperations {
        */
       this.blockDidMutated(BlockMovedMutationType, movedBlock, {
         fromIndex,
-        toIndex,
+        toIndex: resolvedIndex,
       } as BlockMutationEventDetailWithoutTarget<typeof BlockMovedMutationType>);
 
-      // Sync to Yjs
-      this.dependencies.YjsManager.moveBlock(movedBlock.id, toIndex);
+      // Sync to Yjs using the actual resolved index
+      this.dependencies.YjsManager.moveBlock(movedBlock.id, resolvedIndex);
     } finally {
       this.suppressStopCapturing = false;
     }

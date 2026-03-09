@@ -451,6 +451,85 @@ describe('Blocks', () => {
       expect(block1.holder.parentElement).toBe(workingArea);
       expect(tableCellContainer.contains(block1.holder)).toBe(false);
     });
+
+    it('should re-sort nested blocks to be immediately after the moved block in flat array', () => {
+      const blocks = createBlocks();
+      const p0 = createMockBlock('p0');
+      const tableBlock = createMockBlock('table', 'table');
+      const cellBlock = createMockBlock('cell', 'paragraph');
+      const p1 = createMockBlock('p1');
+
+      // Build flat array: [p0, tableBlock, cellBlock, p1]
+      blocks.push(p0);
+      blocks.push(tableBlock);
+
+      // Nest cellBlock.holder inside tableBlock.holder via an intermediate div
+      const innerContainer = document.createElement('div');
+
+      tableBlock.holder.appendChild(innerContainer);
+      innerContainer.appendChild(cellBlock.holder);
+
+      // Add cellBlock to the flat array manually (already in DOM inside tableBlock)
+      blocks.blocks.push(cellBlock);
+
+      // Add p1 as a direct child of workingArea
+      blocks.push(p1);
+
+      // Verify initial state: [p0(0), tableBlock(1), cellBlock(2), p1(3)]
+      expect(blocks.blocks[0]).toBe(p0);
+      expect(blocks.blocks[1]).toBe(tableBlock);
+      expect(blocks.blocks[2]).toBe(cellBlock);
+      expect(blocks.blocks[3]).toBe(p1);
+
+      // Move tableBlock from index 1 to index 2 (before p1's old position)
+      blocks.move(2, 1);
+
+      // After move, cellBlock must immediately follow tableBlock in the flat array
+      const tableIdx = blocks.blocks.indexOf(tableBlock);
+      const cellIdx = blocks.blocks.indexOf(cellBlock);
+
+      expect(cellIdx).toBe(tableIdx + 1);
+    });
+
+    it('should maintain correct flat array order when the reference block is nested inside the moved block', () => {
+      const blocks = createBlocks();
+      const tableBlock = createMockBlock('table', 'table');
+      const cellBlock = createMockBlock('cell', 'paragraph');
+      const p1 = createMockBlock('p1');
+
+      // Build flat array: [tableBlock, cellBlock, p1]
+      blocks.push(tableBlock);
+
+      // Nest cellBlock.holder inside tableBlock.holder
+      tableBlock.holder.appendChild(cellBlock.holder);
+      blocks.blocks.push(cellBlock);
+
+      // Add p1 as a direct child of workingArea after the table
+      blocks.push(p1);
+
+      // Sanity check initial flat array: [tableBlock(0), cellBlock(1), p1(2)]
+      expect(blocks.blocks[0]).toBe(tableBlock);
+      expect(blocks.blocks[1]).toBe(cellBlock);
+      expect(blocks.blocks[2]).toBe(p1);
+
+      // Move tableBlock from index 0 to index 1
+      // previousBlockIndex = 0 → blocks[0] after splice = cellBlock (nested inside tableBlock)
+      // findWorkingAreaChild(cellBlock.holder) walks up and returns tableBlock.holder — self-reference
+      // Without the nested re-sort fix, flat array becomes [cellBlock, tableBlock, p1] (cellBlock before table)
+      blocks.move(1, 0);
+
+      // tableBlock must still be in the workingArea (not detached)
+      expect(tableBlock.holder.parentElement).toBe(workingArea);
+
+      // cellBlock must still be inside tableBlock
+      expect(tableBlock.holder.contains(cellBlock.holder)).toBe(true);
+
+      // Flat array must have tableBlock before cellBlock (table owns cell, so table comes first)
+      const tableIdx = blocks.blocks.indexOf(tableBlock);
+      const cellIdx = blocks.blocks.indexOf(cellBlock);
+
+      expect(tableIdx).toBeLessThan(cellIdx);
+    });
   });
 
   describe('insert', () => {

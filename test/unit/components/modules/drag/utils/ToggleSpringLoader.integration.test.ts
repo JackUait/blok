@@ -20,13 +20,13 @@ describe('ToggleSpringLoader.update — null target', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.clearAllMocks();
     loader = new ToggleSpringLoader();
   });
 
   afterEach(() => {
     loader.cancel();
     vi.useRealTimers();
-    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 

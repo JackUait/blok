@@ -425,7 +425,7 @@ export class DragController extends Module {
   private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom', sourceBlocks: Block[]): string | null {
     // If dropping below a toggleable block, the block becomes a child of the toggle.
     // Detect via DOM attribute (covers both toggle list blocks AND toggle headings).
-    if (edge === 'bottom' && this.isToggleableBlock(targetBlock)) {
+    if (edge === 'bottom' && this.isToggleableBlock(targetBlock) && this.isOpenToggle(targetBlock)) {
       // Don't re-enter the toggle if all source blocks are already its children.
       // This allows a child to escape its own toggle parent by dragging to the bottom edge.
       const allSourcesAreChildren = sourceBlocks.length > 0 &&
@@ -452,6 +452,14 @@ export class DragController extends Module {
    */
   private isToggleableBlock(block: Block): boolean {
     return block.holder.querySelector('[data-blok-toggle-open]') !== null;
+  }
+
+  /**
+   * Checks whether a toggleable block is currently open (expanded).
+   * Returns false for closed (collapsed) toggles.
+   */
+  private isOpenToggle(block: Block): boolean {
+    return block.holder.querySelector('[data-blok-toggle-open="true"]') !== null;
   }
 
   /**

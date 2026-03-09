@@ -119,11 +119,24 @@ export class BlockHierarchy {
       }
     }
 
-    // Move block holder into toggle child container if the new parent has one
+    // Move block holder into toggle child container if the new parent has one,
+    // honouring the flat-array order so the DOM order matches the logical order.
     if (newParentId !== null && newParent !== undefined) {
       const newContainer = newParent.holder.querySelector('[data-blok-toggle-children]');
       if (newContainer) {
-        newContainer.appendChild(block.holder);
+        const allBlocks = this.repository.blocks;
+        const blockIdx = allBlocks.indexOf(block);
+        let nextSiblingHolder: HTMLElement | null = null;
+
+        for (let i = blockIdx + 1; i < allBlocks.length; i++) {
+          if (allBlocks[i].holder.parentElement === newContainer) {
+            nextSiblingHolder = allBlocks[i].holder;
+            break;
+          }
+        }
+
+        // insertBefore(el, null) is equivalent to appendChild
+        newContainer.insertBefore(block.holder, nextSiblingHolder);
       }
     }
 

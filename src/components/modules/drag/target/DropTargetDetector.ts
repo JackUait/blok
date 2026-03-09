@@ -308,7 +308,7 @@ export class DropTargetDetector {
     const toggleAttr = toggleBlock.holder.getAttribute('data-blok-depth');
     const toggleHierarchyDepth = toggleAttr !== null ? parseInt(toggleAttr, 10) : 0;
 
-    return (toggleHierarchyDepth + 1) * 2;
+    return (toggleHierarchyDepth + 1) * 28 / 24;
   }
 
   /**

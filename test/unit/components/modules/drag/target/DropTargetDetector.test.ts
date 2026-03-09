@@ -856,8 +856,9 @@ describe('DropTargetDetector', () => {
       const result = det.determineDropTarget(innerElement, 100, 199, outsider);
 
       expect(result).not.toBeNull();
-      // Depth should be (toggleHierarchyDepth + 1) * 2 = (0 + 1) * 2 = 2
-      expect(result?.depth).toBe(2);
+      // Depth should be (toggleHierarchyDepth + 1) * 28 / 24 = (0 + 1) * 28 / 24 ≈ 1.1667
+      // indicator CSS: left = depth * 24px → 1.1667 * 24 = 28px = pl-7 padding of toggle children
+      expect(result?.depth).toBeCloseTo(28 / 24, 4);
 
       document.body.removeChild(child.holder);
     });
@@ -923,13 +924,14 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(toggleHeading.holder);
     });
 
-    it('should set depth to 2 when dropping inside toggle at root level', () => {
+    it('should set depth to 28/24 when dropping inside root-level toggle (bottom edge)', () => {
       const toggle = createToggleTestBlock({
         id: 'toggle-1',
         toggleOpen: true,
         contentIds: [],
         name: 'toggle',
       });
+      // Root-level toggle has no data-blok-depth attribute (defaults to 0)
       const outsider = createToggleTestBlock({ id: 'outsider' });
 
       const blockManager = createToggleBlockManager([toggle, outsider]);
@@ -946,9 +948,52 @@ describe('DropTargetDetector', () => {
       const result = det.determineDropTarget(innerElement, 100, 99, outsider);
 
       expect(result).not.toBeNull();
-      expect(result?.depth).toBe(2);
+      // (toggleHierarchyDepth + 1) * 28 / 24 = (0 + 1) * 28 / 24 ≈ 1.1667
+      // indicator at depth * 24px = 28px = pl-7 padding of [data-blok-toggle-children]
+      expect(result?.depth).toBeCloseTo(28 / 24, 4);
 
       document.body.removeChild(toggle.holder);
+    });
+
+    it('should set depth to 56/24 when dropping inside a depth-1 nested toggle (bottom edge)', () => {
+      const outerToggle = createToggleTestBlock({
+        id: 'outer-toggle',
+        toggleOpen: true,
+        contentIds: ['inner-toggle'],
+        name: 'toggle',
+      });
+      outerToggle.holder.setAttribute('data-blok-depth', '0');
+
+      const innerToggle = createToggleTestBlock({
+        id: 'inner-toggle',
+        toggleOpen: true,
+        contentIds: [],
+        name: 'toggle',
+        parentId: 'outer-toggle',
+      });
+      // data-blok-depth="1" — nested one level inside outer toggle
+      innerToggle.holder.setAttribute('data-blok-depth', '1');
+
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([outerToggle, innerToggle, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(innerToggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(innerToggle.holder);
+
+      const innerElement = innerToggle.holder.querySelector('[data-blok-toggle-open]') ?? innerToggle.holder;
+      const result = det.determineDropTarget(innerElement, 100, 99, outsider);
+
+      expect(result).not.toBeNull();
+      // (toggleHierarchyDepth + 1) * 28 / 24 = (1 + 1) * 28 / 24 ≈ 2.3333
+      expect(result?.depth).toBeCloseTo(56 / 24, 4);
+
+      document.body.removeChild(innerToggle.holder);
     });
 
     it('should NOT set parentId when dropping on top edge of open toggle', () => {

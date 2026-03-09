@@ -1234,9 +1234,10 @@ describe("DragManager - Component Integration", () => {
       expect(child_b_call?.[1]).toBe("toggle-1");
     });
 
-    it("should hide dropped block when parent toggle is collapsed", () => {
-      // Bug 4: Dropping a block into a collapsed toggle left it visible
-      // because updateChildrenVisibility was never called
+    it("should NOT hide block and NOT reparent when dropping onto bottom edge of a collapsed toggle", () => {
+      // Previously (buggy): dropping on a closed toggle reparented the block as a
+      // hidden child. Now the block should stay at root level and remain visible,
+      // because the drop indicator showed root level for a closed toggle.
       const collapsedToggle = createBlockStub({
         id: "collapsed-toggle",
         name: "toggle",
@@ -1260,7 +1261,7 @@ describe("DragManager - Component Integration", () => {
       const allBlocks = [paragraphBlock, collapsedToggle];
       const blockManagerMock = createBlockManagerMock(allBlocks);
 
-      const { dragManager, wrapper } = createDragManager({
+      const { dragManager, modules, wrapper } = createDragManager({
         BlockManager: blockManagerMock,
       });
 
@@ -1275,8 +1276,14 @@ describe("DragManager - Component Integration", () => {
         "bottom",
       );
 
-      // The dropped block should be hidden since the toggle is collapsed
-      expect(paragraphBlock.holder.classList.contains("hidden")).toBe(true);
+      // setBlockParent should NOT be called with "collapsed-toggle" — the block
+      // must not become a child of the closed toggle
+      expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalledWith(
+        expect.anything(),
+        "collapsed-toggle",
+      );
+      // The block should NOT be hidden (it stays at root level, not a child)
+      expect(paragraphBlock.holder.classList.contains("hidden")).toBe(false);
     });
 
     it("should not call setBlockParent when block is already at correct parent", () => {
@@ -1449,6 +1456,62 @@ describe("DragManager - Component Integration", () => {
         expect.objectContaining({ id: "child-1" }),
         null,
       );
+    });
+
+    it("should set parentId to null (root level) when dropping onto bottom edge of a CLOSED toggle", () => {
+      // Bug: resolveParentForDrop uses isToggleableBlock which returns true for both
+      // open AND closed toggles. DropTargetDetector only shows "entering toggle"
+      // indicator for OPEN toggles, so for a closed toggle the indicator shows root
+      // level — but the block was being reparented as a hidden child. The fix is to
+      // only reparent when the toggle is open.
+      const closedToggle = createBlockStub({
+        id: "closed-toggle",
+        name: "toggle",
+        parentId: null,
+      });
+
+      // Add the toggle-open DOM attribute set to "false" (closed toggle)
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "false");
+      closedToggle.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const paragraphBlock = createBlockStub({
+        id: "paragraph-1",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      const allBlocks = [paragraphBlock, closedToggle];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      performDragDrop(
+        dragManager,
+        wrapper,
+        paragraphBlock,
+        closedToggle,
+        "bottom",
+      );
+
+      // setBlockParent should NOT be called with "closed-toggle" — the block
+      // must remain at root level (no reparenting to the closed toggle).
+      // Note: since the block is already at root (parentId === null), setBlockParent
+      // is skipped entirely rather than being called with null.
+      expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalledWith(
+        expect.anything(),
+        "closed-toggle",
+      );
+      // The block should NOT be hidden since it stays at root level
+      expect(paragraphBlock.holder.classList.contains("hidden")).toBe(false);
     });
   });
 

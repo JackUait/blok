@@ -535,6 +535,43 @@ describe('BlockHierarchy', () => {
       expect(toggleContainer.contains(child.holder)).toBe(false);
     });
 
+    it('inserts block at correct DOM position (between existing siblings) based on flat array order', () => {
+      // Scenario: toggle has C1 and C2 as children. A is being dropped between C1 and C2.
+      // The flat array (repository.blocks) is already [toggle, C1, A, C2] (moveBlocks ran first).
+      // setBlockParent(A, toggle.id) must produce DOM order [C1, A, C2], NOT [C1, C2, A].
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: ['c1', 'c2'] },
+        { id: 'c1', parentId: 'toggle', contentIds: [] },
+        { id: 'a', parentId: null, contentIds: [] },
+        { id: 'c2', parentId: 'toggle', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggle = requireBlock('toggle');
+      const c1 = requireBlock('c1');
+      const a = requireBlock('a');
+      const c2 = requireBlock('c2');
+
+      // Build DOM: toggle holds a toggle-children container with C1 and C2 already in it.
+      // A's holder is outside (it will be moved in by setBlockParent).
+      const editorWrapper = document.createElement('div');
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute('data-blok-toggle-children', '');
+      toggleContainer.appendChild(c1.holder);
+      toggleContainer.appendChild(c2.holder);
+      toggle.holder.appendChild(toggleContainer);
+      editorWrapper.appendChild(toggle.holder);
+      editorWrapper.appendChild(a.holder);
+
+      hierarchy.setBlockParent(a, 'toggle');
+
+      // DOM order inside toggleContainer should be [C1, A, C2]
+      const children = Array.from(toggleContainer.children);
+      expect(children[0]).toBe(c1.holder);
+      expect(children[1]).toBe(a.holder);
+      expect(children[2]).toBe(c2.holder);
+    });
+
     it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },

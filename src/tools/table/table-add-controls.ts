@@ -166,7 +166,7 @@ export class TableAddControls {
       this.addRowBtn.style.left = '0px';
       this.addRowBtn.style.transform = '';
 
-      this.addColBtn.style.left = `${visibleWidth}px`;
+      this.addColBtn.style.left = `${visibleWidth + 4}px`;
       this.addColBtn.style.right = '';
     } else {
       this.addRowBtn.style.width = '';
@@ -178,7 +178,7 @@ export class TableAddControls {
       this.addRowBtn.style.right = `${paddingRight}px`;
 
       this.addColBtn.style.left = '';
-      this.addColBtn.style.right = `${paddingRight - 32}px`;
+      this.addColBtn.style.right = `${paddingRight - 36}px`;
     }
   }
 

@@ -178,7 +178,7 @@ export class TableAddControls {
       this.addRowBtn.style.right = `${paddingRight}px`;
 
       this.addColBtn.style.left = '';
-      this.addColBtn.style.right = '-36px';
+      this.addColBtn.style.right = `${paddingRight - 32}px`;
     }
   }
 

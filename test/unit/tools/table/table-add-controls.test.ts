@@ -153,7 +153,7 @@ describe('TableAddControls', () => {
       expect(addColBtn).not.toBeNull();
     });
 
-    it('add-column button is positioned outside the grid content area (right: -36px)', () => {
+    it('add-column button is positioned outside the grid content area', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
       new TableAddControls({
@@ -167,7 +167,7 @@ describe('TableAddControls', () => {
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      expect(addColBtn.style.right).toBe('-36px');
+      expect(addColBtn.style.right).toBe('-32px');
     });
 
     it('add-row button contains a plus SVG icon', () => {
@@ -1711,6 +1711,39 @@ describe('TableAddControls', () => {
       // Button is clamped to scroll container visible width
       expect(addRowBtn.style.width).toBe('600px');
     });
+
+    it('add-column button right offset accounts for wrapper padding in percent mode', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      const scrollContainer = document.createElement('div');
+
+      wrapper.insertBefore(scrollContainer, grid);
+      scrollContainer.appendChild(grid);
+
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === wrapper) {
+          return { paddingRight: '20px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingLeft: '0px' } as CSSStyleDeclaration;
+      });
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
+
+      // paddingRight (20) - buttonWidth (32) = -12px
+      expect(addColBtn.style.right).toBe('-12px');
+
+      spy.mockRestore();
+    });
   });
 
   describe('scroll overflow clipping', () => {
@@ -1883,21 +1916,26 @@ describe('TableAddControls', () => {
       const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      // Both buttons should use the same offset magnitude from the wrapper edge
-      // bottom: -Npx and right: -Npx should match
+      // add-row button uses a fixed bottom offset
       expect(addRowBtn.style.bottom).toBe('-36px');
-      expect(addColBtn.style.right).toBe('-36px');
+      // add-col button right = paddingRight - buttonWidth; with no padding in jsdom: 0 - 32 = -32px
+      expect(addColBtn.style.right).toBe('-32px');
 
       // Both hit areas should be the same size in their respective axis
       expect(addRowBtn.style.height).toBe('32px');
       expect(addColBtn.style.width).toBe('32px');
     });
 
-    it('add-col button extends fully outside the wrapper (no reliance on wrapper padding)', () => {
+    it('add-col button right offset is paddingRight - buttonWidth when wrapper has no padding', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 
-      // Even when wrapper has no right padding, add-col should work correctly
-      wrapper.style.paddingRight = '0px';
+      const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === wrapper) {
+          return { paddingRight: '0px' } as CSSStyleDeclaration;
+        }
+
+        return { paddingLeft: '0px' } as CSSStyleDeclaration;
+      });
 
       new TableAddControls({
         wrapper,
@@ -1910,9 +1948,11 @@ describe('TableAddControls', () => {
 
       const addColBtn = wrapper.querySelector(`[${ADD_COL_ATTR}]`) as HTMLElement;
 
-      // Button should extend outside the wrapper
-      expect(addColBtn.style.right).toBe('-36px');
+      // paddingRight (0) - buttonWidth (32) = -32px; button still extends outside wrapper
+      expect(addColBtn.style.right).toBe('-32px');
       expect(addColBtn.style.width).toBe('32px');
+
+      spy.mockRestore();
     });
 
     it('syncRowButtonWidth uses right:0 when wrapper has no padding', () => {

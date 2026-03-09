@@ -181,7 +181,12 @@ export class DropTargetDetector {
     const previousBlock = targetIndex > 0
       ? this.blockManager.getBlockByIndex(targetIndex - 1)
       : null;
-    const canUsePreviousBlock = previousBlock && !this.sourceBlocks.includes(previousBlock);
+    // Only normalize within the same toggle context — don't cross toggle boundaries.
+    // If previousBlock is inside a toggle and targetBlock is not (or vice versa),
+    // normalization would trap the block inside the toggle.
+    const canUsePreviousBlock = previousBlock &&
+      !this.sourceBlocks.includes(previousBlock) &&
+      previousBlock.parentId === targetBlock.parentId;
 
     if (isTopHalf && targetIndex > 0 && canUsePreviousBlock) {
       const targetDepth = this.calculateTargetDepth(previousBlock, 'bottom', sourceBlock);
@@ -315,9 +320,16 @@ export class DropTargetDetector {
 
     // Case 1: Bottom edge of an open toggle → "insert as first child"
     if (edge === 'bottom' && this.isOpenToggle(targetBlock)) {
-      const toggleDepth = this.getToggleChildIndicatorDepth(targetBlock);
+      // If all source blocks are already children of this toggle, don't re-enter it.
+      // This allows blocks to be dragged OUT of a toggle by hovering over its bottom area.
+      const allSourcesAreChildren = this.sourceBlocks.length > 0 &&
+        this.sourceBlocks.every(b => b.parentId === targetBlock.id);
 
-      return { ...target, parentId: targetBlock.id, depth: toggleDepth };
+      if (!allSourcesAreChildren) {
+        const toggleDepth = this.getToggleChildIndicatorDepth(targetBlock);
+
+        return { ...target, parentId: targetBlock.id, depth: toggleDepth };
+      }
     }
 
     // Case 2: Target block is a child of an open toggle

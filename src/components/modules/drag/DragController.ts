@@ -359,7 +359,7 @@ export class DragController extends Module {
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
     // Update parent-child relationships after move
-    const newParentId = this.resolveParentForDrop(targetBlock, edge);
+    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
     const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
     const reparentedBlocks: Block[] = [];
     const affectedParentIds = new Set<string>();
@@ -419,13 +419,21 @@ export class DragController extends Module {
    *
    * @param targetBlock - The block that was the drop target
    * @param edge - Which edge of the target the drop occurred on
+   * @param sourceBlocks - The blocks being dragged
    * @returns The parentId for the dropped blocks, or null for root level
    */
-  private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom'): string | null {
+  private resolveParentForDrop(targetBlock: Block, edge: 'top' | 'bottom', sourceBlocks: Block[]): string | null {
     // If dropping below a toggleable block, the block becomes a child of the toggle.
     // Detect via DOM attribute (covers both toggle list blocks AND toggle headings).
     if (edge === 'bottom' && this.isToggleableBlock(targetBlock)) {
-      return targetBlock.id;
+      // Don't re-enter the toggle if all source blocks are already its children.
+      // This allows a child to escape its own toggle parent by dragging to the bottom edge.
+      const allSourcesAreChildren = sourceBlocks.length > 0 &&
+        sourceBlocks.every(b => b.parentId === targetBlock.id);
+
+      if (!allSourcesAreChildren) {
+        return targetBlock.id;
+      }
     }
 
     // If the target block is itself a child, the dropped block becomes a sibling
@@ -485,7 +493,7 @@ export class DragController extends Module {
     }
 
     // Set parent relationships for duplicated blocks
-    const newParentId = this.resolveParentForDrop(targetBlock, edge);
+    const newParentId = this.resolveParentForDrop(targetBlock, edge, sourceBlocks);
     const affectedParentIds = new Set<string>();
 
     for (const dupBlock of result.duplicatedBlocks) {

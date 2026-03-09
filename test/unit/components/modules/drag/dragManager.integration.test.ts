@@ -1405,6 +1405,51 @@ describe("DragManager - Component Integration", () => {
       // The old parent toggle should have call('rendered') invoked
       expect(toggleBlock.call).toHaveBeenCalledWith("rendered");
     });
+
+    it("should set parentId to null (root level) when dropping a toggle child onto its own toggle parent with bottom edge", () => {
+      // Bug: when a child block is dragged onto the bottom edge of its own toggle
+      // parent, resolveParentForDrop blindly returns the toggle's id (keeping it a
+      // child) instead of allowing the block to escape to root level.
+      const toggleBlock = createBlockStub({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+        contentIds: ["child-1"],
+      });
+
+      // Add toggle-open DOM attribute so isToggleableBlock returns true
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const childBlock = createBlockStub({
+        id: "child-1",
+        name: "paragraph",
+        parentId: "toggle-1",
+      });
+
+      const allBlocks = [toggleBlock, childBlock];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag the child onto the bottom edge of its own toggle parent
+      performDragDrop(dragManager, wrapper, childBlock, toggleBlock, "bottom");
+
+      // setBlockParent should be called with null (root level), NOT "toggle-1"
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "child-1" }),
+        null,
+      );
+    });
   });
 
   describe("Duplicate parent-child relationship updates", () => {

@@ -62,11 +62,32 @@ export class BlockHierarchy {
       oldParent.contentIds = oldParent.contentIds.filter(id => id !== block.id);
     }
 
-    // If old parent had a toggle child container and this block was in it, move it back out
+    // If old parent had a toggle child container and this block was in it, move it to the
+    // position indicated by the flat array. moveBlocks() updates the flat array before
+    // setBlockParent() is called, so getBlockIndex() reflects the intended drop position.
     if (oldParent !== undefined) {
       const oldContainer = oldParent.holder.querySelector('[data-blok-toggle-children]');
+
       if (oldContainer && block.holder.parentElement === oldContainer) {
-        oldParent.holder.after(block.holder);
+        // Scan backwards in the flat array for the nearest block whose holder is at root
+        // level (not inside any toggle-children container) — use it as the DOM anchor.
+        const allBlocks = this.repository.blocks;
+        const blockIndex = allBlocks.indexOf(block);
+        let placed = false;
+
+        for (let i = blockIndex - 1; i >= 0; i--) {
+          const prevBlock = allBlocks[i];
+
+          if (prevBlock && prevBlock.holder.closest('[data-blok-toggle-children]') === null) {
+            prevBlock.holder.insertAdjacentElement('afterend', block.holder);
+            placed = true;
+            break;
+          }
+        }
+
+        if (!placed) {
+          oldParent.holder.after(block.holder);
+        }
       }
     }
 

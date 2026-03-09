@@ -988,6 +988,71 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(toggle.holder);
     });
 
+    it('should NOT set parentId when dragging a block that is already a child of the target open toggle', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: ['child-1'],
+        name: 'toggle',
+      });
+      const child = createToggleTestBlock({ id: 'child-1', parentId: 'toggle-1' });
+
+      const blockManager = createToggleBlockManager([toggle, child]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([child]);
+
+      vi.spyOn(toggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(toggle.holder);
+
+      const innerElement = toggle.holder.querySelector('[data-blok-toggle-open]') ?? toggle.holder;
+      // Bottom half of toggle
+      const result = det.determineDropTarget(innerElement, 100, 99, child);
+
+      expect(result).not.toBeNull();
+      expect(result?.block).toBe(toggle);
+      expect(result?.edge).toBe('bottom');
+      // The child is already inside this toggle — should NOT re-enter it
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(toggle.holder);
+    });
+
+    it('should set parentId when dragging an external block onto the bottom of an open toggle that already has children', () => {
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: ['child-1'],
+        name: 'toggle',
+      });
+      const child = createToggleTestBlock({ id: 'child-1', parentId: 'toggle-1' });
+      const outsider = createToggleTestBlock({ id: 'outsider' });
+
+      const blockManager = createToggleBlockManager([toggle, child, outsider]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([outsider]);
+
+      vi.spyOn(toggle.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 100, left: 0, right: 200, width: 200, height: 100, x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(toggle.holder);
+
+      const innerElement = toggle.holder.querySelector('[data-blok-toggle-open]') ?? toggle.holder;
+      // Bottom half of toggle
+      const result = det.determineDropTarget(innerElement, 100, 99, outsider);
+
+      expect(result).not.toBeNull();
+      expect(result?.block).toBe(toggle);
+      expect(result?.edge).toBe('bottom');
+      // External block should still enter the toggle
+      expect(result?.parentId).toBe('toggle-1');
+
+      document.body.removeChild(toggle.holder);
+    });
+
     it('should NOT set parentId when target child belongs to closed toggle', () => {
       const toggle = createToggleTestBlock({
         id: 'toggle-1',
@@ -1017,6 +1082,45 @@ describe('DropTargetDetector', () => {
       expect(result?.parentId).toBeNull();
 
       document.body.removeChild(child.holder);
+    });
+
+    it('should NOT trap a toggle child inside the toggle when cursor is at top half of the next external block (multi-child toggle)', () => {
+      // Scenario: toggle T has two children [childA, childD].
+      // User drags childA. cursor is at the TOP HALF of the external block C (right after T).
+      // Without the fix, normalization converts "top of C" → "bottom of childD" (last child of T),
+      // which returns parentId=T.id — trapping childA inside T forever.
+      const toggle = createToggleTestBlock({
+        id: 'toggle-1',
+        toggleOpen: true,
+        contentIds: ['child-1', 'child-2'],
+        name: 'toggle',
+      });
+      const childA = createToggleTestBlock({ id: 'child-1', parentId: 'toggle-1' }); // source
+      const childD = createToggleTestBlock({ id: 'child-2', parentId: 'toggle-1' }); // last child, NOT source
+      const external = createToggleTestBlock({ id: 'external' }); // C: next block after toggle
+
+      // flat array order: [toggle, childA, childD, external]
+      const blockManager = createToggleBlockManager([toggle, childA, childD, external]);
+      const det = new DropTargetDetector(createToggleUIAdapter(), blockManager);
+      det.setSourceBlocks([childA]);
+
+      vi.spyOn(external.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 200, bottom: 300, left: 0, right: 200, width: 200, height: 100, x: 0, y: 200, toJSON: () => ({}),
+      });
+
+      document.body.appendChild(external.holder);
+
+      const innerElement = document.createElement('div');
+      external.holder.appendChild(innerElement);
+
+      // Cursor at Y=210 — top half of external block (midpoint is 250)
+      const result = det.determineDropTarget(innerElement, 100, 210, childA);
+
+      expect(result).not.toBeNull();
+      // Must escape the toggle — parentId must be null (root level)
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(external.holder);
     });
   });
 });

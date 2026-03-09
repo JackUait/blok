@@ -500,6 +500,41 @@ describe('BlockHierarchy', () => {
       expect(toggleContainer.contains(child.holder)).toBe(false);
     });
 
+    it('places extracted block at flat-array position when other blocks come between the toggle and the drop target', () => {
+      // Mimics what happens during drag: moveBlocks() has already updated the flat array
+      // so child is at index 3 (after G), but child.holder is still physically inside the
+      // toggle's [data-blok-toggle-children] container.
+      // setBlockParent must honour the flat-array order, not always place right after the toggle.
+      repository = createRepositoryWithBlocks([
+        { id: 'toggle', parentId: null, contentIds: ['childD'] },
+        { id: 'childD', parentId: 'toggle', contentIds: [] },
+        { id: 'G', parentId: null, contentIds: [] },
+        { id: 'child', parentId: 'toggle', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggle = requireBlock('toggle');
+      const childD = requireBlock('childD');
+      const G = requireBlock('G');
+      const child = requireBlock('child');
+
+      // DOM: toggle and G in editorWrapper; childD and child inside toggle's container
+      const editorWrapper = document.createElement('div');
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute('data-blok-toggle-children', '');
+      toggle.holder.appendChild(toggleContainer);
+      toggleContainer.appendChild(childD.holder);
+      toggleContainer.appendChild(child.holder);
+      editorWrapper.appendChild(toggle.holder);
+      editorWrapper.appendChild(G.holder);
+
+      hierarchy.setBlockParent(child, null);
+
+      // child.holder must land AFTER G.holder (flat-array index 3, G is at 2)
+      expect(G.holder.nextSibling).toBe(child.holder);
+      expect(toggleContainer.contains(child.holder)).toBe(false);
+    });
+
     it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },

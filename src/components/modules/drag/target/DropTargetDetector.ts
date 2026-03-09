@@ -302,13 +302,11 @@ export class DropTargetDetector {
 
   /**
    * Calculates the indicator depth for a child being dropped inside a toggle.
-   * Uses the toggle's hierarchy depth to determine the visual nesting level.
+   * Returns 0 so the drop indicator is full-width and visually consistent with
+   * root-level indicators, regardless of toggle nesting depth.
    */
-  private getToggleChildIndicatorDepth(toggleBlock: Block): number {
-    const toggleAttr = toggleBlock.holder.getAttribute('data-blok-depth');
-    const toggleHierarchyDepth = toggleAttr !== null ? parseInt(toggleAttr, 10) : 0;
-
-    return (toggleHierarchyDepth + 1) * 28 / 24;
+  private getToggleChildIndicatorDepth(_toggleBlock: Block): number {
+    return 0;
   }
 
   /**

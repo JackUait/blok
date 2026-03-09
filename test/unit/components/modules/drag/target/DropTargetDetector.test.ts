@@ -856,9 +856,8 @@ describe('DropTargetDetector', () => {
       const result = det.determineDropTarget(innerElement, 100, 199, outsider);
 
       expect(result).not.toBeNull();
-      // Depth should be (toggleHierarchyDepth + 1) * 28 / 24 = (0 + 1) * 28 / 24 ≈ 1.1667
-      // indicator CSS: left = depth * 24px → 1.1667 * 24 = 28px = pl-7 padding of toggle children
-      expect(result?.depth).toBeCloseTo(28 / 24, 4);
+      // Depth should be 0 so the indicator is full-width (same as root-level indicators)
+      expect(result?.depth).toBe(0);
 
       document.body.removeChild(child.holder);
     });
@@ -924,7 +923,7 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(toggleHeading.holder);
     });
 
-    it('should set depth to 28/24 when dropping inside root-level toggle (bottom edge)', () => {
+    it('should set depth to 0 when dropping inside root-level toggle (bottom edge)', () => {
       const toggle = createToggleTestBlock({
         id: 'toggle-1',
         toggleOpen: true,
@@ -948,14 +947,13 @@ describe('DropTargetDetector', () => {
       const result = det.determineDropTarget(innerElement, 100, 99, outsider);
 
       expect(result).not.toBeNull();
-      // (toggleHierarchyDepth + 1) * 28 / 24 = (0 + 1) * 28 / 24 ≈ 1.1667
-      // indicator at depth * 24px = 28px = pl-7 padding of [data-blok-toggle-children]
-      expect(result?.depth).toBeCloseTo(28 / 24, 4);
+      // Depth should be 0 so the indicator is full-width (same as root-level indicators)
+      expect(result?.depth).toBe(0);
 
       document.body.removeChild(toggle.holder);
     });
 
-    it('should set depth to 56/24 when dropping inside a depth-1 nested toggle (bottom edge)', () => {
+    it('should set depth to 0 when dropping inside a depth-1 nested toggle (bottom edge)', () => {
       const outerToggle = createToggleTestBlock({
         id: 'outer-toggle',
         toggleOpen: true,
@@ -990,8 +988,8 @@ describe('DropTargetDetector', () => {
       const result = det.determineDropTarget(innerElement, 100, 99, outsider);
 
       expect(result).not.toBeNull();
-      // (toggleHierarchyDepth + 1) * 28 / 24 = (1 + 1) * 28 / 24 ≈ 2.3333
-      expect(result?.depth).toBeCloseTo(56 / 24, 4);
+      // Depth should be 0 so the indicator is full-width (same as root-level indicators)
+      expect(result?.depth).toBe(0);
 
       document.body.removeChild(innerToggle.holder);
     });

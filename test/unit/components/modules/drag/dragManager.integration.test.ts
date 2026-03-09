@@ -1286,7 +1286,7 @@ describe("DragManager - Component Integration", () => {
       expect(paragraphBlock.holder.classList.contains("hidden")).toBe(false);
     });
 
-    it("should not call setBlockParent when block is already at correct parent", () => {
+    it("should call setBlockParent when reordering between toggle children (same parent)", () => {
       const toggleBlock = createBlockStub({
         id: "toggle-1",
         name: "toggle",
@@ -1317,8 +1317,12 @@ describe("DragManager - Component Integration", () => {
       // Drag child-2 to bottom of child-1 (both are already children of toggle-1)
       performDragDrop(dragManager, wrapper, child2, child1, "bottom");
 
-      // setBlockParent should NOT be called since child-2 already has toggle-1 as parent
-      expect(modules.BlockManager.setBlockParent).not.toHaveBeenCalled();
+      // setBlockParent MUST be called even though child-2 already has toggle-1 as parent,
+      // so that the DOM order within [data-blok-toggle-children] is synced to match the flat array
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "child-2" }),
+        "toggle-1",
+      );
     });
 
     it("should call rendered() on affected parent blocks after reparenting", () => {
@@ -1512,6 +1516,58 @@ describe("DragManager - Component Integration", () => {
       );
       // The block should NOT be hidden since it stays at root level
       expect(paragraphBlock.holder.classList.contains("hidden")).toBe(false);
+    });
+
+    it("should call setBlockParent when reordering a toggle child within the same toggle", () => {
+      // Bug: reordering within a toggle was silently skipped because
+      // movedBlock.parentId === newParentId, so setBlockParent was never called
+      // and the DOM order in [data-blok-toggle-children] was never synced.
+      const toggleBlock = createBlockStub({
+        id: "toggle-1",
+        name: "toggle",
+        parentId: null,
+        contentIds: ["child-a", "child-b"],
+      });
+
+      // Add the toggle-open DOM attribute
+      const toggleWrapper = document.createElement("div");
+
+      toggleWrapper.setAttribute("data-blok-toggle-open", "true");
+      toggleBlock.holder
+        .querySelector("[data-blok-element-content]")!
+        .appendChild(toggleWrapper);
+
+      const childA = createBlockStub({
+        id: "child-a",
+        name: "paragraph",
+        parentId: "toggle-1",
+      });
+      const childB = createBlockStub({
+        id: "child-b",
+        name: "paragraph",
+        parentId: "toggle-1",
+      });
+
+      const allBlocks = [toggleBlock, childA, childB];
+      const blockManagerMock = createBlockManagerMock(allBlocks);
+
+      const { dragManager, modules, wrapper } = createDragManager({
+        BlockManager: blockManagerMock,
+      });
+
+      document.body.appendChild(wrapper);
+      allBlocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag childA (first child) onto the bottom half of childB (second child)
+      // This should reorder them to [childB, childA] within the toggle
+      performDragDrop(dragManager, wrapper, childA, childB, "bottom");
+
+      // setBlockParent must be called to sync the DOM order within the toggle container,
+      // even though childA's parentId (toggle-1) hasn't changed
+      expect(modules.BlockManager.setBlockParent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "child-a" }),
+        "toggle-1",
+      );
     });
   });
 

@@ -130,6 +130,27 @@ test.describe('Toggle focus behavior', () => {
     });
   });
 
+  test.describe('body placeholder height matches child paragraph (no layout shift)', () => {
+    test('toggle block height is unchanged after clicking body placeholder', async ({ page }) => {
+      await createBlok(page, createToggleData('Toggle title'));
+
+      const toggleBlock = page.locator(TOGGLE_BLOCK_SELECTOR);
+      const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
+
+      await expect(placeholder).toBeVisible();
+
+      const heightBefore = await toggleBlock.evaluate((el) => el.getBoundingClientRect().height);
+
+      await placeholder.click();
+
+      await expect(page.locator(TOGGLE_CHILDREN_PARAGRAPH_SELECTOR)).toBeVisible();
+
+      const heightAfter = await toggleBlock.evaluate((el) => el.getBoundingClientRect().height);
+
+      expect(heightAfter).toBeCloseTo(heightBefore, 0);
+    });
+  });
+
   test.describe('Enter at end of open toggle title focuses new child block', () => {
     test('pressing Enter at end of open toggle title creates a focused child paragraph', async ({ page }) => {
       await createBlok(page, createToggleData('Parent toggle'));

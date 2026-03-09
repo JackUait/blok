@@ -10,11 +10,19 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).toContain('leading-[1.6em]');
   });
 
-  it('uses py-[3px] to match blok-block paragraph vertical padding', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('py-[3px]');
+  it('uses pt-[calc(0.5em+5px)] to match block wrapper top padding + paragraph margins/padding', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('pt-[calc(0.5em+5px)]');
+  });
+
+  it('uses pb-[4px] to match paragraph bottom padding + margin', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('pb-[4px]');
   });
 
   it('does not contain py-1 (would cause layout shift vs paragraph block)', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-1');
+  });
+
+  it('does not contain py-[3px] (insufficient — missing block wrapper top padding)', () => {
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[3px]');
   });
 });

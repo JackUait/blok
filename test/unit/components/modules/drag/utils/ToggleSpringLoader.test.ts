@@ -24,6 +24,7 @@ describe('ToggleSpringLoader', () => {
     springLoader.cancel();
     vi.useRealTimers();
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('calls expand on toggle after 500ms hover', () => {
@@ -91,8 +92,10 @@ describe('ToggleSpringLoader', () => {
     springLoader.update(block);
     vi.advanceTimersByTime(200);
     springLoader.update(block); // same block, should not restart timer
+    expect(block.holder.hasAttribute('data-blok-spring-loading')).toBe(true);
     vi.advanceTimersByTime(300); // 200+300 = 500ms from first call
     expect(block.call).toHaveBeenCalledTimes(1);
+    expect(block.holder.hasAttribute('data-blok-spring-loading')).toBe(false);
   });
 
   it('cancel() clears pending timer and attribute', () => {

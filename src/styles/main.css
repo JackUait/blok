@@ -852,6 +852,13 @@
   transform: translateX(-50%) translateY(-50%);
 }
 
+/* Spring-loading: visual feedback while waiting to auto-expand a closed toggle */
+[data-blok-spring-loading] {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  border-radius: 4px;
+  transition: outline-color 0.15s ease-out;
+}
+
 /**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation

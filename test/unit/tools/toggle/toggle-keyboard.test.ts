@@ -93,6 +93,7 @@ describe('Toggle Keyboard Handlers', () => {
     it('sets caret to new child block when toggle is open and caret is at end', async () => {
       const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
 
+      const mockSetToBlock = vi.fn();
       const contentElement = document.createElement('div');
       contentElement.setAttribute('contenteditable', 'true');
       // Empty content so afterContent will be ''
@@ -102,6 +103,17 @@ describe('Toggle Keyboard Handlers', () => {
       const context = createMockContext({
         getContentElement: () => contentElement,
         isOpen: true,
+        api: {
+          blocks: {
+            splitBlock: vi.fn(),
+            convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
+            getBlockIndex: vi.fn().mockReturnValue(0),
+            getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+            insert: vi.fn().mockReturnValue({ id: 'new-block-id' }),
+            setBlockParent: vi.fn(),
+          },
+          caret: { setToBlock: mockSetToBlock },
+        } as unknown as API,
       });
 
       // Selection at end of empty content element
@@ -116,7 +128,7 @@ describe('Toggle Keyboard Handlers', () => {
 
       expect(context.api.blocks.insert).toHaveBeenCalledWith('paragraph', { text: '' }, {}, 1, true);
       expect(context.api.blocks.setBlockParent).toHaveBeenCalledWith('new-block-id', 'test-block-id');
-      expect((context.api as unknown as { caret: { setToBlock: ReturnType<typeof vi.fn> } }).caret.setToBlock).toHaveBeenCalledWith('new-block-id', 'start');
+      expect(mockSetToBlock).toHaveBeenCalledWith('new-block-id', 'start');
 
       contentElement.remove();
     });

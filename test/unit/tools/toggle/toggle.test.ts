@@ -543,12 +543,13 @@ describe('ToggleItem', () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockNewBlock = { id: 'new-child-block' };
+      const mockSetToBlock = vi.fn();
       const mockAPI = createMockAPI();
       (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
       (mockAPI.blocks as unknown as Record<string, unknown>).getBlockIndex = vi.fn().mockReturnValue(0);
       (mockAPI.blocks as unknown as Record<string, unknown>).insert = vi.fn().mockReturnValue(mockNewBlock);
       (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
-      (mockAPI as unknown as Record<string, unknown>).caret = { setToBlock: vi.fn() };
+      (mockAPI as unknown as Record<string, unknown>).caret = { setToBlock: mockSetToBlock };
 
       const options = createToggleOptions();
       options.api = mockAPI;
@@ -568,7 +569,7 @@ describe('ToggleItem', () => {
         true
       );
       expect(mockAPI.blocks.setBlockParent).toHaveBeenCalledWith('new-child-block', 'test-block-id');
-      expect((mockAPI as unknown as { caret: { setToBlock: ReturnType<typeof vi.fn> } }).caret.setToBlock).toHaveBeenCalledWith('new-child-block', 'start');
+      expect(mockSetToBlock).toHaveBeenCalledWith('new-child-block', 'start');
     });
 
     it('reappears when children are removed and toggle is re-expanded', async () => {

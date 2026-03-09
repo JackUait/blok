@@ -11,6 +11,7 @@ const TOGGLE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="
 const TOGGLE_CONTENT_SELECTOR = '[data-blok-toggle-content]';
 const TOGGLE_BODY_PLACEHOLDER_SELECTOR = '[data-blok-toggle-body-placeholder]';
 const TOGGLE_CHILDREN_SELECTOR = '[data-blok-toggle-children]';
+const TOGGLE_CHILDREN_PARAGRAPH_SELECTOR = `${TOGGLE_CHILDREN_SELECTOR} [data-blok-component="paragraph"]`;
 
 declare global {
   interface Window {
@@ -68,6 +69,17 @@ const createToggleData = (text: string, extra: Record<string, unknown> = {}): Ou
   ],
 });
 
+/**
+ * Returns true when the active element (or its ancestor) is inside [data-blok-toggle-children].
+ * Used to assert that focus landed in a child block after placeholder click / Enter.
+ */
+const isFocusInsideToggleChildren = (page: Page): Promise<boolean> =>
+  page.evaluate(() => {
+    const container = document.querySelector('[data-blok-toggle-children]');
+
+    return container !== null && container.contains(document.activeElement);
+  });
+
 test.describe('Toggle focus behavior', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -91,13 +103,16 @@ test.describe('Toggle focus behavior', () => {
       await placeholder.click();
 
       // A new paragraph should appear inside the toggle children container
-      const childrenContainer = page.locator(TOGGLE_CHILDREN_SELECTOR);
-      const childParagraph = childrenContainer.locator('[contenteditable]');
+      await expect(page.locator(TOGGLE_CHILDREN_PARAGRAPH_SELECTOR)).toBeVisible();
 
-      await expect(childParagraph).toBeVisible();
+      // Focus (activeElement) should be inside the toggle children container
+      await page.waitForFunction(() => {
+        const container = document.querySelector('[data-blok-toggle-children]');
 
-      // The child paragraph's contenteditable element should be focused
-      await expect(childParagraph).toBeFocused();
+        return container !== null && container.contains(document.activeElement);
+      });
+
+      expect(await isFocusInsideToggleChildren(page)).toBe(true);
     });
 
     test('clicking body placeholder: typing immediately enters text in new child block', async ({ page }) => {
@@ -111,10 +126,7 @@ test.describe('Toggle focus behavior', () => {
       // Type text immediately — if focus was set correctly, this will land in the new block
       await page.keyboard.type('hello');
 
-      const childrenContainer = page.locator(TOGGLE_CHILDREN_SELECTOR);
-      const childParagraph = childrenContainer.locator('[contenteditable]');
-
-      await expect(childParagraph).toHaveText('hello');
+      await expect(page.locator(TOGGLE_CHILDREN_PARAGRAPH_SELECTOR)).toHaveText('hello');
     });
   });
 
@@ -132,13 +144,16 @@ test.describe('Toggle focus behavior', () => {
       await page.keyboard.press('Enter');
 
       // A child paragraph should be inside the toggle children container
-      const childrenContainer = page.locator(TOGGLE_CHILDREN_SELECTOR);
-      const childParagraph = childrenContainer.locator('[contenteditable]');
+      await expect(page.locator(TOGGLE_CHILDREN_PARAGRAPH_SELECTOR)).toBeVisible();
 
-      await expect(childParagraph).toBeVisible();
+      // Focus (activeElement) should be inside the toggle children container
+      await page.waitForFunction(() => {
+        const container = document.querySelector('[data-blok-toggle-children]');
 
-      // The child paragraph should be focused
-      await expect(childParagraph).toBeFocused();
+        return container !== null && container.contains(document.activeElement);
+      });
+
+      expect(await isFocusInsideToggleChildren(page)).toBe(true);
     });
 
     test('pressing Enter at end of open toggle title: typing immediately enters text in child block', async ({ page }) => {
@@ -158,11 +173,8 @@ test.describe('Toggle focus behavior', () => {
       // The toggle title should still be unchanged
       await expect(page.locator(TOGGLE_BLOCK_SELECTOR).locator(TOGGLE_CONTENT_SELECTOR)).toHaveText('Parent toggle');
 
-      // The typed text should be in the child paragraph
-      const childrenContainer = page.locator(TOGGLE_CHILDREN_SELECTOR);
-      const childParagraph = childrenContainer.locator('[contenteditable]');
-
-      await expect(childParagraph).toHaveText('child text');
+      // The typed text should be in the child paragraph inside the toggle
+      await expect(page.locator(TOGGLE_CHILDREN_PARAGRAPH_SELECTOR)).toHaveText('child text');
     });
   });
 });

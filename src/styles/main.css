@@ -852,12 +852,6 @@
   transform: translateX(-50%) translateY(-50%);
 }
 
-/* Spring-loading: visual feedback while waiting to auto-expand a closed toggle */
-[data-blok-spring-loading] {
-  outline: 2px solid rgba(59, 130, 246, 0.5);
-  border-radius: 4px;
-}
-
 /* Spring-loaded: flash selection highlight on toggle after it auto-expands */
 @keyframes spring-loaded-flash {
   0% { background-color: var(--blok-selection); }

@@ -2301,10 +2301,7 @@ test.describe('drag and drop', () => {
         return wrapper?.getAttribute('data-blok-dragging') === 'true';
       }, { timeout: 2000 });
 
-      // Wait for spring-load to fire (600ms > 500ms delay)
-      await page.waitForTimeout(600);
-
-      // Toggle should now be open
+      // Toggle should now be open (auto-waiting handles the 500ms spring-load delay)
       await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
 
       // Release mouse
@@ -2404,8 +2401,10 @@ test.describe('drag and drop', () => {
         return wrapper?.getAttribute('data-blok-dragging') === 'true';
       }, { timeout: 2000 });
 
-      // Wait for spring-load to fire (600ms > 500ms)
-      await page.waitForTimeout(600);
+      // Wait for spring-load to fire (500ms delay)
+      await page.waitForFunction(() => {
+        return document.querySelector('[data-blok-toggle-open="true"]') !== null;
+      }, { timeout: 3000 });
 
       // Toggle should be open now
       const openToggle = page.locator('[data-blok-toggle-open="true"]');
@@ -2423,11 +2422,11 @@ test.describe('drag and drop', () => {
 
       // Verify para is now a child of the toggle
       const savedData = await page.evaluate(() => window.blokInstance?.save());
-      const para = savedData?.blocks.find((b: { id: string }) => b.id === 'para-1');
-      const toggle = savedData?.blocks.find((b: { id: string }) => b.id === 'toggle-1');
+      const para = savedData?.blocks.find(b => b.type === 'paragraph');
+      const toggle = savedData?.blocks.find(b => b.type === 'toggle');
 
-      expect(para?.parent).toBe('toggle-1');
-      expect(toggle?.content).toContain('para-1');
+      expect(para?.parent).toBe(toggle?.id);
+      expect(toggle?.content).toContain(para?.id);
     });
 
     test('should reparent block when dropped between existing toggle children', async ({ page }) => {

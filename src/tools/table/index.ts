@@ -797,12 +797,13 @@ export class Table implements BlockTool {
           populateNewCells(gridEl, this.cellBlocks);
           updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
           this.initResize(gridEl);
-          this.addControls?.syncRowButtonWidth();
           this.rowColControls?.refresh();
 
           if (this.scrollContainer) {
             this.scrollContainer.scrollLeft = this.scrollContainer.scrollWidth;
           }
+
+          this.addControls?.syncRowButtonWidth();
         });
       },
       onDragStart: () => {
@@ -885,13 +886,13 @@ export class Table implements BlockTool {
       },
       onDragEnd: () => {
         this.initResize(gridEl);
-        this.addControls?.syncRowButtonWidth();
         this.rowColControls?.refresh();
 
         if (this.scrollContainer) {
           this.scrollContainer.scrollLeft = dragState.addedCols > 0 ? this.scrollContainer.scrollWidth : 0;
         }
 
+        this.addControls?.syncRowButtonWidth();
         dragState.addedCols = 0;
       },
     });

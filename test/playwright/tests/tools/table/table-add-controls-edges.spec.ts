@@ -302,4 +302,73 @@ test.describe('Add Controls Edge Cases', () => {
 
     await expect(tooltip).toContainText(/column/i);
   });
+
+  test('add-col and add-row buttons are exactly 4px from the grid after adding a column', async ({ page }) => {
+    // Create a percent-mode table (no colWidths — buttons start in percent mode)
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Click the add-column button to add a column (triggers percent→pixel mode transition)
+    await hoverNearRightEdge(page, table);
+
+    const addColBtn = page.locator('[data-blok-table-add-col]');
+
+    await expect(addColBtn).toBeVisible();
+    await addColBtn.click();
+
+    // Wait for layout to settle after the column is added
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('[data-blok-table-row]');
+
+      return rows.length > 0 && (rows[0] as HTMLElement).querySelectorAll('[data-blok-table-cell]').length === 4;
+    });
+
+    // Measure button positions vs table edges using real rendered layout
+    const gaps = await page.evaluate(() => {
+      const scrollContainer = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const grid = scrollContainer?.firstElementChild as HTMLElement | null;
+      const addColBtnEl = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
+      const addRowBtnEl = document.querySelector('[data-blok-table-add-row]') as HTMLElement | null;
+
+      if (!scrollContainer || !grid || !addColBtnEl || !addRowBtnEl) {
+        return null;
+      }
+
+      const scrollRect = scrollContainer.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+      const colBtnRect = addColBtnEl.getBoundingClientRect();
+      const rowBtnRect = addRowBtnEl.getBoundingClientRect();
+
+      return {
+        colGap: colBtnRect.left - Math.min(gridRect.right, scrollRect.right),
+        rowGap: rowBtnRect.top - gridRect.bottom,
+      };
+    });
+
+    expect(gaps).not.toBeNull();
+
+    // Both buttons must be within [2, 6] px of the table edge — centred on 4px
+    const { colGap, rowGap } = gaps!;
+
+    expect(colGap).toBeGreaterThanOrEqual(2);
+    expect(colGap).toBeLessThanOrEqual(6);
+    expect(rowGap).toBeGreaterThanOrEqual(2);
+    expect(rowGap).toBeLessThanOrEqual(6);
+  });
 });

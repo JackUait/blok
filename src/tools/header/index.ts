@@ -774,7 +774,9 @@ export class Header implements BlockTool {
     bodyPlaceholder.className = BODY_PLACEHOLDER_STYLES;
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
     bodyPlaceholder.textContent = this.api.i18n.t('tools.toggle.bodyPlaceholder');
-    bodyPlaceholder.addEventListener('click', () => this.handleBodyPlaceholderClick());
+    if (!this.readOnly) {
+      bodyPlaceholder.addEventListener('click', () => this.handleBodyPlaceholderClick());
+    }
     this._bodyPlaceholderElement = bodyPlaceholder;
     wrapper.appendChild(bodyPlaceholder);
 

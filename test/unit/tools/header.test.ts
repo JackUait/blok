@@ -1277,6 +1277,47 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
     expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
   });
 
+  it('does not insert a block in read-only mode', () => {
+    const mockInsert = vi.fn();
+    const mockAPI: API = {
+      styles: {
+        block: 'blok-block',
+        inlineToolbar: 'blok-inline-toolbar',
+        inlineToolButton: 'blok-inline-tool-button',
+        inlineToolButtonActive: 'blok-inline-tool-button--active',
+        input: 'blok-input',
+        loader: 'blok-loader',
+        button: 'blok-button',
+        settingsButton: 'blok-settings-button',
+        settingsButtonActive: 'blok-settings-button--active',
+      },
+      i18n: { t: (key: string) => key, has: () => false },
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([]),
+        insert: mockInsert,
+        setBlockParent: vi.fn(),
+      },
+      events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+    } as unknown as API;
+
+    const header = new Header({
+      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      config: {},
+      api: mockAPI,
+      readOnly: true,
+      block: { id: 'test-block-id' } as never,
+    });
+    const wrapper = header.render();
+    header.rendered();
+
+    const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
+
+    expect(bodyPlaceholder).not.toBeNull();
+    bodyPlaceholder.click();
+
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
   it('does not insert a block when blockId is undefined', () => {
     const mockInsert = vi.fn();
     const mockAPI: API = {

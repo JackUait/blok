@@ -27,6 +27,11 @@ const createMockContext = (overrides: Partial<ToggleKeyboardContext> = {}): Togg
         convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
         getBlockIndex: vi.fn().mockReturnValue(0),
         getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+        insert: vi.fn().mockReturnValue({ id: 'new-block-id' }),
+        setBlockParent: vi.fn(),
+      },
+      caret: {
+        setToBlock: vi.fn(),
       },
     } as unknown as API,
     blockId: 'test-block-id',
@@ -81,6 +86,49 @@ describe('Toggle Keyboard Handlers', () => {
         { text: 'hello' },
         1
       );
+
+      contentElement.remove();
+    });
+
+    it('sets caret to new child block when toggle is open and caret is at end', async () => {
+      const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
+
+      const mockSetToBlock = vi.fn();
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      // Empty content so afterContent will be ''
+      contentElement.textContent = '';
+      document.body.appendChild(contentElement);
+
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+        isOpen: true,
+        api: {
+          blocks: {
+            splitBlock: vi.fn(),
+            convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
+            getBlockIndex: vi.fn().mockReturnValue(0),
+            getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+            insert: vi.fn().mockReturnValue({ id: 'new-block-id' }),
+            setBlockParent: vi.fn(),
+          },
+          caret: { setToBlock: mockSetToBlock },
+        } as unknown as API,
+      });
+
+      // Selection at end of empty content element
+      const range = document.createRange();
+      range.selectNodeContents(contentElement);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      await handleToggleEnter(context);
+
+      expect(context.api.blocks.insert).toHaveBeenCalledWith('paragraph', { text: '' }, {}, 1, true);
+      expect(context.api.blocks.setBlockParent).toHaveBeenCalledWith('new-block-id', 'test-block-id');
+      expect(mockSetToBlock).toHaveBeenCalledWith('new-block-id', 'start');
 
       contentElement.remove();
     });

@@ -288,6 +288,7 @@ export class ToggleItem implements BlockTool {
     const newBlock = this.api.blocks.insert('paragraph', { text: '' }, {}, blockIndex + 1, true);
 
     this.api.blocks.setBlockParent(newBlock.id, this.blockId);
+    this.api.caret.setToBlock(newBlock.id, 'start');
 
     // Hide the body placeholder now that a child exists
     this._bodyPlaceholderElement?.classList.add('hidden');

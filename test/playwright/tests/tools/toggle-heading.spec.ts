@@ -836,7 +836,73 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 10. Arrow positioning
+  // 10. Body placeholder click
+  // =========================================================================
+
+  test.describe('body placeholder click', () => {
+    test('clicking body placeholder creates a child paragraph and hides placeholder', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle H2', 2)]);
+
+      const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(placeholder).toBeVisible();
+
+      await placeholder.click();
+
+      // A new paragraph should exist as a child block
+      const savedData = await page.evaluate(async () => window.blokInstance?.save());
+
+      expect(savedData?.blocks).toHaveLength(2);
+      expect(savedData?.blocks[1].type).toBe('paragraph');
+      expect(savedData?.blocks[1].parent).toBe(savedData?.blocks[0].id);
+
+      // The placeholder should now be hidden
+      await expect(placeholder).not.toBeVisible();
+    });
+
+    test('clicking body placeholder focuses the new child paragraph', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Focus Test H2', 2)]);
+
+      const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(placeholder).toBeVisible();
+      await placeholder.click();
+
+      // Focus should land inside the toggle children container
+      await page.waitForFunction(() => {
+        const container = document.querySelector('[data-blok-toggle-children]');
+
+        return container !== null && container.contains(document.activeElement);
+      });
+
+      const focusInChildren = await page.evaluate(() => {
+        const container = document.querySelector('[data-blok-toggle-children]');
+
+        return container !== null && container.contains(document.activeElement);
+      });
+
+      expect(focusInChildren).toBe(true);
+    });
+
+    test('clicking body placeholder: typing immediately enters text in the new child block', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Type Test H2', 2)]);
+
+      const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
+
+      await expect(placeholder).toBeVisible();
+      await placeholder.click();
+
+      await page.keyboard.type('child text');
+
+      // The child paragraph lives inside [data-blok-toggle-children]
+      const childParagraph = page.locator('[data-blok-toggle-children] [data-blok-component="paragraph"]');
+
+      await expect(childParagraph).toHaveText('child text');
+    });
+  });
+
+  // =========================================================================
+  // 11. Arrow positioning
   // =========================================================================
 
   test.describe('arrow positioning', () => {

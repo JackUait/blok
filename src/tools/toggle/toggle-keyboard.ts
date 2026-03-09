@@ -62,6 +62,7 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
     const newBlock = api.blocks.insert('paragraph', { text: '' }, {}, currentBlockIndex + 1, true);
 
     api.blocks.setBlockParent(newBlock.id, blockId);
+    api.caret.setToBlock(newBlock.id, 'start');
 
     return;
   }

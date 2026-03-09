@@ -774,6 +774,9 @@ export class Header implements BlockTool {
     bodyPlaceholder.className = BODY_PLACEHOLDER_STYLES;
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
     bodyPlaceholder.textContent = this.api.i18n.t('tools.toggle.bodyPlaceholder');
+    if (!this.readOnly) {
+      bodyPlaceholder.addEventListener('click', () => this.handleBodyPlaceholderClick());
+    }
     this._bodyPlaceholderElement = bodyPlaceholder;
     wrapper.appendChild(bodyPlaceholder);
 
@@ -882,6 +885,29 @@ export class Header implements BlockTool {
       this._isOpen,
       this.readOnly
     );
+  }
+
+  /**
+   * Handle a click on the body placeholder: insert a new child paragraph and focus it.
+   * Mirrors the toggle list's handleBodyPlaceholderClick.
+   */
+  private handleBodyPlaceholderClick(): void {
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+    if (blockIndex === undefined) {
+      return;
+    }
+
+    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, {}, blockIndex + 1, true);
+
+    this.api.blocks.setBlockParent(newBlock.id, this.blockId);
+    this.api.caret.setToBlock(newBlock.id, 'start');
+
+    this._bodyPlaceholderElement?.classList.add('hidden');
   }
 
   /**

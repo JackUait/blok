@@ -2263,6 +2263,173 @@ test.describe('drag and drop', () => {
       expect(para?.parent).toBeUndefined();
     });
 
+    test('should auto-expand closed toggle after 500ms hover during drag', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Closed Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Drag me' } },
+          ],
+        },
+      });
+
+      // Collapse the toggle
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+      await arrow.click();
+      await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
+
+      // Hover over paragraph to reveal drag handle
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drag me' });
+      await paraBlock.hover();
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+      await expect(settingsButton).toBeVisible();
+
+      // Start drag
+      const sourceBox = await getBoundingBox(settingsButton);
+      const toggleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Closed Toggle' });
+      const targetBox = await getBoundingBox(toggleBlock);
+
+      await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+      await page.mouse.down();
+
+      // Move over the closed toggle (triggers drag threshold + spring-load timer)
+      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 15 });
+
+      // Wait for drag state
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+        return wrapper?.getAttribute('data-blok-dragging') === 'true';
+      }, { timeout: 2000 });
+
+      // Wait for spring-load to fire (600ms > 500ms delay)
+      await page.waitForTimeout(600);
+
+      // Toggle should now be open
+      await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
+
+      // Release mouse
+      await page.mouse.up();
+
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+        return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+      }, { timeout: 2000 });
+    });
+
+    test('should cancel spring-load when moving away before 500ms', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Closed Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Drag me' } },
+          ],
+        },
+      });
+
+      // Collapse the toggle
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+      await arrow.click();
+      await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
+
+      // Hover over paragraph to reveal drag handle
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drag me' });
+      await paraBlock.hover();
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+      await expect(settingsButton).toBeVisible();
+
+      // Start drag
+      const sourceBox = await getBoundingBox(settingsButton);
+      const toggleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Closed Toggle' });
+      const targetBox = await getBoundingBox(toggleBlock);
+
+      await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+      await page.mouse.down();
+
+      // Move over the closed toggle
+      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 15 });
+
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+        return wrapper?.getAttribute('data-blok-dragging') === 'true';
+      }, { timeout: 2000 });
+
+      // spring-loading attribute should appear immediately
+      await expect(page.locator('[data-blok-spring-loading]')).toBeVisible();
+
+      // Move away before 500ms — attribute should disappear
+      const paraBox = await getBoundingBox(paraBlock);
+      await page.mouse.move(paraBox.x + paraBox.width / 2, paraBox.y + paraBox.height / 2, { steps: 5 });
+      await expect(page.locator('[data-blok-spring-loading]')).not.toBeVisible();
+
+      // Toggle should still be closed
+      await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
+
+      await page.mouse.up();
+    });
+
+    test('should nest block inside toggle when dropped after spring-load expands it', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Closed Toggle' } },
+            { id: 'para-1', type: 'paragraph', data: { text: 'Drop me in' } },
+          ],
+        },
+      });
+
+      // Collapse the toggle
+      const arrow = page.locator('[data-blok-toggle-arrow]');
+      await arrow.click();
+      await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
+
+      // Hover over paragraph to reveal drag handle
+      const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drop me in' });
+      await paraBlock.hover();
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+      await expect(settingsButton).toBeVisible();
+
+      // Start drag
+      const sourceBox = await getBoundingBox(settingsButton);
+      const toggleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Closed Toggle' });
+      const targetBox = await getBoundingBox(toggleBlock);
+
+      await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
+      await page.mouse.down();
+
+      // Move to center of toggle to trigger spring-load
+      await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 15 });
+
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+        return wrapper?.getAttribute('data-blok-dragging') === 'true';
+      }, { timeout: 2000 });
+
+      // Wait for spring-load to fire (600ms > 500ms)
+      await page.waitForTimeout(600);
+
+      // Toggle should be open now
+      const openToggle = page.locator('[data-blok-toggle-open="true"]');
+      await expect(openToggle).toBeVisible();
+
+      // Move to bottom edge of the now-open toggle inner element to nest the block
+      const openToggleBox = await getBoundingBox(openToggle);
+      await page.mouse.move(openToggleBox.x + openToggleBox.width / 2, openToggleBox.y + openToggleBox.height - 2, { steps: 5 });
+      await page.mouse.up();
+
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+        return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+      }, { timeout: 2000 });
+
+      // Verify para is now a child of the toggle
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+      const para = savedData?.blocks.find((b: { id: string }) => b.id === 'para-1');
+      const toggle = savedData?.blocks.find((b: { id: string }) => b.id === 'toggle-1');
+
+      expect(para?.parent).toBe('toggle-1');
+      expect(toggle?.content).toContain('para-1');
+    });
+
     test('should reparent block when dropped between existing toggle children', async ({ page }) => {
       await createBlok(page, {
         data: {

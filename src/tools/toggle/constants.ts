@@ -38,12 +38,12 @@ export const CONTENT_STYLES = 'outline-hidden pl-0.5 leading-[1.6em] flex-1 min-
 /**
  * Styles for toggle wrapper (arrow + content layout)
  */
-export const TOGGLE_WRAPPER_STYLES = 'flex items-start';
+export const TOGGLE_WRAPPER_STYLES = 'flex items-center';
 
 /**
  * Styles for the toggle arrow button
  */
-export const ARROW_STYLES = 'flex-shrink-0 p-[10px] flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-colors duration-200 ease-in-out mt-px focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none';
+export const ARROW_STYLES = 'flex-shrink-0 p-[8px] flex items-center justify-center cursor-pointer select-none rounded hover:bg-black/5 transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none';
 
 /**
  * SVG icon for the toggle arrow

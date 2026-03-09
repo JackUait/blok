@@ -611,7 +611,7 @@ export class Header implements BlockTool {
      */
     if (this._data.isToggleable) {
       this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-7');
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-8');
 
       if (!this._wrapper) {
         /**
@@ -689,7 +689,7 @@ export class Header implements BlockTool {
      * When isToggleable, add left padding to leave room for the arrow (which lives
      * in the wrapper div as a sibling, not inside this element).
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, this._data.isToggleable ? 'pl-7' : '');
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, this._data.isToggleable ? 'pl-8' : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)

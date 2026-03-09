@@ -325,7 +325,7 @@ describe('Toggle DOM Builder', () => {
 
         expect(headerRow).toBeInstanceOf(HTMLElement);
         expect(headerRow.className).toContain('flex');
-        expect(headerRow.className).toContain('items-start');
+        expect(headerRow.className).toContain('items-center');
       });
 
       it('header row contains arrow element as first child', () => {

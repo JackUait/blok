@@ -603,6 +603,25 @@ describe('Header Tool - Custom Configurations', () => {
 
         expect(element.innerHTML).toContain('<b>Bold</b> toggle heading');
       });
+
+      it('applies pl-8 padding to heading element when isToggleable is true', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const wrapper = header.render();
+        const heading = wrapper.querySelector('h2') as HTMLElement;
+
+        expect(heading).not.toBeNull();
+        expect(heading.classList.contains('pl-8')).toBe(true);
+        expect(heading.classList.contains('pl-7')).toBe(false);
+      });
+
+      it('does not apply pl-8 padding to heading element when isToggleable is false', () => {
+        const options = createHeaderOptions({ text: 'Normal Heading', level: 2, isToggleable: false });
+        const header = new Header(options);
+        const element = header.render();
+
+        expect(element.classList.contains('pl-8')).toBe(false);
+      });
     });
 
     describe('toggle arrow click', () => {

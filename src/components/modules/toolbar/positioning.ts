@@ -76,7 +76,16 @@ export class ToolbarPositioner {
      * to properly center the toolbar on the text, not on the marker which may have different font-size
      */
     const textElement = listItemElement?.querySelector('[contenteditable]');
-    const contentElement = textElement ?? listItemElement ?? targetBlock.pluginsContent;
+    const pluginsContent = targetBlock.pluginsContent;
+    /**
+     * If pluginsContent is a non-editable container (e.g. a toggle heading wrapper <div>),
+     * use its first contenteditable descendant for accurate line-height centering.
+     */
+    const editableDescendant =
+      !pluginsContent.matches('[contenteditable]')
+        ? (pluginsContent.querySelector('[contenteditable]') ?? null)
+        : null;
+    const contentElement = textElement ?? listItemElement ?? editableDescendant ?? pluginsContent;
     const contentRect = contentElement.getBoundingClientRect();
     const contentOffset = contentRect.top - holderRect.top;
 

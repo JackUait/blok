@@ -600,12 +600,36 @@ describe('ToggleItem', () => {
   });
 
   describe('accessibility and visual fixes', () => {
-    // Fix 1: Touch target minimum 44px
-    it('arrow element has p-[10px] padding class for 44px touch target', async () => {
+    // Fix: Vertical alignment — header row uses items-center so arrow SVG center aligns with text center
+    it('header row uses items-center class (not items-start) for vertical alignment', async () => {
+      const { buildToggleItem } = await import('../../../../src/tools/toggle/dom-builder');
+      const result = buildToggleItem({
+        data: { text: '' },
+        readOnly: false,
+        isOpen: true,
+        keydownHandler: null,
+        onArrowClick: null,
+        onBodyPlaceholderClick: null,
+        bodyPlaceholderText: 'Empty toggle. Click or drop blocks inside.',
+        ariaLabels: { collapse: 'Collapse', expand: 'Expand' },
+      });
+
+      // The header row is the first child div of the wrapper — it lays out arrow + content
+      const headerRow = result.wrapper.querySelector('div');
+
+      expect(headerRow).not.toBeNull();
+      expect(headerRow?.classList.contains('items-center')).toBe(true);
+      expect(headerRow?.classList.contains('items-start')).toBe(false);
+    });
+
+    // Fix 1: Touch target — arrow uses p-[8px] (28px box) with items-center alignment
+    it('arrow element has p-[8px] padding class and no mt-px offset', async () => {
       const { buildArrow } = await import('../../../../src/tools/toggle/dom-builder');
       const arrow = buildArrow(true, null);
 
-      expect(arrow.className).toContain('p-[10px]');
+      expect(arrow.className).toContain('p-[8px]');
+      expect(arrow.className).not.toContain('p-[10px]');
+      expect(arrow.className).not.toContain('mt-px');
       expect(arrow.className).not.toContain('w-6');
       expect(arrow.className).not.toContain('h-6');
     });

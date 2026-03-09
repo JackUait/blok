@@ -164,6 +164,51 @@ describe('ToolbarPositioner', () => {
 
       expect(result).toBeTypeOf('number');
     });
+
+    it('uses first contenteditable descendant line-height when pluginsContent is a non-editable wrapper', () => {
+      if (!mockNodes.plusButton) {
+        throw new Error('plusButton is undefined');
+      }
+
+      // Build a block where pluginsContent is a non-contenteditable wrapper <div>
+      // containing a <h2 contenteditable="true"> with a larger line-height.
+      const holder = document.createElement('div');
+      const wrapperDiv = document.createElement('div');
+      const heading = document.createElement('h2');
+      heading.setAttribute('contenteditable', 'true');
+      wrapperDiv.appendChild(heading);
+      holder.appendChild(wrapperDiv);
+      document.body.appendChild(holder);
+
+      const toggleHeadingBlock = {
+        ...mockBlock,
+        holder,
+        pluginsContent: wrapperDiv,
+      } as unknown as Block;
+
+      // Override getComputedStyle so the wrapper reports lineHeight 24 and the
+      // heading reports lineHeight 36. The toolbar must center on 36px, not 24px.
+      vi.stubGlobal('getComputedStyle', vi.fn((element: HTMLElement) => {
+        if (element === wrapperDiv) {
+          return { paddingTop: '0px', lineHeight: '24', height: '40px' };
+        }
+        if (element === heading) {
+          return { paddingTop: '0px', lineHeight: '36', height: '40px' };
+        }
+        // plusButton
+        return { paddingTop: '0px', lineHeight: '24', height: '40px' };
+      }));
+
+      const resultUsingWrapper = positioner.calculateToolbarY(
+        { targetBlock: toggleHeadingBlock, hoveredTarget: null, isMobile: false },
+        mockNodes.plusButton
+      );
+
+      // Expected: centered on heading's 36px line-height
+      // firstLineCenterY = 0 (contentOffset) + 0 (paddingTop) + 36/2 = 18
+      // toolbarY = 18 - 40/2 = -2
+      expect(resultUsingWrapper).toBe(-2);
+    });
   });
 
   describe('moveToY', () => {

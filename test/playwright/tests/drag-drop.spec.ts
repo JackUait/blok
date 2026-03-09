@@ -2356,7 +2356,8 @@ test.describe('drag and drop', () => {
       // Move away before 500ms — attribute should disappear
       const paraBox = await getBoundingBox(paraBlock);
       await page.mouse.move(paraBox.x + paraBox.width / 2, paraBox.y + paraBox.height / 2, { steps: 5 });
-      await expect(page.locator('[data-blok-spring-loading]')).not.toBeVisible();
+      // Wait deterministically for attribute removal (cancellation)
+      await page.waitForFunction(() => document.querySelector('[data-blok-spring-loading]') === null, { timeout: 2000 });
 
       // Toggle should still be closed
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();

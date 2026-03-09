@@ -119,4 +119,20 @@ describe('ToggleSpringLoader', () => {
     expect(block.call).not.toHaveBeenCalled();
     expect(block.holder.hasAttribute('data-blok-spring-loading')).toBe(false);
   });
+
+  it('sets data-blok-spring-loaded attribute on holder after expand fires', () => {
+    const block = makeBlock(true, false);
+    springLoader.update(block);
+    vi.advanceTimersByTime(500);
+    expect(block.holder.hasAttribute('data-blok-spring-loaded')).toBe(true);
+  });
+
+  it('removes data-blok-spring-loaded attribute after 700ms', () => {
+    const block = makeBlock(true, false);
+    springLoader.update(block);
+    vi.advanceTimersByTime(500);
+    expect(block.holder.hasAttribute('data-blok-spring-loaded')).toBe(true);
+    vi.advanceTimersByTime(700);
+    expect(block.holder.hasAttribute('data-blok-spring-loaded')).toBe(false);
+  });
 });

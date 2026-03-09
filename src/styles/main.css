@@ -858,6 +858,17 @@
   border-radius: 4px;
 }
 
+/* Spring-loaded: flash selection highlight on toggle after it auto-expands */
+@keyframes spring-loaded-flash {
+  0% { background-color: var(--blok-selection); }
+  100% { background-color: transparent; }
+}
+
+[data-blok-spring-loaded] [data-blok-element-content] {
+  animation: spring-loaded-flash 700ms ease-out forwards;
+  border-radius: 4px;
+}
+
 /**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation

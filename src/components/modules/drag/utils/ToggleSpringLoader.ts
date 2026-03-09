@@ -2,6 +2,8 @@ import type { Block } from '../../../block';
 
 const SPRING_LOAD_DELAY_MS = 500;
 const SPRING_LOADING_ATTR = 'data-blok-spring-loading';
+const SPRING_LOADED_ATTR = 'data-blok-spring-loaded';
+const SPRING_LOADED_DURATION_MS = 700;
 
 function isClosedToggle(block: Block): boolean {
   return block.holder.querySelector('[data-blok-toggle-open="false"]') !== null;
@@ -39,6 +41,9 @@ export class ToggleSpringLoader {
       if (this.currentBlock) {
         this.currentBlock.holder.removeAttribute(SPRING_LOADING_ATTR);
         this.currentBlock.call('expand');
+        this.currentBlock.holder.setAttribute(SPRING_LOADED_ATTR, '');
+        const expandedBlock = this.currentBlock;
+        setTimeout(() => expandedBlock.holder.removeAttribute(SPRING_LOADED_ATTR), SPRING_LOADED_DURATION_MS);
         this.currentBlock = null;
       }
     }, SPRING_LOAD_DELAY_MS);

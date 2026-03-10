@@ -26,6 +26,7 @@ import { twMerge } from '../../components/utils/tw';
 import { ARROW_ICON, BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
+import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
 
 /**
  * Tool's input and output data format
@@ -305,6 +306,7 @@ export class Header implements BlockTool {
    */
   public removed(): void {
     this.api.events.off('block changed', this.handleBlockChanged);
+    this._element.removeEventListener('keydown', this.handleKeyDown);
   }
 
   /**
@@ -578,6 +580,12 @@ export class Header implements BlockTool {
      */
     if (data.level !== undefined && this._element.parentNode) {
       /**
+       * Remove the existing keydown listener before replacing the element.
+       * removeEventListener is a no-op if the listener was never added.
+       */
+      this._element.removeEventListener('keydown', this.handleKeyDown);
+
+      /**
        * Create a new tag
        */
       const newHeader = this.getTag();
@@ -727,6 +735,10 @@ export class Header implements BlockTool {
       tag.setAttribute('data-placeholder', placeholderText);
     }
 
+    if (!this.readOnly && this._data.isToggleable) {
+      tag.addEventListener('keydown', this.handleKeyDown);
+    }
+
     return tag;
   }
 
@@ -840,6 +852,46 @@ export class Header implements BlockTool {
       text: this._data.text,
       isToggleable: !wasToggleable || undefined,
     };
+  }
+
+  /**
+   * Build the keyboard context for toggle-heading keyboard handlers.
+   */
+  private createKeyboardContext(): Parameters<typeof handleHeaderToggleEnter>[0] {
+    return {
+      api: this.api,
+      blockId: this.blockId,
+      getText: () => this._element.innerHTML,
+      getContentElement: () => this._element,
+      syncContentFromDOM: () => {
+        this._data.text = this._element.innerHTML;
+      },
+      isOpen: this._isOpen,
+      currentLevel: this.currentLevel.number,
+    };
+  }
+
+  /**
+   * Keydown handler attached to toggle heading elements.
+   * Handles Enter (create child / split) and Backspace (remove toggle).
+   */
+  private handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void this.handleEnter();
+
+      return;
+    }
+
+    if (event.key === 'Backspace') {
+      void handleHeaderToggleBackspace(this.createKeyboardContext(), event);
+    }
+  };
+
+  private async handleEnter(): Promise<void> {
+    await handleHeaderToggleEnter(this.createKeyboardContext());
+    this.updateChildrenVisibility();
+    this.updateBodyPlaceholderVisibility();
   }
 
   /**

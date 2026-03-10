@@ -128,7 +128,7 @@ export const handleToggleBackspace = async (
  * @param range - The current selection range
  * @returns Object with before/after HTML content
  */
-const splitContentAtRange = (
+export const splitContentAtRange = (
   contentEl: HTMLElement,
   range: Range
 ): { beforeContent: string; afterContent: string } => {

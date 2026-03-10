@@ -201,19 +201,35 @@ export class TableAddControls {
       this.addColBtn.style.right = `${paddingRight - 36}px`;
     }
 
-    // Explicitly pin the add-col button height to the grid's rendered height.
-    // Without this, on systems with traditional (non-overlay) scrollbars a horizontal
-    // scrollbar inflates the scroll container's height; the wrapper inherits that extra
-    // height and `bottom: 0` stretches the button accordingly.
-    const gridHeight = this.grid.getBoundingClientRect().height;
+    // Pin both buttons' positions to the grid's rendered rect to prevent
+    // scrollbar-induced wrapper height inflation from shifting them.
+    //
+    // On systems with traditional (non-overlay) scrollbars a horizontal scrollbar
+    // consumes layout height in the scroll container; the wrapper inherits that extra
+    // height. Without explicit pinning:
+    //   - add-col button: `bottom: 0` stretches it taller than the grid
+    //   - add-row button: `bottom: -36px` shifts it further below the grid
+    const gridRect = this.grid.getBoundingClientRect();
+    const wrapperRect = this.wrapper.getBoundingClientRect();
+    const gridHeight = gridRect.height;
 
     if (gridHeight > 0) {
+      // add-col: fix height to grid height
       this.addColBtn.style.height = `${gridHeight}px`;
       this.addColBtn.style.bottom = '';
+
+      // add-row: fix top to grid bottom (relative to wrapper top) + 4px gap
+      const gridBottomRelativeToWrapper = gridRect.bottom - wrapperRect.top;
+
+      this.addRowBtn.style.top = `${gridBottomRelativeToWrapper + 4}px`;
+      this.addRowBtn.style.bottom = '';
     } else {
       // Pre-layout fallback (e.g. JSDOM where getBoundingClientRect returns zeros)
       this.addColBtn.style.height = '';
       this.addColBtn.style.bottom = '0px';
+
+      this.addRowBtn.style.top = '';
+      this.addRowBtn.style.bottom = '-36px';
     }
   }
 

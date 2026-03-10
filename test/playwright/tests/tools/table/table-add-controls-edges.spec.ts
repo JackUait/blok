@@ -590,4 +590,71 @@ test.describe('Add Controls Edge Cases', () => {
     // After fix: parsedStyleHeight === gridRenderedHeight
     expect(heights!.parsedStyleHeight).toBeCloseTo(heights!.gridRenderedHeight, 2);
   });
+
+  test('add-row button top is pinned to grid bottom by syncRowButtonWidth', async ({ page }) => {
+    // Regression: on systems with traditional (non-overlay) scrollbars, a horizontal scrollbar
+    // inflates the scroll container's height, which propagates to the wrapper. The add-row button
+    // used bottom:-36px which tied it to the wrapper's bottom — as the wrapper grew, the button
+    // shifted down by the same amount.
+    // Fix: syncRowButtonWidth() must set top = gridHeight + 4px (grid bottom relative to wrapper
+    // top) so the button position is independent of wrapper height inflation.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Add a column — transitions to pixel mode and calls syncRowButtonWidth
+    await hoverNearRightEdge(page, table);
+
+    const addColBtn = page.locator('[data-blok-table-add-col]');
+
+    await expect(addColBtn).toBeVisible();
+    await addColBtn.click();
+
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('[data-blok-table-row]');
+
+      return rows.length > 0 && (rows[0] as HTMLElement).querySelectorAll('[data-blok-table-cell]').length === 4;
+    });
+
+    // syncRowButtonWidth() must set addRowBtn.style.top = gridHeight + 4px
+    // so it stays anchored to the grid bottom, not the wrapper bottom.
+    const positions = await page.evaluate(() => {
+      const wrapper = document.querySelector('[data-blok-tool="table"]') as HTMLElement | null;
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const grid = sc?.firstElementChild as HTMLElement | null;
+      const btn = document.querySelector('[data-blok-table-add-row]') as HTMLElement | null;
+
+      if (!wrapper || !grid || !btn) return null;
+
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+      const expectedTop = gridRect.bottom - wrapperRect.top + 4;
+
+      return {
+        // Parsed numeric value of btn.style.top (NaN if '' or unset)
+        parsedStyleTop: parseFloat(btn.style.top),
+        expectedTop,
+      };
+    });
+
+    expect(positions).not.toBeNull();
+    // Before fix: parsedStyleTop is NaN (style.top was never set) — this assertion fails
+    // After fix: parsedStyleTop ≈ expectedTop (grid bottom relative to wrapper + 4px gap)
+    expect(positions!.parsedStyleTop).toBeCloseTo(positions!.expectedTop, 2);
+  });
 });

@@ -420,6 +420,14 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
+     * Don't cross parent block boundaries (e.g., don't operate on blocks outside a toggle).
+     * When the next block is in a different parent context, treat it as if there's no next block.
+     */
+    if (nextBlock.parentId !== currentBlock.parentId) {
+      return;
+    }
+
+    /**
      * If next Block is empty, it should be removed just like a character
      */
     if (nextBlock.isEmpty) {

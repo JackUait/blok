@@ -97,6 +97,7 @@ export class TableAddControls {
   private getNewColumnWidth: (() => number) | undefined;
   private scrollContainer: HTMLElement | null = null;
   private boundScrollHandler: (() => void) | null = null;
+  private scrollContainerResizeObserver: ResizeObserver | null = null;
 
   constructor(options: TableAddControlsOptions) {
     this.wrapper = options.wrapper;
@@ -199,6 +200,21 @@ export class TableAddControls {
       this.addColBtn.style.left = '';
       this.addColBtn.style.right = `${paddingRight - 36}px`;
     }
+
+    // Explicitly pin the add-col button height to the grid's rendered height.
+    // Without this, on systems with traditional (non-overlay) scrollbars a horizontal
+    // scrollbar inflates the scroll container's height; the wrapper inherits that extra
+    // height and `bottom: 0` stretches the button accordingly.
+    const gridHeight = this.grid.getBoundingClientRect().height;
+
+    if (gridHeight > 0) {
+      this.addColBtn.style.height = `${gridHeight}px`;
+      this.addColBtn.style.bottom = '';
+    } else {
+      // Pre-layout fallback (e.g. JSDOM where getBoundingClientRect returns zeros)
+      this.addColBtn.style.height = '';
+      this.addColBtn.style.bottom = '0px';
+    }
   }
 
   /**
@@ -239,9 +255,16 @@ export class TableAddControls {
       this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
     }
 
+    this.scrollContainerResizeObserver?.disconnect();
+
     this.scrollContainer = sc;
     this.boundScrollHandler = (): void => { this.syncRowButtonWidth(); };
     sc.addEventListener('scroll', this.boundScrollHandler, { passive: true });
+
+    this.scrollContainerResizeObserver = new ResizeObserver(() => {
+      this.syncRowButtonWidth();
+    });
+    this.scrollContainerResizeObserver.observe(sc);
   }
 
   public destroy(): void {
@@ -250,6 +273,9 @@ export class TableAddControls {
       this.scrollContainer = null;
       this.boundScrollHandler = null;
     }
+
+    this.scrollContainerResizeObserver?.disconnect();
+    this.scrollContainerResizeObserver = null;
 
     this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);

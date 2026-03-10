@@ -441,4 +441,153 @@ test.describe('Add Controls Edge Cases', () => {
     expect(colGap!).toBeGreaterThanOrEqual(2);
     expect(colGap!).toBeLessThanOrEqual(6);
   });
+
+  test('both buttons stay 4px from grid after viewport is resized narrower', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Add a column to enter pixel mode (table grid wider than scroll container)
+    await hoverNearRightEdge(page, table);
+
+    const addColBtn = page.locator('[data-blok-table-add-col]');
+
+    await expect(addColBtn).toBeVisible();
+    await addColBtn.click();
+
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('[data-blok-table-row]');
+
+      return rows.length > 0 && (rows[0] as HTMLElement).querySelectorAll('[data-blok-table-cell]').length === 4;
+    });
+
+    // Resize viewport narrower so the scroll container shrinks
+    const originalWidth = page.viewportSize()!.width;
+
+    await page.setViewportSize({ width: Math.round(originalWidth * 0.6), height: page.viewportSize()!.height });
+
+    // Wait until the scroll container itself has shrunk (layout reflow complete).
+    // setViewportSize waits for the resize to be applied, but ResizeObserver callbacks
+    // are fired asynchronously in the rendering pipeline. Polling sc.clientWidth ensures
+    // layout has stabilised before we measure button positions.
+    const newWidth = Math.round(originalWidth * 0.6);
+
+    await page.waitForFunction((targetWidth: number) => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+
+      return sc !== null && sc.clientWidth < targetWidth;
+    }, newWidth);
+
+    const gaps = await page.evaluate(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const grid = sc?.firstElementChild as HTMLElement | null;
+      const addColBtnEl = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
+      const addRowBtnEl = document.querySelector('[data-blok-table-add-row]') as HTMLElement | null;
+
+      if (!sc || !grid || !addColBtnEl || !addRowBtnEl) return null;
+
+      const scrollRect = sc.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+      const colBtnRect = addColBtnEl.getBoundingClientRect();
+      const rowBtnRect = addRowBtnEl.getBoundingClientRect();
+
+      // Visible grid right edge = min(grid's right, scroll container's right)
+      const visibleGridRight = Math.min(gridRect.right, scrollRect.right);
+      const visibleGridWidth = visibleGridRight - scrollRect.left;
+
+      return {
+        colGap: colBtnRect.left - Math.min(gridRect.right, scrollRect.right),
+        rowGap: rowBtnRect.top - gridRect.bottom,
+        addRowWidth: addRowBtnEl.getBoundingClientRect().width,
+        visibleGridWidth,
+      };
+    });
+
+    expect(gaps).not.toBeNull();
+    expect(gaps!.colGap).toBeGreaterThanOrEqual(2);
+    expect(gaps!.colGap).toBeLessThanOrEqual(6);
+    expect(gaps!.rowGap).toBeGreaterThanOrEqual(2);
+    expect(gaps!.rowGap).toBeLessThanOrEqual(6);
+    // add-row button width must match the visible portion of the grid
+    // (may be narrower than sc.clientWidth when scrolled past the grid's right edge)
+    expect(Math.abs(gaps!.addRowWidth - gaps!.visibleGridWidth)).toBeLessThanOrEqual(2);
+  });
+
+  test('add-col button height is explicitly set to grid height by syncRowButtonWidth', async ({ page }) => {
+    // Regression: on systems with traditional (non-overlay) scrollbars, a horizontal scrollbar
+    // inflates the scroll container's height, which propagates to the wrapper. The add-col button
+    // used bottom:0 which tied it to the wrapper, causing it to grow taller than the grid.
+    // Fix: syncRowButtonWidth() must explicitly set height = grid.getBoundingClientRect().height
+    // so the button never exceeds the grid's actual rendered height.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Add a column — transitions to pixel mode and calls syncRowButtonWidth
+    await hoverNearRightEdge(page, table);
+
+    const addColBtn = page.locator('[data-blok-table-add-col]');
+
+    await expect(addColBtn).toBeVisible();
+    await addColBtn.click();
+
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('[data-blok-table-row]');
+
+      return rows.length > 0 && (rows[0] as HTMLElement).querySelectorAll('[data-blok-table-cell]').length === 4;
+    });
+
+    // syncRowButtonWidth() must have set an explicit pixel height on the add-col button
+    // equal to the grid's rendered height, to prevent scrollbar-induced height inflation.
+    const heights = await page.evaluate(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const grid = sc?.firstElementChild as HTMLElement | null;
+      const btn = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
+
+      if (!grid || !btn) return null;
+
+      const gridHeight = grid.getBoundingClientRect().height;
+
+      return {
+        // Parsed numeric value of the button's inline style.height (NaN if empty)
+        parsedStyleHeight: parseFloat(btn.style.height),
+        gridRenderedHeight: gridHeight,
+      };
+    });
+
+    expect(heights).not.toBeNull();
+    // Before fix: parsedStyleHeight is NaN (style.height was '') — this assertion fails
+    // After fix: parsedStyleHeight === gridRenderedHeight
+    expect(heights!.parsedStyleHeight).toBeCloseTo(heights!.gridRenderedHeight, 2);
+  });
 });

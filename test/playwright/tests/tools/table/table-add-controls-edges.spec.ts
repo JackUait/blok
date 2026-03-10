@@ -371,4 +371,74 @@ test.describe('Add Controls Edge Cases', () => {
     expect(rowGap).toBeGreaterThanOrEqual(2);
     expect(rowGap).toBeLessThanOrEqual(6);
   });
+
+  test('add-col button stays 4px from grid after user scrolls table back to the left', async ({ page }) => {
+    // Create a percent-mode table so the first add-column click triggers percent→pixel transition
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [['A', 'B', 'C'], ['D', 'E', 'F']],
+            },
+          },
+        ],
+      },
+    });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    // Add a column — this transitions to pixel mode and auto-scrolls right
+    await hoverNearRightEdge(page, table);
+
+    const addColBtn = page.locator('[data-blok-table-add-col]');
+
+    await expect(addColBtn).toBeVisible();
+    await addColBtn.click();
+
+    // Wait for 4 columns
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('[data-blok-table-row]');
+
+      return rows.length > 0 && (rows[0] as HTMLElement).querySelectorAll('[data-blok-table-cell]').length === 4;
+    });
+
+    // Now simulate the user scrolling the table back to the start (scrollLeft=0)
+    await page.evaluate(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+
+      if (sc) sc.scrollLeft = 0;
+    });
+
+    // The scroll event must trigger syncRowButtonWidth — give it one rAF to settle
+    await page.waitForFunction(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+
+      return sc?.scrollLeft === 0;
+    });
+
+    // Measure gap at scrollLeft=0 (grid overflows scroll container to the right)
+    const colGap = await page.evaluate(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const grid = sc?.firstElementChild as HTMLElement | null;
+      const btn = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
+
+      if (!sc || !grid || !btn) return null;
+
+      const scrollRect = sc.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+
+      return btnRect.left - Math.min(gridRect.right, scrollRect.right);
+    });
+
+    expect(colGap).not.toBeNull();
+    expect(colGap!).toBeGreaterThanOrEqual(2);
+    expect(colGap!).toBeLessThanOrEqual(6);
+  });
 });

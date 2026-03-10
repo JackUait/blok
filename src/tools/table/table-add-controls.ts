@@ -95,6 +95,8 @@ export class TableAddControls {
   private boundRowPointerDown: (e: PointerEvent) => void;
   private boundColPointerDown: (e: PointerEvent) => void;
   private getNewColumnWidth: (() => number) | undefined;
+  private scrollContainer: HTMLElement | null = null;
+  private boundScrollHandler: (() => void) | null = null;
 
   constructor(options: TableAddControlsOptions) {
     this.wrapper = options.wrapper;
@@ -228,7 +230,27 @@ export class TableAddControls {
     this.addColBtn.style.pointerEvents = this.colVisible ? '' : 'none';
   }
 
+  /**
+   * Attach a passive scroll listener to the scroll container so button
+   * positions are kept in sync when the user scrolls the table horizontally.
+   */
+  public attachScrollContainer(sc: HTMLElement): void {
+    if (this.scrollContainer && this.boundScrollHandler) {
+      this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
+    }
+
+    this.scrollContainer = sc;
+    this.boundScrollHandler = (): void => { this.syncRowButtonWidth(); };
+    sc.addEventListener('scroll', this.boundScrollHandler, { passive: true });
+  }
+
   public destroy(): void {
+    if (this.scrollContainer && this.boundScrollHandler) {
+      this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
+      this.scrollContainer = null;
+      this.boundScrollHandler = null;
+    }
+
     this.wrapper.removeEventListener('mousemove', this.boundMouseMove);
     this.wrapper.removeEventListener('mouseleave', this.boundMouseLeave);
     document.removeEventListener('mousemove', this.boundDocumentMouseMove);

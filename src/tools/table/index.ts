@@ -286,6 +286,12 @@ export class Table implements BlockTool {
 
     this.scrollContainer = sc;
 
+    // Keep add-button positions in sync when the user scrolls horizontally.
+    // addControls may be null when the scroll container is first created during
+    // initSubsystems() (initResize runs before initAddControls). In that case,
+    // initAddControls() will call attachScrollContainer() once addControls exists.
+    this.addControls?.attachScrollContainer(sc);
+
     return sc;
   }
 
@@ -896,6 +902,13 @@ export class Table implements BlockTool {
         dragState.addedCols = 0;
       },
     });
+
+    // If the scroll container already exists (pixel-mode table loaded from data),
+    // attach the scroll listener now. For percent-mode tables the listener is
+    // attached later inside ensureScrollContainer() when the first column is added.
+    if (this.scrollContainer) {
+      this.addControls.attachScrollContainer(this.scrollContainer);
+    }
   }
 
   private initRowColControls(gridEl: HTMLElement): void {

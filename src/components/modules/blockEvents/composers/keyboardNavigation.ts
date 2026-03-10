@@ -440,6 +440,19 @@ export class KeyboardNavigation extends BlockEventComposer {
      * If current Block is empty, just remove it and set cursor to the next Block (like we're removing line break char)
      */
     if (currentBlock.isEmpty) {
+      /**
+       * If the current block is inside a parent (e.g., toggle), keep navigation within that parent.
+       * When there is no previous sibling in the same parent, do nothing to prevent the cursor
+       * from exiting the toggle after the flat-array index is decremented past the parent block.
+       */
+      if (currentBlock.parentId !== null) {
+        const prevBlock = BlockManager.previousBlock;
+
+        if (prevBlock === null || prevBlock.parentId !== currentBlock.parentId) {
+          return;
+        }
+      }
+
       void BlockManager.removeBlock(currentBlock);
 
       /**

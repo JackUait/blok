@@ -291,5 +291,39 @@ test.describe('Toggle - Delete key behavior', () => {
       expect(childBlock?.parent).toBe('header-1');
       expect(rootBlock?.parent).toBeUndefined();
     });
+
+    test('Delete on empty first child inside toggle heading does nothing instead of exiting toggle', async ({ page }) => {
+      // Toggle heading with empty first child and a content child after it.
+      await createBlok(page, {
+        blocks: [
+          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true }, content: ['child-1', 'child-2'] },
+          { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'header-1' },
+          { id: 'child-2', type: 'paragraph', data: { text: 'Content' }, parent: 'header-1' },
+          { id: 'root-1', type: 'paragraph', data: { text: 'Root content' } },
+        ],
+      });
+
+      // Click on the empty first child and press Delete — should do nothing (no previous sibling)
+      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
+      await children.first().click();
+      await page.keyboard.press('Delete');
+
+      const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+      expect(saved).toBeDefined();
+
+      const allBlocks = saved?.blocks ?? [];
+
+      // child-1 must NOT be removed — all 4 blocks remain
+      expect(allBlocks.length).toBe(4);
+
+      const child1 = allBlocks.find(b => b.id === 'child-1');
+      const child2 = allBlocks.find(b => b.id === 'child-2');
+
+      expect(child1).toBeDefined();
+      expect(child1?.parent).toBe('header-1');
+      expect(child2).toBeDefined();
+      expect(child2?.parent).toBe('header-1');
+    });
   });
 });

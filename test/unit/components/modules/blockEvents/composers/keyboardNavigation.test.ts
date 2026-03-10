@@ -769,6 +769,80 @@ describe('KeyboardNavigation', () => {
       isCaretAtStartOfInputSpy.mockRestore();
     });
 
+    it('removes empty first toggle child and focuses next sibling when next sibling exists in same parent', () => {
+      const toggleParentId = 'toggle-parent';
+      const childBlockId = 'child-block';
+      const nextChildId = 'next-child';
+
+      const toggleParent = createBlock({
+        id: toggleParentId,
+        contentIds: [childBlockId, nextChildId],
+      });
+
+      const childBlock = createBlock({
+        id: childBlockId,
+        isEmpty: true,
+        parentId: toggleParentId,
+      });
+
+      const nextChild = createBlock({
+        id: nextChildId,
+        isEmpty: false,
+        parentId: toggleParentId,
+      });
+
+      const removeBlock = vi.fn();
+      const setToBlock = vi.fn();
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === toggleParent) return 0;
+        if (block === childBlock) return 1;
+        if (block === nextChild) return 2;
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === toggleParentId) return toggleParent;
+        if (id === childBlockId) return childBlock;
+        if (id === nextChildId) return nextChild;
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: childBlock,
+          previousBlock: toggleParent,
+          nextBlock: nextChild,
+          currentBlockIndex: 1,
+          removeBlock,
+          setBlockParent: vi.fn(),
+          move: vi.fn(),
+          getBlockIndex,
+          getBlockById,
+          mergeBlocks: vi.fn(() => Promise.resolve()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          navigatePrevious: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      // Empty first child must be removed and focus set to next sibling
+      expect(removeBlock).toHaveBeenCalledWith(childBlock);
+      expect(setToBlock).toHaveBeenCalledWith(nextChild, 'start');
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
     it('merges with previous sibling when Backspace is pressed at start of a toggle child that has a previous sibling in same parent', () => {
       const toggleParentId = 'toggle-parent';
       const prevChildId = 'prev-child';

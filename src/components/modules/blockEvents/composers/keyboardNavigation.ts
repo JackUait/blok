@@ -309,7 +309,10 @@ export class KeyboardNavigation extends BlockEventComposer {
      * within the toggle rather than promoting (un-nesting) the block to root level.
      *
      * If there is no previous sibling in the same parent (i.e. this is the first
-     * or only child), do nothing — the block must stay inside the toggle.
+     * or only child):
+     *   - If the block is empty and a next sibling exists in the same parent,
+     *     remove it and focus the next sibling (acts like deleting an empty line).
+     *   - Otherwise do nothing — the block must stay inside the toggle.
      * If a previous sibling exists in the same parent, fall through to the
      * normal merge/remove logic below so the interaction stays within the toggle.
      *
@@ -317,6 +320,15 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell) {
       if (previousBlock === null || previousBlock.parentId !== currentBlock.parentId) {
+        if (currentBlock.isEmpty) {
+          const nextBlock = BlockManager.nextBlock;
+
+          if (nextBlock !== null && nextBlock.parentId === currentBlock.parentId) {
+            void BlockManager.removeBlock(currentBlock);
+            Caret.setToBlock(nextBlock, Caret.positions.START);
+          }
+        }
+
         return;
       }
       // Previous sibling exists in the same parent — fall through to merge/remove logic

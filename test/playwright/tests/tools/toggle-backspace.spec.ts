@@ -66,10 +66,10 @@ test.describe('Toggle - Backspace key behavior', () => {
   });
 
   test.describe('Backspace on empty child block stays within toggle', () => {
-    test('Backspace on empty first child (no previous sibling) does nothing instead of promoting block out', async ({ page }) => {
-      // The bug: pressing Backspace at position 0 of a toggle child calls setBlockParent(null)
-      // which promotes the block out of the toggle. With only a next sibling (no previous),
-      // the fix should do nothing.
+    test('Backspace on empty first child with next sibling removes it and focuses next sibling inside toggle', async ({ page }) => {
+      // Empty first child (no previous sibling) but has a next sibling in the same toggle.
+      // Backspace should remove child-1 and focus child-2 (still inside the toggle).
+      // It must NOT promote child-1 to root level.
       await createBlok(page, {
         blocks: [
           { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1', 'child-2'] },
@@ -79,7 +79,7 @@ test.describe('Toggle - Backspace key behavior', () => {
         ],
       });
 
-      // Click empty first child and press Backspace — should do nothing
+      // Click empty first child and press Backspace — should remove child-1
       const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
       await children.first().click();
       await page.keyboard.press('Backspace');
@@ -90,8 +90,39 @@ test.describe('Toggle - Backspace key behavior', () => {
 
       const allBlocks = saved?.blocks ?? [];
 
-      // child-1 must NOT be promoted out — all 4 blocks remain, child-1 still inside toggle
-      expect(allBlocks.length).toBe(4);
+      // child-1 removed; toggle-1, child-2, root-1 remain
+      expect(allBlocks.length).toBe(3);
+
+      const child1 = allBlocks.find(b => b.id === 'child-1');
+      const child2 = allBlocks.find(b => b.id === 'child-2');
+
+      expect(child1).toBeUndefined();
+      expect(child2?.parent).toBe('toggle-1');
+    });
+
+    test('Backspace on empty only child does nothing (no sibling to move to)', async ({ page }) => {
+      // Empty only child — no previous sibling, no next sibling in the toggle.
+      // Backspace should do nothing to prevent orphaning the toggle.
+      await createBlok(page, {
+        blocks: [
+          { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1'] },
+          { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'toggle-1' },
+          { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
+        ],
+      });
+
+      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
+      await children.first().click();
+      await page.keyboard.press('Backspace');
+
+      const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+      expect(saved).toBeDefined();
+
+      const allBlocks = saved?.blocks ?? [];
+
+      // child-1 stays inside toggle — 3 blocks remain
+      expect(allBlocks.length).toBe(3);
 
       const child1 = allBlocks.find(b => b.id === 'child-1');
 
@@ -203,7 +234,9 @@ test.describe('Toggle - Backspace key behavior', () => {
   });
 
   test.describe('Toggle heading - Backspace key behavior', () => {
-    test('Backspace on empty first child inside toggle heading does nothing instead of promoting block out', async ({ page }) => {
+    test('Backspace on empty first child with next sibling removes it and stays inside toggle heading', async ({ page }) => {
+      // Empty first child has a next sibling in the same toggle heading.
+      // Backspace should remove child-1 and focus child-2 (still inside the toggle heading).
       await createBlok(page, {
         blocks: [
           { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true }, content: ['child-1', 'child-2'] },
@@ -223,7 +256,38 @@ test.describe('Toggle - Backspace key behavior', () => {
 
       const allBlocks = saved?.blocks ?? [];
 
-      expect(allBlocks.length).toBe(4);
+      // child-1 removed; header-1, child-2, root-1 remain
+      expect(allBlocks.length).toBe(3);
+
+      const child1 = allBlocks.find(b => b.id === 'child-1');
+      const child2 = allBlocks.find(b => b.id === 'child-2');
+
+      expect(child1).toBeUndefined();
+      expect(child2?.parent).toBe('header-1');
+    });
+
+    test('Backspace on empty only child inside toggle heading does nothing', async ({ page }) => {
+      // Empty only child in toggle heading — no siblings. Backspace should do nothing.
+      await createBlok(page, {
+        blocks: [
+          { id: 'header-1', type: 'header', data: { text: 'Toggle Heading', level: 2, isToggleable: true }, content: ['child-1'] },
+          { id: 'child-1', type: 'paragraph', data: { text: '' }, parent: 'header-1' },
+          { id: 'root-1', type: 'paragraph', data: { text: 'Root' } },
+        ],
+      });
+
+      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
+      await children.first().click();
+      await page.keyboard.press('Backspace');
+
+      const saved = await page.evaluate(async () => window.blokInstance?.save());
+
+      expect(saved).toBeDefined();
+
+      const allBlocks = saved?.blocks ?? [];
+
+      // child-1 stays inside toggle heading — 3 blocks remain
+      expect(allBlocks.length).toBe(3);
 
       const child1 = allBlocks.find(b => b.id === 'child-1');
 

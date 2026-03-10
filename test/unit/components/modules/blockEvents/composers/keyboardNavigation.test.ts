@@ -698,7 +698,10 @@ describe('KeyboardNavigation', () => {
       isCaretAtStartOfInputSpy.mockRestore();
     });
 
-    it('promotes toggle child to sibling after toggle on Backspace at start of block', () => {
+    it('does nothing when Backspace is pressed at start of a toggle child with no previous sibling in same parent', () => {
+      // Previously this test verified that the block was promoted (un-nested) out of the toggle.
+      // The behaviour was changed: pressing Backspace at the start of a toggle child with no
+      // previous sibling in the same parent should do nothing (keep the block inside the toggle).
       const toggleParentId = 'toggle-parent';
       const childBlockId = 'child-block';
 
@@ -731,6 +734,7 @@ describe('KeyboardNavigation', () => {
       const blok = createBlokModules({
         BlockManager: {
           currentBlock: childBlock,
+          // previousBlock is the toggle parent (different parentId) — no sibling in same parent
           previousBlock: toggleParent,
           currentBlockIndex: 1,
           setBlockParent,
@@ -757,11 +761,80 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleBackspace(event);
 
-      // Block should be un-parented from the toggle
-      expect(setBlockParent).toHaveBeenCalledWith(childBlock, null);
-      // Block should be repositioned after the toggle parent
-      expect(move).toHaveBeenCalled();
+      // Block must NOT be un-nested — setBlockParent and move must not be called
+      expect(setBlockParent).not.toHaveBeenCalled();
+      expect(move).not.toHaveBeenCalled();
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+    });
+
+    it('merges with previous sibling when Backspace is pressed at start of a toggle child that has a previous sibling in same parent', () => {
+      const toggleParentId = 'toggle-parent';
+      const prevChildId = 'prev-child';
+      const currentChildId = 'current-child';
+
+      const toggleParent = createBlock({
+        id: toggleParentId,
+        contentIds: [prevChildId, currentChildId],
+      });
+
+      const prevChild = createBlock({
+        id: prevChildId,
+        isEmpty: false,
+        parentId: toggleParentId,
+        mergeable: true,
+      });
+
+      const currentChild = createBlock({
+        id: currentChildId,
+        isEmpty: false,
+        parentId: toggleParentId,
+        mergeable: true,
+      });
+
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const setBlockParent = vi.fn();
+      const move = vi.fn();
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: currentChild,
+          // previousBlock is prevChild — same parentId as currentChild
+          previousBlock: prevChild,
+          currentBlockIndex: 2,
+          setBlockParent,
+          move,
+          getBlockIndex: vi.fn(),
+          getBlockById: vi.fn((id: string) => {
+            if (id === toggleParentId) return toggleParent;
+            return undefined;
+          }),
+          removeBlock: vi.fn(),
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock: vi.fn(),
+          navigatePrevious: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Backspace' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleBackspace(event);
+
+      // Block must NOT be un-nested from the toggle
+      expect(setBlockParent).not.toHaveBeenCalled();
+      expect(move).not.toHaveBeenCalled();
+      // Instead, mergeBlocks should be called (merge with previous sibling inside toggle)
+      expect(mergeBlocks).toHaveBeenCalledWith(prevChild, currentChild);
 
       isCaretAtStartOfInputSpy.mockRestore();
     });

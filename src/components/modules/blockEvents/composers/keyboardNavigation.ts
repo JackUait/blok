@@ -305,23 +305,21 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
-     * When the caret is at the start of a toggle child block, Backspace should
-     * promote (un-nest) the block to be a sibling after the toggle parent,
-     * equivalent to Shift+Tab. Skip this for table cell blocks — they use
-     * a separate parent-child mechanism that should not be affected.
+     * When the caret is at the start of a toggle child block, keep navigation
+     * within the toggle rather than promoting (un-nesting) the block to root level.
+     *
+     * If there is no previous sibling in the same parent (i.e. this is the first
+     * or only child), do nothing — the block must stay inside the toggle.
+     * If a previous sibling exists in the same parent, fall through to the
+     * normal merge/remove logic below so the interaction stays within the toggle.
+     *
+     * Skip this guard for table cell blocks — they use a separate mechanism.
      */
     if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell) {
-      const parentBlock = BlockManager.getBlockById(currentBlock.parentId);
-
-      if (parentBlock !== undefined) {
-        BlockManager.setBlockParent(currentBlock, null);
-        const parentIndex = BlockManager.getBlockIndex(parentBlock);
-        const currentIndex = BlockManager.getBlockIndex(currentBlock);
-
-        BlockManager.move(parentIndex + 1, currentIndex, false);
+      if (previousBlock === null || previousBlock.parentId !== currentBlock.parentId) {
+        return;
       }
-
-      return;
+      // Previous sibling exists in the same parent — fall through to merge/remove logic
     }
 
     /**

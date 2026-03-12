@@ -160,4 +160,30 @@ export interface BlokConfig {
      */
     fontFamily?: string;
   }
+
+  /**
+   * Initial width mode. Defaults to 'narrow'.
+   */
+  defaultWidth?: 'narrow' | 'full';
+
+  /**
+   * CSS max-width value for narrow mode.
+   * Any valid CSS length (e.g. '650px', '800px', '60ch').
+   * Defaults to '650px'.
+   */
+  narrowWidth?: string;
+
+  /**
+   * CSS max-width value for full width mode.
+   * Any valid CSS length, or 'none' for no constraint.
+   * Defaults to 'none'.
+   */
+  fullWidth?: string;
+
+  /**
+   * Called when the editor width mode changes.
+   * @param mode - the new mode ('narrow' or 'full')
+   * @param value - the resolved CSS max-width value
+   */
+  onWidthChange?: (mode: 'narrow' | 'full', value: string) => void;
 }

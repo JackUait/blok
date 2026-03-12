@@ -149,6 +149,7 @@ const createMockAPIMethods = (): APIInterface => ({
       redactor: document.createElement('div'),
     },
   },
+  width: {} as APIInterface['width'],
   rectangleSelection: {} as APIInterface['rectangleSelection'],
 });
 

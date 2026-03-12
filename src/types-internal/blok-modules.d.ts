@@ -16,6 +16,7 @@ import { StylesAPI } from '../components/modules/api/styles';
 import { ToolbarAPI } from '../components/modules/api/toolbar';
 import { TooltipAPI } from '../components/modules/api/tooltip';
 import { UiAPI } from '../components/modules/api/ui';
+import { WidthAPI } from '../components/modules/api/width';
 /** ./toolbar */
 import { BlockSettings } from '../components/modules/toolbar/blockSettings';
 import { Toolbar } from '../components/modules/toolbar/index';
@@ -61,6 +62,7 @@ export interface BlokModules {
   ToolbarAPI: ToolbarAPI,
   TooltipAPI: TooltipAPI,
   UiAPI: UiAPI,
+  WidthAPI: WidthAPI,
 
   // Toolbar Modules
   BlockSettings: BlockSettings,

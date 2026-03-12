@@ -16,6 +16,7 @@ import { ToolbarAPI } from './api/toolbar';
 import { ToolsAPI } from './api/tools';
 import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
+import { WidthAPI } from './api/width';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
@@ -61,6 +62,7 @@ export {
   ToolbarAPI,
   TooltipAPI,
   UiAPI,
+  WidthAPI,
 
   // Toolbar Modules
   BlockSettings,
@@ -110,6 +112,7 @@ export const Modules = {
   ToolbarAPI,
   TooltipAPI,
   UiAPI,
+  WidthAPI,
 
   // Toolbar Modules
   BlockSettings,

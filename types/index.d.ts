@@ -144,7 +144,7 @@ export interface API {
   i18n: I18n;
   readOnly: ReadOnly;
   ui: Ui;
-  width?: Width;
+  width: Width;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;
@@ -179,7 +179,7 @@ export class Blok {
   public inlineToolbar: InlineToolbar;
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
-  public width?: Width;
+  public width: Width;
   constructor(configuration?: BlokConfig|string);
 
   /**

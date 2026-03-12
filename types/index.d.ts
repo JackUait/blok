@@ -179,7 +179,7 @@ export class Blok {
   public inlineToolbar: InlineToolbar;
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
-  public width: Width;
+  public width?: Width;
   constructor(configuration?: BlokConfig|string);
 
   /**

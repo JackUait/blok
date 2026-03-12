@@ -1,5 +1,6 @@
 import type { API, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+import { IconWidthNarrow, IconWidthFull } from '../icons';
 
 /**
  * WidthTune — opt-in block tune for toggling editor width mode.
@@ -17,13 +18,16 @@ export class WidthTune implements BlockTune {
     this.api = api;
   }
 
+  /**
+   * Tune's appearance in block settings menu
+   */
   public render(): MenuConfig {
     const current = this.api.width.get();
 
     return [
       {
         name: 'width-narrow',
-        icon: this.narrowIcon,
+        icon: IconWidthNarrow,
         title: this.api.i18n.t('blockSettings.widthNarrow'),
         isActive: current === 'narrow',
         onActivate: (): void => {
@@ -32,7 +36,7 @@ export class WidthTune implements BlockTune {
       },
       {
         name: 'width-full',
-        icon: this.fullIcon,
+        icon: IconWidthFull,
         title: this.api.i18n.t('blockSettings.widthFull'),
         isActive: current === 'full',
         onActivate: (): void => {
@@ -40,25 +44,5 @@ export class WidthTune implements BlockTune {
         },
       },
     ];
-  }
-
-  // ─── Icons ─────────────────────────────────────────────────────────────────
-
-  private get narrowIcon(): string {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="4" width="16" height="16" rx="2"/>
-      <line x1="7" y1="9" x2="17" y2="9"/>
-      <line x1="7" y1="12" x2="17" y2="12"/>
-      <line x1="7" y1="15" x2="13" y2="15"/>
-    </svg>`;
-  }
-
-  private get fullIcon(): string {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2"/>
-      <line x1="5" y1="9" x2="19" y2="9"/>
-      <line x1="5" y1="12" x2="19" y2="12"/>
-      <line x1="5" y1="15" x2="19" y2="15"/>
-    </svg>`;
   }
 }

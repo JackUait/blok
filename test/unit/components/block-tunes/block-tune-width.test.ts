@@ -7,7 +7,6 @@ import type { MenuConfig } from '../../../../types/tools/menu-config';
 type WidthMocks = {
   get: Mock<() => 'narrow' | 'full'>;
   set: Mock<(mode: 'narrow' | 'full') => void>;
-  toggle: Mock<() => void>;
 };
 
 type I18nMocks = {
@@ -18,7 +17,6 @@ function createWidthTune(currentMode: 'narrow' | 'full' = 'narrow') {
   const widthApi: WidthMocks = {
     get: vi.fn().mockReturnValue(currentMode),
     set: vi.fn(),
-    toggle: vi.fn(),
   };
 
   const i18n: I18nMocks = {

@@ -611,6 +611,12 @@
   --color-link-input-border: var(--blok-link-input-border);
 }
 
+@layer utilities {
+  .max-w-blok-content {
+    max-width: var(--blok-content-width, var(--max-width-content));
+  }
+}
+
 /* ─── Light theme (default) ─────────────────────────── */
 [data-blok-interface],
 [data-blok-popover] {

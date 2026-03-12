@@ -105,7 +105,7 @@ describe('StyleManager', () => {
 
       const classes = styleManager.getContentClasses(false, false);
       expect(classes).toContain('mx-auto');
-      expect(classes).toContain('max-w-content');
+      expect(classes).toContain('max-w-blok-content');
       expect(contentElement.className).toBe(classes);
     });
 
@@ -140,9 +140,16 @@ describe('StyleManager', () => {
       const classes = styleManager.getContentClasses(false, false);
 
       expect(classes).toContain('mx-auto');
-      expect(classes).toContain('max-w-content');
+      expect(classes).toContain('max-w-blok-content');
       expect(classes).not.toContain('bg-selection');
       expect(classes).not.toContain('max-w-none');
+    });
+
+    it('should use max-w-blok-content class for content width', () => {
+      // get content classes for non-selected, non-stretched state
+      const classes = styleManager.getContentClasses(false, false);
+      expect(classes).toContain('max-w-blok-content');
+      expect(classes).not.toContain('max-w-content');
     });
   });
 
@@ -159,7 +166,7 @@ describe('StyleManager', () => {
 
     it('provides contentStyles', () => {
       expect(StyleManager.contentStyles).toContain('mx-auto');
-      expect(StyleManager.contentStyles).toContain('max-w-content');
+      expect(StyleManager.contentStyles).toContain('max-w-blok-content');
     });
   });
 });

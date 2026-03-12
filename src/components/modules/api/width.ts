@@ -9,9 +9,9 @@ export class WidthAPI extends Module {
     const widthManager = this.Blok.WidthManager;
 
     return {
-      get: (): 'narrow' | 'full' => widthManager.getWidth(),
-      set: (mode: 'narrow' | 'full'): void => widthManager.setWidth(mode),
-      toggle: (): void => widthManager.toggle(),
+      get: () => widthManager.getWidth(),
+      set: (mode) => widthManager.setWidth(mode),
+      toggle: () => widthManager.toggle(),
     };
   }
 }

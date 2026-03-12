@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WidthAPI } from '../../../../../src/components/modules/api/width';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
@@ -28,6 +28,14 @@ function createWidthAPI() {
 }
 
 describe('WidthAPI', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should expose get() that delegates to WidthManager.getWidth()', () => {
     const { api, widthManager } = createWidthAPI();
     const result = api.methods.get();

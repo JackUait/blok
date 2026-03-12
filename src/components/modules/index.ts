@@ -34,6 +34,7 @@ import { Toolbar } from './toolbar/index';
 import { InlineToolbar } from './toolbar/inline';
 import { Tools } from './tools';
 import { UI } from './ui';
+import { WidthManager } from './widthManager';
 import { YjsManager } from './yjs';
 
 /**
@@ -82,6 +83,7 @@ export {
   Saver,
   Tools,
   UI,
+  WidthManager,
   YjsManager,
 };
 
@@ -130,5 +132,6 @@ export const Modules = {
   Saver,
   Tools,
   UI,
+  WidthManager,
   YjsManager,
 };

@@ -38,6 +38,7 @@ import { Tools } from '../components/modules/tools';
 import { UI } from '../components/modules/ui';
 import { ToolsAPI } from '../components/modules/api/tools';
 import { I18n } from '../components/modules/i18n';
+import { WidthManager } from '../components/modules/widthManager';
 import { YjsManager } from '../components/modules/yjs';
 
 export interface BlokModules {
@@ -82,5 +83,6 @@ export interface BlokModules {
   Saver: Saver,
   Tools: Tools,
   UI: UI,
+  WidthManager: WidthManager,
   YjsManager: YjsManager,
 }

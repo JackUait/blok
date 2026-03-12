@@ -249,6 +249,7 @@ export class Core {
       'RectangleSelection',
       'CrossBlockSelection',
       'ReadOnly',
+      'WidthManager',
     ];
 
     await modulesToPrepare.reduce(

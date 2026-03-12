@@ -148,6 +148,6 @@ test.describe('Editor width mode', () => {
 
     const result = await page.evaluate(() => window.__widthChangeResult);
 
-    expect(result).toEqual({ mode: 'full', value: 'none' });
+    expect(result).toStrictEqual({ mode: 'full', value: 'none' });
   });
 });

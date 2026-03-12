@@ -285,3 +285,4 @@ class Blok {
 }
 
 export { Blok };
+export { WidthTune } from './components/block-tunes/block-tune-width';

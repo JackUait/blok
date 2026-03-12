@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WidthManager } from '../../../../src/components/modules/widthManager';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokConfig } from '../../../../types';
@@ -26,6 +26,10 @@ function createWidthManager(config: Partial<BlokConfig> = {}): {
 }
 
 describe('WidthManager', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });

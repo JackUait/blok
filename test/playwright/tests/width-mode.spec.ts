@@ -10,6 +10,7 @@ declare global {
   interface Window {
     blokWidthInstance?: Blok;
     Blok: new (...args: unknown[]) => Blok;
+    __widthChangeResult?: { mode: string; value: string } | null;
   }
 }
 
@@ -50,6 +51,7 @@ test.describe('Editor width mode', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
   test('should apply 650px CSS variable by default (narrow mode)', async ({ page }) => {
@@ -88,11 +90,20 @@ test.describe('Editor width mode', () => {
       window.blokWidthInstance?.width.toggle();
     });
     const wrapper = page.locator(BLOK_INTERFACE_SELECTOR);
-    const cssVar = await wrapper.evaluate((el: HTMLElement) =>
+    const cssVarAfterFirst = await wrapper.evaluate((el: HTMLElement) =>
       el.style.getPropertyValue('--blok-content-width').trim()
     );
 
-    expect(cssVar).toBe('none');
+    expect(cssVarAfterFirst).toBe('none');
+
+    await page.evaluate(() => {
+      window.blokWidthInstance?.width.toggle();
+    });
+    const cssVarAfterSecond = await wrapper.evaluate((el: HTMLElement) =>
+      el.style.getPropertyValue('--blok-content-width').trim()
+    );
+
+    expect(cssVarAfterSecond).toBe('700px');
   });
 
   test('editor.width.get() should return current mode', async ({ page }) => {
@@ -100,5 +111,43 @@ test.describe('Editor width mode', () => {
     const mode = await page.evaluate(() => window.blokWidthInstance?.width.get());
 
     expect(mode).toBe('full');
+  });
+
+  test('editor.width.set() should switch from narrow to full', async ({ page }) => {
+    await createBlok(page, { narrowWidth: '750px' });
+    await page.evaluate(() => {
+      window.blokWidthInstance?.width.set('full');
+    });
+    const wrapper = page.locator(BLOK_INTERFACE_SELECTOR);
+    const cssVar = await wrapper.evaluate((el: HTMLElement) =>
+      el.style.getPropertyValue('--blok-content-width').trim()
+    );
+
+    expect(cssVar).toBe('none');
+  });
+
+  test('onWidthChange callback should be called with mode and value on toggle', async ({ page }) => {
+    await resetBlok(page);
+    await page.evaluate(async ({ holder }) => {
+      window.__widthChangeResult = null;
+      const blok = new window.Blok({
+        holder,
+        narrowWidth: '600px',
+        onWidthChange: (mode: string, value: string) => {
+          window.__widthChangeResult = { mode, value };
+        },
+      } as BlokConfig);
+
+      window.blokWidthInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    await page.evaluate(() => {
+      window.blokWidthInstance?.width.toggle();
+    });
+
+    const result = await page.evaluate(() => window.__widthChangeResult);
+
+    expect(result).toEqual({ mode: 'full', value: 'none' });
   });
 });

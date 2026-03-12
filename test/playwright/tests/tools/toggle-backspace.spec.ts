@@ -192,7 +192,8 @@ test.describe('Toggle - Backspace key behavior', () => {
       const child1 = allBlocks.find(b => b.id === 'child-1');
 
       expect(child1?.parent).toBe('toggle-1');
-      expect(child1?.data?.text).toBe('Hello world');
+      const child1Data = child1?.data as { text?: string } | undefined;
+      expect(child1Data?.text).toBe('Hello world');
     });
 
     test('Backspace at start of non-empty child with previous sibling merges into previous sibling inside toggle', async ({ page }) => {
@@ -229,7 +230,8 @@ test.describe('Toggle - Backspace key behavior', () => {
       // child-1 stays inside toggle
       expect(child1?.parent).toBe('toggle-1');
       // merged content: "FirstSecond"
-      expect(child1?.data?.text).toBe('FirstSecond');
+      const child1Data = child1?.data as { text?: string } | undefined;
+      expect(child1Data?.text).toBe('FirstSecond');
     });
   });
 

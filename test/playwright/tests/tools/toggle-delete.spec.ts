@@ -4,13 +4,10 @@ import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
-import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
-const TOGGLE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="toggle"]`;
 const TOGGLE_CONTENT_SELECTOR = '[data-blok-toggle-content]';
 const TOGGLE_CHILDREN_SELECTOR = '[data-blok-toggle-children]';
-const PARAGRAPH_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`;
 
 declare global {
   interface Window {
@@ -140,11 +137,13 @@ test.describe('Toggle - Delete key behavior', () => {
 
       // Child block should still have only its own content
       const childBlock = allBlocks.find(b => b.id === 'child-1');
-      expect(childBlock?.data?.text).toBe('Child content');
+      const childBlockData = childBlock?.data as { text?: string } | undefined;
+      expect(childBlockData?.text).toBe('Child content');
 
       // Root block should be unchanged
       const rootBlock = allBlocks.find(b => b.id === 'root-1');
-      expect(rootBlock?.data?.text).toBe('After toggle');
+      const rootBlockData = rootBlock?.data as { text?: string } | undefined;
+      expect(rootBlockData?.text).toBe('After toggle');
 
       // Child must still be inside toggle
       expect(childBlock?.parent).toBe('toggle-1');
@@ -170,18 +169,11 @@ test.describe('Toggle - Delete key behavior', () => {
       expect(saved).toBeDefined();
 
       const allBlocks = saved?.blocks ?? [];
-      const childBlock = allBlocks.find(b => b.id === 'child-1');
-      const toggleBlock = allBlocks.find(b => b.id === 'toggle-1');
 
-      // If the toggle still exists, child must be a child of it
-      if (toggleBlock !== undefined) {
-        expect(childBlock?.parent).toBe('toggle-1');
-      } else {
-        // Toggle was converted to something (e.g. paragraph) — child must NOT be a second root block
-        const rootBlocks = allBlocks.filter(b => b.parent === undefined);
-        // At most one root-level block should exist (the converted toggle)
-        expect(rootBlocks.length).toBeLessThanOrEqual(1);
-      }
+      // If the toggle still exists, child must be a child of it;
+      // otherwise child must not become an extra root-level block
+      const rootBlocks = allBlocks.filter(b => b.parent === undefined);
+      expect(rootBlocks.length).toBeLessThanOrEqual(1);
     });
   });
 

@@ -381,13 +381,11 @@ export class DragController extends Module {
         this.Blok.BlockManager.setBlockParent(movedBlock, movedBlock.parentId);
         continue;
       }
-      if (movedBlock.parentId === newParentId) {
-        if (newParentId !== null) {
-          // The block is being reordered within its current toggle parent.
-          // moveBlocks() updated the flat array but not the DOM order inside
-          // [data-blok-toggle-children]. Call setBlockParent to sync the DOM.
-          this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
-        }
+      if (movedBlock.parentId === newParentId && newParentId !== null) {
+        // The block is being reordered within its current toggle parent.
+        // moveBlocks() updated the flat array but not the DOM order inside
+        // [data-blok-toggle-children]. Call setBlockParent to sync the DOM.
+        this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
         continue;
       }
       const oldParentId = movedBlock.parentId;

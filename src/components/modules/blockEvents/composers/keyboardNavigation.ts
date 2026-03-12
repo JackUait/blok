@@ -320,14 +320,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      */
     if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell) {
       if (previousBlock === null || previousBlock.parentId !== currentBlock.parentId) {
-        if (currentBlock.isEmpty) {
-          const nextBlock = BlockManager.nextBlock;
-
-          if (nextBlock !== null && nextBlock.parentId === currentBlock.parentId) {
-            void BlockManager.removeBlock(currentBlock);
-            Caret.setToBlock(nextBlock, Caret.positions.START);
-          }
-        }
+        this.removeEmptyToggleChildAndFocusNext(currentBlock);
 
         return;
       }
@@ -455,12 +448,10 @@ export class KeyboardNavigation extends BlockEventComposer {
        * When there is no previous sibling in the same parent, do nothing to prevent the cursor
        * from exiting the toggle after the flat-array index is decremented past the parent block.
        */
-      if (currentBlock.parentId !== null) {
-        const prevBlock = BlockManager.previousBlock;
+      const prevBlock = BlockManager.previousBlock;
 
-        if (prevBlock === null || prevBlock.parentId !== currentBlock.parentId) {
-          return;
-        }
+      if (currentBlock.parentId !== null && (prevBlock === null || prevBlock.parentId !== currentBlock.parentId)) {
+        return;
       }
 
       void BlockManager.removeBlock(currentBlock);
@@ -800,6 +791,25 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Clear blocks selection by arrows
      */
     this.Blok.BlockSelection.clearSelection(event);
+  }
+
+  /**
+   * When Backspace is pressed at the start of an empty toggle child block that has no
+   * previous sibling in the same parent, remove the block and move the caret to the
+   * next sibling (if one exists in the same parent).
+   */
+  private removeEmptyToggleChildAndFocusNext(block: Block): void {
+    if (!block.isEmpty) {
+      return;
+    }
+
+    const { BlockManager, Caret } = this.Blok;
+    const nextBlock = BlockManager.nextBlock;
+
+    if (nextBlock !== null && nextBlock.parentId === block.parentId) {
+      void BlockManager.removeBlock(block);
+      Caret.setToBlock(nextBlock, Caret.positions.START);
+    }
   }
 
 }

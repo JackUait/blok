@@ -65,29 +65,21 @@ export class BlockHierarchy {
     // If old parent had a toggle child container and this block was in it, move it to the
     // position indicated by the flat array. moveBlocks() updates the flat array before
     // setBlockParent() is called, so getBlockIndex() reflects the intended drop position.
-    if (oldParent !== undefined) {
-      const oldContainer = oldParent.holder.querySelector('[data-blok-toggle-children]');
+    const oldContainer = oldParent !== undefined ? oldParent.holder.querySelector('[data-blok-toggle-children]') : null;
 
-      if (oldContainer && block.holder.parentElement === oldContainer) {
-        // Scan backwards in the flat array for the nearest block whose holder is at root
-        // level (not inside any toggle-children container) — use it as the DOM anchor.
-        const allBlocks = this.repository.blocks;
-        const blockIndex = allBlocks.indexOf(block);
-        let placed = false;
+    if (oldContainer && block.holder.parentElement === oldContainer) {
+      // Scan backwards in the flat array for the nearest block whose holder is at root
+      // level (not inside any toggle-children container) — use it as the DOM anchor.
+      const allBlocks = this.repository.blocks;
+      const blockIndex = allBlocks.indexOf(block);
+      const anchor = allBlocks.slice(0, blockIndex).reverse().find(
+        b => b.holder.closest('[data-blok-toggle-children]') === null
+      );
 
-        for (let i = blockIndex - 1; i >= 0; i--) {
-          const prevBlock = allBlocks[i];
-
-          if (prevBlock && prevBlock.holder.closest('[data-blok-toggle-children]') === null) {
-            prevBlock.holder.insertAdjacentElement('afterend', block.holder);
-            placed = true;
-            break;
-          }
-        }
-
-        if (!placed) {
-          oldParent.holder.after(block.holder);
-        }
+      if (anchor) {
+        anchor.holder.insertAdjacentElement('afterend', block.holder);
+      } else if (oldParent !== undefined) {
+        oldParent.holder.after(block.holder);
       }
     }
 
@@ -126,14 +118,9 @@ export class BlockHierarchy {
       if (newContainer) {
         const allBlocks = this.repository.blocks;
         const blockIdx = allBlocks.indexOf(block);
-        let nextSiblingHolder: HTMLElement | null = null;
-
-        for (let i = blockIdx + 1; i < allBlocks.length; i++) {
-          if (allBlocks[i].holder.parentElement === newContainer) {
-            nextSiblingHolder = allBlocks[i].holder;
-            break;
-          }
-        }
+        const nextSiblingHolder = allBlocks.slice(blockIdx + 1).find(
+          b => b.holder.parentElement === newContainer
+        )?.holder ?? null;
 
         // insertBefore(el, null) is equivalent to appendChild
         newContainer.insertBefore(block.holder, nextSiblingHolder);

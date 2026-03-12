@@ -243,25 +243,26 @@ test.describe('Table block-level drag reorder', () => {
     });
 
     expect(savedData).toBeDefined();
+    const safeData = savedData as NonNullable<typeof savedData>;
 
     // Find the table block in the save output
-    const tableOutputBlock = savedData!.blocks.find(
-      (b: { type: string }) => b.type === 'table'
+    const tableOutputBlock = safeData.blocks.find(
+      (b) => b.type === 'table'
     );
 
     expect(tableOutputBlock).toBeDefined();
     const tableId = (tableOutputBlock as { id: string }).id;
 
     // Identify the table's position in the flat array
-    const tableIndex = savedData!.blocks.findIndex(
-      (b: { id: string }) => b.id === tableId
+    const tableIndex = safeData.blocks.findIndex(
+      (b) => b.id === tableId
     );
 
     expect(tableIndex).toBeGreaterThanOrEqual(0);
 
     // Identify all cell block IDs (blocks with parent === tableId)
-    const cellBlocks = savedData!.blocks.filter(
-      (b: { parent?: string }) => (b as { parent?: string }).parent === tableId
+    const cellBlocks = safeData.blocks.filter(
+      (b) => (b as { parent?: string }).parent === tableId
     );
 
     // There should be 4 cell blocks (one per cell in the 2x2 table)
@@ -274,13 +275,13 @@ test.describe('Table block-level drag reorder', () => {
     // The bug: after drag, the flat array looks like:
     //   [B(cell), Before, C(cell), TABLE, D(cell), After, A(cell)]
     // Cell blocks are scattered with foreign blocks interspersed.
-    const cellBlockIndices = cellBlocks.map((cellBlock: { id: string }) =>
-      savedData!.blocks.findIndex((b: { id: string }) => b.id === cellBlock.id)
+    const cellBlockIndices = cellBlocks.map((cellBlock) =>
+      safeData.blocks.findIndex((b) => b.id === (cellBlock as { id: string }).id)
     );
 
     const tableGroupIds = new Set([
       tableId,
-      ...cellBlocks.map((b: { id: string }) => b.id),
+      ...cellBlocks.map((b) => (b as { id: string }).id),
     ]);
 
     // Compute the full group range including the table's own index
@@ -301,7 +302,7 @@ test.describe('Table block-level drag reorder', () => {
 
     // Every index in the group range must belong to the table group
     for (let i = minGroupIndex; i <= maxGroupIndex; i++) {
-      const blockAtIndex = savedData!.blocks[i] as { id: string };
+      const blockAtIndex = safeData.blocks[i] as { id: string };
 
       expect(
         tableGroupIds.has(blockAtIndex.id),

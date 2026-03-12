@@ -341,10 +341,10 @@ test.describe('Add Controls Edge Cases', () => {
 
     // Measure button positions vs table edges using real rendered layout
     const gaps = await page.evaluate(() => {
-      const scrollContainer = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
-      const grid = scrollContainer?.firstElementChild as HTMLElement | null;
-      const addColBtnEl = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
-      const addRowBtnEl = document.querySelector('[data-blok-table-add-row]') as HTMLElement | null;
+      const scrollContainer = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
+        const grid = scrollContainer?.firstElementChild as HTMLElement | null;
+        const addColBtnEl = document.querySelector<HTMLElement>('[data-blok-table-add-col]');
+        const addRowBtnEl = document.querySelector<HTMLElement>('[data-blok-table-add-row]');
 
       if (!scrollContainer || !grid || !addColBtnEl || !addRowBtnEl) {
         return null;
@@ -364,7 +364,7 @@ test.describe('Add Controls Edge Cases', () => {
     expect(gaps).not.toBeNull();
 
     // Both buttons must be within [2, 6] px of the table edge — centred on 4px
-    const { colGap, rowGap } = gaps!;
+    const { colGap, rowGap } = gaps as NonNullable<typeof gaps>;
 
     expect(colGap).toBeGreaterThanOrEqual(2);
     expect(colGap).toBeLessThanOrEqual(6);
@@ -410,23 +410,23 @@ test.describe('Add Controls Edge Cases', () => {
 
     // Now simulate the user scrolling the table back to the start (scrollLeft=0)
     await page.evaluate(() => {
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
 
       if (sc) sc.scrollLeft = 0;
     });
 
     // The scroll event must trigger syncRowButtonWidth — give it one rAF to settle
     await page.waitForFunction(() => {
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
 
       return sc?.scrollLeft === 0;
     });
 
     // Measure gap at scrollLeft=0 (grid overflows scroll container to the right)
     const colGap = await page.evaluate(() => {
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
       const grid = sc?.firstElementChild as HTMLElement | null;
-      const btn = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
+      const btn = document.querySelector<HTMLElement>('[data-blok-table-add-col]');
 
       if (!sc || !grid || !btn) return null;
 
@@ -438,8 +438,8 @@ test.describe('Add Controls Edge Cases', () => {
     });
 
     expect(colGap).not.toBeNull();
-    expect(colGap!).toBeGreaterThanOrEqual(2);
-    expect(colGap!).toBeLessThanOrEqual(6);
+    expect(colGap as number).toBeGreaterThanOrEqual(2);
+    expect(colGap as number).toBeLessThanOrEqual(6);
   });
 
   test('both buttons stay 4px from grid after viewport is resized narrower', async ({ page }) => {
@@ -477,9 +477,10 @@ test.describe('Add Controls Edge Cases', () => {
     });
 
     // Resize viewport narrower so the scroll container shrinks
-    const originalWidth = page.viewportSize()!.width;
+    const viewportSize = page.viewportSize() ?? { width: 1280, height: 720 };
+    const originalWidth = viewportSize.width;
 
-    await page.setViewportSize({ width: Math.round(originalWidth * 0.6), height: page.viewportSize()!.height });
+    await page.setViewportSize({ width: Math.round(originalWidth * 0.6), height: viewportSize.height });
 
     // Wait until the scroll container itself has shrunk (layout reflow complete).
     // setViewportSize waits for the resize to be applied, but ResizeObserver callbacks
@@ -488,16 +489,16 @@ test.describe('Add Controls Edge Cases', () => {
     const newWidth = Math.round(originalWidth * 0.6);
 
     await page.waitForFunction((targetWidth: number) => {
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
 
       return sc !== null && sc.clientWidth < targetWidth;
     }, newWidth);
 
     const gaps = await page.evaluate(() => {
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
       const grid = sc?.firstElementChild as HTMLElement | null;
-      const addColBtnEl = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
-      const addRowBtnEl = document.querySelector('[data-blok-table-add-row]') as HTMLElement | null;
+      const addColBtnEl = document.querySelector<HTMLElement>('[data-blok-table-add-col]');
+      const addRowBtnEl = document.querySelector<HTMLElement>('[data-blok-table-add-row]');
 
       if (!sc || !grid || !addColBtnEl || !addRowBtnEl) return null;
 
@@ -519,13 +520,15 @@ test.describe('Add Controls Edge Cases', () => {
     });
 
     expect(gaps).not.toBeNull();
-    expect(gaps!.colGap).toBeGreaterThanOrEqual(2);
-    expect(gaps!.colGap).toBeLessThanOrEqual(6);
-    expect(gaps!.rowGap).toBeGreaterThanOrEqual(2);
-    expect(gaps!.rowGap).toBeLessThanOrEqual(6);
+    const safeGaps = gaps as NonNullable<typeof gaps>;
+
+    expect(safeGaps.colGap).toBeGreaterThanOrEqual(2);
+    expect(safeGaps.colGap).toBeLessThanOrEqual(6);
+    expect(safeGaps.rowGap).toBeGreaterThanOrEqual(2);
+    expect(safeGaps.rowGap).toBeLessThanOrEqual(6);
     // add-row button width must match the visible portion of the grid
     // (may be narrower than sc.clientWidth when scrolled past the grid's right edge)
-    expect(Math.abs(gaps!.addRowWidth - gaps!.visibleGridWidth)).toBeLessThanOrEqual(2);
+    expect(Math.abs(safeGaps.addRowWidth - safeGaps.visibleGridWidth)).toBeLessThanOrEqual(2);
   });
 
   test('add-col button height is explicitly set to grid height by syncRowButtonWidth', async ({ page }) => {
@@ -570,9 +573,9 @@ test.describe('Add Controls Edge Cases', () => {
     // syncRowButtonWidth() must have set an explicit pixel height on the add-col button
     // equal to the grid's rendered height, to prevent scrollbar-induced height inflation.
     const heights = await page.evaluate(() => {
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
       const grid = sc?.firstElementChild as HTMLElement | null;
-      const btn = document.querySelector('[data-blok-table-add-col]') as HTMLElement | null;
+      const btn = document.querySelector<HTMLElement>('[data-blok-table-add-col]');
 
       if (!grid || !btn) return null;
 
@@ -586,9 +589,11 @@ test.describe('Add Controls Edge Cases', () => {
     });
 
     expect(heights).not.toBeNull();
+    const safeHeights = heights as NonNullable<typeof heights>;
+
     // Before fix: parsedStyleHeight is NaN (style.height was '') — this assertion fails
     // After fix: parsedStyleHeight === gridRenderedHeight
-    expect(heights!.parsedStyleHeight).toBeCloseTo(heights!.gridRenderedHeight, 2);
+    expect(safeHeights.parsedStyleHeight).toBeCloseTo(safeHeights.gridRenderedHeight, 2);
   });
 
   test('add-row button top is pinned to grid bottom by syncRowButtonWidth', async ({ page }) => {
@@ -634,10 +639,10 @@ test.describe('Add Controls Edge Cases', () => {
     // syncRowButtonWidth() must set addRowBtn.style.top = gridHeight + 4px
     // so it stays anchored to the grid bottom, not the wrapper bottom.
     const positions = await page.evaluate(() => {
-      const wrapper = document.querySelector('[data-blok-tool="table"]') as HTMLElement | null;
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement | null;
+      const wrapper = document.querySelector<HTMLElement>('[data-blok-tool="table"]');
+      const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
       const grid = sc?.firstElementChild as HTMLElement | null;
-      const btn = document.querySelector('[data-blok-table-add-row]') as HTMLElement | null;
+      const btn = document.querySelector<HTMLElement>('[data-blok-table-add-row]');
 
       if (!wrapper || !grid || !btn) return null;
 
@@ -653,8 +658,10 @@ test.describe('Add Controls Edge Cases', () => {
     });
 
     expect(positions).not.toBeNull();
+    const safePositions = positions as NonNullable<typeof positions>;
+
     // Before fix: parsedStyleTop is NaN (style.top was never set) — this assertion fails
     // After fix: parsedStyleTop ≈ expectedTop (grid bottom relative to wrapper + 4px gap)
-    expect(positions!.parsedStyleTop).toBeCloseTo(positions!.expectedTop, 2);
+    expect(safePositions.parsedStyleTop).toBeCloseTo(safePositions.expectedTop, 2);
   });
 });

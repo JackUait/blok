@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
 import { DragController as DragManager } from '../../../../src/components/modules/drag/DragController';
-import { DragPreview } from '../../../../src/components/modules/drag/preview/DragPreview';
+import type { DragPreview } from '../../../../src/components/modules/drag/preview/DragPreview';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
@@ -809,10 +809,8 @@ describe('DragManager', () => {
 
       dragManager.setupDragHandle(dragHandle, paraBlock);
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
       dragHandle.dispatchEvent(createMouseEvent('mousedown', { clientX: 100, clientY: 100 }));
 
-      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch -- Testing drag-and-drop requires direct mouse event dispatching
       document.dispatchEvent(createMouseEvent('mousemove', { clientX: 110, clientY: 100 }));
 
       // createMulti should be called with ONLY the root blocks (para + table),

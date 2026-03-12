@@ -138,6 +138,31 @@ export class TableAddControls {
   }
 
   /**
+   * Compute the visible pixel width for the add-row button when the grid has
+   * explicit pixel widths set. Accounts for scroll-container clipping.
+   */
+  private computeVisibleWidth(numericWidth: number, isInsideScrollContainer: boolean, scrollContainer: HTMLElement | null): number {
+    if (!isInsideScrollContainer || scrollContainer === null) {
+      return numericWidth;
+    }
+
+    const wrapperRect = this.wrapper.getBoundingClientRect();
+
+    if (wrapperRect.width > 0) {
+      const gridRect = this.grid.getBoundingClientRect();
+      const scrollRect = scrollContainer.getBoundingClientRect();
+
+      return Math.min(gridRect.right, scrollRect.right) - wrapperRect.left;
+    }
+
+    if (scrollContainer.clientWidth > 0) {
+      return Math.min(numericWidth, scrollContainer.clientWidth);
+    }
+
+    return numericWidth;
+  }
+
+  /**
    * Match the add-row button width and horizontal position to the grid.
    *
    * Pixel mode (colWidths set): clamp to the scroll container's visible
@@ -162,24 +187,7 @@ export class TableAddControls {
        * scroll position. Fall back to clientWidth in pre-layout / jsdom where
        * getBoundingClientRect returns all-zero rects.
        */
-      let visibleWidth: number;
-
-      if (isInsideScrollContainer) {
-        const wrapperRect = this.wrapper.getBoundingClientRect();
-
-        if (wrapperRect.width > 0) {
-          const gridRect = this.grid.getBoundingClientRect();
-          const scrollRect = scrollContainer.getBoundingClientRect();
-
-          visibleWidth = Math.min(gridRect.right, scrollRect.right) - wrapperRect.left;
-        } else if (scrollContainer.clientWidth > 0) {
-          visibleWidth = Math.min(numericWidth, scrollContainer.clientWidth);
-        } else {
-          visibleWidth = numericWidth;
-        }
-      } else {
-        visibleWidth = numericWidth;
-      }
+      const visibleWidth = this.computeVisibleWidth(numericWidth, isInsideScrollContainer, scrollContainer);
 
       this.addRowBtn.style.width = `${visibleWidth}px`;
       this.addRowBtn.style.right = '';

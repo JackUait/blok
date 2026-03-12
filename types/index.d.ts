@@ -30,6 +30,7 @@ import {
   I18n,
   Ui,
   Tools,
+  Width,
 } from './api';
 
 import { OutputData } from './data-formats';
@@ -105,6 +106,7 @@ export {
   I18n,
   Ui,
   Tools,
+  Width,
 } from './api';
 export {
   BlockMutationType,
@@ -142,6 +144,7 @@ export interface API {
   i18n: I18n;
   readOnly: ReadOnly;
   ui: Ui;
+  width?: Width;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;
@@ -176,6 +179,7 @@ export class Blok {
   public inlineToolbar: InlineToolbar;
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
+  public width: Width;
   constructor(configuration?: BlokConfig|string);
 
   /**

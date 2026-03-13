@@ -59,7 +59,6 @@
   "tools.table.clickToAddColumn": "Click to add a new column",
   "tools.table.dragToAddRemoveColumns": "Drag to add or remove columns",
   "blockSettings.delete": "Delete",
-  "blockSettings.widthNarrow": "Narrow width",
   "blockSettings.widthFull": "Full width",
   "a11y.dragHandle": "Drag to move block or click for menu",
   "a11y.dragHandleRole": "drag handle",

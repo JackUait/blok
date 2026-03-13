@@ -27,7 +27,7 @@ export class WidthTune implements BlockTune {
     return {
       name: 'toggle-width',
       icon: current === 'full' ? IconWidthFull : IconWidthNarrow,
-      title: this.api.i18n.t('blockSettings.widthFull'),
+      title: this.api.i18n.t('blockSettings.toggleWidth'),
       isActive: current === 'full',
       toggle: true,
       closeOnActivate: true,

@@ -258,8 +258,8 @@ export class PopoverItemDefault extends PopoverItem {
       const titleEl = document.createElement('div');
 
       titleEl.className = params.secondaryLabel
-        ? 'grow whitespace-nowrap text-sm font-medium leading-5'
-        : 'mr-auto whitespace-nowrap text-sm font-medium leading-5';
+        ? 'grow whitespace-nowrap text-[13px] font-medium leading-5'
+        : 'mr-auto whitespace-nowrap text-[13px] font-medium leading-5';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
       titleEl.textContent = title;
@@ -272,7 +272,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'ml-auto shrink-0 flex items-center whitespace-nowrap pl-20 text-[11px] font-medium tracking-wide text-text-secondary/50';
+      secondaryEl.className = 'ml-auto shrink-0 flex items-center whitespace-nowrap pl-20 text-[10px] font-normal tracking-wider text-text-secondary/40';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.textContent = params.secondaryLabel;

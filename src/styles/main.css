@@ -481,7 +481,7 @@
   --animate-bounce-in: bounceIn 0.75s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
   --animate-selection-bounce: selectionBounce 0.75s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
   --animate-button-clicked: buttonClicked 0.75s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
-  --animate-panel-showing: panelShowing 100ms ease;
+  --animate-panel-showing: panelShowing 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-panel-showing-mobile: panelShowingMobile 250ms ease;
   --animate-wobble: wobble 400ms;
   --animate-rotation: rotation 1.2s infinite linear;
@@ -515,9 +515,9 @@
   }
 
   @keyframes panelShowing {
-    from { opacity: 0; transform: translateY(-8px) scale(0.9); }
-    70% { opacity: 1; transform: translateY(2px); }
-    to { transform: translateY(0); }
+    from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+    60% { opacity: 1; transform: translateY(1px) scale(1.005); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   @keyframes panelShowingMobile {
@@ -609,6 +609,8 @@
   --color-search-input-border: var(--blok-search-input-border);
   --color-search-input-focus-border: var(--blok-search-input-focus-border);
   --color-link-input-border: var(--blok-link-input-border);
+  --color-popover-icon-bg: var(--blok-popover-icon-bg);
+  --color-popover-icon-active-bg: var(--blok-popover-icon-active-bg);
 }
 
 @layer utilities {
@@ -662,6 +664,10 @@
   --blok-search-input-border: rgba(226, 226, 229, 0.20);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
   --blok-link-input-border: rgba(226, 226, 229, 0.2);
+
+  /* Popover icon container */
+  --blok-popover-icon-bg: rgba(55, 53, 47, 0.06);
+  --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.1);
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -708,6 +714,8 @@
     --blok-search-input-border: rgba(255, 255, 255, 0.07);
     --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
     --blok-link-input-border: #37352f;
+    --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
+    --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.15);
   }
 }
 
@@ -754,6 +762,8 @@
   --blok-search-input-border: rgba(255, 255, 255, 0.07);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
   --blok-link-input-border: #37352f;
+  --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
+  --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.15);
 }
 
 /*
@@ -949,4 +959,25 @@
 [data-blok-slash-search]::after {
   content: attr(data-blok-slash-search);
   @apply text-gray-text font-medium text-base pointer-events-none;
+}
+
+/**
+ * Custom scrollbar for popover items
+ */
+[data-blok-popover-items] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--blok-popover-border) transparent;
+}
+[data-blok-popover-items]::-webkit-scrollbar {
+  width: 4px;
+}
+[data-blok-popover-items]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-blok-popover-items]::-webkit-scrollbar-thumb {
+  background: var(--blok-popover-border);
+  border-radius: 4px;
+}
+[data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
+  background: var(--blok-gray-text);
 }

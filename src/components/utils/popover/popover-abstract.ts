@@ -452,7 +452,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Set CSS variables
     popover.style.setProperty('--width', this.params.width ?? 'auto');
     popover.style.setProperty('--item-padding', '4px');
-    popover.style.setProperty('--item-height', 'calc(1.25rem + 2 * var(--item-padding))');
+    popover.style.setProperty('--item-height', 'calc(1.75rem + 2 * var(--item-padding))');
     popover.style.setProperty('--popover-top', 'calc(100% + 0.5rem)');
     popover.style.setProperty('--popover-left', '0');
     popover.style.setProperty('--nested-popover-overlap', '0.25rem');
@@ -461,13 +461,14 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Create popover container
     const popoverContainer = document.createElement('div');
     popoverContainer.className = css.popoverContainer;
+    popoverContainer.style.boxShadow = '0 0 0 1px var(--blok-popover-border), 0 4px 16px rgba(0, 0, 0, 0.1), 0 16px 40px -8px rgba(0, 0, 0, 0.08)';
     popoverContainer.setAttribute(DATA_ATTR.popoverContainer, '');
     popoverContainer.setAttribute('data-blok-testid', 'popover-container');
 
     // Create nothing found message
     const nothingFoundMessage = document.createElement('div');
     nothingFoundMessage.className = twMerge(
-      'cursor-default text-sm leading-5 font-medium whitespace-nowrap overflow-hidden text-ellipsis text-gray-text px-3 py-3 text-center',
+      'cursor-default text-[13px] leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis text-gray-text/70 px-3 py-4 text-center',
       'hidden'
     );
     nothingFoundMessage.setAttribute('data-blok-testid', 'popover-nothing-found');

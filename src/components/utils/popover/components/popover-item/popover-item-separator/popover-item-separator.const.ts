@@ -2,9 +2,9 @@
  * Tailwind CSS classes for popover separator component
  */
 export const css = {
-  container: 'py-1 px-[3px] transition-[opacity,max-height,padding] duration-150 max-h-4 overflow-hidden',
+  container: 'py-1.5 px-2 transition-[opacity,max-height,padding] duration-150 max-h-5 overflow-hidden',
   containerHidden: 'opacity-0 max-h-0! py-0!',
-  line: 'h-px w-full bg-popover-border',
+  line: 'h-px w-full bg-popover-border/60',
 };
 
 /**

@@ -461,7 +461,6 @@ export class TableCellBlocks {
       this.api.blocks.setBlockParent(blockId, this.tableBlockId);
       mountedIds.push(blockId);
     }
-
     return mountedIds;
   }
 
@@ -550,12 +549,17 @@ export class TableCellBlocks {
       return;
     }
 
-    const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
+    // Wrap in transactWithoutCapture so this auto-repair insertion does not
+    // pollute the undo history. If a drag or other operation causes a cell to
+    // temporarily lose its block, the repair should be invisible to undo/redo.
+    this.api.blocks.transactWithoutCapture?.(() => {
+      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
 
-    container.appendChild(block.holder);
-    this.api.blocks.setBlockParent(block.id, this.tableBlockId);
-    this.syncBlockToModel(cell, block.id);
-    this.stripPlaceholders(container);
+      container.appendChild(block.holder);
+      this.api.blocks.setBlockParent(block.id, this.tableBlockId);
+      this.syncBlockToModel(cell, block.id);
+      this.stripPlaceholders(container);
+    });
   }
 
   /**
@@ -890,8 +894,13 @@ export class TableCellBlocks {
     queueMicrotask(() => {
       this.pendingCheckScheduled = false;
 
-      for (const cell of this.cellsPendingCheck) {
-        this.ensureCellHasBlock(cell);
+      // During a Yjs undo/redo sync, cell blocks are restored by initializeCells()
+      // which runs shortly after. Inserting a phantom block here would race with
+      // that restoration and leave the cell with a duplicate/wrong block.
+      if (!this.api.blocks.isSyncingFromYjs) {
+        for (const cell of this.cellsPendingCheck) {
+          this.ensureCellHasBlock(cell);
+        }
       }
 
       this.cellsPendingCheck.clear();

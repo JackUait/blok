@@ -213,6 +213,17 @@ export class DocumentStore {
   }
 
   /**
+   * Execute Yjs operations without adding them to the undo history.
+   * Uses a non-tracked origin so the UndoManager ignores these changes.
+   * Use this for auto-repair operations (e.g. ensuring empty cells have a block)
+   * that should never be undoable by the user.
+   * @param fn - Function containing Yjs operations to execute
+   */
+  public transactWithoutCapture(fn: () => void): void {
+    this.ydoc.transact(fn, 'no-capture');
+  }
+
+  /**
    * Get existing tunes Y.Map or create a new one.
    * @param yblock - The block Y.Map
    * @returns The tunes Y.Map

@@ -267,7 +267,7 @@
   </div>
 
   <script type="module">
-    import { Blok } from './src/blok.ts';
+    import { Blok, WidthTune } from './src/blok.ts';
     import { Paragraph, Header, List, Table, Toggle, Bold, Italic, Link, Marker } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
@@ -703,11 +703,13 @@
       if (state.tools.list) tools.list = List;
       if (state.tools.table) tools.table = Table;
       if (state.tools.toggle) tools.toggle = { class: Toggle, inlineToolbar: true };
+      tools.width = WidthTune;
 
       return {
         readOnly: state.readOnly,
         holder: 'blok',
         tools,
+        tunes: ['width'],
         autofocus: state.autofocus,
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {

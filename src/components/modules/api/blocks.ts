@@ -47,6 +47,8 @@ export class BlocksAPI extends Module {
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
       splitBlock: this.splitBlock,
       transact: (fn: () => void): void => this.transact(fn),
+      transactWithoutCapture: (fn: () => void): void => this.transactWithoutCapture(fn),
+      setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
     };
   }
 
@@ -469,6 +471,23 @@ export class BlocksAPI extends Module {
    */
   private transact(fn: () => void): void {
     this.Blok.BlockManager.transactForTool(fn);
+  }
+
+  /**
+   * Execute a function without adding any block operations to the undo history.
+   * Useful for auto-repair operations that should never appear in undo history.
+   */
+  private transactWithoutCapture(fn: () => void): void {
+    this.Blok.YjsManager.transactWithoutCapture(fn);
+  }
+
+  /**
+   * Notify BlockManager that a pointer drag interaction has started or ended.
+   * While active, DOM-mutation-triggered Yjs syncs are suppressed to prevent
+   * cross-cell browser DOM mutations from corrupting Yjs state.
+   */
+  private setPointerDragActive(active: boolean): void {
+    this.Blok.BlockManager.setPointerDragActive(active);
   }
 
   /**

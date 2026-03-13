@@ -191,4 +191,22 @@ export interface Blocks {
    * @param fn - The function containing block operations to group
    */
   transact?(fn: () => void): void;
+
+  /**
+   * Execute a function without recording any block operations in the undo history.
+   * Use this for auto-repair operations (e.g. ensuring empty cells always have a block)
+   * that should never appear as undoable entries in the history.
+   *
+   * @param fn - The function containing block operations to execute without undo capture
+   */
+  transactWithoutCapture?(fn: () => void): void;
+
+  /**
+   * Notify BlockManager that a pointer drag interaction has started or ended.
+   * While active, DOM-mutation-triggered Yjs syncs are suppressed to prevent
+   * cross-cell browser DOM mutations from corrupting Yjs state.
+   *
+   * @param active - true when a drag starts, false when it ends
+   */
+  setPointerDragActive?(active: boolean): void;
 }

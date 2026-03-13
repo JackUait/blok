@@ -262,6 +262,17 @@ export class YjsManager extends Module {
     this.documentStore.transact(fn, 'local');
   }
 
+  /**
+   * Execute Yjs operations without adding them to the undo history.
+   * Uses a non-tracked origin so the UndoManager ignores these changes.
+   * Use this for auto-repair operations (e.g. ensuring empty cells have a block)
+   * that should never be undoable by the user.
+   * @param fn - Function containing Yjs operations to execute
+   */
+  public transactWithoutCapture(fn: () => void): void {
+    this.documentStore.transactWithoutCapture(fn);
+  }
+
   // ========== Public API: Smart Grouping ==========
 
   /**

@@ -1272,6 +1272,9 @@ export class Table implements BlockTool {
       rectangleSelection, // Pass reference
       i18n: this.api.i18n,
       isPopoverOpen: () => this.rowColControls?.isPopoverOpen ?? false,
+      onPointerDragActiveChange: (active) => {
+        this.api.blocks.setPointerDragActive?.(active);
+      },
       onSelectionActiveChange: (hasSelection) => {
         if (this.resize) {
           this.resize.enabled = !hasSelection;

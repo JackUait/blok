@@ -2654,7 +2654,7 @@ test.describe('drag and drop', () => {
       expect(exChild?.parent).toBeUndefined();
     });
 
-    test('should show indented drop indicator when hovering inside open toggle', async ({ page }) => {
+    test('should show full-width drop indicator when hovering inside open toggle', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -2692,14 +2692,14 @@ test.describe('drag and drop', () => {
         return document.querySelector('[data-drop-indicator="bottom"]') !== null;
       }, { timeout: 2000 });
 
-      // Verify the indicator has non-zero depth (indented)
+      // Verify the indicator has depth 0 (full-width, not indented)
       // Check on the block-wrapper which receives the CSS variable
       const toggleBlock = page.getByTestId('block-wrapper').filter({ hasText: 'My Toggle' });
       const depth = await toggleBlock.evaluate((el: HTMLElement) =>
         el.style.getPropertyValue('--drop-indicator-depth')
       );
 
-      expect(parseInt(depth, 10)).toBeGreaterThan(0);
+      expect(parseInt(depth, 10)).toBe(0);
 
       // Clean up
       await page.mouse.up();

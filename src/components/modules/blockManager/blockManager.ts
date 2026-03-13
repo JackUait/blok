@@ -168,6 +168,22 @@ export class BlockManager extends Module {
   }
 
   /**
+   * When true, suppresses DOM-mutation-triggered Yjs syncs.
+   * Set by the table tool's cell-selection handler during a pointer drag
+   * to prevent cross-cell browser DOM mutations from corrupting Yjs state.
+   */
+  private _isPointerDragActive = false;
+
+  /**
+   * Sets whether a pointer drag interaction is currently active.
+   * While true, `syncBlockDataToYjs` is suppressed so that any incidental
+   * DOM mutations caused by the browser during a drag do not corrupt Yjs.
+   */
+  public setPointerDragActive(active: boolean): void {
+    this._isPointerDragActive = active;
+  }
+
+  /**
    * Index of current working block
    * @type {number}
    */
@@ -693,16 +709,35 @@ export class BlockManager extends Module {
     try {
       fn();
     } finally {
-      this.operations.suppressStopCapturing = prevSuppress;
-
+      // Closing boundary uses two nested queueMicrotask calls to ensure correct ordering.
+      //
+      // Microtask ordering after fn() returns:
+      //   [D1..D4 continuations, C (schedulePendingCellCheck), T (outer)]
+      //
+      // C runs BEFORE T (outer). During C, ensureCellHasBlock inserts fire, and
+      // scheduleParentSync queues P2 (flushParentSyncs). P2 is appended to the queue
+      // AFTER T (outer), so when T (outer) runs, P2 hasn't run yet.
+      //
+      // By queueing T_inner from inside T (outer), T_inner lands AFTER P2 in the queue:
+      //   After C runs: [T (outer), P2]
+      //   T (outer) runs, queues T_inner: [P2, T_inner]
+      //   P2 runs: sets pendingParentSyncPromise
+      //   T_inner runs: finds pendingParentSyncPromise set → waits for it → stopCapturing()
+      //
+      // This ensures the parent sync's updateBlockData fires inside the same undo group
+      // as the structural operation (deletes + empty cell inserts + table data update).
       queueMicrotask(() => {
-        if (this.pendingParentSyncPromise !== null) {
-          void this.pendingParentSyncPromise.then(() => {
+        queueMicrotask(() => {
+          if (this.pendingParentSyncPromise !== null) {
+            void this.pendingParentSyncPromise.then(() => {
+              this.Blok.YjsManager.stopCapturing();
+              this.operations.suppressStopCapturing = prevSuppress;
+            });
+          } else {
             this.Blok.YjsManager.stopCapturing();
-          });
-        } else {
-          this.Blok.YjsManager.stopCapturing();
-        }
+            this.operations.suppressStopCapturing = prevSuppress;
+          }
+        });
       });
     }
   }
@@ -1000,8 +1035,10 @@ export class BlockManager extends Module {
     });
 
     // Sync content changes to Yjs for undo/redo support
-    // Skip if we're currently syncing from Yjs (undo/redo) to avoid corrupting the undo stack
-    if (mutationType === BlockChangedMutationType && !this.yjsSync.isSyncingFromYjs) {
+    // Skip if we're currently syncing from Yjs (undo/redo) to avoid corrupting the undo stack.
+    // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
+    // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
+    if (mutationType === BlockChangedMutationType && !this.yjsSync.isSyncingFromYjs && !this._isPointerDragActive) {
       void this.syncBlockDataToYjs(block);
     }
 

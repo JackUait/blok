@@ -72,6 +72,7 @@ interface CellSelectionOptions {
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton?: (cells: HTMLElement[]) => void;
   onColorChange?: (cells: HTMLElement[], color: string | null, mode: CellColorMode) => void;
+  onPointerDragActiveChange?: (active: boolean) => void;
   isPopoverOpen?: () => boolean;
   i18n: I18n;
 }
@@ -97,6 +98,7 @@ export class TableCellSelection {
   private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
   private onColorChange: ((cells: HTMLElement[], color: string | null, mode: CellColorMode) => void) | undefined;
   private onSelectionRangeChange: ((range: SelectionRange) => void) | undefined;
+  private onPointerDragActiveChange: ((active: boolean) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
 
@@ -120,6 +122,7 @@ export class TableCellSelection {
     this.onCopyViaButton = options.onCopyViaButton;
     this.onColorChange = options.onColorChange;
     this.onSelectionRangeChange = options.onSelectionRangeChange;
+    this.onPointerDragActiveChange = options.onPointerDragActiveChange;
     this.isPopoverOpen = options.isPopoverOpen;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
@@ -145,10 +148,16 @@ export class TableCellSelection {
     this.destroyPillPopover();
     this.disconnectResizeObserver();
     this.clearSelection();
+    // Ensure Yjs sync suppression and userSelect are cleaned up if destroyed mid-drag.
+    if (this.anchorCell) {
+      this.onPointerDragActiveChange?.(false);
+      this.grid.style.userSelect = '';
+    }
     this.grid.removeEventListener('pointerdown', this.boundPointerDown);
     this.grid.removeEventListener('dragstart', this.boundPreventDragStart);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
+    document.removeEventListener('pointercancel', this.boundPointerUp);
     document.removeEventListener('pointerdown', this.boundClearSelection);
     document.removeEventListener('mousemove', this.boundCancelRectangle, true);
     document.removeEventListener('keydown', this.boundKeyDown);
@@ -260,10 +269,18 @@ export class TableCellSelection {
     this.anchorCell = cell;
     this.isSelecting = false;
 
+    // Suppress DOM-mutation-triggered Yjs syncs for the duration of this pointer drag.
+    // The browser can mutate contenteditable DOM across cell boundaries during a drag,
+    // and writing that corrupted state to Yjs would break undo.
+    this.onPointerDragActiveChange?.(true);
+
     // Listen to mousemove in capture phase to cancel RectangleSelection before it runs
     document.addEventListener('mousemove', this.boundCancelRectangle, true);
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
+    // pointercancel fires when the browser interrupts the pointer sequence (e.g. touch scroll).
+    // Treat it like pointerup so the drag-active flag is always cleared.
+    document.addEventListener('pointercancel', this.boundPointerUp);
   }
 
   private handlePointerMove(e: PointerEvent): void {
@@ -296,9 +313,12 @@ export class TableCellSelection {
       this.isSelecting = true;
       this.onSelectionActiveChange?.(true);
 
-      // Clear native text selection
-      window.getSelection()?.removeAllRanges();
+      // Prevent native text selection from extending across cell boundaries.
+      // We restore userSelect in handlePointerUp.
       this.grid.style.userSelect = 'none';
+
+      // Clear any native text selection that may have formed within the anchor cell.
+      window.getSelection()?.removeAllRanges();
     }
 
     // Update extent and repaint
@@ -332,8 +352,13 @@ export class TableCellSelection {
     document.removeEventListener('mousemove', this.boundCancelRectangle, true);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
+    document.removeEventListener('pointercancel', this.boundPointerUp);
+
+    // Re-enable Yjs sync suppression that was set in handlePointerDown.
+    this.onPointerDragActiveChange?.(false);
 
     if (this.isSelecting) {
+      // Restore userSelect that was set in handlePointerMove when crossing cells.
       this.grid.style.userSelect = '';
       this.hasSelection = true;
 

@@ -337,8 +337,10 @@ test.describe('ui.block-tunes', () => {
 
       await openBlockTunesViaShortcut(page);
 
-      // First item should be auto-focused when popover opens (no search field)
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing auto-focus behavior requires checking the first item
+      // Block settings opens without auto-focus; navigate to first item
+      await page.keyboard.press('ArrowDown');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking the first item
       const firstItem = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"]`).first();
 
       await expect(firstItem).toHaveAttribute('data-blok-focused', 'true');
@@ -368,8 +370,10 @@ test.describe('ui.block-tunes', () => {
 
       await openBlockTunesViaShortcut(page);
 
-      // First item should be auto-focused when popover opens (no search field)
-      // eslint-disable-next-line playwright/no-nth-methods -- Testing auto-focus behavior requires checking the first item
+      // Block settings opens without auto-focus; navigate to first item
+      await page.keyboard.press('ArrowDown');
+
+      // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking the first item
       const firstItem = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-testid="popover-item"]`).first();
 
       await expect(firstItem).toHaveAttribute('data-blok-focused', 'true');
@@ -625,7 +629,8 @@ test.describe('ui.block-tunes', () => {
       // eslint-disable-next-line playwright/no-nth-methods -- Testing keyboard navigation requires checking specific indices
       const firstVisibleItem = popoverItems.first();
 
-      // First item should be auto-focused when popover opens (no search field)
+      // Block settings opens without auto-focus; navigate to first item
+      await page.keyboard.press('ArrowDown');
       await expect(firstVisibleItem).toHaveAttribute('data-blok-focused', 'true');
 
       // Navigate down to second item
@@ -798,7 +803,8 @@ test.describe('ui.block-tunes', () => {
 
       expect(nestedItemsCount).toBeGreaterThan(0);
 
-      // First item in nested popover should be focused
+      // Nested popover opens without auto-focus; navigate to first item
+      await page.keyboard.press('ArrowDown');
       // eslint-disable-next-line playwright/no-nth-methods -- need to check first item
       await expect(nestedItems.first()).toHaveAttribute('data-blok-focused', 'true');
 

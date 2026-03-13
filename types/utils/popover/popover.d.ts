@@ -86,6 +86,13 @@ export interface PopoverParams {
    * block content area rather than to the plus button.
    */
   leftAlignElement?: HTMLElement;
+
+  /**
+   * When true, the first item is focused when the popover opens (default behavior).
+   * When false, no item is pre-focused — focus only appears after keyboard navigation.
+   * Defaults to true. Has no effect when a search field is present (search receives focus instead).
+   */
+  autoFocusFirstItem?: boolean;
 }
 
 

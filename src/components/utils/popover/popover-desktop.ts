@@ -240,13 +240,18 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Focuses the initial element when popover is shown.
-   * Focuses search field if present, otherwise first menu item.
-   * Skips the first Tab press so it just "enters" the menu rather than advancing.
+   * When a search field is present, it receives focus so the user can type immediately.
+   * When autoFocusFirstItem is false, no item is pre-focused — focus only appears
+   * after the user begins keyboard navigation.
    */
   private focusInitialElement(): void {
     if (this.search) {
       this.search.focus();
 
+      return;
+    }
+
+    if (this.params.autoFocusFirstItem === false) {
       return;
     }
 
@@ -500,6 +505,7 @@ export class PopoverDesktop extends PopoverAbstract {
       onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
       width: item.childrenWidth,
       handleContentEditableNavigation: handleContentEditable,
+      autoFocusFirstItem: this.params.autoFocusFirstItem,
     });
 
     item.onChildrenOpen();

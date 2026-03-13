@@ -120,6 +120,7 @@ const LOGIC_TESTS = [
   '**/ui/ui-module.spec.ts',
   '**/ui/block-tunes.spec.ts',
   '**/ui/plus-block-tunes.spec.ts',
+  '**/ui/block-settings-active-state.spec.ts',
   '**/ui/selection-with-link-input.spec.ts',
   '**/ui/inline-toolbar-nested-popover.spec.ts',
   '**/ui/multilingual-search.spec.ts',

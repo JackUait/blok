@@ -196,6 +196,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
           search: this.Blok.I18n.t('popover.search'),
         },
+        autoFocusFirstItem: false,
       };
 
       if (PopoverClass === PopoverDesktop) {

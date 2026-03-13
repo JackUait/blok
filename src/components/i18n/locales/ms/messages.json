@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "Klik untuk tambah lajur baharu",
   "tools.table.dragToAddRemoveColumns": "Seret untuk tambah atau buang lajur",
   "blockSettings.delete": "Padam",
+  "blockSettings.toggleWidth": "Tukar lebar",
   "a11y.dragHandle": "Seret untuk alih blok atau klik untuk menu",
   "a11y.dragHandleRole": "pemegang seret",
   "a11y.dragStarted": "Menyeret blok",

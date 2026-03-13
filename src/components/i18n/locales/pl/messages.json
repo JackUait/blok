@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "Kliknij, aby dodać nową kolumnę",
   "tools.table.dragToAddRemoveColumns": "Przeciągnij, aby dodać lub usunąć kolumny",
   "blockSettings.delete": "Usuń",
+  "blockSettings.toggleWidth": "Przełącz szerokość",
   "a11y.dragHandle": "Przeciągnij, aby przenieść lub kliknij, aby otworzyć menu",
   "a11y.dragHandleRole": "uchwyt przeciągania",
   "a11y.dragStarted": "Przeciąganie bloku",

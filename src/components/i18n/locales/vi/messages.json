@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "Nhấp để thêm cột mới",
   "tools.table.dragToAddRemoveColumns": "Kéo để thêm hoặc xóa cột",
   "blockSettings.delete": "Xóa",
+  "blockSettings.toggleWidth": "Chuyển đổi độ rộng",
   "a11y.dragHandle": "Kéo để di chuyển khối hoặc nhấp để mở menu",
   "a11y.dragHandleRole": "tay nắm kéo",
   "a11y.dragStarted": "Đang kéo khối",

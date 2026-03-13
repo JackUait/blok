@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "Ծալել",
   "tools.toggle.ariaLabelExpand": "Ծավալել",
   "blockSettings.delete": "Ջնջել",
+  "blockSettings.toggleWidth": "Փոխել լայնությունը",
   "a11y.dragHandle": "Քաշեք տեղափոխելու կամ սեղմեք մենյուի համար",
   "a11y.dragHandleRole": "քաշման կոճակ",
   "a11y.dragStarted": "Բլոկի քաշում",

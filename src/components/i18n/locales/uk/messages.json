@@ -37,6 +37,7 @@
   "tools.header.toggleHeading3": "Згортний заголовок 3",
   "tools.list.placeholder": "Список",
   "blockSettings.delete": "Видалити",
+  "blockSettings.toggleWidth": "Переключити ширину",
   "a11y.dragHandle": "Перетягніть або натисніть для меню",
   "a11y.dragHandleRole": "елемент керування блоком",
   "a11y.dragStarted": "Переміщення блока",

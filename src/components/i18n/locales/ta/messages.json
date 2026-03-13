@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "புதிய நெடுவரிசை சேர்க்க கிளிக் செய்யவும்",
   "tools.table.dragToAddRemoveColumns": "நெடுவரிசைகளைச் சேர்க்க அல்லது நீக்க இழுக்கவும்",
   "blockSettings.delete": "நீக்கு",
+  "blockSettings.toggleWidth": "அகலத்தை மாற்று",
   "a11y.dragHandle": "தொகுதியை நகர்த்த இழுக்கவும் அல்லது பட்டியலுக்கு தட்டவும்",
   "a11y.dragHandleRole": "இழுக்கும் கைப்பிடி",
   "a11y.dragStarted": "தொகுதியை இழுக்கிறது",

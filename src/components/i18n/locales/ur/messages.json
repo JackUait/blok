@@ -37,6 +37,7 @@
   "tools.header.toggleHeading3": "ٹوگل عنوان 3",
   "tools.list.placeholder": "فہرست",
   "blockSettings.delete": "حذف کریں",
+  "blockSettings.toggleWidth": "چوڑائی تبدیل کریں",
   "a11y.dragHandle": "بلاک منتقل کرنے کے لیے گھسیٹیں یا مینو کے لیے کلک کریں",
   "a11y.dragHandleRole": "گھسیٹنے کا ہینڈل",
   "a11y.dragStarted": "بلاک گھسیٹا جا رہا ہے",

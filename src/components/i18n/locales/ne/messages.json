@@ -37,6 +37,7 @@
   "tools.header.toggleHeading3": "मोड्ने शीर्षक ३",
   "tools.list.placeholder": "सूची",
   "blockSettings.delete": "मेटाउनुहोस्",
+  "blockSettings.toggleWidth": "चौडाइ बदल्नुहोस्",
   "a11y.dragHandle": "ब्लक सार्न तान्नुहोस् वा मेनुको लागि क्लिक गर्नुहोस्",
   "a11y.dragHandleRole": "तान्ने नियन्त्रण",
   "a11y.dragStarted": "ब्लक तान्दै",

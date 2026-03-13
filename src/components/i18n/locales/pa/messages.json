@@ -37,6 +37,7 @@
   "tools.header.toggleHeading3": "ਟੌਗਲ ਸਿਰਲੇਖ 3",
   "tools.list.placeholder": "ਸੂਚੀ",
   "blockSettings.delete": "ਮਿਟਾਓ",
+  "blockSettings.toggleWidth": "ਚੌੜਾਈ ਬਦਲੋ",
   "a11y.dragHandle": "ਬਲਾਕ ਹਿਲਾਉਣ ਲਈ ਖਿੱਚੋ ਜਾਂ ਮੀਨੂ ਲਈ ਕਲਿੱਕ ਕਰੋ",
   "a11y.dragHandleRole": "ਖਿੱਚਣ ਵਾਲਾ ਹੈਂਡਲ",
   "a11y.dragStarted": "ਬਲਾਕ ਖਿੱਚਿਆ ਜਾ ਰਿਹਾ ਹੈ",

@@ -37,6 +37,7 @@
   "tools.header.toggleHeading3": "ჩამოსაშლელი სათაური 3",
   "tools.list.placeholder": "სია",
   "blockSettings.delete": "წაშლა",
+  "blockSettings.toggleWidth": "სიგანის გადართვა",
   "a11y.dragHandle": "გადაიტანეთ ბლოკის გადასატანად ან დააწკაპუნეთ მენიუსთვის",
   "a11y.dragHandleRole": "გადატანის სახელური",
   "a11y.dragStarted": "ბლოკის გადატანა",

@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "Klikněte pro přidání nového sloupce",
   "tools.table.dragToAddRemoveColumns": "Přetáhněte pro přidání nebo odebrání sloupců",
   "blockSettings.delete": "Smazat",
+  "blockSettings.toggleWidth": "Přepnout šířku",
   "a11y.dragHandle": "Přetáhněte pro přesunutí nebo klikněte pro nabídku",
   "a11y.dragHandleRole": "úchyt pro přetažení",
   "a11y.dragStarted": "Přetahování bloku",

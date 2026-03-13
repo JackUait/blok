@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "جمع کردن",
   "tools.toggle.ariaLabelExpand": "گسترش",
   "blockSettings.delete": "حذف",
+  "blockSettings.toggleWidth": "تغییر حالت عرض",
   "a11y.dragHandle": "برای جابجایی بلوک بکشید یا برای منو کلیک کنید",
   "a11y.dragHandleRole": "دستگیره کشیدن",
   "a11y.dragStarted": "در حال کشیدن بلوک",

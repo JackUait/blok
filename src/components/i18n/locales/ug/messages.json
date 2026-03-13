@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "يېڭى ئىستون قوشۇش ئۈچۈن چېكىڭ",
   "tools.table.dragToAddRemoveColumns": "ئىستون قوشۇش ياكى ئۆچۈرۈش ئۈچۈن سۆرەڭ",
   "blockSettings.delete": "ئۆچۈرۈش",
+  "blockSettings.toggleWidth": "كەڭلىكنى ئالماشتۇرۇش",
   "a11y.dragHandle": "بۆلەكنى يۆتكەش ئۈچۈن سۆرەڭ ياكى تىزىملىك ئۈچۈن چېكىڭ",
   "a11y.dragHandleRole": "سۆرەش تۇتقۇچى",
   "a11y.dragStarted": "بۆلەك سۆرىلىۋاتىدۇ",

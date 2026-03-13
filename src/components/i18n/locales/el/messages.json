@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "Σύμπτυξη",
   "tools.toggle.ariaLabelExpand": "Ανάπτυξη",
   "blockSettings.delete": "Διαγραφή",
+  "blockSettings.toggleWidth": "Εναλλαγή πλάτους",
   "a11y.dragHandle": "Σύρετε για μετακίνηση ή κλικ για μενού",
   "a11y.dragHandleRole": "λαβή μετακίνησης",
   "a11y.dragStarted": "Μετακίνηση μπλοκ",

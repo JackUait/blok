@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "સંકોચો",
   "tools.toggle.ariaLabelExpand": "વિસ્તૃત કરો",
   "blockSettings.delete": "કાઢી નાખો",
+  "blockSettings.toggleWidth": "પહોળાઈ બદલો",
   "a11y.dragHandle": "બ્લોક ખસેડવા માટે ખેંચો અથવા મેનૂ માટે ક્લિક કરો",
   "a11y.dragHandleRole": "ખેંચવાનું હેન્ડલ",
   "a11y.dragStarted": "બ્લોક ખેંચાઈ રહ્યો છે",

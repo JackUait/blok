@@ -37,6 +37,7 @@
   "tools.header.toggleHeading3": "Prepínací nadpis 3",
   "tools.list.placeholder": "Zoznam",
   "blockSettings.delete": "Odstrániť",
+  "blockSettings.toggleWidth": "Prepnúť šírku",
   "a11y.dragHandle": "Potiahnutím presuniete blok alebo kliknutím otvoríte ponuku",
   "a11y.dragHandleRole": "úchyt na presun",
   "a11y.dragStarted": "Presúva sa blok",

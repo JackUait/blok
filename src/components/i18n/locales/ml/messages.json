@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "പുതിയ കോളം ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക",
   "tools.table.dragToAddRemoveColumns": "കോളങ്ങൾ ചേർക്കാനോ നീക്കാനോ വലിച്ചിടുക",
   "blockSettings.delete": "ഇല്ലാതാക്കുക",
+  "blockSettings.toggleWidth": "വീതി മാറ്റുക",
   "a11y.dragHandle": "ബ്ലോക്ക് നീക്കാൻ വലിച്ചിടുക അല്ലെങ്കിൽ മെനുവിന് ക്ലിക്ക് ചെയ്യുക",
   "a11y.dragHandleRole": "വലിച്ചിടൽ ഹാൻഡിൽ",
   "a11y.dragStarted": "ബ്ലോക്ക് വലിച്ചിടുന്നു",

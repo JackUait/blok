@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "Sažmi",
   "tools.toggle.ariaLabelExpand": "Proširi",
   "blockSettings.delete": "Obriši",
+  "blockSettings.toggleWidth": "Promijeni širinu",
   "a11y.dragHandle": "Prevucite za premještanje bloka ili kliknite za meni",
   "a11y.dragHandleRole": "ručka za povlačenje",
   "a11y.dragStarted": "Povlačenje bloka",

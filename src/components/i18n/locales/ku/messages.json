@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "کلیک بکە بۆ زیادکردنی ستوونی نوێ",
   "tools.table.dragToAddRemoveColumns": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ستوون",
   "blockSettings.delete": "سڕینەوە",
+  "blockSettings.toggleWidth": "پانی بگۆڕە",
   "a11y.dragHandle": "ڕاکێشە بۆ گواستنەوەی بلۆک یان کلیک بکە بۆ مێنیو",
   "a11y.dragHandleRole": "دەستگیرەی ڕاکێشان",
   "a11y.dragStarted": "بلۆک دەکێشرێت",

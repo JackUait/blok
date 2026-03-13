@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "Yeni sütun əlavə etmək üçün klikləyin",
   "tools.table.dragToAddRemoveColumns": "Sütun əlavə etmək və ya silmək üçün dartın",
   "blockSettings.delete": "Sil",
+  "blockSettings.toggleWidth": "Genişliyi dəyiş",
   "a11y.dragHandle": "Köçürmək üçün dartın və ya menyu üçün klikləyin",
   "a11y.dragHandleRole": "dartma tutacağı",
   "a11y.dragStarted": "Blok dartılır",

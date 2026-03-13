@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "ಹೊಸ ಕಾಲಂ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
   "tools.table.dragToAddRemoveColumns": "ಕಾಲಂಗಳನ್ನು ಸೇರಿಸಲು ಅಥವಾ ತೆಗೆಯಲು ಎಳೆಯಿರಿ",
   "blockSettings.delete": "ಅಳಿಸಿ",
+  "blockSettings.toggleWidth": "ಅಗಲ ಬದಲಿಸಿ",
   "a11y.dragHandle": "ಬ್ಲಾಕ್ ಸರಿಸಲು ಎಳೆಯಿರಿ ಅಥವಾ ಮೆನುಗಾಗಿ ಕ್ಲಿಕ್ ಮಾಡಿ",
   "a11y.dragHandleRole": "ಎಳೆಯುವ ಹಿಡಿಕೆ",
   "a11y.dragStarted": "ಬ್ಲಾಕ್ ಎಳೆಯಲಾಗುತ್ತಿದೆ",

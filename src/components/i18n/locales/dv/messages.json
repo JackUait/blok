@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "ތިރިކުރޭ",
   "tools.toggle.ariaLabelExpand": "ފުޅާ ކުރޭ",
   "blockSettings.delete": "ފޮހެލާ",
+  "blockSettings.toggleWidth": "ފުޅާމިން ބަދަލުކުރޭ",
   "a11y.dragHandle": "ބްލޮކް ބަދަލުކުރަން ދަމާލާ ނުވަތަ މެނޫއަށް ކްލިކް ކުރޭ",
   "a11y.dragHandleRole": "ދެމުމުގެ ހެންޑަލް",
   "a11y.dragStarted": "ބްލޮކް ދަމަނީ",

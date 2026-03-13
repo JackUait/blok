@@ -58,6 +58,7 @@
   "tools.table.clickToAddColumn": "Нажмите, чтобы добавить столбец",
   "tools.table.dragToAddRemoveColumns": "Тяните, чтобы добавить или удалить столбцы",
   "blockSettings.delete": "Удалить",
+  "blockSettings.toggleWidth": "Переключить ширину",
   "a11y.dragHandle": "Перетащите или нажмите для меню",
   "a11y.dragHandleRole": "управление блоком",
   "a11y.dragStarted": "Перетаскивание блока",

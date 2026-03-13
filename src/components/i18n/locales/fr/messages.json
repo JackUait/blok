@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "Réduire",
   "tools.toggle.ariaLabelExpand": "Développer",
   "blockSettings.delete": "Supprimer",
+  "blockSettings.toggleWidth": "Basculer la largeur",
   "a11y.dragHandle": "Glisser pour déplacer ou cliquer pour le menu",
   "a11y.dragHandleRole": "poignée de glissement",
   "a11y.dragStarted": "Déplacement du bloc",

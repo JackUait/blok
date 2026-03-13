@@ -42,6 +42,7 @@
   "tools.toggle.ariaLabelCollapse": "折叠",
   "tools.toggle.ariaLabelExpand": "展开",
   "blockSettings.delete": "删除",
+  "blockSettings.toggleWidth": "切换宽度",
   "a11y.dragHandle": "拖动移动或点击打开菜单",
   "a11y.dragHandleRole": "拖动控件",
   "a11y.dragStarted": "正在拖动内容块",

@@ -37,6 +37,7 @@
   "tools.header.toggleHeading3": "හැකිලෙන ශීර්ෂය 3",
   "tools.list.placeholder": "ලැයිස්තුව",
   "blockSettings.delete": "මකන්න",
+  "blockSettings.toggleWidth": "පළල මාරු කරන්න",
   "a11y.dragHandle": "කොටස ගෙනයාමට අදින්න හෝ මෙනුව සඳහා තේරන්න",
   "a11y.dragHandleRole": "ඇදීමේ හසුරුව",
   "a11y.dragStarted": "කොටස ඇදගෙන යමින්",

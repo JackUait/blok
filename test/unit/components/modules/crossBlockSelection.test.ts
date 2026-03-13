@@ -132,6 +132,9 @@ describe('CrossBlockSelection', () => {
       DragManager: {
         isDragging: false,
       },
+      RectangleSelection: {
+        isRectActivated: vi.fn().mockReturnValue(false),
+      },
       BlockSettings: {
         opened: false,
       },
@@ -425,6 +428,25 @@ describe('CrossBlockSelection', () => {
       expect(inlineToolbarClose).toHaveBeenCalled();
       expect(toggleSpy).toHaveBeenCalledWith(blocks[1], blocks[2]);
       expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[2]);
+    });
+
+    it('does not change selection when rectangle selection is active', () => {
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+
+      (blokState.RectangleSelection.isRectActivated as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+      const event = {
+        relatedTarget: blocks[0].holder,
+        target: blocks[1].holder,
+      } as unknown as MouseEvent;
+
+      blocks[0].selected = false;
+      blocks[1].selected = false;
+
+      accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
+
+      expect(blocks[0].selected).toBe(false);
+      expect(blocks[1].selected).toBe(false);
     });
 
     describe('resolveToRootBlock integration', () => {

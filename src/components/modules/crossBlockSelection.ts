@@ -263,6 +263,16 @@ export class CrossBlockSelection extends Module {
     }
 
     /**
+     * Skip cross-block selection when rectangle selection is active.
+     * Both modules listen for mouse events during drag; without this guard
+     * toggleBlocksSelectedState fights with trySelectNextBlock, causing
+     * unpredictable skipped/deselected blocks.
+     */
+    if (this.Blok.RectangleSelection.isRectActivated()) {
+      return;
+    }
+
+    /**
      * Probably, blok is not initialized yet
      */
     if (mouseEvent.relatedTarget === null && mouseEvent.target === null) {

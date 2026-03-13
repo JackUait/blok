@@ -8,6 +8,7 @@
     "tools": "Tools",
     "migration": "Migration",
     "changelog": "Changelog",
+    "integrations": "Integrations",
     "github": "GitHub",
     "searchAriaLabel": "Search (⌘K)",
     "toggleMenu": "Toggle menu"

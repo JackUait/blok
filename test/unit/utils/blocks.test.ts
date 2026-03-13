@@ -558,6 +558,121 @@ describe('blocks utilities', () => {
       expect(result[0].toolbox?.[0].icon).toBe('H2');
     });
 
+    it('should keep toolbox items that differ by additional data properties from the current block', async () => {
+      /**
+       * Regression: when a tool has entries like regular heading ({level: 2}) and
+       * toggle heading ({level: 2, isToggleable: true}), the convert menu should
+       * show both as separate options (they are different block variants).
+       */
+      const mockTool = {
+        name: 'header',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H1',
+            title: 'Heading 1',
+            data: { level: 1 },
+          },
+          {
+            icon: 'H2',
+            title: 'Heading 2',
+            data: { level: 2 },
+          },
+          {
+            icon: 'TH1',
+            title: 'Toggle heading 1',
+            data: { level: 1, isToggleable: true },
+          },
+          {
+            icon: 'TH2',
+            title: 'Toggle heading 2',
+            data: { level: 2, isToggleable: true },
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool];
+
+      // When current block is regular heading 2, convert menu should show:
+      // H1, Toggle H1, Toggle H2 (but NOT H2 since that's the current block variant)
+      const mockBlock = createMockBlock('header');
+
+      mockSave.mockResolvedValue({
+        id: 'test-block-id',
+        tool: 'header',
+        data: { text: 'Test', level: 2 },
+        time: Date.now(),
+      } as SavedData);
+
+      const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
+
+      expect(result).toHaveLength(1);
+      const toolboxItems = result[0].toolbox!;
+
+      expect(toolboxItems).toHaveLength(3);
+      expect(toolboxItems.map((item) => item.icon)).toEqual(['H1', 'TH1', 'TH2']);
+    });
+
+    it('should keep regular heading entry when current block is toggle heading', async () => {
+      /**
+       * Regression: when current block is toggle heading 2, convert menu should
+       * include regular heading 2 (different variant, no isToggleable flag).
+       */
+      const mockTool = {
+        name: 'header',
+        conversionConfig: {
+          export: 'text',
+          import: 'text',
+        },
+        toolbox: [
+          {
+            icon: 'H1',
+            title: 'Heading 1',
+            data: { level: 1 },
+          },
+          {
+            icon: 'H2',
+            title: 'Heading 2',
+            data: { level: 2 },
+          },
+          {
+            icon: 'TH1',
+            title: 'Toggle heading 1',
+            data: { level: 1, isToggleable: true },
+          },
+          {
+            icon: 'TH2',
+            title: 'Toggle heading 2',
+            data: { level: 2, isToggleable: true },
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const allBlockTools: BlockToolAdapter[] = [mockTool];
+
+      // When current block is toggle heading 2, convert menu should show:
+      // H1, H2, Toggle H1 (but NOT Toggle H2 since that's the current block variant)
+      const mockBlock = createMockBlock('header');
+
+      mockSave.mockResolvedValue({
+        id: 'test-block-id',
+        tool: 'header',
+        data: { text: 'Test', level: 2, isToggleable: true },
+        time: Date.now(),
+      } as SavedData);
+
+      const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
+
+      expect(result).toHaveLength(1);
+      const toolboxItems = result[0].toolbox!;
+
+      expect(toolboxItems).toHaveLength(3);
+      expect(toolboxItems.map((item) => item.icon)).toEqual(['H1', 'H2', 'TH1']);
+    });
+
     it('should filter out empty toolbox items', async () => {
       const mockTool = {
         name: 'header',

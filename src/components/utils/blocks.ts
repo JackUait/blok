@@ -73,6 +73,22 @@ export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools
       return result;
     }
 
+    /**
+     * Collect all data property names that appear in any toolbox entry for this tool.
+     * This lets us compare toolbox items against the current block using ALL distinguishing
+     * properties, not just the ones in a single entry.
+     *
+     * Example: header tool has entries with { level } and { level, isToggleable }.
+     * The union of keys is { level, isToggleable }, so regular headings and toggle
+     * headings are correctly treated as different block variants.
+     */
+    const allToolboxDataKeys = new Set(
+      tool.toolbox
+        .map(item => item.data)
+        .filter((data): data is BlockToolData => data !== undefined)
+        .flatMap(data => Object.keys(data))
+    );
+
     /** Filter out invalid toolbox entries */
     const actualToolboxItems = tool.toolbox.filter((toolboxItem) => {
       /**
@@ -86,10 +102,22 @@ export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools
 
       /**
        * When a tool has several toolbox entries, we need to make sure we do not add
-       * toolbox item with the same data to the resulting array. This helps exclude duplicates
+       * toolbox item with the same data to the resulting array. This helps exclude duplicates.
+       *
+       * We compare ALL distinguishing data properties (union of keys across all toolbox entries)
+       * to correctly differentiate variants like regular heading vs toggle heading.
        */
-      if (hasToolboxData && toolboxItem.data !== undefined && isSameBlockData(toolboxItem.data, blockData)) {
-        return false;
+      if (hasToolboxData && toolboxItem.data !== undefined) {
+        const wouldProduceSameBlock = [...allToolboxDataKeys].every(key => {
+          const toolboxValue = toolboxItem.data !== undefined ? toolboxItem.data[key] : undefined;
+          const blockValue = blockData[key];
+
+          return equals(toolboxValue, blockValue);
+        });
+
+        if (wouldProduceSameBlock) {
+          return false;
+        }
       }
 
       if (!hasToolboxData && tool.name === block.name) {

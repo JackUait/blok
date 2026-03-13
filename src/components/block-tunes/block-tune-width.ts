@@ -30,6 +30,7 @@ export class WidthTune implements BlockTune {
         icon: IconWidthNarrow,
         title: this.api.i18n.t('blockSettings.widthNarrow'),
         isActive: current === 'narrow',
+        closeOnActivate: true,
         onActivate: (): void => {
           this.api.width.set('narrow');
         },
@@ -39,6 +40,7 @@ export class WidthTune implements BlockTune {
         icon: IconWidthFull,
         title: this.api.i18n.t('blockSettings.widthFull'),
         isActive: current === 'full',
+        closeOnActivate: true,
         onActivate: (): void => {
           this.api.width.set('full');
         },

@@ -94,6 +94,11 @@ export class RectangleSelection extends Module {
   private rectCrossesBlocks = false;
 
   /**
+   * The block index where selection started (anchor point for geometry-based selection)
+   */
+  private anchorBlockIndex: number | null = null;
+
+  /**
    * Selection rectangle
    */
   private overlayRectangle: HTMLDivElement | null = null;
@@ -169,6 +174,7 @@ export class RectangleSelection extends Module {
       this.Blok.BlockSelection.allBlocksSelected = false;
       this.clearSelection();
       this.stackOfSelected = [];
+      this.anchorBlockIndex = null;
     }
 
     const selectorsToAvoid = [
@@ -208,6 +214,7 @@ export class RectangleSelection extends Module {
     this.mousedown = false;
     this.startX = 0;
     this.startY = 0;
+    this.anchorBlockIndex = null;
     if (this.overlayRectangle !== null) {
       this.overlayRectangle.style.display = 'none';
     }
@@ -660,83 +667,40 @@ export class RectangleSelection extends Module {
   }
 
   /**
-   * Adds a block to the selection and determines which blocks should be selected
-   * @param {object} index - index of new block in the reactor
+   * Adds a block to the selection and determines which blocks should be selected.
+   * Uses geometry-based approach: tracks an anchor block index and computes the
+   * expected range [min(anchor, current), max(anchor, current)] on each call.
+   * @param {number} index - index of new block in the reactor
    */
   private trySelectNextBlock(index: number): void {
-    const sizeStack = this.stackOfSelected.length;
-    const lastSelected = this.stackOfSelected[sizeStack - 1];
-    const sameBlock = lastSelected === index;
-
-    if (sameBlock) {
-      return;
+    if (this.anchorBlockIndex === null) {
+      this.anchorBlockIndex = index;
     }
 
-    const previousSelected = this.stackOfSelected[sizeStack - 2];
-    const blockNumbersIncrease = previousSelected !== undefined && lastSelected !== undefined
-      ? lastSelected - previousSelected > 0
-      : false;
-    const isInitialSelection = sizeStack <= 1;
-    const selectionInDownDirection = lastSelected !== undefined && index > lastSelected && blockNumbersIncrease;
-    const selectionInUpDirection = lastSelected !== undefined && index < lastSelected && sizeStack > 1 && !blockNumbersIncrease;
-    const generalSelection = selectionInDownDirection || selectionInUpDirection || isInitialSelection;
-    const reduction = !generalSelection;
+    const minIndex = Math.min(this.anchorBlockIndex, index);
+    const maxIndex = Math.max(this.anchorBlockIndex, index);
 
-    // When the selection is too fast, some blocks do not have time to be noticed. Fix it.
-    if (!reduction && (lastSelected === undefined || index > lastSelected)) {
-      const startIndex = lastSelected !== undefined ? lastSelected + 1 : index;
+    const expectedIndices = new Set(
+      Array.from({ length: maxIndex - minIndex + 1 }, (_, i) => minIndex + i)
+    );
 
-      Array.from({ length: index - startIndex + 1 }, (_unused, offset) => startIndex + offset)
-        .forEach((ind) => {
-          this.addBlockInSelection(ind);
-        });
+    const previousStack = new Set(this.stackOfSelected);
 
-      return;
-    }
-
-    // for both directions
-    if (!reduction && lastSelected !== undefined && index < lastSelected) {
-      Array.from(
-        { length: lastSelected - index },
-        (_unused, offset) => lastSelected - 1 - offset
-      ).forEach((ind) => {
-        this.addBlockInSelection(ind);
-      });
-
-      return;
-    }
-
-    if (!reduction) {
-      return;
-    }
-
-    const shouldRemove = (stackIndex: number): boolean => {
-      if (lastSelected === undefined) {
-        return false;
+    // Deselect blocks no longer in range
+    for (const prevIndex of previousStack) {
+      if (!expectedIndices.has(prevIndex) && this.rectCrossesBlocks) {
+        this.Blok.BlockSelection.unSelectBlockByIndex(prevIndex);
       }
-
-      if (index > lastSelected) {
-        return index > stackIndex;
-      }
-
-      return index < stackIndex;
-    };
-
-    const indicesToRemove: number[] = [];
-
-    for (const stackIndex of [ ...this.stackOfSelected ].reverse()) {
-      if (!shouldRemove(stackIndex)) {
-        break;
-      }
-
-      if (this.rectCrossesBlocks) {
-        this.Blok.BlockSelection.unSelectBlockByIndex(stackIndex);
-      }
-      indicesToRemove.push(stackIndex);
     }
 
-    if (indicesToRemove.length > 0) {
-      this.stackOfSelected.splice(this.stackOfSelected.length - indicesToRemove.length, indicesToRemove.length);
+    // Select blocks newly in range
+    for (const expectedIndex of expectedIndices) {
+      if (!previousStack.has(expectedIndex) && this.rectCrossesBlocks) {
+        this.Blok.BlockSelection.selectBlockByIndex(expectedIndex);
+      }
     }
+
+    // Replace stack with the correct ordered range
+    this.stackOfSelected = Array.from({ length: maxIndex - minIndex + 1 }, (_, i) => minIndex + i);
   }
 }

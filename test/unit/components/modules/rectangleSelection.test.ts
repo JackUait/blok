@@ -876,12 +876,18 @@ describe('RectangleSelection', () => {
     const internal = rectangleSelection as unknown as {
       stackOfSelected: number[];
       rectCrossesBlocks: boolean;
+      anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
     };
 
-    internal.stackOfSelected.push(0, 1);
     internal.rectCrossesBlocks = true;
 
+    // Start selection at block 0, expand to 1
+    internal.trySelectNextBlock(0);
+    internal.trySelectNextBlock(1);
+    blockSelection.selectBlockByIndex.mockClear();
+
+    // Jump to block 4 (skipping 2, 3)
     internal.trySelectNextBlock(4);
 
     expect(internal.stackOfSelected).toEqual([0, 1, 2, 3, 4]);
@@ -899,12 +905,21 @@ describe('RectangleSelection', () => {
     const internal = rectangleSelection as unknown as {
       stackOfSelected: number[];
       rectCrossesBlocks: boolean;
+      anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
     };
 
-    internal.stackOfSelected.push(0, 1, 2, 3);
     internal.rectCrossesBlocks = true;
 
+    // Build up selection from 0 to 3
+    internal.trySelectNextBlock(0);
+    internal.trySelectNextBlock(1);
+    internal.trySelectNextBlock(2);
+    internal.trySelectNextBlock(3);
+    blockSelection.selectBlockByIndex.mockClear();
+    blockSelection.unSelectBlockByIndex.mockClear();
+
+    // Shrink back to 1
     internal.trySelectNextBlock(1);
 
     expect(internal.stackOfSelected).toEqual([0, 1]);
@@ -1455,14 +1470,168 @@ describe('RectangleSelection', () => {
 
       internal.mouseY = 300;
 
-      const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
+      const elementFromPointSpy2 = vi.spyOn(document, 'elementFromPoint').mockReturnValue(null);
 
       const result = internal.genInfoForMouseSelection();
 
       expect(result.index).toBeUndefined();
       expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
 
-      elementFromPointSpy.mockRestore();
+      elementFromPointSpy2.mockRestore();
     });
   });
+
+  describe('trySelectNextBlock - direction changes', () => {
+    it('should deselect blocks when selection shrinks downward then back', () => {
+      const {
+        rectangleSelection,
+        blockSelection,
+      } = createRectangleSelection();
+
+      const internal = rectangleSelection as unknown as {
+        stackOfSelected: number[];
+        rectCrossesBlocks: boolean;
+        anchorBlockIndex: number | null;
+        trySelectNextBlock: (index: number) => void;
+      };
+
+      internal.rectCrossesBlocks = true;
+
+      // Expand down: 0, 1, 2, 3, 4
+      internal.trySelectNextBlock(0);
+      internal.trySelectNextBlock(1);
+      internal.trySelectNextBlock(2);
+      internal.trySelectNextBlock(3);
+      internal.trySelectNextBlock(4);
+
+      blockSelection.selectBlockByIndex.mockClear();
+      blockSelection.unSelectBlockByIndex.mockClear();
+
+      // Shrink back to 2
+      internal.trySelectNextBlock(2);
+
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(3);
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(4);
+      expect(internal.stackOfSelected).toEqual([0, 1, 2]);
+    });
+
+    it('should deselect blocks when selection shrinks upward then back', () => {
+      const {
+        rectangleSelection,
+        blockSelection,
+      } = createRectangleSelection();
+
+      const internal = rectangleSelection as unknown as {
+        stackOfSelected: number[];
+        rectCrossesBlocks: boolean;
+        anchorBlockIndex: number | null;
+        trySelectNextBlock: (index: number) => void;
+      };
+
+      internal.rectCrossesBlocks = true;
+
+      // Expand up from 5: 5, 4, 3, 2, 1
+      internal.trySelectNextBlock(5);
+      internal.trySelectNextBlock(4);
+      internal.trySelectNextBlock(3);
+      internal.trySelectNextBlock(2);
+      internal.trySelectNextBlock(1);
+
+      blockSelection.selectBlockByIndex.mockClear();
+      blockSelection.unSelectBlockByIndex.mockClear();
+
+      // Shrink to 3
+      internal.trySelectNextBlock(3);
+
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(1);
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(2);
+      expect(internal.stackOfSelected).toEqual([3, 4, 5]);
+    });
+
+    it('should handle zigzag (down then up then down) correctly', () => {
+      const {
+        rectangleSelection,
+      } = createRectangleSelection();
+
+      const internal = rectangleSelection as unknown as {
+        stackOfSelected: number[];
+        rectCrossesBlocks: boolean;
+        anchorBlockIndex: number | null;
+        trySelectNextBlock: (index: number) => void;
+      };
+
+      internal.rectCrossesBlocks = true;
+
+      // Expand down 0->4
+      internal.trySelectNextBlock(0);
+      internal.trySelectNextBlock(1);
+      internal.trySelectNextBlock(2);
+      internal.trySelectNextBlock(3);
+      internal.trySelectNextBlock(4);
+
+      // Shrink to 2
+      internal.trySelectNextBlock(2);
+
+      // Expand again to 5
+      internal.trySelectNextBlock(5);
+
+      expect(internal.stackOfSelected).toEqual([0, 1, 2, 3, 4, 5]);
+    });
+
+    it('should correctly handle complete reversal past anchor', () => {
+      const {
+        rectangleSelection,
+        blockSelection,
+      } = createRectangleSelection();
+
+      const internal = rectangleSelection as unknown as {
+        stackOfSelected: number[];
+        rectCrossesBlocks: boolean;
+        anchorBlockIndex: number | null;
+        trySelectNextBlock: (index: number) => void;
+      };
+
+      internal.rectCrossesBlocks = true;
+
+      // Start at 3, expand down to 5
+      internal.trySelectNextBlock(3);
+      internal.trySelectNextBlock(4);
+      internal.trySelectNextBlock(5);
+
+      blockSelection.selectBlockByIndex.mockClear();
+      blockSelection.unSelectBlockByIndex.mockClear();
+
+      // Shrink past anchor to 1
+      internal.trySelectNextBlock(1);
+
+      // Anchor stays at 3, selection flips direction
+      expect(internal.stackOfSelected).toEqual([1, 2, 3]);
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(4);
+      expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(5);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+    });
+
+    it('should handle single block selection (anchor == current)', () => {
+      const {
+        rectangleSelection,
+        blockSelection,
+      } = createRectangleSelection();
+
+      const internal = rectangleSelection as unknown as {
+        stackOfSelected: number[];
+        rectCrossesBlocks: boolean;
+        anchorBlockIndex: number | null;
+        trySelectNextBlock: (index: number) => void;
+      };
+
+      internal.rectCrossesBlocks = true;
+
+      internal.trySelectNextBlock(3);
+
+      expect(internal.stackOfSelected).toEqual([3]);
+      expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+    });
+  });
+
 });

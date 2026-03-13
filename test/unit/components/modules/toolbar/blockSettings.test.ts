@@ -336,7 +336,7 @@ describe('BlockSettings', () => {
 
     const addEventListenerSpy = vi.spyOn(block.pluginsContent, 'addEventListener');
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockResolvedValue([
       {
         name: 'duplicate',
@@ -379,7 +379,7 @@ describe('BlockSettings', () => {
     (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
 
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockResolvedValue([]);
 
     isMobileScreenMock.mockReturnValueOnce(true);
@@ -476,20 +476,13 @@ describe('BlockSettings', () => {
   });
 
 
-  it('merges tool tunes, convert-to menu and common tunes', async () => {
+  it('excludes tool tunes and shows only convert-to menu and common tunes', async () => {
     const block = createBlock();
 
     blokMock.Tools.blockTools = new Map([
       ['paragraph', { name: 'paragraph' } ],
     ]);
 
-    const toolTunes: MenuConfigItem[] = [
-      {
-        name: 'duplicate',
-        title: 'Duplicate',
-        onActivate: vi.fn(),
-      },
-    ];
     const commonTunes: MenuConfigItem[] = [
       {
         name: 'delete',
@@ -512,20 +505,23 @@ describe('BlockSettings', () => {
     ]);
 
     const items = await (blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
-    }).getTunesItems(block, commonTunes, toolTunes);
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, commonTunes);
 
-    if ('title' in items[0]) {
-      expect(items[0].title).toBe('Duplicate');
-    }
-    expect(items[1].type).toBe(PopoverItemType.Separator);
-
+    /**
+     * Only convert-to and common tunes should appear (no tool-specific tunes)
+     */
     const convertTo = items.find((item): item is PopoverItemParams & { name?: string; children?: { items?: PopoverItemParams[] } } => 'name' in item && item.name === 'convert-to');
+
+    expect(convertTo).toBeDefined();
 
     if (convertTo && 'children' in convertTo) {
       expect(convertTo.children?.items).toHaveLength(1);
     }
 
+    /**
+     * Last item should be the common tune (delete)
+     */
     const lastItem = items.at(-1);
 
     if (lastItem && 'name' in lastItem) {
@@ -552,7 +548,7 @@ describe('BlockSettings', () => {
     getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
 
     const items = await (blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }).getTunesItems(block, commonTunes);
 
     expect(items).toHaveLength(2);
@@ -631,7 +627,7 @@ describe('BlockSettings', () => {
     });
 
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockReturnValueOnce(getTunesItemsPromise as Promise<PopoverItemParams[]>);
 
     // Start opening block settings (async operation)
@@ -683,7 +679,7 @@ describe('BlockSettings', () => {
     (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
 
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockRejectedValueOnce(new Error('Tool renderSettings threw'));
 
     await blockSettings.open(block);
@@ -735,7 +731,7 @@ describe('BlockSettings', () => {
     (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
 
     const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[], tool?: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockResolvedValueOnce([]);
 
     /**

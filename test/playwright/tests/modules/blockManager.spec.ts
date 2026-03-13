@@ -239,6 +239,46 @@ test.describe('modules/blockManager', () => {
     expect(blocks).toHaveLength(0);
   });
 
+  test('focuses the new default block after deleting the only block so user can type immediately', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        id: 'only-block',
+        type: 'paragraph',
+        data: { text: 'Delete me' },
+      },
+    ]);
+
+    // Focus the block first so the editor has focus before deletion
+    await page.getByText('Delete me').click();
+
+    await page.evaluate(async () => {
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
+      }
+
+      await window.blokInstance.blocks.delete(0);
+    });
+
+    // Wait for the new default block to appear
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        if (!window.blokInstance) {
+          throw new Error('Blok instance not found');
+        }
+
+        return window.blokInstance.blocks.getBlocksCount?.() ?? 0;
+      });
+
+      expect(count).toBe(1);
+    }).toPass();
+
+    // Type text WITHOUT clicking — the new block should already be focused
+    await page.keyboard.type('Hello after delete');
+
+    // Verify the typed text appears in the editor
+    await expect(page.getByText('Hello after delete')).toBeVisible();
+  });
+
   test('converts a block to a compatible tool via API', async ({ page }) => {
     const CONVERTABLE_SOURCE_TOOL = `(() => {
       return class ConvertableSourceTool {

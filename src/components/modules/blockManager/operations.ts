@@ -432,9 +432,13 @@ export class BlockOperations {
        */
       if (noBlocksLeft && addLastBlock) {
         this.insert({}, blocksStore);
+
+        resolve();
+
+        return;
       }
 
-      // If all blocks removed, unset current block
+      // If all blocks removed and no default block was added, unset current block
       if (noBlocksLeft) {
         this.currentBlockIndexValue = -1;
 

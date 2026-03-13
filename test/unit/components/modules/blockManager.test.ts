@@ -348,6 +348,21 @@ describe('BlockManager', () => {
     expect(blockManager.blocks.length).toBeGreaterThan(0);
   });
 
+  it('sets currentBlockIndex to 0 after removing the last block with addLastBlock=true', async () => {
+    const block = createBlockStub({ id: 'only-block' });
+    const defaultBlock = createBlockStub({ id: 'default-block' });
+    const { blockManager, composeBlockSpy } = createBlockManager({
+      initialBlocks: [ block ],
+    });
+
+    composeBlockSpy.mockReturnValue(defaultBlock);
+
+    await blockManager.removeBlock(block);
+
+    expect(blockManager.currentBlockIndex).toBe(0);
+    expect(blockManager.currentBlock).toBeDefined();
+  });
+
   it('moves a block and emits movement mutation', () => {
     const firstBlock = createBlockStub({ id: 'block-1' });
     const secondBlock = createBlockStub({ id: 'block-2' });

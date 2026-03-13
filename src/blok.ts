@@ -87,14 +87,14 @@ class Blok {
     /**
      * Flag to track if destroy() was called before isReady resolved
      */
-    let pendingDestroy = false;
+    const lifecycle = { pendingDestroy: false };
 
     /**
      * Initialize destroy to set the pendingDestroy flag.
      * Will be replaced with the real implementation in exportAPI.
      */
     this.destroy = (): void => {
-      pendingDestroy = true;
+      lifecycle.pendingDestroy = true;
     };
 
     /**
@@ -103,7 +103,7 @@ class Blok {
      * @type {Promise<void>}
      */
     this.isReady = blok.isReady.then(() => {
-      if (pendingDestroy) {
+      if (lifecycle.pendingDestroy) {
         Object.values(blok.moduleInstances)
           .forEach((moduleInstance) => {
             if (moduleInstance === undefined || moduleInstance === null) {

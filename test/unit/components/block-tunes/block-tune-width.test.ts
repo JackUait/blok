@@ -56,10 +56,10 @@ describe('WidthTune', () => {
     expect(Array.isArray(item)).toBe(false);
   });
 
-  it('should use name "width-full"', () => {
+  it('should use name "toggle-width"', () => {
     const { tune } = createWidthTune();
     const item = tune.render() as MenuConfigItemWithActivate;
-    expect(item.name).toBe('width-full');
+    expect(item.name).toBe('toggle-width');
   });
 
   it('isActive should be false when current mode is narrow', () => {

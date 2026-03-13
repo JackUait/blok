@@ -7,6 +7,7 @@ import type { MenuConfig } from '../../../../types/tools/menu-config';
 type WidthMocks = {
   get: Mock<() => 'narrow' | 'full'>;
   set: Mock<(mode: 'narrow' | 'full') => void>;
+  toggle: Mock<() => void>;
 };
 
 type I18nMocks = {
@@ -17,6 +18,7 @@ function createWidthTune(currentMode: 'narrow' | 'full' = 'narrow') {
   const widthApi: WidthMocks = {
     get: vi.fn().mockReturnValue(currentMode),
     set: vi.fn(),
+    toggle: vi.fn(),
   };
 
   const i18n: I18nMocks = {
@@ -48,50 +50,46 @@ describe('WidthTune', () => {
     expect(WidthTune.isTune).toBe(true);
   });
 
-  it('render() should return an array with two MenuConfig items', () => {
+  it('render() should return a single MenuConfig item (not an array)', () => {
     const { tune } = createWidthTune();
-    const items = tune.render() as MenuConfigItemWithActivate[];
-    expect(Array.isArray(items)).toBe(true);
-    expect(items).toHaveLength(2);
+    const item = tune.render();
+    expect(Array.isArray(item)).toBe(false);
   });
 
-  it('first item should be the narrow option', () => {
+  it('should use name "width-full"', () => {
     const { tune } = createWidthTune();
-    const items = tune.render() as MenuConfigItemWithActivate[];
-    expect(items[0].name).toBe('width-narrow');
+    const item = tune.render() as MenuConfigItemWithActivate;
+    expect(item.name).toBe('width-full');
   });
 
-  it('second item should be the full width option', () => {
-    const { tune } = createWidthTune();
-    const items = tune.render() as MenuConfigItemWithActivate[];
-    expect(items[1].name).toBe('width-full');
-  });
-
-  it('narrow item should be active when current mode is narrow', () => {
+  it('isActive should be false when current mode is narrow', () => {
     const { tune } = createWidthTune('narrow');
-    const items = tune.render() as MenuConfigItemWithActivate[];
-    expect(items[0].isActive).toBe(true);
-    expect(items[1].isActive).toBe(false);
+    const item = tune.render() as MenuConfigItemWithActivate;
+    expect(item.isActive).toBe(false);
   });
 
-  it('full item should be active when current mode is full', () => {
+  it('isActive should be true when current mode is full', () => {
     const { tune } = createWidthTune('full');
-    const items = tune.render() as MenuConfigItemWithActivate[];
-    expect(items[0].isActive).toBe(false);
-    expect(items[1].isActive).toBe(true);
+    const item = tune.render() as MenuConfigItemWithActivate;
+    expect(item.isActive).toBe(true);
   });
 
-  it('onActivate of narrow item should call api.width.set("narrow")', () => {
+  it('onActivate should call api.width.toggle()', () => {
     const { tune, widthApi } = createWidthTune();
-    const items = tune.render() as MenuConfigItemWithActivate[];
-    items[0].onActivate?.(items[0]);
-    expect(widthApi.set).toHaveBeenCalledWith('narrow');
+    const item = tune.render() as MenuConfigItemWithActivate;
+    item.onActivate?.(item);
+    expect(widthApi.toggle).toHaveBeenCalledTimes(1);
   });
 
-  it('onActivate of full item should call api.width.set("full")', () => {
-    const { tune, widthApi } = createWidthTune();
-    const items = tune.render() as MenuConfigItemWithActivate[];
-    items[1].onActivate?.(items[1]);
-    expect(widthApi.set).toHaveBeenCalledWith('full');
+  it('closeOnActivate should be true', () => {
+    const { tune } = createWidthTune();
+    const item = tune.render() as MenuConfigItemWithActivate;
+    expect(item.closeOnActivate).toBe(true);
+  });
+
+  it('toggle should be true', () => {
+    const { tune } = createWidthTune();
+    const item = tune.render() as MenuConfigItemWithActivate;
+    expect(item.toggle).toBe(true);
   });
 });

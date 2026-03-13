@@ -871,7 +871,19 @@ describe('RectangleSelection', () => {
     const {
       rectangleSelection,
       blockSelection,
+      blockManager,
     } = createRectangleSelection();
+
+    // Populate blocks with sequential vertical positions (50px each)
+    for (let i = 0; i < 5; i++) {
+      const holder = document.createElement('div');
+
+      holder.getBoundingClientRect = vi.fn(() => ({
+        top: i * 50, bottom: (i + 1) * 50, left: 0, right: 800, width: 800, height: 50,
+        x: 0, y: i * 50, toJSON: () => ({}),
+      }));
+      blockManager.blocks.push({ id: `b${i}`, holder, parentId: null } as unknown as BlockType);
+    }
 
     const internal = rectangleSelection as unknown as {
       stackOfSelected: number[];
@@ -900,7 +912,19 @@ describe('RectangleSelection', () => {
     const {
       rectangleSelection,
       blockSelection,
+      blockManager,
     } = createRectangleSelection();
+
+    // Populate blocks with sequential vertical positions (50px each)
+    for (let i = 0; i < 4; i++) {
+      const holder = document.createElement('div');
+
+      holder.getBoundingClientRect = vi.fn(() => ({
+        top: i * 50, bottom: (i + 1) * 50, left: 0, right: 800, width: 800, height: 50,
+        x: 0, y: i * 50, toJSON: () => ({}),
+      }));
+      blockManager.blocks.push({ id: `b${i}`, holder, parentId: null } as unknown as BlockType);
+    }
 
     const internal = rectangleSelection as unknown as {
       stackOfSelected: number[];
@@ -1268,8 +1292,8 @@ describe('RectangleSelection', () => {
     });
   });
 
-  describe('genInfoForMouseSelection resolves child blocks to root blocks', () => {
-    it('returns the root block index when getBlockByChildNode returns a child block with parentId', () => {
+  describe('genInfoForMouseSelection returns child block index directly', () => {
+    it('returns the child block index when getBlockByChildNode returns a child block with parentId', () => {
       const {
         rectangleSelection,
         blockManager,
@@ -1296,10 +1320,7 @@ describe('RectangleSelection', () => {
       blockManager.blocks.push(tableBlock, childBlock);
       blockManager.lastBlock = { holder: tableHolder };
 
-      // elementFromPoint hits the child block's element
       blockManager.getBlockByChildNode.mockReturnValue(childBlock);
-      // resolveToRootBlock walks up the parentId chain and returns the table
-      blockManager.resolveToRootBlock.mockReturnValue(tableBlock);
 
       Object.defineProperty(document.body, 'offsetWidth', {
         configurable: true,
@@ -1317,8 +1338,9 @@ describe('RectangleSelection', () => {
 
       const result = internal.genInfoForMouseSelection();
 
-      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(childBlock);
-      expect(result.index).toBe(0); // table is at index 0, not child at index 1
+      // Returns child's own index (1), not resolved root (0)
+      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
+      expect(result.index).toBe(1);
 
       elementFromPointSpy.mockRestore();
     });
@@ -1344,8 +1366,6 @@ describe('RectangleSelection', () => {
       blockManager.lastBlock = { holder: blockHolder };
 
       blockManager.getBlockByChildNode.mockReturnValue(rootBlock);
-      // resolveToRootBlock returns the same block when parentId is null
-      blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
 
       Object.defineProperty(document.body, 'offsetWidth', {
         configurable: true,
@@ -1363,13 +1383,13 @@ describe('RectangleSelection', () => {
 
       const result = internal.genInfoForMouseSelection();
 
-      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(rootBlock);
+      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
       expect(result.index).toBe(0);
 
       elementFromPointSpy.mockRestore();
     });
 
-    it('selects only the table block index when mouse is over a cell paragraph inside a table', () => {
+    it('returns the cell paragraph index directly when mouse is over a cell paragraph inside a table', () => {
       const {
         rectangleSelection,
         blockManager,
@@ -1418,10 +1438,7 @@ describe('RectangleSelection', () => {
       blockManager.blocks.push(paragraph, table, cellParagraph1, cellParagraph2, paragraph2);
       blockManager.lastBlock = { holder: paragraph2Holder };
 
-      // Mouse is over cellParagraph1
       blockManager.getBlockByChildNode.mockReturnValue(cellParagraph1);
-      // resolveToRootBlock walks cellParagraph1 → table
-      blockManager.resolveToRootBlock.mockReturnValue(table);
 
       Object.defineProperty(document.body, 'offsetWidth', {
         configurable: true,
@@ -1439,9 +1456,9 @@ describe('RectangleSelection', () => {
 
       const result = internal.genInfoForMouseSelection();
 
-      // Should return the TABLE's index (1), not cellParagraph1's index (2)
-      expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(cellParagraph1);
-      expect(result.index).toBe(1);
+      // Returns cellParagraph1's own index (2), not table's index (1)
+      expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
+      expect(result.index).toBe(2);
 
       elementFromPointSpy.mockRestore();
     });
@@ -1481,12 +1498,312 @@ describe('RectangleSelection', () => {
     });
   });
 
+  describe('visual-position-based selection', () => {
+    /**
+     * Helper to create a block stub with mocked getBoundingClientRect for visual position tests
+     */
+    const createBlockWithPosition = (
+      id: string,
+      top: number,
+      height: number,
+      parentId: string | null = null
+    ): BlockType => {
+      const holder = document.createElement('div');
+
+      holder.getBoundingClientRect = vi.fn(() => ({
+        top,
+        bottom: top + height,
+        left: 100,
+        right: 700,
+        width: 600,
+        height,
+        x: 100,
+        y: top,
+        toJSON: () => ({}),
+      }));
+
+      return {
+        id,
+        holder,
+        parentId,
+      } as unknown as BlockType;
+    };
+
+    describe('genInfoForMouseSelection returns child block index directly', () => {
+      it('returns the child block index without calling resolveToRootBlock', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockContent,
+        } = createRectangleSelection();
+
+        const toggleHolder = document.createElement('div');
+        const childHolder = document.createElement('div');
+
+        toggleHolder.appendChild(blockContent);
+
+        const toggleBlock = {
+          id: 'toggle-1',
+          holder: toggleHolder,
+          parentId: null,
+        } as unknown as BlockType;
+
+        const childBlock = {
+          id: 'child-1',
+          holder: childHolder,
+          parentId: 'toggle-1',
+        } as unknown as BlockType;
+
+        blockManager.blocks.push(toggleBlock, childBlock);
+        blockManager.lastBlock = { holder: toggleHolder };
+        blockManager.getBlockByChildNode.mockReturnValue(childBlock);
+
+        Object.defineProperty(document.body, 'offsetWidth', {
+          configurable: true,
+          value: 800,
+        });
+
+        const internal = rectangleSelection as unknown as {
+          mouseY: number;
+          genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+        };
+
+        internal.mouseY = 300;
+
+        const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(childHolder);
+
+        const result = internal.genInfoForMouseSelection();
+
+        // Should return child's own index (1), NOT resolve to root toggle (0)
+        expect(result.index).toBe(1);
+        expect(blockManager.resolveToRootBlock).not.toHaveBeenCalled();
+
+        elementFromPointSpy.mockRestore();
+      });
+    });
+
+    describe('trySelectNextBlock uses visual positions', () => {
+      it('excludes blocks with zero height (hidden/collapsed) from selection', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        const block0 = createBlockWithPosition('b0', 0, 50);
+        const block1 = createBlockWithPosition('b1', 50, 30);
+        const block2 = createBlockWithPosition('b2', 0, 0); // hidden — zero height
+        const block3 = createBlockWithPosition('b3', 80, 50);
+
+        blockManager.blocks.push(block0, block1, block2, block3);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          anchorBlockIndex: number | null;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        internal.trySelectNextBlock(0);
+        internal.trySelectNextBlock(3);
+
+        // Block 2 has zero height and should NOT be selected
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+        // Blocks 0, 1, 3 should be selected (they are visually in range)
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+      });
+
+      it('excludes blocks that are visually outside the anchor-to-current range', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        // Block 2 has indices within [0, 3] but is visually far below
+        const block0 = createBlockWithPosition('b0', 0, 50);     // top=0, bottom=50
+        const block1 = createBlockWithPosition('b1', 50, 30);    // top=50, bottom=80
+        const block2 = createBlockWithPosition('b2', 500, 50);   // top=500, bottom=550 (far below)
+        const block3 = createBlockWithPosition('b3', 80, 50);    // top=80, bottom=130
+
+        blockManager.blocks.push(block0, block1, block2, block3);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          anchorBlockIndex: number | null;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        internal.trySelectNextBlock(0);
+        internal.trySelectNextBlock(3);
+
+        // Visual range: top=0 (block 0) to bottom=130 (block 3)
+        // Block 2 at top=500 is visually outside this range
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+      });
+
+      it('includes toggle children that are visually within the selection range', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        // Simulates: paragraph, toggle heading, toggle child, toggle child, paragraph
+        const block0 = createBlockWithPosition('paragraph-1', 0, 50);
+        const block1 = createBlockWithPosition('toggle-1', 50, 30, null);
+        const block2 = createBlockWithPosition('child-1', 80, 50, 'toggle-1');
+        const block3 = createBlockWithPosition('child-2', 130, 50, 'toggle-1');
+        const block4 = createBlockWithPosition('paragraph-2', 180, 50);
+
+        blockManager.blocks.push(block0, block1, block2, block3, block4);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          anchorBlockIndex: number | null;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        // Anchor at block 0, mouse moves to toggle child at index 3
+        // With old code: genInfoForMouseSelection would resolve to root (index 1),
+        // so trySelectNextBlock(1) selects [0, 1] — children not selected (BUG)
+        // With new code: genInfoForMouseSelection returns 3 directly,
+        // trySelectNextBlock(3) uses visual positions to select [0, 1, 2, 3]
+        internal.trySelectNextBlock(0);
+        internal.trySelectNextBlock(3);
+
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+        // Block 4 is outside the visual range
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
+      });
+    });
+
+    describe('changingRectangle uses root block holder for rectCrossesBlocks', () => {
+      it('resolves to root block holder for horizontal intersection check', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockContent,
+        } = createRectangleSelection();
+
+        // Root toggle has wide holder, child has narrow holder
+        const rootHolder = document.createElement('div');
+        const childHolder = document.createElement('div');
+
+        rootHolder.appendChild(blockContent);
+
+        rootHolder.getBoundingClientRect = vi.fn(() => ({
+          top: 50, bottom: 100, left: 100, right: 700, width: 600, height: 50,
+          x: 100, y: 50, toJSON: () => ({}),
+        }));
+        childHolder.getBoundingClientRect = vi.fn(() => ({
+          top: 80, bottom: 130, left: 200, right: 400, width: 200, height: 50,
+          x: 200, y: 80, toJSON: () => ({}),
+        }));
+
+        const rootBlock = {
+          id: 'toggle-1',
+          holder: rootHolder,
+          parentId: null,
+        } as unknown as BlockType;
+
+        const childBlock = {
+          id: 'child-1',
+          holder: childHolder,
+          parentId: 'toggle-1',
+        } as unknown as BlockType;
+
+        blockManager.blocks.push(rootBlock, childBlock);
+        blockManager.lastBlock = { holder: rootHolder };
+        blockManager.getBlockByChildNode.mockReturnValue(childBlock);
+        blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
+
+        Object.defineProperty(document.body, 'offsetWidth', {
+          configurable: true,
+          value: 800,
+        });
+
+        const internal = rectangleSelection as unknown as {
+          mousedown: boolean;
+          mouseX: number;
+          mouseY: number;
+          startX: number;
+          startY: number;
+          isRectSelectionActivated: boolean;
+          rectCrossesBlocks: boolean;
+          overlayRectangle: HTMLDivElement;
+          changingRectangle: (event: MouseEvent) => void;
+        };
+
+        internal.mousedown = true;
+        internal.isRectSelectionActivated = true;
+        internal.overlayRectangle = document.createElement('div');
+        // Rubber band covers x=150 to x=350 — intersects root (100-700) but starts at 150
+        internal.startX = 150;
+        internal.startY = 50;
+        internal.mouseX = 350;
+        internal.mouseY = 120;
+
+        const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(childHolder);
+
+        const mouseEvent = new MouseEvent('mousemove', { clientX: 350, clientY: 120 });
+
+        Object.defineProperty(mouseEvent, 'pageX', { value: 350 });
+        Object.defineProperty(mouseEvent, 'pageY', { value: 120 });
+
+        internal.changingRectangle(mouseEvent);
+
+        // The rectCrossesBlocks check should use the root block holder (wide: 100-700),
+        // not the child block holder (narrow: 200-400)
+        expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(childBlock);
+        expect(internal.rectCrossesBlocks).toBe(true);
+
+        elementFromPointSpy.mockRestore();
+      });
+    });
+  });
+
   describe('trySelectNextBlock - direction changes', () => {
+    /**
+     * Helper to populate blockManager.blocks with sequential vertical positions
+     * Each block is 50px tall, positioned sequentially from top=0
+     */
+    const populateBlocksWithPositions = (blockManager: BlockManagerModuleMock, count: number): void => {
+      for (let i = 0; i < count; i++) {
+        const holder = document.createElement('div');
+
+        holder.getBoundingClientRect = vi.fn(() => ({
+          top: i * 50, bottom: (i + 1) * 50, left: 0, right: 800, width: 800, height: 50,
+          x: 0, y: i * 50, toJSON: () => ({}),
+        }));
+        blockManager.blocks.push({ id: `b${i}`, holder, parentId: null } as unknown as BlockType);
+      }
+    };
+
     it('should deselect blocks when selection shrinks downward then back', () => {
       const {
         rectangleSelection,
         blockSelection,
+        blockManager,
       } = createRectangleSelection();
+
+      populateBlocksWithPositions(blockManager, 5);
 
       const internal = rectangleSelection as unknown as {
         stackOfSelected: number[];
@@ -1519,7 +1836,10 @@ describe('RectangleSelection', () => {
       const {
         rectangleSelection,
         blockSelection,
+        blockManager,
       } = createRectangleSelection();
+
+      populateBlocksWithPositions(blockManager, 6);
 
       const internal = rectangleSelection as unknown as {
         stackOfSelected: number[];
@@ -1551,7 +1871,10 @@ describe('RectangleSelection', () => {
     it('should handle zigzag (down then up then down) correctly', () => {
       const {
         rectangleSelection,
+        blockManager,
       } = createRectangleSelection();
+
+      populateBlocksWithPositions(blockManager, 6);
 
       const internal = rectangleSelection as unknown as {
         stackOfSelected: number[];
@@ -1582,7 +1905,10 @@ describe('RectangleSelection', () => {
       const {
         rectangleSelection,
         blockSelection,
+        blockManager,
       } = createRectangleSelection();
+
+      populateBlocksWithPositions(blockManager, 6);
 
       const internal = rectangleSelection as unknown as {
         stackOfSelected: number[];
@@ -1616,7 +1942,10 @@ describe('RectangleSelection', () => {
       const {
         rectangleSelection,
         blockSelection,
+        blockManager,
       } = createRectangleSelection();
+
+      populateBlocksWithPositions(blockManager, 4);
 
       const internal = rectangleSelection as unknown as {
         stackOfSelected: number[];

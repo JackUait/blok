@@ -474,9 +474,12 @@ export class RectangleSelection extends Module {
      */
     this.rectCrossesBlocks = false;
     const block = index !== undefined ? this.Blok.BlockManager.getBlockByIndex(index) : undefined;
+    const rootBlock = block !== undefined
+      ? this.Blok.BlockManager.resolveToRootBlock(block)
+      : undefined;
 
-    if (block) {
-      const holderRect = block.holder.getBoundingClientRect();
+    if (rootBlock) {
+      const holderRect = rootBlock.holder.getBoundingClientRect();
       const scrollLeft = this.getScrollLeft();
 
       // Selection rectangle horizontal bounds (in page coordinates)
@@ -618,12 +621,9 @@ export class RectangleSelection extends Module {
       };
     }
     const blockInCurrentPos = this.Blok.BlockManager.getBlockByChildNode(elementUnderMouse);
-    const rootBlock = blockInCurrentPos !== undefined
-      ? this.Blok.BlockManager.resolveToRootBlock(blockInCurrentPos)
-      : undefined;
 
-    const index = rootBlock !== undefined
-      ? this.Blok.BlockManager.blocks.findIndex((block) => block.holder === rootBlock.holder)
+    const index = blockInCurrentPos !== undefined
+      ? this.Blok.BlockManager.blocks.indexOf(blockInCurrentPos)
       : undefined;
 
     return {
@@ -677,12 +677,30 @@ export class RectangleSelection extends Module {
       this.anchorBlockIndex = index;
     }
 
-    const minIndex = Math.min(this.anchorBlockIndex, index);
-    const maxIndex = Math.max(this.anchorBlockIndex, index);
+    const blocks = this.Blok.BlockManager.blocks;
+    const anchorBlock = blocks[this.anchorBlockIndex];
+    const currentBlock = blocks[index];
 
-    const expectedIndices = new Set(
-      Array.from({ length: maxIndex - minIndex + 1 }, (_, i) => minIndex + i)
-    );
+    if (!anchorBlock || !currentBlock) {
+      return;
+    }
+
+    const anchorRect = anchorBlock.holder.getBoundingClientRect();
+    const currentRect = currentBlock.holder.getBoundingClientRect();
+
+    const minY = Math.min(anchorRect.top, currentRect.top);
+    const maxY = Math.max(anchorRect.bottom, currentRect.bottom);
+
+    const expectedIndices = new Set<number>();
+
+    blocks.forEach((block, i) => {
+      const blockRect = block.holder.getBoundingClientRect();
+
+      // Include blocks that have visual height and overlap the selection range
+      if (blockRect.height > 0 && blockRect.bottom > minY && blockRect.top < maxY) {
+        expectedIndices.add(i);
+      }
+    });
 
     const previousStack = new Set(this.stackOfSelected);
 
@@ -700,7 +718,7 @@ export class RectangleSelection extends Module {
       }
     }
 
-    // Replace stack with the correct ordered range
-    this.stackOfSelected = Array.from({ length: maxIndex - minIndex + 1 }, (_, i) => minIndex + i);
+    // Replace stack with the visually selected indices
+    this.stackOfSelected = Array.from(expectedIndices).sort((a, b) => a - b);
   }
 }

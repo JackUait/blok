@@ -189,6 +189,7 @@ type PopoverDesktopInternal = Omit<PopoverDesktop, 'shouldOpenBottom' | 'shouldO
   };
   nestedPopover: PopoverDesktop | null | undefined;
   nestedPopoverTriggerItem: PopoverItemDefault | null;
+  _size: { height: number; width: number } | undefined;
 };
 
 const createRect = (overrides: Partial<DOMRect>): DOMRect => ({
@@ -960,6 +961,39 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('size measurement', () => {
+    it('applies opened-state padding to the clone before measuring', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      /**
+       * Spy on document.body.appendChild to capture the measurement clone
+       * and verify it has the opened-state padding class applied to its container.
+       */
+      const originalAppendChild = document.body.appendChild.bind(document.body);
+      let cloneContainerClass = '';
+
+      vi.spyOn(document.body, 'appendChild').mockImplementation((node: Node) => {
+        if (node instanceof HTMLElement && node.hasAttribute(DATA_ATTR.popoverOpened)) {
+          const container = node.querySelector(`[${DATA_ATTR.popoverContainer}]`);
+
+          if (container) {
+            cloneContainerClass = container.className;
+          }
+        }
+
+        return originalAppendChild(node);
+      });
+
+      // Invalidate cache and re-measure
+      instance._size = undefined;
+      void instance.size;
+
+      // The clone's container should include the opened-state padding (p-1.5)
+      expect(cloneContainerClass).toContain('p-1.5');
+    });
+  });
+
   describe('permanently hidden items are not overridden by filterItems', () => {
     it('item hidden via toggleItemHiddenByName stays hidden after filterItems with empty query', () => {
       const popover = createPopover({
@@ -1127,6 +1161,137 @@ describe('PopoverDesktop', () => {
       expect(popover.getElement().style.left).toBe(`${50 + window.scrollX}px`);
 
       trigger.remove();
+    });
+  });
+
+  describe('handleMouseLeave', () => {
+    it('destroys nested popover and resets hover state when mouse leaves popover container', () => {
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [
+                {
+                  title: 'Child',
+                  name: 'child',
+                  onActivate: vi.fn(),
+                },
+              ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      expect(parentItem).toBeDefined();
+      expect(parentElement).not.toBeNull();
+
+      // Hover over parent to open nested popover
+      const hoverEvent = {
+        composedPath: () => parentElement ? [parentElement] : [],
+      } as unknown as Event;
+
+      instance.handleHover(hoverEvent);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      // Mouse leaves the popover container to an unrelated element
+      const outsideElement = document.createElement('div');
+
+      document.body.appendChild(outsideElement);
+
+      const mouseLeaveEvent = new MouseEvent('mouseleave', {
+        relatedTarget: outsideElement,
+        bubbles: false,
+      });
+
+      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+
+      expect(instance.nestedPopover).toBeNull();
+      expect(instance.nestedPopoverTriggerItem).toBeNull();
+
+      outsideElement.remove();
+    });
+
+    it('preserves nested popover when mouse moves into the nested popover', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [
+                {
+                  title: 'Child',
+                  name: 'child',
+                  onActivate: vi.fn(),
+                },
+              ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      expect(parentItem).toBeDefined();
+      expect(parentElement).not.toBeNull();
+
+      // Hover over parent to open nested popover
+      const hoverEvent = {
+        composedPath: () => parentElement ? [parentElement] : [],
+      } as unknown as Event;
+
+      instance.handleHover(hoverEvent);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      // Mouse moves into the nested popover element
+      const nestedPopoverElement = instance.nestedPopover!.getElement();
+      const mouseLeaveEvent = new MouseEvent('mouseleave', {
+        relatedTarget: nestedPopoverElement,
+        bubbles: false,
+      });
+
+      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+
+      // Nested popover should still be open
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+  });
+
+  describe('items container padding', () => {
+    it('has symmetric horizontal padding on the items container', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const itemsContainer = instance.nodes.items;
+
+      // Items container should have symmetric horizontal padding (px-1) not just pr-1
+      expect(itemsContainer.className).toContain('px-1');
+      expect(itemsContainer.className).not.toMatch(/\bpr-1\b/);
+    });
+
+    it('has symmetric horizontal padding on desktop popover items', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const firstItem = instance.itemsDefault[0];
+      const element = firstItem.getElement();
+
+      expect(element).not.toBeNull();
+
+      // Desktop items should have pl-2 (8px) and pr-3 (12px)
+      expect(element?.className).toContain('pl-2');
+      expect(element?.className).toContain('pr-3');
     });
   });
 

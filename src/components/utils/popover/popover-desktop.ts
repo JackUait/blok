@@ -8,7 +8,8 @@ import { PopoverItemHtml } from './components/popover-item/popover-item-html/pop
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
-import { CSSVariables } from './popover.const';
+import { CSSVariables, css as popoverCss } from './popover.const';
+import { twMerge } from '../tw';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -108,6 +109,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (this.nodes.popoverContainer !== null) {
       this.listeners.on(this.nodes.popoverContainer, 'mouseover', (event: Event) => this.handleHover(event));
+      this.listeners.on(this.nodes.popoverContainer, 'mouseleave', (event: Event) => this.handleMouseLeave(event));
     }
 
     if (params.searchable) {
@@ -394,6 +396,28 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Handles mouse leaving the popover container.
+   * Destroys nested popover unless the mouse moved into it.
+   * @param event - mouseleave event
+   */
+  private handleMouseLeave(event: Event): void {
+    const mouseEvent = event as MouseEvent;
+    const relatedTarget = mouseEvent.relatedTarget;
+
+    if (
+      relatedTarget instanceof Node &&
+      this.nestedPopover !== undefined &&
+      this.nestedPopover !== null &&
+      this.nestedPopover.hasNode(relatedTarget)
+    ) {
+      return;
+    }
+
+    this.destroyNestedPopoverIfExists();
+    this.previouslyHoveredItem = null;
+  }
+
+  /**
    * Sets CSS variable with position of item near which nested popover should be displayed.
    * Is used for correct positioning of the nested popover
    * @param nestedPopoverEl - nested popover element
@@ -627,9 +651,12 @@ export class PopoverDesktop extends PopoverAbstract {
 
     popoverClone.setAttribute(DATA_ATTR.popoverOpened, 'true');
     popoverClone.querySelector(`[${DATA_ATTR.nested}]`)?.remove();
-    document.body.appendChild(popoverClone);
 
     const container = popoverClone.querySelector(`[${DATA_ATTR.popoverContainer}]`) as HTMLElement;
+
+    container.className = twMerge(container.className, popoverCss.popoverContainerOpened);
+
+    document.body.appendChild(popoverClone);
 
     size.height = container.offsetHeight;
     size.width = container.offsetWidth;

@@ -231,21 +231,21 @@ describe('PopoverItemDefault', () => {
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemDestructive);
   });
 
-  it('uses uniform pr-4 right padding for items without secondary label or chevron', () => {
+  it('uses symmetric horizontal padding for items without secondary label or chevron', () => {
     const { element } = createItem();
 
-    expect(element.className).toContain('pr-4');
-    expect(element.className).not.toContain('pr-8');
+    expect(element.className).toContain('pl-2');
+    expect(element.className).toContain('pr-3');
   });
 
-  it('uses pr-4 right padding when item has secondary label', () => {
+  it('uses symmetric horizontal padding when item has secondary label', () => {
     const { element } = createItem({ secondaryLabel: '#' });
 
-    expect(element.className).toContain('pr-4');
-    expect(element.className).not.toContain('pr-8');
+    expect(element.className).toContain('pl-2');
+    expect(element.className).toContain('pr-3');
   });
 
-  it('uses pr-4 right padding when item has children with visible chevron', () => {
+  it('uses symmetric horizontal padding when item has children with visible chevron', () => {
     const { element } = createItem({
       children: {
         items: [
@@ -254,8 +254,8 @@ describe('PopoverItemDefault', () => {
       },
     });
 
-    expect(element.className).toContain('pr-4');
-    expect(element.className).not.toContain('pr-8');
+    expect(element.className).toContain('pl-2');
+    expect(element.className).toContain('pr-3');
   });
 
   it('exposes toggle, title and disabled getters', () => {

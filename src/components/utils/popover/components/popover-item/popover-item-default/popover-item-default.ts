@@ -326,7 +326,7 @@ export class PopoverItemDefault extends PopoverItem {
 
     return twMerge(
       css.item,
-      !isInline && !isNestedInline && 'pl-2 pr-4',
+      !isInline && !isNestedInline && 'pl-2 pr-3',
       isInline && cssInline.item,
       isNestedInline && cssNestedInline.item,
       this.params.isDisabled && css.itemDisabled

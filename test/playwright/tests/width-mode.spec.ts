@@ -74,14 +74,14 @@ test.describe('Editor width mode', () => {
     expect(cssVar).toBe('800px');
   });
 
-  test('should apply none CSS variable when defaultWidth is full', async ({ page }) => {
+  test('should apply 100% CSS variable when defaultWidth is full', async ({ page }) => {
     await createBlok(page, { defaultWidth: 'full' });
     const wrapper = page.locator(BLOK_INTERFACE_SELECTOR);
     const cssVar = await wrapper.evaluate((el: HTMLElement) =>
       el.style.getPropertyValue('--blok-content-width').trim()
     );
 
-    expect(cssVar).toBe('none');
+    expect(cssVar).toBe('100%');
   });
 
   test('editor.width.toggle() should switch from narrow to full', async ({ page }) => {
@@ -94,7 +94,7 @@ test.describe('Editor width mode', () => {
       el.style.getPropertyValue('--blok-content-width').trim()
     );
 
-    expect(cssVarAfterFirst).toBe('none');
+    expect(cssVarAfterFirst).toBe('100%');
 
     await page.evaluate(() => {
       window.blokWidthInstance?.width.toggle();
@@ -123,7 +123,7 @@ test.describe('Editor width mode', () => {
       el.style.getPropertyValue('--blok-content-width').trim()
     );
 
-    expect(cssVar).toBe('none');
+    expect(cssVar).toBe('100%');
   });
 
   test('onWidthChange callback should be called with mode and value on toggle', async ({ page }) => {
@@ -148,6 +148,6 @@ test.describe('Editor width mode', () => {
 
     const result = await page.evaluate(() => window.__widthChangeResult);
 
-    expect(result).toStrictEqual({ mode: 'full', value: 'none' });
+    expect(result).toStrictEqual({ mode: 'full', value: '100%' });
   });
 });

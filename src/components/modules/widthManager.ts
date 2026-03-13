@@ -1,7 +1,7 @@
 import { Module } from '../__module';
 
 const DEFAULT_NARROW_WIDTH = '650px';
-const DEFAULT_FULL_WIDTH = 'none';
+const DEFAULT_FULL_WIDTH = '100%';
 const CSS_VAR = '--blok-content-width';
 
 /**

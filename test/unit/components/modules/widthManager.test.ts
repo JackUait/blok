@@ -47,10 +47,10 @@ describe('WidthManager', () => {
       expect(wrapper.style.getPropertyValue('--blok-content-width')).toBe('800px');
     });
 
-    it('should set --blok-content-width to none when defaultWidth is full', () => {
+    it('should set --blok-content-width to 100% when defaultWidth is full', () => {
       const { manager, wrapper } = createWidthManager({ defaultWidth: 'full' });
       manager.prepare();
-      expect(wrapper.style.getPropertyValue('--blok-content-width')).toBe('none');
+      expect(wrapper.style.getPropertyValue('--blok-content-width')).toBe('100%');
     });
 
     it('should use custom fullWidth when provided', () => {
@@ -71,7 +71,7 @@ describe('WidthManager', () => {
       const { manager, wrapper } = createWidthManager({ defaultWidth: 'narrow' });
       manager.prepare();
       manager.setWidth('full');
-      expect(wrapper.style.getPropertyValue('--blok-content-width')).toBe('none');
+      expect(wrapper.style.getPropertyValue('--blok-content-width')).toBe('100%');
     });
 
     it('should update --blok-content-width when switching to narrow', () => {
@@ -86,7 +86,7 @@ describe('WidthManager', () => {
       const { manager } = createWidthManager({ onWidthChange });
       manager.prepare();
       manager.setWidth('full');
-      expect(onWidthChange).toHaveBeenCalledWith('full', 'none');
+      expect(onWidthChange).toHaveBeenCalledWith('full', '100%');
     });
 
     it('should not call onWidthChange when setting the same mode', () => {

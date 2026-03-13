@@ -354,6 +354,7 @@ export class PopoverItemDefault extends PopoverItem {
   private getChevronClass(isInline: boolean): string {
     return twMerge(
       css.icon,
+      'w-5 h-5 bg-transparent',
       isInline && 'rotate-90'
     );
   }

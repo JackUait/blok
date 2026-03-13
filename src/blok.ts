@@ -85,10 +85,17 @@ class Blok {
     const blok = new Core(configuration);
 
     /**
-     * Initialize destroy with a no-op function that will be replaced in exportAPI
+     * Flag to track if destroy() was called before isReady resolved
      */
+    let pendingDestroy = false;
 
-    this.destroy = (): void => {};
+    /**
+     * Initialize destroy to set the pendingDestroy flag.
+     * Will be replaced with the real implementation in exportAPI.
+     */
+    this.destroy = (): void => {
+      pendingDestroy = true;
+    };
 
     /**
      * We need to export isReady promise in the constructor
@@ -96,6 +103,48 @@ class Blok {
      * @type {Promise<void>}
      */
     this.isReady = blok.isReady.then(() => {
+      if (pendingDestroy) {
+        Object.values(blok.moduleInstances)
+          .forEach((moduleInstance) => {
+            if (moduleInstance === undefined || moduleInstance === null) {
+              return;
+            }
+
+            if (isFunction((moduleInstance as { markDestroyed?: () => void }).markDestroyed)) {
+              (moduleInstance as { markDestroyed: () => void }).markDestroyed();
+            }
+          });
+
+        Object.values(blok.moduleInstances)
+          .forEach((moduleInstance) => {
+            if (moduleInstance === undefined || moduleInstance === null) {
+              return;
+            }
+
+            if (isFunction((moduleInstance as { destroy?: () => void }).destroy)) {
+              (moduleInstance as { destroy: () => void }).destroy();
+            }
+
+            const listeners = (moduleInstance as { listeners?: { removeAll?: () => void } }).listeners;
+
+            if (listeners && isFunction(listeners.removeAll)) {
+              listeners.removeAll();
+            }
+          });
+
+        destroyTooltip();
+
+        const thisKeys = Object.keys(this) as Array<keyof Blok>;
+        for (const field of thisKeys) {
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- needed to clear instance properties
+          delete this[field];
+        }
+
+        Object.setPrototypeOf(this, null);
+
+        return;
+      }
+
       this.exportAPI(blok);
       /**
        * @todo pass API as an argument. It will allow to use Blok's API when blok is ready

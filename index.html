@@ -722,12 +722,17 @@
     window.blok = blok;
 
     /**
-     * Reinitialize editor with current state
+     * Reinitialize editor with current state.
+     * Debounced to prevent zombie instances when toggling multiple checkboxes rapidly.
      */
-    async function reinitEditor() {
-      blok.destroy();
-      blok = new Blok(buildConfig());
-      window.blok = blok;
+    let reinitTimeout;
+    function reinitEditor() {
+      clearTimeout(reinitTimeout);
+      reinitTimeout = setTimeout(() => {
+        blok.destroy();
+        blok = new Blok(buildConfig());
+        window.blok = blok;
+      }, 50);
     }
 
     /**

@@ -854,6 +854,87 @@ describe('Blok', () => {
     });
   });
 
+  describe('destroy before isReady', () => {
+    const createDeferred = (): { promise: Promise<void>; resolve: () => void } => {
+      let resolve!: () => void;
+      const promise = new Promise<void>(r => { resolve = r; });
+
+      return { promise, resolve };
+    };
+
+    it('should tear down the instance when destroy() is called before isReady resolves', async () => {
+      const deferred = createDeferred();
+
+      // Temporarily override MockCore to use a pending promise
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      // Patch the constructor to use our deferred promise
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.isReady = deferredIsReady;
+        }
+      } as unknown as typeof coreModule.Core;
+
+      // Replace Core temporarily
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      // Call destroy before isReady resolves
+      blok.destroy();
+
+      // Now resolve isReady
+      deferred.resolve();
+      await blok.isReady;
+
+      // The instance should be fully torn down (prototype set to null)
+      expect(Object.getPrototypeOf(blok)).toBeNull();
+
+      // Restore original Core
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should not call exportAPI when pendingDestroy is true', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.isReady = deferredIsReady;
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+      const exportAPISpy = vi.spyOn(blok, 'exportAPI');
+
+      // Call destroy before isReady resolves
+      blok.destroy();
+
+      // Now resolve isReady
+      deferred.resolve();
+      await blok.isReady;
+
+      // exportAPI should NOT have been called since we destroyed before ready
+      expect(exportAPISpy).not.toHaveBeenCalled();
+
+      // Restore original Core
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+  });
+
   describe('static version', () => {
     it('should expose version as static property', () => {
       expect(Blok.version).toBeDefined();

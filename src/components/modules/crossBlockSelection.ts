@@ -310,8 +310,14 @@ export class CrossBlockSelection extends Module {
     }
 
     if (this.firstSelectedBlock && targetBlock === this.firstSelectedBlock) {
-      relatedBlock.selected = false;
-      targetBlock.selected = false;
+      const rIndex = BlockManager.blocks.indexOf(relatedBlock);
+      const tIndex = BlockManager.blocks.indexOf(targetBlock);
+      const start = Math.min(rIndex, tIndex);
+      const end = Math.max(rIndex, tIndex);
+
+      for (const i of Array.from({ length: end - start + 1 }, (_, idx) => start + idx)) {
+        BlockManager.blocks[i].selected = false;
+      }
 
       BlockSelection.clearCache();
 

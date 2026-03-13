@@ -410,6 +410,45 @@ describe('CrossBlockSelection', () => {
       expect(blockSelectionClearCache).toHaveBeenCalled();
     });
 
+    it('deselects all intermediate blocks when fast-returning to the first selected block', () => {
+      /**
+       * Simulate 5 blocks: user drags from B0 to B3 (selecting B0-B3),
+       * then fast-drags back to B0 skipping B1 and B2.
+       */
+      const extraBlock = createBlockStub();
+
+      blocks.push(extraBlock);
+      redactor.appendChild(extraBlock.holder);
+
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+
+      (blokState.BlockManager as unknown as { blocks: BlockWithSelection[] }).blocks = blocks;
+
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[3]);
+
+      blocks[0].selected = true;
+      blocks[1].selected = true;
+      blocks[2].selected = true;
+      blocks[3].selected = true;
+
+      /**
+       * Fast mouse movement: mouseover fires with target=B0, related=B3,
+       * skipping B1 and B2 entirely.
+       */
+      const event = {
+        relatedTarget: blocks[3].holder,
+        target: blocks[0].holder,
+      } as unknown as MouseEvent;
+
+      accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
+
+      expect(blocks[0].selected).toBe(false);
+      expect(blocks[1].selected).toBe(false);
+      expect(blocks[2].selected).toBe(false);
+      expect(blocks[3].selected).toBe(false);
+    });
+
     it('delegates range toggling to toggleBlocksSelectedState for intermediate blocks', () => {
       const toggleSpy = vi.spyOn(
         crossBlockSelection as unknown as {

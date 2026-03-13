@@ -23,6 +23,7 @@ type BlockSelectionModuleMock = {
   allBlocksSelected: boolean;
   selectBlockByIndex: Mock<(index: number) => void>;
   unSelectBlockByIndex: Mock<(index: number) => void>;
+  disableNavigationMode: Mock<() => void>;
   selectedBlocks: BlockType[];
 };
 
@@ -87,6 +88,7 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     allBlocksSelected: false,
     selectBlockByIndex: vi.fn<(index: number) => void>(),
     unSelectBlockByIndex: vi.fn<(index: number) => void>(),
+    disableNavigationMode: vi.fn<() => void>(),
     selectedBlocks: [],
   };
 
@@ -669,32 +671,40 @@ describe('RectangleSelection', () => {
     const {
       rectangleSelection,
       blockManager,
-      blockContent,
+      blokWrapper,
+      modules,
     } = createRectangleSelection();
 
-    const blockHolder = document.createElement('div');
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
 
-    blockHolder.appendChild(blockContent);
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 500,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 500,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const blockHolder = document.createElement('div');
 
     const block = {
       holder: blockHolder,
     } as unknown as BlockType;
 
     blockManager.blocks.push(block);
-    blockManager.lastBlock = {
-      holder: blockHolder,
-    };
 
     blockManager.getBlockByChildNode.mockReturnValue(block);
 
-    Object.defineProperty(document.body, 'offsetWidth', {
-      configurable: true,
-      value: 800,
-    });
-
     const internal = rectangleSelection as unknown as {
       mouseY: number;
-      genInfoForMouseSelection: () => { index: number; leftPos: number; rightPos: number };
+      genInfoForMouseSelection: () => { index: number | undefined };
     };
 
     internal.mouseY = 300;
@@ -704,8 +714,6 @@ describe('RectangleSelection', () => {
     const result = internal.genInfoForMouseSelection();
 
     expect(result.index).toBe(0);
-    expect(result.leftPos).toBe(200);
-    expect(result.rightPos).toBe(600);
 
     elementFromPointSpy.mockRestore();
   });
@@ -731,11 +739,9 @@ describe('RectangleSelection', () => {
     internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
 
     const genInfoSpy = vi.spyOn(
-      rectangleSelection as unknown as { genInfoForMouseSelection: () => { rightPos: number; leftPos: number; index: number } },
+      rectangleSelection as unknown as { genInfoForMouseSelection: () => { index: number } },
       'genInfoForMouseSelection'
     ).mockReturnValue({
-      leftPos: 0,
-      rightPos: 500,
       index: 1,
     });
     const trySelectSpy = vi.spyOn(
@@ -788,11 +794,9 @@ describe('RectangleSelection', () => {
     internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
 
     const genInfoSpy = vi.spyOn(
-      rectangleSelection as unknown as { genInfoForMouseSelection: () => { rightPos: number; leftPos: number; index: number | undefined } },
+      rectangleSelection as unknown as { genInfoForMouseSelection: () => { index: number | undefined } },
       'genInfoForMouseSelection'
     ).mockReturnValue({
-      leftPos: 0,
-      rightPos: 500,
       index: undefined,
     });
     const trySelectSpy = vi.spyOn(
@@ -1297,13 +1301,21 @@ describe('RectangleSelection', () => {
       const {
         rectangleSelection,
         blockManager,
-        blockContent,
+        blokWrapper,
+        modules,
       } = createRectangleSelection();
+
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+      }
+
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
+        x: 0, y: 0, toJSON: () => ({}),
+      });
 
       const tableHolder = document.createElement('div');
       const childHolder = document.createElement('div');
-
-      tableHolder.appendChild(blockContent);
 
       const tableBlock = {
         id: 'table-1',
@@ -1318,18 +1330,12 @@ describe('RectangleSelection', () => {
       } as unknown as BlockType;
 
       blockManager.blocks.push(tableBlock, childBlock);
-      blockManager.lastBlock = { holder: tableHolder };
 
       blockManager.getBlockByChildNode.mockReturnValue(childBlock);
 
-      Object.defineProperty(document.body, 'offsetWidth', {
-        configurable: true,
-        value: 800,
-      });
-
       const internal = rectangleSelection as unknown as {
         mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+        genInfoForMouseSelection: () => { index: number | undefined };
       };
 
       internal.mouseY = 300;
@@ -1349,12 +1355,20 @@ describe('RectangleSelection', () => {
       const {
         rectangleSelection,
         blockManager,
-        blockContent,
+        blokWrapper,
+        modules,
       } = createRectangleSelection();
 
-      const blockHolder = document.createElement('div');
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+      }
 
-      blockHolder.appendChild(blockContent);
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
+        x: 0, y: 0, toJSON: () => ({}),
+      });
+
+      const blockHolder = document.createElement('div');
 
       const rootBlock = {
         id: 'paragraph-1',
@@ -1363,18 +1377,12 @@ describe('RectangleSelection', () => {
       } as unknown as BlockType;
 
       blockManager.blocks.push(rootBlock);
-      blockManager.lastBlock = { holder: blockHolder };
 
       blockManager.getBlockByChildNode.mockReturnValue(rootBlock);
 
-      Object.defineProperty(document.body, 'offsetWidth', {
-        configurable: true,
-        value: 800,
-      });
-
       const internal = rectangleSelection as unknown as {
         mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+        genInfoForMouseSelection: () => { index: number | undefined };
       };
 
       internal.mouseY = 300;
@@ -1393,8 +1401,18 @@ describe('RectangleSelection', () => {
       const {
         rectangleSelection,
         blockManager,
-        blockContent,
+        blokWrapper,
+        modules,
       } = createRectangleSelection();
+
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+      }
+
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
+        x: 0, y: 0, toJSON: () => ({}),
+      });
 
       // Set up blocks: [paragraph, table, cellParagraph1, cellParagraph2, paragraph2]
       const paragraphHolder = document.createElement('div');
@@ -1402,8 +1420,6 @@ describe('RectangleSelection', () => {
       const cellParagraph1Holder = document.createElement('div');
       const cellParagraph2Holder = document.createElement('div');
       const paragraph2Holder = document.createElement('div');
-
-      tableHolder.appendChild(blockContent);
 
       const paragraph = {
         id: 'p-1',
@@ -1436,18 +1452,12 @@ describe('RectangleSelection', () => {
       } as unknown as BlockType;
 
       blockManager.blocks.push(paragraph, table, cellParagraph1, cellParagraph2, paragraph2);
-      blockManager.lastBlock = { holder: paragraph2Holder };
 
       blockManager.getBlockByChildNode.mockReturnValue(cellParagraph1);
 
-      Object.defineProperty(document.body, 'offsetWidth', {
-        configurable: true,
-        value: 800,
-      });
-
       const internal = rectangleSelection as unknown as {
         mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+        genInfoForMouseSelection: () => { index: number | undefined };
       };
 
       internal.mouseY = 300;
@@ -1467,22 +1477,22 @@ describe('RectangleSelection', () => {
       const {
         rectangleSelection,
         blockManager,
-        blockContent,
+        blokWrapper,
+        modules,
       } = createRectangleSelection();
 
-      const blockHolder = document.createElement('div');
+      if (modules.UI) {
+        modules.UI.nodes.redactor = blokWrapper;
+      }
 
-      blockHolder.appendChild(blockContent);
-      blockManager.lastBlock = { holder: blockHolder };
-
-      Object.defineProperty(document.body, 'offsetWidth', {
-        configurable: true,
-        value: 800,
+      vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+        top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
+        x: 0, y: 0, toJSON: () => ({}),
       });
 
       const internal = rectangleSelection as unknown as {
         mouseY: number;
-        genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+        genInfoForMouseSelection: () => { index: number | undefined };
       };
 
       internal.mouseY = 300;
@@ -1534,13 +1544,21 @@ describe('RectangleSelection', () => {
         const {
           rectangleSelection,
           blockManager,
-          blockContent,
+          blokWrapper,
+          modules,
         } = createRectangleSelection();
+
+        if (modules.UI) {
+          modules.UI.nodes.redactor = blokWrapper;
+        }
+
+        vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+          top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
+          x: 0, y: 0, toJSON: () => ({}),
+        });
 
         const toggleHolder = document.createElement('div');
         const childHolder = document.createElement('div');
-
-        toggleHolder.appendChild(blockContent);
 
         const toggleBlock = {
           id: 'toggle-1',
@@ -1555,17 +1573,11 @@ describe('RectangleSelection', () => {
         } as unknown as BlockType;
 
         blockManager.blocks.push(toggleBlock, childBlock);
-        blockManager.lastBlock = { holder: toggleHolder };
         blockManager.getBlockByChildNode.mockReturnValue(childBlock);
-
-        Object.defineProperty(document.body, 'offsetWidth', {
-          configurable: true,
-          value: 800,
-        });
 
         const internal = rectangleSelection as unknown as {
           mouseY: number;
-          genInfoForMouseSelection: () => { index: number | undefined; leftPos: number; rightPos: number };
+          genInfoForMouseSelection: () => { index: number | undefined };
         };
 
         internal.mouseY = 300;
@@ -1699,14 +1711,22 @@ describe('RectangleSelection', () => {
         const {
           rectangleSelection,
           blockManager,
-          blockContent,
+          blokWrapper,
+          modules,
         } = createRectangleSelection();
+
+        if (modules.UI) {
+          modules.UI.nodes.redactor = blokWrapper;
+        }
+
+        vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+          top: 0, bottom: 500, left: 0, right: 800, width: 800, height: 500,
+          x: 0, y: 0, toJSON: () => ({}),
+        });
 
         // Root toggle has wide holder, child has narrow holder
         const rootHolder = document.createElement('div');
         const childHolder = document.createElement('div');
-
-        rootHolder.appendChild(blockContent);
 
         rootHolder.getBoundingClientRect = vi.fn(() => ({
           top: 50, bottom: 100, left: 100, right: 700, width: 600, height: 50,
@@ -1730,14 +1750,8 @@ describe('RectangleSelection', () => {
         } as unknown as BlockType;
 
         blockManager.blocks.push(rootBlock, childBlock);
-        blockManager.lastBlock = { holder: rootHolder };
         blockManager.getBlockByChildNode.mockReturnValue(childBlock);
         blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
-
-        Object.defineProperty(document.body, 'offsetWidth', {
-          configurable: true,
-          value: 800,
-        });
 
         const internal = rectangleSelection as unknown as {
           mousedown: boolean;
@@ -1961,6 +1975,202 @@ describe('RectangleSelection', () => {
       expect(internal.stackOfSelected).toEqual([3]);
       expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
     });
+  });
+
+  it('disables navigation mode when starting a new selection', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Mock editor bounds to allow selection
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 500,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 500,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const startTarget = document.createElement('div');
+
+    blokWrapper.appendChild(startTarget);
+
+    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+
+    rectangleSelection.startSelection(120, 240);
+
+    expect(blockSelection.disableNavigationMode).toHaveBeenCalled();
+
+    elementFromPointSpy.mockRestore();
+  });
+
+  it('uses redactor center X instead of document.body center for elementFromPoint in genInfoForMouseSelection', () => {
+    const {
+      rectangleSelection,
+      blockManager,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    // Set blokWrapper as the redactor in the UI nodes
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    // Simulate editor offset to the right (e.g., in a sidebar layout)
+    // Editor occupies x: 600-1000, so its center is 800
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 500,
+      left: 600,
+      right: 1000,
+      width: 400,
+      height: 500,
+      x: 600,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    // document.body is 1200px wide, so body center = 600 (NOT the editor center of 800)
+    Object.defineProperty(document.body, 'offsetWidth', {
+      configurable: true,
+      value: 1200,
+    });
+
+    const blockHolder = document.createElement('div');
+    const block = { id: 'b0', holder: blockHolder, parentId: null } as unknown as BlockType;
+
+    blockManager.blocks.push(block);
+    blockManager.getBlockByChildNode.mockReturnValue(block);
+
+    blockHolder.getBoundingClientRect = vi.fn(() => ({
+      top: 0, bottom: 50, left: 600, right: 1000, width: 400, height: 50,
+      x: 600, y: 0, toJSON: () => ({}),
+    }));
+
+    blockManager.resolveToRootBlock.mockReturnValue(block);
+    blockManager.getBlockByIndex.mockReturnValue(block);
+
+    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(blockHolder);
+
+    const internal = rectangleSelection as unknown as {
+      mouseY: number;
+      genInfoForMouseSelection: () => { index: number | undefined };
+    };
+
+    internal.mouseY = 25;
+
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(0);
+
+    internal.genInfoForMouseSelection();
+
+    // The X coordinate passed to elementFromPoint should be the redactor's center (800),
+    // NOT document.body.offsetWidth / 2 (600)
+    expect(elementFromPointSpy).toHaveBeenCalledWith(800, 25);
+
+    elementFromPointSpy.mockRestore();
+  });
+
+  it('does not deselect previously selected blocks when Shift+dragging a new range', () => {
+    const {
+      rectangleSelection,
+      blockSelection,
+      blockManager,
+      blokWrapper,
+      modules,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    if (modules.UI) {
+      modules.UI.nodes.redactor = blokWrapper;
+    }
+
+    vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 1000,
+      left: 0,
+      right: 800,
+      width: 800,
+      height: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    // Create 6 blocks with sequential vertical positions (50px each)
+    for (let i = 0; i < 6; i++) {
+      const holder = document.createElement('div');
+
+      holder.getBoundingClientRect = vi.fn(() => ({
+        top: i * 50, bottom: (i + 1) * 50, left: 0, right: 800, width: 800, height: 50,
+        x: 0, y: i * 50, toJSON: () => ({}),
+      }));
+      blockManager.blocks.push({ id: `b${i}`, holder, parentId: null, selected: false } as unknown as BlockType);
+    }
+
+    const internal = rectangleSelection as unknown as {
+      stackOfSelected: number[];
+      rectCrossesBlocks: boolean;
+      anchorBlockIndex: number | null;
+      trySelectNextBlock: (index: number) => void;
+    };
+
+    internal.rectCrossesBlocks = true;
+
+    // First drag: select blocks 0-2
+    internal.trySelectNextBlock(0);
+    internal.trySelectNextBlock(2);
+    expect(internal.stackOfSelected).toEqual([0, 1, 2]);
+
+    // Simulate mouseup (endSelection)
+    rectangleSelection.endSelection();
+
+    // Mark blocks 0-2 as selected (simulating what BlockSelection would have done)
+    for (let i = 0; i < 3; i++) {
+      (blockManager.blocks[i] as unknown as { selected: boolean }).selected = true;
+    }
+
+    blockSelection.selectBlockByIndex.mockClear();
+    blockSelection.unSelectBlockByIndex.mockClear();
+
+    // Second drag with Shift: start new selection at block 4
+    const startTarget = document.createElement('div');
+
+    blokWrapper.appendChild(startTarget);
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(startTarget);
+    rectangleSelection.startSelection(120, 240, true);
+
+    // Drag over blocks 4-5
+    internal.rectCrossesBlocks = true;
+    internal.trySelectNextBlock(4);
+    internal.trySelectNextBlock(5);
+
+    // Blocks 4-5 should be selected in the current drag
+    expect(internal.stackOfSelected).toEqual([4, 5]);
+    expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(4);
+    expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(5);
+
+    // Blocks 0-2 should NOT have been deselected
+    expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalledWith(0);
+    expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalledWith(1);
+    expect(blockSelection.unSelectBlockByIndex).not.toHaveBeenCalledWith(2);
   });
 
 });

@@ -172,6 +172,7 @@ export class RectangleSelection extends Module {
      */
     if (!startsInsideToolbar && !shiftKey) {
       this.Blok.BlockSelection.allBlocksSelected = false;
+      this.Blok.BlockSelection.disableNavigationMode();
       this.clearSelection();
       this.stackOfSelected = [];
       this.anchorBlockIndex = null;
@@ -215,6 +216,7 @@ export class RectangleSelection extends Module {
     this.startX = 0;
     this.startY = 0;
     this.anchorBlockIndex = null;
+    this.stackOfSelected = [];
     if (this.overlayRectangle !== null) {
       this.overlayRectangle.style.display = 'none';
     }
@@ -594,30 +596,24 @@ export class RectangleSelection extends Module {
 
   /**
    * Collects information needed to determine the behavior of the rectangle
-   * For page-wide selection, we check blocks at the center X position but at the actual mouse Y position
-   * @returns {object} index - index next Block, leftPos - start of left border of Block, rightPos - right border
+   * For page-wide selection, we check blocks at the redactor's center X position but at the actual mouse Y position
+   * @returns {object} index - index of the Block at the current mouse Y position
    */
-  private genInfoForMouseSelection(): {index: number | undefined; leftPos: number; rightPos: number} {
-    const widthOfRedactor = document.body.offsetWidth;
-    const centerOfRedactor = widthOfRedactor / 2;
+  private genInfoForMouseSelection(): {index: number | undefined} {
+    const { UI } = this.Blok;
+    const redactor = UI.nodes.redactor;
+    const redactorRect = redactor.getBoundingClientRect();
+    const centerOfRedactor = redactorRect.left + redactorRect.width / 2;
     const scrollTop = this.getScrollTop();
     const y = this.mouseY - scrollTop;
 
     // For page-wide selection: check what block is at the center X, but at the mouse's Y position
     // This allows selection to work even when mouse is in the left/right margins
     const elementUnderMouse = document.elementFromPoint(centerOfRedactor, y);
-    const lastBlockHolder = this.Blok.BlockManager.lastBlock?.holder;
-    const contentElement = lastBlockHolder?.querySelector(createSelector(DATA_ATTR.elementContent));
-    const contentWidth = contentElement ? Number.parseInt(window.getComputedStyle(contentElement).width, 10) : 0;
-    const centerOfBlock = contentWidth / 2;
-    const leftPos = centerOfRedactor - centerOfBlock;
-    const rightPos = centerOfRedactor + centerOfBlock;
 
     if (!elementUnderMouse) {
       return {
         index: undefined,
-        leftPos,
-        rightPos,
       };
     }
     const blockInCurrentPos = this.Blok.BlockManager.getBlockByChildNode(elementUnderMouse);
@@ -628,8 +624,6 @@ export class RectangleSelection extends Module {
 
     return {
       index,
-      leftPos,
-      rightPos,
     };
   }
 

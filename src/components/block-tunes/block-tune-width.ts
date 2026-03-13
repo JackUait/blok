@@ -24,27 +24,16 @@ export class WidthTune implements BlockTune {
   public render(): MenuConfig {
     const current = this.api.width.get();
 
-    return [
-      {
-        name: 'width-narrow',
-        icon: IconWidthNarrow,
-        title: this.api.i18n.t('blockSettings.widthNarrow'),
-        isActive: current === 'narrow',
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.api.width.set('narrow');
-        },
+    return {
+      name: 'width-full',
+      icon: current === 'full' ? IconWidthFull : IconWidthNarrow,
+      title: this.api.i18n.t('blockSettings.widthFull'),
+      isActive: current === 'full',
+      toggle: true,
+      closeOnActivate: true,
+      onActivate: (): void => {
+        this.api.width.toggle();
       },
-      {
-        name: 'width-full',
-        icon: IconWidthFull,
-        title: this.api.i18n.t('blockSettings.widthFull'),
-        isActive: current === 'full',
-        closeOnActivate: true,
-        onActivate: (): void => {
-          this.api.width.set('full');
-        },
-      },
-    ];
+    };
   }
 }

@@ -99,10 +99,12 @@ export const getConvertibleToolsForBlock = async (block: BlockAPI, allBlockTools
       return true;
     });
 
-    result.push({
-      ...tool,
-      toolbox: actualToolboxItems,
-    } as BlockToolAdapter);
+    if (actualToolboxItems.length > 0) {
+      result.push({
+        ...tool,
+        toolbox: actualToolboxItems,
+      } as BlockToolAdapter);
+    }
 
     return result;
   }, [] as BlockToolAdapter[]);

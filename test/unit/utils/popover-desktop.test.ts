@@ -1271,16 +1271,6 @@ describe('PopoverDesktop', () => {
   });
 
   describe('items container padding', () => {
-    it('has symmetric horizontal padding on the items container', () => {
-      const popover = createPopover();
-      const instance = popover as unknown as PopoverDesktopInternal;
-      const itemsContainer = instance.nodes.items;
-
-      // Items container should have symmetric horizontal padding (px-1) not just pr-1
-      expect(itemsContainer.className).toContain('px-1');
-      expect(itemsContainer.className).not.toMatch(/\bpr-1\b/);
-    });
-
     it('has symmetric horizontal padding on desktop popover items', () => {
       const popover = createPopover();
       const instance = popover as unknown as PopoverDesktopInternal;

@@ -894,16 +894,22 @@ describe('RectangleSelection', () => {
       rectCrossesBlocks: boolean;
       anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
+      startY: number;
+      mouseY: number;
     };
 
     internal.rectCrossesBlocks = true;
 
     // Start selection at block 0, expand to 1
+    internal.startY = 25;  // anchor at block 0 center (0-50)
+    internal.mouseY = 25;
     internal.trySelectNextBlock(0);
+    internal.mouseY = 75;  // block 1 center (50-100)
     internal.trySelectNextBlock(1);
     blockSelection.selectBlockByIndex.mockClear();
 
     // Jump to block 4 (skipping 2, 3)
+    internal.mouseY = 225;  // block 4 center (200-250)
     internal.trySelectNextBlock(4);
 
     expect(internal.stackOfSelected).toEqual([0, 1, 2, 3, 4]);
@@ -935,19 +941,27 @@ describe('RectangleSelection', () => {
       rectCrossesBlocks: boolean;
       anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
+      startY: number;
+      mouseY: number;
     };
 
     internal.rectCrossesBlocks = true;
 
     // Build up selection from 0 to 3
+    internal.startY = 25;  // anchor at block 0 center (0-50)
+    internal.mouseY = 25;
     internal.trySelectNextBlock(0);
+    internal.mouseY = 75;  // block 1 center (50-100)
     internal.trySelectNextBlock(1);
+    internal.mouseY = 125;  // block 2 center (100-150)
     internal.trySelectNextBlock(2);
+    internal.mouseY = 175;  // block 3 center (150-200)
     internal.trySelectNextBlock(3);
     blockSelection.selectBlockByIndex.mockClear();
     blockSelection.unSelectBlockByIndex.mockClear();
 
     // Shrink back to 1
+    internal.mouseY = 75;  // block 1 center
     internal.trySelectNextBlock(1);
 
     expect(internal.stackOfSelected).toEqual([0, 1]);
@@ -1614,11 +1628,17 @@ describe('RectangleSelection', () => {
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
           stackOfSelected: number[];
+          startY: number;
+          mouseY: number;
         };
 
         internal.rectCrossesBlocks = true;
 
+        // block0: 0-50, block1: 50-80, block2: 0-0 (hidden), block3: 80-130
+        internal.startY = 25;   // anchor at block 0 center
+        internal.mouseY = 25;
         internal.trySelectNextBlock(0);
+        internal.mouseY = 105;  // block 3 center (80+25=105)
         internal.trySelectNextBlock(3);
 
         // Block 2 has zero height and should NOT be selected
@@ -1649,11 +1669,17 @@ describe('RectangleSelection', () => {
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
           stackOfSelected: number[];
+          startY: number;
+          mouseY: number;
         };
 
         internal.rectCrossesBlocks = true;
 
+        // block0: 0-50, block1: 50-80, block2: 500-550 (far below), block3: 80-130
+        internal.startY = 25;   // anchor at block 0 center
+        internal.mouseY = 25;
         internal.trySelectNextBlock(0);
+        internal.mouseY = 105;  // block 3 center (80+25=105)
         internal.trySelectNextBlock(3);
 
         // Visual range: top=0 (block 0) to bottom=130 (block 3)
@@ -1685,6 +1711,8 @@ describe('RectangleSelection', () => {
           anchorBlockIndex: number | null;
           trySelectNextBlock: (index: number) => void;
           stackOfSelected: number[];
+          startY: number;
+          mouseY: number;
         };
 
         internal.rectCrossesBlocks = true;
@@ -1694,7 +1722,11 @@ describe('RectangleSelection', () => {
         // so trySelectNextBlock(1) selects [0, 1] — children not selected (BUG)
         // With new code: genInfoForMouseSelection returns 3 directly,
         // trySelectNextBlock(3) uses visual positions to select [0, 1, 2, 3]
+        // block0: 0-50, block1: 50-80, block2: 80-130, block3: 130-180, block4: 180-230
+        internal.startY = 25;   // anchor at block 0 center
+        internal.mouseY = 25;
         internal.trySelectNextBlock(0);
+        internal.mouseY = 155;  // block 3 center (130+25=155)
         internal.trySelectNextBlock(3);
 
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
@@ -1703,6 +1735,80 @@ describe('RectangleSelection', () => {
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
         // Block 4 is outside the visual range
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
+      });
+    });
+
+    describe('trySelectNextBlock constrains selection to rubber band coordinates', () => {
+      it('does not select blocks outside the rubber band Y range even if block holders overlap', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        /**
+         * Layout: blocks with overlapping holders (8px padding overlap, realistic scenario)
+         *
+         *   Block 0 (header):     top=80,   bottom=186
+         *   Block 1 (paragraph):  top=178,  bottom=254   ← overlaps block 0 by 8px
+         *   Block 2 (header):     top=246,  bottom=332   ← overlaps block 1 by 8px
+         *   Block 3 (header):     top=324,  bottom=429   ← overlaps block 2 by 8px
+         *   Block 4 (header):     top=421,  bottom=507   ← overlaps block 3 by 8px
+         *   Block 5 (header):     top=499,  bottom=569   ← overlaps block 4 by 8px
+         *   Block 6 (header):     top=561,  bottom=622   ← overlaps block 5 by 8px
+         *
+         * Rubber band: startY=300, mouseY=500  (viewport Y coords, scrollY=0)
+         *   → visually covers blocks 2, 3, 4 (and partially 5 at top=499)
+         *   → should NOT select block 1 (bottom=254 < 300) or block 6 (top=561 > 500)
+         *
+         * Bug: the old algorithm used anchorBlock.holder.top (246) and
+         * currentBlock.holder.bottom (569) as the range, which extends beyond
+         * the rubber band and catches blocks 1 and 6.
+         */
+        const block0 = createBlockWithPosition('b0', 80, 106);   // top=80,  bottom=186
+        const block1 = createBlockWithPosition('b1', 178, 76);   // top=178, bottom=254
+        const block2 = createBlockWithPosition('b2', 246, 86);   // top=246, bottom=332
+        const block3 = createBlockWithPosition('b3', 324, 105);  // top=324, bottom=429
+        const block4 = createBlockWithPosition('b4', 421, 86);   // top=421, bottom=507
+        const block5 = createBlockWithPosition('b5', 499, 70);   // top=499, bottom=569
+        const block6 = createBlockWithPosition('b6', 561, 61);   // top=561, bottom=622
+
+        blockManager.blocks.push(block0, block1, block2, block3, block4, block5, block6);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          anchorBlockIndex: number | null;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        // Simulate the rubber band from Y=300 to Y=500 (page coordinates, no scroll)
+        internal.startY = 300;
+        internal.mouseY = 500;
+
+        // Anchor at block 2 (first block detected at Y=300, inside its bounds 246-332)
+        // Mouse moves to block 5 (at Y=500, inside its bounds 499-569)
+        internal.trySelectNextBlock(2);
+        internal.trySelectNextBlock(5);
+
+        // Blocks 2, 3, 4, 5 are within or overlap the rubber band [300, 500]
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(4);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(5);
+
+        // Block 1 (bottom=254) is entirely above the rubber band start (300) — must NOT be selected
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
+
+        // Block 6 (top=561) is entirely below the rubber band end (500) — must NOT be selected
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(6);
+
+        // Block 0 (bottom=186) is far above — must NOT be selected
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
       });
     });
 
@@ -1824,21 +1930,30 @@ describe('RectangleSelection', () => {
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
+        startY: number;
+        mouseY: number;
       };
 
       internal.rectCrossesBlocks = true;
 
-      // Expand down: 0, 1, 2, 3, 4
+      // Expand down: 0, 1, 2, 3, 4 — block i at i*50 to (i+1)*50, center = i*50+25
+      internal.startY = 25;  // anchor at block 0 center
+      internal.mouseY = 25;
       internal.trySelectNextBlock(0);
+      internal.mouseY = 75;
       internal.trySelectNextBlock(1);
+      internal.mouseY = 125;
       internal.trySelectNextBlock(2);
+      internal.mouseY = 175;
       internal.trySelectNextBlock(3);
+      internal.mouseY = 225;
       internal.trySelectNextBlock(4);
 
       blockSelection.selectBlockByIndex.mockClear();
       blockSelection.unSelectBlockByIndex.mockClear();
 
       // Shrink back to 2
+      internal.mouseY = 125;
       internal.trySelectNextBlock(2);
 
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(3);
@@ -1860,21 +1975,30 @@ describe('RectangleSelection', () => {
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
+        startY: number;
+        mouseY: number;
       };
 
       internal.rectCrossesBlocks = true;
 
-      // Expand up from 5: 5, 4, 3, 2, 1
+      // Expand up from 5: block i at i*50 to (i+1)*50, center = i*50+25
+      internal.startY = 275;  // anchor at block 5 center (250+25)
+      internal.mouseY = 275;
       internal.trySelectNextBlock(5);
+      internal.mouseY = 225;
       internal.trySelectNextBlock(4);
+      internal.mouseY = 175;
       internal.trySelectNextBlock(3);
+      internal.mouseY = 125;
       internal.trySelectNextBlock(2);
+      internal.mouseY = 75;
       internal.trySelectNextBlock(1);
 
       blockSelection.selectBlockByIndex.mockClear();
       blockSelection.unSelectBlockByIndex.mockClear();
 
       // Shrink to 3
+      internal.mouseY = 175;
       internal.trySelectNextBlock(3);
 
       expect(blockSelection.unSelectBlockByIndex).toHaveBeenCalledWith(1);
@@ -1895,21 +2019,31 @@ describe('RectangleSelection', () => {
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
+        startY: number;
+        mouseY: number;
       };
 
       internal.rectCrossesBlocks = true;
 
-      // Expand down 0->4
+      // Expand down 0->4 — block i at i*50 to (i+1)*50, center = i*50+25
+      internal.startY = 25;  // anchor at block 0 center
+      internal.mouseY = 25;
       internal.trySelectNextBlock(0);
+      internal.mouseY = 75;
       internal.trySelectNextBlock(1);
+      internal.mouseY = 125;
       internal.trySelectNextBlock(2);
+      internal.mouseY = 175;
       internal.trySelectNextBlock(3);
+      internal.mouseY = 225;
       internal.trySelectNextBlock(4);
 
       // Shrink to 2
+      internal.mouseY = 125;
       internal.trySelectNextBlock(2);
 
       // Expand again to 5
+      internal.mouseY = 275;
       internal.trySelectNextBlock(5);
 
       expect(internal.stackOfSelected).toEqual([0, 1, 2, 3, 4, 5]);
@@ -1929,19 +2063,26 @@ describe('RectangleSelection', () => {
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
+        startY: number;
+        mouseY: number;
       };
 
       internal.rectCrossesBlocks = true;
 
-      // Start at 3, expand down to 5
+      // Start at 3, expand down to 5 — block i at i*50 to (i+1)*50, center = i*50+25
+      internal.startY = 175;  // anchor at block 3 center (150+25)
+      internal.mouseY = 175;
       internal.trySelectNextBlock(3);
+      internal.mouseY = 225;
       internal.trySelectNextBlock(4);
+      internal.mouseY = 275;
       internal.trySelectNextBlock(5);
 
       blockSelection.selectBlockByIndex.mockClear();
       blockSelection.unSelectBlockByIndex.mockClear();
 
       // Shrink past anchor to 1
+      internal.mouseY = 75;
       internal.trySelectNextBlock(1);
 
       // Anchor stays at 3, selection flips direction
@@ -1966,10 +2107,15 @@ describe('RectangleSelection', () => {
         rectCrossesBlocks: boolean;
         anchorBlockIndex: number | null;
         trySelectNextBlock: (index: number) => void;
+        startY: number;
+        mouseY: number;
       };
 
       internal.rectCrossesBlocks = true;
 
+      // block 3 is at 150-200, center = 175
+      internal.startY = 175;
+      internal.mouseY = 175;
       internal.trySelectNextBlock(3);
 
       expect(internal.stackOfSelected).toEqual([3]);
@@ -2130,16 +2276,21 @@ describe('RectangleSelection', () => {
       rectCrossesBlocks: boolean;
       anchorBlockIndex: number | null;
       trySelectNextBlock: (index: number) => void;
+      startY: number;
+      mouseY: number;
     };
 
     internal.rectCrossesBlocks = true;
 
-    // First drag: select blocks 0-2
+    // First drag: select blocks 0-2 — block i at i*50 to (i+1)*50, center = i*50+25
+    internal.startY = 25;   // anchor at block 0 center
+    internal.mouseY = 25;
     internal.trySelectNextBlock(0);
+    internal.mouseY = 125;  // block 2 center (100+25)
     internal.trySelectNextBlock(2);
     expect(internal.stackOfSelected).toEqual([0, 1, 2]);
 
-    // Simulate mouseup (endSelection)
+    // Simulate mouseup (endSelection) — resets startY/mouseY to 0
     rectangleSelection.endSelection();
 
     // Mark blocks 0-2 as selected (simulating what BlockSelection would have done)
@@ -2150,7 +2301,7 @@ describe('RectangleSelection', () => {
     blockSelection.selectBlockByIndex.mockClear();
     blockSelection.unSelectBlockByIndex.mockClear();
 
-    // Second drag with Shift: start new selection at block 4
+    // Second drag with Shift: startSelection sets startY=240 (block 4 area: 200-250)
     const startTarget = document.createElement('div');
 
     blokWrapper.appendChild(startTarget);
@@ -2159,7 +2310,9 @@ describe('RectangleSelection', () => {
 
     // Drag over blocks 4-5
     internal.rectCrossesBlocks = true;
+    internal.mouseY = 225;  // block 4 center (200+25)
     internal.trySelectNextBlock(4);
+    internal.mouseY = 275;  // block 5 center (250+25)
     internal.trySelectNextBlock(5);
 
     // Blocks 4-5 should be selected in the current drag

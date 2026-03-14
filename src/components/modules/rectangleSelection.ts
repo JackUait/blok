@@ -682,8 +682,17 @@ export class RectangleSelection extends Module {
     const anchorRect = anchorBlock.holder.getBoundingClientRect();
     const currentRect = currentBlock.holder.getBoundingClientRect();
 
-    const minY = Math.min(anchorRect.top, currentRect.top);
-    const maxY = Math.max(anchorRect.bottom, currentRect.bottom);
+    /**
+     * Constrain the selection range to the actual rubber band coordinates.
+     * Without this, the range extends to the full bounding box of the anchor/current blocks,
+     * which can select blocks that are visually outside the rubber band rectangle.
+     */
+    const scrollTop = this.getScrollTop();
+    const rubberBandMinY = Math.min(this.startY, this.mouseY) - scrollTop;
+    const rubberBandMaxY = Math.max(this.startY, this.mouseY) - scrollTop;
+
+    const minY = Math.max(Math.min(anchorRect.top, currentRect.top), rubberBandMinY);
+    const maxY = Math.min(Math.max(anchorRect.bottom, currentRect.bottom), rubberBandMaxY);
 
     const expectedIndices = new Set<number>();
 

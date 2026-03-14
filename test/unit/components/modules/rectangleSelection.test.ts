@@ -1810,6 +1810,98 @@ describe('RectangleSelection', () => {
         // Block 0 (bottom=186) is far above — must NOT be selected
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
       });
+
+      it('does not select blocks whose X range does not overlap the rubber band X range', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        /**
+         * Layout: two blocks at the same vertical position but different horizontal positions.
+         *
+         *   Block 0: top=100, height=100 (bottom=200), left=500, right=700  ← RIGHT side, outside rubber band X
+         *   Block 1: top=100, height=100 (bottom=200), left=100, right=300  ← LEFT side, inside rubber band X
+         *
+         * Rubber band: startX=50, mouseX=350, startY=50, mouseY=250 (page coords, scrollX=0)
+         *   → X viewport range: [50, 350]  — overlaps block 1 (left=100, right=300) but NOT block 0 (left=500, right=700)
+         *   → Y viewport range: [50, 250]  — overlaps BOTH blocks (top=100, bottom=200)
+         *
+         * Expected: block 1 IS selected, block 0 is NOT selected.
+         * Bug: current code only checks Y, so block 0 gets selected despite being outside the rubber band horizontally.
+         */
+        const block0Holder = document.createElement('div');
+
+        block0Holder.getBoundingClientRect = vi.fn(() => ({
+          top: 100,
+          bottom: 200,
+          left: 500,
+          right: 700,
+          width: 200,
+          height: 100,
+          x: 500,
+          y: 100,
+          toJSON: () => ({}),
+        }));
+
+        const block1Holder = document.createElement('div');
+
+        block1Holder.getBoundingClientRect = vi.fn(() => ({
+          top: 100,
+          bottom: 200,
+          left: 100,
+          right: 300,
+          width: 200,
+          height: 100,
+          x: 100,
+          y: 100,
+          toJSON: () => ({}),
+        }));
+
+        const block0 = {
+          id: 'b0',
+          holder: block0Holder,
+          parentId: null,
+        } as unknown as BlockType;
+
+        const block1 = {
+          id: 'b1',
+          holder: block1Holder,
+          parentId: null,
+        } as unknown as BlockType;
+
+        blockManager.blocks.push(block0, block1);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          anchorBlockIndex: number | null;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+          startX: number;
+          mouseX: number;
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        // Rubber band covers both blocks vertically, but only block 1 horizontally
+        internal.startX = 50;
+        internal.mouseX = 350;
+        internal.startY = 50;
+        internal.mouseY = 250;
+
+        // Anchor at block 1 (inside the rubber band X range)
+        internal.anchorBlockIndex = 1;
+        internal.trySelectNextBlock(1);
+
+        // Block 1 (left=100, right=300) overlaps rubber band X [50, 350] — must be selected
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+
+        // Block 0 (left=500, right=700) does NOT overlap rubber band X [50, 350] — must NOT be selected
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
+      });
     });
 
     describe('changingRectangle uses root block holder for rectCrossesBlocks', () => {

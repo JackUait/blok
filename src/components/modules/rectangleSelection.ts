@@ -694,13 +694,19 @@ export class RectangleSelection extends Module {
     const minY = Math.max(Math.min(anchorRect.top, currentRect.top), rubberBandMinY);
     const maxY = Math.min(Math.max(anchorRect.bottom, currentRect.bottom), rubberBandMaxY);
 
+    const scrollLeft = this.getScrollLeft();
+    const rubberBandMinX = Math.min(this.startX, this.mouseX) - scrollLeft;
+    const rubberBandMaxX = Math.max(this.startX, this.mouseX) - scrollLeft;
+
     const expectedIndices = new Set<number>();
 
     blocks.forEach((block, i) => {
       const blockRect = block.holder.getBoundingClientRect();
 
+      const xOverlaps = rubberBandMinX === rubberBandMaxX || (blockRect.right > rubberBandMinX && blockRect.left < rubberBandMaxX);
+
       // Include blocks that have visual height and overlap the selection range
-      if (blockRect.height > 0 && blockRect.bottom > minY && blockRect.top < maxY) {
+      if (blockRect.height > 0 && blockRect.bottom > minY && blockRect.top < maxY && xOverlaps) {
         expectedIndices.add(i);
       }
     });

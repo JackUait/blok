@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
@@ -191,8 +191,9 @@ describe('DemoPage', () => {
       // Clicking copy on real JSON should not show "Скопировано!" either because
       // useCopyToClipboard is not mocked here — we just verify the button is present
       // and the panel shows the Russian title.
-      expect(screen.getByTestId('output-copy')).toBeInTheDocument();
-      expect(screen.getByText('Вывод JSON')).toBeInTheDocument();
+      const outputPanel = screen.getByTestId('output-panel');
+      expect(within(outputPanel).getByTestId('output-copy')).toBeInTheDocument();
+      expect(within(outputPanel).getByText('Вывод JSON')).toBeInTheDocument();
 
       // The copy button label should be in Russian
       expect(screen.getByText('Копировать')).toBeInTheDocument();

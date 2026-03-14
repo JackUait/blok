@@ -13,26 +13,26 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "framer-motion": "^12.35.0",
+    "framer-motion": "^12.36.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
-    "@react-grab/claude-code": "^0.1.25",
+    "@react-grab/claude-code": "^0.1.28",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.4",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.0",
     "jsdom": "^28.1.0",
-    "react-grab": "^0.1.25",
+    "react-grab": "^0.1.28",
     "rimraf": "^6.1.3",
     "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vitest": "^4.0.18"
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
   }
 }

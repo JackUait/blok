@@ -226,7 +226,7 @@ export class RectangleSelection extends Module {
    * is RectSelection Activated
    */
   public isRectActivated(): boolean {
-    return this.isRectSelectionActivated;
+    return this.isRectSelectionActivated || this.mousedown;
   }
 
   /**
@@ -481,19 +481,21 @@ export class RectangleSelection extends Module {
       : undefined;
 
     if (rootBlock) {
-      const holderRect = rootBlock.holder.getBoundingClientRect();
+      const contentEl = rootBlock.holder.querySelector<HTMLElement>('[data-blok-element-content]');
+      const boundsEl = contentEl ?? rootBlock.holder;
+      const boundsRect = boundsEl.getBoundingClientRect();
       const scrollLeft = this.getScrollLeft();
 
       // Selection rectangle horizontal bounds (in page coordinates)
       const rectLeft = Math.min(this.startX, this.mouseX);
       const rectRight = Math.max(this.startX, this.mouseX);
 
-      // Block holder horizontal bounds (convert from viewport to page coordinates)
-      const holderLeft = holderRect.left + scrollLeft;
-      const holderRight = holderRect.right + scrollLeft;
+      // Block content element horizontal bounds (convert from viewport to page coordinates)
+      const contentLeft = boundsRect.left + scrollLeft;
+      const contentRight = boundsRect.right + scrollLeft;
 
       // Check for horizontal intersection
-      this.rectCrossesBlocks = rectRight >= holderLeft && rectLeft <= holderRight;
+      this.rectCrossesBlocks = rectRight >= contentLeft && rectLeft <= contentRight;
     }
 
     this.updateRectangleSize();
@@ -702,8 +704,10 @@ export class RectangleSelection extends Module {
 
     blocks.forEach((block, i) => {
       const blockRect = block.holder.getBoundingClientRect();
+      const blockContentEl = block.holder.querySelector<HTMLElement>('[data-blok-element-content]');
+      const blockContentRect = (blockContentEl ?? block.holder).getBoundingClientRect();
 
-      const xOverlaps = rubberBandMinX === rubberBandMaxX || (blockRect.right > rubberBandMinX && blockRect.left < rubberBandMaxX);
+      const xOverlaps = rubberBandMinX === rubberBandMaxX || (blockContentRect.right > rubberBandMinX && blockContentRect.left < rubberBandMaxX);
 
       // Include blocks that have visual height and overlap the selection range
       if (blockRect.height > 0 && blockRect.bottom > minY && blockRect.top < maxY && xOverlaps) {

@@ -346,6 +346,26 @@ describe('RectangleSelection', () => {
     expect(rectangleSelection.isRectActivated()).toBe(true);
   });
 
+  it('returns true when mousedown is true but isRectSelectionActivated is false', () => {
+    const { rectangleSelection } = createRectangleSelection();
+    const internal = rectangleSelection as unknown as { mousedown: boolean; isRectSelectionActivated: boolean };
+
+    internal.mousedown = true;
+    internal.isRectSelectionActivated = false;
+
+    expect(rectangleSelection.isRectActivated()).toBe(true);
+  });
+
+  it('returns false when both mousedown and isRectSelectionActivated are false', () => {
+    const { rectangleSelection } = createRectangleSelection();
+    const internal = rectangleSelection as unknown as { mousedown: boolean; isRectSelectionActivated: boolean };
+
+    internal.mousedown = false;
+    internal.isRectSelectionActivated = false;
+
+    expect(rectangleSelection.isRectActivated()).toBe(false);
+  });
+
   it('resets selection parameters on endSelection', () => {
     const {
       rectangleSelection,
@@ -1820,20 +1840,38 @@ describe('RectangleSelection', () => {
 
         /**
          * Layout: two blocks at the same vertical position but different horizontal positions.
+         * Holders are full-width (left=0, right=1280) as they would be in a real editor.
+         * The fix should check the content element's X bounds, not the holder's.
          *
-         *   Block 0: top=100, height=100 (bottom=200), left=500, right=700  ← RIGHT side, outside rubber band X
-         *   Block 1: top=100, height=100 (bottom=200), left=100, right=300  ← LEFT side, inside rubber band X
+         *   Block 0: holder full-width, content left=500, right=700  ← RIGHT side, outside rubber band X
+         *   Block 1: holder full-width, content left=100, right=300  ← LEFT side, inside rubber band X
          *
          * Rubber band: startX=50, mouseX=350, startY=50, mouseY=250 (page coords, scrollX=0)
-         *   → X viewport range: [50, 350]  — overlaps block 1 (left=100, right=300) but NOT block 0 (left=500, right=700)
+         *   → X viewport range: [50, 350]  — overlaps block 1 content (100-300) but NOT block 0 content (500-700)
          *   → Y viewport range: [50, 250]  — overlaps BOTH blocks (top=100, bottom=200)
          *
          * Expected: block 1 IS selected, block 0 is NOT selected.
-         * Bug: current code only checks Y, so block 0 gets selected despite being outside the rubber band horizontally.
+         * Bug: current code uses holder bounds (0-1280 for both), so block 0 gets selected despite its
+         * content element being outside the rubber band horizontally.
          */
         const block0Holder = document.createElement('div');
 
         block0Holder.getBoundingClientRect = vi.fn(() => ({
+          top: 100,
+          bottom: 200,
+          left: 0,
+          right: 1280,
+          width: 1280,
+          height: 100,
+          x: 0,
+          y: 100,
+          toJSON: () => ({}),
+        }));
+
+        const block0ContentEl = document.createElement('div');
+
+        block0ContentEl.setAttribute('data-blok-element-content', '');
+        block0ContentEl.getBoundingClientRect = vi.fn(() => ({
           top: 100,
           bottom: 200,
           left: 500,
@@ -1844,10 +1882,26 @@ describe('RectangleSelection', () => {
           y: 100,
           toJSON: () => ({}),
         }));
+        block0Holder.appendChild(block0ContentEl);
 
         const block1Holder = document.createElement('div');
 
         block1Holder.getBoundingClientRect = vi.fn(() => ({
+          top: 100,
+          bottom: 200,
+          left: 0,
+          right: 1280,
+          width: 1280,
+          height: 100,
+          x: 0,
+          y: 100,
+          toJSON: () => ({}),
+        }));
+
+        const block1ContentEl = document.createElement('div');
+
+        block1ContentEl.setAttribute('data-blok-element-content', '');
+        block1ContentEl.getBoundingClientRect = vi.fn(() => ({
           top: 100,
           bottom: 200,
           left: 100,
@@ -1858,6 +1912,7 @@ describe('RectangleSelection', () => {
           y: 100,
           toJSON: () => ({}),
         }));
+        block1Holder.appendChild(block1ContentEl);
 
         const block0 = {
           id: 'b0',
@@ -1896,10 +1951,10 @@ describe('RectangleSelection', () => {
         internal.anchorBlockIndex = 1;
         internal.trySelectNextBlock(1);
 
-        // Block 1 (left=100, right=300) overlaps rubber band X [50, 350] — must be selected
+        // Block 1 content (left=100, right=300) overlaps rubber band X [50, 350] — must be selected
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
 
-        // Block 0 (left=500, right=700) does NOT overlap rubber band X [50, 350] — must NOT be selected
+        // Block 0 content (left=500, right=700) does NOT overlap rubber band X [50, 350] — must NOT be selected
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
       });
     });
@@ -1984,6 +2039,168 @@ describe('RectangleSelection', () => {
         // The rectCrossesBlocks check should use the root block holder (wide: 100-700),
         // not the child block holder (narrow: 200-400)
         expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(childBlock);
+        expect(internal.rectCrossesBlocks).toBe(true);
+
+        elementFromPointSpy.mockRestore();
+      });
+
+      it('sets rectCrossesBlocks to false when rubber band is in the margin and does not overlap the block content element X range', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blokWrapper,
+          modules,
+        } = createRectangleSelection();
+
+        if (modules.UI) {
+          modules.UI.nodes.redactor = blokWrapper;
+        }
+
+        vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+          top: 0, bottom: 500, left: 0, right: 1280, width: 1280, height: 500,
+          x: 0, y: 0, toJSON: () => ({}),
+        });
+
+        // Root block whose holder is full-width but content element is centered (315–965)
+        const rootHolder = document.createElement('div');
+
+        rootHolder.getBoundingClientRect = vi.fn(() => ({
+          top: 300, bottom: 400, left: 0, right: 1280, width: 1280, height: 100,
+          x: 0, y: 300, toJSON: () => ({}),
+        }));
+
+        const contentEl = document.createElement('div');
+
+        contentEl.setAttribute('data-blok-element-content', '');
+        contentEl.getBoundingClientRect = vi.fn(() => ({
+          top: 300, bottom: 400, left: 315, right: 965, width: 650, height: 100,
+          x: 315, y: 300, toJSON: () => ({}),
+        }));
+        rootHolder.appendChild(contentEl);
+
+        const rootBlock = {
+          id: 'root-1',
+          holder: rootHolder,
+          parentId: null,
+        } as unknown as BlockType;
+
+        blockManager.blocks.push(rootBlock);
+        blockManager.getBlockByChildNode.mockReturnValue(rootBlock);
+        blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
+
+        const internal = rectangleSelection as unknown as {
+          mousedown: boolean;
+          mouseX: number;
+          mouseY: number;
+          startX: number;
+          startY: number;
+          isRectSelectionActivated: boolean;
+          rectCrossesBlocks: boolean;
+          overlayRectangle: HTMLDivElement;
+          changingRectangle: (event: MouseEvent) => void;
+        };
+
+        internal.mousedown = true;
+        internal.isRectSelectionActivated = true;
+        internal.overlayRectangle = document.createElement('div');
+
+        // Rubber band is in the left margin: x=50–200, does NOT overlap content at x=315–965
+        internal.startX = 50;
+        internal.startY = 200;
+        internal.mouseX = 200;
+        internal.mouseY = 350;
+
+        const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(rootHolder);
+
+        const mouseEvent = new MouseEvent('mousemove', { clientX: 200, clientY: 350 });
+
+        Object.defineProperty(mouseEvent, 'pageX', { value: 200 });
+        Object.defineProperty(mouseEvent, 'pageY', { value: 350 });
+
+        internal.changingRectangle(mouseEvent);
+
+        // Rubber band x=[50,200] does not overlap content x=[315,965] → rectCrossesBlocks must be false
+        expect(internal.rectCrossesBlocks).toBe(false);
+
+        elementFromPointSpy.mockRestore();
+      });
+
+      it('sets rectCrossesBlocks to true when rubber band overlaps the block content element X range', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blokWrapper,
+          modules,
+        } = createRectangleSelection();
+
+        if (modules.UI) {
+          modules.UI.nodes.redactor = blokWrapper;
+        }
+
+        vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+          top: 0, bottom: 500, left: 0, right: 1280, width: 1280, height: 500,
+          x: 0, y: 0, toJSON: () => ({}),
+        });
+
+        // Root block whose holder is full-width but content element is centered (315–965)
+        const rootHolder = document.createElement('div');
+
+        rootHolder.getBoundingClientRect = vi.fn(() => ({
+          top: 300, bottom: 400, left: 0, right: 1280, width: 1280, height: 100,
+          x: 0, y: 300, toJSON: () => ({}),
+        }));
+
+        const contentEl = document.createElement('div');
+
+        contentEl.setAttribute('data-blok-element-content', '');
+        contentEl.getBoundingClientRect = vi.fn(() => ({
+          top: 300, bottom: 400, left: 315, right: 965, width: 650, height: 100,
+          x: 315, y: 300, toJSON: () => ({}),
+        }));
+        rootHolder.appendChild(contentEl);
+
+        const rootBlock = {
+          id: 'root-1',
+          holder: rootHolder,
+          parentId: null,
+        } as unknown as BlockType;
+
+        blockManager.blocks.push(rootBlock);
+        blockManager.getBlockByChildNode.mockReturnValue(rootBlock);
+        blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
+
+        const internal = rectangleSelection as unknown as {
+          mousedown: boolean;
+          mouseX: number;
+          mouseY: number;
+          startX: number;
+          startY: number;
+          isRectSelectionActivated: boolean;
+          rectCrossesBlocks: boolean;
+          overlayRectangle: HTMLDivElement;
+          changingRectangle: (event: MouseEvent) => void;
+        };
+
+        internal.mousedown = true;
+        internal.isRectSelectionActivated = true;
+        internal.overlayRectangle = document.createElement('div');
+
+        // Rubber band overlaps content at x=315–965: x=200–500
+        internal.startX = 200;
+        internal.startY = 200;
+        internal.mouseX = 500;
+        internal.mouseY = 350;
+
+        const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(rootHolder);
+
+        const mouseEvent = new MouseEvent('mousemove', { clientX: 500, clientY: 350 });
+
+        Object.defineProperty(mouseEvent, 'pageX', { value: 500 });
+        Object.defineProperty(mouseEvent, 'pageY', { value: 350 });
+
+        internal.changingRectangle(mouseEvent);
+
+        // Rubber band x=[200,500] overlaps content x=[315,965] → rectCrossesBlocks must be true
         expect(internal.rectCrossesBlocks).toBe(true);
 
         elementFromPointSpy.mockRestore();

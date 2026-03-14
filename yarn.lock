@@ -1219,7 +1219,7 @@ __metadata:
     eslint-plugin-jest: "npm:29.15.0"
     eslint-plugin-jest-dom: "npm:^5.5.0"
     eslint-plugin-jsdoc: "npm:62.8.0"
-    eslint-plugin-playwright: "npm:2.9.0"
+    eslint-plugin-playwright: "npm:2.10.0"
     eslint-plugin-react-hooks: "npm:^7.0.1"
     eslint-plugin-sonarjs: "npm:4.0.2"
     eslint-plugin-storybook: "npm:10.2.19"
@@ -1247,7 +1247,7 @@ __metadata:
     vite-plugin-css-injected-by-js: "npm:4.0.1"
     vitest: "npm:4.1.0"
     yaml: "npm:^2.8.2"
-    yjs: "npm:13.6.29"
+    yjs: "npm:13.6.30"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
@@ -5092,14 +5092,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-playwright@npm:2.9.0":
-  version: 2.9.0
-  resolution: "eslint-plugin-playwright@npm:2.9.0"
+"eslint-plugin-playwright@npm:2.10.0":
+  version: 2.10.0
+  resolution: "eslint-plugin-playwright@npm:2.10.0"
   dependencies:
     globals: "npm:^17.3.0"
   peerDependencies:
     eslint: ">=8.40.0"
-  checksum: 10c0/8f5528547c7d731b9ff4afad7a8b98ede86d93342842be9f06a5428358180c17f7b7624e4dcaae331f211345bcecf9f3cc48f8a995549f30dfd633b8300e5a08
+  checksum: 10c0/ca68b0587b99a5f4021c5df2138ec4a71dc5205e9f4b01a9d961ee5b6c4f2e4c398a5fc22b5d9efaed547a021292950a78e723696cd9f5b4ef004a7521c621cd
   languageName: node
   linkType: hard
 
@@ -11838,12 +11838,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yjs@npm:13.6.29":
-  version: 13.6.29
-  resolution: "yjs@npm:13.6.29"
+"yjs@npm:13.6.30":
+  version: 13.6.30
+  resolution: "yjs@npm:13.6.30"
   dependencies:
     lib0: "npm:^0.2.99"
-  checksum: 10c0/f300786ea63deac8a83e85598707ab9542e0a90b72fc0a1bcc77a58e618799de531ba4f85bcf349e647ad9e72bc4186edf50c4ecf67c8144cd53d3ac80d27351
+  checksum: 10c0/98ec3c85fdb8420fe250e86e66676d7421dd4c1960319409a39e6ae90d05dc967793b67705736751633d8b22e334dba51a1404ad83139300c0be42195f068261
   languageName: node
   linkType: hard
 

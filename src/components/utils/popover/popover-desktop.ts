@@ -389,7 +389,7 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    this.destroyNestedPopoverIfExists();
+    this.destroyNestedPopoverIfExists(false);
 
     this.previouslyHoveredItem = item;
 
@@ -418,7 +418,7 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    this.destroyNestedPopoverIfExists();
+    this.destroyNestedPopoverIfExists(false);
     this.previouslyHoveredItem = null;
   }
 
@@ -441,8 +441,11 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Destroys existing nested popover
+   * @param restoreFocus - whether to restore keyboard focus to the trigger item after closing.
+   * Should be true for keyboard-driven closes (e.g. ArrowLeft/Escape), false for mouse-driven closes
+   * to avoid leaving a stale focus highlight on the trigger item.
    */
-  protected destroyNestedPopoverIfExists(): void {
+  protected destroyNestedPopoverIfExists(restoreFocus = true): void {
     if (this.nestedPopover === undefined || this.nestedPopover === null) {
       return;
     }
@@ -456,8 +459,11 @@ export class PopoverDesktop extends PopoverAbstract {
     elementToRemove.remove();
     this.nestedPopover = null;
     this.flipper?.activate(this.flippableElements);
-    // Focus the trigger item synchronously to ensure keyboard events work immediately
-    this.focusAfterNestedPopoverClose(triggerItemElement);
+
+    if (restoreFocus) {
+      // Focus the trigger item synchronously to ensure keyboard events work immediately
+      this.focusAfterNestedPopoverClose(triggerItemElement);
+    }
 
     this.nestedPopoverTriggerItem?.onChildrenClose();
     // Reset trigger item so clicking the same item again will open the nested popover

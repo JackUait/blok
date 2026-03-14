@@ -785,6 +785,10 @@ export class Header implements BlockTool {
     const bodyPlaceholder = document.createElement('div');
     bodyPlaceholder.className = BODY_PLACEHOLDER_STYLES;
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
+    // Class changes on the body placeholder (show/hide) must not trigger didMutated →
+    // syncBlockDataToYjs, which would create a spurious Yjs undo entry when a child
+    // block is inserted via Enter. The placeholder holds no user-editable content.
+    bodyPlaceholder.setAttribute('data-blok-mutation-free', 'true');
     bodyPlaceholder.textContent = this.api.i18n.t('tools.toggle.bodyPlaceholder');
     if (!this.readOnly) {
       bodyPlaceholder.addEventListener('click', () => this.handleBodyPlaceholderClick());
@@ -795,6 +799,9 @@ export class Header implements BlockTool {
     const childContainer = document.createElement('div');
     childContainer.className = TOGGLE_CHILDREN_STYLES;
     childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+    // Block DOM mutations inside the children container from triggering the header tool's
+    // didMutated → syncBlockDataToYjs path (same rationale as the toggle list tool).
+    childContainer.setAttribute('data-blok-mutation-free', 'true');
     this._childContainerElement = childContainer;
     wrapper.appendChild(childContainer);
 
@@ -954,9 +961,8 @@ export class Header implements BlockTool {
       return;
     }
 
-    const newBlock = this.api.blocks.insert('paragraph', { text: '' }, {}, blockIndex + 1, true);
+    const newBlock = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1);
 
-    this.api.blocks.setBlockParent(newBlock.id, this.blockId);
     this.api.caret.setToBlock(newBlock.id, 'start');
 
     this._bodyPlaceholderElement?.classList.add('hidden');

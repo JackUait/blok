@@ -361,6 +361,9 @@ export class BlockManager extends Module {
         updateIndentation: (block) => {
           this.hierarchy.updateBlockIndentation(block);
         },
+        setBlockParent: (block, parentId) => {
+          this.hierarchy.setBlockParent(block, parentId);
+        },
         replaceBlock: (index, newBlock) => {
           this.blocksStore.replace(index, newBlock);
         },
@@ -740,6 +743,21 @@ export class BlockManager extends Module {
         });
       });
     }
+  }
+
+  /**
+   * Insert a new paragraph block as a child of the given parent, atomically.
+   * Block creation and parent assignment are grouped into a single undo entry.
+   *
+   * @param parentId - id of the parent block
+   * @param insertIndex - flat block index where the new block should appear
+   * @returns the newly created child block
+   */
+  public insertInsideParent(parentId: string, insertIndex: number): Block {
+    this._currentBlockIndex = this.operations.currentBlockIndexValue;
+    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore);
+    this._currentBlockIndex = this.operations.currentBlockIndexValue;
+    return result;
   }
 
   /**

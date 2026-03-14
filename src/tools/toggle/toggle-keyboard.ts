@@ -57,11 +57,12 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
   /**
    * When toggle is open and caret is at the end (no content after caret),
    * create a child paragraph inside the toggle rather than a sibling toggle.
+   * insertInsideParent() groups both block creation and parent assignment into
+   * a single Yjs undo entry, so one CMD+Z removes the new block completely.
    */
   if (isOpen && afterContent === '') {
-    const newBlock = api.blocks.insert('paragraph', { text: '' }, {}, currentBlockIndex + 1, true);
+    const newBlock = api.blocks.insertInsideParent(blockId, currentBlockIndex + 1);
 
-    api.blocks.setBlockParent(newBlock.id, blockId);
     api.caret.setToBlock(newBlock.id, 'start');
 
     return;

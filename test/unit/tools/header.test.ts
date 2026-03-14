@@ -1183,6 +1183,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
   it('clicking body placeholder inserts a child paragraph at the correct index', () => {
     const mockNewBlock = { id: 'new-child-block' };
     const mockSetToBlock = vi.fn();
+    const mockInsertInsideParent = vi.fn().mockReturnValue(mockNewBlock);
     const mockAPI = (() => {
       const api: API = {
         styles: {
@@ -1200,8 +1201,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
         blocks: {
           getChildren: vi.fn().mockReturnValue([]),
           getBlockIndex: vi.fn().mockReturnValue(2),
-          insert: vi.fn().mockReturnValue(mockNewBlock),
-          setBlockParent: vi.fn(),
+          insertInsideParent: mockInsertInsideParent,
         },
         events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
       } as unknown as API;
@@ -1225,8 +1225,8 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
 
     bodyPlaceholder.click();
 
-    expect(mockAPI.blocks.insert).toHaveBeenCalledWith('paragraph', { text: '' }, {}, 3, true);
-    expect(mockAPI.blocks.setBlockParent).toHaveBeenCalledWith('new-child-block', 'test-block-id');
+    // insertInsideParent(parentId, insertIndex) — index is getBlockIndex(2) + 1 = 3
+    expect(mockInsertInsideParent).toHaveBeenCalledWith('test-block-id', 3);
     expect(mockSetToBlock).toHaveBeenCalledWith('new-child-block', 'start');
   });
 
@@ -1250,8 +1250,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
         blocks: {
           getChildren: vi.fn().mockReturnValue([]),
           getBlockIndex: vi.fn().mockReturnValue(0),
-          insert: vi.fn().mockReturnValue(mockNewBlock),
-          setBlockParent: vi.fn(),
+          insertInsideParent: vi.fn().mockReturnValue(mockNewBlock),
         },
         events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
       } as unknown as API;
@@ -1278,7 +1277,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
   });
 
   it('does not insert a block in read-only mode', () => {
-    const mockInsert = vi.fn();
+    const mockInsertInsideParent = vi.fn();
     const mockAPI: API = {
       styles: {
         block: 'blok-block',
@@ -1294,8 +1293,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       i18n: { t: (key: string) => key, has: () => false },
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
-        insert: mockInsert,
-        setBlockParent: vi.fn(),
+        insertInsideParent: mockInsertInsideParent,
       },
       events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
     } as unknown as API;
@@ -1315,11 +1313,11 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
     expect(bodyPlaceholder).not.toBeNull();
     bodyPlaceholder.click();
 
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockInsertInsideParent).not.toHaveBeenCalled();
   });
 
   it('does not insert a block when blockId is undefined', () => {
-    const mockInsert = vi.fn();
+    const mockInsertInsideParent = vi.fn();
     const mockAPI: API = {
       styles: {
         block: 'blok-block',
@@ -1335,8 +1333,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       i18n: { t: (key: string) => key, has: () => false },
       blocks: {
         getChildren: vi.fn().mockReturnValue([]),
-        insert: mockInsert,
-        setBlockParent: vi.fn(),
+        insertInsideParent: mockInsertInsideParent,
       },
       events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
     } as unknown as API;
@@ -1357,6 +1354,6 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
     expect(bodyPlaceholder).not.toBeNull();
     bodyPlaceholder.click();
 
-    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockInsertInsideParent).not.toHaveBeenCalled();
   });
 });

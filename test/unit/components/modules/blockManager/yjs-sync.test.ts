@@ -189,6 +189,7 @@ const createMockSyncHandlers = (): SyncHandlers => ({
   getBlockIndex: vi.fn(() => 0),
   insertDefaultBlock: vi.fn(() => createMockBlock()),
   updateIndentation: vi.fn(),
+  setBlockParent: vi.fn(),
   replaceBlock: vi.fn(),
   onBlockRemoved: vi.fn(),
   onBlockAdded: vi.fn(),
@@ -850,6 +851,82 @@ describe('BlockYjsSync', () => {
         expect(childBlock.parentId).toBe('toggle-id');
       });
 
+      it('calls setBlockParent handler (not just updateIndentation) when parentId is defined', () => {
+        /**
+         * Regression test for Fix 2:
+         * When a Yjs 'add' event fires for a block with a parentId (redo restoring a
+         * toggle child), handleYjsAdd() must call setBlockParent() so that:
+         * 1. The block is moved into the toggle's [data-blok-toggle-children] container
+         * 2. The parent's contentIds array is updated
+         *
+         * Previously only updateIndentation() was called, which only applied visual
+         * indentation — the block was never actually placed inside the toggle container.
+         */
+        const parentBlock = createMockBlock({ id: 'toggle-id' });
+        const testBlocksStore = createBlocksStore([parentBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'child text' }),
+          parentId: 'toggle-id',
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'toggle-id', type: 'toggle' },
+          { id: 'child-block', type: 'paragraph', parentId: 'toggle-id' },
+        ]);
+
+        const childBlock = createMockBlock({ id: 'child-block' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(childBlock);
+
+        callback({ blockId: 'child-block', type: 'add', origin: 'redo' });
+
+        // setBlockParent must be called to move the block into the toggle container
+        // and update parent's contentIds
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'toggle-id');
+
+        // updateIndentation should NOT be called separately (setBlockParent handles it)
+        expect(mockHandlers.updateIndentation).not.toHaveBeenCalled();
+      });
+
+      it('does not call setBlockParent when parentId is not defined', () => {
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: 'root block' }),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'new-block', type: 'paragraph' },
+        ]);
+
+        const newBlock = createMockBlock({ id: 'new-block' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+
+        callback({ blockId: 'new-block', type: 'add', origin: 'redo' });
+
+        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
+        expect(mockHandlers.updateIndentation).not.toHaveBeenCalled();
+      });
+
       it('does not create block if it already exists', () => {
         const existingBlock = createMockBlock({ id: 'existing' });
         repository = new BlockRepository();
@@ -1047,6 +1124,61 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.onBlockAdded).toHaveBeenCalledTimes(2);
         expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(tableBlock, expect.any(Number));
         expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(childBlock, expect.any(Number));
+      });
+
+      it('calls setBlockParent (not updateIndentation) for each block with parentId', () => {
+        /**
+         * Regression test for Fix 2 (batch-add path):
+         * When multiple blocks are restored via batch-add (e.g. toggle + its children),
+         * handleYjsBatchAdd() must call setBlockParent() for blocks with a parentId so that:
+         * 1. The block is moved into the toggle's [data-blok-toggle-children] container
+         * 2. The parent's contentIds array is updated
+         *
+         * Previously only updateIndentation() was called for the parent-id path.
+         */
+        const toggleBlock = createMockBlock({ id: 'toggle-1' });
+        const childBlock2 = createMockBlock({ id: 'child-2' });
+
+        vi.spyOn(factory, 'composeBlock').mockImplementation((options) => {
+          if ((options as { id: string }).id === 'toggle-1') return toggleBlock;
+          return childBlock2;
+        });
+
+        const toggleYblock = createMockYMap({
+          type: 'toggle',
+          data: createMockYMap({}),
+        });
+        const childYblock2 = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'toggle-1',
+        });
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'toggle-1') return toggleYblock;
+          if (id === 'child-2') return childYblock2;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'block-1' },
+          { id: 'block-2' },
+          { id: 'block-3' },
+          { id: 'toggle-1', type: 'toggle' },
+          { id: 'child-2', type: 'paragraph', parentId: 'toggle-1' },
+        ]);
+
+        mockHandlers.setBlockParent = vi.fn();
+
+        callback({ blockIds: ['toggle-1', 'child-2'], type: 'batch-add', origin: 'redo' });
+
+        // setBlockParent must be called for the child block with parentId
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock2, 'toggle-1');
+
+        // updateIndentation should NOT be called separately (setBlockParent handles it)
+        expect(mockHandlers.updateIndentation).not.toHaveBeenCalled();
+
+        // setBlockParent should NOT be called for the toggle block (no parentId)
+        expect(mockHandlers.setBlockParent).not.toHaveBeenCalledWith(toggleBlock, expect.anything());
       });
     });
 

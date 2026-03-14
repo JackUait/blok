@@ -183,6 +183,17 @@ export interface Blocks {
   ): BlockAPI;
 
   /**
+   * Insert a new paragraph block as a child of the given parent block, atomically.
+   * The block creation and parent assignment are grouped into a single undo entry,
+   * so a single CMD+Z removes the new block completely.
+   *
+   * @param parentId - id of the parent block
+   * @param insertIndex - flat block index where the new block should appear
+   * @returns BlockAPI for the newly created child block
+   */
+  insertInsideParent(parentId: string, insertIndex: number): BlockAPI;
+
+  /**
    * Execute a function within a transaction.
    * All block operations (insert, delete, move) within fn are grouped
    * into a single undo entry. Prevents undo-group splitting that would

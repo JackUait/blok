@@ -46,6 +46,7 @@ export class BlocksAPI extends Module {
       setBlockParent: (blockId: string, parentId: string | null): void => this.setBlockParent(blockId, parentId),
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
       splitBlock: this.splitBlock,
+      insertInsideParent: this.insertInsideParent,
       transact: (fn: () => void): void => this.transact(fn),
       transactWithoutCapture: (fn: () => void): void => this.transactWithoutCapture(fn),
       setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
@@ -394,6 +395,29 @@ export class BlocksAPI extends Module {
     this.Blok.BlockManager.insertMany(blocksToInsert, index);
 
     return blocksToInsert.map((block) => new BlockAPI(block));
+  };
+
+  /**
+   * Insert a new paragraph block as a child of the given parent block, atomically.
+   * The block creation and parent assignment are grouped into a single undo entry,
+   * so a single CMD+Z removes the new block completely.
+   *
+   * @param parentId - id of the parent block
+   * @param insertIndex - flat block index where the new block should appear
+   * @returns BlockAPI for the newly created child block
+   */
+  private insertInsideParent = (parentId: string, insertIndex: number): BlockAPIInterface => {
+    // Force new undo group so this insertion is separate from previous typing.
+    this.Blok.YjsManager.stopCapturing();
+
+    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex);
+
+    // Boundary after the atomic op so any deferred DOM callbacks stay in the same undo group.
+    queueMicrotask(() => {
+      this.Blok.YjsManager.stopCapturing();
+    });
+
+    return new BlockAPI(newBlock);
   };
 
   /**

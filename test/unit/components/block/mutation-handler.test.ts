@@ -294,13 +294,14 @@ describe('MutationHandler', () => {
       expect(result.shouldFireUpdate).toBe(false);
     });
 
-    it('returns true when removed nodes are detached (no parent)', () => {
+    it('returns false when removed nodes are detached but came from a mutation-free container', () => {
       const mutationFreeElement = document.createElement('div');
 
       mutationFreeElement.setAttribute('data-blok-mutation-free', 'true');
       toolElement?.appendChild(mutationFreeElement);
 
-      // removedNode is detached from DOM, has no parentElement
+      // removedNode is detached from DOM (simulates a block removed from toggle-children container).
+      // The mutation target is the mutation-free container, so we know the removal happened there.
       const removedNode = document.createElement('span');
 
       const mutation = createMutationRecord({
@@ -313,7 +314,30 @@ describe('MutationHandler', () => {
 
       const result = mutationHandler.handleMutation([mutation]);
 
-      // Detached nodes (no parent) are not considered mutation-free, so update fires
+      // Detached removed nodes fall back to the mutation record's target to determine
+      // mutation-free status. Since the target is mutation-free, shouldFireUpdate = false.
+      expect(result.shouldFireUpdate).toBe(false);
+    });
+
+    it('returns true when removed nodes are detached and target is not mutation-free', () => {
+      const regularContainer = document.createElement('div');
+
+      toolElement?.appendChild(regularContainer);
+
+      // removedNode is detached, and the container is NOT mutation-free
+      const removedNode = document.createElement('span');
+
+      const mutation = createMutationRecord({
+        target: regularContainer,
+        addedNodes: [] as unknown as NodeList,
+        removedNodes: [removedNode] as unknown as NodeList,
+      });
+
+      createMutationHandler();
+
+      const result = mutationHandler.handleMutation([mutation]);
+
+      // Target is not mutation-free, so shouldFireUpdate = true
       expect(result.shouldFireUpdate).toBe(true);
     });
   });

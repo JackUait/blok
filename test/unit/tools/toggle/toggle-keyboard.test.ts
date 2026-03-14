@@ -27,8 +27,7 @@ const createMockContext = (overrides: Partial<ToggleKeyboardContext> = {}): Togg
         convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
         getBlockIndex: vi.fn().mockReturnValue(0),
         getCurrentBlockIndex: vi.fn().mockReturnValue(0),
-        insert: vi.fn().mockReturnValue({ id: 'new-block-id' }),
-        setBlockParent: vi.fn(),
+        insertInsideParent: vi.fn().mockReturnValue({ id: 'new-block-id' }),
       },
       caret: {
         setToBlock: vi.fn(),
@@ -94,6 +93,7 @@ describe('Toggle Keyboard Handlers', () => {
       const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
 
       const mockSetToBlock = vi.fn();
+      const mockInsertInsideParent = vi.fn().mockReturnValue({ id: 'new-block-id' });
       const contentElement = document.createElement('div');
       contentElement.setAttribute('contenteditable', 'true');
       // Empty content so afterContent will be ''
@@ -109,8 +109,7 @@ describe('Toggle Keyboard Handlers', () => {
             convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
             getBlockIndex: vi.fn().mockReturnValue(0),
             getCurrentBlockIndex: vi.fn().mockReturnValue(0),
-            insert: vi.fn().mockReturnValue({ id: 'new-block-id' }),
-            setBlockParent: vi.fn(),
+            insertInsideParent: mockInsertInsideParent,
           },
           caret: { setToBlock: mockSetToBlock },
         } as unknown as API,
@@ -126,8 +125,8 @@ describe('Toggle Keyboard Handlers', () => {
 
       await handleToggleEnter(context);
 
-      expect(context.api.blocks.insert).toHaveBeenCalledWith('paragraph', { text: '' }, {}, 1, true);
-      expect(context.api.blocks.setBlockParent).toHaveBeenCalledWith('new-block-id', 'test-block-id');
+      // insertInsideParent should be called with (parentId, insertIndex)
+      expect(mockInsertInsideParent).toHaveBeenCalledWith('test-block-id', 1);
       expect(mockSetToBlock).toHaveBeenCalledWith('new-block-id', 'start');
 
       contentElement.remove();

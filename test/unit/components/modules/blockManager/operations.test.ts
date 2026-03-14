@@ -1023,6 +1023,32 @@ describe('BlockOperations', () => {
       // After split completes, currentBlockIndex should point at the NEW block (index 2)
       expect(operations.currentBlockIndexValue).toBe(2);
     });
+
+    it('includes parent field in YjsManager.addBlock call when splitting a nested block', () => {
+      // Setup parent-child relationship: block-2 is a child of block-1
+      const childBlock = repository.getBlockById('block-2');
+      if (!childBlock) {
+        throw new Error('Test setup failed: block-2 not found');
+      }
+
+      hierarchy.setBlockParent(childBlock, 'block-1');
+
+      const fragment = document.createDocumentFragment();
+      fragment.appendChild(document.createTextNode('split content'));
+      (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
+
+      operations.currentBlockIndexValue = 1; // block-2
+      operations.split(blocksStore);
+
+      // YjsManager.addBlock must be called with parent: 'block-1' so the child's
+      // own YMap entry records the parentId — required for correct redo behaviour.
+      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const splitAddCall = addBlockCalls.find(
+        (call: unknown[]) => (call[0] as { parent?: string })?.parent === 'block-1'
+      );
+
+      expect(splitAddCall).toBeDefined();
+    });
   });
 
   describe('splitBlockWithData', () => {
@@ -1132,6 +1158,112 @@ describe('BlockOperations', () => {
       expect(newBlock.parentId).toBe('block-1');
       // The parent should have the new block in its contentIds
       expect(parentBlock.contentIds).toContain(newBlock.id);
+    });
+
+    it('includes parent field in YjsManager.addBlock call when splitting a nested block', () => {
+      // Setup parent-child relationship: block-2 is a child of block-1
+      const childBlock = repository.getBlockById('block-2');
+      if (!childBlock) {
+        throw new Error('Test setup failed: block-2 not found');
+      }
+
+      hierarchy.setBlockParent(childBlock, 'block-1');
+
+      operations.currentBlockIndexValue = 1; // block-2
+      operations.splitBlockWithData(
+        'block-2',
+        { text: 'Remaining' },
+        'paragraph',
+        { text: 'Extracted' },
+        2,
+        blocksStore
+      );
+
+      // YjsManager.addBlock must be called with parent: 'block-1' so the child's
+      // own YMap entry records the parentId — required for correct redo behaviour.
+      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const splitAddCall = addBlockCalls.find(
+        (call: unknown[]) => (call[0] as { type?: string })?.type === 'paragraph' &&
+          (call[0] as { parent?: string })?.parent === 'block-1'
+      );
+
+      expect(splitAddCall).toBeDefined();
+    });
+  });
+
+  describe('insertInsideParent', () => {
+    it('throws error when parent block is not found', () => {
+      expect(() => {
+        operations.insertInsideParent('unknown-parent', 1, blocksStore);
+      }).toThrow('Parent block with id "unknown-parent" not found');
+    });
+
+    it('inserts a new paragraph block at the given index', () => {
+      const initialCount = repository.length;
+
+      operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(repository.length).toBe(initialCount + 1);
+    });
+
+    it('calls YjsManager.transact for atomic operation', () => {
+      operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+    });
+
+    it('calls YjsManager.addBlock with parent id', () => {
+      operations.insertInsideParent('block-1', 1, blocksStore);
+
+      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const callWithParent = addBlockCalls.find(
+        (call: unknown[]) => (call[0] as { parent?: string })?.parent === 'block-1'
+      );
+
+      expect(callWithParent).toBeDefined();
+    });
+
+    it('sets parentId on the newly created block', () => {
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(newBlock.parentId).toBe('block-1');
+    });
+
+    it('adds new block id to parent contentIds', () => {
+      const parentBlock = repository.getBlockById('block-1');
+      if (!parentBlock) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(parentBlock.contentIds).toContain(newBlock.id);
+    });
+
+    it('does NOT call YjsManager.stopCapturing (atomic - no undo split)', () => {
+      operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(dependencies.YjsManager.stopCapturing).not.toHaveBeenCalled();
+    });
+
+    it('wraps operation in withAtomicOperation', () => {
+      operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
+    });
+
+    it('returns the newly created block', () => {
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(newBlock).toBeDefined();
+      expect(newBlock.id).toBeTruthy();
+    });
+
+    it('updates currentBlockIndex to the inserted block index', () => {
+      operations.currentBlockIndexValue = 0;
+      operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(operations.currentBlockIndexValue).toBe(1);
     });
   });
 

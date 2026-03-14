@@ -147,10 +147,26 @@ export class MutationHandler {
         target,
       ];
 
+      // Resolve the element to check for mutation-free ancestry.
+      // Removed elements are detached from the DOM so their ancestor chain no longer
+      // includes the container they came from. In that case we fall back to the
+      // mutation record's `target` (the container from which the node was removed).
+      const resolveElement = (node: Node): Element | null => {
+        if (!$.isElement(node)) {
+          // Text/comment node: use parent, or fall back to the mutation target.
+          return node.parentElement ?? ($.isElement(target) ? target : null);
+        }
+
+        if (!node.isConnected) {
+          // Detached element: use the mutation target (its former container).
+          return $.isElement(target) ? target : null;
+        }
+
+        return node;
+      };
+
       return changedNodes.every((node) => {
-        const elementToCheck: Element | null = !$.isElement(node)
-          ? node.parentElement ?? null
-          : node;
+        const elementToCheck = resolveElement(node);
 
         if (elementToCheck === null) {
           return false;

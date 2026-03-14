@@ -41,6 +41,8 @@ export interface SyncHandlers {
   insertDefaultBlock: (skipYjsSync: boolean) => Block;
   /** Called to update block indentation */
   updateIndentation: (block: Block) => void;
+  /** Called to set the parent of a block, updating contentIds and DOM placement */
+  setBlockParent: (block: Block, parentId: string) => void;
   /** Called to replace a block at a specific index with a new block instance */
   replaceBlock: (index: number, newBlock: Block) => void;
   /** Called when a block is removed during undo/redo (before DOM removal) */
@@ -339,9 +341,10 @@ export class BlockYjsSync {
       // claim the block for the correct cell during undo/redo
       this.handlers.onBlockAdded(block, targetIndex);
 
-      // Apply indentation if needed
+      // Set parent relationship if needed — this moves the block into the toggle's
+      // DOM child container, updates parent's contentIds, and applies indentation.
       if (parentId !== undefined) {
-        this.handlers.updateIndentation(block);
+        this.handlers.setBlockParent(block, parentId);
       }
 
       // Reconcile orphaned children: when a parent block is restored via undo,
@@ -455,8 +458,10 @@ export class BlockYjsSync {
         this.blocksStore.activateBlock(block);
         this.handlers.onBlockAdded(block, targetIndex);
 
+        // Set parent relationship if needed — this moves the block into the toggle's
+        // DOM child container, updates parent's contentIds, and applies indentation.
         if (parentId !== undefined) {
-          this.handlers.updateIndentation(block);
+          this.handlers.setBlockParent(block, parentId);
         }
       }
     }, { extendThroughRAF: true });
@@ -484,6 +489,16 @@ export class BlockYjsSync {
       // Emit block-removed event BEFORE removal so listeners can inspect
       // the block's DOM position (e.g., which table cell it's in)
       this.handlers.onBlockRemoved(block, index);
+
+      // Clean up parent's contentIds so the parent block reports
+      // no children after undo removes a child block.
+      if (block.parentId !== null) {
+        const parentBlock = this.repository.getBlockById(block.parentId);
+
+        if (parentBlock !== undefined) {
+          parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
+        }
+      }
 
       // Remove from DOM
       this.blocksStore.remove(index);

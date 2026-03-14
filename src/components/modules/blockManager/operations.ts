@@ -790,6 +790,7 @@ export class BlockOperations {
           id: newBlockId,
           type: currentBlock.name,
           data: { text: extractedText },
+          parent: currentBlock.parentId ?? undefined,
         }, insertIndex);
       });
 
@@ -855,6 +856,7 @@ export class BlockOperations {
           id: newBlockId,
           type: newBlockType,
           data: newBlockData,
+          parent: currentBlock.parentId ?? undefined,
         }, insertIndex);
       });
 
@@ -884,6 +886,66 @@ export class BlockOperations {
       if (currentBlock.parentId !== null) {
         this.hierarchy.setBlockParent(newBlock, currentBlock.parentId);
       }
+
+      return newBlock;
+    });
+  }
+
+  /**
+   * Insert a new paragraph block as a child of the given parent, atomically.
+   *
+   * Wraps the Yjs addBlock call and DOM insert inside a single
+   * `withAtomicOperation` + `YjsManager.transact` so that the block
+   * creation and parent assignment form ONE undo entry.
+   *
+   * Use this instead of calling `insert()` followed by `setBlockParent()`
+   * from a tool keyboard handler, which would create two separate Yjs
+   * undo steps.
+   *
+   * @param parentId - id of the parent block
+   * @param insertIndex - flat block index where the new block should appear
+   * @param blocksStore - The blocks store to modify
+   * @returns the newly created child block
+   */
+  public insertInsideParent(parentId: string, insertIndex: number, blocksStore: BlocksStore): Block {
+    const parentBlock = this.repository.getBlockById(parentId);
+
+    if (parentBlock === undefined) {
+      throw new Error(`Parent block with id "${parentId}" not found`);
+    }
+
+    const newBlockId = generateBlockId();
+
+    return this.yjsSync.withAtomicOperation(() => {
+      // Atomic Yjs transaction: add new block with parent (single undo entry)
+      this.dependencies.YjsManager.transact(() => {
+        this.dependencies.YjsManager.addBlock({
+          id: newBlockId,
+          type: this.dependencies.config.defaultBlock ?? 'paragraph',
+          data: { text: '' },
+          parent: parentId,
+        }, insertIndex);
+      });
+
+      // Insert DOM block (skip Yjs sync — already done above)
+      const newBlock = this.insert({
+        id: newBlockId,
+        tool: this.dependencies.config.defaultBlock ?? 'paragraph',
+        data: { text: '' },
+        index: insertIndex,
+        needToFocus: false,
+        skipYjsSync: true,
+      }, blocksStore);
+
+      // Update currentBlockIndex AFTER insert so blockDidMutated sees original as current
+      this.currentBlockIndex = insertIndex;
+
+      // Set parent relationship (updates parentId, contentIds, and DOM placement).
+      // Moving the block into the toggle's children container triggers a MutationObserver
+      // on the toggle holder. extendThroughRAF keeps isSyncingFromYjs=true through RAF so
+      // that MutationObserver-triggered blockDidMutated calls are suppressed (they would
+      // otherwise create a second Yjs undo entry for the toggle data update, splitting undo).
+      this.hierarchy.setBlockParent(newBlock, parentId);
 
       return newBlock;
     });

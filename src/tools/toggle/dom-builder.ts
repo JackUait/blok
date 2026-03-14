@@ -88,6 +88,11 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
   const childContainerElement = document.createElement('div');
   childContainerElement.className = TOGGLE_CHILDREN_STYLES;
   childContainerElement.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+  // Block DOM mutations inside the children container from triggering the toggle tool's
+  // didMutated → syncBlockDataToYjs path. Child block insertions/removals are tracked
+  // via the block hierarchy (parentId / contentIds) and must not create spurious Yjs
+  // undo entries that split "insert child" into two CMD+Z steps.
+  childContainerElement.setAttribute('data-blok-mutation-free', 'true');
   childContainerElement.id = `toggle-children-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   arrowElement.setAttribute('aria-controls', childContainerElement.id);
 
@@ -173,6 +178,10 @@ const buildBodyPlaceholder = (onClick: (() => void) | null, text: string): HTMLE
   const placeholder = document.createElement('div');
   placeholder.className = BODY_PLACEHOLDER_STYLES;
   placeholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
+  // Class changes on the body placeholder (show/hide) must not trigger didMutated →
+  // syncBlockDataToYjs, which would create a spurious Yjs undo entry when a child
+  // block is inserted via Enter. The placeholder holds no user-editable content.
+  placeholder.setAttribute('data-blok-mutation-free', 'true');
   placeholder.textContent = text;
 
   if (onClick) {

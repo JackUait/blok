@@ -986,4 +986,32 @@ describe('BlockManager', () => {
       );
     });
   });
+
+  it('keeps isSyncingFromYjs true during insertMany RENDERED lifecycle', () => {
+    /**
+     * Regression test: RENDERED lifecycle hooks (e.g., Table.rendered() which
+     * creates table cell paragraph blocks via api.blocks.insert()) must run
+     * with isSyncingFromYjs = true during insertMany. Without this, those
+     * inserts create 'local' origin Yjs transactions that pollute the undo
+     * stack, causing redo to restore table cells instead of the user's action.
+     */
+    const block = createBlockStub({ id: 'test-block' });
+
+    // Track isSyncingFromYjs state during block rendered() call
+    let syncingDuringRendered = false;
+    const originalCall = block.call as ReturnType<typeof vi.fn>;
+
+    originalCall.mockImplementation((method: string) => {
+      if (method === 'rendered') {
+        // During insertMany, isSyncingFromYjs should be true
+        syncingDuringRendered = blockManager.isSyncingFromYjs;
+      }
+    });
+
+    const { blockManager } = createBlockManager({});
+
+    blockManager.insertMany([block], 0);
+
+    expect(syncingDuringRendered).toBe(true);
+  });
 });

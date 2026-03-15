@@ -391,8 +391,10 @@ export class BlockYjsSync {
       const yjsParentId = yblock.get('parentId') as string | undefined;
 
       if (yjsParentId === restoredBlockId) {
-        // In-memory state is stale — fix it to match Yjs.
-        block.parentId = restoredBlockId;
+        // In-memory state is stale — use setBlockParent to fully restore:
+        // moves DOM into toggle container, updates parent's contentIds,
+        // adjusts visibility based on toggle state, and updates indentation.
+        this.handlers.setBlockParent(block, restoredBlockId);
       }
     }
   }
@@ -491,6 +493,10 @@ export class BlockYjsSync {
 
     // Keep Yjs sync state active for the full remove lifecycle so listeners
     // and block.destroy handlers can detect undo/redo-originated removals.
+    // Use extendThroughRAF to keep isSyncingFromYjs true through deferred
+    // DOM callbacks (e.g., toggle's updateBodyPlaceholderVisibility triggered
+    // by the block-removed event). Without this, those callbacks trigger
+    // syncBlockDataToYjs with 'local' origin, clearing the redo stack.
     this.withAtomicOperation(() => {
       // Emit block-removed event BEFORE removal so listeners can inspect
       // the block's DOM position (e.g., which table cell it's in)
@@ -506,6 +512,22 @@ export class BlockYjsSync {
         }
       }
 
+      // Promote children to root level before removing the parent block.
+      // This matches removeBlock() in operations.ts — without this,
+      // children whose DOM is inside the toggle's container are destroyed
+      // along with the parent, and children in the blocks array become
+      // orphaned with a stale parentId pointing to a deleted block.
+      for (const childId of block.contentIds) {
+        const childBlock = this.repository.getBlockById(childId);
+
+        if (childBlock === undefined) {
+          continue;
+        }
+
+        childBlock.parentId = null;
+        childBlock.holder.classList.remove('hidden');
+      }
+
       // Remove from DOM
       this.blocksStore.remove(index);
 
@@ -513,7 +535,7 @@ export class BlockYjsSync {
       if (this.blocksStore.length === 0) {
         this.handlers.insertDefaultBlock(true);
       }
-    });
+    }, { extendThroughRAF: true });
   }
 
   /**

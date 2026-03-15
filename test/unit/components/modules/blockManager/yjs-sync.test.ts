@@ -982,7 +982,9 @@ describe('BlockYjsSync', () => {
 
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(childBlock.parentId).toBe('parent-block');
+        // reconcileOrphanedChildren must call setBlockParent to fully restore
+        // DOM placement, parent contentIds, and visibility — not just set parentId.
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'parent-block');
       });
     });
 
@@ -1139,8 +1141,9 @@ describe('BlockYjsSync', () => {
         // Simulate undo: Yjs re-adds the toggle
         callback({ blockId: 'toggle-id', type: 'add', origin: 'undo' });
 
-        // After undo: child's parentId must be reconciled to 'toggle-id'
-        expect(childBlock.parentId).toBe('toggle-id');
+        // After undo: reconcileOrphanedChildren must call setBlockParent to
+        // fully restore DOM placement, parent contentIds, and visibility.
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'toggle-id');
       });
 
       it('calls setBlockParent handler (not just updateIndentation) when parentId is defined', () => {
@@ -1575,10 +1578,209 @@ describe('BlockYjsSync', () => {
         );
         yjsSync.subscribe();
 
-        callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+        // Mock RAF so cleanup is deferred
+        let rafCallback: FrameRequestCallback | undefined;
+        const originalRAF = globalThis.requestAnimationFrame;
 
-        expect(syncStates).toEqual([true, true]);
-        expect(yjsSync.isSyncingFromYjs).toBe(false);
+        globalThis.requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+          rafCallback = cb;
+          return 0;
+        });
+
+        try {
+          callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+
+          // During execution, isSyncingFromYjs was true
+          expect(syncStates).toEqual([true, true]);
+          // After synchronous return, still true (RAF extension)
+          expect(yjsSync.isSyncingFromYjs).toBe(true);
+          // After RAF fires, drops to false
+          rafCallback!(0);
+          expect(yjsSync.isSyncingFromYjs).toBe(false);
+        } finally {
+          globalThis.requestAnimationFrame = originalRAF;
+        }
+      });
+
+      it('extends isSyncingFromYjs through RAF after removing a block', () => {
+        /**
+         * handleYjsRemove must use extendThroughRAF so that deferred DOM
+         * callbacks (e.g., toggle's updateBodyPlaceholderVisibility triggered
+         * by the block-removed event) run while isSyncingFromYjs is still
+         * true. Without this, those callbacks can trigger syncBlockDataToYjs
+         * with 'local' origin, clearing the redo stack.
+         */
+        const blockToRemove = createMockBlock({ id: 'to-remove' });
+        const testBlocksStore = createBlocksStore([blockToRemove]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // Mock requestAnimationFrame for deterministic control
+        let rafCallback: FrameRequestCallback | undefined;
+        const originalRAF = globalThis.requestAnimationFrame;
+
+        globalThis.requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+          rafCallback = cb;
+          return 0;
+        });
+
+        try {
+          callback({ blockId: 'to-remove', type: 'remove', origin: 'undo' });
+
+          // After synchronous execution, isSyncingFromYjs should STILL be true
+          // because cleanup is deferred through RAF
+          expect(yjsSync.isSyncingFromYjs).toBe(true);
+
+          // After RAF fires, isSyncingFromYjs should drop to false
+          expect(rafCallback).toBeDefined();
+          rafCallback!(0);
+          expect(yjsSync.isSyncingFromYjs).toBe(false);
+        } finally {
+          globalThis.requestAnimationFrame = originalRAF;
+        }
+      });
+
+      it('promotes children to root level when removing a parent block', () => {
+        /**
+         * When handleYjsRemove removes a block that has children (contentIds),
+         * it must promote those children to root level (set parentId = null and
+         * remove the hidden class) — matching the behavior of removeBlock() in
+         * operations.ts.
+         *
+         * Without this, children whose DOM is inside the toggle's container are
+         * destroyed with the parent, and children in the blocks array become
+         * orphaned with a stale parentId pointing to a deleted block.
+         */
+        const childA = createMockBlock({ id: 'child-a', parentId: 'toggle-id' });
+        const childB = createMockBlock({ id: 'child-b', parentId: 'toggle-id' });
+
+        childA.holder.classList.add('hidden');
+        childB.holder.classList.add('hidden');
+
+        const toggleBlock = createMockBlock({
+          id: 'toggle-id',
+          contentIds: ['child-a', 'child-b'],
+        });
+
+        const testBlocksStore = createBlocksStore([toggleBlock, childA, childB]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        callback({ blockId: 'toggle-id', type: 'remove', origin: 'redo' });
+
+        // Children must be promoted: parentId = null, hidden class removed
+        expect(childA.parentId).toBe(null);
+        expect(childB.parentId).toBe(null);
+        expect(childA.holder.classList.contains('hidden')).toBe(false);
+        expect(childB.holder.classList.contains('hidden')).toBe(false);
+      });
+    });
+
+    describe('reconcileOrphanedChildren', () => {
+      it('calls setBlockParent for orphaned children to restore full DOM placement', () => {
+        /**
+         * When reconcileOrphanedChildren finds a child whose Yjs parentId matches
+         * the restored block but whose in-memory parentId does not, it must call
+         * handlers.setBlockParent() — not just set block.parentId directly.
+         *
+         * setBlockParent() moves the child's DOM into the toggle's container,
+         * updates the parent's contentIds, and adjusts visibility. Without it,
+         * the toggle appears empty after undo even though children have the
+         * correct parentId in memory.
+         */
+        const childA = createMockBlock({ id: 'child-a', parentId: null });
+        const childB = createMockBlock({ id: 'child-b', parentId: null });
+        const testBlocksStore = createBlocksStore([childA, childB]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // Yjs state: children have parentId = 'toggle-id' (authoritative)
+        const childAYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'toggle-id',
+        });
+        const childBYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'toggle-id',
+        });
+        const toggleYblock = createMockYMap({
+          type: 'toggle',
+          data: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'toggle-id') return toggleYblock;
+          if (id === 'child-a') return childAYblock;
+          if (id === 'child-b') return childBYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'toggle-id', type: 'toggle' },
+          { id: 'child-a', type: 'paragraph', parentId: 'toggle-id' },
+          { id: 'child-b', type: 'paragraph', parentId: 'toggle-id' },
+        ]);
+
+        const restoredToggle = createMockBlock({ id: 'toggle-id' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(restoredToggle);
+
+        // Simulate undo: Yjs re-adds the toggle
+        callback({ blockId: 'toggle-id', type: 'add', origin: 'undo' });
+
+        // setBlockParent must be called for EACH orphaned child
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childA, 'toggle-id');
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childB, 'toggle-id');
       });
     });
   });

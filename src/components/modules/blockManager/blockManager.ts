@@ -498,7 +498,15 @@ export class BlockManager extends Module {
 
     this.Blok.YjsManager.fromJSON(blockDataArray);
 
-    this.blocksStore.insertMany(blocks, index);
+    // Wrap in atomic operation so that RENDERED lifecycle hooks (which may
+    // create nested blocks, e.g. table cell paragraphs, or call setBlockParent)
+    // run with isSyncingFromYjs = true. This prevents:
+    // 1. operations.insert() from syncing duplicate blocks to Yjs
+    // 2. scheduleParentSync from writing back data already in Yjs
+    // Both would create 'local' origin transactions that pollute the undo stack.
+    this.yjsSync.withAtomicOperation(() => {
+      this.blocksStore.insertMany(blocks, index);
+    }, { extendThroughRAF: true });
 
     // Apply indentation for blocks with parentId (hierarchical structure)
     blocks.forEach(block => {

@@ -43,11 +43,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
       'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
       'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile',
       // RTL styles
-      'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto',
-      // Narrow mode (not-mobile)
-      'not-mobile:group-data-[blok-narrow=true]:left-[5px]',
-      // Narrow mode RTL (not-mobile)
-      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:left-0 not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:right-[5px]'
+      'group-data-[blok-rtl=true]:right-[calc(-1*(var(--spacing-toolbox-btn)))] group-data-[blok-rtl=true]:left-auto'
     ),
     plusButtonShortcutKey: 'text-white',
     /**

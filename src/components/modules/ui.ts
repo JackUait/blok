@@ -466,11 +466,11 @@ export class UI extends Module<UINodes> {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
     }
     this.nodes.redactor = $.make('div', [
-      // Narrow mode: add right margin on non-mobile screens
-      'not-mobile:group-data-[blok-narrow=true]:mr-(--spacing-narrow-mode-right-padding)',
-      // RTL narrow mode: add left margin instead
-      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:ml-(--spacing-narrow-mode-right-padding)',
-      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:mr-0',
+      // Narrow mode: add left margin on non-mobile screens to make room for toolbar buttons
+      'not-mobile:group-data-[blok-narrow=true]:ml-(--spacing-narrow-mode-padding)',
+      // RTL narrow mode: add right margin instead
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:mr-(--spacing-narrow-mode-padding)',
+      'not-mobile:group-data-[blok-rtl=true]:group-data-[blok-narrow=true]:ml-0',
       // Firefox empty contenteditable fix
       '[&_[contenteditable]:empty]:after:content-["\\feff_"]',
     ]);

@@ -449,7 +449,7 @@
 
   /* Spacing (also powers w-*, h-*, min-w-*, min-h-*, size-*) */
   --spacing-content-width: 650px;
-  --spacing-narrow-mode-right-padding: 50px;
+  --spacing-narrow-mode-padding: 50px;
   --spacing-toolbox-btn: 26px;
   --spacing-toolbox-btn-mobile: 36px;
   --spacing-icon: 20px;

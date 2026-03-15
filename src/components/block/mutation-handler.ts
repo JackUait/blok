@@ -139,6 +139,8 @@ export class MutationHandler {
       return true;
     }
 
+    const toolElement = this.getToolElement();
+
     const everyRecordIsMutationFree = mutationsOrInputEvent.length > 0 && mutationsOrInputEvent.every((record) => {
       const { addedNodes, removedNodes, target } = record;
       const changedNodes = [
@@ -172,7 +174,14 @@ export class MutationHandler {
           return false;
         }
 
-        return elementToCheck.closest('[data-blok-mutation-free="true"]') !== null;
+        // Only consider mutation-free zones that are WITHIN this block's own tool
+        // element. A mutation-free container in a parent block (e.g., toggle's
+        // [data-blok-toggle-children]) must not suppress child block mutations.
+        const mutationFreeAncestor = elementToCheck.closest('[data-blok-mutation-free="true"]');
+
+        return mutationFreeAncestor !== null
+          && toolElement !== null
+          && toolElement.contains(mutationFreeAncestor);
       });
     });
 

@@ -340,6 +340,82 @@ describe('MutationHandler', () => {
       // Target is not mutation-free, so shouldFireUpdate = true
       expect(result.shouldFireUpdate).toBe(true);
     });
+
+    it('returns shouldFireUpdate: true when mutation-free container is OUTSIDE the tool element (parent block boundary)', () => {
+      /**
+       * Regression test: child blocks inside a toggle have their tool element
+       * nested inside the toggle's [data-blok-toggle-children] container which
+       * has data-blok-mutation-free="true". The mutation-free check must be
+       * scoped to the block's OWN tool element — a mutation-free ancestor
+       * belonging to a parent block must NOT suppress the child's mutations.
+       *
+       * DOM structure:
+       *   toggle tool element
+       *     └── toggle-children [data-blok-mutation-free="true"]   ← parent's zone
+       *           └── child block holder
+       *                 └── child tool element (this block)        ← getToolElement()
+       *                       └── text node (mutation target)
+       */
+      const toggleToolElement = document.createElement('div');
+      const toggleChildrenContainer = document.createElement('div');
+
+      toggleChildrenContainer.setAttribute('data-blok-mutation-free', 'true');
+      toggleToolElement.appendChild(toggleChildrenContainer);
+
+      const childBlockHolder = document.createElement('div');
+
+      toggleChildrenContainer.appendChild(childBlockHolder);
+
+      // The child block's tool element is INSIDE the mutation-free container
+      const childToolElement = document.createElement('div');
+
+      childBlockHolder.appendChild(childToolElement);
+
+      const textNode = document.createTextNode('hello');
+
+      childToolElement.appendChild(textNode);
+
+      // Set toolElement to the CHILD's tool element
+      toolElement = childToolElement;
+
+      // Mutation targets the text node inside the child tool element
+      const mutation = createMutationRecord({
+        type: 'characterData' as MutationRecordType,
+        target: textNode,
+      });
+
+      createMutationHandler();
+
+      const result = mutationHandler.handleMutation([mutation]);
+
+      // The mutation-free container is OUTSIDE the child's tool element,
+      // so the child's mutations must NOT be suppressed
+      expect(result.shouldFireUpdate).toBe(true);
+    });
+
+    it('returns shouldFireUpdate: false when mutation-free container is INSIDE the tool element', () => {
+      /**
+       * Counter-test: mutation-free containers that ARE inside the block's own
+       * tool element should still suppress mutations (e.g., toggle arrow, body
+       * placeholder within the toggle tool itself).
+       */
+      const mutationFreeChild = document.createElement('div');
+
+      mutationFreeChild.setAttribute('data-blok-mutation-free', 'true');
+      toolElement?.appendChild(mutationFreeChild);
+
+      const innerNode = document.createElement('span');
+
+      mutationFreeChild.appendChild(innerNode);
+
+      const mutation = createMutationRecord({ target: innerNode });
+
+      createMutationHandler();
+
+      const result = mutationHandler.handleMutation([mutation]);
+
+      expect(result.shouldFireUpdate).toBe(false);
+    });
   });
 
   describe('detectToolRootChange', () => {

@@ -185,6 +185,10 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
+    if (this.Blok.RectangleSelection.isRectActivated()) {
+      return;
+    }
+
     /**
      * Don't clear selection when clicking on toolbar elements (settings toggler, plus button, etc.)
      * This allows multi-block selection to be preserved when interacting with the toolbar

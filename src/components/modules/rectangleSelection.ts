@@ -283,7 +283,7 @@ export class RectangleSelection extends Module {
       passive: true,
     });
 
-    this.listeners.on(document.body, 'mouseup', () => {
+    this.listeners.on(document, 'mouseup', () => {
       this.processMouseUp();
     }, false);
   }
@@ -481,21 +481,19 @@ export class RectangleSelection extends Module {
       : undefined;
 
     if (rootBlock) {
-      const contentEl = rootBlock.holder.querySelector<HTMLElement>('[data-blok-element-content]');
-      const boundsEl = contentEl ?? rootBlock.holder;
-      const boundsRect = boundsEl.getBoundingClientRect();
+      const holderRect = rootBlock.holder.getBoundingClientRect();
       const scrollLeft = this.getScrollLeft();
 
       // Selection rectangle horizontal bounds (in page coordinates)
       const rectLeft = Math.min(this.startX, this.mouseX);
       const rectRight = Math.max(this.startX, this.mouseX);
 
-      // Block content element horizontal bounds (convert from viewport to page coordinates)
-      const contentLeft = boundsRect.left + scrollLeft;
-      const contentRight = boundsRect.right + scrollLeft;
+      // Block holder horizontal bounds (convert from viewport to page coordinates)
+      const holderLeft = holderRect.left + scrollLeft;
+      const holderRight = holderRect.right + scrollLeft;
 
       // Check for horizontal intersection
-      this.rectCrossesBlocks = rectRight >= contentLeft && rectLeft <= contentRight;
+      this.rectCrossesBlocks = rectRight >= holderLeft && rectLeft <= holderRight;
     }
 
     this.updateRectangleSize();

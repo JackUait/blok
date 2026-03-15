@@ -20,6 +20,7 @@ install-state.gz
 test-results
 
 dist/
+test/playwright/fixtures/vendor/
 
 coverage/
 .nyc_output/

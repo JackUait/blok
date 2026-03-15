@@ -109,9 +109,10 @@ export const createDocumentClickedHandler = (
     /**
      * Clear Selection if user clicked somewhere
      * But preserve selection when clicking on block settings toggler or inside block settings
-     * to allow multi-block operations like conversion
+     * to allow multi-block operations like conversion.
+     * Also preserve selection when Shift is held (additive Shift+drag rubber band selection).
      */
-    if (!context.doNotProcess) {
+    if (!context.doNotProcess && !event.shiftKey) {
       Blok.BlockSelection.clearSelection(event);
     }
 

@@ -2044,7 +2044,7 @@ describe('RectangleSelection', () => {
         elementFromPointSpy.mockRestore();
       });
 
-      it('sets rectCrossesBlocks to false when rubber band is in the margin and does not overlap the block content element X range', () => {
+      it('sets rectCrossesBlocks to true when rubber band is in the margin but overlaps the full-width block holder X range', () => {
         const {
           rectangleSelection,
           blockManager,
@@ -2119,8 +2119,8 @@ describe('RectangleSelection', () => {
 
         internal.changingRectangle(mouseEvent);
 
-        // Rubber band x=[50,200] does not overlap content x=[315,965] → rectCrossesBlocks must be false
-        expect(internal.rectCrossesBlocks).toBe(false);
+        // Rubber band x=[50,200] overlaps full-width holder x=[0,1280] → rectCrossesBlocks must be true
+        expect(internal.rectCrossesBlocks).toBe(true);
 
         elementFromPointSpy.mockRestore();
       });

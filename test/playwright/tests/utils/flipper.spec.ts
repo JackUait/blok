@@ -720,8 +720,8 @@ test.describe('flipper', () => {
       return blockSettings.flipper.hasFocus();
     });
 
-    // First item is auto-focused when popover opens (no search field)
-    expect(hasFocusAfterOpen).toBe(true);
+    // No item is auto-focused when popover opens (autoFocusFirstItem: false)
+    expect(hasFocusAfterOpen).toBe(false);
 
     await closeBlockTunes(page);
 
@@ -835,23 +835,8 @@ test.describe('flipper', () => {
 
     expect(flipCallbackCount).not.toBeNull();
 
-    // First item is already focused (auto-focused on popover open)
-    // First Tab is skipped due to skipNextTab, so it won't trigger callback
-    await triggerKey(plugin, KEY_CODES.TAB, {
-      key: 'Tab',
-      code: 'Tab',
-    });
-
-    const countAfterInitialTab = await page.evaluate(() => {
-      const context = globalThis as typeof globalThis & { __flipCallbackCount?: number };
-
-      return context.__flipCallbackCount ?? 0;
-    });
-
-    // First Tab is skipped (skipNextTab), no callback triggered
-    expect(countAfterInitialTab).toBe(0);
-
-    // Second Tab actually moves focus, triggering callback
+    // No item is auto-focused on open (autoFocusFirstItem: false), so skipNextTab is never set.
+    // First Tab immediately moves focus and triggers callback.
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',
@@ -921,13 +906,13 @@ test.describe('flipper', () => {
       (globalThis as typeof globalThis & { __flipCallback?: () => void }).__flipCallback = callback;
     });
 
-    // First Tab is skipped due to skipNextTab (first item auto-focused)
+    // No item is auto-focused on open (autoFocusFirstItem: false), so skipNextTab is never set.
+    // Both Tab presses trigger the callback.
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',
     });
 
-    // Second Tab actually moves focus, triggering callback
     await triggerKey(plugin, KEY_CODES.TAB, {
       key: 'Tab',
       code: 'Tab',
@@ -939,7 +924,7 @@ test.describe('flipper', () => {
       return context.__flipCallbackCount ?? 0;
     });
 
-    expect(countBeforeRemoval).toBe(1);
+    expect(countBeforeRemoval).toBe(2);
 
     await page.evaluate(() => {
       const blok = window.blokInstance;
@@ -972,7 +957,7 @@ test.describe('flipper', () => {
       return context.__flipCallbackCount ?? 0;
     });
 
-    expect(countAfterRemoval).toBe(1);
+    expect(countAfterRemoval).toBe(2);
   });
 
   test('activate with cursorPosition parameter', async ({ page }) => {

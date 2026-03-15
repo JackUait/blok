@@ -838,7 +838,28 @@ export class BlockManager extends Module {
    * @param newParentId - the new parent block id, or null for root level
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
-    return this.hierarchy.setBlockParent(block, newParentId);
+    this.hierarchy.setBlockParent(block, newParentId);
+
+    // Sync the child block's parentId to Yjs so undo/redo can restore the relationship.
+    // Without this, blocks created via insertDefaultBlockAtIndex + setBlockParent (e.g.,
+    // pressing Enter in a child paragraph) lose their parentId on redo because the
+    // initial addBlock wrote to Yjs before setBlockParent was called.
+    // Skip during Yjs sync operations (undo/redo handler already has correct state).
+    if (this.yjsSync.isSyncingFromYjs) {
+      return;
+    }
+
+    const yblock = this.Blok.YjsManager.getBlockById(block.id);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    if (newParentId !== null) {
+      yblock.set('parentId', newParentId);
+    } else {
+      yblock.delete('parentId');
+    }
   }
 
   /**

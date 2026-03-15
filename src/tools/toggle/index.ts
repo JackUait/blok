@@ -170,6 +170,17 @@ export class ToggleItem implements BlockTool {
 
     this._data = result.newData;
 
+    if (typeof this._data.isOpen === 'boolean') {
+      this._isOpen = this._data.isOpen;
+    }
+
+    if (this._arrowElement && this._element) {
+      updateArrowState(this._arrowElement, this._element, this._isOpen, {
+        collapse: this.api.i18n.t(ARIA_LABEL_COLLAPSE_KEY),
+        expand: this.api.i18n.t(ARIA_LABEL_EXPAND_KEY),
+      });
+    }
+
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
 

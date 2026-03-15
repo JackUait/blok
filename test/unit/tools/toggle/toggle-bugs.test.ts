@@ -417,3 +417,87 @@ describe('Bug 5: Toggle collapsed state persisted in save()', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// BUG: setData() does not update _isOpen or arrow state
+// ---------------------------------------------------------------------------
+
+describe('Bug: setData() syncs _isOpen and arrow state from new data', () => {
+  it('updates _isOpen when setData receives isOpen=false on an open toggle', () => {
+    // Start with an open toggle (isOpen: true)
+    const { toggle, blocks } = createToggle({ text: 'test', isOpen: true });
+    blocks.getChildren.mockReturnValue([]);
+    toggle.render();
+    toggle.rendered();
+
+    // setData with isOpen: false (simulates undo/redo restoring collapsed state)
+    toggle.setData({ text: 'test', isOpen: false });
+
+    // save() reads _isOpen — it should reflect the new state
+    const saved = toggle.save();
+    expect(saved.isOpen).toBe(false);
+  });
+
+  it('updates _isOpen when setData receives isOpen=true on a collapsed toggle', () => {
+    // Start with a collapsed toggle (isOpen: false)
+    const { toggle, blocks } = createToggle({ text: 'test', isOpen: false });
+    blocks.getChildren.mockReturnValue([]);
+    toggle.render();
+    toggle.rendered();
+
+    // setData with isOpen: true (simulates undo/redo restoring expanded state)
+    toggle.setData({ text: 'test', isOpen: true });
+
+    const saved = toggle.save();
+    expect(saved.isOpen).toBe(true);
+  });
+
+  it('updates the wrapper data-blok-toggle-open attribute when isOpen changes via setData', () => {
+    const { toggle, blocks } = createToggle({ text: 'test', isOpen: true });
+    blocks.getChildren.mockReturnValue([]);
+    const element = toggle.render();
+    toggle.rendered();
+
+    // Wrapper should start as open
+    expect(element.getAttribute('data-blok-toggle-open')).toBe('true');
+
+    // setData with isOpen: false
+    toggle.setData({ text: 'test', isOpen: false });
+
+    // Wrapper attribute should reflect the new state
+    expect(element.getAttribute('data-blok-toggle-open')).toBe('false');
+  });
+
+  it('updates arrow aria-expanded when isOpen changes via setData', () => {
+    const { toggle, blocks } = createToggle({ text: 'test', isOpen: true });
+    blocks.getChildren.mockReturnValue([]);
+    const element = toggle.render();
+    toggle.rendered();
+
+    const arrow = element.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
+    expect(arrow.getAttribute('aria-expanded')).toBe('true');
+
+    toggle.setData({ text: 'test', isOpen: false });
+
+    expect(arrow.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('hides children when setData changes isOpen from true to false', () => {
+    const childHolder = document.createElement('div');
+    childHolder.setAttribute('data-blok-element', '');
+    const child = { id: 'child-1', holder: childHolder };
+
+    const { toggle } = createToggle({ text: 'test', isOpen: true }, { children: [child] });
+    toggle.render();
+    toggle.rendered();
+
+    // Children should be visible (toggle starts open)
+    expect(childHolder.classList.contains('hidden')).toBe(false);
+
+    // setData collapses the toggle
+    toggle.setData({ text: 'test', isOpen: false });
+
+    // Children should now be hidden
+    expect(childHolder.classList.contains('hidden')).toBe(true);
+  });
+});

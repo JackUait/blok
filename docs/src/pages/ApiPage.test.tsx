@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { ApiPage } from './ApiPage';
 import { I18nProvider } from '../contexts/I18nContext';
 
+vi.mock('../components/common/CodeBlock', () => ({
+  CodeBlock: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+}));
+
 describe('ApiPage', () => {
   beforeEach(() => {
     vi.useFakeTimers();

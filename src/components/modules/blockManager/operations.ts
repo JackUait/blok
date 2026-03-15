@@ -309,9 +309,14 @@ export class BlockOperations {
     /**
      * Sync to Yjs data layer (unless caller is handling sync separately,
      * or we're inside an atomic operation like paste where all Yjs sync
-     * is deferred until the operation completes)
+     * is deferred until the operation completes).
+     *
+     * When isSyncingFromYjs is true, still add blocks that don't yet exist
+     * in Yjs — e.g., table cell paragraphs created during rendered() lifecycle
+     * hooks need to be tracked for undo/redo even though the parent block's
+     * insertion is already being synced.
      */
-    if (!skipYjsSync && !this.yjsSync.isSyncingFromYjs) {
+    if (!skipYjsSync && (!this.yjsSync.isSyncingFromYjs || this.dependencies.YjsManager.getBlockById(block.id) === undefined)) {
       this.dependencies.YjsManager.addBlock({
         id: block.id,
         type: block.name,

@@ -321,8 +321,7 @@ describe('ApiPage', () => {
       const anchorLink = screen.getByRole('link', { name: /Link to Blok Class/ });
       fireEvent.click(anchorLink);
 
-      await vi.advanceTimersByTimeAsync(100);
-
+      // pushState is called synchronously in the click handler
       expect(pushStateSpy).toHaveBeenCalledWith(null, '', '#core');
 
       pushStateSpy.mockRestore();

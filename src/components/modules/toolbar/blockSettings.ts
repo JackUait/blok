@@ -183,14 +183,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         this.Blok.BlockSelection.clearCache();
       }
 
-      /** Get common tunes (delete, move, etc.) */
-      const { commonTunes } = block.getTunes();
+      /** Get tool-specific tunes and common tunes (delete, move, etc.) */
+      const { toolTunes, commonTunes } = block.getTunes();
 
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverParams: PopoverParams & { flipper?: Flipper } = {
         searchable: false,
         trigger: trigger || this.nodes.wrapper,
-        items: await this.getTunesItems(block, commonTunes),
+        items: await this.getTunesItems(block, commonTunes, toolTunes),
         scopeElement: this.Blok.API.methods.ui.nodes.redactor,
         messages: {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
@@ -293,16 +293,27 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Returns list of items to be displayed in block tunes menu.
-   * Merges conversion menu and common tunes in one list in predefined order
+   * Merges conversion menu, tool-specific tunes, and common tunes in one list in predefined order
    * @param currentBlock –  block we are about to open block tunes for
    * @param commonTunes – common tunes
+   * @param toolTunes – tool-specific tunes from renderSettings()
    */
-  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[]): Promise<PopoverItemParams[]> {
+  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[], toolTunes?: MenuConfigItem[]): Promise<PopoverItemParams[]> {
     const items = [] as MenuConfigItem[];
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
 
     const allBlockTools = Array.from(this.Blok.Tools.blockTools.values());
+
+    /**
+     * Tool-specific tunes come first (e.g. heading level selector)
+     */
+    if (!hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0) {
+      items.push(...toolTunes);
+      items.push({
+        type: PopoverItemType.Separator,
+      });
+    }
 
     /**
      * Get convertible tools based on selection:
@@ -382,7 +393,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     /**
-     * For single block selection, show all common tunes (delete, move, etc.)
+     * For single block selection, show common tunes (delete, move, etc.)
      * For multiple blocks, only show delete option with multi-block delete behavior
      */
     if (!hasMultipleBlocksSelected) {

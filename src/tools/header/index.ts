@@ -848,6 +848,15 @@ export class Header implements BlockTool {
      */
     if (wasToggleable) {
       updateChildrenVisibility(this.api, this.blockId ?? '', true);
+
+      // Promote children to root level before removing the toggle wrapper,
+      // otherwise their DOM holders would be detached with the wrapper.
+      const children = this.api.blocks.getChildren(this.blockId ?? '');
+
+      for (const child of children) {
+        this.api.blocks.setBlockParent(child.id, null);
+      }
+
       this._isOpen = false;
       this.api.events.off('block changed', this.handleBlockChanged);
     } else if (!this.readOnly) {

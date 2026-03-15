@@ -888,6 +888,94 @@ describe('BlockOperations', () => {
       expect(newBlock.contentIds).toHaveLength(1);
       expect(child1.parentId).toBe(newBlock.id);
     });
+
+    it('promotes children to root level when replacing toggle header with regular header', () => {
+      // Register header tool in the factory
+      const headerAdapter = createMockBlockToolAdapter('header');
+
+      (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+        .dependencies.tools.set('header', headerAdapter);
+
+      // Set up a toggle header block with 2 child blocks
+      const child1 = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'toggle-header-1' });
+      const child2 = createMockBlock({ id: 'child-2', name: 'paragraph', parentId: 'toggle-header-1' });
+      const toggleHeader = createMockBlock({
+        id: 'toggle-header-1',
+        name: 'header',
+        contentIds: ['child-1', 'child-2'],
+        data: { text: 'My heading', level: 2, isToggleable: true },
+      });
+
+      const testStore = createBlocksStore([toggleHeader, child1, child2]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Replace toggle header with a regular (non-toggleable) header via Backspace
+      const newBlock = testOps.replace(toggleHeader, 'header', { text: '', level: 2 }, testStore);
+
+      // Children should be promoted to root level (parentId = null)
+      expect(child1.parentId).toBeNull();
+      expect(child2.parentId).toBeNull();
+
+      // New block should have no children
+      expect(newBlock.contentIds).toHaveLength(0);
+
+      // Children should appear after the new header in the block list
+      const newBlockIndex = testRepo.getBlockIndex(newBlock);
+      const child1Index = testRepo.getBlockIndex(child1);
+      const child2Index = testRepo.getBlockIndex(child2);
+
+      expect(child1Index).toBeGreaterThan(newBlockIndex);
+      expect(child2Index).toBeGreaterThan(child1Index);
+    });
+
+    it('keeps children when replacing regular header with toggle header', () => {
+      // Register header tool in the factory
+      const headerAdapter = createMockBlockToolAdapter('header');
+
+      (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+        .dependencies.tools.set('header', headerAdapter);
+
+      // Set up a toggle header block with a child
+      const child1 = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'header-1' });
+      const headerBlock = createMockBlock({
+        id: 'header-1',
+        name: 'header',
+        contentIds: ['child-1'],
+        data: { text: 'My heading', level: 2, isToggleable: true },
+      });
+
+      const testStore = createBlocksStore([headerBlock, child1]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Replace header with a toggle header — children should stay
+      const newBlock = testOps.replace(headerBlock, 'header', { text: 'My heading', level: 2, isToggleable: true }, testStore);
+
+      // Children should remain attached to the new toggle header
+      expect(newBlock.contentIds).toHaveLength(1);
+      expect(child1.parentId).toBe(newBlock.id);
+    });
   });
 
   describe('move', () => {

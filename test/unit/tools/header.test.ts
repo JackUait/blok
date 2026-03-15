@@ -875,6 +875,7 @@ describe('Header Tool - Custom Configurations', () => {
 
         const mockAPI = createMockAPI();
         (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+        (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
 
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
           data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
@@ -915,6 +916,7 @@ describe('Header Tool - Custom Configurations', () => {
       it('resets _isOpen when isToggleable is turned off', () => {
         const mockAPI = createMockAPI();
         (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+        (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
 
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
           data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
@@ -938,6 +940,43 @@ describe('Header Tool - Custom Configurations', () => {
         const savedData = header.save(header.render());
 
         expect(savedData.isToggleable).toBeUndefined();
+      });
+
+      it('promotes children to root level (setBlockParent null) when toggling off', () => {
+        const childBlocks = [
+          { id: 'child-0', holder: document.createElement('div') },
+          { id: 'child-1', holder: document.createElement('div') },
+        ];
+
+        const mockAPI = createMockAPI();
+        const mockSetBlockParent = vi.fn();
+
+        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
+        (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = mockSetBlockParent;
+
+        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          config: {},
+          api: mockAPI,
+          readOnly: false,
+          block: { id: 'test-block-id' } as never,
+        };
+
+        const header = new Header(options);
+        header.render();
+        header.rendered();
+
+        // Toggle isToggleable OFF via settings menu
+        const settings = toMenuArray(header.renderSettings());
+        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
+        const onActivate = toggleSetting?.onActivate as (() => void) | undefined;
+
+        onActivate?.();
+
+        // Each child should have been promoted to root level
+        expect(mockSetBlockParent).toHaveBeenCalledTimes(2);
+        expect(mockSetBlockParent).toHaveBeenCalledWith('child-0', null);
+        expect(mockSetBlockParent).toHaveBeenCalledWith('child-1', null);
       });
     });
 

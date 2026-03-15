@@ -570,9 +570,12 @@ export class BlockOperations {
      * Tools that can host children (have a toggle-children container in their DOM).
      * When replacing with a non-hosting tool, children must be promoted to root level
      * rather than orphaned inside a block that has no children container.
+     *
+     * A header can only host children when isToggleable is true in its data.
+     * Regular (non-toggleable) headers have no children container.
      */
-    const HOSTING_TOOLS = new Set(['toggle', 'header']);
-    const newToolCanHostChildren = HOSTING_TOOLS.has(newTool);
+    const newToolCanHostChildren = newTool === 'toggle' ||
+      (newTool === 'header' && (data as { isToggleable?: boolean }).isToggleable === true);
 
     if (oldContentIds.length > 0 && !newToolCanHostChildren) {
       // Promote each child to root level, inserting after the new block

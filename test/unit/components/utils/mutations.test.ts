@@ -33,6 +33,17 @@ describe('isMutationBelongsToElement', () => {
     expect(isMutationBelongsToElement(mutation, element)).toBe(false);
   });
 
+  it('ignores internal data-blok-toggle-open attribute updates', () => {
+    const element = document.createElement('div');
+    const mutation = createMutation({
+      type: 'attributes',
+      attributeName: 'data-blok-toggle-open',
+      target: element,
+    });
+
+    expect(isMutationBelongsToElement(mutation, element)).toBe(false);
+  });
+
   it('returns true when mutation affects the element or its descendants', () => {
     const element = document.createElement('div');
     const child = document.createElement('span');

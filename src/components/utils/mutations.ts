@@ -7,9 +7,9 @@ export const isMutationBelongsToElement = (mutationRecord: MutationRecord, eleme
   const { type, target, addedNodes, removedNodes } = mutationRecord;
 
   /**
-   * Skip own technical mutations, for example, data-blok-empty attribute changes
+   * Skip own technical mutations, for example, data-blok-empty or data-blok-toggle-open attribute changes
    */
-  if (mutationRecord.type === 'attributes' && mutationRecord.attributeName === 'data-blok-empty') {
+  if (mutationRecord.type === 'attributes' && (mutationRecord.attributeName === 'data-blok-empty' || mutationRecord.attributeName === 'data-blok-toggle-open')) {
     return false;
   }
 

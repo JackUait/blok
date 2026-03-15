@@ -175,6 +175,8 @@ describe('Toolbox', () => {
         convert: vi.fn(),
         composeBlockData: vi.fn(async () => ({})),
         insert: vi.fn(() => blockAPI),
+        setBlockParent: vi.fn(),
+        transact: vi.fn((fn: () => void) => fn()),
         stopBlockMutationWatching: vi.fn(),
       },
       caret: {
@@ -928,6 +930,73 @@ describe('Toolbox', () => {
       await toolbox.toolButtonActivated('testTool', {});
 
       expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+    });
+
+    it('should wrap parent-clear, insert, and parent-restore in a single transaction for child blocks', async () => {
+      const parentId = 'parent-toggle-id';
+      const newBlockAPI = {
+        id: 'new-block-id',
+        isEmpty: false,
+        call: vi.fn(),
+        holder: document.createElement('div'),
+      } as unknown as BlockAPI;
+
+      const childBlock = {
+        ...mocks.blockAPI,
+        id: 'child-block-id',
+        isEmpty: true,
+        parentId,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(childBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.insert).mockReturnValue(newBlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // transact should have been called to group the operations
+      expect(mocks.api.blocks.transact).toHaveBeenCalledTimes(1);
+
+      // All three block operations should have been called inside the transaction
+      const transactFn = vi.mocked(mocks.api.blocks.transact!).mock.calls[0]?.[0];
+
+      expect(transactFn).toBeTypeOf('function');
+
+      // Verify the operations were called: clear parent, insert, restore parent
+      expect(mocks.api.blocks.setBlockParent).toHaveBeenCalledWith('child-block-id', null);
+      expect(mocks.api.blocks.insert).toHaveBeenCalled();
+      expect(mocks.api.blocks.setBlockParent).toHaveBeenCalledWith('new-block-id', parentId);
+    });
+
+    it('should not use transaction when block has no parent', async () => {
+      const blockWithoutParent = {
+        ...mocks.blockAPI,
+        isEmpty: true,
+        parentId: undefined,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(blockWithoutParent as unknown as BlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // transact should NOT have been called since the block has no parent
+      expect(mocks.api.blocks.transact).not.toHaveBeenCalled();
+      expect(mocks.api.blocks.setBlockParent).not.toHaveBeenCalled();
     });
   });
 

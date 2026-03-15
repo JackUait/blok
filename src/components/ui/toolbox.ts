@@ -608,26 +608,32 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       : undefined;
 
     /**
-     * When replacing a block that is a toggle child, remove it from the parent's
-     * contentIds BEFORE replacing so we don't leave a stale id behind.
-     * The new block will be reparented after insertion.
+     * When replacing a child block (e.g. inside a toggle), the parent-clear,
+     * insert, and parent-restore must be a single undo entry. Wrap them in
+     * a transaction so undo/redo treats the conversion atomically.
      */
-    if (shouldReplaceBlock && currentBlockParentId !== null) {
-      this.api.blocks.setBlockParent(currentBlock.id, null);
-    }
+    const performInsert = (): BlockAPI => {
+      if (shouldReplaceBlock && currentBlockParentId !== null) {
+        this.api.blocks.setBlockParent(currentBlock.id, null);
+      }
 
-    const newBlock = this.api.blocks.insert(
-      toolName,
-      blockData,
-      undefined,
-      index,
-      undefined,
-      shouldReplaceBlock
-    );
+      const inserted = this.api.blocks.insert(
+        toolName,
+        blockData,
+        undefined,
+        index,
+        undefined,
+        shouldReplaceBlock
+      );
 
-    if (currentBlockParentId !== null) {
-      this.api.blocks.setBlockParent(newBlock.id, currentBlockParentId);
-    }
+      if (currentBlockParentId !== null) {
+        this.api.blocks.setBlockParent(inserted.id, currentBlockParentId);
+      }
+
+      return inserted;
+    };
+
+    const newBlock = this.insertWithTransaction(performInsert, currentBlockParentId);
 
     this.api.caret.setToBlock(index);
 
@@ -640,6 +646,29 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * Pass setExplicitlyClosed: false so the toolbar can show again on hover after toolbox insertion
      */
     this.api.toolbar.close({ setExplicitlyClosed: false });
+  }
+
+  /**
+   * Runs a block-insert callback inside a transaction when the block has a parent,
+   * so that parent-clear + insert + parent-restore form a single undo entry.
+   * When there is no parent (or transact is unavailable), runs the callback directly.
+   *
+   * @param fn - synchronous callback that performs the insert and returns the new BlockAPI
+   * @param parentId - the current block's parentId, or null if none
+   * @returns the BlockAPI returned by fn
+   */
+  private insertWithTransaction(fn: () => BlockAPI, parentId: string | null): BlockAPI {
+    const result: { block: BlockAPI | undefined } = { block: undefined };
+
+    if (parentId !== null && this.api.blocks.transact !== undefined) {
+      this.api.blocks.transact(() => {
+        result.block = fn();
+      });
+    } else {
+      result.block = fn();
+    }
+
+    return result.block as BlockAPI;
   }
 
   /**

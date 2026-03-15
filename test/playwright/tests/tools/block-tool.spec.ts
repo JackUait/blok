@@ -1043,7 +1043,6 @@ test.describe('blockToolAdapter', () => {
       const instance = ensureBlockToolStubInstance(tool.create(data, blockApi, false));
 
       expect(instance.config).toMatchObject(options.config?.config ?? {});
-      expect(instance.config).toHaveProperty('_toolboxEntries');
     });
   });
 });

@@ -12,18 +12,16 @@ import type {
   BlockToolData,
   PasteEvent,
   ToolboxConfig,
-  ToolboxConfigEntry,
   ConversionConfig,
   SanitizerConfig,
   PasteConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
-import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggleH1, IconToggleH2, IconToggleH3 } from '../../components/icons';
+import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3 } from '../../components/icons';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
-import { translateToolTitle } from '../../components/utils/tools';
 import { twMerge } from '../../components/utils/tw';
-import { ARROW_ICON, BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
+import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR, TOGGLE_CHILDREN_STYLES } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility } from '../toggle/toggle-lifecycle';
 import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
@@ -72,11 +70,6 @@ export interface HeaderConfig {
   levelOverrides?: Record<number, HeaderLevelConfig>;
   /** Custom shortcuts per level. If undefined, uses default markdown (#, ##, etc). If empty {}, disables all shortcuts. */
   shortcuts?: Record<number, string>;
-  /**
-   * @internal Injected by BlockToolAdapter - merged toolbox entries.
-   * When present, renderSettings() will use these entries instead of the default levels.
-   */
-  _toolboxEntries?: ToolboxConfigEntry[];
 }
 
 /**
@@ -359,97 +352,21 @@ export class Header implements BlockTool {
    * @returns MenuConfig array
    */
   public renderSettings(): MenuConfig {
-    const toolboxEntries = this._settings._toolboxEntries;
-
-    /**
-     * If user provided custom toolbox entries, use them to build settings menu.
-     * This ensures block settings match the toolbox configuration.
-     * Entries without explicit level data will default to the configured defaultLevel.
-     *
-     * Only fall back to levels config when _toolboxEntries is not provided or empty,
-     * or when using the default single "Heading" toolbox entry (detected by having
-     * exactly one entry with no level data and no custom title or the default "Heading" title).
-     */
-    const isDefaultToolboxEntry = toolboxEntries?.length === 1 &&
-      toolboxEntries[0].data === undefined &&
-      (toolboxEntries[0].title === undefined || toolboxEntries[0].title === 'Heading');
-
-    const levelSettings: MenuConfig = toolboxEntries !== undefined && toolboxEntries.length > 0 && !isDefaultToolboxEntry
-      ? this.buildSettingsFromToolboxEntries(toolboxEntries)
-      : this.levels.map(level => {
-        const translated = this.api.i18n.t(level.nameKey);
-        const title = translated !== level.nameKey ? translated : level.name;
-
-        return {
-          icon: level.icon,
-          title,
-          onActivate: (): void => this.setLevel(level.number),
-          closeOnActivate: true,
-          isActive: this.currentLevel.number === level.number,
-          dataset: {
-            'blok-header-level': String(level.number),
-          },
-        };
-      });
-
-    const settingsArray = Array.isArray(levelSettings) ? levelSettings : [levelSettings];
-
-    /**
-     * Add toggle heading option
-     */
-    const toggleHeadingTitle = this.api.i18n.t('tools.header.toggleHeading');
-
-    settingsArray.push({
-      icon: ARROW_ICON,
-      title: toggleHeadingTitle !== 'tools.header.toggleHeading' ? toggleHeadingTitle : 'Toggle heading',
-      onActivate: (): void => this.toggleIsToggleable(),
-      closeOnActivate: true,
-      isActive: this._data.isToggleable === true,
-    });
-
-    return settingsArray;
-  }
-
-  /**
-   * Build settings menu items from toolbox entries.
-   * This allows users to customize which levels appear in block settings
-   * by configuring the toolbox.
-   *
-   * @param entries - Merged toolbox entries from user config
-   * @returns MenuConfig array
-   */
-  private buildSettingsFromToolboxEntries(entries: ToolboxConfigEntry[]): MenuConfig {
-    return entries.map(entry => {
-      const entryData = entry.data as { level?: number } | undefined;
-      const level = entryData?.level ?? this.defaultLevel.number;
-      const defaultLevel = Header.DEFAULT_LEVELS.find(l => l.number === level);
-      const fallbackTitle = defaultLevel?.name ?? `Heading ${level}`;
-
-      const title = this.resolveToolboxEntryTitle(entry, fallbackTitle);
-      const icon = entry.icon ?? defaultLevel?.icon ?? IconHeading;
+    return this.levels.map(level => {
+      const translated = this.api.i18n.t(level.nameKey);
+      const title = translated !== level.nameKey ? translated : level.name;
 
       return {
-        icon,
+        icon: level.icon,
         title,
-        onActivate: (): void => this.setLevel(level),
+        onActivate: (): void => this.setLevel(level.number),
         closeOnActivate: true,
-        isActive: this.currentLevel.number === level,
+        isActive: this.currentLevel.number === level.number,
         dataset: {
-          'blok-header-level': String(level),
+          'blok-header-level': String(level.number),
         },
       };
     });
-  }
-
-  /**
-   * Resolves the title for a toolbox entry using the shared translation utility.
-   *
-   * @param entry - Toolbox entry
-   * @param fallback - Fallback title if no custom title or translation found
-   * @returns Resolved title string
-   */
-  private resolveToolboxEntryTitle(entry: ToolboxConfigEntry, fallback: string): string {
-    return translateToolTitle(this.api.i18n, entry, fallback);
   }
 
   /**
@@ -866,40 +783,6 @@ export class Header implements BlockTool {
     }
     headerRow.appendChild(this._element);
     this._wrapper.appendChild(headerRow);
-  }
-
-  /**
-   * Toggle the isToggleable state on/off.
-   * Called from the settings menu.
-   */
-  private toggleIsToggleable(): void {
-    const wasToggleable = this._data.isToggleable === true;
-
-    /**
-     * If disabling toggle, ensure children are visible before removing toggle state
-     */
-    if (wasToggleable) {
-      updateChildrenVisibility(this.api, this.blockId ?? '', true);
-
-      // Promote children to root level before removing the toggle wrapper,
-      // otherwise their DOM holders would be detached with the wrapper.
-      const children = this.api.blocks.getChildren(this.blockId ?? '');
-
-      for (const child of children) {
-        this.api.blocks.setBlockParent(child.id, null);
-      }
-
-      this._isOpen = false;
-      this.api.events.off('block changed', this.handleBlockChanged);
-    } else if (!this.readOnly) {
-      this.api.events.on('block changed', this.handleBlockChanged);
-    }
-
-    this.data = {
-      level: this._data.level,
-      text: this._data.text,
-      isToggleable: !wasToggleable || undefined,
-    };
   }
 
   /**

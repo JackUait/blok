@@ -711,7 +711,7 @@ describe('BlockToolAdapter', () => {
         block: BlockAPI;
         readonly: boolean;
         api: API;
-        config: ToolSettings & { _toolboxEntries?: unknown };
+        config: ToolSettings;
       };
 
       expect(instanceWithProps.data).toEqual(data);
@@ -719,11 +719,8 @@ describe('BlockToolAdapter', () => {
       expect(instanceWithProps.readonly).toBe(false);
       expect(instanceWithProps.api).toEqual(options.api);
 
-      // Config should include original settings plus injected _toolboxEntries
-      if (options.config.config !== undefined) {
-        expect(instanceWithProps.config).toMatchObject(options.config.config);
-      }
-      expect(instanceWithProps.config).toHaveProperty('_toolboxEntries');
+      // Config should match the tool's settings
+      expect(instanceWithProps.config).toEqual(options.config.config);
     });
   });
 });

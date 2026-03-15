@@ -4,16 +4,8 @@ import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
-import {
-  BLOK_INTERFACE_SELECTOR,
-} from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
-const HEADER_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`;
-const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
-const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
-const POPOVER_ITEM_SELECTOR = '[data-blok-testid="popover-item"]';
-const DEFAULT_WAIT_TIMEOUT = 5_000;
 
 declare global {
   interface Window {
@@ -73,40 +65,6 @@ const createHeaderData = (text: string, level: number, isToggleable?: boolean): 
     },
   ],
 });
-
-const waitForBlockTunesPopover = async (
-  page: Page,
-  timeout = DEFAULT_WAIT_TIMEOUT
-): Promise<void> => {
-  const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
-
-  await expect(popover).toHaveCount(1);
-  await popover.waitFor({ state: 'visible', timeout });
-};
-
-const focusHeaderBlock = async (page: Page): Promise<void> => {
-  const block = page.locator(HEADER_BLOCK_SELECTOR);
-
-  await expect(block).toHaveCount(1);
-  await expect(block).toBeVisible();
-  await block.click();
-};
-
-const openBlockTunesViaToolbar = async (page: Page): Promise<void> => {
-  await focusHeaderBlock(page);
-
-  const block = page.locator(HEADER_BLOCK_SELECTOR);
-  const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
-
-  // After click, hover the block to trigger the toolbar to open.
-  // Toolbar.close() (called by mousedown) now resets lastHoveredBlockId,
-  // so hovering the same block re-emits BlockHovered and opens the toolbar.
-  await block.hover();
-
-  await expect(settingsButton).toBeVisible();
-  await settingsButton.click();
-  await waitForBlockTunesPopover(page);
-};
 
 test.describe('Toggle Headings', () => {
   test.beforeAll(() => {
@@ -250,44 +208,6 @@ test.describe('Toggle Headings', () => {
       // Expand again
       await arrow.click();
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
-    });
-  });
-
-  test.describe('settings menu', () => {
-    test('enables toggle heading via settings menu', async ({ page }) => {
-      await createBlok(page, createHeaderData('Make Toggleable', 2));
-
-      await openBlockTunesViaToolbar(page);
-
-      // Find the "Toggle heading" option
-      const toggleOption = page.locator(POPOVER_ITEM_SELECTOR).filter({ hasText: 'Toggle heading', hasNotText: /Toggle heading \d/ });
-
-      await expect(toggleOption).toBeVisible();
-      await toggleOption.click();
-
-      // Header should now have toggle features
-      const header = page.getByRole('heading', { level: 2, name: 'Make Toggleable' });
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-
-      await expect(arrow).toBeVisible();
-      await expect(header).toHaveAttribute('data-blok-toggle-open');
-    });
-
-    test('disables toggle heading via settings menu', async ({ page }) => {
-      await createBlok(page, createHeaderData('Remove Toggle', 2, true));
-
-      // Verify toggle exists
-      await expect(page.locator('[data-blok-toggle-arrow]')).toBeVisible();
-
-      await openBlockTunesViaToolbar(page);
-
-      // Click toggle heading to disable it
-      const toggleOption = page.locator(POPOVER_ITEM_SELECTOR).filter({ hasText: 'Toggle heading', hasNotText: /Toggle heading \d/ });
-
-      await toggleOption.click();
-
-      // Arrow should be gone
-      await expect(page.locator('[data-blok-toggle-arrow]')).toHaveCount(0);
     });
   });
 

@@ -183,14 +183,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         this.Blok.BlockSelection.clearCache();
       }
 
-      /** Get tool's settings data - only relevant for single block selection */
-      const { toolTunes, commonTunes } = block.getTunes();
+      /** Get common tunes (delete, move, etc.) */
+      const { commonTunes } = block.getTunes();
 
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverParams: PopoverParams & { flipper?: Flipper } = {
         searchable: false,
         trigger: trigger || this.nodes.wrapper,
-        items: await this.getTunesItems(block, commonTunes, toolTunes),
+        items: await this.getTunesItems(block, commonTunes),
         scopeElement: this.Blok.API.methods.ui.nodes.redactor,
         messages: {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
@@ -293,25 +293,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
   /**
    * Returns list of items to be displayed in block tunes menu.
-   * Merges tool specific tunes, conversion menu and common tunes in one list in predefined order
+   * Merges conversion menu and common tunes in one list in predefined order
    * @param currentBlock –  block we are about to open block tunes for
    * @param commonTunes – common tunes
-   * @param toolTunes - tool specific tunes
    */
-  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[], toolTunes?: MenuConfigItem[]): Promise<PopoverItemParams[]> {
+  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[]): Promise<PopoverItemParams[]> {
     const items = [] as MenuConfigItem[];
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
-
-    /**
-     * Only show tool-specific tunes when a single block is selected
-     */
-    if (!hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0) {
-      items.push(...toolTunes);
-      items.push({
-        type: PopoverItemType.Separator,
-      });
-    }
 
     const allBlockTools = Array.from(this.Blok.Tools.blockTools.values());
 

@@ -155,7 +155,6 @@ type EventsDispatcherMock = {
 
 const createBlock = (): Block => ({
   getTunes: vi.fn(() => ({
-    toolTunes: [],
     commonTunes: [],
   })),
   holder: document.createElement('div'),

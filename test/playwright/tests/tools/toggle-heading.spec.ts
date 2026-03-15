@@ -13,11 +13,7 @@ const HOLDER_ID = 'blok';
 const HEADER_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`;
 const PARAGRAPH_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`;
 const TOGGLE_ARROW_SELECTOR = '[data-blok-toggle-arrow]';
-const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
-const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 const TOOLBOX_POPOVER_SELECTOR = '[data-blok-testid="toolbox-popover"]';
-
-const DEFAULT_WAIT_TIMEOUT = 5_000;
 
 // ---------------------------------------------------------------------------
 // Type helpers
@@ -114,42 +110,6 @@ const createBlokEmpty = async (page: Page): Promise<void> => {
     await blok.isReady;
   }, { holder: HOLDER_ID });
 };
-
-// ---------------------------------------------------------------------------
-// Interaction helpers
-// ---------------------------------------------------------------------------
-
-const waitForBlockTunesPopover = async (
-  page: Page,
-  timeout = DEFAULT_WAIT_TIMEOUT
-): Promise<void> => {
-  const popover = page.locator(POPOVER_CONTAINER_SELECTOR);
-
-  await expect(popover).toHaveCount(1);
-  await popover.waitFor({ state: 'visible', timeout });
-};
-
-const openBlockTunesViaToolbar = async (page: Page): Promise<void> => {
-  const block = page.locator(HEADER_BLOCK_SELECTOR);
-
-  await expect(block).toHaveCount(1);
-  await expect(block).toBeVisible();
-  await block.click();
-  await block.hover();
-
-  const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
-
-  await expect(settingsButton).toBeVisible();
-  await settingsButton.click();
-  await waitForBlockTunesPopover(page);
-};
-
-const findToggleHeadingItem = (page: Page) =>
-  page.getByTestId('popover-item').filter({
-    hasText: 'Toggle heading',
-  }).filter({
-    hasNotText: /Toggle heading \d/,
-  });
 
 // ---------------------------------------------------------------------------
 // Data factories
@@ -462,84 +422,7 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 4. Block settings
-  // =========================================================================
-
-  test.describe('block settings', () => {
-    test('enables toggle heading via settings menu — arrow appears', async ({ page }) => {
-      await createBlokWithData(page, [makeRegularHeaderBlock('Make Toggleable', 2)]);
-
-      await openBlockTunesViaToolbar(page);
-
-      const toggleOption = findToggleHeadingItem(page);
-
-      await expect(toggleOption).toBeVisible();
-      await toggleOption.click();
-
-      const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
-
-      await expect(arrow).toBeVisible();
-      await expect(page.getByRole('heading', { level: 2, name: 'Make Toggleable' })).toHaveAttribute('data-blok-toggle-open');
-    });
-
-    test('disables toggle heading via settings menu — arrow is removed', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Remove Toggle', 2)]);
-
-      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toBeVisible();
-
-      await openBlockTunesViaToolbar(page);
-
-      const toggleOption = findToggleHeadingItem(page);
-
-      await toggleOption.click();
-
-      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveCount(0);
-    });
-
-    test('"Toggle heading" settings item has active attribute when already enabled', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Active State', 2)]);
-
-      await openBlockTunesViaToolbar(page);
-
-      const toggleOption = findToggleHeadingItem(page);
-
-      await expect(toggleOption).toHaveAttribute('data-blok-popover-item-active', 'true');
-    });
-
-    test('"Toggle heading" settings item does not have active attribute on regular header', async ({ page }) => {
-      await createBlokWithData(page, [makeRegularHeaderBlock('Inactive State', 2)]);
-
-      await openBlockTunesViaToolbar(page);
-
-      const toggleOption = findToggleHeadingItem(page);
-
-      await expect(toggleOption).not.toHaveAttribute('data-blok-popover-item-active', 'true');
-    });
-
-    test('changing level from H2 to H3 via settings preserves toggle state', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Level Change', 2)]);
-
-      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toBeVisible();
-
-      await openBlockTunesViaToolbar(page);
-
-      const h3Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 3', hasNotText: 'Toggle' });
-
-      await h3Option.click();
-
-      // Heading level changed
-      const newHeader = page.getByRole('heading', { level: 3, name: 'Level Change' });
-
-      await expect(newHeader).toBeVisible();
-
-      // Arrow must still be present
-      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toBeVisible();
-      await expect(newHeader).toHaveAttribute('data-blok-toggle-open');
-    });
-  });
-
-  // =========================================================================
-  // 5. Toolbox creation
+  // 4. Toolbox creation
   // =========================================================================
 
   test.describe('toolbox creation', () => {
@@ -611,7 +494,7 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 6. Markdown shortcuts
+  // 5. Markdown shortcuts
   // =========================================================================
 
   test.describe('markdown shortcuts', () => {
@@ -706,7 +589,7 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 7. Save data
+  // 6. Save data
   // =========================================================================
 
   test.describe('save data', () => {
@@ -770,7 +653,7 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 8. Read-only mode
+  // 7. Read-only mode
   // =========================================================================
 
   test.describe('read-only mode', () => {
@@ -807,7 +690,7 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 9. Keyboard interactions
+  // 8. Keyboard interactions
   // =========================================================================
 
   test.describe('keyboard interactions', () => {
@@ -836,7 +719,7 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 10. Body placeholder click
+  // 9. Body placeholder click
   // =========================================================================
 
   test.describe('body placeholder click', () => {
@@ -902,7 +785,7 @@ test.describe('Toggle Heading', () => {
   });
 
   // =========================================================================
-  // 11. Arrow positioning
+  // 10. Arrow positioning
   // =========================================================================
 
   test.describe('arrow positioning', () => {

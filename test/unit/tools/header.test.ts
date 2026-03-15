@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/header';
 import { IconToggleH1, IconToggleH2, IconToggleH3 } from '../../../src/components/icons';
 import { TOGGLE_ATTR } from '../../../src/tools/toggle/constants';
-import type { API, BlockToolConstructorOptions, ToolboxConfigEntry } from '../../../types';
+import type { API, BlockToolConstructorOptions } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 
 const createMockAPI = (): API => ({
@@ -75,8 +75,7 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const settings = toMenuArray(header.renderSettings());
 
-      // 3 levels + 1 toggle heading option
-      expect(settings).toHaveLength(4);
+      expect(settings).toHaveLength(3);
       expect(settings.filter(s => s.dataset !== undefined).map(s => s.dataset as Record<string, string>)).toEqual([
         { 'blok-header-level': '1' },
         { 'blok-header-level': '2' },
@@ -89,8 +88,7 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const settings = toMenuArray(header.renderSettings());
 
-      // 6 levels + 1 toggle heading option
-      expect(settings).toHaveLength(7);
+      expect(settings).toHaveLength(6);
     });
 
     it('only allows specified levels in settings', () => {
@@ -98,8 +96,7 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const settings = toMenuArray(header.renderSettings());
 
-      // 3 levels + 1 toggle heading option
-      expect(settings).toHaveLength(4);
+      expect(settings).toHaveLength(3);
     });
   });
 
@@ -268,8 +265,7 @@ describe('Header Tool - Custom Configurations', () => {
       const header = new Header(options);
       const settings = toMenuArray(header.renderSettings());
 
-      // 2 levels + 1 toggle heading option
-      expect(settings).toHaveLength(3);
+      expect(settings).toHaveLength(2);
       expect(settings[0].title).toBe('Main Title');
       expect(settings[1].title).toBe('Section Title');
     });
@@ -342,177 +338,6 @@ describe('Header Tool - Custom Configurations', () => {
       const element = header.render();
 
       expect(element).toHaveAttribute('data-blok-tool', 'header');
-    });
-  });
-
-  describe('_toolboxEntries configuration', () => {
-    it('uses custom toolbox entries when _toolboxEntries is provided', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { icon: '<svg>H2</svg>', title: 'Big Heading', data: { level: 2 } },
-        { icon: '<svg>H3</svg>', title: 'Medium Heading', data: { level: 3 } },
-        { icon: '<svg>H4</svg>', title: 'Small Heading', data: { level: 4 } },
-      ];
-      const options = createHeaderOptions(
-        { text: 'Test', level: 2 },
-        { _toolboxEntries: toolboxEntries }
-      );
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      // 3 toolbox entries + 1 toggle heading option
-      expect(settings).toHaveLength(4);
-      expect(settings[0].title).toBe('Big Heading');
-      expect(settings[0].icon).toBe('<svg>H2</svg>');
-      expect(settings[1].title).toBe('Medium Heading');
-      expect(settings[2].title).toBe('Small Heading');
-    });
-
-    it('shows correct levels based on toolbox entry data', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { title: 'H2', data: { level: 2 } },
-        { title: 'H4', data: { level: 4 } },
-      ];
-      const options = createHeaderOptions({}, { _toolboxEntries: toolboxEntries });
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      // 2 toolbox entries + 1 toggle heading option
-      expect(settings).toHaveLength(3);
-      expect(settings.filter(s => s.dataset !== undefined).map(s => s.dataset as Record<string, string>)).toEqual([
-        { 'blok-header-level': '2' },
-        { 'blok-header-level': '4' },
-      ]);
-    });
-
-    it('falls back to levels config when _toolboxEntries is not provided', () => {
-      const options = createHeaderOptions({}, { levels: [1, 2, 3] });
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      // 3 levels + 1 toggle heading option
-      expect(settings).toHaveLength(4);
-    });
-
-    it('falls back to all levels when neither _toolboxEntries nor levels is provided', () => {
-      const options = createHeaderOptions({}, {});
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      // 6 levels + 1 toggle heading option
-      expect(settings).toHaveLength(7);
-    });
-
-    it('marks correct level as active with custom toolbox entries', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { title: 'H2', data: { level: 2 } },
-        { title: 'H3', data: { level: 3 } },
-      ];
-      const options = createHeaderOptions(
-        { text: 'Test', level: 3 },
-        { _toolboxEntries: toolboxEntries }
-      );
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      expect(settings[0].isActive).toBe(false);
-      expect(settings[1].isActive).toBe(true);
-    });
-
-    it('uses default icon when not provided in toolbox entry', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { title: 'Custom H2', data: { level: 2 } },
-      ];
-      const options = createHeaderOptions(
-        { text: 'Test', level: 2 },
-        { _toolboxEntries: toolboxEntries }
-      );
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      expect(settings[0].title).toBe('Custom H2');
-      expect(settings[0].icon).toBeDefined();
-      expect(typeof settings[0].icon).toBe('string');
-      expect((settings[0].icon as string).length).toBeGreaterThan(0);
-    });
-
-    it('uses default title when not provided in toolbox entry', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { icon: '<svg>custom</svg>', data: { level: 2 } },
-      ];
-      const options = createHeaderOptions({}, { _toolboxEntries: toolboxEntries });
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      expect(settings[0].title).toBe('Heading 2');
-      expect(settings[0].icon).toBe('<svg>custom</svg>');
-    });
-
-    it('uses default level when data.level is not provided in toolbox entry', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { title: 'Default Level' },
-      ];
-      const options = createHeaderOptions({}, { _toolboxEntries: toolboxEntries, defaultLevel: 3 });
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      // 1 toolbox entry + 1 toggle heading option
-      expect(settings).toHaveLength(2);
-      expect(settings[0].dataset).toEqual({ 'blok-header-level': '3' });
-    });
-
-    it('ignores levels config when _toolboxEntries is provided', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { title: 'Only H2', data: { level: 2 } },
-      ];
-      const options = createHeaderOptions(
-        {},
-        {
-          _toolboxEntries: toolboxEntries,
-          levels: [1, 2, 3, 4, 5, 6],
-        }
-      );
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      // 1 toolbox entry + 1 toggle heading option
-      expect(settings).toHaveLength(2);
-      expect(settings[0].title).toBe('Only H2');
-    });
-
-    it('handles empty _toolboxEntries array by falling back to levels config', () => {
-      const options = createHeaderOptions(
-        {},
-        {
-          _toolboxEntries: [],
-          levels: [1, 2],
-        }
-      );
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      // 2 levels + 1 toggle heading option
-      expect(settings).toHaveLength(3);
-    });
-
-    it('calls setLevel with correct level when onActivate is triggered', () => {
-      const toolboxEntries: ToolboxConfigEntry[] = [
-        { title: 'H3', data: { level: 3 } },
-      ];
-      const options = createHeaderOptions(
-        { text: 'Test', level: 2 },
-        { _toolboxEntries: toolboxEntries }
-      );
-      const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
-
-      const onActivate = settings[0].onActivate as () => void;
-
-      onActivate();
-
-      // Check data.level changed (element replacement only happens when in DOM)
-      const savedData = header.save(header.render());
-
-      expect(savedData.level).toBe(3);
     });
   });
 
@@ -827,156 +652,6 @@ describe('Header Tool - Custom Configurations', () => {
 
         expect(savedData.text).not.toContain(TOGGLE_ATTR.toggleArrow);
         expect(savedData.text).toBe('Clean text');
-      });
-    });
-
-    describe('renderSettings()', () => {
-      it('includes a toggle heading option in settings', () => {
-        const options = createHeaderOptions({ text: 'Test', level: 2 });
-        const header = new Header(options);
-        const settings = toMenuArray(header.renderSettings());
-        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
-
-        expect(toggleSetting).toBeDefined();
-      });
-
-      it('toggle heading setting is active when isToggleable is true', () => {
-        const options = createHeaderOptions({ text: 'Test', level: 2, isToggleable: true });
-        const header = new Header(options);
-        const settings = toMenuArray(header.renderSettings());
-        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
-
-        expect(toggleSetting?.isActive).toBe(true);
-      });
-
-      it('toggle heading setting is not active when isToggleable is false', () => {
-        const options = createHeaderOptions({ text: 'Test', level: 2, isToggleable: false });
-        const header = new Header(options);
-        const settings = toMenuArray(header.renderSettings());
-        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
-
-        expect(toggleSetting?.isActive).toBe(false);
-      });
-    });
-
-    describe('toggling isToggleable off unhides children', () => {
-      it('shows hidden children when isToggleable is turned off via settings', () => {
-        const childHolders = Array.from({ length: 2 }, (_, i) => {
-          const holder = document.createElement('div');
-          holder.textContent = `Child ${i + 1}`;
-
-          return holder;
-        });
-
-        const childBlocks = childHolders.map((holder, i) => ({
-          id: `child-${i}`,
-          holder,
-        }));
-
-        const mockAPI = createMockAPI();
-        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
-        (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
-
-        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
-          config: {},
-          api: mockAPI,
-          readOnly: false,
-          block: { id: 'test-block-id' } as never,
-        };
-
-        const header = new Header(options);
-
-        header.render();
-
-        // Call rendered() to apply initial state (expanded in editing mode)
-        header.rendered();
-
-        // Collapse first so children are hidden
-        header.collapse();
-
-        // Verify children are hidden (collapsed state)
-        for (const holder of childHolders) {
-          expect(holder.classList.contains('hidden')).toBe(true);
-        }
-
-        // Toggle isToggleable OFF via the settings menu
-        const settings = toMenuArray(header.renderSettings());
-        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
-        const onActivate = toggleSetting?.onActivate as (() => void) | undefined;
-
-        onActivate?.();
-
-        // Children should now be visible since toggle was disabled
-        for (const holder of childHolders) {
-          expect(holder.classList.contains('hidden')).toBe(false);
-        }
-      });
-
-      it('resets _isOpen when isToggleable is turned off', () => {
-        const mockAPI = createMockAPI();
-        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
-        (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
-
-        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
-          config: {},
-          api: mockAPI,
-          readOnly: false,
-          block: { id: 'test-block-id' } as never,
-        };
-
-        const header = new Header(options);
-        header.render();
-
-        // Toggle isToggleable OFF
-        const settings = toMenuArray(header.renderSettings());
-        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
-        const onActivate = toggleSetting?.onActivate as (() => void) | undefined;
-
-        onActivate?.();
-
-        // isToggleable should be undefined (off)
-        const savedData = header.save(header.render());
-
-        expect(savedData.isToggleable).toBeUndefined();
-      });
-
-      it('promotes children to root level (setBlockParent null) when toggling off', () => {
-        const childBlocks = [
-          { id: 'child-0', holder: document.createElement('div') },
-          { id: 'child-1', holder: document.createElement('div') },
-        ];
-
-        const mockAPI = createMockAPI();
-        const mockSetBlockParent = vi.fn();
-
-        (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
-        (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = mockSetBlockParent;
-
-        const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
-          config: {},
-          api: mockAPI,
-          readOnly: false,
-          block: { id: 'test-block-id' } as never,
-        };
-
-        const header = new Header(options);
-        header.render();
-        header.rendered();
-
-        // Toggle isToggleable OFF via settings menu
-        const settings = toMenuArray(header.renderSettings());
-        const toggleSetting = settings.find(s => s.title === 'Toggle heading');
-        const onActivate = toggleSetting?.onActivate as (() => void) | undefined;
-
-        onActivate?.();
-
-        // Each child should have been promoted to root level
-        expect(mockSetBlockParent).toHaveBeenCalledTimes(2);
-        expect(mockSetBlockParent).toHaveBeenCalledWith('child-0', null);
-        expect(mockSetBlockParent).toHaveBeenCalledWith('child-1', null);
       });
     });
 

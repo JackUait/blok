@@ -224,7 +224,7 @@ export class ToggleItem implements BlockTool {
       return;
     }
 
-    if (data.event.type === 'block-removed') {
+    if (data.event.type === 'block-removed' || data.event.type === 'block-added') {
       this.updateBodyPlaceholderVisibility();
     }
   };

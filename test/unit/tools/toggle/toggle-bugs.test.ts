@@ -501,3 +501,62 @@ describe('Bug: setData() syncs _isOpen and arrow state from new data', () => {
     expect(childHolder.classList.contains('hidden')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// BUG: handleBlockChanged does not handle 'block-added' events
+// ---------------------------------------------------------------------------
+
+describe('Bug: handleBlockChanged hides body placeholder on block-added event', () => {
+  it('hides body placeholder when a child block is added (toggle)', () => {
+    // Create an open toggle with NO children — body placeholder should be visible
+    const { toggle, api, blocks } = createToggle({ text: 'test', isOpen: true });
+    blocks.getChildren.mockReturnValue([]);
+    const element = toggle.render();
+    toggle.rendered();
+
+    // Get the handleBlockChanged listener registered on 'block changed'
+    const eventsOn = api.events.on as ReturnType<typeof vi.fn>;
+    const registeredCalls = eventsOn.mock.calls as [string, (data: unknown) => void][];
+    const blockChangedCall = registeredCalls.find(call => call[0] === 'block changed');
+    expect(blockChangedCall).toBeDefined();
+    const handleBlockChanged = blockChangedCall![1];
+
+    // Placeholder should be visible (no children)
+    const placeholder = element.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.classList.contains('hidden')).toBe(false);
+
+    // Simulate a child being added (e.g., via undo restoring a deleted child)
+    blocks.getChildren.mockReturnValue([{ id: 'child-1' }]);
+    handleBlockChanged({ event: { type: 'block-added' } });
+
+    // Placeholder should now be hidden (toggle has children)
+    expect(placeholder.classList.contains('hidden')).toBe(true);
+  });
+
+  it('hides body placeholder when a child block is added (header toggle)', () => {
+    // Create an open toggle heading with NO children
+    const { header, api, blocks } = createHeader(
+      { text: 'test', level: 2, isToggleable: true, isOpen: true }
+    );
+    blocks.getChildren.mockReturnValue([]);
+    header.render();
+    header.rendered();
+
+    // Get the handleBlockChanged listener
+    const eventsOn = api.events.on as ReturnType<typeof vi.fn>;
+    const registeredCalls = eventsOn.mock.calls as [string, (data: unknown) => void][];
+    const blockChangedCall = registeredCalls.find(call => call[0] === 'block changed');
+    expect(blockChangedCall).toBeDefined();
+    const handleBlockChanged = blockChangedCall![1];
+
+    // Simulate a child being added
+    blocks.getChildren.mockReturnValue([{ id: 'child-1' }]);
+    handleBlockChanged({ event: { type: 'block-added' } });
+
+    // Verify placeholder is hidden — header toggle's placeholder should be hidden when children exist
+    const rendered = header.render();
+    const placeholder = rendered.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
+    expect(placeholder === null || placeholder.classList.contains('hidden')).toBe(true);
+  });
+});

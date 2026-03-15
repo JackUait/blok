@@ -1396,3 +1396,113 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
     expect(mockInsertInsideParent).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// BUG 1: Header has no setData() method — undo/redo on toggle headings
+// triggers full DOM destruction instead of in-place update.
+// ---------------------------------------------------------------------------
+describe('Header Tool - setData() for undo/redo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const createToggleHeader = (
+    data: Partial<HeaderData> = {},
+    overrides: { children?: Array<{ id: string; holder: HTMLElement }> } = {}
+  ): { header: Header; api: API; wrapper: HTMLElement } => {
+    const children = overrides.children ?? [];
+    const api: API = {
+      styles: {
+        block: 'blok-block',
+        inlineToolbar: 'blok-inline-toolbar',
+        inlineToolButton: 'blok-inline-tool-button',
+        inlineToolButtonActive: 'blok-inline-tool-button--active',
+        input: 'blok-input',
+        loader: 'blok-loader',
+        button: 'blok-button',
+        settingsButton: 'blok-settings-button',
+        settingsButtonActive: 'blok-settings-button--active',
+      },
+      i18n: { t: (key: string) => key, has: () => false },
+      blocks: {
+        getChildren: vi.fn().mockReturnValue(children),
+      },
+      events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
+    } as unknown as API;
+
+    const header = new Header({
+      data: { text: 'Hello', level: 2, isToggleable: true, isOpen: true, ...data } as HeaderData,
+      config: {},
+      api,
+      readOnly: false,
+      block: { id: 'test-block-id' } as never,
+    });
+
+    const wrapper = header.render();
+    header.rendered();
+
+    return { header, api, wrapper };
+  };
+
+  it('setData updates heading text content', () => {
+    const { header, wrapper } = createToggleHeader({ text: 'Original' });
+
+    const result = header.setData({ text: 'Updated', level: 2, isToggleable: true, isOpen: true });
+
+    const heading = wrapper.querySelector('h2') as HTMLElement;
+    expect(heading.innerHTML).toBe('Updated');
+    expect(result).toBe(true);
+  });
+
+  it('setData syncs _isOpen when isOpen changes from true to false', () => {
+    const { header } = createToggleHeader({ isOpen: true });
+
+    header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: false });
+
+    const saved = header.save(document.createElement('div'));
+    expect(saved.isOpen).toBe(false);
+  });
+
+  it('setData syncs _isOpen when isOpen changes from false to true', () => {
+    const { header } = createToggleHeader({ isOpen: false });
+
+    header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: true });
+
+    const saved = header.save(document.createElement('div'));
+    expect(saved.isOpen).toBe(true);
+  });
+
+  it('setData updates wrapper data-blok-toggle-open attribute', () => {
+    const { header, wrapper } = createToggleHeader({ isOpen: true });
+
+    const heading = wrapper.querySelector('h2') as HTMLElement;
+    expect(heading.getAttribute('data-blok-toggle-open')).toBe('true');
+
+    header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: false });
+
+    expect(heading.getAttribute('data-blok-toggle-open')).toBe('false');
+  });
+
+  it('setData updates arrow aria-expanded attribute', () => {
+    const { header, wrapper } = createToggleHeader({ isOpen: true });
+
+    const arrow = wrapper.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
+    expect(arrow.getAttribute('aria-expanded')).toBe('true');
+
+    header.setData({ text: 'Hello', level: 2, isToggleable: true, isOpen: false });
+
+    expect(arrow.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('setData returns true for successful in-place update', () => {
+    const { header } = createToggleHeader();
+
+    const result = header.setData({ text: 'New text', level: 2, isToggleable: true, isOpen: true });
+
+    expect(result).toBe(true);
+  });
+});

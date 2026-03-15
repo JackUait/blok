@@ -696,9 +696,8 @@ describe('BlockYjsSync', () => {
 
       it('preserves contentIds when replacing block due to tunes change', () => {
         /**
-         * Bug 2 regression: when handleYjsUpdate recreates a block because tunes
-         * changed, the composeBlock call must carry over the original block's
-         * contentIds so that parent-child hierarchy is preserved.
+         * Bug 2 regression: handleYjsUpdate must carry over contentIds when
+         * recreating a block because tunes changed.
          */
         const block = createMockBlock({
           id: 'toggle-block',
@@ -730,7 +729,6 @@ describe('BlockYjsSync', () => {
         const yblock = createMockYMap({
           type: 'paragraph',
           data: ydata,
-          // Different tunes to trigger tunes-changed path
           tunes: createMockYMap({ toggleOpen: false }),
         });
 
@@ -751,9 +749,8 @@ describe('BlockYjsSync', () => {
 
       it('preserves contentIds when replacing block due to setData failure', async () => {
         /**
-         * Bug 2 regression: when handleYjsUpdate falls back to replacing a block
-         * because setData returns false, the composeBlock call must carry over the
-         * original block's contentIds.
+         * Bug 2 regression: handleYjsUpdate must carry over contentIds when
+         * falling back to block replacement because setData returns false.
          */
         const block = createMockBlock({
           id: 'toggle-block',
@@ -809,9 +806,8 @@ describe('BlockYjsSync', () => {
 
       it('preserves parentId when replacing block due to tunes change', () => {
         /**
-         * Bug 2 regression: when handleYjsUpdate recreates a block because tunes
-         * changed, the composeBlock call must carry over the original block's
-         * parentId so that parent-child hierarchy is preserved.
+         * Bug 2 regression: handleYjsUpdate must carry over parentId when
+         * recreating a block because tunes changed.
          */
         const block = createMockBlock({
           id: 'child-block',
@@ -863,9 +859,8 @@ describe('BlockYjsSync', () => {
 
       it('preserves parentId when replacing block due to setData failure', async () => {
         /**
-         * Bug 2 regression: when handleYjsUpdate falls back to replacing a block
-         * because setData returns false, the composeBlock call must carry over the
-         * original block's parentId.
+         * Bug 2 regression: handleYjsUpdate must carry over parentId when
+         * falling back to block replacement because setData returns false.
          */
         const block = createMockBlock({
           id: 'child-block',
@@ -921,14 +916,9 @@ describe('BlockYjsSync', () => {
 
       it('reconciles orphaned children after block replacement in handleYjsUpdate', async () => {
         /**
-         * Bug 3 regression: when handleYjsUpdate replaces a block (e.g. because
-         * setData returns false), it must call reconcileOrphanedChildren() to fix
-         * any child blocks whose in-memory parentId is stale.
-         *
-         * Scenario: parent block is updated via undo. setData fails, so the block
-         * is replaced. A child block's in-memory parentId points to a stale ID,
-         * but Yjs records the correct parentId. After replacement,
-         * reconcileOrphanedChildren should fix the child's parentId.
+         * Bug 3 regression: after replaceBlock in handleYjsUpdate,
+         * reconcileOrphanedChildren must fix child blocks whose in-memory
+         * parentId is stale while Yjs records the correct parentId.
          */
         const parentBlock = createMockBlock({
           id: 'parent-block',
@@ -937,7 +927,6 @@ describe('BlockYjsSync', () => {
           contentIds: ['child-block'],
         });
 
-        // Child has stale parentId pointing to a removed block
         const childBlock = createMockBlock({
           id: 'child-block',
           parentId: 'stale-old-parent',
@@ -964,7 +953,6 @@ describe('BlockYjsSync', () => {
         });
         yjsSync.subscribe();
 
-        // Yjs state: parent block data
         const parentYdata = createMockYMap({ text: 'parent updated' });
         const parentYblock = createMockYMap({
           type: 'paragraph',
@@ -972,7 +960,6 @@ describe('BlockYjsSync', () => {
           tunes: createMockYMap({}),
         });
 
-        // Yjs state: child block has parentId = 'parent-block' (correct)
         const childYblock = createMockYMap({
           type: 'paragraph',
           data: createMockYMap({ text: '' }),
@@ -989,14 +976,12 @@ describe('BlockYjsSync', () => {
         vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
         mockHandlers.getBlockIndex = vi.fn(() => 0);
 
-        // Before: child has stale parentId
         expect(childBlock.parentId).toBe('stale-old-parent');
 
         callback({ blockId: 'parent-block', type: 'update', origin: 'undo' });
 
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        // After: child's parentId must be reconciled to 'parent-block'
         expect(childBlock.parentId).toBe('parent-block');
       });
     });

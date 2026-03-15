@@ -499,6 +499,38 @@ export class Header implements BlockTool {
   }
 
   /**
+   * Update tool data in-place without full DOM re-render.
+   * Called by DataPersistenceManager during undo/redo to apply Yjs state
+   * without destroying and recreating the DOM.
+   *
+   * @param newData - The new data from Yjs
+   * @returns true if the update was applied in-place
+   */
+  public setData(newData: HeaderData): boolean {
+    this._data = this.normalizeData(newData);
+
+    if (typeof newData.text === 'string') {
+      this._element.innerHTML = newData.text;
+    }
+
+    if (this._data.isToggleable && typeof this._data.isOpen === 'boolean') {
+      this._isOpen = this._data.isOpen;
+
+      if (this._arrowElement && this._element) {
+        updateArrowState(this._arrowElement, this._element, this._isOpen, {
+          collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
+          expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
+        });
+      }
+
+      this.updateChildrenVisibility();
+      this.updateBodyPlaceholderVisibility();
+    }
+
+    return true;
+  }
+
+  /**
    * Extract Tool's data from the view.
    * Reads directly from this._element (the heading) which never contains the arrow —
    * the arrow lives in the wrapper div (sibling), so no cloning/stripping is needed.

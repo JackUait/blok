@@ -539,15 +539,17 @@ describe('ToggleItem', () => {
       expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
     });
 
-    it('creates child paragraph when clicked', async () => {
+    it('uses insertInsideParent when body placeholder is clicked', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockNewBlock = { id: 'new-child-block' };
       const mockSetToBlock = vi.fn();
+      const mockInsertInsideParent = vi.fn().mockReturnValue(mockNewBlock);
       const mockAPI = createMockAPI();
       (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
-      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockIndex = vi.fn().mockReturnValue(0);
-      (mockAPI.blocks as unknown as Record<string, unknown>).insert = vi.fn().mockReturnValue(mockNewBlock);
+      (mockAPI.blocks as unknown as Record<string, unknown>).getBlockIndex = vi.fn().mockReturnValue(2);
+      (mockAPI.blocks as unknown as Record<string, unknown>).insertInsideParent = mockInsertInsideParent;
+      (mockAPI.blocks as unknown as Record<string, unknown>).insert = vi.fn();
       (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
       (mockAPI as unknown as Record<string, unknown>).caret = { setToBlock: mockSetToBlock };
 
@@ -561,15 +563,13 @@ describe('ToggleItem', () => {
       const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
       bodyPlaceholder.click();
 
-      expect(mockAPI.blocks.insert).toHaveBeenCalledWith(
-        'paragraph',
-        { text: '' },
-        {},
-        1,
-        true
-      );
-      expect(mockAPI.blocks.setBlockParent).toHaveBeenCalledWith('new-child-block', 'test-block-id');
+      // insertInsideParent(parentId, insertIndex) — index is getBlockIndex(2) + 1 = 3
+      expect(mockInsertInsideParent).toHaveBeenCalledWith('test-block-id', 3);
       expect(mockSetToBlock).toHaveBeenCalledWith('new-child-block', 'start');
+
+      // Must NOT use the old non-atomic pattern
+      expect(mockAPI.blocks.insert).not.toHaveBeenCalled();
+      expect(mockAPI.blocks.setBlockParent).not.toHaveBeenCalled();
     });
 
     it('reappears when children are removed and toggle is re-expanded', async () => {

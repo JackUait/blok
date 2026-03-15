@@ -263,6 +263,8 @@ export class BlockYjsSync {
         tool: block.name,
         data,
         tunes,
+        contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
+        parentId: block.parentId ?? undefined,
         bindEventsImmediately: true,
       });
 
@@ -270,6 +272,7 @@ export class BlockYjsSync {
       // from syncing back to Yjs after block replacement
       this.withAtomicOperation(() => {
         this.handlers.replaceBlock(blockIndex, newBlock);
+        this.reconcileOrphanedChildren(blockId);
       }, { extendThroughRAF: true });
     } else {
       // Update data in-place; if tool can't handle it, recreate the block.
@@ -286,10 +289,13 @@ export class BlockYjsSync {
             tool: block.name,
             data,
             tunes: block.preservedTunes,
+            contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
+            parentId: block.parentId ?? undefined,
             bindEventsImmediately: true,
           });
 
           this.handlers.replaceBlock(blockIndex, newBlock);
+          this.reconcileOrphanedChildren(blockId);
         }
       }, { extendThroughRAF: true });
     }

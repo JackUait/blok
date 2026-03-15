@@ -20,6 +20,7 @@ import type { BlocksStore } from '../../../../../src/components/modules/blockMan
 const createMockBlock = (options: {
   id?: string;
   parentId?: string | null;
+  contentIds?: string[];
   data?: Record<string, unknown>;
   tunes?: Record<string, unknown>;
 } = {}): Block => {
@@ -38,7 +39,7 @@ const createMockBlock = (options: {
     id: blockId,
     holder,
     parentId: options.parentId ?? null,
-    contentIds: [],
+    contentIds: options.contentIds ?? [],
     data: options.data ?? {},
     preservedTunes: options.tunes ?? {},
     setData: mockSetData as Block['setData'],
@@ -691,6 +692,312 @@ describe('BlockYjsSync', () => {
         // After synchronous replaceBlock, isSyncingFromYjs should still be true
         // (extended through RAF)
         expect(yjsSync.isSyncingFromYjs).toBe(true);
+      });
+
+      it('preserves contentIds when replacing block due to tunes change', () => {
+        /**
+         * Bug 2 regression: when handleYjsUpdate recreates a block because tunes
+         * changed, the composeBlock call must carry over the original block's
+         * contentIds so that parent-child hierarchy is preserved.
+         */
+        const block = createMockBlock({
+          id: 'toggle-block',
+          data: { text: 'toggle' },
+          tunes: { toggleOpen: true },
+          contentIds: ['child-1', 'child-2'],
+        });
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'toggle' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          // Different tunes to trigger tunes-changed path
+          tunes: createMockYMap({ toggleOpen: false }),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'toggle-block' });
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'toggle-block', type: 'update', origin: 'undo' });
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            contentIds: ['child-1', 'child-2'],
+          })
+        );
+      });
+
+      it('preserves contentIds when replacing block due to setData failure', async () => {
+        /**
+         * Bug 2 regression: when handleYjsUpdate falls back to replacing a block
+         * because setData returns false, the composeBlock call must carry over the
+         * original block's contentIds.
+         */
+        const block = createMockBlock({
+          id: 'toggle-block',
+          data: { text: 'toggle' },
+          tunes: {},
+          contentIds: ['child-a', 'child-b'],
+        });
+
+        (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'updated toggle' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'toggle-block' });
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'toggle-block', type: 'update', origin: 'undo' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            contentIds: ['child-a', 'child-b'],
+          })
+        );
+      });
+
+      it('preserves parentId when replacing block due to tunes change', () => {
+        /**
+         * Bug 2 regression: when handleYjsUpdate recreates a block because tunes
+         * changed, the composeBlock call must carry over the original block's
+         * parentId so that parent-child hierarchy is preserved.
+         */
+        const block = createMockBlock({
+          id: 'child-block',
+          data: { text: 'child' },
+          tunes: { alignment: 'left' },
+          parentId: 'parent-1',
+        });
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'child' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          tunes: createMockYMap({ alignment: 'center' }),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'child-block' });
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'child-block', type: 'update', origin: 'undo' });
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            parentId: 'parent-1',
+          })
+        );
+      });
+
+      it('preserves parentId when replacing block due to setData failure', async () => {
+        /**
+         * Bug 2 regression: when handleYjsUpdate falls back to replacing a block
+         * because setData returns false, the composeBlock call must carry over the
+         * original block's parentId.
+         */
+        const block = createMockBlock({
+          id: 'child-block',
+          data: { text: 'child' },
+          tunes: {},
+          parentId: 'parent-1',
+        });
+
+        (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const ydata = createMockYMap({ text: 'updated child' });
+        const yblock = createMockYMap({
+          type: 'paragraph',
+          data: ydata,
+          tunes: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+
+        const newBlock = createMockBlock({ id: 'child-block' });
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'child-block', type: 'update', origin: 'undo' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            parentId: 'parent-1',
+          })
+        );
+      });
+
+      it('reconciles orphaned children after block replacement in handleYjsUpdate', async () => {
+        /**
+         * Bug 3 regression: when handleYjsUpdate replaces a block (e.g. because
+         * setData returns false), it must call reconcileOrphanedChildren() to fix
+         * any child blocks whose in-memory parentId is stale.
+         *
+         * Scenario: parent block is updated via undo. setData fails, so the block
+         * is replaced. A child block's in-memory parentId points to a stale ID,
+         * but Yjs records the correct parentId. After replacement,
+         * reconcileOrphanedChildren should fix the child's parentId.
+         */
+        const parentBlock = createMockBlock({
+          id: 'parent-block',
+          data: { text: 'parent' },
+          tunes: {},
+          contentIds: ['child-block'],
+        });
+
+        // Child has stale parentId pointing to a removed block
+        const childBlock = createMockBlock({
+          id: 'child-block',
+          parentId: 'stale-old-parent',
+        });
+
+        (parentBlock.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([parentBlock, childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // Yjs state: parent block data
+        const parentYdata = createMockYMap({ text: 'parent updated' });
+        const parentYblock = createMockYMap({
+          type: 'paragraph',
+          data: parentYdata,
+          tunes: createMockYMap({}),
+        });
+
+        // Yjs state: child block has parentId = 'parent-block' (correct)
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'parent-block',
+        });
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'parent-block') return parentYblock;
+          if (id === 'child-block') return childYblock;
+          return undefined;
+        });
+
+        const newBlock = createMockBlock({ id: 'parent-block' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(newBlock);
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        // Before: child has stale parentId
+        expect(childBlock.parentId).toBe('stale-old-parent');
+
+        callback({ blockId: 'parent-block', type: 'update', origin: 'undo' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // After: child's parentId must be reconciled to 'parent-block'
+        expect(childBlock.parentId).toBe('parent-block');
       });
     });
 

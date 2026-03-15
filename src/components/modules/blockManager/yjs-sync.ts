@@ -5,6 +5,7 @@
  */
 import type { Map as YMap } from 'yjs';
 
+import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent } from '../yjs/types';
@@ -272,7 +273,12 @@ export class BlockYjsSync {
       // from syncing back to Yjs after block replacement
       this.withAtomicOperation(() => {
         this.handlers.replaceBlock(blockIndex, newBlock);
-        this.reconcileOrphanedChildren(blockId);
+
+        const hadOrphanedChildren = this.reconcileOrphanedChildren(blockId);
+
+        if (hadOrphanedChildren) {
+          newBlock.call(BlockToolAPI.RENDERED);
+        }
       }, { extendThroughRAF: true });
     } else {
       // Update data in-place; if tool can't handle it, recreate the block.
@@ -295,7 +301,12 @@ export class BlockYjsSync {
           });
 
           this.handlers.replaceBlock(blockIndex, newBlock);
-          this.reconcileOrphanedChildren(blockId);
+
+          const hadOrphanedChildren = this.reconcileOrphanedChildren(blockId);
+
+          if (hadOrphanedChildren) {
+            newBlock.call(BlockToolAPI.RENDERED);
+          }
         }
       }, { extendThroughRAF: true });
     }
@@ -357,7 +368,15 @@ export class BlockYjsSync {
       // children may have stale in-memory parentId pointing to the block that
       // replaced it (e.g. after replace() mutated children's parentId outside
       // the Yjs transaction). Fix their in-memory parentId to match Yjs state.
-      this.reconcileOrphanedChildren(blockId);
+      // Re-trigger rendered() if any children were reconciled, because the
+      // initial rendered() during insert() fires BEFORE reconciliation — the
+      // toggle sees 0 children and shows the body placeholder. The second
+      // rendered() call lets the toggle update its visibility state.
+      const hadOrphanedChildren = this.reconcileOrphanedChildren(blockId);
+
+      if (hadOrphanedChildren) {
+        block.call(BlockToolAPI.RENDERED);
+      }
     }, { extendThroughRAF: true });
   }
 
@@ -374,29 +393,33 @@ export class BlockYjsSync {
    *
    * @param restoredBlockId - the ID of the block that was just re-added to the DOM
    */
-  private reconcileOrphanedChildren(restoredBlockId: string): void {
-    for (const block of this.repository.blocks) {
+  private reconcileOrphanedChildren(restoredBlockId: string): boolean {
+    const orphanedChildren = Array.from(this.repository.blocks).filter((block) => {
       if (block.parentId === restoredBlockId) {
         // Already pointing to the correct parent — no action needed.
-        continue;
+        return false;
       }
 
       // Check the authoritative Yjs state for this block's parentId.
       const yblock = this.dependencies.YjsManager.getBlockById(block.id);
 
       if (yblock === undefined) {
-        continue;
+        return false;
       }
 
       const yjsParentId = yblock.get('parentId') as string | undefined;
 
-      if (yjsParentId === restoredBlockId) {
-        // In-memory state is stale — use setBlockParent to fully restore:
-        // moves DOM into toggle container, updates parent's contentIds,
-        // adjusts visibility based on toggle state, and updates indentation.
-        this.handlers.setBlockParent(block, restoredBlockId);
-      }
+      return yjsParentId === restoredBlockId;
+    });
+
+    // In-memory state is stale — use setBlockParent to fully restore:
+    // moves DOM into toggle container, updates parent's contentIds,
+    // adjusts visibility based on toggle state, and updates indentation.
+    for (const child of orphanedChildren) {
+      this.handlers.setBlockParent(child, restoredBlockId);
     }
+
+    return orphanedChildren.length > 0;
   }
 
   /**

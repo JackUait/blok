@@ -1246,6 +1246,129 @@ describe('BlockYjsSync', () => {
 
         expect(composeBlockSpy).not.toHaveBeenCalled();
       });
+
+      it('re-triggers rendered lifecycle on restored block after reconcileOrphanedChildren adds children', () => {
+        /**
+         * Bug: When handleYjsAdd restores a toggle parent via undo:
+         * 1. Toggle is created and rendered() fires — sees 0 children, shows placeholder
+         * 2. reconcileOrphanedChildren fixes orphaned children via setBlockParent
+         * 3. Nobody notifies the toggle to re-check visibility
+         *
+         * Fix: After reconcileOrphanedChildren, if the restored block received
+         * any reconciled children, call block.call('rendered') to trigger
+         * the toggle to update its visibility state.
+         */
+
+        // Setup: child block exists with stale parentId
+        const childBlock = createMockBlock({ id: 'child-id', parentId: 'old-parent-id' });
+        const testBlocksStore = createBlocksStore([childBlock]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // Yjs state: child has parentId = 'toggle-id' (correct), toggle has no parent
+        const childYblock = createMockYMap({
+          type: 'paragraph',
+          data: createMockYMap({ text: '' }),
+          parentId: 'toggle-id',
+        });
+
+        const toggleYblock = createMockYMap({
+          type: 'toggle',
+          data: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
+          if (id === 'toggle-id') return toggleYblock;
+          if (id === 'child-id') return childYblock;
+          return undefined;
+        });
+
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'toggle-id', type: 'toggle' },
+          { id: 'child-id', type: 'paragraph', parentId: 'toggle-id' },
+        ]);
+
+        const restoredToggle = createMockBlock({ id: 'toggle-id' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(restoredToggle);
+
+        // Act: simulate undo restoring the toggle
+        callback({ blockId: 'toggle-id', type: 'add', origin: 'undo' });
+
+        // Assert: block.call('rendered') must be called TWICE on the restored toggle:
+        // 1. Once by blocksStore.insert (normal lifecycle during DOM insertion)
+        // 2. Once AFTER reconcileOrphanedChildren (so the toggle re-checks children
+        //    and hides the body placeholder)
+        const renderedCalls = (restoredToggle.call as ReturnType<typeof vi.fn>).mock.calls
+          .filter((args: unknown[]) => args[0] === 'rendered');
+
+        expect(renderedCalls).toHaveLength(2);
+      });
+
+      it('does NOT re-trigger rendered when no children were reconciled', () => {
+        /**
+         * If reconcileOrphanedChildren doesn't find any orphaned children,
+         * there's no need to re-trigger rendered. The only rendered call
+         * should be from blocksStore.insert (the normal lifecycle).
+         */
+        const testBlocksStore = createBlocksStore([]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const toggleYblock = createMockYMap({
+          type: 'toggle',
+          data: createMockYMap({}),
+        });
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(toggleYblock);
+        mockToJSON(mockYjsManager).mockReturnValue([
+          { id: 'toggle-id', type: 'toggle' },
+        ]);
+
+        const restoredToggle = createMockBlock({ id: 'toggle-id' });
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(restoredToggle);
+
+        callback({ blockId: 'toggle-id', type: 'add', origin: 'undo' });
+
+        // No orphaned children exist, so setBlockParent should not be called
+        // by reconcileOrphanedChildren
+        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
+        // block.call('rendered') should only be called once — by blocksStore.insert.
+        // Our fix should NOT add an extra rendered call when no children were reconciled.
+        const renderedCalls = (restoredToggle.call as ReturnType<typeof vi.fn>).mock.calls
+          .filter((args: unknown[]) => args[0] === 'rendered');
+
+        expect(renderedCalls).toHaveLength(1);
+      });
     });
 
     describe('handleYjsBatchAdd', () => {

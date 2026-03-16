@@ -162,6 +162,7 @@ const createApiStub = (): API => ({
   readOnly: {} as API['readOnly'],
   ui: {} as API['ui'],
   width: {} as API['width'],
+  theme: {} as API['theme'],
   rectangleSelection: {} as API['rectangleSelection'],
 });
 

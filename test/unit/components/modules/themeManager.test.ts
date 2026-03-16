@@ -11,8 +11,9 @@ import type { BlokModules } from '../../../../src/types-internal/blok-modules';
  */
 function createMatchMediaStub(initialDark = false) {
   let listener: ((e: MediaQueryListEvent) => void) | null = null;
+  let currentMatches = initialDark;
   const mql = {
-    matches: initialDark,
+    get matches() { return currentMatches; },
     media: '(prefers-color-scheme: dark)',
     addEventListener: vi.fn((_event: string, cb: (e: MediaQueryListEvent) => void) => {
       listener = cb;
@@ -33,7 +34,7 @@ function createMatchMediaStub(initialDark = false) {
     mql,
     matchMedia: vi.fn().mockReturnValue(mql),
     trigger(dark: boolean) {
-      mql.matches = dark;
+      currentMatches = dark;
       if (listener) {
         listener({ matches: dark } as MediaQueryListEvent);
       }

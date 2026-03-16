@@ -8,13 +8,13 @@ const ATTR = 'data-blok-theme';
  * Module-level counter of active ThemeManager instances.
  * Prevents premature attribute cleanup when multiple Blok instances coexist.
  */
-let activeInstances = 0;
+const state = { activeInstances: 0 };
 
 /**
  * Reset the instance counter. Exported for testing only.
  */
 export function resetActiveInstances(): void {
-  activeInstances = 0;
+  state.activeInstances = 0;
 }
 
 /**
@@ -40,7 +40,7 @@ export class ThemeManager extends Module {
    * Called by Core after all modules are constructed and wired.
    */
   public prepare(): void {
-    activeInstances++;
+    state.activeInstances++;
     this.mode = this.config.theme ?? 'auto';
     this.applyAttribute();
     this.resolved = this.deriveResolved();
@@ -92,10 +92,10 @@ export class ThemeManager extends Module {
    */
   public destroy(): void {
     this.removeMediaListener();
-    activeInstances--;
+    state.activeInstances--;
 
-    if (activeInstances <= 0) {
-      activeInstances = 0;
+    if (state.activeInstances <= 0) {
+      state.activeInstances = 0;
       this.removeAttribute();
     }
   }

@@ -952,8 +952,9 @@
  * When the user types "/" to open the toolbox, the contenteditable
  * transforms to look like a search input with a placeholder.
  */
-[data-blok-slash-search] {
-  @apply bg-search-input-bg rounded-lg transition-colors duration-150 max-w-[240px];
+[data-blok-slash-search],
+[data-blok-slash-search]:focus-visible {
+  @apply bg-search-input-bg rounded-[4px] transition-colors duration-150 max-w-[240px];
 }
 
 [data-blok-slash-search]::after {

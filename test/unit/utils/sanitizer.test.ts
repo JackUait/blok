@@ -1175,6 +1175,51 @@ describe('sanitizer', () => {
        */
       expect(result).toContain('background-color');
     });
+
+    it('should add background-color: transparent to mark with text color but no background-color', () => {
+      const markerSanitize = getMarkerSanitize();
+
+      /**
+       * When text is copied from the editor, the browser may drop
+       * background-color: transparent (the initial value) from the clipboard HTML.
+       * Without an explicit transparent background, the browser's default <mark>
+       * background (yellow/Mark system color) would show through on paste.
+       */
+      const taintString = '<mark style="color: red;">text</mark>';
+
+      const result = clean(taintString, markerSanitize);
+
+      expect(result).toContain('color');
+      expect(result).toContain('background-color');
+      expect(result).toContain('transparent');
+    });
+
+    it('should not override existing background-color on mark with text color', () => {
+      const markerSanitize = getMarkerSanitize();
+      const taintString = '<mark style="color: red; background-color: #f1f1ef;">text</mark>';
+
+      const result = clean(taintString, markerSanitize);
+
+      expect(result).toContain('color');
+      expect(result).toContain('background-color');
+      expect(result).toContain('#f1f1ef');
+      expect(result).not.toContain('transparent');
+    });
+
+    it('should not add background-color to mark without any color property', () => {
+      const markerSanitize = getMarkerSanitize();
+      const taintString = '<mark style="position: fixed;">text</mark>';
+
+      const result = clean(taintString, markerSanitize);
+
+      /**
+       * All style properties are stripped (position not in allow-list),
+       * and since there's no color, no transparent bg should be added.
+       * The mark element should have no style attribute.
+       */
+      expect(result).not.toContain('background-color');
+      expect(result).not.toContain('style');
+    });
   });
 
   describe('cloneTagConfig edge cases', () => {

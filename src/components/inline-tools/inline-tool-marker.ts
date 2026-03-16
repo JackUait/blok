@@ -86,6 +86,17 @@ export class MarkerInlineTool implements InlineTool {
           }
         }
 
+        /**
+         * When text color is set without an explicit background-color,
+         * add transparent background to override the browser's default
+         * <mark> background (yellow/Mark system color). This handles
+         * pasted content where the browser may have dropped the
+         * transparent value during clipboard serialization.
+         */
+        if (style.getPropertyValue('color') && !style.getPropertyValue('background-color')) {
+          style.setProperty('background-color', 'transparent');
+        }
+
         return style.length > 0 ? { style: true } : {};
       },
     } as SanitizerConfig;

@@ -4,6 +4,87 @@ import { clean } from '../../../../../src/components/utils/sanitizer';
 import { SAFE_STRUCTURAL_TAGS } from '../../../../../src/components/modules/paste/constants';
 
 describe('preprocessGoogleDocsHtml', () => {
+  /** Wraps HTML in a Google Docs wrapper for testing Google Docs-specific conversions */
+  const gdocs = (html: string): string => `<b id="docs-internal-guid-test">${html}</b>`;
+
+  describe('non-Google Docs content — browser clipboard spans', () => {
+    it('should not convert browser clipboard span with background-color to mark', () => {
+      /**
+       * When the browser natively copies text from a contenteditable, it wraps
+       * the content in a <span> with computed styles including background-color.
+       * This span must NOT be treated as Google Docs formatting.
+       */
+      const html = '<span style="color: rgb(0, 0, 0); font-family: ui-sans-serif; background-color: rgb(255, 255, 255);">plain text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('should not convert plain browser span with only font styles', () => {
+      const html = '<span style="font-size: 16px; font-family: sans-serif;">text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<b>');
+      expect(result).not.toContain('<i>');
+      expect(result).not.toContain('<mark');
+    });
+
+    it('should convert browser span with non-default text color to mark', () => {
+      /**
+       * When Chrome copies a <mark> that is the entire selection, it converts
+       * the <mark> to a <span> with computed styles.  The non-default text
+       * color must be preserved by converting to <mark>.
+       */
+      const html = '<span style="color: rgb(224, 62, 62); font-family: ui-sans-serif; background-color: rgb(255, 255, 255);">colored text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('colored text');
+    });
+
+    it('should convert browser span with non-white background-color to mark', () => {
+      /**
+       * Yellow background from the marker tool, copied via browser clipboard.
+       */
+      const html = '<span style="color: rgb(0, 0, 0); background-color: rgb(255, 226, 153);">highlighted text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('highlighted text');
+    });
+
+    it('should convert browser span with both non-default color and background to mark', () => {
+      const html = '<span style="color: rgb(224, 62, 62); background-color: rgb(255, 226, 153);">both styles</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('both styles');
+    });
+
+    it('should not convert browser span with only default black text and white background', () => {
+      const html = '<span style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);">plain text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('should convert bold browser span with color to both b and mark', () => {
+      const html = '<span style="font-weight: 700; color: rgb(224, 62, 62); background-color: rgb(255, 255, 255);">bold red</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<b>');
+      expect(result).toContain('<mark');
+      expect(result).toContain('bold red');
+    });
+
+    it('should treat #ffffff background as default white', () => {
+      const html = '<span style="color: rgb(0, 0, 0); background-color: #ffffff;">text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+  });
+
   it('converts bold style spans to <b> tags', () => {
     const html = '<span style="font-weight:700">bold text</span>';
     const result = preprocessGoogleDocsHtml(html);
@@ -56,7 +137,7 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts color-only span to <mark> without <b> or <i>', () => {
-    const html = '<span style="color:red">red text</span>';
+    const html = gdocs('<span style="color:red">red text</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('red text');
@@ -77,7 +158,7 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts span with rgb color to <mark> with color style', () => {
-    const html = '<span style="color: rgb(255, 0, 0)">red text</span>';
+    const html = gdocs('<span style="color: rgb(255, 0, 0)">red text</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<mark style="color: #d44c47; background-color: transparent;">red text</mark>');
@@ -85,7 +166,7 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts span with background-color to <mark> with background-color style', () => {
-    const html = '<span style="background-color: rgb(255, 255, 0)">highlighted text</span>';
+    const html = gdocs('<span style="background-color: rgb(255, 255, 0)">highlighted text</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<mark style="background-color: #fbf3db;">highlighted text</mark>');
@@ -93,42 +174,42 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts span with bold and color to <b> wrapping <mark>', () => {
-    const html = '<span style="font-weight: 700; color: rgb(255, 0, 0)">bold red</span>';
+    const html = gdocs('<span style="font-weight: 700; color: rgb(255, 0, 0)">bold red</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<b><mark style="color: #d44c47; background-color: transparent;">bold red</mark></b>');
   });
 
   it('converts span with italic and color to <i> wrapping <mark>', () => {
-    const html = '<span style="font-style: italic; color: rgb(0, 0, 255)">italic blue</span>';
+    const html = gdocs('<span style="font-style: italic; color: rgb(0, 0, 255)">italic blue</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<i><mark style="color: #337ea9; background-color: transparent;">italic blue</mark></i>');
   });
 
   it('converts span with bold, italic, and color to nested <b><i><mark>', () => {
-    const html = '<span style="font-weight: 700; font-style: italic; color: rgb(0, 128, 0)">bold italic green</span>';
+    const html = gdocs('<span style="font-weight: 700; font-style: italic; color: rgb(0, 128, 0)">bold italic green</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<b><i><mark style="color: #448361; background-color: transparent;">bold italic green</mark></i></b>');
   });
 
   it('does not create <mark> for default black text color', () => {
-    const html = '<span style="color: rgb(0, 0, 0)">normal text</span>';
+    const html = gdocs('<span style="color: rgb(0, 0, 0)">normal text</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).not.toContain('<mark');
   });
 
   it('converts span with both color and background-color to <mark> with both styles', () => {
-    const html = '<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">colored highlighted</span>';
+    const html = gdocs('<span style="color: rgb(255, 0, 0); background-color: rgb(255, 255, 0)">colored highlighted</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<mark style="color: #d44c47; background-color: #fbf3db;">colored highlighted</mark>');
   });
 
   it('does not confuse background-color with color in regex', () => {
-    const html = '<span style="background-color: rgb(255, 255, 0)">only bg</span>';
+    const html = gdocs('<span style="background-color: rgb(255, 255, 0)">only bg</span>');
     const result = preprocessGoogleDocsHtml(html);
 
     // Should have background-color but NOT a standalone color property
@@ -150,7 +231,7 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts <p> boundaries to <br> inside table cells', () => {
-    const html = '<table><tr><td><p>line one</p><p>line two</p></td></tr></table>';
+    const html = gdocs('<table><tr><td><p>line one</p><p>line two</p></td></tr></table>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<td>line one<br>line two</td>');
@@ -158,7 +239,7 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts <p> boundaries to <br> inside <th> cells', () => {
-    const html = '<table><tr><th><p>header one</p><p>header two</p></th></tr></table>';
+    const html = gdocs('<table><tr><th><p>header one</p><p>header two</p></th></tr></table>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<th>header one<br>header two</th>');
@@ -349,7 +430,7 @@ describe('preprocessGoogleDocsHtml', () => {
      */
 
     it('does not create <mark> for transparent background-color', () => {
-      const html = '<span style="background-color:transparent">plain text</span>';
+      const html = gdocs('<span style="background-color:transparent">plain text</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).not.toContain('<mark');
@@ -357,7 +438,7 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('does not create <mark> for hex default black color #000000', () => {
-      const html = '<span style="color:#000000">black text</span>';
+      const html = gdocs('<span style="color:#000000">black text</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).not.toContain('<mark');
@@ -397,14 +478,14 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('creates <mark> with background-color for highlighted text (realistic Google Docs)', () => {
-      const html = [
+      const html = gdocs([
         '<span style="font-size:11pt;font-family:Arial,sans-serif;',
         'color:#000000;background-color:#ffff00;',
         'font-weight:400;font-style:normal;font-variant:normal;',
         'text-decoration:none;vertical-align:baseline;',
         'white-space:pre;white-space:pre-wrap;">',
         'highlighted text</span>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -415,14 +496,14 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('creates <b> wrapping <mark> for bold highlighted text (realistic Google Docs)', () => {
-      const html = [
+      const html = gdocs([
         '<span style="font-size:11pt;font-family:Arial,sans-serif;',
         'color:#000000;background-color:#ffff00;',
         'font-weight:700;font-style:normal;font-variant:normal;',
         'text-decoration:none;vertical-align:baseline;',
         'white-space:pre;white-space:pre-wrap;">',
         'bold highlighted</span>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -447,7 +528,7 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('adds background-color:transparent to mark with only text color to prevent browser default yellow', () => {
-      const html = '<span style="color:#666666">gray text</span>';
+      const html = gdocs('<span style="color:#666666">gray text</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark');
@@ -456,12 +537,12 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('adds background-color:transparent for non-black text color in realistic Google Docs span', () => {
-      const html = [
+      const html = gdocs([
         '<span style="font-size:11pt;font-family:Arial,sans-serif;',
         'color:#666666;background-color:transparent;',
         'font-weight:400;font-style:normal;">',
         'gray text</span>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -481,13 +562,13 @@ describe('preprocessGoogleDocsHtml', () => {
 
   describe('highlighted links from Google Docs', () => {
     it('preserves background-color on link wrapped in highlighted span (a > span structure)', () => {
-      const html = [
+      const html = gdocs([
         '<a href="https://example.com" style="text-decoration:none;">',
         '<span style="font-size:11pt;font-family:Arial,sans-serif;',
         'color:#1155cc;background-color:#fce5cd;',
         'text-decoration:underline;">Link text</span>',
         '</a>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -498,12 +579,12 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('preserves background-color on span wrapping a link (span > a structure)', () => {
-      const html = [
+      const html = gdocs([
         '<span style="font-size:11pt;font-family:Arial,sans-serif;',
         'color:#000000;background-color:#fce5cd;">',
         '<a href="https://example.com">Link text</a>',
         '</span>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -513,11 +594,11 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('maps highlighted link background color to Blok preset', () => {
-      const html = [
+      const html = gdocs([
         '<a href="https://example.com" style="text-decoration:none;">',
         '<span style="color:#1155cc;background-color:#fce5cd;">Link text</span>',
         '</a>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -527,7 +608,7 @@ describe('preprocessGoogleDocsHtml', () => {
 
     it('preserves background-color when it is on the <a> tag itself', () => {
       // Google Docs sometimes puts background-color directly on the <a> element
-      const html = '<a href="https://example.com" style="background-color:#fce5cd;text-decoration:none;">Link text</a>';
+      const html = gdocs('<a href="https://example.com" style="background-color:#fce5cd;text-decoration:none;">Link text</a>');
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -562,11 +643,11 @@ describe('preprocessGoogleDocsHtml', () => {
     it('does not create inner mark for anchor with only color:inherit', () => {
       // After convertGoogleDocsStyles, the anchor has color:inherit.
       // convertAnchorColorStyles should NOT create a redundant inner mark for inherit.
-      const html = [
+      const html = gdocs([
         '<span style="color:#1155cc;background-color:#a64d79;">',
         '<a href="https://example.com" style="color:inherit;">Link text</a>',
         '</span>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -578,11 +659,11 @@ describe('preprocessGoogleDocsHtml', () => {
 
     it('preserves background after full sanitization (preprocess + clean)', () => {
       // End-to-end test: preprocessor + sanitizer with realistic config
-      const html = [
+      const html = gdocs([
         '<span style="color:#1155cc;background-color:#a64d79;">',
         '<a href="https://example.com" style="color:inherit;">Link text</a>',
         '</span>',
-      ].join('');
+      ].join(''));
 
       const preprocessed = preprocessGoogleDocsHtml(html);
 
@@ -617,14 +698,14 @@ describe('preprocessGoogleDocsHtml', () => {
     });
 
     it('handles emoji span with background + link span with background in same paragraph', () => {
-      const html = [
+      const html = gdocs([
         '<p dir="ltr">',
         '<span style="color:#000000;background-color:#fce5cd;">🔗 </span>',
         '<a href="https://example.com" style="text-decoration:none;">',
         '<span style="color:#1155cc;background-color:#fce5cd;text-decoration:underline;">Link text</span>',
         '</a>',
         '</p>',
-      ].join('');
+      ].join(''));
 
       const result = preprocessGoogleDocsHtml(html);
 
@@ -639,42 +720,42 @@ describe('preprocessGoogleDocsHtml', () => {
 
   describe('Google Docs color mapping to Blok presets', () => {
     it('maps Google Docs pure red text color to Blok red preset', () => {
-      const html = '<span style="color:#ff0000">red text</span>';
+      const html = gdocs('<span style="color:#ff0000">red text</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark style="color: #d44c47; background-color: transparent;">red text</mark>');
     });
 
     it('maps Google Docs pure blue text color to Blok blue preset', () => {
-      const html = '<span style="color:#0000ff">blue text</span>';
+      const html = gdocs('<span style="color:#0000ff">blue text</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark style="color: #337ea9; background-color: transparent;">blue text</mark>');
     });
 
     it('maps Google Docs yellow background to Blok yellow bg preset', () => {
-      const html = '<span style="background-color:#ffff00">highlighted</span>';
+      const html = gdocs('<span style="background-color:#ffff00">highlighted</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark style="background-color: #fbf3db;">highlighted</mark>');
     });
 
     it('maps both text color and bg color to presets simultaneously', () => {
-      const html = '<span style="color:#ff0000;background-color:#ffff00">both</span>';
+      const html = gdocs('<span style="color:#ff0000;background-color:#ffff00">both</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark style="color: #d44c47; background-color: #fbf3db;">both</mark>');
     });
 
     it('maps Google Docs light red bg (#f4cccc) to Blok red bg preset', () => {
-      const html = '<span style="background-color:#f4cccc">light red bg</span>';
+      const html = gdocs('<span style="background-color:#f4cccc">light red bg</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark style="background-color: #fdebec;">light red bg</mark>');
     });
 
     it('maps rgb() format colors to presets', () => {
-      const html = '<span style="color:rgb(255, 0, 0)">red rgb</span>';
+      const html = gdocs('<span style="color:rgb(255, 0, 0)">red rgb</span>');
       const result = preprocessGoogleDocsHtml(html);
 
       expect(result).toContain('<mark style="color: #d44c47; background-color: transparent;">red rgb</mark>');

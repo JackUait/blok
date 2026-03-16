@@ -17,9 +17,13 @@ export function preprocessGoogleDocsHtml(html: string): string {
 
   wrapper.innerHTML = html;
 
-  unwrapGoogleDocsContent(wrapper);
-  convertGoogleDocsStyles(wrapper);
-  convertTableCellParagraphs(wrapper);
+  const isGoogleDocs = unwrapGoogleDocsContent(wrapper);
+
+  convertGoogleDocsStyles(wrapper, isGoogleDocs);
+
+  if (isGoogleDocs) {
+    convertTableCellParagraphs(wrapper);
+  }
 
   return wrapper.innerHTML;
 }
@@ -29,12 +33,14 @@ export function preprocessGoogleDocsHtml(html: string): string {
  * Google Docs wraps clipboard HTML in `<b id="docs-internal-guid-...">`.
  * Content may be split across multiple child `<div>` elements (e.g. one
  * per table), so all children are moved out of the wrapper.
+ *
+ * @returns true if Google Docs content was detected
  */
-function unwrapGoogleDocsContent(wrapper: HTMLElement): void {
+function unwrapGoogleDocsContent(wrapper: HTMLElement): boolean {
   const googleDocsWrapper = wrapper.querySelector<HTMLElement>('b[id^="docs-internal-guid-"]');
 
   if (!googleDocsWrapper) {
-    return;
+    return false;
   }
 
   const fragment = document.createDocumentFragment();
@@ -44,6 +50,8 @@ function unwrapGoogleDocsContent(wrapper: HTMLElement): void {
   }
 
   googleDocsWrapper.replaceWith(fragment);
+
+  return true;
 }
 
 /**
@@ -77,6 +85,82 @@ function isDefaultBlack(color: string): boolean {
 }
 
 /**
+ * Check whether a CSS background-color value is the default white page background.
+ * When the browser natively copies from a contenteditable, it adds computed styles
+ * including `background-color: rgb(255, 255, 255)` — the resolved page background.
+ * These should not be treated as intentional marker formatting.
+ */
+function isDefaultWhiteBackground(bgColor: string): boolean {
+  const normalized = bgColor.replace(/\s/g, '').toLowerCase();
+
+  return normalized === 'rgb(255,255,255)' || normalized === '#ffffff' || normalized === 'white';
+}
+
+/**
+ * Optionally wrap innerHTML in a `<mark>` with mapped color styles.
+ * Returns the original content unchanged when no color formatting is needed.
+ */
+function buildMarkWrapper(
+  innerHTML: string,
+  hasColor: boolean,
+  hasBgColor: boolean,
+  color: string | undefined,
+  bgColor: string | undefined
+): string {
+  if (!hasColor && !hasBgColor) {
+    return innerHTML;
+  }
+
+  const mappedColor = hasColor && color !== undefined ? mapToNearestPresetColor(color, 'text') : '';
+  const mappedBg = hasBgColor && bgColor !== undefined ? mapToNearestPresetColor(bgColor, 'bg') : '';
+
+  const colorStyles = [
+    hasColor ? `color: ${mappedColor}` : '',
+    resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
+  ].filter(Boolean).join('; ');
+
+  return colorStyles
+    ? `<mark style="${colorStyles};">${innerHTML}</mark>`
+    : innerHTML;
+}
+
+/**
+ * Convert a single style `<span>` to semantic HTML.
+ *
+ * For Google Docs content, all non-transparent backgrounds are treated as
+ * intentional formatting.  For browser-native clipboard content, default
+ * page values (black text, white background) are filtered out so computed
+ * styles on plain text don't produce spurious `<mark>` elements.
+ *
+ * @returns replacement HTML string, or `null` if the span should be left as-is
+ */
+function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string | null {
+  const style = span.getAttribute('style') ?? '';
+  const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
+  const isItalic = /font-style\s*:\s*italic/i.test(style);
+
+  const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+  const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+  const color = colorMatch?.[1]?.trim();
+  const bgColor = bgMatch?.[1]?.trim();
+
+  const hasColor = color !== undefined && !isDefaultBlack(color);
+  const hasBgColor = isGoogleDocs
+    ? bgColor !== undefined && bgColor !== 'transparent'
+    : bgColor !== undefined && bgColor !== 'transparent' && !isDefaultWhiteBackground(bgColor);
+
+  if (!isBold && !isItalic && !hasColor && !hasBgColor) {
+    return null;
+  }
+
+  const inner = buildMarkWrapper(span.innerHTML, hasColor, hasBgColor, color, bgColor);
+  const italic = isItalic ? `<i>${inner}</i>` : inner;
+
+  return isBold ? `<b>${italic}</b>` : italic;
+}
+
+/**
  * Convert Google Docs style-based `<span>` elements to semantic HTML tags.
  *
  * - `<span style="font-weight:700">` or `font-weight:bold` → `<b>`
@@ -86,44 +170,18 @@ function isDefaultBlack(color: string): boolean {
  *
  * Color and bold/italic can combine: a bold red span becomes `<b><mark style="color: red;">text</mark></b>`.
  */
-function convertGoogleDocsStyles(wrapper: HTMLElement): void {
+function convertGoogleDocsStyles(wrapper: HTMLElement, isGoogleDocs: boolean): void {
   for (const span of Array.from(wrapper.querySelectorAll('span[style]'))) {
-    const style = span.getAttribute('style') ?? '';
-    const isBold = /font-weight\s*:\s*(700|bold)/i.test(style);
-    const isItalic = /font-style\s*:\s*italic/i.test(style);
+    const replacement = convertSpanToSemanticHtml(span, isGoogleDocs);
 
-    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
-    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
-
-    const color = colorMatch?.[1]?.trim();
-    const bgColor = bgMatch?.[1]?.trim();
-
-    const hasColor = color !== undefined && !isDefaultBlack(color);
-    const hasBgColor = bgColor !== undefined && bgColor !== 'transparent';
-
-    if (!isBold && !isItalic && !hasColor && !hasBgColor) {
-      continue;
+    if (replacement !== null) {
+      span.replaceWith(document.createRange().createContextualFragment(replacement));
     }
-
-    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
-    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
-
-    const colorStyles = [
-      hasColor ? `color: ${mappedColor}` : '',
-      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
-    ].filter(Boolean).join('; ');
-
-    const inner = colorStyles
-      ? `<mark style="${colorStyles};">${span.innerHTML}</mark>`
-      : span.innerHTML;
-
-    const italic = isItalic ? `<i>${inner}</i>` : inner;
-    const wrapped = isBold ? `<b>${italic}</b>` : italic;
-
-    span.replaceWith(document.createRange().createContextualFragment(wrapped));
   }
 
-  convertAnchorColorStyles(wrapper);
+  if (isGoogleDocs) {
+    convertAnchorColorStyles(wrapper);
+  }
 }
 
 /**

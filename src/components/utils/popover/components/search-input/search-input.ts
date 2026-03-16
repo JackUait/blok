@@ -1,5 +1,5 @@
 import { Dom } from '../../../../dom';
-import { IconSearch } from '../../../../icons';
+import { IconCross, IconSearch } from '../../../../icons';
 import { EventsDispatcher } from '../../../events';
 import { Listeners } from '../../../listeners';
 
@@ -22,6 +22,11 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
    * Editable input itself
    */
   private input: HTMLInputElement;
+
+  /**
+   * Clear button element
+   */
+  private clearButton: HTMLButtonElement;
 
   /**
    * The instance of the Listeners util
@@ -73,8 +78,15 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     this.input.setAttribute('data-blok-flipper-navigation-target', 'true');
     this.input.setAttribute('data-blok-testid', 'popover-search-input');
 
+    this.clearButton = Dom.make('button', css.clearButton, {
+      type: 'button',
+      innerHTML: IconCross,
+    }) as HTMLButtonElement;
+    this.clearButton.setAttribute('aria-label', 'Clear search');
+
     this.wrapper.appendChild(iconWrapper);
     this.wrapper.appendChild(this.input);
+    this.wrapper.appendChild(this.clearButton);
 
     this.overrideValueProperty();
 
@@ -82,6 +94,11 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
 
     eventsToHandle.forEach((eventName) => {
       this.listeners.on(this.input, eventName, this.handleValueChange);
+    });
+
+    this.listeners.on(this.clearButton, 'click', () => {
+      this.clear();
+      this.input.focus();
     });
   }
 
@@ -104,12 +121,14 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
    */
   public clear(): void {
     this.input.value = '';
+    this.updateClearButtonVisibility();
   }
 
   /**
    * Handles value changes for the input element
    */
   private handleValueChange = (): void => {
+    this.updateClearButtonVisibility();
     this.applySearch(this.input.value);
   };
 
@@ -157,6 +176,18 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
         applySearch(value);
       },
     });
+  }
+
+  /**
+   * Shows or hides the clear button based on whether the input has a value
+   */
+  private updateClearButtonVisibility(): void {
+    const visible = this.input.value.length > 0;
+
+    this.clearButton.classList.toggle('opacity-0', !visible);
+    this.clearButton.classList.toggle('pointer-events-none', !visible);
+    this.clearButton.classList.toggle('opacity-100', visible);
+    this.clearButton.classList.toggle('pointer-events-auto', visible);
   }
 
   /**

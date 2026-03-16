@@ -32,7 +32,7 @@ describe('SearchInput', () => {
     const element = searchInput.getElement();
 
     expect(element).toHaveAttribute('data-blok-testid', 'popover-search-field');
-    expect(element.children.length).toBe(2);
+    expect(element.children.length).toBe(3);
 
     const input = element.querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
 

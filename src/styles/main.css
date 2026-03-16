@@ -350,8 +350,9 @@
   resize: vertical;
 }
 
-/* Remove inner padding in Chrome and Safari on macOS. */
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-search-decoration {
+/* Remove inner padding and native cancel button in Chrome and Safari on macOS. */
+:where([data-blok-interface], [data-blok-popover]) ::-webkit-search-decoration,
+:where([data-blok-interface], [data-blok-popover]) ::-webkit-search-cancel-button {
   -webkit-appearance: none;
 }
 

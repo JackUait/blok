@@ -82,6 +82,11 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   private lifecycleManager: InlineLifecycleManager;
 
   /**
+   * SelectionUtils instance for fake background cleanup
+   */
+  private selection: SelectionUtils = new SelectionUtils();
+
+  /**
    * Currently visible tools instances
    */
   private tools: Map<InlineToolAdapter, IInlineTool> = new Map();
@@ -185,8 +190,22 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.openingPromise = this.open();
-    await this.openingPromise;
-    this.openingPromise = null;
+
+    try {
+      await this.openingPromise;
+    } catch {
+      this.opened = false;
+
+      if (this.popover) {
+        this.popover.hide?.();
+        this.popover.destroy?.();
+        this.popover = null;
+      }
+
+      return;
+    } finally {
+      this.openingPromise = null;
+    }
 
     this.Blok.Toolbar.hideBlockActions();
   }
@@ -202,6 +221,9 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     this.tools = new Map();
     this.opened = false;
     this.openingPromise = null;
+
+    // Clean up any orphaned fake background elements left by inline tools (Link, Marker, Convert)
+    this.selection.clearFakeBackground();
 
     // Hide and destroy popover
     if (this.popover) {

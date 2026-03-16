@@ -436,6 +436,15 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (blockContentElement) {
       this.toolboxInstance.updateLeftAlignElement(blockContentElement);
+
+      /**
+       * Sync toolbar content wrapper's margin with the block content element
+       * so toolbar buttons align with the block content edge, even when
+       * consumer CSS overrides the block content's margin.
+       */
+      if (this.nodes.content) {
+        this.nodes.content.style.marginLeft = getComputedStyle(blockContentElement).marginLeft;
+      }
     }
 
     /**
@@ -555,6 +564,20 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Sync toolbar content wrapper's margin with the block content element
+     * so toolbar buttons align with the block content edge.
+     */
+    const blockContentElement = targetBlockHolder.querySelector<HTMLElement>(`[${DATA_ATTR.elementContent}]`);
+
+    if (blockContentElement) {
+      this.toolboxInstance.updateLeftAlignElement(blockContentElement);
+
+      if (this.nodes.content) {
+        this.nodes.content.style.marginLeft = getComputedStyle(blockContentElement).marginLeft;
+      }
+    }
+
+    /**
      * Reset content offset for multi-block selection
      */
     this.positioner.applyContentOffset(this.nodes, targetBlock);
@@ -620,10 +643,13 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Reset the content offset transform
+     * Reset the content offset transform and margin sync
      */
     if (this.nodes.actions) {
       this.nodes.actions.style.transform = '';
+    }
+    if (this.nodes.content) {
+      this.nodes.content.style.marginLeft = '';
     }
     this.positioner.setHoveredTarget(null);
 

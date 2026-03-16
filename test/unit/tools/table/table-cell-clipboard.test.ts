@@ -271,6 +271,27 @@ describe('table-cell-clipboard', () => {
 
       expect(text).toBe('\tHello');
     });
+
+    it('should strip HTML tags and return only visible text', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            {
+              blocks: [{
+                tool: 'paragraph',
+                data: { text: '<mark style="color: rgb(68, 131, 97);"><strong>Complete</strong></mark>' },
+              }],
+            },
+          ],
+        ],
+      };
+
+      const text = buildClipboardPlainText(payload);
+
+      expect(text).toBe('Complete');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -360,6 +381,41 @@ describe('table-cell-clipboard', () => {
       const result = parseClipboardHtml(html);
 
       expect(result).toBeNull();
+    });
+
+    it('should decode &lt; and &gt; entities that browsers introduce during clipboard re-serialization', () => {
+      // When navigator.clipboard.write() roundtrips through the browser,
+      // the browser re-serializes the HTML and encodes < > inside attribute
+      // values as &lt; &gt;. This caused styled cell content (mark, bold, etc.)
+      // to display as raw HTML text after paste.
+      const html = '<table data-blok-table-cells="{&quot;rows&quot;:1,&quot;cols&quot;:1,&quot;cells&quot;:[[{&quot;blocks&quot;:[{&quot;tool&quot;:&quot;paragraph&quot;,&quot;data&quot;:{&quot;text&quot;:&quot;&lt;strong&gt;Hello&lt;/strong&gt;&quot;}}]}]]}"><tr><td><strong>Hello</strong></td></tr></table>';
+
+      const result = parseClipboardHtml(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('<strong>Hello</strong>');
+    });
+
+    it('should decode &amp; entities without double-decoding', () => {
+      // Text containing & characters: "A &amp; B" → browser encodes & as &amp;
+      // inside the attribute, so &amp; in JSON becomes &amp;amp; in the attribute.
+      const html = '<table data-blok-table-cells="{&quot;rows&quot;:1,&quot;cols&quot;:1,&quot;cells&quot;:[[{&quot;blocks&quot;:[{&quot;tool&quot;:&quot;paragraph&quot;,&quot;data&quot;:{&quot;text&quot;:&quot;A &amp;amp; B&quot;}}]}]]}"><tr><td>A &amp; B</td></tr></table>';
+
+      const result = parseClipboardHtml(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.cells[0][0].blocks[0].data.text).toBe('A &amp; B');
+    });
+
+    it('should decode mark with style attributes after clipboard round-trip', () => {
+      const html = '<table data-blok-table-cells="{&quot;rows&quot;:1,&quot;cols&quot;:1,&quot;cells&quot;:[[{&quot;blocks&quot;:[{&quot;tool&quot;:&quot;paragraph&quot;,&quot;data&quot;:{&quot;text&quot;:&quot;&lt;mark style=\\&quot;color: rgb(68, 131, 97); background-color: transparent;\\&quot;&gt;&lt;i&gt;&lt;strong&gt;Done&lt;/strong&gt;&lt;/i&gt;&lt;/mark&gt;&quot;}}]}]]}"><tr><td><mark><i><strong>Done</strong></i></mark></td></tr></table>';
+
+      const result = parseClipboardHtml(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.cells[0][0].blocks[0].data.text).toBe(
+        '<mark style="color: rgb(68, 131, 97); background-color: transparent;"><i><strong>Done</strong></i></mark>'
+      );
     });
   });
 

@@ -79,12 +79,12 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
 }
 
 /**
- * Extract a plain-text representation from a single block's data.
+ * Extract the raw HTML content from a single block's data.
  *
  * Looks for `data.text` (string), then `data.items` (array of strings),
  * and falls back to an empty string.
  */
-function extractBlockText(block: ClipboardBlockData): string {
+function extractBlockHtml(block: ClipboardBlockData): string {
   const { data } = block;
 
   if (typeof data.text === 'string') {
@@ -98,6 +98,25 @@ function extractBlockText(block: ClipboardBlockData): string {
   }
 
   return '';
+}
+
+/**
+ * Strip HTML tags from a string, returning only the visible text content.
+ */
+function stripHtmlTags(html: string): string {
+  const div = document.createElement('div');
+
+  div.innerHTML = html;
+
+  return div.textContent ?? '';
+}
+
+/**
+ * Extract a plain-text representation from a single block's data.
+ * HTML tags are stripped so only visible text remains.
+ */
+function extractBlockPlainText(block: ClipboardBlockData): string {
+  return stripHtmlTags(extractBlockHtml(block));
 }
 
 /**
@@ -116,7 +135,7 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
     .map((row) => {
       const cellsHtml = row
         .map((cell) => {
-          const text = cell.blocks.map(extractBlockText).join(' ');
+          const text = cell.blocks.map(extractBlockHtml).join(' ');
 
           const styles = [
             cell.color ? `background-color: ${cell.color}` : '',
@@ -145,7 +164,7 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
 export function buildClipboardPlainText(payload: TableCellsClipboard): string {
   return payload.cells
     .map((row) =>
-      row.map((cell) => cell.blocks.map(extractBlockText).join(' ')).join('\t')
+      row.map((cell) => cell.blocks.map(extractBlockPlainText).join(' ')).join('\t')
     )
     .join('\n');
 }
@@ -406,7 +425,15 @@ export function parseClipboardHtml(html: string): TableCellsClipboard | null {
       return null;
     }
 
-    const jsonStr = raw.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+    // Browsers re-serialize clipboard HTML, encoding special characters inside
+    // attribute values as HTML entities. Decode them back before JSON.parse.
+    // Order matters: &amp; must be last to avoid double-decoding (e.g. &amp;lt; → &lt; → <).
+    const jsonStr = raw
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
 
     return JSON.parse(jsonStr) as TableCellsClipboard;
   } catch {

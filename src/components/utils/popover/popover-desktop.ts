@@ -447,6 +447,31 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Retrieves popover item that is the target of the specified event.
+   * Overridden to include promoted items from recursive search.
+   * @param event - event to retrieve popover item from
+   */
+  protected override getTargetItem(event: Event): PopoverItemDefault | PopoverItemHtml | undefined {
+    const allItems = this.promotedItemCache !== null
+      ? [...this.items, ...this.promotedItemCache.items]
+      : this.items;
+
+    return allItems
+      .filter((item): item is PopoverItemDefault | PopoverItemHtml =>
+        item instanceof PopoverItemDefault || item instanceof PopoverItemHtml
+      )
+      .find(item => {
+        const itemEl = item.getElement();
+
+        if (itemEl === null) {
+          return false;
+        }
+
+        return event.composedPath().includes(itemEl);
+      });
+  }
+
+  /**
    * Sets CSS variable with position of item near which nested popover should be displayed.
    * Is used for correct positioning of the nested popover
    * @param nestedPopoverEl - nested popover element

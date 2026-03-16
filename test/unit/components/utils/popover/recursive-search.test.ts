@@ -369,6 +369,44 @@ describe('cleanupPromotedItems', () => {
   });
 });
 
+describe('click handling for promoted items', () => {
+  it('should activate promoted item on click', () => {
+    let activated = false;
+
+    const popover = new PopoverDesktop({
+      items: [
+        {
+          title: 'Convert to',
+          icon: '<svg></svg>',
+          name: 'convert-to',
+          children: {
+            items: [
+              {
+                title: 'Heading',
+                icon: '<svg></svg>',
+                name: 'heading',
+                closeOnActivate: true,
+                onActivate: () => { activated = true; },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    popover.filterItems('heading');
+
+    const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
+    const promotedItem = Array.from(itemsContainer?.querySelectorAll('[data-blok-popover-item]') ?? [])
+      .find(el => el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading');
+
+    expect(promotedItem).not.toBeUndefined();
+    promotedItem?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(activated).toBe(true);
+  });
+});
+
 describe('SearchInput path (searchable popover)', () => {
   it('should show promoted children when searching via SearchInput', () => {
     const popover = new PopoverDesktop({

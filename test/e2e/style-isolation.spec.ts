@@ -429,4 +429,47 @@ test.describe('Style isolation', () => {
 
     expect(blokFocusVisibleApplied).toBe(true);
   });
+
+  /**
+   * Regression test: native <input> elements inside Blok boundaries must never
+   * show a focus outline on mouse click.
+   *
+   * Root cause: browsers always match :focus-visible on <input> elements (per
+   * CSS Selectors L4 — text entry always needs visible focus indication), so
+   * the restore rule `[data-blok-popover] :focus-visible { outline: revert }`
+   * (specificity 0,2,0) overrides the element-level `outline-hidden` utility
+   * (specificity 0,1,0), showing the browser-default outline ring.
+   *
+   * Fix: extend the contenteditable suppression rule to also cover <input> and
+   * <textarea>, matching the same rationale (text cursor is sufficient
+   * affordance).
+   */
+  test('input elements inside popover do not show outline on mouse click', async ({ page }) => {
+    await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+
+    const block = page.locator(PARAGRAPH_SELECTOR).first();
+
+    await block.hover();
+
+    // Open block settings menu (has searchable: true, so search input appears)
+    const settingsToggler = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
+
+    await expect(settingsToggler).toBeVisible();
+    await settingsToggler.click();
+    await page.waitForSelector(`${POPOVER_SELECTOR}[data-blok-popover-opened]`, { state: 'attached' });
+
+    const searchInput = page.locator('[data-blok-testid="popover-search-input"]');
+
+    await expect(searchInput).toBeVisible();
+
+    // Click the input to give it focus (triggers :focus-visible on <input> per spec)
+    await searchInput.click();
+
+    // Verify outline is suppressed (should be 'none', not browser-default 'auto')
+    const outlineStyle = await searchInput.evaluate(
+      (el) => window.getComputedStyle(el).outlineStyle
+    );
+
+    expect(outlineStyle).toBe('none');
+  });
 });

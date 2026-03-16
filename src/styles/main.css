@@ -417,10 +417,13 @@
   outline: none;
 }
 
-/* Never show a focus outline on contenteditable blocks — the text cursor
-   is sufficient affordance regardless of how focus was triggered. */
-[data-blok-interface] [contenteditable]:focus-visible,
-[data-blok-popover] [contenteditable]:focus-visible {
+/* Never show a focus outline on text-entry elements — the text cursor
+   is sufficient affordance regardless of how focus was triggered.
+   Browsers always match :focus-visible on these elements even on mouse
+   click (per CSS Selectors L4), so the :focus-visible restore rule below
+   would otherwise override element-level outline-hidden utilities. */
+[data-blok-interface] :is([contenteditable], input, textarea):focus-visible,
+[data-blok-popover] :is([contenteditable], input, textarea):focus-visible {
   outline: none;
 }
 

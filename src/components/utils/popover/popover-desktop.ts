@@ -854,6 +854,20 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Appends DOM elements for a group of promoted items to the items container.
+   * @param groupItems - promoted items with their scores
+   */
+  private appendPromotedGroupElements(groupItems: Array<{ item: PopoverItemDefault; score: number }>): void {
+    for (const { item } of groupItems) {
+      const el = item.getElement();
+
+      if (el !== null) {
+        this.nodes.items?.appendChild(el);
+      }
+    }
+  }
+
+  /**
    * Adds search to the popover
    */
   private addSearch(): void {
@@ -862,7 +876,42 @@ export class PopoverDesktop extends PopoverAbstract {
       placeholder: this.messages.search,
     });
 
-    this.search.on(SearchInputEvent.Search, this.onSearch);
+    this.search.on(SearchInputEvent.Search, (searchData: { query: string; items: SearchableItem[] }) => {
+      const isEmptyQuery = searchData.query === '';
+
+      if (isEmptyQuery) {
+        this.cleanupPromotedItems();
+        this.onSearch({
+          query: searchData.query,
+          topLevelItems: searchData.items as unknown as PopoverItemDefault[],
+          promotedItems: [],
+        });
+
+        return;
+      }
+
+      // Build cache on first non-empty search
+      if (this.promotedItemCache === null) {
+        this.promotedItemCache = this.buildPromotedItemCache();
+      }
+
+      // Score promoted items against the query
+      const { parentChains } = this.promotedItemCache;
+      const promotedScored = this.promotedItemCache.items
+        .map(item => ({
+          item,
+          score: scoreSearchMatch(item, searchData.query),
+          chain: parentChains.get(item) ?? [],
+        }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      this.onSearch({
+        query: searchData.query,
+        topLevelItems: searchData.items as unknown as PopoverItemDefault[],
+        promotedItems: promotedScored,
+      });
+    });
 
     const searchElement = this.search.getElement();
 
@@ -878,45 +927,60 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   public override filterItems(query: string): void {
     if (query === '') {
+      this.cleanupPromotedItems();
       this.onSearch({
         query,
-        items: this.itemsDefault as unknown as SearchableItem[],
+        topLevelItems: this.itemsDefault,
+        promotedItems: [],
       });
 
       return;
     }
 
-    const scoredItems = this.itemsDefault
+    // Build cache on first non-empty search
+    if (this.promotedItemCache === null) {
+      this.promotedItemCache = this.buildPromotedItemCache();
+    }
+
+    // Score top-level items
+    const topLevelScored = this.itemsDefault
       .map(item => ({ item, score: scoreSearchMatch(item, query) }))
       .filter(({ score }) => score > 0)
       .sort((a, b) => b.score - a.score);
 
-    const matchingItems = scoredItems.map(({ item }) => item);
+    // Score promoted items from cache
+    const { parentChains: chains } = this.promotedItemCache;
+    const promotedScored = this.promotedItemCache.items
+      .map(item => ({
+        item,
+        score: scoreSearchMatch(item, query),
+        chain: chains.get(item) ?? [],
+      }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score);
 
     this.onSearch({
       query,
-      items: matchingItems as unknown as SearchableItem[],
+      topLevelItems: topLevelScored.map(({ item }) => item),
+      promotedItems: promotedScored,
     });
   }
 
   /**
-   * Handles input inside search field
-   * @param data - search input event data
-   * @param data.query - search query text
-   * @param data.items - search results
+   * Handles search results from both filterItems and SearchInput.
+   * Renders top-level matches and promoted children with group separators.
    */
-  private onSearch = (data: { query: string, items: SearchableItem[] }): void => {
+  private onSearch = (data: {
+    query: string;
+    topLevelItems: PopoverItemDefault[] | SearchableItem[];
+    promotedItems: Array<{ item: PopoverItemDefault; score: number; chain: string[] }>;
+  }): void => {
     const isEmptyQuery = data.query === '';
-    const isNothingFound = data.items.length === 0;
-
-    // Cast data.items to PopoverItemDefault[] since we know that's what filterItems passes
-    const matchingItems = data.items as unknown as PopoverItemDefault[];
+    const matchingTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
+    const isNothingFound = matchingTopLevel.length === 0 && data.promotedItems.length === 0;
 
     /**
      * When nothing is found, disable transitions so items hide instantly.
-     * The "Nothing found" message fade-in provides the visual transition;
-     * animating the last items' collapse simultaneously causes a jarring
-     * height bounce in the popover container.
      */
     if (isNothingFound) {
       this.items.forEach(item => {
@@ -929,48 +993,92 @@ export class PopoverDesktop extends PopoverAbstract {
         const isDefaultItem = item instanceof PopoverItemDefault;
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
         const isHidden = isDefaultItem
-          ? !matchingItems.includes(item) || (item.name !== undefined && this.isNamePermanentlyHidden(item.name))
+          ? !matchingTopLevel.includes(item) || (item.name !== undefined && this.isNamePermanentlyHidden(item.name))
           : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
 
         item.toggleHidden(isHidden);
       });
 
     if (isNothingFound) {
-      // Force reflow so the instant hide takes effect, then restore transitions
       this.nodes.popoverContainer.offsetHeight;
       this.items.forEach(item => {
         item.getElement()?.style.removeProperty('transition-duration');
       });
     }
 
-    // Reorder DOM elements to reflect ranking
-    if (!isEmptyQuery && matchingItems.length > 0) {
-      this.reorderItemsByRank(matchingItems);
+    // Reorder top-level DOM elements to reflect ranking
+    if (!isEmptyQuery && matchingTopLevel.length > 0) {
+      this.reorderItemsByRank(matchingTopLevel);
     } else if (isEmptyQuery && this.originalItemOrder !== undefined) {
       this.restoreOriginalItemOrder();
     }
 
+    // Detach previous promoted elements from DOM (don't destroy cache)
+    for (const separator of this.promotedSeparators) {
+      separator.remove();
+    }
+    this.promotedSeparators = [];
+
+    if (this.promotedItemCache !== null) {
+      for (const item of this.promotedItemCache.items) {
+        item.getElement()?.remove();
+      }
+    }
+
+    // Render promoted items grouped by parent chain
+    if (data.promotedItems.length > 0) {
+      const groups = new Map<string, Array<{ item: PopoverItemDefault; score: number }>>();
+
+      for (const entry of data.promotedItems) {
+        const label = entry.chain.join(' \u203A ');
+        const existing = groups.get(label);
+
+        if (existing !== undefined) {
+          existing.push({ item: entry.item, score: entry.score });
+        } else {
+          groups.set(label, [{ item: entry.item, score: entry.score }]);
+        }
+      }
+
+      // Sort groups by best score in each group
+      const sortedGroups = [...groups.entries()].sort((a, b) => {
+        const bestA = Math.max(...a[1].map(e => e.score));
+        const bestB = Math.max(...b[1].map(e => e.score));
+
+        return bestB - bestA;
+      });
+
+      for (const [label, groupItems] of sortedGroups) {
+        const separator = this.createGroupSeparator(label);
+
+        this.promotedSeparators.push(separator);
+        this.nodes.items?.appendChild(separator);
+
+        this.appendPromotedGroupElements(groupItems);
+      }
+    }
+
     this.toggleNothingFoundMessage(isNothingFound);
 
-    /** List of elements available for keyboard navigation considering search query applied */
-    const flippableElements = isEmptyQuery ? this.flippableElements : data.items.map(item => (item as PopoverItem).getElement());
+    // Build flippable elements list: top-level matches + promoted items
+    const topLevelFlippable = isEmptyQuery
+      ? this.flippableElements
+      : matchingTopLevel.map(item => item.getElement());
+
+    const promotedFlippable = data.promotedItems.map(({ item }) => item.getElement());
+
+    const flippableElements = [
+      ...topLevelFlippable,
+      ...promotedFlippable,
+    ].filter((el): el is HTMLElement => el !== null);
 
     if (!this.flipper?.isActivated) {
       return;
     }
 
-    /** Update flipper items with only visible */
     this.flipper.deactivate();
-    this.flipper.activate(flippableElements as HTMLElement[]);
+    this.flipper.activate(flippableElements);
 
-    /**
-     * Focus first item after filtering.
-     * Always skip the first Tab press so it just "enters" the menu rather than
-     * advancing to second item. This applies regardless of whether the query is
-     * empty (initial "/" open) or non-empty (user is typing to filter), because
-     * the user's keyboard focus is still in the search input - pressing Tab
-     * should enter the list at item 0, not advance from 0 to 1.
-     */
     if (flippableElements.length > 0) {
       this.flipper.focusItem(0, { skipNextTab: true });
     }

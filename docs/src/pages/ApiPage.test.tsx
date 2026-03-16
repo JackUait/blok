@@ -317,8 +317,8 @@ describe('ApiPage', () => {
         </MemoryRouter>
       );
 
-      // Find an anchor link (section title anchor)
-      const anchorLink = screen.getByRole('link', { name: /Link to Blok Class/ });
+      // Find an anchor link (section title anchor) by aria-label — avoids slow accessible name computation
+      const anchorLink = screen.getByLabelText('Link to Blok Class');
       fireEvent.click(anchorLink);
 
       // pushState is called synchronously in the click handler
@@ -336,8 +336,8 @@ describe('ApiPage', () => {
         </MemoryRouter>
       );
 
-      // Check that method anchor links exist
-      const methodAnchor = screen.getByRole('link', { name: /Link to blocks\.clear\(\)/ });
+      // Check that method anchor links exist — query by aria-label to avoid slow accessible name computation
+      const methodAnchor = screen.getByLabelText('Link to blocks.clear()');
       expect(methodAnchor).toBeInTheDocument();
       expect(methodAnchor).toHaveAttribute('href', '#blocks-api-blocks-clear');
     });
@@ -351,8 +351,8 @@ describe('ApiPage', () => {
         </MemoryRouter>
       );
 
-      // Check that property anchor links exist (e.g., isReady in core section)
-      const propAnchor = screen.getByRole('link', { name: /Link to isReady/ });
+      // Check that property anchor links exist (e.g., isReady in core section) — query by aria-label
+      const propAnchor = screen.getByLabelText('Link to isReady');
       expect(propAnchor).toBeInTheDocument();
       expect(propAnchor).toHaveAttribute('href', '#core-prop-isready');
     });
@@ -366,11 +366,8 @@ describe('ApiPage', () => {
         </MemoryRouter>
       );
 
-      // Check that config option anchor links exist - use getAllByRole since "holder" appears in multiple sections
-      const holderAnchors = screen.getAllByRole('link', { name: /Link to holder/ });
-      const configHolderAnchor = holderAnchors.find(
-        (el) => el.getAttribute('href') === '#config-holder'
-      );
+      // Check that config option anchor links exist — query by href attribute directly for speed
+      const configHolderAnchor = document.querySelector('a[href="#config-holder"][aria-label="Link to holder"]');
       expect(configHolderAnchor).toBeInTheDocument();
     });
   });

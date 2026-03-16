@@ -415,11 +415,24 @@ test.describe('Add Controls Edge Cases', () => {
       if (sc) sc.scrollLeft = 0;
     });
 
-    // The scroll event must trigger syncRowButtonWidth — give it one rAF to settle
+    // The passive scroll listener calls syncRowButtonWidth() which updates the
+    // add-col button's `left` style. Wait until the button position actually
+    // reflects the non-scrolled state (gap >= 2px) so we don't measure stale layout.
     await page.waitForFunction(() => {
       const sc = document.querySelector<HTMLElement>('[data-blok-table-scroll]');
 
-      return sc?.scrollLeft === 0;
+      if (sc?.scrollLeft !== 0) return false;
+
+      const grid = sc?.firstElementChild as HTMLElement | null;
+      const btn = document.querySelector<HTMLElement>('[data-blok-table-add-col]');
+
+      if (!sc || !grid || !btn) return false;
+
+      const scrollRect = sc.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+
+      return btnRect.left - Math.min(gridRect.right, scrollRect.right) >= 2;
     });
 
     // Measure gap at scrollLeft=0 (grid overflows scroll container to the right)

@@ -658,4 +658,107 @@ test.describe('Table cell copy/paste', () => {
     expect(secondTableData.colWidths).toBeDefined();
     expect(secondTableData.colWidths).toHaveLength(3);
   });
+
+  test('should insert single-cell content at caret when pasting into the same cell', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['Hello', 'B1'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Select cell (0,0) — single cell selection
+    await selectCells(page, 0, 0, 0, 0);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(1);
+
+    // Copy the single cell
+    const { html, plain } = await performCopyAndCapture(page);
+
+    expect(html).toContain('<table');
+    expect(plain).toBe('Hello');
+
+    // Click into the same cell to place cursor at end
+    const targetEditable = getCellEditable(page, 0, 0);
+
+    await targetEditable.click();
+    await expect(targetEditable).toBeFocused();
+
+    // Move caret to the end of text
+    await page.keyboard.press('End');
+
+    // Paste — should INSERT "Hello" at caret, not replace the cell
+    await dispatchPasteEvent(page, html, plain);
+
+    // Cell should contain "HelloHello" (original + pasted), not just "Hello"
+    await expect(targetEditable).toHaveText('HelloHello');
+
+    // Other cells should be unaffected
+    await expect(getCellEditable(page, 0, 1)).toHaveText('B1');
+    await expect(getCellEditable(page, 1, 0)).toHaveText('A2');
+  });
+
+  test('should insert single-cell content at caret when pasting into a different cell', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['Hello', 'World'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Select cell (0,0) — single cell
+    await selectCells(page, 0, 0, 0, 0);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(1);
+
+    // Copy the single cell
+    const { html, plain } = await performCopyAndCapture(page);
+
+    expect(html).toContain('<table');
+    expect(plain).toBe('Hello');
+
+    // Click into cell (0,1) to place cursor at end
+    const targetEditable = getCellEditable(page, 0, 1);
+
+    await targetEditable.click();
+    await expect(targetEditable).toBeFocused();
+
+    // Move caret to end
+    await page.keyboard.press('End');
+
+    // Paste — should INSERT "Hello" at caret, preserving existing "World"
+    await dispatchPasteEvent(page, html, plain);
+
+    // Cell should contain "WorldHello" (existing + pasted), not just "Hello"
+    await expect(targetEditable).toHaveText('WorldHello');
+
+    // Source cell should be unchanged
+    await expect(getCellEditable(page, 0, 0)).toHaveText('Hello');
+    await expect(getCellEditable(page, 1, 0)).toHaveText('A2');
+    await expect(getCellEditable(page, 1, 1)).toHaveText('B2');
+  });
 });

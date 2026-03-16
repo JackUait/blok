@@ -1395,6 +1395,20 @@ export class Table implements BlockTool {
       return;
     }
 
+    /**
+     * Single-cell (1×1) payloads should insert content inline at the caret
+     * position rather than replacing the entire target cell. This matches user
+     * expectations: copying one cell and pasting into another cell (or the same
+     * cell) appends/inserts the text instead of overwriting.
+     */
+    if (payload.rows === 1 && payload.cols === 1) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.insertSingleCellPayloadInline(payload.cells[0][0]);
+
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -1404,6 +1418,62 @@ export class Table implements BlockTool {
     const targetColIndex = cellsInRow.indexOf(targetCell);
 
     this.pastePayloadIntoCells(gridEl, payload, targetRowIndex, targetColIndex);
+  }
+
+  /**
+   * Insert the content of a single clipboard cell at the current caret position.
+   * Extracts text from each block and joins with line breaks.
+   */
+  private insertSingleCellPayloadInline(cell: { blocks: ClipboardBlockData[] }): void {
+    const html = cell.blocks
+      .map((block) => {
+        if (typeof block.data.text === 'string') {
+          return block.data.text;
+        }
+
+        return '';
+      })
+      .filter(Boolean)
+      .join('<br>');
+
+    if (!html) {
+      return;
+    }
+
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+
+    range.deleteContents();
+
+    const fragment = document.createDocumentFragment();
+    const wrapper = document.createElement('div');
+
+    wrapper.innerHTML = html;
+
+    Array.from(wrapper.childNodes).forEach((child) => fragment.appendChild(child));
+
+    if (fragment.childNodes.length === 0) {
+      fragment.appendChild(new Text());
+    }
+
+    const lastChild = fragment.lastChild as ChildNode;
+
+    range.insertNode(fragment);
+
+    const newRange = document.createRange();
+    const nodeToSetCaret = lastChild.nodeType === Node.TEXT_NODE ? lastChild : lastChild.firstChild;
+
+    if (nodeToSetCaret !== null && nodeToSetCaret.textContent !== null) {
+      newRange.setStart(nodeToSetCaret, nodeToSetCaret.textContent.length);
+    }
+
+    selection.removeAllRanges();
+    selection.addRange(newRange);
   }
 
   private pastePayloadIntoCells(

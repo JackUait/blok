@@ -3482,8 +3482,8 @@ describe('Table Tool', () => {
       document.body.removeChild(element);
     });
 
-    it('inserts blocks from clipboard payload into the target cell', () => {
-      const { element, mockInsert, mockSetBlockParent } = createPasteTable([['A', 'B'], ['C', 'D']]);
+    it('inserts single-cell (1x1) payload inline instead of replacing the cell', () => {
+      const { element, mockInsert } = createPasteTable([['A', 'B'], ['C', 'D']]);
 
       const sc = element.firstElementChild as HTMLElement;
       const gridEl = sc.firstElementChild as HTMLElement;
@@ -3502,19 +3502,13 @@ describe('Table Tool', () => {
 
       gridEl.dispatchEvent(pasteEvent);
 
-      // One new block should have been inserted
+      // 1x1 payloads use inline insertion — no block-level insert should happen
       const insertsAfter = mockInsert.mock.calls.length;
 
-      expect(insertsAfter - insertsBefore).toBe(1);
+      expect(insertsAfter - insertsBefore).toBe(0);
 
-      // The inserted block should have the correct tool and data
-      const lastCall = mockInsert.mock.calls[mockInsert.mock.calls.length - 1];
-
-      expect(lastCall[0]).toBe('paragraph');
-      expect(lastCall[1]).toEqual({ text: 'pasted text' });
-
-      // Block should be parented to the table
-      expect(mockSetBlockParent).toHaveBeenCalled();
+      // The event should still be intercepted
+      expect(pasteEvent.defaultPrevented).toBe(true);
 
       document.body.removeChild(element);
     });

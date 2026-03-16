@@ -436,6 +436,64 @@ describe('KeyboardNavigation', () => {
       isCaretAtStartOfInputSpy.mockRestore();
       isCaretAtEndOfInputSpy.mockRestore();
     });
+
+    it('skips redundant setBlockParent when new block already has the correct parentId (table cell)', () => {
+      const tableBlockId = 'table-block';
+
+      const currentBlock = createBlock({
+        id: 'cell-block',
+        parentId: tableBlockId,
+      });
+
+      // The new block returned by insertDefaultBlockAtIndex already has parentId set
+      // because handleBlockMutation -> claimBlockForCell sets it during the insert
+      const newBlock = createBlock({
+        id: 'new-cell-block',
+        parentId: tableBlockId,
+      });
+
+      const setBlockParent = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock,
+          currentBlockIndex: 1,
+          insertDefaultBlockAtIndex,
+          split: vi.fn(() => newBlock),
+          setBlockParent,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          markCaretBeforeChange: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // insertDefaultBlockAtIndex should be called (block inserted below)
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+
+      // setBlockParent should NOT be called because newBlock.parentId already matches currentBlock.parentId
+      expect(setBlockParent).not.toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
   });
 
   describe('handleBackspace', () => {

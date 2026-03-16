@@ -249,7 +249,7 @@ export class KeyboardNavigation extends BlockEventComposer {
 
       if (toggleWrapper?.getAttribute('data-blok-toggle-open') === 'true') {
         this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.id);
-      } else if (currentBlock.parentId !== null) {
+      } else if (currentBlock.parentId !== null && newBlock.parentId !== currentBlock.parentId) {
         this.Blok.BlockManager.setBlockParent(newBlock, currentBlock.parentId);
       }
 

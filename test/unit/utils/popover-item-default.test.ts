@@ -272,6 +272,34 @@ describe('PopoverItemDefault', () => {
     expect(item.isDisabled).toBe(true);
   });
 
+  it('removes icon background in inline context', () => {
+    const item = new PopoverItemDefault(
+      {
+        title: 'Bold',
+        name: 'bold',
+        icon: '<svg></svg>',
+        onActivate: vi.fn(),
+      },
+      { isInline: true, iconWithGap: true }
+    );
+    const element = item.getElement()!;
+
+    document.body.appendChild(element);
+
+    const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+    expect(icon).not.toBeNull();
+    expect(icon?.className).not.toContain('bg-popover-icon-bg');
+  });
+
+  it('keeps icon background in non-inline context', () => {
+    const { element } = createItem();
+    const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+    expect(icon).not.toBeNull();
+    expect(icon?.className).toContain('bg-popover-icon-bg');
+  });
+
   it('prevents icon container from shrinking in flex layout', () => {
     const { element } = createItem();
     const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');

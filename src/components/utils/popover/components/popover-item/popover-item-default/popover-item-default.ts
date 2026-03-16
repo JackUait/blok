@@ -339,7 +339,7 @@ export class PopoverItemDefault extends PopoverItem {
   private getIconClass(iconWithGap: boolean, isInline: boolean, isNestedInline: boolean, isWobbling: boolean): string {
     return twMerge(
       css.icon,
-      isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
+      isInline && 'w-auto h-auto bg-transparent [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
       iconWithGap && 'mr-3',
       iconWithGap && isInline && 'shadow-none mr-0!',

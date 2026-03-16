@@ -22,7 +22,7 @@ export const DRAG_CONFIG = {
  */
 export const PREVIEW_STYLES = {
   base: 'fixed pointer-events-none z-10000 opacity-80 transition-none',
-  content: 'relative mx-auto max-w-content',
+  content: 'relative mx-auto max-w-blok-content',
 } as const;
 
 /**

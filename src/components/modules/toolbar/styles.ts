@@ -14,7 +14,7 @@ export const getToolbarStyles = (): { [name: string]: string } => {
     toolbarOpened: 'block',
     toolbarClosed: 'hidden',
     content: twJoin(
-      'relative mx-auto max-w-content'
+      'relative mx-auto max-w-blok-content'
     ),
     actions: twJoin(
       'absolute flex opacity-0 pr-[5px]',

@@ -36,6 +36,13 @@ describe('drag.constants', () => {
     });
   });
 
+  describe('PREVIEW_STYLES', () => {
+    it('content should use dynamic max-w-blok-content to respond to width mode changes', () => {
+      expect(constantsModule.PREVIEW_STYLES.content).toContain('max-w-blok-content');
+      expect(constantsModule.PREVIEW_STYLES.content).not.toContain('max-w-content');
+    });
+  });
+
   describe('hasPassedThreshold', () => {
     it('should return false when distance is below default threshold', () => {
       expect(constantsModule.hasPassedThreshold(0, 0, 2, 2)).toBe(false); // distance ~2.8

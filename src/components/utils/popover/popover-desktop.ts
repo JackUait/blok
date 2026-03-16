@@ -68,6 +68,14 @@ export class PopoverDesktop extends PopoverAbstract {
   private leftAlignElement: HTMLElement | undefined;
 
   /**
+   * Updates the element whose left edge is used for horizontal positioning.
+   * @param element - new element to align against, or undefined to fall back to trigger
+   */
+  public setLeftAlignElement(element: HTMLElement | undefined): void {
+    this.leftAlignElement = element;
+  }
+
+  /**
    * Popover size cache
    */
   private _size: { height: number; width: number } | undefined;

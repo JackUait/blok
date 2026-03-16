@@ -48,6 +48,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   filterItems: vi.fn(),
   toggleItemHiddenByName: vi.fn(),
   updatePosition: vi.fn(),
+  setLeftAlignElement: vi.fn(),
 }));
 
 vi.mock('../../../src/components/dom', () => ({
@@ -75,6 +76,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public filterItems = mockPopoverInstance.filterItems;
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
+      public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
     },
     PopoverMobile: class MockPopoverMobile {
       public show = mockPopoverInstance.show;
@@ -87,6 +89,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public filterItems = mockPopoverInstance.filterItems;
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
+      public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
     },
   };
 });
@@ -114,6 +117,38 @@ vi.mock('../../../src/components/utils', async () => {
  * Tests internal functionality and edge cases not covered by E2E tests
  */
 describe('Toolbox', () => {
+  describe('updateLeftAlignElement', () => {
+    it('forwards new element to the popover via setLeftAlignElement', () => {
+      const newElement = document.createElement('div');
+
+      const toolbox = new Toolbox({
+        api: {
+          blocks: {
+            getCurrentBlockIndex: vi.fn(() => 0),
+            getBlockByIndex: vi.fn(() => undefined),
+            convert: vi.fn(),
+            composeBlockData: vi.fn(async () => ({})),
+            insert: vi.fn(),
+            setBlockParent: vi.fn(),
+            transact: vi.fn((fn: () => void) => fn()),
+            stopBlockMutationWatching: vi.fn(),
+          },
+          caret: { setToBlock: vi.fn() },
+          toolbar: { close: vi.fn() },
+          ui: { nodes: { redactor: document.createElement('div') } },
+          events: { on: vi.fn(), off: vi.fn() },
+        } as unknown as API,
+        tools: createToolsCollection([]),
+        i18nLabels: { filter: 'Filter', nothingFound: 'Nothing found', slashSearchPlaceholder: 'Type to search' },
+        i18n: { t: vi.fn((key: string) => key), has: vi.fn(() => false) },
+      });
+
+      toolbox.updateLeftAlignElement(newElement);
+
+      expect(mockPopoverInstance.setLeftAlignElement).toHaveBeenCalledWith(newElement);
+    });
+  });
+
   const i18nLabels: Record<'filter' | 'nothingFound' | 'slashSearchPlaceholder', string> = {
     filter: 'Filter',
     nothingFound: 'Nothing found',

@@ -1142,6 +1142,45 @@ describe('PopoverDesktop', () => {
       leftAlignElement.remove();
     });
 
+    it('uses updated leftAlignElement after setLeftAlignElement is called', () => {
+      const trigger = document.createElement('button');
+      const originalAlignElement = document.createElement('div');
+      const newAlignElement = document.createElement('div');
+
+      document.body.appendChild(trigger);
+      document.body.appendChild(originalAlignElement);
+      document.body.appendChild(newAlignElement);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+      vi.spyOn(originalAlignElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 200, right: 600, width: 400, height: 40 })
+      );
+      vi.spyOn(newAlignElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 300, right: 700, width: 400, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+        leftAlignElement: originalAlignElement,
+      });
+
+      popover.show();
+      expect(popover.getElement().style.left).toBe(`${200 + window.scrollX}px`);
+      popover.hide();
+
+      // Update the left align element
+      popover.setLeftAlignElement(newAlignElement);
+
+      popover.show();
+      expect(popover.getElement().style.left).toBe(`${300 + window.scrollX}px`);
+
+      trigger.remove();
+      originalAlignElement.remove();
+      newAlignElement.remove();
+    });
+
     it('falls back to trigger left when leftAlignElement is not provided', () => {
       const trigger = document.createElement('button');
 

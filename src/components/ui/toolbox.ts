@@ -206,6 +206,20 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
+   * Updates the element used for horizontal popover alignment.
+   * Called when the toolbar moves to a new block so the popover
+   * aligns with the block's content element rather than the toolbar's own wrapper.
+   * @param element - block content element to align against
+   */
+  public updateLeftAlignElement(element: HTMLElement | undefined): void {
+    this.leftAlignElement = element;
+
+    if (this.popover !== null && 'setLeftAlignElement' in this.popover) {
+      (this.popover as { setLeftAlignElement: (el: HTMLElement | undefined) => void }).setLeftAlignElement(element);
+    }
+  }
+
+  /**
    * Returns root block settings element
    */
   public getElement(): HTMLElement | null {

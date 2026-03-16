@@ -429,6 +429,16 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Update toolbox left alignment to the block's content element so the popover
+     * aligns with the actual visible content, not the toolbar's internal wrapper.
+     */
+    const blockContentElement = targetBlockHolder.querySelector<HTMLElement>(`[${DATA_ATTR.elementContent}]`);
+
+    if (blockContentElement) {
+      this.toolboxInstance.updateLeftAlignElement(blockContentElement);
+    }
+
+    /**
      * Apply content offset for nested elements (e.g., nested list items)
      */
     this.positioner.applyContentOffset(this.nodes, targetBlock);
@@ -836,7 +846,6 @@ export class Toolbar extends Module<ToolbarNodes> {
       },
       i18n: this.Blok.I18n,
       triggerElement: this.nodes.plusButton,
-      leftAlignElement: this.nodes.content,
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {

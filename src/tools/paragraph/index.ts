@@ -346,11 +346,9 @@ export class Paragraph implements BlockTool {
 
     this._data = data;
 
-    queueMicrotask(() => {
-      if (this._element) {
-        this._element.innerHTML = this._data.text || '';
-      }
-    });
+    if (this._element) {
+      this._element.innerHTML = this._data.text || '';
+    }
   }
 
   /**

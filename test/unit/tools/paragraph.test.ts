@@ -402,7 +402,7 @@ describe('Paragraph Tool - Custom Configurations', () => {
       vi.restoreAllMocks();
     });
 
-    it('updates element innerHTML after microtask flush on paste', async () => {
+    it('updates element innerHTML synchronously on paste', () => {
       const options = createParagraphOptions({ text: 'original' });
       const paragraph = new Paragraph(options);
       const element = paragraph.render();
@@ -418,11 +418,8 @@ describe('Paragraph Tool - Custom Configurations', () => {
 
       paragraph.onPaste(pasteEvent);
 
-      // NOT updated synchronously — save() still reads old content
-      expect(paragraph.save(element).text).not.toBe('<b>hello</b>');
-
-      // Updated after microtask — save() reflects new content
-      await Promise.resolve();
+      // innerHTML must be updated synchronously so refreshToolRootElement() reads current DOM
+      expect(element.innerHTML).toBe('<b>hello</b>');
       expect(paragraph.save(element).text).toBe('<b>hello</b>');
     });
   });

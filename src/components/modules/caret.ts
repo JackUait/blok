@@ -682,9 +682,21 @@ export class Caret extends Module {
     }
 
     /**
+     * If both blocks share the same DOM container (e.g., same table cell),
+     * navigate directly to the next block instead of exiting the table.
+     */
+    if (nextBlock !== null && currentBlock.parentId !== null &&
+        currentBlock.holder.parentElement !== null &&
+        currentBlock.holder.parentElement === nextBlock.holder.parentElement) {
+      this.setToBlockAtXPosition(nextBlock, caretX, true);
+
+      return true;
+    }
+
+    /**
      * If current block is inside a table cell (has parentId), check if we should
      * exit the table. This handles two cases:
-     * 1. nextBlock is still in the same table → skip all cell paragraphs
+     * 1. nextBlock is in a different cell of the same table → skip to block after table
      * 2. nextBlock is null (last block in flat list) → table is at the end
      */
     const shouldExitParent = currentBlock.parentId !== null && (

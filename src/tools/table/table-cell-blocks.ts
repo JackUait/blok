@@ -144,8 +144,8 @@ export class TableCellBlocks {
       return;
     }
 
-    // ArrowDown at last row -> exit table
-    if (event.key === 'ArrowDown' && position.row === this.getRowCount() - 1) {
+    // ArrowDown at last row -> exit table (skip if already handled by block-level navigation)
+    if (event.key === 'ArrowDown' && !event.defaultPrevented && position.row === this.getRowCount() - 1) {
       event.preventDefault();
       this.exitTableForward();
     }
@@ -492,7 +492,19 @@ export class TableCellBlocks {
       return;
     }
 
-    container.appendChild(block.holder);
+    // Insert at the correct DOM position based on the flat array order,
+    // so that pressing Enter on a non-last paragraph inserts the new block
+    // right after the current one instead of always at the end of the cell.
+    const blocksCount = this.api.blocks.getBlocksCount();
+    const nextSiblingHolder = Array.from(
+      { length: blocksCount - index - 1 },
+      (_, offset) => this.api.blocks.getBlockByIndex(index + 1 + offset)
+    ).find(
+      candidate => candidate?.holder.parentElement === container
+    )?.holder ?? null;
+
+    // insertBefore(el, null) is equivalent to appendChild
+    container.insertBefore(block.holder, nextSiblingHolder);
     this.api.blocks.setBlockParent(blockId, this.tableBlockId);
     this.stripPlaceholders(container);
   }

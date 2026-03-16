@@ -600,14 +600,6 @@ export class KeyboardNavigation extends BlockEventComposer {
     const isDownKey = keyCode === keyCodes.DOWN;
     const isRightKey = keyCode === keyCodes.RIGHT && !this.isRtl;
 
-    /**
-     * Skip ArrowDown handling for blocks inside table cells — the table's own
-     * grid-level handler manages row-based navigation and table exit.
-     */
-    if (isDownKey && this.isCurrentBlockInsideTableCell) {
-      return;
-    }
-
     const isNavigated = (() => {
       if (isDownKey) {
         /**

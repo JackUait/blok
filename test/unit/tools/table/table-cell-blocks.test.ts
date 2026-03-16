@@ -1218,6 +1218,76 @@ describe('TableCellBlocks', () => {
 
       expect(foundCell).toBeNull();
     });
+
+    it('should insert a new block at the correct DOM position instead of always appending', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      const container = document.createElement('div');
+
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      // Two existing blocks already in the cell container: blockA (index 0) and blockB (index 2)
+      const blockAHolder = document.createElement('div');
+
+      blockAHolder.setAttribute('data-blok-id', 'block-a');
+      container.appendChild(blockAHolder);
+
+      const blockBHolder = document.createElement('div');
+
+      blockBHolder.setAttribute('data-blok-id', 'block-b');
+      container.appendChild(blockBHolder);
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // New block that should go BETWEEN blockA and blockB based on flat array order
+      const blockNewHolder = document.createElement('div');
+
+      blockNewHolder.setAttribute('data-blok-id', 'block-new');
+
+      // Flat array order: blockA (index 0), blockNew (index 1), blockB (index 2)
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'block-a') return 0;
+            if (id === 'block-new') return 1;
+            if (id === 'block-b') return 2;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'block-a', holder: blockAHolder };
+            if (index === 1) return { id: 'block-new', holder: blockNewHolder };
+            if (index === 2) return { id: 'block-b', holder: blockBHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(3),
+          setBlockParent: vi.fn(),
+        },
+        events: {
+          on: vi.fn(),
+          off: vi.fn(),
+        },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.claimBlockForCell(cell, 'block-new');
+
+      // The DOM order should be [blockA, blockNew, blockB], NOT [blockA, blockB, blockNew]
+      const children = Array.from(container.children);
+
+      expect(children).toEqual([blockAHolder, blockNewHolder, blockBHolder]);
+    });
   });
 
   describe('empty cell guarantee', () => {

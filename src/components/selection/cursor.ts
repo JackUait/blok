@@ -43,6 +43,13 @@ export class SelectionCursor {
     selection.removeAllRanges();
     selection.addRange(range);
 
+    // Focus contenteditable elements explicitly after setting the selection range.
+    // Placed after addRange() so the selection is preserved when focus transfers —
+    // calling focus() before addRange() can reset the caret during arrow navigation.
+    if ($.isContentEditable(element) && document.activeElement !== element) {
+      element.focus();
+    }
+
     return range.getBoundingClientRect();
   }
 

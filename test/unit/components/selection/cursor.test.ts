@@ -189,6 +189,29 @@ describe('SelectionCursor', () => {
       domSpy.mockRestore();
     });
 
+    it('focuses contenteditable element when it is not already the active element', () => {
+      const { element } = createContentEditable('Target');
+      const focusSpy = vi.spyOn(element, 'focus');
+
+      SelectionCursor.setCursor(element, 0);
+
+      expect(focusSpy).toHaveBeenCalledOnce();
+    });
+
+    it('does not call focus when contenteditable element is already the active element', () => {
+      const { element } = createContentEditable('Target');
+
+      // jsdom doesn't set document.activeElement for contenteditable divs,
+      // so simulate real browser behavior by mocking the property.
+      const activeElementSpy = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(element);
+      const focusSpy = vi.spyOn(element, 'focus');
+
+      SelectionCursor.setCursor(element, 0);
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      activeElementSpy.mockRestore();
+    });
+
     it('returns element bounding rect when selection is unavailable', () => {
       const { element } = createContentEditable();
 

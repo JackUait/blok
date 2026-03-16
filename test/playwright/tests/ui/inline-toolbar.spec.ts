@@ -876,6 +876,49 @@ test.describe('inline toolbar', () => {
     expect(Math.abs(toolbarRight - paragraphRight)).toBeLessThanOrEqual(10);
   });
 
+  test('should position toolbar near selection when page is scrolled', async ({ page }) => {
+    // Create enough blocks to require scrolling
+    const blocks = Array.from({ length: 20 }, (_, i) => ({
+      type: 'paragraph' as const,
+      data: { text: `Paragraph number ${i + 1} with some text content to fill the page.` },
+    }));
+
+    await createBlok(page, { data: { blocks } });
+
+    // Scroll to the last paragraph and select text in it
+    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+
+    await lastParagraph.scrollIntoViewIfNeeded();
+
+    const contentEditable = lastParagraph.locator('[contenteditable]');
+
+    await selectText(contentEditable, 'Paragraph');
+
+    const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
+
+    await expect(toolbar).toBeVisible();
+
+    // Get positions — both are viewport-relative from Playwright's boundingBox()
+    const toolbarBox = await getRequiredBoundingBox(toolbar);
+    const selectionRect = await page.evaluate(() => {
+      const selection = window.getSelection();
+
+      if (!selection || selection.rangeCount === 0) {
+        throw new Error('No selection available');
+      }
+
+      const rect = selection.getRangeAt(0).getBoundingClientRect();
+
+      return { top: rect.top, bottom: rect.bottom, left: rect.left };
+    });
+
+    // Toolbar should be near the selection vertically (within 50px below selection bottom)
+    // If the toolbar is off-screen (e.g. top < -100), it means scroll offset wasn't accounted for
+    expect(toolbarBox.y).toBeGreaterThan(0);
+    expect(toolbarBox.y).toBeLessThan(selectionRect.bottom + 50);
+    expect(toolbarBox.y).toBeGreaterThanOrEqual(selectionRect.top);
+  });
+
   test('should display inline toolbar in read-only mode when tool supports it', async ({ page }) => {
     await createBlok(page, {
       readOnly: true,

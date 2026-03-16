@@ -37,9 +37,11 @@
     `all: initial !important` — main editor wrapper (outermost boundary).
     Resets every property to its CSS initial value with !important priority,
     blocking even `!important` host-page styles from cascading in.
-    Blok's own Tailwind utility classes (applied to the same elements or
-    descendants) override this because they have equal or higher specificity
-    and appear later in the cascade.
+    However, `!important` declarations always beat normal declarations
+    regardless of specificity or source order, so Tailwind utility classes
+    applied to the wrapper element itself (e.g. `relative`, `z-1`) are
+    overridden. Properties that the wrapper needs must be explicitly
+    re-applied with `!important` below (same pattern as font-family/color).
 
   [data-blok-popover]:not([data-blok-popover-inline])
     Inherited-properties-only reset — toolbox/settings popovers, appended
@@ -72,6 +74,27 @@
 */
 [data-blok-interface=blok] {
   all: initial !important;
+
+  /*
+    Re-apply layout properties that `all: initial` resets.
+    The wrapper must be a positioned containing block so that
+    absolutely-positioned children (inline toolbar, main toolbar)
+    resolve against it rather than the document root. Without this,
+    the inline toolbar renders off-screen when the page is scrolled.
+  */
+  position: relative !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  z-index: 1 !important;
+}
+
+/*
+  RTL direction is set conditionally via JS (ui.ts) using the
+  data-blok-rtl attribute. `all: initial` resets direction to `ltr`,
+  so we must re-apply it with !important when the attribute is present.
+*/
+[data-blok-interface=blok][data-blok-rtl=true] {
+  direction: rtl !important;
 }
 
 /* Font family — user-configurable via config.style.fontFamily */

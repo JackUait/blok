@@ -3,7 +3,8 @@ import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
 
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
-import { PopoverItemSeparator, css as popoverItemCls , PopoverItemDefault } from './components/popover-item';
+import { PopoverItemSeparator, css as popoverItemCls, PopoverItemDefault, PopoverItemType } from './components/popover-item';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
@@ -85,6 +86,20 @@ export class PopoverDesktop extends PopoverAbstract {
    * Cached on first search so we can restore order when query is cleared.
    */
   private originalItemOrder: Element[] | undefined;
+
+  /**
+   * Cache of promoted items built from nested children.
+   * Built once on first non-empty search, destroyed on clear/hide/destroy.
+   */
+  private promotedItemCache: {
+    items: PopoverItemDefault[];
+    parentChains: Map<PopoverItemDefault, string[]>;
+  } | null = null;
+
+  /**
+   * Temporary group separator elements injected during search.
+   */
+  private promotedSeparators: HTMLElement[] = [];
 
   /**
    * Construct the instance
@@ -321,6 +336,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * Closes popover
    */
   public hide = (): void => {
+    this.cleanupPromotedItems();
     super.hide();
 
     this.destroyNestedPopoverIfExists();
@@ -731,6 +747,111 @@ export class PopoverDesktop extends PopoverAbstract {
 
     focusedItem?.onFocus();
   };
+
+  /**
+   * Builds cache of PopoverItemDefault instances from nested children.
+   * Recursively walks the item tree to arbitrary depth.
+   * Each cached item is mapped to its parent chain for group labeling.
+   */
+  private buildPromotedItemCache(): { items: PopoverItemDefault[]; parentChains: Map<PopoverItemDefault, string[]> } {
+    const cache = {
+      items: [] as PopoverItemDefault[],
+      parentChains: new Map<PopoverItemDefault, string[]>(),
+    };
+
+    this.collectPromotedChildren(this.items, [], cache);
+
+    return cache;
+  }
+
+  /**
+   * Recursively collects default child items from items that have children.
+   * @param items - items to inspect for children
+   * @param parentChain - ancestor label chain accumulated so far
+   * @param cache - mutable cache to populate
+   */
+  private collectPromotedChildren(
+    items: PopoverItem[],
+    parentChain: string[],
+    cache: { items: PopoverItemDefault[]; parentChains: Map<PopoverItemDefault, string[]> }
+  ): void {
+    for (const item of items) {
+      if (!(item instanceof PopoverItemDefault) || !item.hasChildren) {
+        continue;
+      }
+
+      const label = item.title ?? item.name ?? '';
+      const newChain = [...parentChain, label];
+
+      this.collectDefaultChildren(item.children, newChain, cache);
+    }
+  }
+
+  /**
+   * Constructs PopoverItemDefault instances from raw params and adds them to the cache.
+   * @param childParams - raw child item params from a parent item
+   * @param parentChain - ancestor label chain for this group
+   * @param cache - mutable cache to populate
+   */
+  private collectDefaultChildren(
+    childParams: PopoverItemParams[],
+    parentChain: string[],
+    cache: { items: PopoverItemDefault[]; parentChains: Map<PopoverItemDefault, string[]> }
+  ): void {
+    for (const childParam of childParams) {
+      if (childParam.type !== undefined && childParam.type !== PopoverItemType.Default) {
+        continue;
+      }
+
+      const childInstance = new PopoverItemDefault(childParam);
+
+      if (childInstance.name !== undefined && this.isNamePermanentlyHidden(childInstance.name)) {
+        childInstance.destroy();
+        continue;
+      }
+
+      cache.items.push(childInstance);
+      cache.parentChains.set(childInstance, parentChain);
+
+      if (childInstance.hasChildren) {
+        this.collectPromotedChildren([childInstance], parentChain, cache);
+      }
+    }
+  }
+
+  /**
+   * Removes promoted items and group separators from DOM and destroys cached instances.
+   * Idempotent — safe to call when cache is already null.
+   */
+  private cleanupPromotedItems(): void {
+    for (const separator of this.promotedSeparators) {
+      separator.remove();
+    }
+    this.promotedSeparators = [];
+
+    if (this.promotedItemCache !== null) {
+      for (const item of this.promotedItemCache.items) {
+        item.getElement()?.remove();
+        item.destroy();
+      }
+      this.promotedItemCache = null;
+    }
+  }
+
+  /**
+   * Creates a group separator element for promoted search results.
+   * @param label - the parent chain label (e.g., "Convert to" or "Parent › Child")
+   */
+  private createGroupSeparator(label: string): HTMLElement {
+    const el = document.createElement('div');
+
+    el.setAttribute(DATA_ATTR.promotedGroupLabel, '');
+    el.setAttribute('role', 'separator');
+    el.className = 'px-3 pt-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-text/50 cursor-default';
+    el.textContent = label;
+
+    return el;
+  }
 
   /**
    * Adds search to the popover

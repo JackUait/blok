@@ -63,3 +63,4 @@ docs/plans/
 # Local run artifacts
 nohup.out
 e2e-results.log
+docs/superpowers/

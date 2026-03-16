@@ -17,3 +17,4 @@ export * from './i18n';
 export * from './ui';
 export * from './tools';
 export * from './width';
+export * from './theme';

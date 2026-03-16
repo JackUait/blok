@@ -250,6 +250,7 @@ export class Core {
       'CrossBlockSelection',
       'ReadOnly',
       'WidthManager',
+      'ThemeManager',
     ];
 
     await modulesToPrepare.reduce(

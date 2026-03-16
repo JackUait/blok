@@ -1,3 +1,4 @@
+import type { ThemeMode, ResolvedTheme } from '../api/theme';
 import {ToolConstructable, ToolSettings} from '../tools';
 import {API, LogLevels, OutputData} from '../index';
 import {SanitizerConfig} from './sanitizer-config';
@@ -186,4 +187,19 @@ export interface BlokConfig {
    * @param value - the resolved CSS max-width value
    */
   onWidthChange?: (mode: 'narrow' | 'full', value: string) => void;
+
+  /**
+   * Color theme mode.
+   * - 'auto': follow OS preference via prefers-color-scheme (default)
+   * - 'light': force light theme
+   * - 'dark': force dark theme
+   */
+  theme?: ThemeMode;
+
+  /**
+   * Called when the resolved theme changes (e.g. OS preference switches in 'auto' mode).
+   * Does not fire on initialization — only on subsequent changes.
+   * @param resolvedTheme - the resolved theme ('dark' or 'light')
+   */
+  onThemeChange?: (resolvedTheme: ResolvedTheme) => void;
 }

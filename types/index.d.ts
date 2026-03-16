@@ -31,6 +31,9 @@ import {
   Ui,
   Tools,
   Width,
+  Theme,
+  ThemeMode,
+  ResolvedTheme,
 } from './api';
 
 import { OutputData } from './data-formats';
@@ -107,6 +110,9 @@ export {
   Ui,
   Tools,
   Width,
+  Theme,
+  ThemeMode,
+  ResolvedTheme,
 } from './api';
 export {
   BlockMutationType,
@@ -145,6 +151,7 @@ export interface API {
   readOnly: ReadOnly;
   ui: Ui;
   width: Width;
+  theme: Theme;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;
@@ -180,6 +187,7 @@ export class Blok {
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
   public width: Width;
+  public theme: Theme;
   constructor(configuration?: BlokConfig|string);
 
   /**

@@ -17,6 +17,7 @@ import { ToolsAPI } from './api/tools';
 import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
 import { WidthAPI } from './api/width';
+import { ThemeAPI } from './api/theme';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
 import { BlockSelection } from './blockSelection';
@@ -36,6 +37,7 @@ import { InlineToolbar } from './toolbar/inline';
 import { Tools } from './tools';
 import { UI } from './ui';
 import { WidthManager } from './widthManager';
+import { ThemeManager } from './themeManager';
 import { YjsManager } from './yjs';
 
 /**
@@ -63,6 +65,7 @@ export {
   TooltipAPI,
   UiAPI,
   WidthAPI,
+  ThemeAPI,
 
   // Toolbar Modules
   BlockSettings,
@@ -86,6 +89,7 @@ export {
   Tools,
   UI,
   WidthManager,
+  ThemeManager,
   YjsManager,
 };
 
@@ -113,6 +117,7 @@ export const Modules = {
   TooltipAPI,
   UiAPI,
   WidthAPI,
+  ThemeAPI,
 
   // Toolbar Modules
   BlockSettings,
@@ -136,5 +141,6 @@ export const Modules = {
   Tools,
   UI,
   WidthManager,
+  ThemeManager,
   YjsManager,
 };

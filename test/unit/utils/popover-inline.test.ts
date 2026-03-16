@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Flipper } from '../../../src/components/flipper';
 import { PopoverInline } from '../../../src/components/utils/popover/popover-inline';
-import { PopoverItemType } from '../../../src/components/utils/popover/components/popover-item';
+import { PopoverItemDefault, PopoverItemType } from '../../../src/components/utils/popover/components/popover-item';
+import type { PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
+import { PopoverDesktop } from '../../../src/components/utils/popover/popover-desktop';
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -15,6 +17,21 @@ vi.mock('../../../src/components/utils', async () => {
     isMobileScreen: vi.fn(() => false),
   };
 });
+
+/**
+ * Internal type for accessing protected members in tests
+ */
+type PopoverInlineInternal = PopoverInline & {
+  readonly items: Array<PopoverItemDefault | PopoverItemSeparator>;
+  nestedPopover: PopoverDesktop | null | undefined;
+  nestedPopoverTriggerItem: PopoverItemDefault | null;
+  showNestedItems: (item: PopoverItemDefault) => void;
+  nodes: {
+    popover: HTMLElement;
+    popoverContainer: HTMLElement;
+    items: HTMLElement;
+  };
+};
 
 describe('PopoverInline', () => {
 
@@ -286,6 +303,67 @@ describe('PopoverInline', () => {
 
       expect(element).toBeInstanceOf(HTMLElement);
       expect(element).toHaveAttribute(DATA_ATTR.popoverInline, '');
+    });
+  });
+
+  describe('handleMouseLeave', () => {
+    it('should NOT close nested popover when mouse leaves the popover container', () => {
+      const onClose = vi.fn();
+      const popover = createPopoverInline({
+        items: [
+          {
+            icon: 'Icon',
+            title: 'Tool With Actions',
+            name: 'tool-with-actions',
+            children: {
+              items: [
+                {
+                  title: 'Child Action',
+                  name: 'child-action',
+                  onActivate: vi.fn(),
+                },
+              ],
+              onClose,
+            },
+          },
+        ],
+      });
+
+      const instance = popover as unknown as PopoverInlineInternal;
+
+      // Find the item with children
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.hasChildren
+      );
+
+      expect(parentItem).toBeDefined();
+
+      // Open the nested popover by clicking the item (inline uses click-to-toggle)
+      instance.showNestedItems(parentItem!);
+
+      // Verify nested popover is open
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+      expect(popover.hasNestedPopoverOpen).toBe(true);
+
+      // Mouse leaves the popover container to an unrelated element
+      const outsideElement = document.createElement('div');
+
+      document.body.appendChild(outsideElement);
+
+      const mouseLeaveEvent = new MouseEvent('mouseleave', {
+        relatedTarget: outsideElement,
+        bubbles: false,
+      });
+
+      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+
+      // Nested popover should still be open — inline toolbar uses click-to-close, not hover-to-close
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+      expect(popover.hasNestedPopoverOpen).toBe(true);
+      expect(onClose).not.toHaveBeenCalled();
+
+      outsideElement.remove();
     });
   });
 

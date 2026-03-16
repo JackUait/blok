@@ -241,6 +241,14 @@ export class PopoverInline extends PopoverDesktop {
   }
 
   /**
+   * Disable mouse-leave event handling.
+   * Inline toolbar uses click-to-toggle for nested popovers, not hover.
+   */
+  protected override handleMouseLeave(): void {
+    return;
+  }
+
+  /**
    * Sets CSS variable with position of item near which nested popover should be displayed.
    * Is used to position nested popover right below clicked item
    * @param nestedPopoverEl - nested popover element

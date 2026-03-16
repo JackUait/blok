@@ -405,7 +405,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * Destroys nested popover unless the mouse moved into it.
    * @param event - mouseleave event
    */
-  private handleMouseLeave(event: Event): void {
+  protected handleMouseLeave(event: Event): void {
     const mouseEvent = event as MouseEvent;
     const relatedTarget = mouseEvent.relatedTarget;
 

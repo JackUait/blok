@@ -479,9 +479,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
       // Get English title for search fallback
       const titleKey = toolboxItem.titleKey;
-      const englishTitleKey = titleKey
-        ? (titleKey.includes('.') ? titleKey : `toolNames.${titleKey}`)
-        : undefined;
+      const resolvedTitleKey = titleKey?.includes('.') ? titleKey : `toolNames.${titleKey}`;
+      const englishTitleKey = titleKey ? resolvedTitleKey : undefined;
       const englishTitle = englishTitleKey
         ? this.api.i18n.getEnglishTranslation(englishTitleKey)
         : toolboxItem.title;

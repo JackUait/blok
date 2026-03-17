@@ -336,9 +336,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       tool.toolbox.forEach((toolboxItem) => {
         // Resolve English title for multilingual search
         const titleKey = toolboxItem.titleKey;
-        const englishTitleKey = titleKey
-          ? (titleKey.includes('.') ? titleKey : `toolNames.${titleKey}`)
-          : undefined;
+        const resolvedTitleKey = titleKey?.includes('.') ? titleKey : `toolNames.${titleKey}`;
+        const englishTitleKey = titleKey ? resolvedTitleKey : undefined;
         const englishTitle = englishTitleKey
           ? this.Blok.I18n.getEnglishTranslation(englishTitleKey)
           : toolboxItem.title;

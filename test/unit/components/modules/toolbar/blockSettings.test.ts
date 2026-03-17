@@ -832,7 +832,7 @@ describe('BlockSettings', () => {
 
     const headerItem = children[0];
 
-    expect(headerItem.englishTitle).toBe('Heading 1');
-    expect(headerItem.searchTerms).toEqual(['h1', 'title', 'header', 'heading']);
+    expect('englishTitle' in headerItem && headerItem.englishTitle).toBe('Heading 1');
+    expect('searchTerms' in headerItem && headerItem.searchTerms).toEqual(['h1', 'title', 'header', 'heading']);
   });
 });

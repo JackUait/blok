@@ -621,7 +621,7 @@ export class PopoverDesktop extends PopoverAbstract {
     const actualPopoverEl: HTMLElement = queriedPopoverEl instanceof HTMLElement ? queriedPopoverEl : nestedPopoverEl;
 
     // Check if parent popover has openTop or openLeft state
-    const isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);
+    const _isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);
     const isParentOpenLeft = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenLeft);
 
     // Apply position: absolute for nested container

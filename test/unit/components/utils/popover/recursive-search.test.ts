@@ -219,7 +219,7 @@ describe('filterItems with promoted items', () => {
     expect(labels?.length).toBe(1);
   });
 
-  it('should show both top-level and promoted duplicates without dedup', () => {
+  it('should hide top-level items that duplicate promoted items by title', () => {
     const popover = new PopoverDesktop({
       items: [
         createItemParams({ title: 'Heading', name: 'heading' }),
@@ -239,11 +239,62 @@ describe('filterItems with promoted items', () => {
     popover.filterItems('heading');
 
     const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
-    const headingItems = Array.from(itemsContainer?.querySelectorAll('[data-blok-popover-item-title]') ?? [])
-      .filter(el => el.textContent === 'Heading');
+    const visibleItems = Array.from(itemsContainer?.querySelectorAll('[data-blok-popover-item]:not([data-blok-hidden])') ?? []);
+    const visibleHeadings = visibleItems.filter(el =>
+      el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading'
+    );
 
-    // Both the top-level and promoted "Heading" should appear
-    expect(headingItems.length).toBe(2);
+    // Only the promoted "Heading" should be visible (top-level duplicate is hidden)
+    expect(visibleHeadings.length).toBe(1);
+
+    // The promoted item should be under the "Convert to" group
+    const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
+    expect(separator?.textContent).toBe('Convert to');
+  });
+
+  it('should keep top-level items that do not duplicate any promoted item', () => {
+    const popover = new PopoverDesktop({
+      items: [
+        createItemParams({ title: 'Heading 1', name: 'heading-1' }),
+        createItemParams({ title: 'Heading 2', name: 'heading-2' }),
+        createItemParams({ title: 'Heading 3', name: 'heading-3' }),
+        {
+          title: 'Convert to',
+          icon: '<svg></svg>',
+          name: 'convert-to',
+          children: {
+            items: [
+              createItemParams({ title: 'Heading 2', name: 'heading-2-convert' }),
+              createItemParams({ title: 'Heading 3', name: 'heading-3-convert' }),
+            ],
+          },
+        },
+      ],
+    });
+
+    popover.filterItems('heading');
+
+    const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
+    const visibleItems = Array.from(itemsContainer?.querySelectorAll('[data-blok-popover-item]:not([data-blok-hidden])') ?? []);
+    const visibleTitles = visibleItems.map(el => el.querySelector('[data-blok-popover-item-title]')?.textContent);
+
+    // Heading 1 has no promoted duplicate — stays visible at top level
+    expect(visibleTitles).toContain('Heading 1');
+
+    // Heading 2 and Heading 3 appear under "Convert to" only (top-level duplicates hidden)
+    const topLevelHeading2 = visibleItems.filter(el =>
+      el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading 2'
+    );
+    expect(topLevelHeading2.length).toBe(1);
+
+    const topLevelHeading3 = visibleItems.filter(el =>
+      el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading 3'
+    );
+    expect(topLevelHeading3.length).toBe(1);
+
+    // Group separator should be present
+    const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
+    expect(separator?.textContent).toBe('Convert to');
   });
 
   it('should render group separator with empty label when parent has no title or name', () => {
@@ -439,6 +490,47 @@ describe('SearchInput path (searchable popover)', () => {
     const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
     const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
     expect(separator?.textContent).toBe('Convert to');
+  });
+
+  it('should deduplicate top-level items against promoted items via SearchInput', () => {
+    const popover = new PopoverDesktop({
+      searchable: true,
+      items: [
+        createItemParams({ title: 'Heading 1', name: 'heading-1' }),
+        createItemParams({ title: 'Heading 2', name: 'heading-2' }),
+        {
+          title: 'Convert to',
+          icon: '<svg></svg>',
+          name: 'convert-to',
+          children: {
+            items: [
+              createItemParams({ title: 'Heading 2', name: 'heading-2-convert' }),
+            ],
+          },
+        },
+      ],
+      messages: {
+        nothingFound: 'Nothing found',
+        search: 'Search',
+      },
+    });
+
+    const searchInput = popover.getElement().querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
+    searchInput.value = 'heading';
+    searchInput.dispatchEvent(new Event('input'));
+
+    const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
+    const visibleItems = Array.from(itemsContainer?.querySelectorAll('[data-blok-popover-item]:not([data-blok-hidden])') ?? []);
+    const visibleTitles = visibleItems.map(el => el.querySelector('[data-blok-popover-item-title]')?.textContent);
+
+    // Heading 1 stays at top level (no promoted duplicate)
+    expect(visibleTitles).toContain('Heading 1');
+
+    // Heading 2 appears only once under "Convert to"
+    const heading2Items = visibleItems.filter(el =>
+      el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading 2'
+    );
+    expect(heading2Items.length).toBe(1);
   });
 
   it('should clean up promoted items when SearchInput is cleared', () => {

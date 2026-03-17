@@ -896,6 +896,34 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Filters out top-level items whose title duplicates a promoted item's title.
+   * Prevents the same entry from appearing both at the top level and under a group
+   * like "Convert to" during search.
+   * @param topLevel - top-level items matching the search query
+   * @param promoted - promoted items from nested children
+   */
+  private deduplicateAgainstPromoted(
+    topLevel: PopoverItemDefault[],
+    promoted: Array<{ item: PopoverItemDefault }>
+  ): PopoverItemDefault[] {
+    const promotedTitles = new Set<string>();
+
+    for (const { item } of promoted) {
+      if (item.title !== undefined) {
+        promotedTitles.add(item.title.toLowerCase());
+      }
+    }
+
+    return topLevel.filter(item => {
+      if (!(item instanceof PopoverItemDefault) || item.title === undefined) {
+        return true;
+      }
+
+      return !promotedTitles.has(item.title.toLowerCase());
+    });
+  }
+
+  /**
    * Adds search to the popover
    */
   private addSearch(): void {
@@ -1004,7 +1032,13 @@ export class PopoverDesktop extends PopoverAbstract {
     promotedItems: Array<{ item: PopoverItemDefault; score: number; chain: string[] }>;
   }): void => {
     const isEmptyQuery = data.query === '';
-    const matchingTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
+    const allTopLevel = data.topLevelItems as unknown as PopoverItemDefault[];
+
+    // Deduplicate: hide top-level items whose title matches a promoted item
+    const matchingTopLevel = !isEmptyQuery && data.promotedItems.length > 0
+      ? this.deduplicateAgainstPromoted(allTopLevel, data.promotedItems)
+      : allTopLevel;
+
     const isNothingFound = matchingTopLevel.length === 0 && data.promotedItems.length === 0;
 
     /**

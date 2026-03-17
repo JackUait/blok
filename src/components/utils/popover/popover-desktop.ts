@@ -642,14 +642,8 @@ export class PopoverDesktop extends PopoverAbstract {
       actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(var(--nesting-level) * (${parentWidth} - var(--nested-popover-overlap)))`);
     }
 
-    // Calculate top position based on parent open direction
-    if (isParentOpenTop) {
-      // Open upward
-      nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) + var(--item-height) + 0.5rem + var(--nested-popover-overlap))';
-    } else {
-      // Open downward
-      nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--nested-popover-overlap))';
-    }
+    // Center nested popover vertically on the trigger item
+    nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
   }
 
   /**

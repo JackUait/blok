@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "Klik for at tilføje en ny kolonne",
   "tools.table.dragToAddRemoveColumns": "Træk for at tilføje eller fjerne kolonner",
   "blockSettings.delete": "Slet",
-  "blockSettings.toggleWidth": "Skift bredde",
   "a11y.dragHandle": "Træk for at flytte blok eller klik for menu",
   "a11y.dragHandleRole": "trækhåndtag",
   "a11y.dragStarted": "Trækker blok",

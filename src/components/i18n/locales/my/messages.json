@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "ကော်လံအသစ်ထည့်ရန် နှိပ်ပါ",
   "tools.table.dragToAddRemoveColumns": "ကော်လံထည့်ရန် သို့မဟုတ် ဖယ်ရန် ဆွဲယူပါ",
   "blockSettings.delete": "ဖျက်ရန်",
-  "blockSettings.toggleWidth": "အကျယ်ပြောင်းရန်",
   "a11y.dragHandle": "ဘလောက်ရွှေ့ရန် ဆွဲယူပါ သို့မဟုတ် မီနူးအတွက် နှိပ်ပါ",
   "a11y.dragHandleRole": "ဆွဲယူကိုင်တံ",
   "a11y.dragStarted": "ဘလောက်ကို ဆွဲယူနေသည်",

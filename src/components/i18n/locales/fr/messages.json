@@ -42,7 +42,6 @@
   "tools.toggle.ariaLabelCollapse": "Réduire",
   "tools.toggle.ariaLabelExpand": "Développer",
   "blockSettings.delete": "Supprimer",
-  "blockSettings.toggleWidth": "Basculer la largeur",
   "a11y.dragHandle": "Glisser pour déplacer ou cliquer pour le menu",
   "a11y.dragHandleRole": "poignée de glissement",
   "a11y.dragStarted": "Déplacement du bloc",
@@ -73,5 +72,5 @@
   "tools.table.dragToAddRemoveRows": "Glisser pour ajouter ou supprimer des lignes",
   "tools.table.clickToAddColumn": "Cliquer pour ajouter une colonne",
   "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes",
-  "blockSettings.convertWithChildrenWarning": "Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer\u00a0?"
+  "blockSettings.convertWithChildrenWarning": "Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer ?"
 }

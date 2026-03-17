@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "Klicken, um eine Spalte hinzuzufügen",
   "tools.table.dragToAddRemoveColumns": "Ziehen, um Spalten hinzuzufügen oder zu entfernen",
   "blockSettings.delete": "Löschen",
-  "blockSettings.toggleWidth": "Breite umschalten",
   "a11y.dragHandle": "Ziehen zum Verschieben oder klicken für Menü",
   "a11y.dragHandleRole": "Ziehgriff",
   "a11y.dragStarted": "Block wird verschoben",

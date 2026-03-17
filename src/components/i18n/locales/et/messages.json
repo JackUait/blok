@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "Klõpsa uue veeru lisamiseks",
   "tools.table.dragToAddRemoveColumns": "Lohista veergude lisamiseks või eemaldamiseks",
   "blockSettings.delete": "Kustuta",
-  "blockSettings.toggleWidth": "Lülita laiust",
   "a11y.dragHandle": "Lohista ploki teisaldamiseks või klõpsa menüü jaoks",
   "a11y.dragHandleRole": "lohistamiskäepide",
   "a11y.dragStarted": "Lohistab plokki",

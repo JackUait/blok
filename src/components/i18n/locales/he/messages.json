@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "לחץ להוספת עמודה חדשה",
   "tools.table.dragToAddRemoveColumns": "גרור להוספה או הסרה של עמודות",
   "blockSettings.delete": "מחק",
-  "blockSettings.toggleWidth": "החלף רוחב",
   "a11y.dragHandle": "גרור להזזת הבלוק או לחץ לתפריט",
   "a11y.dragHandleRole": "ידית גרירה",
   "a11y.dragStarted": "גורר בלוק",

@@ -34,7 +34,6 @@ export class API extends Module {
       i18n: this.Blok.I18nAPI.methods,
       readOnly: this.Blok.ReadOnlyAPI.methods,
       ui: this.Blok.UiAPI.methods,
-      width: this.Blok.WidthAPI.methods,
       theme: this.Blok.ThemeAPI.methods,
       rectangleSelection: this.Blok.RectangleSelection,
     };

@@ -37,7 +37,6 @@
   "tools.header.toggleHeading3": "Pārslēdzams virsraksts 3",
   "tools.list.placeholder": "Saraksts",
   "blockSettings.delete": "Dzēst",
-  "blockSettings.toggleWidth": "Pārslēgt platumu",
   "a11y.dragHandle": "Velciet, lai pārvietotu bloku, vai noklikšķiniet izvēlnei",
   "a11y.dragHandleRole": "vilkšanas rokturis",
   "a11y.dragStarted": "Velk bloku",

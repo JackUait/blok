@@ -37,7 +37,6 @@
   "tools.header.toggleHeading3": "ຫົວຂໍ້ພັບ 3",
   "tools.list.placeholder": "ລາຍການ",
   "blockSettings.delete": "ລຶບ",
-  "blockSettings.toggleWidth": "ສະຫຼັບຄວາມກວ້າງ",
   "a11y.dragHandle": "ລາກເພື່ອຍ້າຍບລັອກ ຫຼື ຄລິກເພື່ອເປີດເມນູ",
   "a11y.dragHandleRole": "ບ່ອນຈັບລາກ",
   "a11y.dragStarted": "ກຳລັງລາກບລັອກ",

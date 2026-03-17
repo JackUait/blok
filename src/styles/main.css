@@ -642,7 +642,7 @@
 
 @layer utilities {
   .max-w-blok-content {
-    max-width: var(--blok-content-width, var(--max-width-content));
+    max-width: var(--max-width-content);
   }
 }
 

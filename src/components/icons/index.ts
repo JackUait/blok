@@ -378,22 +378,6 @@ export const IconToggleH2 = `
 </svg>
 `;
 
-// Width Narrow icon (content-width block)
-export const IconWidthNarrow = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="3" y="3" width="14" height="14" rx="2"/>
-  <line x1="5" y1="8" x2="15" y2="8"/>
-  <line x1="5" y1="11" x2="15" y2="11"/>
-  <line x1="5" y1="14" x2="11" y2="14"/>
-</svg>`;
-
-// Width Full icon (full-width block)
-export const IconWidthFull = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="1" y="3" width="18" height="14" rx="2"/>
-  <line x1="3" y1="8" x2="17" y2="8"/>
-  <line x1="3" y1="11" x2="17" y2="11"/>
-  <line x1="3" y1="14" x2="17" y2="14"/>
-</svg>`;
-
 // Toggle Heading 3 icon (H3 with toggle arrow)
 export const IconToggleH3 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

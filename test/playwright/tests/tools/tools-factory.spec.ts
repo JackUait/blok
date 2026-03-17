@@ -53,7 +53,6 @@ const apiMethodsStub: ToolApiMethods = {
   i18n: {} as ToolApiMethods['i18n'],
   readOnly: {} as ToolApiMethods['readOnly'],
   ui: {} as ToolApiMethods['ui'],
-  width: {} as ToolApiMethods['width'],
   theme: {} as ToolApiMethods['theme'],
   rectangleSelection: {} as ToolApiMethods['rectangleSelection'],
 };

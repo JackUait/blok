@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "Kliknite za dodajanje novega stolpca",
   "tools.table.dragToAddRemoveColumns": "Povlecite za dodajanje ali odstranjevanje stolpcev",
   "blockSettings.delete": "Izbriši",
-  "blockSettings.toggleWidth": "Preklopi širino",
   "a11y.dragHandle": "Povlecite za premik bloka ali kliknite za meni",
   "a11y.dragHandleRole": "ročaj za vlečenje",
   "a11y.dragStarted": "Vlečenje bloka",

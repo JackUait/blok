@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "클릭하여 새 열 추가",
   "tools.table.dragToAddRemoveColumns": "드래그하여 열 추가 또는 제거",
   "blockSettings.delete": "삭제",
-  "blockSettings.toggleWidth": "너비 전환",
   "a11y.dragHandle": "드래그하여 이동하거나 클릭하여 메뉴 열기",
   "a11y.dragHandleRole": "드래그 핸들",
   "a11y.dragStarted": "블록 드래그 중",

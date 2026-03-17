@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "انقر لإضافة عمود جديد",
   "tools.table.dragToAddRemoveColumns": "اسحب لإضافة أو إزالة أعمدة",
   "blockSettings.delete": "حذف",
-  "blockSettings.toggleWidth": "تبديل العرض",
   "a11y.dragHandle": "اسحب لتحريك الكتلة أو انقر للقائمة",
   "a11y.dragHandleRole": "مقبض السحب",
   "a11y.dragStarted": "جارٍ سحب الكتلة",

@@ -249,7 +249,6 @@ export class Core {
       'RectangleSelection',
       'CrossBlockSelection',
       'ReadOnly',
-      'WidthManager',
       'ThemeManager',
     ];
 

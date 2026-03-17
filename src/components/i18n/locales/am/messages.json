@@ -42,7 +42,6 @@
   "tools.toggle.ariaLabelCollapse": "ሰብስብ",
   "tools.toggle.ariaLabelExpand": "አስፋ",
   "blockSettings.delete": "ሰርዝ",
-  "blockSettings.toggleWidth": "ስፋት ቀያይር",
   "a11y.dragHandle": "ብሎኩን ለማንቀሳቀስ ይጎትቱ ወይም ለምናሌ ጠቅ ያድርጉ",
   "a11y.dragHandleRole": "መጎተቻ",
   "a11y.dragStarted": "ብሎክ እየተጎተተ ነው",

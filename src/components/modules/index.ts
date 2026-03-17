@@ -16,7 +16,7 @@ import { ToolbarAPI } from './api/toolbar';
 import { ToolsAPI } from './api/tools';
 import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
-import { WidthAPI } from './api/width';
+
 import { ThemeAPI } from './api/theme';
 import { BlockEvents } from './blockEvents';
 import { BlockManager } from './blockManager';
@@ -36,7 +36,7 @@ import { Toolbar } from './toolbar/index';
 import { InlineToolbar } from './toolbar/inline';
 import { Tools } from './tools';
 import { UI } from './ui';
-import { WidthManager } from './widthManager';
+
 import { ThemeManager } from './themeManager';
 import { YjsManager } from './yjs';
 
@@ -64,7 +64,6 @@ export {
   ToolbarAPI,
   TooltipAPI,
   UiAPI,
-  WidthAPI,
   ThemeAPI,
 
   // Toolbar Modules
@@ -88,7 +87,6 @@ export {
   Saver,
   Tools,
   UI,
-  WidthManager,
   ThemeManager,
   YjsManager,
 };
@@ -116,7 +114,6 @@ export const Modules = {
   ToolbarAPI,
   TooltipAPI,
   UiAPI,
-  WidthAPI,
   ThemeAPI,
 
   // Toolbar Modules
@@ -140,7 +137,6 @@ export const Modules = {
   Saver,
   Tools,
   UI,
-  WidthManager,
   ThemeManager,
   YjsManager,
 };

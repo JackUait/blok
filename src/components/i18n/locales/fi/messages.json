@@ -42,7 +42,6 @@
   "tools.toggle.ariaLabelCollapse": "Pienennä",
   "tools.toggle.ariaLabelExpand": "Laajenna",
   "blockSettings.delete": "Poista",
-  "blockSettings.toggleWidth": "Vaihda leveyttä",
   "a11y.dragHandle": "Vedä siirtääksesi lohkon tai napsauta avataksesi valikon",
   "a11y.dragHandleRole": "vetokahva",
   "a11y.dragStarted": "Lohkoa vedetään",

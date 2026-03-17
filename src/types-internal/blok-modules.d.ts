@@ -16,7 +16,7 @@ import { StylesAPI } from '../components/modules/api/styles';
 import { ToolbarAPI } from '../components/modules/api/toolbar';
 import { TooltipAPI } from '../components/modules/api/tooltip';
 import { UiAPI } from '../components/modules/api/ui';
-import { WidthAPI } from '../components/modules/api/width';
+
 import { ThemeAPI } from '../components/modules/api/theme';
 /** ./toolbar */
 import { BlockSettings } from '../components/modules/toolbar/blockSettings';
@@ -40,7 +40,7 @@ import { Tools } from '../components/modules/tools';
 import { UI } from '../components/modules/ui';
 import { ToolsAPI } from '../components/modules/api/tools';
 import { I18n } from '../components/modules/i18n';
-import { WidthManager } from '../components/modules/widthManager';
+
 import { ThemeManager } from '../components/modules/themeManager';
 import { YjsManager } from '../components/modules/yjs';
 
@@ -64,7 +64,6 @@ export interface BlokModules {
   ToolbarAPI: ToolbarAPI,
   TooltipAPI: TooltipAPI,
   UiAPI: UiAPI,
-  WidthAPI: WidthAPI,
   ThemeAPI: ThemeAPI,
 
   // Toolbar Modules
@@ -88,7 +87,6 @@ export interface BlokModules {
   Saver: Saver,
   Tools: Tools,
   UI: UI,
-  WidthManager: WidthManager,
   ThemeManager: ThemeManager,
   YjsManager: YjsManager,
 }

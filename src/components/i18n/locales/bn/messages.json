@@ -42,7 +42,6 @@
   "tools.toggle.ariaLabelCollapse": "সংকুচিত করুন",
   "tools.toggle.ariaLabelExpand": "প্রসারিত করুন",
   "blockSettings.delete": "মুছুন",
-  "blockSettings.toggleWidth": "প্রস্থ পরিবর্তন করুন",
   "a11y.dragHandle": "ব্লক সরাতে টানুন বা মেনুর জন্য ক্লিক করুন",
   "a11y.dragHandleRole": "টান-হাতল",
   "a11y.dragStarted": "ব্লক টানা হচ্ছে",

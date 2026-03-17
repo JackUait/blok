@@ -42,7 +42,6 @@
   "tools.toggle.ariaLabelCollapse": "Inklappen",
   "tools.toggle.ariaLabelExpand": "Uitklappen",
   "blockSettings.delete": "Verwijderen",
-  "blockSettings.toggleWidth": "Breedte wisselen",
   "a11y.dragHandle": "Sleep om te verplaatsen of klik voor menu",
   "a11y.dragHandleRole": "sleepgreep",
   "a11y.dragStarted": "Blok wordt versleept",

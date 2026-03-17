@@ -30,7 +30,6 @@ import {
   I18n,
   Ui,
   Tools,
-  Width,
   Theme,
   ThemeMode,
   ResolvedTheme,
@@ -109,7 +108,6 @@ export {
   I18n,
   Ui,
   Tools,
-  Width,
   Theme,
   ThemeMode,
   ResolvedTheme,
@@ -150,7 +148,6 @@ export interface API {
   i18n: I18n;
   readOnly: ReadOnly;
   ui: Ui;
-  width: Width;
   theme: Theme;
   rectangleSelection: {
     cancelActiveSelection: () => void;
@@ -186,7 +183,6 @@ export class Blok {
   public inlineToolbar: InlineToolbar;
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
-  public width: Width;
   public theme: Theme;
   constructor(configuration?: BlokConfig|string);
 

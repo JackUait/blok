@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "Кликните за додавање нове колоне",
   "tools.table.dragToAddRemoveColumns": "Превуците за додавање или уклањање колона",
   "blockSettings.delete": "Обриши",
-  "blockSettings.toggleWidth": "Промени ширину",
   "a11y.dragHandle": "Превуците за премештање блока или кликните за мени",
   "a11y.dragHandleRole": "ручка за превлачење",
   "a11y.dragStarted": "Превлачење блока",

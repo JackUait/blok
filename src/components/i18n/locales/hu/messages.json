@@ -58,7 +58,6 @@
   "tools.table.clickToAddColumn": "Kattintson új oszlop hozzáadásához",
   "tools.table.dragToAddRemoveColumns": "Húzza oszlopok hozzáadásához vagy eltávolításához",
   "blockSettings.delete": "Törlés",
-  "blockSettings.toggleWidth": "Szélesség váltása",
   "a11y.dragHandle": "Húzza az áthelyezéshez vagy kattintson a menühöz",
   "a11y.dragHandleRole": "húzófogantyú",
   "a11y.dragStarted": "Blokk áthelyezése",

@@ -80,6 +80,13 @@ export interface PopoverParams {
   width?: string;
 
   /**
+   * Minimum width of the popover in pixels (e.g. '250px').
+   * When width is 'auto', the measured content width is clamped
+   * to at least this value.
+   */
+  minWidth?: string;
+
+  /**
    * Optional element whose left edge should be used for horizontal positioning.
    * When provided, the popover's left position uses this element's left coordinate
    * instead of the trigger's left. Useful for aligning the toolbox popover to the

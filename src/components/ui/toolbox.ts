@@ -375,6 +375,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       },
       items: this.toolboxItemsToBeDisplayed,
       handleContentEditableNavigation: true,
+      minWidth: '250px',
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
@@ -478,7 +479,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const toPopoverItem = (toolboxItem: ToolboxConfigEntry, tool: BlockToolAdapter, displaySecondaryLabel = true): PopoverItemParams => {
       // Get English title for search fallback
       const titleKey = toolboxItem.titleKey;
-      const englishTitleKey = titleKey ? `toolNames.${titleKey}` : undefined;
+      const englishTitleKey = titleKey
+        ? (titleKey.includes('.') ? titleKey : `toolNames.${titleKey}`)
+        : undefined;
       const englishTitle = englishTitleKey
         ? this.api.i18n.getEnglishTranslation(englishTitleKey)
         : toolboxItem.title;

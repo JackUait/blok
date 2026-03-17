@@ -248,6 +248,16 @@ const createBlokMock = (): BlokMock => {
   const i18n = {
     t: vi.fn((key: string) => key),
     has: vi.fn(() => false),
+    getEnglishTranslation: vi.fn((key: string) => {
+      const translations: Record<string, string> = {
+        'tools.header.heading1': 'Heading 1',
+        'tools.header.heading2': 'Heading 2',
+        'toolNames.text': 'Text',
+        'toolNames.heading': 'Heading',
+      };
+
+      return translations[key] ?? '';
+    }),
   };
 
   return {
@@ -474,6 +484,35 @@ describe('BlockSettings', () => {
     selectionAtBlokSpy.mockRestore();
   });
 
+
+  it('passes minWidth of 250px to the popover', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    const selectionStub = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      clearSaved: vi.fn(),
+    };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const params = popover?.params as { minWidth?: string } | undefined;
+
+    expect(params?.minWidth).toBe('250px');
+
+    getTunesItemsSpy.mockRestore();
+  });
 
   it('excludes tool tunes and shows only convert-to menu and common tunes', async () => {
     const block = createBlock();
@@ -751,5 +790,49 @@ describe('BlockSettings', () => {
     expect(blockSettings.isOpening).toBe(false);
 
     getTunesItemsSpy.mockRestore();
+  });
+
+  it('sets englishTitle and searchTerms on convert-to children for multilingual search', async () => {
+    const block = createBlock();
+
+    blokMock.Tools.blockTools = new Map([
+      ['paragraph', { name: 'paragraph' }],
+    ]);
+
+    getConvertibleToolsForBlockMock.mockResolvedValueOnce([
+      {
+        name: 'header',
+        toolbox: [
+          {
+            icon: '<svg />',
+            title: 'Heading 1',
+            titleKey: 'tools.header.heading1',
+            name: 'header-1',
+            data: { level: 1 },
+            searchTerms: ['h1', 'title', 'header', 'heading'],
+          },
+        ],
+      },
+    ]);
+
+    const items = await (blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, []);
+
+    const convertTo = items.find(
+      (item): item is PopoverItemParams & { children?: { items?: PopoverItemParams[] } } =>
+        'name' in item && item.name === 'convert-to'
+    );
+
+    expect(convertTo).toBeDefined();
+
+    const children = convertTo?.children?.items ?? [];
+
+    expect(children).toHaveLength(1);
+
+    const headerItem = children[0];
+
+    expect(headerItem.englishTitle).toBe('Heading 1');
+    expect(headerItem.searchTerms).toEqual(['h1', 'title', 'header', 'heading']);
   });
 });

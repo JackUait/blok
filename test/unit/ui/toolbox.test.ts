@@ -51,6 +51,16 @@ const mockPopoverInstance = vi.hoisted(() => ({
   setLeftAlignElement: vi.fn(),
 }));
 
+/**
+ * Captures items passed to the last PopoverDesktop constructor call
+ */
+const lastPopoverItems = vi.hoisted(() => ({ value: [] as unknown[] }));
+
+/**
+ * Captures all params passed to the last PopoverDesktop constructor call
+ */
+const lastPopoverParams = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+
 vi.mock('../../../src/components/dom', () => ({
   Dom: {
     make: vi.fn((tag: string, classNames: string) => {
@@ -66,6 +76,10 @@ vi.mock('../../../src/components/dom', () => ({
 vi.mock('../../../src/components/utils/popover', () => {
   return {
     PopoverDesktop: class MockPopoverDesktop {
+      constructor(params: { items?: unknown[]; [key: string]: unknown }) {
+        lastPopoverItems.value = params.items ?? [];
+        lastPopoverParams.value = params;
+      }
       public show = mockPopoverInstance.show;
       public hide = mockPopoverInstance.hide;
       public destroy = mockPopoverInstance.destroy;
@@ -289,6 +303,17 @@ describe('Toolbox', () => {
         BlokMobileLayoutToggled,
         expect.any(Function)
       );
+    });
+
+    it('should pass minWidth of 250px to the popover', () => {
+      new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      expect(lastPopoverParams.value).toHaveProperty('minWidth', '250px');
     });
   });
 
@@ -1371,6 +1396,91 @@ describe('Toolbox', () => {
         // so blocks.insert should not be called
         expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
       }
+    });
+  });
+
+  describe('englishTitle for multilingual search', () => {
+    it('should resolve englishTitle correctly for tools with dotted titleKey', () => {
+      const headerTool = {
+        name: 'header',
+        toolbox: [
+          {
+            title: 'Heading 1',
+            titleKey: 'tools.header.heading1',
+            icon: '<svg>h1</svg>',
+            name: 'header-1',
+            data: { level: 1 },
+          },
+        ],
+      } as unknown as BlockToolAdapter;
+
+      const apiWithI18n = {
+        ...mocks.api,
+        i18n: {
+          t: vi.fn((key: string) => key),
+          has: vi.fn(() => false),
+          getEnglishTranslation: vi.fn((key: string) => {
+            const translations: Record<string, string> = {
+              'tools.header.heading1': 'Heading 1',
+              'toolNames.heading': 'Heading',
+            };
+
+            return translations[key] ?? '';
+          }),
+        },
+      } as unknown as typeof mocks.api;
+
+      new Toolbox({
+        api: apiWithI18n,
+        tools: createToolsCollection([['header', headerTool]]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      const items = lastPopoverItems.value as Array<{ englishTitle?: string }>;
+      const headerItem = items.find(item => item.englishTitle !== undefined);
+
+      expect(headerItem).toBeDefined();
+      expect(headerItem?.englishTitle).toBe('Heading 1');
+    });
+
+    it('should resolve englishTitle correctly for tools with short titleKey', () => {
+      const textTool = {
+        name: 'paragraph',
+        toolbox: {
+          title: 'Text',
+          titleKey: 'text',
+          icon: '<svg>text</svg>',
+        },
+      } as unknown as BlockToolAdapter;
+
+      const apiWithI18n = {
+        ...mocks.api,
+        i18n: {
+          t: vi.fn((key: string) => key),
+          has: vi.fn(() => false),
+          getEnglishTranslation: vi.fn((key: string) => {
+            const translations: Record<string, string> = {
+              'toolNames.text': 'Text',
+            };
+
+            return translations[key] ?? '';
+          }),
+        },
+      } as unknown as typeof mocks.api;
+
+      new Toolbox({
+        api: apiWithI18n,
+        tools: createToolsCollection([['paragraph', textTool]]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      const items = lastPopoverItems.value as Array<{ englishTitle?: string }>;
+      const textItem = items.find(item => item.englishTitle !== undefined);
+
+      expect(textItem).toBeDefined();
+      expect(textItem?.englishTitle).toBe('Text');
     });
   });
 });

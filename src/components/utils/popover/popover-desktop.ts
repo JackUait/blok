@@ -237,7 +237,10 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nodes.popover.style.setProperty(CSSVariables.PopoverHeight, measuredSize.height + 'px');
 
     if (this.params.width === undefined || this.params.width === 'auto') {
-      this.nodes.popover.style.setProperty('--width', measuredSize.width + 'px');
+      const minWidth = this.params.minWidth !== undefined ? parseFloat(this.params.minWidth) : 0;
+      const width = Math.max(measuredSize.width, minWidth);
+
+      this.nodes.popover.style.setProperty('--width', width + 'px');
     }
 
     if (!this.trigger && !this.shouldOpenBottom) {

@@ -197,6 +197,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           search: this.Blok.I18n.t('popover.search'),
         },
         autoFocusFirstItem: false,
+        minWidth: '250px',
       };
 
       if (PopoverClass === PopoverDesktop) {
@@ -333,10 +334,21 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       tool.toolbox.forEach((toolboxItem) => {
+        // Resolve English title for multilingual search
+        const titleKey = toolboxItem.titleKey;
+        const englishTitleKey = titleKey
+          ? (titleKey.includes('.') ? titleKey : `toolNames.${titleKey}`)
+          : undefined;
+        const englishTitle = englishTitleKey
+          ? this.Blok.I18n.getEnglishTranslation(englishTitleKey)
+          : toolboxItem.title;
+
         result.push({
           icon: toolboxItem.icon,
           title: translateToolTitle(this.Blok.I18n, toolboxItem, tool.name),
           name: toolboxItem.name ?? tool.name,
+          englishTitle,
+          searchTerms: toolboxItem.searchTerms,
           closeOnActivate: true,
           onActivate: async () => {
             const { Caret, Toolbar } = this.Blok;

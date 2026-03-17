@@ -40,6 +40,20 @@ interface LegacyListData {
 }
 
 /**
+ * Legacy toggle list data structure for data model transformation.
+ * Old format: { title: string, isExpanded?: boolean, body: { blocks: [], time, version } }
+ */
+interface LegacyToggleListData {
+  title: string;
+  isExpanded?: boolean;
+  body?: {
+    time?: number;
+    blocks?: OutputBlockData[];
+    version?: string;
+  };
+}
+
+/**
  * Result of analyzing the input data format
  */
 export interface DataFormatAnalysis {
@@ -144,6 +158,20 @@ const isLegacyListBlock = (block: OutputBlockData): block is OutputBlockData<str
 };
 
 /**
+ * Check if a block is in legacy toggleList format
+ * Legacy format: { type: "toggleList", data: { title: "...", body: { blocks: [...] } } }
+ */
+const isLegacyToggleListBlock = (block: OutputBlockData): block is OutputBlockData<string, LegacyToggleListData> => {
+  if (block.type !== 'toggleList') {
+    return false;
+  }
+
+  const data = block.data as Record<string, unknown>;
+
+  return typeof data === 'object' && data !== null && 'title' in data;
+};
+
+/**
  * Check if a block contains nested hierarchy in its items
  */
 const hasNestedItems = (block: OutputBlockData): boolean => {
@@ -179,9 +207,14 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
   // Check if any block uses legacy list format (items[] array)
   const foundLegacyList = blocks.some(isLegacyListBlock);
 
-  if (foundLegacyList) {
+  // Check if any block uses legacy toggleList format
+  const foundLegacyToggle = blocks.some(isLegacyToggleListBlock);
+
+  if (foundLegacyList || foundLegacyToggle) {
     // Check if there's actual nesting for the hasHierarchy flag
-    const hasNesting = blocks.some(hasNestedItems);
+    const hasNesting = blocks.some(hasNestedItems) || blocks.some(block =>
+      isLegacyToggleListBlock(block) && block.data.body?.blocks !== undefined && block.data.body.blocks.length > 0
+    );
 
     return { format: 'legacy', hasHierarchy: hasNesting };
   }
@@ -269,6 +302,49 @@ const expandListToHierarchical = (
 };
 
 /**
+ * Expand a legacy toggleList block into flat toggle block + child blocks
+ */
+const expandToggleListToHierarchical = (
+  block: OutputBlockData<string, LegacyToggleListData>
+): OutputBlockData[] => {
+  const blocks: OutputBlockData[] = [];
+  const toggleId = block.id ?? generateBlockId();
+  const bodyBlocks = block.data.body?.blocks ?? [];
+
+  // Collect child IDs, ensuring each child has an ID
+  const childIds: BlockId[] = [];
+  const childBlocks: OutputBlockData[] = [];
+
+  for (const childBlock of bodyBlocks) {
+    const childId = childBlock.id ?? generateBlockId();
+
+    childIds.push(childId);
+    childBlocks.push({
+      ...childBlock,
+      id: childId,
+      parent: toggleId,
+    });
+  }
+
+  // Create the toggle block with mapped fields
+  const toggleBlock: OutputBlockData = {
+    id: toggleId,
+    type: 'toggle',
+    data: {
+      text: block.data.title,
+      ...(typeof block.data.isExpanded === 'boolean' ? { isOpen: block.data.isExpanded } : {}),
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+    ...(childIds.length > 0 ? { content: childIds } : {}),
+  };
+
+  blocks.push(toggleBlock);
+  blocks.push(...childBlocks);
+
+  return blocks;
+};
+
+/**
  * Expand legacy nested format to hierarchical flat-with-references format
  * @param blocks - array of blocks potentially containing nested structures
  * @returns expanded array of flat blocks with parent/content references
@@ -281,6 +357,11 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
       // Expand List tool nested items to flat blocks
       // Type guard narrows block.data to LegacyListData
       const expanded = expandListToHierarchical(block.data, block.tunes);
+
+      expandedBlocks.push(...expanded);
+    } else if (isLegacyToggleListBlock(block)) {
+      // Expand toggleList to flat toggle + child blocks
+      const expanded = expandToggleListToHierarchical(block);
 
       expandedBlocks.push(...expanded);
     } else {
@@ -412,6 +493,60 @@ const processRootListItem = (
 };
 
 /**
+ * Process a root toggle block and convert to a legacy toggleList block
+ */
+const processRootToggleItem = (
+  block: OutputBlockData,
+  blockMap: Map<BlockId, OutputBlockData>,
+  processedIds: Set<BlockId>
+): OutputBlockData => {
+  markBlockAsProcessed(block.id, processedIds);
+
+  const data: unknown = block.data;
+  const text = isObjectWithText(data) ? data.text : '';
+  const isOpen = typeof (data as Record<string, unknown>)?.isOpen === 'boolean'
+    ? (data as Record<string, unknown>).isOpen as boolean
+    : undefined;
+
+  // Collect child blocks
+  const childBlocks: OutputBlockData[] = [];
+  const contentIds = block.content ?? [];
+
+  for (const childId of contentIds) {
+    const childBlock = blockMap.get(childId);
+
+    if (childBlock) {
+      markBlockAsProcessed(childId, processedIds);
+      childBlocks.push(stripHierarchyFields(childBlock));
+    }
+  }
+
+  const legacyBlock: OutputBlockData = {
+    id: block.id,
+    type: 'toggleList',
+    data: {
+      title: text,
+      ...(isOpen !== undefined ? { isExpanded: isOpen } : {}),
+      ...(childBlocks.length > 0 ? {
+        body: {
+          blocks: childBlocks,
+        },
+      } : {}),
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+  };
+
+  return legacyBlock;
+};
+
+/**
+ * Check if a block is a flat-model toggle block
+ */
+const isFlatModelToggleBlock = (block: OutputBlockData): boolean => {
+  return block.type === 'toggle';
+};
+
+/**
  * Check if a block is a flat-model list block (has 'text' field instead of 'items')
  */
 const isFlatModelListBlock = (block: OutputBlockData): boolean => {
@@ -441,10 +576,11 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
   }
 
-  // If no flat-model list blocks, just strip hierarchy fields and return
+  // If no flat-model list or toggle blocks, just strip hierarchy fields and return
   const hasFlatListBlocks = blocks.some(isFlatModelListBlock);
+  const hasFlatToggleBlocks = blocks.some(isFlatModelToggleBlock);
 
-  if (!hasFlatListBlocks) {
+  if (!hasFlatListBlocks && !hasFlatToggleBlocks) {
     return blocks.map(stripHierarchyFields);
   }
 
@@ -461,12 +597,20 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
 
     const isFlatListBlock = isFlatModelListBlock(block);
     const isRootListItem = isFlatListBlock && !block.parent;
-    const isNonListItem = !isFlatListBlock;
+    const isFlatToggleBlock = isFlatModelToggleBlock(block);
+    const isRootToggleItem = isFlatToggleBlock && !block.parent;
+    const isNonListItem = !isFlatListBlock && !isFlatToggleBlock;
 
     if (isRootListItem) {
       const listBlock = processRootListItem(block, blockMap, processedIds);
 
       result.push(listBlock);
+    }
+
+    if (isRootToggleItem) {
+      const toggleBlock = processRootToggleItem(block, blockMap, processedIds);
+
+      result.push(toggleBlock);
     }
 
     if (isNonListItem) {

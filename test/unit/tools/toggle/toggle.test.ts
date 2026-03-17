@@ -772,6 +772,65 @@ describe('ToggleItem', () => {
     });
   });
 
+  describe('normalizeData - legacy toggleList format', () => {
+    /**
+     * Create options with raw legacy data (no text field added).
+     */
+    const createLegacyOptions = (
+      data: Record<string, unknown>,
+      overrides: { readOnly?: boolean } = {}
+    ): BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig> => ({
+      data: data as unknown as ToggleItemData,
+      config: {},
+      api: createMockAPI(),
+      readOnly: overrides.readOnly ?? false,
+      block: { id: 'test-block-id' } as never,
+    });
+
+    it('normalizes legacy title field to text', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createLegacyOptions({ title: 'My toggle' }));
+      toggle.render();
+      const saved = toggle.save();
+
+      expect(saved.text).toBe('My toggle');
+    });
+
+    it('normalizes legacy isExpanded field to isOpen', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createLegacyOptions({ title: 'T', isExpanded: true }, { readOnly: true }));
+      const element = toggle.render();
+
+      expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+    });
+
+    it('normalizes legacy isExpanded=false', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createLegacyOptions({ title: 'T', isExpanded: false }));
+      const element = toggle.render();
+
+      expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+    });
+
+    it('prefers text field over title when both present', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createLegacyOptions({ text: 'preferred', title: 'legacy' }));
+      toggle.render();
+      const saved = toggle.save();
+
+      expect(saved.text).toBe('preferred');
+    });
+
+    it('handles empty legacy data with title', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createLegacyOptions({ title: '' }));
+      toggle.render();
+      const saved = toggle.save();
+
+      expect(saved.text).toBe('');
+    });
+  });
+
   describe('onPaste()', () => {
     it('extracts text from DETAILS summary element', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');

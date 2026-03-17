@@ -74,6 +74,20 @@ export class ToggleItem implements BlockTool {
       return normalized;
     }
 
+    // Handle legacy toggleList format: { title, isExpanded }
+    if (typeof data === 'object' && data !== null && 'title' in data) {
+      const legacyData = data as Record<string, unknown>;
+      const normalized: ToggleItemData = {
+        text: typeof legacyData.title === 'string' ? legacyData.title : '',
+      };
+
+      if (typeof legacyData.isExpanded === 'boolean') {
+        normalized.isOpen = legacyData.isExpanded;
+      }
+
+      return normalized;
+    }
+
     return { text: '' };
   }
 

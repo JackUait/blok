@@ -41,11 +41,12 @@ interface LegacyListData {
 
 /**
  * Legacy toggle list data structure for data model transformation.
- * Old format: { title: string, isExpanded?: boolean, body: { blocks: [], time, version } }
+ * Old format: { title: string, isExpanded?: boolean, body: { blocks: [], time, version }, titleVariant?: number }
  */
 interface LegacyToggleListData {
   title: string;
   isExpanded?: boolean;
+  titleVariant?: number;
   body?: {
     time?: number;
     blocks?: OutputBlockData[];
@@ -326,19 +327,37 @@ const expandToggleListToHierarchical = (
     });
   }
 
-  // Create the toggle block with mapped fields
-  const toggleBlock: OutputBlockData = {
+  const sharedFields = {
     id: toggleId,
-    type: 'toggle',
-    data: {
-      text: block.data.title,
-      ...(typeof block.data.isExpanded === 'boolean' ? { isOpen: block.data.isExpanded } : {}),
-    },
     ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
     ...(childIds.length > 0 ? { content: childIds } : {}),
   };
 
-  blocks.push(toggleBlock);
+  const isOpenField = typeof block.data.isExpanded === 'boolean' ? { isOpen: block.data.isExpanded } : {};
+
+  // When titleVariant is set, produce a toggle heading (header with isToggleable)
+  if (typeof block.data.titleVariant === 'number') {
+    blocks.push({
+      ...sharedFields,
+      type: 'header',
+      data: {
+        text: block.data.title,
+        level: block.data.titleVariant,
+        isToggleable: true,
+        ...isOpenField,
+      },
+    });
+  } else {
+    blocks.push({
+      ...sharedFields,
+      type: 'toggle',
+      data: {
+        text: block.data.title,
+        ...isOpenField,
+      },
+    });
+  }
+
   blocks.push(...childBlocks);
 
   return blocks;
@@ -547,6 +566,65 @@ const isFlatModelToggleBlock = (block: OutputBlockData): boolean => {
 };
 
 /**
+ * Check if a block is a toggleable header (header with isToggleable: true)
+ */
+const isToggleableHeaderBlock = (block: OutputBlockData): boolean => {
+  if (block.type !== 'header') {
+    return false;
+  }
+
+  const data: unknown = block.data;
+
+  return typeof data === 'object' && data !== null && (data as Record<string, unknown>).isToggleable === true;
+};
+
+/**
+ * Process a root toggleable header block and convert to a legacy toggleList block with titleVariant
+ */
+const processRootToggleableHeader = (
+  block: OutputBlockData,
+  blockMap: Map<BlockId, OutputBlockData>,
+  processedIds: Set<BlockId>
+): OutputBlockData => {
+  markBlockAsProcessed(block.id, processedIds);
+
+  const data: unknown = block.data;
+  const text = isObjectWithText(data) ? data.text : '';
+  const level = typeof (data as Record<string, unknown>)?.level === 'number'
+    ? (data as Record<string, unknown>).level as number
+    : undefined;
+  const isOpen = typeof (data as Record<string, unknown>)?.isOpen === 'boolean'
+    ? (data as Record<string, unknown>).isOpen as boolean
+    : undefined;
+
+  const childBlocks: OutputBlockData[] = [];
+  const contentIds = block.content ?? [];
+
+  for (const childId of contentIds) {
+    const childBlock = blockMap.get(childId);
+
+    if (childBlock) {
+      markBlockAsProcessed(childId, processedIds);
+      childBlocks.push(stripHierarchyFields(childBlock));
+    }
+  }
+
+  const legacyBlock: OutputBlockData = {
+    id: block.id,
+    type: 'toggleList',
+    data: {
+      title: text,
+      ...(level !== undefined ? { titleVariant: level } : {}),
+      ...(isOpen !== undefined ? { isExpanded: isOpen } : {}),
+      ...(childBlocks.length > 0 ? { body: { blocks: childBlocks } } : {}),
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+  };
+
+  return legacyBlock;
+};
+
+/**
  * Check if a block is a flat-model list block (has 'text' field instead of 'items')
  */
 const isFlatModelListBlock = (block: OutputBlockData): boolean => {
@@ -579,8 +657,9 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
   // If no flat-model list or toggle blocks, just strip hierarchy fields and return
   const hasFlatListBlocks = blocks.some(isFlatModelListBlock);
   const hasFlatToggleBlocks = blocks.some(isFlatModelToggleBlock);
+  const hasFlatToggleableHeaders = blocks.some(b => isToggleableHeaderBlock(b) && !b.parent);
 
-  if (!hasFlatListBlocks && !hasFlatToggleBlocks) {
+  if (!hasFlatListBlocks && !hasFlatToggleBlocks && !hasFlatToggleableHeaders) {
     return blocks.map(stripHierarchyFields);
   }
 
@@ -599,7 +678,9 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     const isRootListItem = isFlatListBlock && !block.parent;
     const isFlatToggleBlock = isFlatModelToggleBlock(block);
     const isRootToggleItem = isFlatToggleBlock && !block.parent;
-    const isNonListItem = !isFlatListBlock && !isFlatToggleBlock;
+    const isToggleableHeader = isToggleableHeaderBlock(block);
+    const isRootToggleableHeader = isToggleableHeader && !block.parent;
+    const isNonListItem = !isFlatListBlock && !isFlatToggleBlock && !isToggleableHeader;
 
     if (isRootListItem) {
       const listBlock = processRootListItem(block, blockMap, processedIds);
@@ -611,6 +692,12 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
       const toggleBlock = processRootToggleItem(block, blockMap, processedIds);
 
       result.push(toggleBlock);
+    }
+
+    if (isRootToggleableHeader) {
+      const legacyBlock = processRootToggleableHeader(block, blockMap, processedIds);
+
+      result.push(legacyBlock);
     }
 
     if (isNonListItem) {

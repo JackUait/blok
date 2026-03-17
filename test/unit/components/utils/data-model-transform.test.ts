@@ -283,6 +283,119 @@ describe('data-model-transform', () => {
       expect(result[0].tunes).toEqual({ alignment: { align: 'center' } });
     });
 
+    it('expands toggleList with titleVariant into a toggle heading header block', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'toggleList',
+          data: {
+            title: 'Section heading',
+            titleVariant: 2,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('header');
+    });
+
+    it('maps titleVariant to header level', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'toggleList',
+          data: {
+            title: 'Section heading',
+            titleVariant: 3,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].data.level).toBe(3);
+    });
+
+    it('sets isToggleable true on header block when titleVariant is present', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'toggleList',
+          data: {
+            title: 'Section heading',
+            titleVariant: 2,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].data.isToggleable).toBe(true);
+    });
+
+    it('maps title to text on toggle heading header block', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'toggleList',
+          data: {
+            title: 'My Heading Toggle',
+            titleVariant: 2,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].data.text).toBe('My Heading Toggle');
+    });
+
+    it('maps isExpanded to isOpen on toggle heading header block', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'toggleList',
+          data: {
+            title: 'Section heading',
+            titleVariant: 2,
+            isExpanded: false,
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result[0].data.isOpen).toBe(false);
+    });
+
+    it('sets body blocks as children of toggle heading header block', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'toggleList',
+          data: {
+            title: 'Section heading',
+            titleVariant: 2,
+            body: {
+              blocks: [
+                { id: 'c1', type: 'paragraph', data: { text: 'child text' } },
+                { id: 'c2', type: 'paragraph', data: { text: 'more content' } },
+              ],
+            },
+          },
+        },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      expect(result).toHaveLength(3);
+      expect(result[0].content).toEqual(['c1', 'c2']);
+      expect(result[1].parent).toBe('t1');
+      expect(result[2].parent).toBe('t1');
+    });
+
     it('generates IDs for blocks missing IDs', () => {
       const blocks: OutputBlockData[] = [
         {
@@ -388,6 +501,66 @@ describe('data-model-transform', () => {
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('toggleList');
       expect(result[0].data.title).toBe('Empty toggle');
+      expect(result[0].data.body).toBeUndefined();
+    });
+
+    it('collapses toggleable header into toggleList with titleVariant', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'h1', type: 'header', data: { text: 'Section heading', level: 2, isToggleable: true }, content: ['c1'] },
+        { id: 'c1', type: 'paragraph', data: { text: 'child text' }, parent: 'h1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('toggleList');
+      expect(result[0].data.titleVariant).toBe(2);
+    });
+
+    it('maps toggleable header text to title in collapsed toggleList', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'h1', type: 'header', data: { text: 'My Section', level: 3, isToggleable: true } },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result[0].data.title).toBe('My Section');
+    });
+
+    it('maps toggleable header isOpen to isExpanded in collapsed toggleList', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true, isOpen: false } },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result[0].data.isExpanded).toBe(false);
+    });
+
+    it('collects toggleable header children into body.blocks', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true }, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'paragraph', data: { text: 'first child' }, parent: 'h1' },
+        { id: 'c2', type: 'paragraph', data: { text: 'second child' }, parent: 'h1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result[0].data.body.blocks).toHaveLength(2);
+      expect(result[0].data.body.blocks[0].data.text).toBe('first child');
+    });
+
+    it('handles toggleable header with no children in collapse', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'h1', type: 'header', data: { text: 'Empty section', level: 2, isToggleable: true } },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe('toggleList');
+      expect(result[0].data.title).toBe('Empty section');
+      expect(result[0].data.titleVariant).toBe(2);
       expect(result[0].data.body).toBeUndefined();
     });
 

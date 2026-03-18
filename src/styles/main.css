@@ -701,6 +701,9 @@
   --blok-table-border: #d1d5db;
   --blok-table-heading-bg: #f9fafb;
   --blok-table-grip-outline: white;
+
+  /* Checklist */
+  --blok-checklist-border: rgba(0, 0, 0, 0.28);
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -717,10 +720,10 @@
     --blok-link: #529cca;
     --blok-line-gray: #37352f;
     --blok-tooltip-bg: #191918;
-    --blok-tooltip-font: #ffffff;
+    --blok-tooltip-font: #e8e6e3;
     --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
     --blok-icon-active-text: #529cca;
-    --blok-text-primary: #f0efed;
+    --blok-text-primary: #e2e0dc;
     --blok-text-secondary: #a39e98;
     --blok-popover-border: rgba(255, 255, 255, 0.07);
     --blok-popover-shadow: rgba(0, 0, 0, 0.6);
@@ -754,6 +757,9 @@
     --blok-table-border: #3e3e3d;
     --blok-table-heading-bg: #272725;
     --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
+
+    /* Checklist */
+    --blok-checklist-border: rgba(255, 255, 255, 0.22);
   }
 }
 
@@ -770,10 +776,10 @@
   --blok-link: #529cca;
   --blok-line-gray: #37352f;
   --blok-tooltip-bg: #191918;
-  --blok-tooltip-font: #ffffff;
+  --blok-tooltip-font: #e8e6e3;
   --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
   --blok-icon-active-text: #529cca;
-  --blok-text-primary: #f0efed;
+  --blok-text-primary: #e2e0dc;
   --blok-text-secondary: #a39e98;
   --blok-popover-border: rgba(255, 255, 255, 0.07);
   --blok-popover-shadow: rgba(0, 0, 0, 0.6);
@@ -807,6 +813,63 @@
   --blok-table-border: #3e3e3d;
   --blok-table-heading-bg: #272725;
   --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
+
+  /* Checklist */
+  --blok-checklist-border: rgba(255, 255, 255, 0.22);
+}
+
+/* ─── Checklist checkbox — custom styled ────────────────── */
+/*
+  appearance: none removes native browser rendering entirely, eliminating the
+  bright-white native checkbox that causes harsh contrast in dark mode.
+  We rebuild the full visual state in CSS for consistent cross-browser rendering.
+*/
+[data-blok-interface] [data-list-style="checklist"] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  border-radius: 3px;
+  border: 1.5px solid var(--blok-checklist-border);
+  background-color: transparent;
+  transition: background-color 80ms ease, border-color 80ms ease;
+}
+
+[data-blok-interface] [data-list-style="checklist"] input[type="checkbox"]:checked {
+  background-color: var(--blok-active-icon);
+  border-color: var(--blok-active-icon);
+  /* SVG checkmark — white path on accent-blue background */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 5L4 7.5L8.5 2.5' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-size: 10px 10px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+[data-blok-interface] [data-list-style="checklist"] input[type="checkbox"]:not(:disabled):hover {
+  border-color: var(--blok-active-icon);
+}
+
+[data-blok-interface] [data-list-style="checklist"] input[type="checkbox"]:disabled {
+  opacity: 0.5;
+}
+
+/*
+  The global input:focus-visible rule above suppresses all input focus rings.
+  Checkboxes need a visible focus ring for keyboard accessibility — restore it.
+*/
+[data-blok-interface] [data-list-style="checklist"] input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--blok-active-icon);
+  outline-offset: 2px;
+}
+
+/* Dark mode: more muted checked text so completed items feel visually "done" */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-list-style="checklist"] [data-checked="true"] {
+    opacity: 0.45;
+  }
+}
+
+[data-blok-theme="dark"] [data-blok-interface] [data-list-style="checklist"] [data-checked="true"] {
+  opacity: 0.45;
 }
 
 /*

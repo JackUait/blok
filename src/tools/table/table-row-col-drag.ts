@@ -195,18 +195,21 @@ export class TableRowColDrag {
       return;
     }
 
+    const dragBg = this.getDragSourceBg();
     const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
 
     cells.forEach(node => {
       const cellEl = node as HTMLElement;
 
-      cellEl.style.backgroundColor = '#f3f4f6';
+      cellEl.style.backgroundColor = dragBg;
       cellEl.style.opacity = '0.7';
       this.dragOverlayCells.push(cellEl);
     });
   }
 
   private highlightColumnCells(rows: NodeListOf<Element>): void {
+    const dragBg = this.getDragSourceBg();
+
     rows.forEach(row => {
       const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
 
@@ -216,10 +219,28 @@ export class TableRowColDrag {
 
       const cellEl = cells[this.dragFromIndex] as HTMLElement;
 
-      cellEl.style.backgroundColor = '#f3f4f6';
+      cellEl.style.backgroundColor = dragBg;
       cellEl.style.opacity = '0.7';
       this.dragOverlayCells.push(cellEl);
     });
+  }
+
+  private getDragSourceBg(): string {
+    return getComputedStyle(this.grid).getPropertyValue('--blok-table-drag-source-bg').trim() || '#f3f4f6';
+  }
+
+  private isDarkMode(): boolean {
+    const theme = document.documentElement.getAttribute('data-blok-theme');
+
+    if (theme === 'dark') {
+      return true;
+    }
+
+    if (theme === 'light') {
+      return false;
+    }
+
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   }
 
   private createDropIndicator(): void {
@@ -343,7 +364,9 @@ export class TableRowColDrag {
     style.zIndex = '50';
     style.borderRadius = '4px';
     style.overflow = 'hidden';
-    style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    style.boxShadow = this.isDarkMode()
+      ? '0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08)'
+      : '0 4px 12px rgba(0, 0, 0, 0.15)';
 
     this.ghostEl = ghost;
 

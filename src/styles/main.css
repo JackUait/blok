@@ -701,6 +701,7 @@
   --blok-table-border: #d1d5db;
   --blok-table-heading-bg: #f9fafb;
   --blok-table-grip-outline: white;
+  --blok-table-drag-source-bg: #f3f4f6;
 
   /* Checklist */
   --blok-checklist-border: rgba(0, 0, 0, 0.28);
@@ -757,6 +758,7 @@
     --blok-table-border: #3e3e3d;
     --blok-table-heading-bg: #272725;
     --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
+    --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
 
     /* Checklist */
     --blok-checklist-border: rgba(255, 255, 255, 0.22);
@@ -813,6 +815,7 @@
   --blok-table-border: #3e3e3d;
   --blok-table-heading-bg: #272725;
   --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
+  --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
 
   /* Checklist */
   --blok-checklist-border: rgba(255, 255, 255, 0.22);
@@ -1069,9 +1072,9 @@
   :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip].bg-gray-200 {
     background-color: #555554;
   }
-  /* Grip dot SVG */
-  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip] svg {
-    color: #9e9e9d;
+  /* Grip dot SVG (exclude active/blue state — text-white must win there) */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip]:not(.bg-blue-500) svg {
+    color: white;
   }
   /* Add row/col pill: border + subtle rest-state fill */
   :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
@@ -1102,8 +1105,8 @@
 [data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip].bg-gray-200 {
   background-color: #555554;
 }
-[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip] svg {
-  color: #9e9e9d;
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip]:not(.bg-blue-500) svg {
+  color: white;
 }
 [data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
   border-color: rgba(255, 255, 255, 0.17);

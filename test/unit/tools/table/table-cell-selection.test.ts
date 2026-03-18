@@ -610,6 +610,14 @@ describe('TableCellSelection', () => {
       expect(pill.style.pointerEvents).toBe('auto');
     });
 
+    it('pill outline uses CSS variable so dark mode can override it', () => {
+      simulateDrag(grid, 0, 0, 1, 1);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      expect(pill.style.outline).toContain('var(--blok-table-grip-outline');
+    });
+
     it('removes pill on click-away clear', () => {
       vi.useFakeTimers();
 

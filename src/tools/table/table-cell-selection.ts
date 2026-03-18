@@ -682,7 +682,7 @@ export class TableCellSelection {
     pill.style.height = `${PILL_HEIGHT}px`;
     pill.style.pointerEvents = 'auto';
     pill.style.transform = 'translate(-50%, -50%)';
-    pill.style.outline = '2px solid white';
+    pill.style.outline = '2px solid var(--blok-table-grip-outline, white)';
 
     const svg = createGripDotsSvg('vertical');
 

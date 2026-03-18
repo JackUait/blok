@@ -2,7 +2,7 @@ import type { I18n } from '../../../types/api';
 import { twMerge } from '../../components/utils/tw';
 
 import { BORDER_WIDTH, CELL_ATTR, ROW_ATTR } from './table-core';
-import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE } from './table-grip-visuals';
+import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE, setGripPillSize } from './table-grip-visuals';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
 import { createGripPopover } from './table-row-col-popover';
 import type { PopoverState } from './table-row-col-popover';
@@ -46,7 +46,7 @@ export interface TableRowColControlsOptions {
   i18n: I18n;
 }
 
-const GRIP_CAPSULE_CLASSES = [
+export const GRIP_CAPSULE_CLASSES = [
   'absolute',
   'z-3',
   'rounded-sm',
@@ -61,19 +61,19 @@ const GRIP_CAPSULE_CLASSES = [
   'overflow-hidden',
 ];
 
-const GRIP_IDLE_CLASSES = [
+export const GRIP_IDLE_CLASSES = [
   'bg-gray-300',
   'opacity-0',
   'pointer-events-none',
 ];
 
-const GRIP_VISIBLE_CLASSES = [
+export const GRIP_VISIBLE_CLASSES = [
   'bg-gray-300',
   'opacity-100',
   'pointer-events-auto',
 ];
 
-const GRIP_ACTIVE_CLASSES = [
+export const GRIP_ACTIVE_CLASSES = [
   'bg-blue-500',
   'text-white',
   'opacity-100',
@@ -577,8 +577,7 @@ export class TableRowColControls {
     const type: 'col' | 'row' = isCol ? 'col' : 'row';
     const pillSize = isCol ? COL_PILL_HEIGHT : ROW_PILL_WIDTH;
 
-    // Reset to pill size before making visible
-    collapseGrip(el, type, pillSize);
+    setGripPillSize(el, type, pillSize);
 
     if (this.isInsideTable) {
       el.style.transition = 'none';
@@ -595,8 +594,8 @@ export class TableRowColControls {
     const svg = el.querySelector('svg');
 
     if (svg) {
-      svg.classList.remove('text-white');
-      svg.classList.add('text-gray-400');
+      svg.classList.remove('text-white', 'opacity-100');
+      svg.classList.add('text-gray-400', 'opacity-0');
     }
   }
 
@@ -632,9 +631,16 @@ export class TableRowColControls {
       el.style.transition = 'none';
     }
 
-    collapseGrip(el, type, pillSize);
+    setGripPillSize(el, type, pillSize);
     el.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
     el.removeAttribute('data-blok-table-grip-visible');
+
+    const svg = el.querySelector('svg');
+
+    if (svg) {
+      svg.classList.add('opacity-0');
+      svg.classList.remove('opacity-100');
+    }
 
     if (this.isInsideTable) {
       void el.offsetHeight;

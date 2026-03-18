@@ -1,6 +1,18 @@
 export const GRIP_HOVER_SIZE = 16;
 
 /**
+ * Sets only the size dimension of a grip pill (height for col, width for row).
+ * Use this in full-state resets where the bg class is already handled by a className overwrite.
+ */
+export const setGripPillSize = (grip: HTMLElement, type: 'col' | 'row', size: number): void => {
+  if (type === 'col') {
+    Object.assign(grip.style, { height: `${size}px` });
+  } else {
+    Object.assign(grip.style, { width: `${size}px` });
+  }
+};
+
+/**
  * Dot positions for vertical layout (2 cols × 3 rows) — used by row grips.
  */
 const VERTICAL_DOTS: [number, number][] = [
@@ -78,11 +90,7 @@ export const expandGrip = (grip: HTMLElement, type: 'col' | 'row'): void => {
  * Column grips shrink height; row grips shrink width.
  */
 export const collapseGrip = (grip: HTMLElement, type: 'col' | 'row', pillSize: number): void => {
-  if (type === 'col') {
-    Object.assign(grip.style, { height: `${pillSize}px` });
-  } else {
-    Object.assign(grip.style, { width: `${pillSize}px` });
-  }
+  setGripPillSize(grip, type, pillSize);
 
   grip.classList.remove('bg-gray-200');
   grip.classList.add('bg-gray-300');

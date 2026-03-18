@@ -7,6 +7,8 @@ import { createEditorContainer, defaultTools, simulateClick, waitForToolbar } fr
 import type { EditorFactoryOptions } from './helpers';
 
 import type { OutputData, ToolSettings } from '@/types';
+import { GRIP_ACTIVE_CLASSES, GRIP_IDLE_CLASSES, GRIP_VISIBLE_CLASSES } from '../tools/table/table-row-col-controls';
+import { GRIP_HOVER_SIZE } from '../tools/table/table-grip-visuals';
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -77,20 +79,24 @@ const waitForTable = async (canvas: HTMLElement): Promise<void> => {
 const forceGripsVisible = (grips: NodeListOf<Element>): void => {
   grips.forEach((grip) => {
     grip.setAttribute('data-blok-table-grip-visible', '');
-    grip.classList.remove('opacity-0', 'pointer-events-none');
-    grip.classList.add('opacity-100', 'pointer-events-auto');
+    GRIP_IDLE_CLASSES.forEach(cls => grip.classList.remove(cls));
+    GRIP_VISIBLE_CLASSES.forEach(cls => grip.classList.add(cls));
   });
 };
 
-const forceGripActive = (grip: Element, expanded: { width: string; height: string }): void => {
+const forceGripActive = (grip: Element): void => {
   grip.setAttribute('data-blok-table-grip-visible', '');
-  grip.classList.remove('opacity-0', 'pointer-events-none', 'bg-gray-300');
-  grip.classList.add('opacity-100', 'pointer-events-auto', 'bg-blue-500', 'text-white');
+  GRIP_IDLE_CLASSES.forEach(cls => grip.classList.remove(cls));
+  GRIP_ACTIVE_CLASSES.forEach(cls => grip.classList.add(cls));
 
   const el = grip as HTMLElement;
+  const isCol = grip.hasAttribute('data-blok-table-grip-col');
 
-  el.style.width = expanded.width;
-  el.style.height = expanded.height;
+  if (isCol) {
+    el.style.height = `${GRIP_HOVER_SIZE}px`;
+  } else {
+    el.style.width = `${GRIP_HOVER_SIZE}px`;
+  }
 
   const svg = grip.querySelector('svg');
 
@@ -701,7 +707,7 @@ export const ColumnGripActive: Story = {
       const grip = canvasElement.querySelector(GRIP_COL_SELECTOR);
 
       if (grip) {
-        forceGripActive(grip, { width: '24px', height: '16px' });
+        forceGripActive(grip);
       }
 
       await waitFor(
@@ -749,7 +755,7 @@ export const RowGripActive: Story = {
       const grip = canvasElement.querySelector(GRIP_ROW_SELECTOR);
 
       if (grip) {
-        forceGripActive(grip, { width: '16px', height: '20px' });
+        forceGripActive(grip);
       }
 
       await waitFor(

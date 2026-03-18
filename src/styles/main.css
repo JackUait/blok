@@ -234,6 +234,13 @@
   font-weight: bolder;
 }
 
+/* Override the browser UA color: MarkText on <mark> elements so that marks
+   without an explicit inline color inherit the parent's text color instead
+   of defaulting to black in dark mode. */
+:where([data-blok-interface], [data-blok-popover]) mark {
+  color: inherit;
+}
+
 /* Correct the odd em font sizing in all browsers for code elements. */
 :where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
   font-family: --theme(
@@ -639,6 +646,10 @@
   --color-popover-icon-bg: var(--blok-popover-icon-bg);
   --color-popover-icon-active-bg: var(--blok-popover-icon-active-bg);
 
+  /* Color picker swatch ring */
+  --color-swatch-ring-hover: var(--blok-swatch-ring-hover);
+  --color-swatch-ring-active: var(--blok-swatch-ring-active);
+
 }
 
 @layer utilities {
@@ -705,6 +716,11 @@
 
   /* Checklist */
   --blok-checklist-border: rgba(0, 0, 0, 0.28);
+
+  /* Color picker swatch */
+  --blok-swatch-neutral-bg: #f7f7f5;
+  --blok-swatch-ring-hover: rgba(0, 0, 0, 0.10);
+  --blok-swatch-ring-active: rgba(0, 0, 0, 0.30);
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -762,6 +778,11 @@
 
     /* Checklist */
     --blok-checklist-border: rgba(255, 255, 255, 0.22);
+
+    /* Color picker swatch */
+    --blok-swatch-neutral-bg: #3a3a38;
+    --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
+    --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
   }
 }
 
@@ -819,6 +840,11 @@
 
   /* Checklist */
   --blok-checklist-border: rgba(255, 255, 255, 0.22);
+
+  /* Color picker swatch */
+  --blok-swatch-neutral-bg: #3a3a38;
+  --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
+  --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */

@@ -1187,4 +1187,89 @@ describe('MarkerInlineTool', () => {
       );
     });
   });
+
+  describe('text swatch preview after applying background color', () => {
+    it('text swatches show the newly applied background color when switching to the text tab', () => {
+      container.textContent = 'Hello world';
+
+      // Select 'Hello'
+      const textNode = container.firstChild!;
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      // Get the picker element from the render config
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+      const pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
+
+      document.body.appendChild(pickerEl);
+
+      try {
+        // Switch to the background tab
+        const bgTab = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-tab-background-color"]');
+
+        bgTab?.click();
+
+        // Click the yellow background swatch (light mode: #fbf3db = rgb(251, 243, 219))
+        const yellowBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-yellow"]');
+
+        yellowBgSwatch?.click();
+
+        // Switch to the text tab
+        const textTab = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-tab-color"]');
+
+        textTab?.click();
+
+        // Text swatches should now use the bg color just applied as their background
+        const yellowTextSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-yellow"]');
+
+        expect(yellowTextSwatch?.style.backgroundColor).toBe('rgb(251, 243, 219)');
+      } finally {
+        document.body.removeChild(pickerEl);
+      }
+    });
+  });
+
+  describe('background swatch preview after applying text color', () => {
+    it('bg swatches show the newly applied text color when switching to the background tab', () => {
+      container.textContent = 'Hello world';
+
+      // Select 'Hello'
+      const textNode = container.firstChild!;
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      // Get the picker element from the render config
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+      const pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
+
+      document.body.appendChild(pickerEl);
+
+      try {
+        // Click the gray text swatch (light mode: #787774 = rgb(120, 119, 116))
+        const graySwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-gray"]');
+
+        graySwatch?.click();
+
+        // Switch to the background tab
+        const bgTab = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-tab-background-color"]');
+
+        bgTab?.click();
+
+        // Bg swatches should now use the text color just applied as their A label
+        const grayBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-gray"]');
+
+        expect(grayBgSwatch?.style.color).toBe('rgb(120, 119, 116)');
+      } finally {
+        document.body.removeChild(pickerEl);
+      }
+    });
+  });
 });

@@ -869,6 +869,54 @@ test.describe('inline tool marker', () => {
     expect(html).toMatch(/color:/);
     expect(html).toContain('bold colored');
   });
+
+  test.describe('dark mode', () => {
+    test.use({ colorScheme: 'dark' });
+
+    test('background-color mark inherits text color instead of turning black', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Highlight this text',
+          },
+        },
+      ]);
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'Highlight');
+      await openMarkerPicker(page);
+
+      // Switch to background color tab
+      const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
+
+      await bgTab.click();
+
+      const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-yellow"]');
+
+      await yellowSwatch.click();
+
+      // Close toolbar
+      await page.mouse.click(10, 10);
+
+      // The mark's computed color must NOT be black — it should inherit the
+      // dark-mode text color (#f0efed = rgb(240, 239, 237)) from the parent.
+      const markColor = await paragraph.evaluate((el) => {
+        const mark = el.querySelector('mark');
+
+        if (!mark) {
+          return null;
+        }
+
+        return window.getComputedStyle(mark).color;
+      });
+
+      expect(markColor).not.toBeNull();
+      // rgb(226, 224, 220) = #e2e0dc (--blok-text-primary in dark mode)
+      expect(markColor).toBe('rgb(226, 224, 220)');
+    });
+  });
 });
 
 declare global {

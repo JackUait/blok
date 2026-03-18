@@ -1,7 +1,25 @@
 import type { I18n } from '../../../types/api';
 import { parseColor } from '../utils/color-mapping';
 import { twMerge } from '../utils/tw';
-import { COLOR_PRESETS } from './color-presets';
+import { COLOR_PRESETS, COLOR_PRESETS_DARK } from './color-presets';
+
+/**
+ * Returns the appropriate preset array for the current theme.
+ * Checks the data-blok-theme attribute first (explicit override),
+ * then falls back to the prefers-color-scheme media query.
+ */
+function getActivePresets(): typeof COLOR_PRESETS {
+  const theme = document.documentElement.getAttribute('data-blok-theme');
+
+  if (theme === 'dark') return COLOR_PRESETS_DARK;
+  if (theme === 'light') return COLOR_PRESETS;
+
+  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+    return COLOR_PRESETS_DARK;
+  }
+
+  return COLOR_PRESETS;
+}
 
 /**
  * Compare two CSS color strings for equality by their parsed RGB tuples.
@@ -55,6 +73,20 @@ export interface ColorPickerHandle {
    */
   setActiveColor: (color: string | null, modeKey: string) => void;
   /**
+   * Set the preview text color shown as the "A" label inside background-mode swatches.
+   * This lets users see how their current text color looks against each background option.
+   * Pass null to revert to the default label color.
+   * @param color - CSS color value (e.g. computed style color) or null to clear
+   */
+  setPreviewTextColor: (color: string | null) => void;
+  /**
+   * Set the preview background color shown behind the "A" label inside text-mode swatches.
+   * This lets users see how their text color choices look against their current background.
+   * Pass null to revert to the default neutral background.
+   * @param color - CSS color value (e.g. inline mark background-color) or null to clear
+   */
+  setPreviewBgColor: (color: string | null) => void;
+  /**
    * Reset the picker state (tab index) back to defaultModeIndex.
    * Call this when the picker is reopened to ensure consistent initial state.
    */
@@ -67,9 +99,10 @@ export interface ColorPickerHandle {
 const TAB_BASE_CLASSES = 'flex-1 py-1.5 text-xs text-center rounded-md cursor-pointer border-none outline-hidden transition-colors';
 
 /**
- * Neutral background for text-mode swatches so they render as visible buttons
+ * Neutral background for text-mode swatches so they render as visible buttons.
+ * Uses a CSS variable so it adapts to dark mode.
  */
-const SWATCH_NEUTRAL_BG = '#f7f7f5';
+const SWATCH_NEUTRAL_BG = 'var(--blok-swatch-neutral-bg)';
 
 /**
  * Creates a color picker element with two tabs (e.g. Text / Background),
@@ -80,7 +113,12 @@ const SWATCH_NEUTRAL_BG = '#f7f7f5';
 export function createColorPicker(options: ColorPickerOptions): ColorPickerHandle {
   const { i18n, modes, testIdPrefix, onColorSelect } = options;
   const defaultModeIndex = options.defaultModeIndex ?? 0;
-  const state = { modeIndex: defaultModeIndex, activeColor: null as string | null };
+  const state = {
+    modeIndex: defaultModeIndex,
+    activeColor: null as string | null,
+    currentTextColor: null as string | null,
+    currentBgColor: null as string | null,
+  };
 
   const wrapper = document.createElement('div');
 
@@ -131,8 +169,9 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     grid.innerHTML = '';
 
     const currentMode = modes[state.modeIndex];
+    const presets = getActivePresets();
 
-    for (const preset of COLOR_PRESETS) {
+    for (const preset of presets) {
       const swatch = document.createElement('button');
       const swatchColor = currentMode.presetField === 'text' ? preset.text : preset.bg;
       const isActive = state.activeColor !== null && colorsEqual(swatchColor, state.activeColor);
@@ -141,16 +180,22 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       swatch.className = twMerge(
         'w-8 h-8 rounded-md cursor-pointer border-none outline-hidden',
         'flex items-center justify-center text-sm font-semibold',
-        'transition-shadow ring-inset hover:ring-2 hover:ring-black/10',
-        isActive && 'ring-2 ring-black/30'
+        'transition-shadow ring-inset hover:ring-2 hover:ring-swatch-ring-hover',
+        isActive && 'ring-2 ring-swatch-ring-active'
       );
       swatch.textContent = 'A';
 
       if (currentMode.presetField === 'text') {
         swatch.style.color = preset.text;
-        swatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
+        swatch.style.backgroundColor = state.currentBgColor ?? SWATCH_NEUTRAL_BG;
       } else {
-        swatch.style.color = '';
+        // Show the caller's current text color as the "A" label so users can
+        // preview how their text will look against each background. Fall back to
+        // a mode-appropriate default when no preview color has been provided.
+        const labelColor = state.currentTextColor
+          ?? (presets === COLOR_PRESETS_DARK ? preset.text : '#37352f');
+
+        swatch.style.color = labelColor;
         swatch.style.backgroundColor = preset.bg;
       }
 
@@ -201,9 +246,19 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
 
       renderSwatches();
     },
+    setPreviewTextColor: (color: string | null) => {
+      state.currentTextColor = color;
+      renderSwatches();
+    },
+    setPreviewBgColor: (color: string | null) => {
+      state.currentBgColor = color;
+      renderSwatches();
+    },
     reset: () => {
       state.modeIndex = defaultModeIndex;
       state.activeColor = null;
+      state.currentTextColor = null;
+      state.currentBgColor = null;
       updateTabs();
       renderSwatches();
     },

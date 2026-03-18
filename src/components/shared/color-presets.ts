@@ -8,7 +8,7 @@ export interface ColorPreset {
 }
 
 /**
- * Ten Notion-style color presets.
+ * Ten Notion-style color presets for light mode.
  * `text` is used for foreground (text-color mode), `bg` for background swatches.
  */
 export const COLOR_PRESETS: ColorPreset[] = [
@@ -22,4 +22,22 @@ export const COLOR_PRESETS: ColorPreset[] = [
   { name: 'purple', text: '#9065b0', bg: '#f6f3f9' },
   { name: 'pink', text: '#c14c8a', bg: '#f9f0f5' },
   { name: 'red', text: '#d44c47', bg: '#fdebec' },
+];
+
+/**
+ * Dark-mode adapted presets. Text colors are lightened for readability on dark
+ * swatch backgrounds; background colors are deep/muted to integrate with dark UI.
+ * Values sourced from Notion's dark theme stylesheet.
+ */
+export const COLOR_PRESETS_DARK: ColorPreset[] = [
+  { name: 'gray',   text: '#9b9b9b', bg: '#2f2f2f' },
+  { name: 'brown',  text: '#ba856f', bg: '#4a3228' },
+  { name: 'orange', text: '#c77d48', bg: '#5c3b23' },
+  { name: 'yellow', text: '#ca9849', bg: '#564328' },
+  { name: 'green',  text: '#529e72', bg: '#243d30' },
+  { name: 'teal',   text: '#4dab9a', bg: '#2e4d4b' },
+  { name: 'blue',   text: '#5e87c9', bg: '#143a4e' },
+  { name: 'purple', text: '#9d68d3', bg: '#3c2d49' },
+  { name: 'pink',   text: '#d15796', bg: '#4e2c3c' },
+  { name: 'red',    text: '#df5452', bg: '#522e2a' },
 ];

@@ -7,7 +7,7 @@ export const ROW_ATTR = 'data-blok-table-row';
 export const CELL_ATTR = 'data-blok-table-cell';
 
 export const BORDER_WIDTH = 1;
-const BORDER_STYLE = `${BORDER_WIDTH}px solid #d1d5db`;
+const BORDER_STYLE = `${BORDER_WIDTH}px solid var(--blok-table-border)`;
 
 const ROW_CLASSES = [
   'flex',

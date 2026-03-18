@@ -349,7 +349,7 @@ export class TableRowColControls {
     grip.style.width = `${idleWidth}px`;
     grip.style.height = `${idleHeight}px`;
     grip.style.transform = 'translate(-50%, -50%)';
-    grip.style.outline = '2px solid white';
+    grip.style.outline = '2px solid var(--blok-table-grip-outline, white)';
 
     grip.appendChild(createGripDotsSvg(type === 'col' ? 'horizontal' : 'vertical'));
 

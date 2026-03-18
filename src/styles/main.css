@@ -638,6 +638,7 @@
   --color-link-input-border: var(--blok-link-input-border);
   --color-popover-icon-bg: var(--blok-popover-icon-bg);
   --color-popover-icon-active-bg: var(--blok-popover-icon-active-bg);
+
 }
 
 @layer utilities {
@@ -695,6 +696,11 @@
   /* Popover icon container */
   --blok-popover-icon-bg: rgba(55, 53, 47, 0.06);
   --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.1);
+
+  /* Table */
+  --blok-table-border: #d1d5db;
+  --blok-table-heading-bg: #f9fafb;
+  --blok-table-grip-outline: white;
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -743,6 +749,11 @@
     --blok-link-input-border: #37352f;
     --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
     --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.15);
+
+    /* Table */
+    --blok-table-border: #3e3e3d;
+    --blok-table-heading-bg: #272725;
+    --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -791,6 +802,11 @@
   --blok-link-input-border: #37352f;
   --blok-popover-icon-bg: rgba(255, 255, 255, 0.08);
   --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.15);
+
+  /* Table */
+  --blok-table-border: #3e3e3d;
+  --blok-table-heading-bg: #272725;
+  --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
 }
 
 /*
@@ -963,7 +979,8 @@
  */
 [data-blok-table-heading] [data-blok-table-cell],
 [data-blok-table-heading-col] {
-  @apply font-semibold bg-gray-50;
+  @apply font-semibold;
+  background-color: var(--blok-table-heading-bg);
 }
 
 /**
@@ -972,6 +989,74 @@
  */
 [data-blok-table-haze][data-blok-table-haze-visible] {
   @apply opacity-100;
+}
+
+/**
+ * Dark theme overrides for table UI chrome.
+ * Grip handles, add-row/col pills, and scroll haze all use hardcoded
+ * Tailwind light-gray/white classes that are too bright on dark backgrounds.
+ * Rules are written for both dark entry points (media query + explicit attr).
+ */
+@media (prefers-color-scheme: dark) {
+  /* Grip pills — collapsed/idle state */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip]:not(.bg-gray-200):not(.bg-blue-500) {
+    background-color: #4a4a4a;
+  }
+  /* Grip pills — hover-expanded state */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip].bg-gray-200 {
+    background-color: #555554;
+  }
+  /* Grip dot SVG */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-grip] svg {
+    color: #9e9e9d;
+  }
+  /* Add row/col pill: border + subtle rest-state fill */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
+    border-color: rgba(255, 255, 255, 0.17);
+    background-color: #2c2c2b;
+  }
+  /* Add row/col pill hover background */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]):hover .border-gray-300 {
+    background-color: #2e2e2d;
+  }
+  /* Add row/col icon color */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 svg {
+    color: #9e9e9d;
+  }
+  /* Scroll haze: dark background gradient instead of white */
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-haze="left"] {
+    background-image: linear-gradient(to right, var(--blok-dark), transparent);
+  }
+  :root:not([data-blok-theme="light"]) [data-blok-interface] [data-blok-table-haze="right"] {
+    background-image: linear-gradient(to left, var(--blok-dark), transparent);
+  }
+}
+
+/* Explicit dark theme attribute — same overrides */
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip]:not(.bg-gray-200):not(.bg-blue-500) {
+  background-color: #4a4a4a;
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip].bg-gray-200 {
+  background-color: #555554;
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-grip] svg {
+  color: #9e9e9d;
+}
+[data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.17);
+  background-color: #2c2c2b;
+}
+[data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]):hover .border-gray-300 {
+  background-color: #2e2e2d;
+}
+[data-blok-theme="dark"] [data-blok-interface] :is([data-blok-table-add-row], [data-blok-table-add-col]) .border-gray-300 svg {
+  color: #9e9e9d;
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-haze="left"] {
+  background-image: linear-gradient(to right, var(--blok-dark), transparent);
+}
+[data-blok-theme="dark"] [data-blok-interface] [data-blok-table-haze="right"] {
+  background-image: linear-gradient(to left, var(--blok-dark), transparent);
 }
 
 /**

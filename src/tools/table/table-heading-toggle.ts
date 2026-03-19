@@ -44,20 +44,21 @@ const LABEL_CLASSES = [
 
 const TRACK_CLASSES = [
   'relative',
-  'w-[34px]',
-  'h-[20px]',
+  'w-[30px]',
+  'h-[18px]',
   'rounded-full',
   'transition-colors',
   'duration-[180ms]',
   'ease-out',
   'shrink-0',
+  'ml-2',
 ];
 
 const THUMB_CLASSES = [
   'absolute',
   'top-[2px]',
-  'w-4',
-  'h-4',
+  'w-[14px]',
+  'h-[14px]',
   'rounded-full',
   'bg-white',
   'transition-[left]',
@@ -112,7 +113,7 @@ export const createHeadingToggle = (options: HeadingToggleOptions): HTMLElement 
 
   const applyState = (): void => {
     track.style.backgroundColor = state.active ? 'var(--blok-toggle-on-bg)' : 'var(--blok-toggle-off-bg)';
-    thumb.style.left = state.active ? '16px' : '2px';
+    thumb.style.left = state.active ? '14px' : '2px';
     thumb.style.backgroundColor = state.active ? 'var(--blok-toggle-thumb-on-bg)' : '';
     thumb.style.boxShadow = state.active
       ? '0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.04)'

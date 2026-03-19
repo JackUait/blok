@@ -808,8 +808,8 @@
 
     /* Toggle switch */
     --blok-toggle-off-bg: #3f3f46;
-    --blok-toggle-on-bg: #e4e4e7;
-    --blok-toggle-thumb-on-bg: #252525;
+    --blok-toggle-on-bg: #529cca;
+    --blok-toggle-thumb-on-bg: #ffffff;
 
     /* Checklist */
     --blok-checklist-border: rgba(255, 255, 255, 0.22);

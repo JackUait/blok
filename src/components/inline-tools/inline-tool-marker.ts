@@ -424,16 +424,24 @@ export class MarkerInlineTool implements InlineTool {
       return null;
     }
 
-    const textColor = window.getComputedStyle(mark).getPropertyValue('color');
+    const rawTextColor = mark.style.getPropertyValue('color');
 
-    if (textColor && textColor !== 'transparent') {
-      return { value: textColor, mode: 'color' };
+    if (rawTextColor && rawTextColor !== 'transparent') {
+      const textColor = window.getComputedStyle(mark).getPropertyValue('color');
+
+      if (textColor && textColor !== 'transparent') {
+        return { value: textColor, mode: 'color' };
+      }
     }
 
-    const bgColor = window.getComputedStyle(mark).getPropertyValue('background-color');
+    const rawBgColor = mark.style.getPropertyValue('background-color');
 
-    if (bgColor && bgColor !== 'transparent') {
-      return { value: bgColor, mode: 'background-color' };
+    if (rawBgColor && rawBgColor !== 'transparent') {
+      const bgColor = window.getComputedStyle(mark).getPropertyValue('background-color');
+
+      if (bgColor && bgColor !== 'transparent') {
+        return { value: bgColor, mode: 'background-color' };
+      }
     }
 
     return null;

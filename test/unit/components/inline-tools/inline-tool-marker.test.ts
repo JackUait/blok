@@ -1388,5 +1388,62 @@ describe('MarkerInlineTool', () => {
       // After the fix: getComputedStyle resolves the var, setActiveColor receives 'rgb(212, 76, 71)'
       expect(setActiveColorSpy).toHaveBeenCalledWith('rgb(212, 76, 71)', 'color');
     });
+
+    it('highlights background swatch (not text swatch) for a background-only mark', () => {
+      // Background-only mark: no explicit color, only background-color set via CSS var.
+      // The regression: getComputedStyle('color') returns the inherited text color (truthy)
+      // so the function incorrectly returns the inherited text color instead of the bg color.
+      container.innerHTML = '<mark style="background-color:var(--blok-color-red-bg)">hello</mark>';
+      const mark = container.querySelector('mark') as HTMLElement;
+      const textNode = mark.firstChild as Text;
+
+      // Capture the real JSDOM implementation before the spy replaces it
+      const originalGetComputedStyle = window.getComputedStyle.bind(window);
+
+      // JSDOM cannot resolve CSS vars, so mock getComputedStyle to return resolved values.
+      // Crucially, 'color' returns an inherited value even though no inline color is set —
+      // this is what caused the regression.
+      vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === mark) {
+          return {
+            getPropertyValue: (prop: string) => {
+              if (prop === 'color') {
+                return 'rgb(55, 53, 47)'; // inherited text color — must NOT be returned
+              }
+
+              if (prop === 'background-color') {
+                return 'rgb(253, 235, 236)'; // resolved CSS var
+              }
+
+              return '';
+            },
+          } as unknown as CSSStyleDeclaration;
+        }
+
+        return originalGetComputedStyle(el);
+      });
+
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+      const sel = window.getSelection()!;
+
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      type PickerHandle = { setActiveColor: (value: string, mode: string) => void };
+      const picker = (tool as unknown as { picker: PickerHandle }).picker;
+      const setActiveColorSpy = vi.spyOn(picker, 'setActiveColor');
+
+      type MenuWithChildren = { children: { onOpen: () => void } };
+      const config = tool.render() as unknown as MenuWithChildren;
+
+      config.children.onOpen();
+
+      // The picker must be activated with the background color, not the inherited text color.
+      expect(setActiveColorSpy).toHaveBeenCalledWith('rgb(253, 235, 236)', 'background-color');
+      expect(setActiveColorSpy).not.toHaveBeenCalledWith('rgb(55, 53, 47)', 'color');
+    });
   });
 });

@@ -10,6 +10,7 @@ import {
   shouldExpandToHierarchical,
   type DataFormatAnalysis,
 } from '../utils/data-model-transform';
+import { migrateMarkColors } from '../utils/color-migration';
 
 /**
  * Module that responsible for rendering Blocks on blok initialization
@@ -157,6 +158,7 @@ export class Renderer extends Module {
          * Insert batch of Blocks
          */
         BlockManager.insertMany(blocks);
+        migrateMarkColors(this.Blok.UI.nodes.redactor);
       }
 
       /**

@@ -116,23 +116,25 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     expect(arrow.getAttribute('role')).toBe('button');
   });
 
-  it('toggle render does not toggle open state on arrow click in read-only mode', () => {
+  it('toggle render DOES toggle open state on arrow click in read-only mode', () => {
     const { toggle } = createToggle({}, { readOnly: true });
     const element = toggle.render();
 
     const arrow = element.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
     expect(arrow).not.toBeNull();
 
-    // In read-only mode the toggle starts closed (!readOnly = false).
-    // After arrow click, the attribute must remain unchanged.
+    // In read-only mode the toggle starts closed (no saved isOpen, default = !readOnly = false).
     const attrBefore = element.getAttribute('data-blok-toggle-open');
+    expect(attrBefore).toBe('false');
+
+    // After arrow click, the state MUST flip — read-only should not block expand/collapse.
     arrow.click();
     const attrAfter = element.getAttribute('data-blok-toggle-open');
 
-    expect(attrAfter).toBe(attrBefore);
+    expect(attrAfter).toBe('true');
   });
 
-  it('header buildArrow does not toggle when read-only', () => {
+  it('header buildArrow DOES toggle when read-only', () => {
     const { header } = createHeader(
       { text: 'Title', level: 2, isToggleable: true },
       { readOnly: true }
@@ -142,11 +144,16 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     const arrow = element.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
     expect(arrow).not.toBeNull();
 
-    const attrBefore = element.getAttribute('data-blok-toggle-open');
-    arrow.click();
-    const attrAfter = element.getAttribute('data-blok-toggle-open');
+    // In read-only mode the toggle starts closed (default = !readOnly = false).
+    const heading = element.querySelector('[data-blok-toggle-open]');
+    const attrBefore = heading?.getAttribute('data-blok-toggle-open');
+    expect(attrBefore).toBe('false');
 
-    expect(attrAfter).toBe(attrBefore);
+    // Clicking the arrow MUST flip the open state.
+    arrow.click();
+    const attrAfter = heading?.getAttribute('data-blok-toggle-open');
+
+    expect(attrAfter).toBe('true');
   });
 });
 

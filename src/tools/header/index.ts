@@ -702,7 +702,7 @@ export class Header implements BlockTool {
    * @returns The arrow element
    */
   private buildArrow(): HTMLElement {
-    const arrow = buildArrow(this._isOpen, this.readOnly ? null : () => this.toggleOpen(), {}, {
+    const arrow = buildArrow(this._isOpen, () => this.toggleOpen(), {}, {
       collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
       expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
     });

@@ -112,7 +112,7 @@ export class ToggleItem implements BlockTool {
       isOpen: this._isOpen,
       placeholder: this.placeholder,
       keydownHandler: this.readOnly ? null : this.handleKeyDown.bind(this),
-      onArrowClick: this.readOnly ? null : () => this.toggleOpen(),
+      onArrowClick: () => this.toggleOpen(),
       onBodyPlaceholderClick: this.readOnly ? null : () => this.handleBodyPlaceholderClick(),
       bodyPlaceholderText: this.api.i18n.t(BODY_PLACEHOLDER_KEY),
       ariaLabels: {

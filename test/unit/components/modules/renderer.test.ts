@@ -94,6 +94,11 @@ const createRenderer = (
   const blokState = {
     BlockManager: blockManager,
     Tools: tools,
+    UI: {
+      nodes: {
+        redactor: document.createElement('div'),
+      },
+    },
   };
 
   renderer.state = blokState as unknown as RendererBlok;

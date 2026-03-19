@@ -461,14 +461,14 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Create popover container
     const popoverContainer = document.createElement('div');
     popoverContainer.className = css.popoverContainer;
-    popoverContainer.style.boxShadow = '0 0 0 1px var(--blok-popover-border), 0 4px 16px rgba(0, 0, 0, 0.1), 0 16px 40px -8px rgba(0, 0, 0, 0.08)';
+    popoverContainer.style.boxShadow = 'var(--blok-popover-box-shadow)';
     popoverContainer.setAttribute(DATA_ATTR.popoverContainer, '');
     popoverContainer.setAttribute('data-blok-testid', 'popover-container');
 
     // Create nothing found message
     const nothingFoundMessage = document.createElement('div');
     nothingFoundMessage.className = twMerge(
-      'cursor-default text-[13px] leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis text-gray-text/70 px-3 py-4 text-center',
+      'cursor-default text-[13px] leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis text-gray-text px-3 py-4 text-center',
       'hidden'
     );
     nothingFoundMessage.setAttribute('data-blok-testid', 'popover-nothing-found');

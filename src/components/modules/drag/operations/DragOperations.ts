@@ -2,6 +2,7 @@
  * DragOperations - Handles move and duplicate operations for drag and drop
  */
 
+import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
 
 export interface SavedBlockData {
@@ -22,7 +23,7 @@ export interface DuplicateResult {
 export interface BlockManagerAdapter {
   getBlockIndex(block: Block): number;
   getBlockByIndex(index: number): Block | undefined;
-  move(toIndex: number, fromIndex: number, needToFocus: boolean): void;
+  move(toIndex: number, fromIndex: number, needToFocus: boolean, skipMovedHook?: boolean): void;
   insert(config: {
     tool: string;
     data: Record<string, unknown>;
@@ -269,25 +270,55 @@ export class DragOperations {
 
   /**
    * Moves blocks down (to a higher index)
+   *
+   * Blocks are processed in reverse order so each lands at its exact final position
+   * without index-shifting side-effects. The `moved()` lifecycle hook is suppressed
+   * during the loop because depth-validators in list items read neighbour depths from
+   * the DOM — in intermediate states those neighbours haven't arrived yet, causing
+   * depths to be incorrectly capped. After all blocks are in place the hooks are
+   * re-triggered in document order (parent → children) so each block sees correct
+   * neighbours when it validates.
    */
   private moveBlocksDown(sortedBlocks: Block[], insertIndex: number): void {
-    // When moving down, start with insertIndex - 1 and decrement for each block
-    // This ensures blocks maintain their relative order
+    const originalIndices = new Map<Block, number>();
+
+    sortedBlocks.forEach(block => {
+      originalIndices.set(block, this.blockManager.getBlockIndex(block));
+    });
+
     const reversedBlocks = [...sortedBlocks].reverse();
 
     reversedBlocks.forEach((block, index) => {
       const currentIndex = this.blockManager.getBlockIndex(block);
       const targetPosition = insertIndex - 1 - index;
 
-      this.blockManager.move(targetPosition, currentIndex, false);
+      this.blockManager.move(targetPosition, currentIndex, false, true);
+    });
+
+    sortedBlocks.forEach(block => {
+      block.call(BlockToolAPI.MOVED, {
+        fromIndex: originalIndices.get(block) ?? 0,
+        toIndex: this.blockManager.getBlockIndex(block),
+        isGroupMove: true,
+      });
     });
   }
 
   /**
    * Moves blocks up (to a lower index)
+   *
+   * Forward order is used so parent blocks arrive at their target before children,
+   * giving depth-validators the correct predecessor. The `moved()` hook is still
+   * suppressed during the loop and re-triggered afterward for symmetry with
+   * `moveBlocksDown` and to guard against any edge-cases in future reordering.
    */
   private moveBlocksUp(sortedBlocks: Block[], baseInsertIndex: number): void {
-    // Track how many blocks we've inserted to adjust the target index
+    const originalIndices = new Map<Block, number>();
+
+    sortedBlocks.forEach(block => {
+      originalIndices.set(block, this.blockManager.getBlockIndex(block));
+    });
+
     sortedBlocks.forEach((block, index) => {
       const currentIndex = this.blockManager.getBlockIndex(block);
       const targetIndex = baseInsertIndex + index;
@@ -296,7 +327,15 @@ export class DragOperations {
         return;
       }
 
-      this.blockManager.move(targetIndex, currentIndex, false);
+      this.blockManager.move(targetIndex, currentIndex, false, true);
+    });
+
+    sortedBlocks.forEach(block => {
+      block.call(BlockToolAPI.MOVED, {
+        fromIndex: originalIndices.get(block) ?? 0,
+        toIndex: this.blockManager.getBlockIndex(block),
+        isGroupMove: true,
+      });
     });
   }
 }

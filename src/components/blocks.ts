@@ -116,7 +116,7 @@ export class Blocks {
    * @param {number} fromIndex - block to move
    * @param {boolean} skipDOM - if true, do not manipulate DOM (useful when SortableJS already did it)
    */
-  public move(toIndex: number, fromIndex: number, skipDOM = false): void {
+  public move(toIndex: number, fromIndex: number, skipDOM = false, skipMovedHook = false): void {
     /**
      * cut out the block, move the DOM element and insert at the desired index
      * again (the shifting within the blocks array will happen automatically).
@@ -142,11 +142,13 @@ export class Blocks {
     // immediately follow the moved block in the flat array, matching DOM nesting.
     this.resortNestedBlocks(block, this.blocks.indexOf(block));
 
-    // invoke hook
-    block.call(BlockToolAPI.MOVED, {
-      fromIndex,
-      toIndex,
-    });
+    // invoke hook (skipped during batch moves — caller re-triggers after all blocks land)
+    if (!skipMovedHook) {
+      block.call(BlockToolAPI.MOVED, {
+        fromIndex,
+        toIndex,
+      });
+    }
   }
 
   /**

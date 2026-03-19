@@ -613,7 +613,7 @@ export class BlockOperations {
    * @param skipDOM - If true, do not manipulate DOM
    * @param blocksStore - The blocks store to modify
    */
-  public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore): void {
+  public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook = false): void {
     // Make sure indexes are valid and within a valid range
     if (isNaN(toIndex) || isNaN(fromIndex)) {
       log(`Warning during 'move' call: incorrect indices provided.`, 'warn');
@@ -642,7 +642,7 @@ export class BlockOperations {
     this.suppressStopCapturing = true;
     try {
       /** Move up current Block */
-      blocksStore.move(toIndex, fromIndex, skipDOM);
+      blocksStore.move(toIndex, fromIndex, skipDOM, skipMovedHook);
 
       /**
        * After the move, the moved block may be at a different index than toIndex

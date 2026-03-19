@@ -16,6 +16,11 @@ export interface DepthValidationOptions {
   blockIndex: number;
   /** Current depth */
   currentDepth: number;
+  /**
+   * When true, skip depth-promotion heuristics (shouldMatchNext/Prev).
+   * Used during group drag-drops where the group's relative structure is preserved.
+   */
+  skipDepthPromotion?: boolean;
 }
 
 /**
@@ -63,12 +68,19 @@ export class ListDepthValidator {
    * @returns The target depth for the dropped item
    */
   getTargetDepthForMove(options: DepthValidationOptions): number {
-    const { blockIndex, currentDepth } = options;
+    const { blockIndex, currentDepth, skipDepthPromotion } = options;
     const maxAllowedDepth = this.getMaxAllowedDepth(blockIndex);
 
     // If current depth exceeds max, cap it
     if (currentDepth > maxAllowedDepth) {
       return maxAllowedDepth;
+    }
+
+    // Depth-promotion heuristics are skipped for group moves: the group preserves
+    // its own relative structure, so we should not promote a block's depth to match
+    // its new neighbours (which may be members of the same group).
+    if (skipDepthPromotion) {
+      return currentDepth;
     }
 
     // Check if we're inserting before a list item (next block)

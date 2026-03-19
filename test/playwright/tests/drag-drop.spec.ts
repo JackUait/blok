@@ -1090,6 +1090,53 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[3])).toBe('Nested B');
     });
 
+    test('should preserve depth of deeply nested children when dragging parent subtree', async ({ page }) => {
+      // Create a list with deeply nested children:
+      // - First (depth 0) <- drag this
+      //   - Nested A (depth 1) <- comes along
+      //     - Deep A1 (depth 2) <- must keep depth 2, not collapse to 1
+      // - Second (depth 0)
+      //
+      // Bug: moveBlocksDown processes in reverse order (DeepA1 → NestedA → First).
+      // When DeepA1 fires its `moved()` hook, Second is still the previous block (depth 0),
+      // so maxAllowedDepth=1 and depth 2 is incorrectly capped to 1.
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Nested A', depth: 1 },
+        { text: 'Deep A1', depth: 2 },
+        { text: 'Second' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      const firstBlock = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+
+      await firstBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      // Order: Second, First, Nested A, Deep A1
+      expect(getBlockText(savedData?.blocks[0])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[1])).toBe('First');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Nested A');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Deep A1');
+
+      // Depths must be preserved — the subtree structure must survive drag & drop
+      expect(getBlockDepth(savedData?.blocks[1])).toBeUndefined(); // First: depth 0 (omitted)
+      expect(getBlockDepth(savedData?.blocks[2])).toBe(1);         // Nested A: depth 1
+      expect(getBlockDepth(savedData?.blocks[3])).toBe(2);         // Deep A1: depth 2 ← this fails without the fix
+    });
+
     // FIXME: These tests have never passed since they were added. The issue is related to
     // how the toolbar's content offset (translateX) interacts with drag detection when
     // dragging nested list items. The settings button for nested items is positioned far

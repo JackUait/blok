@@ -149,7 +149,7 @@ export class ListItem implements BlockTool {
   }
 
   public moved(event: MoveEvent): void {
-    this.validateAndAdjustDepthAfterMove(event.toIndex);
+    this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove);
     this.updateMarkersAfterPositionChange();
   }
 
@@ -162,11 +162,12 @@ export class ListItem implements BlockTool {
     this.updateSiblingListMarkers();
   }
 
-  private validateAndAdjustDepthAfterMove(newIndex: number): void {
+  private validateAndAdjustDepthAfterMove(newIndex: number, skipDepthPromotion?: boolean): void {
     const currentDepth = this.getDepth();
     const targetDepth = this.depthValidator.getTargetDepthForMove({
       blockIndex: newIndex,
       currentDepth,
+      skipDepthPromotion,
     });
 
     if (currentDepth !== targetDepth) {

@@ -224,6 +224,64 @@ describe('ListDepthValidator', () => {
 
       expect(validator.getTargetDepthForMove({ blockIndex: 0, currentDepth: 0 })).toBe(0);
     });
+
+    describe('skipDepthPromotion (group move flag)', () => {
+      it('skips shouldMatchNextDepth promotion when skipDepthPromotion is true', () => {
+        // Reproduces the group-drag bug: root item (d0) is followed by its child (d1).
+        // Without the flag, shouldMatchNextDepth bumps root to d1 (treats child as sibling).
+        // With the flag, root stays at d0.
+        //
+        // blockIndex=1 → prev=blocks[0]=Second(d0), next=blocks[2]=NestedA(d1)
+        const blocks = [
+          createMockBlock({ depth: 0 }), // index 0: Second (prev)
+          createMockBlock({ depth: 0 }), // index 1: placeholder for the moved block
+          createMockBlock({ depth: 1 }), // index 2: NestedA (next)
+        ];
+        const blocksAPI = createMockBlocksAPI(blocks);
+        const validator = new ListDepthValidator(blocksAPI);
+
+        // Without flag: next(d1) > current(d0) and d1 ≤ maxAllowed(1) → promotes to 1
+        expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 0 })).toBe(1);
+        // With flag: promotion skipped → stays at 0
+        expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 0, skipDepthPromotion: true })).toBe(0);
+      });
+
+      it('skips shouldMatchPreviousDepth promotion when skipDepthPromotion is true', () => {
+        const blocks = [
+          createMockBlock({ depth: 0 }),
+          createMockBlock({ depth: 1 }),
+        ];
+        const blocksAPI = createMockBlocksAPI(blocks);
+        const validator = new ListDepthValidator(blocksAPI);
+
+        // Index 2, prev=depth-1, no next → would promote to 1
+        expect(validator.getTargetDepthForMove({ blockIndex: 2, currentDepth: 0 })).toBe(1);
+        expect(validator.getTargetDepthForMove({ blockIndex: 2, currentDepth: 0, skipDepthPromotion: true })).toBe(0);
+      });
+
+      it('still caps depth exceeding maxAllowedDepth even when skipDepthPromotion is true', () => {
+        const blocks = [createMockBlock({ depth: 0 })];
+        const blocksAPI = createMockBlocksAPI(blocks);
+        const validator = new ListDepthValidator(blocksAPI);
+
+        // Max allowed at index 1 is 1; depth 2 must still be capped
+        expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 2, skipDepthPromotion: true })).toBe(1);
+      });
+
+      it('preserves valid depth without promoting when skipDepthPromotion is true', () => {
+        const blocks = [
+          createMockBlock({ depth: 0 }),
+          createMockBlock({ depth: 1 }),
+        ];
+        const blocksAPI = createMockBlocksAPI(blocks);
+        const validator = new ListDepthValidator(blocksAPI);
+
+        // Depth 1 at index 1 is valid; should stay 1
+        expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 1, skipDepthPromotion: true })).toBe(1);
+        // Depth 2 at index 1: max=1, so capped to 1 even with skipDepthPromotion
+        expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 2, skipDepthPromotion: true })).toBe(1);
+      });
+    });
   });
 
   describe('getBlockDepth', () => {

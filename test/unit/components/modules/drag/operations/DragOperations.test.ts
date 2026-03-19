@@ -140,9 +140,9 @@ describe('DragOperations', () => {
         'bottom'
       );
 
-      // Moving down: insertIndex = 5, reverse order
-      expect(mockBlockManager.move).toHaveBeenCalledWith(4, 1, false); // block2 to position 4
-      expect(mockBlockManager.move).toHaveBeenCalledWith(3, 0, false); // block1 to position 3
+      // Moving down: insertIndex = 5, reverse order; skipMovedHook=true defers lifecycle hooks
+      expect(mockBlockManager.move).toHaveBeenCalledWith(4, 1, false, true); // block2 to position 4
+      expect(mockBlockManager.move).toHaveBeenCalledWith(3, 0, false, true); // block1 to position 3
       expect(mockYjsManager.transactMoves).toHaveBeenCalled();
       expect(result.movedBlocks).toEqual([block1, block2]);
       expect(result.targetIndex).toBe(5);
@@ -166,9 +166,9 @@ describe('DragOperations', () => {
         'top'
       );
 
-      // Moving up: insertIndex = 2, maintain order
-      expect(mockBlockManager.move).toHaveBeenCalledWith(2, 5, false); // block1 to position 2
-      expect(mockBlockManager.move).toHaveBeenCalledWith(3, 6, false); // block2 to position 3
+      // Moving up: insertIndex = 2, maintain order; skipMovedHook=true defers lifecycle hooks
+      expect(mockBlockManager.move).toHaveBeenCalledWith(2, 5, false, true); // block1 to position 2
+      expect(mockBlockManager.move).toHaveBeenCalledWith(3, 6, false, true); // block2 to position 3
       expect(result.movedBlocks).toEqual([block1, block2]);
       expect(result.targetIndex).toBe(2);
     });
@@ -455,9 +455,9 @@ describe('DragOperations', () => {
 
       const result = ops.moveBlocks([block1, block2], targetBlock, 'bottom');
 
-      // Moves should still be executed
-      expect(mockBlockManager.move).toHaveBeenCalledWith(4, 1, false);
-      expect(mockBlockManager.move).toHaveBeenCalledWith(3, 0, false);
+      // Moves should still be executed; skipMovedHook=true defers lifecycle hooks
+      expect(mockBlockManager.move).toHaveBeenCalledWith(4, 1, false, true);
+      expect(mockBlockManager.move).toHaveBeenCalledWith(3, 0, false, true);
       expect(result.movedBlocks).toEqual([block1, block2]);
       expect(result.targetIndex).toBe(5);
     });
@@ -481,6 +481,7 @@ const createMockBlock = (
     holder,
     contentIds,
     parentId,
+    call: vi.fn(),
     save: vi.fn(async (): Promise<SavedData & { tunes: { [name: string]: unknown } } | undefined> => ({
       id,
       tool: name,

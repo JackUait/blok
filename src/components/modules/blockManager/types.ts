@@ -109,5 +109,5 @@ export type BlocksStore = Blocks & {
   [index: number]: Block | undefined;
   insert(index: number, block: Block, replace?: boolean, appendToWorkingArea?: boolean): void;
   remove(index: number): void;
-  move(toIndex: number, fromIndex: number, skipDOM?: boolean): void;
+  move(toIndex: number, fromIndex: number, skipDOM?: boolean, skipMovedHook?: boolean): void;
 };

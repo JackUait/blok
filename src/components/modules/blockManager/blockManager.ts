@@ -922,9 +922,9 @@ export class BlockManager extends Module {
   /**
    * Move a block to a new index
    */
-  public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false): void {
+  public move(toIndex: number, fromIndex: number = this.currentBlockIndex, skipDOM = false, skipMovedHook = false): void {
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    this.operations.move(toIndex, fromIndex, skipDOM, this.blocksStore);
+    this.operations.move(toIndex, fromIndex, skipDOM, this.blocksStore, skipMovedHook);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
   }
 

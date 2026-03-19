@@ -117,21 +117,13 @@ export class BlockRepository {
       return undefined;
     }
 
-    const nodes = this.blocksStore.nodes;
-
     const firstLevelBlock = normalizedElement.closest(createSelector(DATA_ATTR.element));
 
     if (!firstLevelBlock) {
       return undefined;
     }
 
-    const index = nodes.indexOf(firstLevelBlock as HTMLElement);
-
-    if (index >= 0) {
-      return this.blocksStore[index];
-    }
-
-    return undefined;
+    return this.blocks.find((block) => block.holder === firstLevelBlock);
   }
 
   /**

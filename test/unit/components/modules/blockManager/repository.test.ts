@@ -323,6 +323,60 @@ describe('BlockRepository', () => {
 
       expect(block).toBeUndefined();
     });
+
+    it('returns the correct block when nested blocks exist before it in the flat array', () => {
+      /**
+       * Regression test for DOM-index vs array-index mismatch.
+       *
+       * Setup: 3 blocks in the flat array, but only 2 as direct workingArea children:
+       *   blocks[0] = rootBlock1  (direct workingArea child, DOM index 0)
+       *   blocks[1] = nestedBlock (inside rootBlock1's toggle container — NOT a workingArea child)
+       *   blocks[2] = rootBlock2  (direct workingArea child, DOM index 1)
+       *
+       * The buggy implementation looks up rootBlock2.holder in workingArea.children,
+       * finds it at DOM index 1, and returns blocks[1] (nestedBlock) — WRONG.
+       * The correct implementation uses identity comparison and returns blocks[2] (rootBlock2).
+       */
+      const localWorkingArea = document.createElement('div');
+      document.body.appendChild(localWorkingArea);
+
+      const localBlocksStore = new Blocks(localWorkingArea);
+      const handler: ProxyHandler<Blocks> = {
+        set: Blocks.set,
+        get: Blocks.get,
+      };
+      const proxiedStore = new Proxy(localBlocksStore, handler) as unknown as BlocksStore;
+
+      // rootBlock1: a toggle-like block whose holder is a direct workingArea child
+      const rootBlock1 = createMockBlock({ id: 'root-1' });
+      localWorkingArea.appendChild(rootBlock1.holder);
+      localBlocksStore.blocks.push(rootBlock1);
+
+      // nestedBlock: its holder lives inside rootBlock1's holder (simulates a toggle child)
+      const nestedBlock = createMockBlock({ id: 'nested-1' });
+      rootBlock1.holder.appendChild(nestedBlock.holder);
+      localBlocksStore.blocks.push(nestedBlock);
+
+      // rootBlock2: a direct workingArea child — DOM index 1, but array index 2
+      const rootBlock2 = createMockBlock({ id: 'root-2' });
+      localWorkingArea.appendChild(rootBlock2.holder);
+      localBlocksStore.blocks.push(rootBlock2);
+
+      repository.initialize(proxiedStore);
+
+      // Sanity: workingArea has only 2 direct children (root-1 and root-2)
+      expect(localWorkingArea.children).toHaveLength(2);
+      // Sanity: flat array has all 3 blocks
+      expect(localBlocksStore.blocks).toHaveLength(3);
+
+      const result = repository.getBlock(rootBlock2.holder);
+
+      // Must return rootBlock2, not nestedBlock
+      expect(result).toBe(rootBlock2);
+      expect(result?.id).toBe('root-2');
+
+      localWorkingArea.remove();
+    });
   });
 
   describe('getBlockByChildNode', () => {

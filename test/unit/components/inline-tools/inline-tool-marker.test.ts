@@ -1627,5 +1627,45 @@ describe('MarkerInlineTool', () => {
 
       expect(markerBtn.style.backgroundColor).toBe('');
     });
+
+    it('reapplies text color to toolbar button via isActive() when toolbar reopens on colored selection', () => {
+      // Simulate a mark with text color that exists in the DOM (previously applied)
+      container.innerHTML = `<mark style="color: ${RED.text}; background-color: transparent">hello</mark>`;
+
+      const markEl = container.querySelector('mark')!;
+      const range = document.createRange();
+
+      range.selectNodeContents(markEl);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      // Fresh tool instance simulates toolbar reopen (InlineToolbar destroys and recreates all)
+      const reopenedTool = new MarkerInlineTool({ api: createMockApi() as never, config: undefined });
+      const config = reopenedTool.render() as PopoverItemDefaultBaseParams;
+      const isActiveFn = config.isActive as () => boolean;
+
+      isActiveFn();
+
+      expect(markerBtn.style.color).toBe(hexToRgb(RED.text));
+    });
+
+    it('reapplies background color to toolbar button via isActive() when toolbar reopens on colored selection', () => {
+      container.innerHTML = `<mark style="background-color: ${ORANGE.bg}">hello</mark>`;
+
+      const markEl = container.querySelector('mark')!;
+      const range = document.createRange();
+
+      range.selectNodeContents(markEl);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      const reopenedTool = new MarkerInlineTool({ api: createMockApi() as never, config: undefined });
+      const config = reopenedTool.render() as PopoverItemDefaultBaseParams;
+      const isActiveFn = config.isActive as () => boolean;
+
+      isActiveFn();
+
+      expect(markerBtn.style.backgroundColor).toBe(hexToRgb(ORANGE.bg));
+    });
   });
 });

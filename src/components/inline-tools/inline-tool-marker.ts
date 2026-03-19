@@ -192,8 +192,15 @@ export class MarkerInlineTool implements InlineTool {
         }
 
         const range = selection.getRangeAt(0);
+        const formatted = isRangeFormatted(range, isMarkTag, { ignoreWhitespace: true });
 
-        return isRangeFormatted(range, isMarkTag, { ignoreWhitespace: true });
+        if (formatted) {
+          const colors = this.detectBothSelectionColors(range);
+
+          this.updateToolbarColors(colors.text, colors.bg);
+        }
+
+        return formatted;
       },
       children: {
         hideChevron: true,
@@ -451,6 +458,37 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     this.selection.clearSaved();
+  }
+
+  /**
+   * Detect both text and background colors from the mark at the start of a range.
+   * Uses the raw inline style value directly. CSS variables are passed through and
+   * resolve correctly in a real browser; resolved rgb values are used as-is.
+   * @param range - The selection range to inspect
+   */
+  private detectBothSelectionColors(range: Range): { text: string | null; bg: string | null } {
+    const mark = findMarkElement(range.startContainer);
+
+    if (!mark) {
+      return { text: null, bg: null };
+    }
+
+    let text: string | null = null;
+    let bg: string | null = null;
+
+    const rawTextColor = mark.style.getPropertyValue('color');
+
+    if (rawTextColor && rawTextColor !== 'transparent') {
+      text = rawTextColor;
+    }
+
+    const rawBgColor = mark.style.getPropertyValue('background-color');
+
+    if (rawBgColor && rawBgColor !== 'transparent') {
+      bg = rawBgColor;
+    }
+
+    return { text, bg };
   }
 
   /**

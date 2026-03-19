@@ -127,9 +127,19 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
   }
 
   /**
-   * Insert Blok JSON blocks.
-   * After inserting all blocks, restores parent-child hierarchy using an ID mapping
-   * (pasted blocks receive new IDs, so original IDs are mapped to new block instances).
+   * Insert Blok JSON blocks using a two-pass approach:
+   *
+   * Pass 1 — child blocks (those whose parentId is within the pasted set) are
+   * inserted first.  They receive new IDs, which are recorded in a map.
+   *
+   * Pass 2 — root/container blocks (e.g. tables) are inserted with their data
+   * remapped so that any old child-block ID references are replaced by the new
+   * IDs from Pass 1.  This prevents container tools (TableCellBlocks) from
+   * resolving old IDs that still exist in the editor and stealing blocks from
+   * the original table.
+   *
+   * After both passes the parent-child hierarchy is re-established using the
+   * accumulated old→new ID mapping.
    */
   private insertBlokBlocks(
     blocks: BlokClipboardBlock[],
@@ -142,31 +152,70 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       this.config.sanitizer
     );
 
+    // Capture replace intent before any insertions move the current block pointer.
+    const shouldReplaceFirst =
+      canReplace &&
+      Boolean(BlockManager.currentBlock?.tool.isDefault) &&
+      Boolean(BlockManager.currentBlock?.isEmpty);
+
+    // Set of old IDs present in this paste, used to identify parent-child pairs.
+    const pastedOldIds = new Set(blocks.map(b => b.id));
+
+    type Entry = { sanitized: (typeof sanitizedBlocks)[number]; original: BlokClipboardBlock };
+    const children: Entry[] = [];
+    const roots: Entry[] = [];
+
+    sanitizedBlocks.forEach((sanitizedBlock, i) => {
+      const original = blocks[i];
+
+      if (original === undefined) {
+        return;
+      }
+
+      const isChild =
+        original.parentId !== undefined &&
+        original.parentId !== null &&
+        pastedOldIds.has(original.parentId);
+
+      (isChild ? children : roots).push({ sanitized: sanitizedBlock, original });
+    });
+
     /**
      * Map from original (old) block ID to the newly inserted Block instance.
-     * Used after insertion to re-establish parent-child relationships.
+     * Used to remap data and restore hierarchy after both passes.
      */
     const oldIdToEntry = new Map<string, { newBlock: Block; original: BlokClipboardBlock }>();
 
-    sanitizedBlocks.forEach((sanitizedBlock, i) => {
-      const { tool, data } = sanitizedBlock;
-      const needToReplaceCurrentBlock = i === 0 &&
-        canReplace &&
-        Boolean(BlockManager.currentBlock?.tool.isDefault) &&
-        Boolean(BlockManager.currentBlock?.isEmpty);
+    // Pass 1: insert children first so they exist with new IDs before the parent.
+    children.forEach(({ sanitized, original }) => {
+      const block = BlockManager.insert({ tool: sanitized.tool, data: sanitized.data });
+
+      oldIdToEntry.set(original.id, { newBlock: block, original });
+      Caret.setToBlock(block, Caret.positions.END);
+    });
+
+    // Build old→new string map for remapping ID references inside parent data.
+    const oldIdToNewId = new Map<string, string>();
+
+    for (const [oldId, { newBlock }] of oldIdToEntry) {
+      oldIdToNewId.set(oldId, newBlock.id);
+    }
+
+    // Pass 2: insert root blocks with child IDs remapped in their data.
+    // Skip replace when children were pre-inserted to avoid replacing a
+    // just-inserted child paragraph rather than the original empty block.
+    roots.forEach(({ sanitized, original }, idx) => {
+      const remappedData = oldIdToNewId.size > 0
+        ? remapIds(sanitized.data, oldIdToNewId) as typeof sanitized.data
+        : sanitized.data;
 
       const block = BlockManager.insert({
-        tool,
-        data,
-        replace: needToReplaceCurrentBlock,
+        tool: sanitized.tool,
+        data: remappedData,
+        replace: idx === 0 && shouldReplaceFirst && children.length === 0,
       });
 
-      const originalBlock = blocks[i];
-
-      if (originalBlock !== undefined) {
-        oldIdToEntry.set(originalBlock.id, { newBlock: block, original: originalBlock });
-      }
-
+      oldIdToEntry.set(original.id, { newBlock: block, original });
       Caret.setToBlock(block, Caret.positions.END);
     });
 
@@ -192,4 +241,32 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       }
     }
   }
+}
+
+/**
+ * Recursively walks `value` and replaces any string found as a key in `idMap`
+ * with its mapped value.  Used to remap old block IDs to new IDs within a
+ * tool's data object before insertion, so that container blocks (e.g. tables)
+ * reference the correct newly-inserted child block IDs.
+ */
+function remapIds(value: unknown, idMap: Map<string, string>): unknown {
+  if (typeof value === 'string') {
+    return idMap.get(value) ?? value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(item => remapIds(item, idMap));
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      result[k] = remapIds(v, idMap);
+    }
+
+    return result;
+  }
+
+  return value;
 }

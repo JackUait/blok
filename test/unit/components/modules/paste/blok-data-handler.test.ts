@@ -121,17 +121,83 @@ describe('BlokDataHandler', () => {
       // All three blocks should be inserted
       expect(blockInstances).toHaveLength(3);
 
-      // The newly inserted parent block should have contentIds pointing to new child block IDs
-      const newParent = blockInstances[0];
-      const newChild1 = blockInstances[1];
-      const newChild2 = blockInstances[2];
+      // Children are inserted first (Pass 1), then the parent (Pass 2)
+      const newChild1 = blockInstances[0];
+      const newChild2 = blockInstances[1];
+      const newParent = blockInstances[2];
 
+      // The newly inserted parent block should have contentIds pointing to new child block IDs
       expect(newParent.contentIds).toContain(newChild1.id);
       expect(newParent.contentIds).toContain(newChild2.id);
 
       // The newly inserted child blocks should have parentId pointing to new parent block ID
       expect(newChild1.parentId).toBe(newParent.id);
       expect(newChild2.parentId).toBe(newParent.id);
+    });
+
+    it('remaps old child block IDs in parent data before inserting the parent', async () => {
+      const { modules, insertedBlocks, blockInstances } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      /**
+       * Simulate pasting a table that references old child paragraph IDs in
+       * data.content. The root cause of the "text outside table" bug:
+       * old IDs in data.content referred to blocks already in the editor,
+       * stealing them from the original table instead of using the newly pasted ones.
+       */
+      const pasteData = JSON.stringify([
+        {
+          id: 'table-1',
+          tool: 'table',
+          data: {
+            content: [
+              [{ blocks: ['child-1'] }, { blocks: ['child-2'] }],
+            ],
+            colWidths: [50, 50],
+          },
+          parentId: null,
+          contentIds: ['child-1', 'child-2'],
+        },
+        {
+          id: 'child-1',
+          tool: 'paragraph',
+          data: { text: 'Cell A' },
+          parentId: 'table-1',
+          contentIds: [],
+        },
+        {
+          id: 'child-2',
+          tool: 'paragraph',
+          data: { text: 'Cell B' },
+          parentId: 'table-1',
+          contentIds: [],
+        },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      // Child paragraphs must be inserted BEFORE the table
+      expect(insertedBlocks[0].tool).toBe('paragraph'); // child-1
+      expect(insertedBlocks[1].tool).toBe('paragraph'); // child-2
+      expect(insertedBlocks[2].tool).toBe('table');     // table last
+
+      // new-block-0 = child-1, new-block-1 = child-2 (insertion order)
+      const newChild1Id = blockInstances[0].id;
+      const newChild2Id = blockInstances[1].id;
+
+      // The table must be inserted with remapped IDs — old 'child-1'/'child-2'
+      // replaced by the new IDs assigned during Pass 1 insertion
+      const tableData = insertedBlocks[2].data as {
+        content: Array<Array<{ blocks: string[] }>>;
+      };
+
+      expect(tableData.content[0][0].blocks).toEqual([newChild1Id]);
+      expect(tableData.content[0][1].blocks).toEqual([newChild2Id]);
     });
 
     it('does not modify blocks that have no hierarchy information', async () => {

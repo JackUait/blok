@@ -305,7 +305,7 @@ export class PopoverItemDefault extends PopoverItem {
   private createIconElement(icon: string, iconWithGap: boolean, isInline: boolean, isNestedInline: boolean): HTMLElement {
     const iconEl = document.createElement('div');
 
-    iconEl.className = this.getIconClass(iconWithGap, isInline, isNestedInline, false);
+    iconEl.className = this.getIconClass(iconWithGap, isInline, isNestedInline);
     iconEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
     iconEl.setAttribute('data-blok-testid', 'popover-item-icon');
     iconEl.innerHTML = icon;
@@ -336,15 +336,14 @@ export class PopoverItemDefault extends PopoverItem {
   /**
    * Gets the icon class based on context
    */
-  private getIconClass(iconWithGap: boolean, isInline: boolean, isNestedInline: boolean, isWobbling: boolean): string {
+  private getIconClass(iconWithGap: boolean, isInline: boolean, isNestedInline: boolean): string {
     return twMerge(
       css.icon,
       isInline && 'w-auto h-auto bg-transparent [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
       iconWithGap && 'mr-3',
       iconWithGap && isInline && 'shadow-none mr-0!',
-      iconWithGap && isNestedInline && 'mr-2!',
-      isWobbling && 'animate-wobble'
+      iconWithGap && isNestedInline && 'mr-2!'
     );
   }
 
@@ -639,45 +638,11 @@ export class PopoverItemDefault extends PopoverItem {
         item.onActivate?.(item);
         this.disableConfirmationMode();
       } catch {
-        this.animateError();
+        // onActivate threw an error
       }
     } else {
       this.enableConfirmationMode(item.confirmation);
     }
-  }
-
-  /**
-   * Animates item which symbolizes that error occurred while executing 'onActivate()' callback
-   */
-  private animateError(): void {
-    this.triggerWobble();
-  }
-
-  /**
-   * Triggers wobble animation on the icon
-   */
-  private triggerWobble(): void {
-    if (!this.nodes.icon) {
-      return;
-    }
-
-    const isInline = this.renderParams?.isInline ?? false;
-    const isNestedInline = this.renderParams?.isNestedInline ?? false;
-    const iconWithGap = this.renderParams?.iconWithGap ?? true;
-
-    // Add wobble class
-    this.nodes.icon.setAttribute(DATA_ATTR.popoverItemWobble, 'true');
-    this.nodes.icon.className = this.getIconClass(iconWithGap, isInline, isNestedInline, true);
-
-    // Remove wobble after animation ends
-    const handleAnimationEnd = (): void => {
-      if (this.nodes.icon) {
-        this.nodes.icon.removeAttribute(DATA_ATTR.popoverItemWobble);
-        this.nodes.icon.className = this.getIconClass(iconWithGap, isInline, isNestedInline, false);
-      }
-    };
-
-    this.nodes.icon.addEventListener('animationend', handleAnimationEnd, { once: true });
   }
 
   /**

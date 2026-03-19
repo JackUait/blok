@@ -129,24 +129,6 @@ describe('PopoverItemDefault', () => {
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemConfirmation);
   });
 
-  it('animates error when onActivate throws', () => {
-    const onActivate = vi.fn(() => {
-      throw new Error('activation failed');
-    });
-    const { item, element } = createItem({ onActivate });
-    const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
-
-    expect(icon).not.toBeNull();
-
-    item.handleClick();
-
-    expect(onActivate).toHaveBeenCalledTimes(1);
-    expect(icon?.getAttribute(DATA_ATTR.popoverItemWobble)).toBe('true');
-
-    icon?.dispatchEvent(new Event('animationend'));
-
-    expect(icon?.hasAttribute(DATA_ATTR.popoverItemWobble)).toBe(false);
-  });
 
   it('enters confirmation mode on first click and executes confirmation on second click', () => {
     const confirmationActivate = vi.fn();

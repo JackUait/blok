@@ -12,7 +12,7 @@ export const css = {
   popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] left-auto top-auto inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
 
   // Popover container - opened state
-  popoverContainerOpened: 'opacity-100 pointer-events-auto p-1.5 max-h-(--max-height) border-none animate-panel-showing',
+  popoverContainerOpened: 'opacity-100 pointer-events-auto p-1.5 max-h-(--max-height) border-none',
 
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',

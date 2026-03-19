@@ -1035,15 +1035,6 @@ export class PopoverDesktop extends PopoverAbstract {
 
     const isNothingFound = matchingTopLevel.length === 0 && data.promotedItems.length === 0;
 
-    /**
-     * When nothing is found, disable transitions so items hide instantly.
-     */
-    if (isNothingFound) {
-      this.items.forEach(item => {
-        item.getElement()?.style.setProperty('transition-duration', '0s');
-      });
-    }
-
     this.items
       .forEach((item) => {
         const isDefaultItem = item instanceof PopoverItemDefault;
@@ -1054,13 +1045,6 @@ export class PopoverDesktop extends PopoverAbstract {
 
         item.toggleHidden(isHidden);
       });
-
-    if (isNothingFound) {
-      this.nodes.popoverContainer.offsetHeight;
-      this.items.forEach(item => {
-        item.getElement()?.style.removeProperty('transition-duration');
-      });
-    }
 
     // Reorder top-level DOM elements to reflect ranking
     if (!isEmptyQuery && matchingTopLevel.length > 0) {

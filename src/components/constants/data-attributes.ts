@@ -161,8 +161,6 @@ export const DATA_ATTR = {
   popoverItemNoHover: 'data-blok-popover-item-no-hover',
   /** Disable focus handling */
   popoverItemNoFocus: 'data-blok-popover-item-no-focus',
-  /** Wobble animation */
-  popoverItemWobble: 'data-blok-popover-item-wobble',
   /** Destructive action item (e.g. delete) */
   popoverItemDestructive: 'data-blok-popover-item-destructive',
   /** Separator item */

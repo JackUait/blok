@@ -391,11 +391,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   protected toggleNothingFoundMessage(isDisplayed: boolean): void {
     if (isDisplayed) {
       this.nodes.nothingFoundMessage.classList.remove('hidden');
-      this.nodes.nothingFoundMessage.classList.add('animate-[fade-in_150ms_ease_forwards]');
       this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
     } else {
       this.nodes.nothingFoundMessage.classList.add('hidden');
-      this.nodes.nothingFoundMessage.classList.remove('animate-[fade-in_150ms_ease_forwards]');
       this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
     }
   }

@@ -881,7 +881,7 @@ test.describe('inline tool marker', () => {
         (window as any).blokInstance.theme.set('light');
       });
 
-      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
       await selectText(paragraph, 'Hello');
       await openMarkerPicker(page);
@@ -901,7 +901,7 @@ test.describe('inline tool marker', () => {
         return mark ? window.getComputedStyle(mark).color : null;
       });
 
-      expect(lightColor).toBeTruthy();
+      expect(lightColor).not.toBeNull();
 
       // Switch to dark mode
       await page.evaluate(() => {
@@ -915,7 +915,7 @@ test.describe('inline tool marker', () => {
         return mark ? window.getComputedStyle(mark).color : null;
       });
 
-      expect(darkColor).toBeTruthy();
+      expect(darkColor).not.toBeNull();
       // Colors must differ — dark theme uses a different hex for red (#df5452 vs #d44c47)
       expect(darkColor).not.toBe(lightColor);
     });
@@ -932,12 +932,13 @@ test.describe('inline tool marker', () => {
       ]);
 
       // After render, migrateMarkColors should have replaced the raw hex with a CSS var
-      const inlineColor = await page.evaluate(() => {
-        const mark = document.querySelector('[data-blok-interface] mark') as HTMLElement;
+      const inlineColor = await page.evaluate((selector) => {
+        const mark = document.querySelector(selector + ' mark') as HTMLElement;
 
         return mark ? mark.style.getPropertyValue('color') : null;
-      });
+      }, BLOK_INTERFACE_SELECTOR);
 
+      expect(inlineColor).not.toBeNull();
       expect(inlineColor).toBe('var(--blok-color-red-text)');
     });
   });

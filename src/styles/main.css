@@ -491,7 +491,7 @@
   --spacing-block-padding-vertical: 0.4em;
 
   /* Max-width */
-  --max-width-content: 650px;
+  --max-width-content: 720px;
 
   /* Font family */
   --font-mono: 'PT Mono', 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseColor, mapToNearestPresetColor } from '../../../../src/components/utils/color-mapping';
+import { parseColor, mapToNearestPresetColor, mapToNearestPresetName } from '../../../../src/components/utils/color-mapping';
 
 describe('parseColor', () => {
   it('parses 6-digit hex color', () => {
@@ -192,5 +192,47 @@ describe('mapToNearestPresetColor', () => {
 
   it('maps 4-digit hex red to Blok red bg preset', () => {
     expect(mapToNearestPresetColor('#f008', 'bg')).toBe('#fdebec');
+  });
+});
+
+describe('mapToNearestPresetName', () => {
+  it('returns name for exact light-preset text hex', () => {
+    expect(mapToNearestPresetName('#d44c47', 'text')).toBe('red');
+  });
+
+  it('returns name for exact light-preset bg hex', () => {
+    expect(mapToNearestPresetName('#fdebec', 'bg')).toBe('red');
+  });
+
+  it('returns name for exact dark-preset text hex', () => {
+    expect(mapToNearestPresetName('#df5452', 'text')).toBe('red');
+  });
+
+  it('returns name for exact dark-preset bg hex', () => {
+    expect(mapToNearestPresetName('#522e2a', 'bg')).toBe('red');
+  });
+
+  it('maps near-miss blue text hex to blue', () => {
+    expect(mapToNearestPresetName('#0000ff', 'text')).toBe('blue');
+  });
+
+  it('maps near-miss green text hex to green', () => {
+    expect(mapToNearestPresetName('#00ff00', 'text')).toBe('green');
+  });
+
+  it('returns null for unparseable input', () => {
+    expect(mapToNearestPresetName('not-a-color', 'text')).toBeNull();
+  });
+
+  it('returns null for empty string', () => {
+    expect(mapToNearestPresetName('', 'text')).toBeNull();
+  });
+
+  it('maps dark blue preset hex to blue name', () => {
+    expect(mapToNearestPresetName('#5e87c9', 'text')).toBe('blue');
+  });
+
+  it('maps dark green bg preset hex to green name', () => {
+    expect(mapToNearestPresetName('#243d30', 'bg')).toBe('green');
   });
 });

@@ -1,4 +1,4 @@
-import { COLOR_PRESETS } from '../shared/color-presets';
+import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../shared/color-presets';
 
 /**
  * Convert an HSL color (H in degrees, S and L as 0-100 percentages) to an RGB tuple.
@@ -238,4 +238,46 @@ export function mapToNearestPresetColor(cssColor: string, mode: 'text' | 'bg'): 
   );
 
   return best.color;
+}
+
+/**
+ * Map an arbitrary CSS color to the name of the nearest Blok preset color.
+ *
+ * Searches both light and dark presets to correctly recover the semantic name
+ * from hex values that originated in either theme. First match wins on ties.
+ *
+ * @param cssColor - CSS color string (hex or rgb)
+ * @param mode - 'text' for text color presets, 'bg' for background presets
+ * @returns the nearest preset name (e.g. 'red'), or null if unparseable
+ */
+export function mapToNearestPresetName(cssColor: string, mode: 'text' | 'bg'): string | null {
+  const rgb = parseColor(cssColor);
+
+  if (rgb === null) {
+    return null;
+  }
+
+  const hsl = rgbToHsl(rgb);
+  const allPresets = [...COLOR_PRESETS, ...COLOR_PRESETS_DARK];
+
+  const best = allPresets.reduce<{ name: string; distance: number } | null>(
+    (acc, preset) => {
+      const presetRgb = parseColor(preset[mode]);
+
+      if (presetRgb === null) {
+        return acc;
+      }
+
+      const distance = hslDistance(hsl, rgbToHsl(presetRgb));
+
+      if (acc === null || distance < acc.distance) {
+        return { name: preset.name, distance };
+      }
+
+      return acc;
+    },
+    null
+  );
+
+  return best?.name ?? null;
 }

@@ -1536,4 +1536,96 @@ describe('MarkerInlineTool', () => {
       expect(setActiveColorSpy).not.toHaveBeenCalledWith('rgb(55, 53, 47)', 'color');
     });
   });
+
+  describe('toolbar button color bar', () => {
+    const RED = COLOR_PRESETS.find((p) => p.name === 'red')!;
+    const ORANGE = COLOR_PRESETS.find((p) => p.name === 'orange')!;
+
+    let markerBtn: HTMLButtonElement;
+    let pickerEl: HTMLElement;
+
+    beforeEach(() => {
+      markerBtn = document.createElement('button');
+      markerBtn.setAttribute('data-blok-item-name', 'marker');
+      document.body.appendChild(markerBtn);
+
+      const config = tool.render();
+      pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
+      document.body.appendChild(pickerEl);
+    });
+
+    afterEach(() => {
+      markerBtn.remove();
+      pickerEl.remove();
+    });
+
+    it('sets --blok-marker-bar on the toolbar button after clicking a text color swatch', () => {
+      container.innerHTML = 'hello';
+      const range = document.createRange();
+
+      range.setStart(container.firstChild!, 0);
+      range.setEnd(container.firstChild!, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-red"]')!.click();
+
+      expect(markerBtn.style.getPropertyValue('--blok-marker-bar')).toBe(RED.text);
+    });
+
+    it('sets --blok-marker-bar to the bg color after clicking a bg color swatch with no text color active', () => {
+      container.innerHTML = 'hello';
+      const range = document.createRange();
+
+      range.setStart(container.firstChild!, 0);
+      range.setEnd(container.firstChild!, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-red"]')!.click();
+
+      expect(markerBtn.style.getPropertyValue('--blok-marker-bar')).toBe(RED.bg);
+    });
+
+    it('clears --blok-marker-bar when default text color swatch is clicked and no bg color is active', () => {
+      container.innerHTML = 'hello';
+      const range = document.createRange();
+
+      range.setStart(container.firstChild!, 0);
+      range.setEnd(container.firstChild!, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      // Apply text color first — this sets the bar
+      pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-red"]')!.click();
+      expect(markerBtn.style.getPropertyValue('--blok-marker-bar')).not.toBe('');
+
+      // Click default — no bg active, bar should clear
+      pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-default"]')!.click();
+
+      expect(markerBtn.style.getPropertyValue('--blok-marker-bar')).toBe('');
+    });
+
+    it('keeps text color as bar indicator when a bg color is subsequently applied', () => {
+      container.innerHTML = 'hello';
+      const range = document.createRange();
+
+      range.setStart(container.firstChild!, 0);
+      range.setEnd(container.firstChild!, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      // Apply text color first
+      pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-red"]')!.click();
+
+      // Apply bg color (restoreSelectionIfSaved restores mark selection)
+      pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-orange"]')!.click();
+
+      // Bar should stay on text color
+      expect(markerBtn.style.getPropertyValue('--blok-marker-bar')).toBe(RED.text);
+
+      // Sanity: the two colors are different (orange bg ≠ red text)
+      expect(RED.text).not.toBe(ORANGE.bg);
+    });
+  });
 });

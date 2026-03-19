@@ -125,6 +125,16 @@ export class MarkerInlineTool implements InlineTool {
   private colorMode: ColorMode = 'color';
 
   /**
+   * Active text color for bar indicator (null = default/none)
+   */
+  private activeTextColor: string | null = null;
+
+  /**
+   * Active background color for bar indicator (null = default/none)
+   */
+  private activeBgColor: string | null = null;
+
+  /**
    * The color picker handle with element and control methods
    */
   private picker: ColorPickerHandle;
@@ -152,6 +162,14 @@ export class MarkerInlineTool implements InlineTool {
         } else {
           this.removeColor(this.colorMode);
         }
+
+        if (modeKey === 'color') {
+          this.activeTextColor = color;
+        } else {
+          this.activeBgColor = color;
+        }
+
+        this.updateToolbarColorBar(this.activeTextColor ?? this.activeBgColor);
 
         // After a text color change, refresh the background-tab preview so
         // the "A" labels reflect the new color when the user switches tabs.
@@ -384,6 +402,9 @@ export class MarkerInlineTool implements InlineTool {
    * and detect the current selection's color to highlight the active swatch.
    */
   private onPickerOpen(): void {
+    this.activeTextColor = null;
+    this.activeBgColor = null;
+
     this.picker.reset();
     this.picker.setPreviewTextColor(this.getSelectionComputedColor());
     this.picker.setPreviewBgColor(this.getSelectionMarkBgColor());
@@ -392,10 +413,38 @@ export class MarkerInlineTool implements InlineTool {
 
     if (activeColor) {
       this.picker.setActiveColor(activeColor.value, activeColor.mode);
+
+      if (activeColor.mode === 'color') {
+        this.activeTextColor = activeColor.value;
+      } else {
+        this.activeBgColor = activeColor.value;
+      }
     }
+
+    this.updateToolbarColorBar(this.activeTextColor ?? this.activeBgColor);
 
     this.selection.setFakeBackground();
     this.selection.save();
+  }
+
+  /**
+   * Update the color bar on the inline toolbar marker button.
+   * Sets --blok-marker-bar on the button element so the SVG rect reflects the active color.
+   * Text color takes priority over background color.
+   * @param color - CSS color value or null to reset to currentColor
+   */
+  private updateToolbarColorBar(color: string | null): void {
+    const btn = document.querySelector<HTMLElement>('[data-blok-item-name="marker"]');
+
+    if (!btn) {
+      return;
+    }
+
+    if (color !== null) {
+      btn.style.setProperty('--blok-marker-bar', color);
+    } else {
+      btn.style.removeProperty('--blok-marker-bar');
+    }
   }
 
   /**

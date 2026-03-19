@@ -15,6 +15,8 @@ import {
 } from './utils/formatting-range-utils';
 import { createColorPicker } from '../shared/color-picker';
 import type { ColorPickerHandle } from '../shared/color-picker';
+import { colorVarName } from '../shared/color-presets';
+import { mapToNearestPresetName } from '../utils/color-mapping';
 
 /**
  * Color mode type — either text color or background color
@@ -227,6 +229,8 @@ export class MarkerInlineTool implements InlineTool {
       return;
     }
 
+    const resolvedValue = this.resolveToVar(value, mode);
+
     /**
      * Check if the entire selection is already inside a single mark element
      */
@@ -245,7 +249,7 @@ export class MarkerInlineTool implements InlineTool {
         range.compareBoundaryPoints(Range.END_TO_END, markRange) >= 0;
 
       if (coversAll) {
-        existingMark.style.setProperty(mode, value);
+        existingMark.style.setProperty(mode, resolvedValue);
         this.ensureTransparentBg(existingMark);
 
         return;
@@ -255,7 +259,7 @@ export class MarkerInlineTool implements InlineTool {
        * Partial selection: split the mark around the selection
        * so the new color applies only to the selected text
        */
-      this.splitMarkAroundRange(existingMark, range, mode, value);
+      this.splitMarkAroundRange(existingMark, range, mode, resolvedValue);
 
       return;
     }
@@ -273,7 +277,7 @@ export class MarkerInlineTool implements InlineTool {
 
     const mark = document.createElement('mark');
 
-    mark.style.setProperty(mode, value);
+    mark.style.setProperty(mode, resolvedValue);
     this.ensureTransparentBg(mark);
     mark.appendChild(range.extractContents());
     range.insertNode(mark);
@@ -420,13 +424,13 @@ export class MarkerInlineTool implements InlineTool {
       return null;
     }
 
-    const textColor = mark.style.getPropertyValue('color');
+    const textColor = window.getComputedStyle(mark).getPropertyValue('color');
 
     if (textColor && textColor !== 'transparent') {
       return { value: textColor, mode: 'color' };
     }
 
-    const bgColor = mark.style.getPropertyValue('background-color');
+    const bgColor = window.getComputedStyle(mark).getPropertyValue('background-color');
 
     if (bgColor && bgColor !== 'transparent') {
       return { value: bgColor, mode: 'background-color' };
@@ -802,5 +806,22 @@ export class MarkerInlineTool implements InlineTool {
     ) {
       mark.style.setProperty('background-color', 'transparent');
     }
+  }
+
+  /**
+   * Translate a raw hex color value to its CSS custom property equivalent.
+   * If the value is already a CSS var or cannot be mapped, returns it unchanged.
+   * @param value - CSS color value from the picker
+   * @param mode - 'color' or 'background-color'
+   */
+  private resolveToVar(value: string, mode: ColorMode): string {
+    if (value.startsWith('var(')) {
+      return value;
+    }
+
+    const presetMode = mode === 'color' ? 'text' : 'bg';
+    const name = mapToNearestPresetName(value, presetMode);
+
+    return name !== null ? colorVarName(name, presetMode) : value;
   }
 }

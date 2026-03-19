@@ -372,6 +372,31 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
+  it('does not hardcode convert-to children width so the nested popover fits any language text', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    getConvertibleToolsForBlockMock.mockResolvedValue([{
+      name: 'header',
+      toolbox: [{ icon: '<svg/>', title: 'Heading', name: 'heading' }],
+    }]);
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const items = (popover?.params as { items: PopoverItemParams[] })?.items;
+    const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
+
+    expect((convertToItem as { children?: { width?: string } } | undefined)?.children?.width).toBeUndefined();
+  });
+
   it('falls back to current block and instantiates mobile popover without focusing flipper', async () => {
     blockSettings.make();
 

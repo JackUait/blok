@@ -1786,6 +1786,35 @@ describe('TableCellSelection', () => {
       // Check that popover items do NOT include a Color entry
       expect(lastPopoverArgs?.items?.some((item: MockPopoverItem) => item.title === 'tools.table.cellColor')).toBe(false);
     });
+
+    it('does not hardcode cell color children width so the nested popover fits any language text', () => {
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onColorChange: vi.fn(),
+      });
+
+      const cell = grid.querySelector(`[${CELL_ATTR}]`) as HTMLElement;
+      const cellRect = cell.getBoundingClientRect();
+
+      cell.dispatchEvent(new PointerEvent('pointerdown', {
+        clientX: cellRect.left + 5,
+        clientY: cellRect.top + 5,
+        bubbles: true,
+        button: 0,
+      }));
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      pill.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      const items = lastPopoverArgs?.items as Array<{ name?: string; children?: { width?: string } }>;
+      const cellColorItem = items?.find(item => item.name === 'cellColor');
+
+      expect(cellColorItem?.children?.width).toBeUndefined();
+    });
   });
 
   describe('isPopoverOpen guard', () => {

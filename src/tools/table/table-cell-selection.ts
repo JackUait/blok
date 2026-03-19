@@ -740,7 +740,6 @@ export class TableCellSelection {
             element: pickerElement,
           }],
           isFlippable: false,
-          width: '12.5rem',
         },
       });
     }

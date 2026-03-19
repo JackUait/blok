@@ -144,6 +144,13 @@ describe('LinkInlineTool', () => {
     expect(renderResult).toHaveProperty('children');
   });
 
+  it('does not hardcode children width so the link popover fits any language text', () => {
+    const { tool } = createTool();
+    const config = tool.render() as unknown as { children: { width?: string } };
+
+    expect(config.children.width).toBeUndefined();
+  });
+
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
     const { tool } = createTool();
     const enterSpy = vi.spyOn(tool as unknown as { enterPressed(event: KeyboardEvent): void }, 'enterPressed');

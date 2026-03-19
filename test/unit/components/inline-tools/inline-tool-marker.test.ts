@@ -60,6 +60,12 @@ describe('MarkerInlineTool', () => {
     expect(config).toHaveProperty('children');
   });
 
+  it('does not hardcode children width so the color picker popover fits any language text', () => {
+    const config = tool.render() as unknown as { children: { width?: string } };
+
+    expect(config.children.width).toBeUndefined();
+  });
+
   describe('isActive', () => {
     it('returns false when no selection', () => {
       vi.spyOn(window, 'getSelection').mockReturnValue(null);

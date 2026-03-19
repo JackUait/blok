@@ -192,7 +192,6 @@ export class MarkerInlineTool implements InlineTool {
       },
       children: {
         hideChevron: true,
-        width: '200px',
         items: [
           {
             type: PopoverItemType.Html,

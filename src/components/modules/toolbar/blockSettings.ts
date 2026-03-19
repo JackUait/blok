@@ -396,7 +396,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         title: this.Blok.I18n.t('popover.convertTo'),
         children: {
           items: convertToItems,
-          width: '200px',
         },
       });
       items.push({

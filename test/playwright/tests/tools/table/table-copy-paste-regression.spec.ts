@@ -244,7 +244,10 @@ test.describe('Table copy-paste regression', () => {
     await expect(tables).toHaveCount(2, { timeout: 5000 });
 
     // --- Step 5: Verify pasted table has correct cell content ---
-    const pastedTable = tables.nth(1);
+    // Insertion order: children are inserted first (Pass 1), then the pasted table
+    // (Pass 2) — all before the original table in the block list.
+    // DOM order: nth(0) = pasted table, nth(1) = original table.
+    const pastedTable = tables.nth(0);
     const pastedCells = pastedTable.locator(CELL_SELECTOR);
 
     await expect(pastedCells).toHaveCount(4);
@@ -269,7 +272,7 @@ test.describe('Table copy-paste regression', () => {
     }
 
     // --- Step 7: Verify original table still has its content ---
-    const originalTable = tables.nth(0);
+    const originalTable = tables.nth(1);
     const originalCells = originalTable.locator(CELL_SELECTOR);
 
     await expect(originalCells).toHaveCount(4);

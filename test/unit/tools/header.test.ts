@@ -1181,3 +1181,53 @@ describe('Header Tool - setData() for undo/redo', () => {
     expect(result).toBe(true);
   });
 });
+
+describe('Header Tool - Notion-matching typography', () => {
+  it('H1 uses text-3xl font size (30px) matching Notion heading 1', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 1 });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.className).toContain('text-3xl');
+  });
+
+  it('H2 uses text-2xl font size (24px) matching Notion heading 2', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 2 });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.className).toContain('text-2xl');
+  });
+
+  it('H3 uses text-xl font size (20px) matching Notion heading 3', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 3 });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.className).toContain('text-xl');
+  });
+
+  it('H4 uses text-lg font size (18px) to maintain hierarchy below H3', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 4 });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.className).toContain('text-lg');
+  });
+
+  it('H2 uses mt-[26px] top margin matching Notion (1.1em × 24px = 26.4px)', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 2 });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.className).toContain('mt-[26px]');
+  });
+
+  it('H3 uses mt-5 top margin matching Notion (1em × 20px = 20px)', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 3 });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.className).toContain('mt-5');
+  });
+});

@@ -682,6 +682,16 @@ describe('TableGrid', () => {
     });
   });
 
+  describe('cell line-height', () => {
+    it('cell has line-height 1 (leading-none) matching Notion table cell', () => {
+      const grid = new TableGrid({ readOnly: false });
+      const element = grid.createGrid(1, 1);
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      expect(cell).toHaveClass('leading-none');
+    });
+  });
+
   describe('table cell block height in readonly mode', () => {
     it('main.css applies min-height to .blok-block inside table cells so empty cells match edit-mode height', () => {
       const mainCss = readFileSync(

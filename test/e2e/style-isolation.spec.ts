@@ -218,7 +218,7 @@ test.describe('Style isolation', () => {
 
   /**
    * Regression test: Header tool heading elements must render with their own
-   * Tailwind-defined font sizes (text-4xl → 2.25rem for H1, text-sm → 0.875rem for H6).
+   * Tailwind-defined font sizes (text-3xl → 1.875rem for H1, text-sm → 0.875rem for H6).
    *
    * Root cause of regression: `font-size: inherit !important` in the heading reset
    * block of main.css overrides Tailwind utility classes, making all heading levels
@@ -238,7 +238,7 @@ test.describe('Style isolation', () => {
       .locator(`${BLOK_INTERFACE_SELECTOR} h6`)
       .evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
 
-    // H1 is text-4xl (2.25rem ≈ 36px), H6 is text-sm (0.875rem ≈ 14px).
+    // H1 is text-3xl (1.875rem ≈ 30px), H6 is text-sm (0.875rem ≈ 14px).
     // With the regression both resolve to the same inherited ~16px value.
     expect(h1FontSize).toBeGreaterThan(h6FontSize);
   });

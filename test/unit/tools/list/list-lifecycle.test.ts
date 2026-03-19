@@ -341,11 +341,24 @@ describe('list-lifecycle', () => {
     expect(result.className).toContain('py-[3px]');
     expect(result.className).toContain('mt-[2px]');
     expect(result.className).toContain('mb-px');
+  });
 
-    // Inner listitem should NOT have vertical padding (all spacing is on wrapper)
-    const checklistItem = result.querySelector('[role="listitem"]') as HTMLElement;
-    expect(checklistItem?.className).not.toContain('pt-[2px]');
-    expect(checklistItem?.className).not.toContain('pb-px');
-    expect(checklistItem?.className).not.toContain('py-0.5');
+  /**
+   * Notion: li { padding: 6px 0 } — each list item has 6px vertical breathing room.
+   */
+  it('list items have 6px vertical padding matching Notion li spacing', () => {
+    const context = createMockContext({ style: 'unordered' });
+    const result = renderListItem(context);
+    const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
+
+    expect(listItem.className).toContain('py-[6px]');
+  });
+
+  it('checklist items have 6px vertical padding matching Notion li spacing', () => {
+    const context = createMockContext({ style: 'checklist' });
+    const result = renderListItem(context);
+    const listItem = result.querySelector('[role="listitem"]') as HTMLElement;
+
+    expect(listItem.className).toContain('py-[6px]');
   });
 });

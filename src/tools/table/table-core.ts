@@ -18,7 +18,7 @@ const CELL_CLASSES = [
   'px-2',
   'min-h-[2em]',
   'outline-hidden',
-  'leading-normal',
+  'leading-none',
   'text-sm',
   'cursor-text',
 ];

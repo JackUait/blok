@@ -530,6 +530,60 @@ describe('Blocks', () => {
 
       expect(tableIdx).toBeLessThan(cellIdx);
     });
+
+    it('should place moved block immediately before the target-index block in the DOM when the target-index block is nested inside a container', () => {
+      /**
+       * Regression for DOM placement bug: when toIndex points to a nested block (e.g. a
+       * toggle child), moveHolderInDOM used findWorkingAreaChild to walk up to the root
+       * ancestor and inserted relative to that. This placed the moved block after the entire
+       * toggle instead of immediately before the nested child in the toggle-children container.
+       *
+       * Flat array before move: [toggleBlock(0), child1Block(1), rootB(2)]
+       * - toggleBlock.holder is a direct workingArea child
+       * - child1Block.holder lives inside toggleBlock.holder > childContainer (toggle-children)
+       * - rootB.holder is a direct workingArea child
+       *
+       * move(toIndex=1, fromIndex=2) moves rootB from index 2 to index 1.
+       * After splice, blocks = [toggleBlock, child1Block], blocks[toIndex=1] = child1Block.
+       * Correct placement: rootB.holder immediately before child1Block.holder in the DOM.
+       */
+      const blocks = createBlocks();
+      const toggleBlock = createMockBlock('toggle', 'toggle');
+      const child1Block = createMockBlock('child1', 'paragraph');
+      const rootB = createMockBlock('rootB', 'paragraph');
+
+      // Place toggleBlock in workingArea
+      blocks.push(toggleBlock);
+
+      // Build the toggle-children container inside toggleBlock's holder
+      const childContainer = document.createElement('div');
+
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      toggleBlock.holder.appendChild(childContainer);
+
+      // Place child1Block.holder inside the toggle-children container
+      childContainer.appendChild(child1Block.holder);
+
+      // Register child1Block in the flat array (its holder is already in DOM via childContainer)
+      blocks.blocks.push(child1Block);
+
+      // Place rootB in workingArea (direct child, after toggleBlock)
+      blocks.push(rootB);
+
+      // Verify initial DOM state:
+      // workingArea: [toggleBlock.holder, rootB.holder]
+      // toggleBlock.holder > childContainer: [child1Block.holder]
+      expect(workingArea.children[0]).toBe(toggleBlock.holder);
+      expect(workingArea.children[1]).toBe(rootB.holder);
+      expect(childContainer.children[0]).toBe(child1Block.holder);
+
+      // Move rootB from index 2 to index 1 (between toggleBlock and child1Block in flat array)
+      blocks.move(1, 2);
+
+      // rootB.holder must be immediately before child1Block.holder in the DOM.
+      // The DOM sibling relationship inside childContainer should be [rootB.holder, child1Block.holder].
+      expect(rootB.holder.nextElementSibling).toBe(child1Block.holder);
+    });
   });
 
   describe('insert', () => {

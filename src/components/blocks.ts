@@ -132,10 +132,7 @@ export class Blocks {
       block.holder.parentElement !== this.workingArea;
 
     if (!skipDOM && !isNested) {
-      const previousBlockIndex = Math.max(0, toIndex - 1);
-      const position: InsertPosition = toIndex > 0 ? 'afterend' : 'beforebegin';
-
-      this.moveHolderInDOM(block, this.blocks[previousBlockIndex].holder, position);
+      this.moveHolderInDOM(block, toIndex);
     }
 
     // move in array
@@ -432,32 +429,31 @@ export class Blocks {
    * @returns Direct child of workingArea, or null
    */
   /**
-   * Move a block's holder in the DOM relative to a reference element.
-   * If the reference is nested inside a container (e.g. a table cell),
-   * walks up to find the workingArea-level ancestor and inserts relative to that.
+   * Move a block's holder in the DOM to the position indicated by toIndex in the
+   * post-splice flat array. Inserts directly before the next block's holder
+   * (without walking up via findWorkingAreaChild), so nested blocks are handled
+   * correctly — the moved block lands at the exact DOM position, not after the
+   * root-level ancestor of a nested reference block.
    *
    * @param block - Block whose holder to move
-   * @param referenceHolder - The reference element to position relative to
-   * @param position - Where to insert relative to the reference
+   * @param toIndex - Target index in the post-splice blocks array
    */
-  private moveHolderInDOM(block: Block, referenceHolder: Element, position: InsertPosition): void {
-    const referenceNode = this.findWorkingAreaChild(referenceHolder);
+  private moveHolderInDOM(block: Block, toIndex: number): void {
+    const nextBlock = this.blocks[toIndex];
 
-    if (referenceNode === block.holder) {
-      /**
-       * Self-reference: the resolved reference is the block being moved itself,
-       * which happens when the previousBlock's holder is nested inside block.holder.
-       * Use the next workingArea sibling to avoid undefined behavior.
-       */
+    if (nextBlock === undefined) {
+      this.workingArea.appendChild(block.holder);
+    } else if (block.holder.contains(nextBlock.holder)) {
+      // Self-reference: next block is nested inside the block being moved
+      // (e.g. moving a toggle forward; blocks[toIndex] is one of its children).
+      // Use the next workingArea sibling to avoid undefined DOM behavior.
       const nextSibling = block.holder.nextElementSibling;
 
-      if (nextSibling) {
+      if (nextSibling !== null) {
         nextSibling.insertAdjacentElement('beforebegin', block.holder);
       }
-    } else if (referenceNode !== null) {
-      referenceNode.insertAdjacentElement(position, block.holder);
     } else {
-      this.workingArea.appendChild(block.holder);
+      nextBlock.holder.insertAdjacentElement('beforebegin', block.holder);
     }
 
     block.call(BlockToolAPI.RENDERED);

@@ -66,7 +66,7 @@ describe('migrateMarkColors', () => {
       '<p><mark style="color:#337ea9; background-color:transparent">blue</mark></p>',
     ].join('');
     migrateMarkColors(container);
-    const marks = container.querySelectorAll('mark') as NodeListOf<HTMLElement>;
+    const marks = container.querySelectorAll<HTMLElement>('mark');
     expect(marks[0].style.getPropertyValue('color')).toBe('var(--blok-color-red-text)');
     expect(marks[1].style.getPropertyValue('color')).toBe('var(--blok-color-blue-text)');
   });

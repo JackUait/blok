@@ -19,9 +19,7 @@ const PROP_MODE: Record<Prop, 'text' | 'bg'> = {
  * @param container - Root element to search within (e.g. the editor redactor node)
  */
 export function migrateMarkColors(container: Element): void {
-  container.querySelectorAll('mark').forEach((mark) => {
-    const el = mark as HTMLElement;
-
+  container.querySelectorAll<HTMLElement>('mark').forEach((el) => {
     for (const prop of PROPS) {
       const value = el.style.getPropertyValue(prop);
 

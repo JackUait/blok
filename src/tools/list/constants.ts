@@ -27,7 +27,7 @@ export const CHECKLIST_ITEM_STYLES = 'flex items-start pl-0.5';
 /**
  * Styles for checkbox input
  */
-export const CHECKBOX_STYLES = 'mt-1 w-4 mr-2 h-4 cursor-pointer accent-current';
+export const CHECKBOX_STYLES = 'mt-0.5 w-5 mr-2 h-5 cursor-pointer accent-current';
 
 /**
  * Placeholder translation key

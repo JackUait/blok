@@ -159,6 +159,11 @@ describe('StyleManager', () => {
       expect(StyleManager.wrapperStyles).toContain('opacity-100');
     });
 
+    it('wrapper styles do not include hover-area padding extension that adds unwanted visual space', () => {
+      expect(StyleManager.wrapperStyles).not.toContain('py-[0.5em]');
+      expect(StyleManager.wrapperStyles).not.toContain('my-[-0.5em]');
+    });
+
     it('wrapper styles remove bottom padding and margin on last block', () => {
       expect(StyleManager.wrapperStyles).toContain('last:pb-0');
       expect(StyleManager.wrapperStyles).toContain('last:mb-0');

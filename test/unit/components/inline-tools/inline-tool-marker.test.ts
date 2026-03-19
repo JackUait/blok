@@ -499,6 +499,112 @@ describe('MarkerInlineTool', () => {
       expect(restoredRange?.collapsed).toBe(false);
       expect(restoredRange?.toString()).toBe('colored text');
     });
+
+    it('removes color only from the partially selected portion, preserving color on unselected text', () => {
+      container.innerHTML = '<mark style="color: #d44c47">Hello World</mark>';
+
+      const markEl = container.querySelector('mark');
+
+      if (!markEl) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const textNode = markEl.firstChild as Text;
+
+      if (!textNode) {
+        throw new Error('Test setup failed: text node not found');
+      }
+
+      /**
+       * Split the text node so the mark has two child nodes.
+       * Then use an element-level range start so that commonAncestorContainer
+       * is the mark element (not a text node), matching the real editor
+       * scenario where the fake-background span gives an element container.
+       */
+      const worldNode = textNode.splitText(6); // textNode="Hello ", worldNode="World"
+
+      const range = document.createRange();
+
+      range.setStart(markEl, 1); // position between "Hello " and "World"
+      range.setEnd(worldNode, 5); // end of "World"
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.removeColor('color');
+
+      // "Hello " should still be wrapped in a colored mark
+      const marks = container.querySelectorAll('mark');
+
+      expect(marks).toHaveLength(1);
+      expect(marks[0].textContent).toBe('Hello ');
+      expect(marks[0].style.color).not.toBe('');
+
+      // Full text must still be present
+      expect(container.textContent).toBe('Hello World');
+    });
+
+    it('removes background-color only from the partially selected portion when mark has both styles', () => {
+      container.innerHTML = '<mark style="color: #d44c47; background-color: #fbecdd">Hello World</mark>';
+
+      const markEl = container.querySelector('mark');
+
+      if (!markEl) {
+        throw new Error('Test setup failed: mark element not found');
+      }
+
+      const textNode = markEl.firstChild as Text;
+
+      if (!textNode) {
+        throw new Error('Test setup failed: text node not found');
+      }
+
+      /**
+       * Same split technique: element-level range start so that
+       * commonAncestorContainer is the mark element.
+       */
+      const worldNode = textNode.splitText(6); // textNode="Hello ", worldNode="World"
+
+      const range = document.createRange();
+
+      range.setStart(markEl, 1); // position between "Hello " and "World"
+      range.setEnd(worldNode, 5); // end of "World"
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('Test setup failed: no selection available');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      tool.removeColor('background-color');
+
+      const marks = container.querySelectorAll('mark');
+
+      // Two marks: "Hello " keeps both styles, "World" keeps only text color
+      expect(marks).toHaveLength(2);
+
+      const helloMark = Array.from(marks).find((m) => m.textContent === 'Hello ');
+      const worldMark = Array.from(marks).find((m) => m.textContent === 'World');
+
+      expect(helloMark).not.toBeNull();
+      expect(helloMark?.style.backgroundColor).not.toBe('');
+
+      expect(worldMark).not.toBeNull();
+      // background-color removed from "World"; ensureTransparentBg sets transparent
+      expect(worldMark?.style.backgroundColor).toBe('transparent');
+      expect(worldMark?.style.color).not.toBe('');
+
+      expect(container.textContent).toBe('Hello World');
+    });
   });
 
   describe('picker stays open after color selection', () => {

@@ -330,6 +330,13 @@ export class MarkerInlineTool implements InlineTool {
       ? ancestorEl.closest('mark')?.parentElement ?? ancestorEl
       : ancestorEl;
 
+    /**
+     * Split any marks that extend beyond the selection boundaries so that
+     * the removal only affects the selected portion, not the entire mark.
+     * (Mirrors the same call in applyColor().)
+     */
+    this.splitMarksAtBoundaries(range);
+
     const markAncestors = collectFormattingAncestors(range, isMarkTag);
 
     for (const mark of markAncestors) {

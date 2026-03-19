@@ -201,7 +201,7 @@ export class Paragraph implements BlockTool {
   private static readonly WRAPPER_CLASSES = [
     'leading-[1.5]',
     'outline-hidden',
-    'mt-[2px]',
+    'mt-px',
     'mb-px',
     '[&>p:first-of-type]:mt-0',
     '[&>p:last-of-type]:mb-0',

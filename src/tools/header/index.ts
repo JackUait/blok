@@ -971,7 +971,7 @@ export class Header implements BlockTool {
     icon: string;
     styles: string;
   }> = [
-    { number: 1, tag: 'H1', nameKey: 'tools.header.heading1', name: 'Heading 1', icon: IconH1, styles: 'text-3xl font-bold mt-8 mb-1' },
+    { number: 1, tag: 'H1', nameKey: 'tools.header.heading1', name: 'Heading 1', icon: IconH1, styles: 'text-3xl font-semibold mt-8 mb-px' },
     { number: 2, tag: 'H2', nameKey: 'tools.header.heading2', name: 'Heading 2', icon: IconH2, styles: 'text-2xl font-semibold mt-[26px] mb-px' },
     { number: 3, tag: 'H3', nameKey: 'tools.header.heading3', name: 'Heading 3', icon: IconH3, styles: 'text-xl font-semibold mt-5 mb-px' },
     { number: 4, tag: 'H4', nameKey: 'tools.header.heading4', name: 'Heading 4', icon: IconH4, styles: 'text-lg font-semibold mt-3 mb-px' },

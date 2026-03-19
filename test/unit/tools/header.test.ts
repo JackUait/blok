@@ -1230,4 +1230,24 @@ describe('Header Tool - Notion-matching typography', () => {
 
     expect(element.className).toContain('mt-5');
   });
+
+  it('H1 uses font-semibold (600) to match Notion heading font-weight: 600', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 1 });
+    const header = new Header(options);
+    const element = header.render();
+    const classes = element.className.split(/\s+/);
+
+    expect(classes).toContain('font-semibold');
+    expect(classes).not.toContain('font-bold');
+  });
+
+  it('H1 uses mb-px (1px) to match Notion heading margin-bottom: 1px', () => {
+    const options = createHeaderOptions({ text: 'Test', level: 1 });
+    const header = new Header(options);
+    const element = header.render();
+    const classes = element.className.split(/\s+/);
+
+    expect(classes).toContain('mb-px');
+    expect(classes).not.toContain('mb-1');
+  });
 });

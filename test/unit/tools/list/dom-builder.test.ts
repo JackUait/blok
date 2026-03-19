@@ -111,15 +111,24 @@ describe('dom-builder', () => {
       expect(contentContainer.innerHTML).toBe('Some text');
     });
 
-    it('applies indentation for nested items', () => {
+    it('applies indentation for nested unordered items (27px per level)', () => {
       const context = createContext({
         data: { text: '', style: 'unordered', depth: 2 },
       });
 
       const content = buildStandardContent(context);
-      const marginLeft = content.style.marginLeft;
 
-      expect(marginLeft).toBe('54px'); // 2 * 27px
+      expect(content.style.marginLeft).toBe('54px'); // 2 * 27px
+    });
+
+    it('applies smaller indentation for nested ordered items (26px per level) to match Notion', () => {
+      const context = createContext({
+        data: { text: '', style: 'ordered', depth: 2 },
+      });
+
+      const content = buildStandardContent(context);
+
+      expect(content.style.marginLeft).toBe('52px'); // 2 * 26px
     });
 
     it('applies custom color when configured', () => {

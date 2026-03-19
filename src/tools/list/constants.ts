@@ -3,9 +3,16 @@
  */
 
 /**
- * Indentation padding per depth level in pixels
+ * Indentation padding per depth level in pixels (unordered/checklist)
+ * Matches Notion's bullet indent: 1.7em × 16px = 27.2px
  */
 export const INDENT_PER_LEVEL = 27;
+
+/**
+ * Indentation padding per depth level in pixels (ordered lists)
+ * Matches Notion's number indent: 1.6em × 16px = 25.6px
+ */
+export const ORDERED_INDENT_PER_LEVEL = 26;
 
 /**
  * Base styles for list wrapper

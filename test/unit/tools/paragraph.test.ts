@@ -353,6 +353,18 @@ describe('Paragraph Tool - Custom Configurations', () => {
     });
   });
 
+  describe('spacing (Notion alignment)', () => {
+    it('uses 1px top margin (mt-px) to match Notion .notion-text margin: 1px 0', () => {
+      const options = createParagraphOptions({ text: 'Test' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+      const classes = element.className.split(/\s+/);
+
+      expect(classes).toContain('mt-px');
+      expect(classes).not.toContain('mt-[2px]');
+    });
+  });
+
   describe('data-blok-tool attribute', () => {
     it('sets data-blok-tool attribute with custom styles', () => {
       const options = createParagraphOptions(

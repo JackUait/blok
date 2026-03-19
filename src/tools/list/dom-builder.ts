@@ -11,6 +11,7 @@ import { twMerge } from '../../components/utils/tw';
 
 import {
   INDENT_PER_LEVEL,
+  ORDERED_INDENT_PER_LEVEL,
   BASE_STYLES,
   ITEM_STYLES,
   CHECKLIST_ITEM_STYLES,
@@ -162,10 +163,11 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
     item.style.fontSize = itemSize;
   }
 
-  // Apply indentation based on depth
+  // Apply indentation based on depth (ordered lists use smaller indent to match Notion)
   const depth = data.depth ?? 0;
   if (depth > 0) {
-    item.style.marginLeft = `${depth * INDENT_PER_LEVEL}px`;
+    const indent = data.style === 'ordered' ? ORDERED_INDENT_PER_LEVEL : INDENT_PER_LEVEL;
+    item.style.marginLeft = `${depth * indent}px`;
   }
 
   // Create marker element

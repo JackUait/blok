@@ -33,7 +33,7 @@ export const BASE_STYLES = 'outline-hidden py-[3px] mt-[2px] mb-px';
 /**
  * Styles for toggle content area
  */
-export const CONTENT_STYLES = 'outline-hidden pl-0.5 leading-[1.6em] flex-1 min-w-0';
+export const CONTENT_STYLES = 'outline-hidden pl-0.5 leading-[1.5] flex-1 min-w-0';
 
 /**
  * Styles for toggle wrapper (arrow + content layout)
@@ -53,13 +53,13 @@ export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBo
 /**
  * Styles for the body placeholder element
  */
-export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 pt-[calc(0.5em+5px)] pb-[4px] text-gray-text leading-[1.6em] cursor-pointer select-none';
+export const BODY_PLACEHOLDER_STYLES = 'hidden pl-[1.1em] pt-[calc(0.5em+5px)] pb-[4px] text-gray-text leading-[1.5] cursor-pointer select-none';
 
 /**
  * Styles for the children container element.
- * pl-7 (28px) aligns children with the toggle text (arrow is w-6=24px + gap).
+ * pl-[1.1em] (~17.6px at 16px base) matches Notion's toggle children indent (margin-left: 1.1em).
  */
-export const TOGGLE_CHILDREN_STYLES = 'pl-7';
+export const TOGGLE_CHILDREN_STYLES = 'pl-[1.1em]';
 
 /**
  * Data attributes specific to the toggle tool

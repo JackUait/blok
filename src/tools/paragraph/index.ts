@@ -199,7 +199,7 @@ export class Paragraph implements BlockTool {
    * Paragraph wrapper styling classes using Tailwind.
    */
   private static readonly WRAPPER_CLASSES = [
-    'leading-[1.6em]',
+    'leading-[1.5]',
     'outline-hidden',
     'mt-[2px]',
     'mb-px',

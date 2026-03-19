@@ -127,7 +127,7 @@ describe('content-offset', () => {
 
       const result = getOffsetFromDepthAttribute(element);
 
-      expect(result).toEqual({ left: 24 });
+      expect(result).toEqual({ left: 27 });
     });
 
     it('returns left offset for depth 2', () => {
@@ -136,7 +136,7 @@ describe('content-offset', () => {
 
       const result = getOffsetFromDepthAttribute(element);
 
-      expect(result).toEqual({ left: 48 });
+      expect(result).toEqual({ left: 54 });
     });
 
     it('returns left offset for depth 3', () => {
@@ -145,7 +145,7 @@ describe('content-offset', () => {
 
       const result = getOffsetFromDepthAttribute(element);
 
-      expect(result).toEqual({ left: 72 });
+      expect(result).toEqual({ left: 81 });
     });
 
     it('finds data-list-depth on ancestor element', () => {
@@ -156,7 +156,7 @@ describe('content-offset', () => {
 
       const result = getOffsetFromDepthAttribute(child);
 
-      expect(result).toEqual({ left: 48 });
+      expect(result).toEqual({ left: 54 });
     });
 
     it('handles negative depth values', () => {
@@ -245,7 +245,7 @@ describe('content-offset', () => {
 
       const result = getContentOffset(content);
 
-      expect(result).toEqual({ left: 48 });
+      expect(result).toEqual({ left: 54 });
     });
 
     it('prioritizes margin-left over data-list-depth attribute', () => {

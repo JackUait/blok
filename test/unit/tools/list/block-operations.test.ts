@@ -222,7 +222,7 @@ describe('block-operations', () => {
       const listItem = document.createElement('div');
       listItem.setAttribute('role', 'listitem');
       if (depth > 0) {
-        listItem.style.marginLeft = `${depth * 24}px`;
+        listItem.style.marginLeft = `${depth * 27}px`;
       }
 
       const marker = document.createElement('span');

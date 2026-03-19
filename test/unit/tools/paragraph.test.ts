@@ -343,6 +343,16 @@ describe('Paragraph Tool - Custom Configurations', () => {
     });
   });
 
+  describe('line-height (Notion alignment)', () => {
+    it('renders with unitless leading-[1.5] to match Notion body text line-height', () => {
+      const options = createParagraphOptions({ text: 'Test' });
+      const paragraph = new Paragraph(options);
+      const element = paragraph.render();
+
+      expect(element.className).toContain('leading-[1.5]');
+    });
+  });
+
   describe('data-blok-tool attribute', () => {
     it('sets data-blok-tool attribute with custom styles', () => {
       const options = createParagraphOptions(

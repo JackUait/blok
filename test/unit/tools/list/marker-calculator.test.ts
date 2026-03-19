@@ -25,7 +25,7 @@ describe('ListMarkerCalculator', () => {
     const roleItem = document.createElement('div');
     roleItem.setAttribute('role', 'listitem');
     if (depth > 0) {
-      roleItem.style.marginLeft = `${depth * 24}px`;
+      roleItem.style.marginLeft = `${depth * 27}px`;
     }
     listItemEl.appendChild(roleItem);
 

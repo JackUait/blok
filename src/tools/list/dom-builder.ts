@@ -224,7 +224,7 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
 
   const content = document.createElement('div');
   content.className = twMerge(
-    'flex-1 outline-hidden leading-[1.6em]',
+    'flex-1 outline-hidden leading-[1.5]',
     data.checked ? 'line-through opacity-60' : '',
     ...PLACEHOLDER_CLASSES
   );

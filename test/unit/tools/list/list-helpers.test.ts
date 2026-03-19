@@ -169,7 +169,7 @@ describe("list-helpers", () => {
 
       adjustDepthTo(element, data, 2);
 
-      expect(listItem.style.marginLeft).toBe("48px");
+      expect(listItem.style.marginLeft).toBe("54px");
     });
 
     it("clears marginLeft when depth is 0", () => {
@@ -189,7 +189,7 @@ describe("list-helpers", () => {
       const element = document.createElement("div");
       const listItem = document.createElement("div");
       listItem.setAttribute("role", "listitem");
-      listItem.style.marginLeft = "24px";
+      listItem.style.marginLeft = "27px";
       element.appendChild(listItem);
       const data = { depth: 1 };
 
@@ -215,7 +215,7 @@ describe("list-helpers", () => {
       for (let depth = 1; depth <= 5; depth++) {
         const data = { depth: 0 };
         adjustDepthTo(element, data, depth);
-        const expectedMargin = `${depth * 24}px`;
+        const expectedMargin = `${depth * 27}px`;
         expect(listItem.style.marginLeft).toBe(expectedMargin);
       }
     });

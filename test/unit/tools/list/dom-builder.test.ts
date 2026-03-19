@@ -119,7 +119,7 @@ describe('dom-builder', () => {
       const content = buildStandardContent(context);
       const marginLeft = content.style.marginLeft;
 
-      expect(marginLeft).toBe('48px'); // 2 * 24px
+      expect(marginLeft).toBe('54px'); // 2 * 27px
     });
 
     it('applies custom color when configured', () => {
@@ -227,7 +227,7 @@ describe('dom-builder', () => {
       const content = buildChecklistContent(context);
       const marginLeft = content.style.marginLeft;
 
-      expect(marginLeft).toBe('24px'); // 1 * 24px
+      expect(marginLeft).toBe('27px'); // 1 * 27px
     });
 
     it('creates editable content div', () => {

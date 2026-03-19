@@ -5,7 +5,7 @@
 /**
  * Indentation padding per depth level in pixels
  */
-export const INDENT_PER_LEVEL = 24;
+export const INDENT_PER_LEVEL = 27;
 
 /**
  * Base styles for list wrapper
@@ -17,7 +17,7 @@ export const BASE_STYLES = 'outline-hidden py-[3px] mt-[2px] mb-px';
 /**
  * Styles for standard list items (unordered, ordered)
  */
-export const ITEM_STYLES = 'outline-hidden pl-0.5 leading-[1.6em]';
+export const ITEM_STYLES = 'outline-hidden pl-0.5 leading-[1.5]';
 
 /**
  * Styles for checklist items

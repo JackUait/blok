@@ -1667,5 +1667,40 @@ describe('MarkerInlineTool', () => {
 
       expect(markerBtn.style.backgroundColor).toBe(hexToRgb(ORANGE.bg));
     });
+
+    it('sets transparent background on toolbar button when only text color is active (suppresses active-state blue)', () => {
+      container.innerHTML = `<mark style="color: ${RED.text}; background-color: transparent">hello</mark>`;
+
+      const markEl = container.querySelector('mark')!;
+      const range = document.createRange();
+
+      range.selectNodeContents(markEl);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      const reopenedTool = new MarkerInlineTool({ api: createMockApi() as never, config: undefined });
+      const config = reopenedTool.render() as PopoverItemDefaultBaseParams;
+      const isActiveFn = config.isActive as () => boolean;
+
+      isActiveFn();
+
+      // background-color must be explicitly set (not removed) so the active-state
+      // blue CSS (`data-blok-popover-item-active:bg-icon-active-bg`) cannot apply
+      expect(markerBtn.style.backgroundColor).toBe('transparent');
+    });
+
+    it('sets transparent background on toolbar button after clicking a text color swatch (suppresses active-state blue)', () => {
+      container.innerHTML = 'hello';
+      const range = document.createRange();
+
+      range.setStart(container.firstChild!, 0);
+      range.setEnd(container.firstChild!, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-red"]')!.click();
+
+      expect(markerBtn.style.backgroundColor).toBe('transparent');
+    });
   });
 });

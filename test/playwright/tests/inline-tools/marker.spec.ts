@@ -870,6 +870,78 @@ test.describe('inline tool marker', () => {
     expect(html).toContain('bold colored');
   });
 
+  test.describe('marker colors adapt to theme', () => {
+    test('color applied in light mode remaps when switching to dark', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'Hello world' } },
+      ]);
+
+      // Force light theme so the test is deterministic regardless of OS preference
+      await page.evaluate(() => {
+        (window as any).blokInstance.theme.set('light');
+      });
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
+
+      await selectText(paragraph, 'Hello');
+      await openMarkerPicker(page);
+
+      // Click the red swatch on the text tab (default tab)
+      const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+
+      await redSwatch.click();
+
+      // Close the picker before measuring so computed styles are stable
+      await page.mouse.click(10, 10);
+
+      // Get the computed color in light mode
+      const lightColor = await paragraph.evaluate((el) => {
+        const mark = el.querySelector('mark');
+
+        return mark ? window.getComputedStyle(mark).color : null;
+      });
+
+      expect(lightColor).toBeTruthy();
+
+      // Switch to dark mode
+      await page.evaluate(() => {
+        (window as any).blokInstance.theme.set('dark');
+      });
+
+      // Get the computed color in dark mode
+      const darkColor = await paragraph.evaluate((el) => {
+        const mark = el.querySelector('mark');
+
+        return mark ? window.getComputedStyle(mark).color : null;
+      });
+
+      expect(darkColor).toBeTruthy();
+      // Colors must differ — dark theme uses a different hex for red (#df5452 vs #d44c47)
+      expect(darkColor).not.toBe(lightColor);
+    });
+
+    test('legacy hex marks are migrated to CSS vars on render', async ({ page }) => {
+      // Load a document with a legacy hex mark (as if saved before the CSS-var migration)
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: '<mark style="color:#d44c47; background-color:transparent">hello</mark>',
+          },
+        },
+      ]);
+
+      // After render, migrateMarkColors should have replaced the raw hex with a CSS var
+      const inlineColor = await page.evaluate(() => {
+        const mark = document.querySelector('[data-blok-interface] mark') as HTMLElement;
+
+        return mark ? mark.style.getPropertyValue('color') : null;
+      });
+
+      expect(inlineColor).toBe('var(--blok-color-red-text)');
+    });
+  });
+
   test.describe('dark mode', () => {
     test.use({ colorScheme: 'dark' });
 

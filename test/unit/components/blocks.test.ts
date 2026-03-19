@@ -584,6 +584,70 @@ describe('Blocks', () => {
       // The DOM sibling relationship inside childContainer should be [rootB.holder, child1Block.holder].
       expect(rootB.holder.nextElementSibling).toBe(child1Block.holder);
     });
+
+    it('should not throw and should keep moved block in workingArea when target-index block is nested inside it (self-reference guard)', () => {
+      /**
+       * Regression for the self-reference branch in moveHolderInDOM:
+       *   `else if (block.holder.contains(nextBlock.holder))`
+       *
+       * Without this guard, the else path runs:
+       *   child2Block.holder.insertAdjacentElement('beforebegin', toggleHolder)
+       * child2Block.holder is a descendant of toggleHolder. jsdom throws a
+       * HierarchyRequestError when you attempt to insert an ancestor before one of
+       * its own descendants — the operation would create a circular tree.
+       *
+       * Scenario:
+       *   Flat array: [p0Block(0), toggleBlock(1), child1Block(2), child2Block(3), p1Block(4)]
+       *   workingArea DOM:         [p0Holder, toggleHolder, p1Holder]
+       *   child1Block.holder and child2Block.holder live inside toggleHolder.
+       *
+       *   move(toIndex=2, fromIndex=1): move toggleBlock from index 1 to index 2.
+       *   After splice(1,1): blocks = [p0Block, child1Block, child2Block, p1Block]
+       *   this.blocks[2] = child2Block — its holder IS inside toggleHolder → self-reference.
+       *   The guard fires: uses toggleHolder.nextElementSibling (= p1Holder) instead,
+       *   re-inserting toggleHolder immediately before p1Holder and avoiding the error.
+       */
+      const blocks = createBlocks();
+      const p0Block = createMockBlock('p0');
+      const toggleBlock = createMockBlock('toggle', 'toggle');
+      const child1Block = createMockBlock('child1', 'paragraph');
+      const child2Block = createMockBlock('child2', 'paragraph');
+      const p1Block = createMockBlock('p1');
+
+      // Push p0 and toggleBlock as direct workingArea children
+      blocks.push(p0Block);
+      blocks.push(toggleBlock);
+
+      // Nest both child holders inside toggleHolder
+      toggleBlock.holder.appendChild(child1Block.holder);
+      toggleBlock.holder.appendChild(child2Block.holder);
+
+      // Register children in the flat array without re-inserting into workingArea
+      blocks.blocks.push(child1Block);
+      blocks.blocks.push(child2Block);
+
+      // Push p1 as a direct workingArea child after the toggle
+      blocks.push(p1Block);
+
+      // Initial state: flat [p0(0), toggle(1), child1(2), child2(3), p1(4)]
+      // workingArea DOM: [p0Holder, toggleHolder, p1Holder]
+      expect(workingArea.children[0]).toBe(p0Block.holder);
+      expect(workingArea.children[1]).toBe(toggleBlock.holder);
+      expect(workingArea.children[2]).toBe(p1Block.holder);
+      expect(blocks.blocks[1]).toBe(toggleBlock);
+      expect(blocks.blocks[2]).toBe(child1Block);
+      expect(blocks.blocks[3]).toBe(child2Block);
+
+      // move(2, 1): after splice blocks[2] = child2Block (inside toggleHolder) → self-reference.
+      // Without the guard this throws HierarchyRequestError.
+      expect(() => blocks.move(2, 1)).not.toThrow();
+
+      // toggleHolder must remain attached to workingArea
+      expect(toggleBlock.holder.parentElement).toBe(workingArea);
+
+      // toggleHolder must be immediately before p1Holder in the DOM
+      expect(toggleBlock.holder.nextElementSibling).toBe(p1Block.holder);
+    });
   });
 
   describe('insert', () => {
@@ -1191,15 +1255,19 @@ describe('Blocks', () => {
       expect(blocks.blocks[0]).toBe(block1);
     });
 
-    it('should not place inserted block inside a nested container when previous block holder is nested', () => {
+    it('should place inserted block directly after the nested previous block holder (no escape to workingArea)', () => {
       const blocks = createBlocks();
 
       /**
-       * Simulate two consecutive tables: Table1 with a cell block nested inside it,
-       * then Table2 after it. When Table2 is deleted and undo restores it,
-       * the insert method uses the previous block (cellBlock) as the reference.
-       * Since cellBlock's holder is nested inside Table1's DOM, inserting
-       * 'afterend' of cellBlock.holder places Table2 INSIDE Table1's cell — a bug.
+       * insert() now uses target.holder.insertAdjacentElement directly, without
+       * walking up to the workingArea root via findWorkingAreaChild.
+       *
+       * When the previous block (cellBlock) is nested inside a table cell container,
+       * inserting 'afterend' of cellBlock.holder places the new block directly after
+       * it inside cellContainer — matching the same DOM parent as cellBlock.
+       *
+       * Callers that need a block placed at root level (e.g. undo restoring a top-level
+       * block after a nested one) should use the appendToWorkingArea flag instead.
        */
       const tableBlock = createMockBlock('table-1', 'table');
       const cellBlock = createMockBlock('cell-1', 'paragraph');
@@ -1214,15 +1282,16 @@ describe('Blocks', () => {
       cellContainer.appendChild(cellBlock.holder);
       blocks.blocks.push(cellBlock);
 
-      // Insert a new top-level block at index 2 (after all existing blocks)
-      const restoredTable = createMockBlock('table-2', 'table');
+      // Insert a new block at index 2 (after all existing blocks)
+      const newBlock = createMockBlock('table-2', 'table');
 
-      blocks.insert(2, restoredTable);
+      blocks.insert(2, newBlock);
 
-      // CRITICAL: The restored table must be a direct child of workingArea,
-      // not nested inside Table1's cell container
-      expect(restoredTable.holder.parentElement).toBe(workingArea);
-      expect(tableBlock.holder.contains(restoredTable.holder)).toBe(false);
+      // With direct insertion (no findWorkingAreaChild walk-up), the new block lands
+      // directly after cellBlock.holder — i.e., inside cellContainer.
+      expect(newBlock.holder.parentElement).toBe(cellContainer);
+      expect(newBlock.holder.nextElementSibling).toBeNull();
+      expect(cellBlock.holder.nextElementSibling).toBe(newBlock.holder);
     });
 
     it('should append to workingArea when appendToWorkingArea is true, even when previous block is nested', () => {
@@ -1254,6 +1323,50 @@ describe('Blocks', () => {
 
       // The cell block should still be nested inside the table
       expect(tableBlock.holder.contains(cellBlock.holder)).toBe(true);
+    });
+
+    it('should place inserted block directly after previous block when previous block holder is nested in a container', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Regression for toggle-child paste bug: when pasting blocks while the
+       * cursor is inside a toggle child, the pasted blocks should appear INSIDE
+       * the toggle's child container (directly after the child), not escape to
+       * the workingArea root.
+       *
+       * Flat array: [toggleBlock(0), childBlock(1)]
+       * - toggleBlock.holder is a direct workingArea child
+       * - childBlock.holder lives inside toggleBlock.holder > childContainer
+       *
+       * insert(2, newBlock) should place newBlock directly after childBlock.holder
+       * inside childContainer (same parent as childBlock.holder).
+       */
+      const toggleBlock = createMockBlock('toggle-1', 'toggle');
+      const childBlock = createMockBlock('child-1', 'paragraph');
+
+      blocks.push(toggleBlock);
+
+      // Build the toggle-children container inside toggleBlock's holder
+      const childContainer = document.createElement('div');
+
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      toggleBlock.holder.appendChild(childContainer);
+
+      // Place childBlock.holder inside the toggle-children container
+      childContainer.appendChild(childBlock.holder);
+
+      // Register childBlock in the flat array (its holder is already in DOM)
+      blocks.blocks.push(childBlock);
+
+      // Insert a new block at index 2 (after the child, simulating a paste)
+      const newBlock = createMockBlock('pasted-1', 'paragraph');
+
+      blocks.insert(2, newBlock);
+
+      // CRITICAL: newBlock should be inside the childContainer (same parent as childBlock),
+      // not escaped to the workingArea root
+      expect(newBlock.holder.parentElement).toBe(childContainer);
+      expect(newBlock.holder.parentElement).not.toBe(workingArea);
     });
 
     it('should handle replace followed by remove', () => {

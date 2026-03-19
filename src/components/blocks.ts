@@ -409,29 +409,14 @@ export class Blocks {
       return;
     }
 
-    const referenceNode = this.findWorkingAreaChild(target.holder);
-
-    if (referenceNode !== null) {
-      referenceNode.insertAdjacentElement(position, block.holder);
-    } else {
-      this.workingArea.appendChild(block.holder);
-    }
-
+    target.holder.insertAdjacentElement(position, block.holder);
     block.call(BlockToolAPI.RENDERED);
   }
 
   /**
-   * Walk from an element up to find the ancestor that is a direct child of workingArea.
-   * If the element itself is a direct child, returns the element.
-   * Returns null if the element is not inside workingArea.
-   *
-   * @param element - Starting element to walk up from
-   * @returns Direct child of workingArea, or null
-   */
-  /**
    * Move a block's holder in the DOM to the position indicated by toIndex in the
    * post-splice flat array. Inserts directly before the next block's holder
-   * (without walking up via findWorkingAreaChild), so nested blocks are handled
+   * (without walking up to the workingArea root), so nested blocks are handled
    * correctly — the moved block lands at the exact DOM position, not after the
    * root-level ancestor of a nested reference block.
    *
@@ -491,15 +476,4 @@ export class Blocks {
     this.blocks.splice(newIdx + 1, 0, ...nested);
   }
 
-  private findWorkingAreaChild(element: Element): Element | null {
-    if (element.parentElement === this.workingArea) {
-      return element;
-    }
-
-    if (element.parentElement === null) {
-      return null;
-    }
-
-    return this.findWorkingAreaChild(element.parentElement);
-  }
 }

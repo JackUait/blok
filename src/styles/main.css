@@ -809,24 +809,24 @@
     /* Marker colors — dark theme */
     --blok-color-gray-text: #9b9b9b;
     --blok-color-gray-bg: #2f2f2f;
-    --blok-color-brown-text: #ba856f;
-    --blok-color-brown-bg: #4a3228;
-    --blok-color-orange-text: #c77d48;
-    --blok-color-orange-bg: #5c3b23;
-    --blok-color-yellow-text: #ca9849;
-    --blok-color-yellow-bg: #564328;
-    --blok-color-green-text: #529e72;
-    --blok-color-green-bg: #243d30;
-    --blok-color-teal-text: #4dab9a;
-    --blok-color-teal-bg: #2e4d4b;
-    --blok-color-blue-text: #5e87c9;
-    --blok-color-blue-bg: #143a4e;
-    --blok-color-purple-text: #9d68d3;
-    --blok-color-purple-bg: #3c2d49;
-    --blok-color-pink-text: #d15796;
-    --blok-color-pink-bg: #4e2c3c;
-    --blok-color-red-text: #df5452;
-    --blok-color-red-bg: #522e2a;
+    --blok-color-brown-text: #c59177;
+    --blok-color-brown-bg: #452a1c;
+    --blok-color-orange-text: #dc8c47;
+    --blok-color-orange-bg: #4d2f14;
+    --blok-color-yellow-text: #d4ab49;
+    --blok-color-yellow-bg: #544012;
+    --blok-color-green-text: #5db184;
+    --blok-color-green-bg: #1e432f;
+    --blok-color-teal-text: #5cbcb3;
+    --blok-color-teal-bg: #1b4642;
+    --blok-color-blue-text: #5c9fcc;
+    --blok-color-blue-bg: #123a54;
+    --blok-color-purple-text: #a67dca;
+    --blok-color-purple-bg: #341d49;
+    --blok-color-pink-text: #d45e99;
+    --blok-color-pink-bg: #4b1b33;
+    --blok-color-red-text: #dd5e5a;
+    --blok-color-red-bg: #4e1a18;
   }
 }
 
@@ -893,24 +893,24 @@
   /* Marker colors — dark theme */
   --blok-color-gray-text: #9b9b9b;
   --blok-color-gray-bg: #2f2f2f;
-  --blok-color-brown-text: #ba856f;
-  --blok-color-brown-bg: #4a3228;
-  --blok-color-orange-text: #c77d48;
-  --blok-color-orange-bg: #5c3b23;
-  --blok-color-yellow-text: #ca9849;
-  --blok-color-yellow-bg: #564328;
-  --blok-color-green-text: #529e72;
-  --blok-color-green-bg: #243d30;
-  --blok-color-teal-text: #4dab9a;
-  --blok-color-teal-bg: #2e4d4b;
-  --blok-color-blue-text: #5e87c9;
-  --blok-color-blue-bg: #143a4e;
-  --blok-color-purple-text: #9d68d3;
-  --blok-color-purple-bg: #3c2d49;
-  --blok-color-pink-text: #d15796;
-  --blok-color-pink-bg: #4e2c3c;
-  --blok-color-red-text: #df5452;
-  --blok-color-red-bg: #522e2a;
+  --blok-color-brown-text: #c59177;
+  --blok-color-brown-bg: #452a1c;
+  --blok-color-orange-text: #dc8c47;
+  --blok-color-orange-bg: #4d2f14;
+  --blok-color-yellow-text: #d4ab49;
+  --blok-color-yellow-bg: #544012;
+  --blok-color-green-text: #5db184;
+  --blok-color-green-bg: #1e432f;
+  --blok-color-teal-text: #5cbcb3;
+  --blok-color-teal-bg: #1b4642;
+  --blok-color-blue-text: #5c9fcc;
+  --blok-color-blue-bg: #123a54;
+  --blok-color-purple-text: #a67dca;
+  --blok-color-purple-bg: #341d49;
+  --blok-color-pink-text: #d45e99;
+  --blok-color-pink-bg: #4b1b33;
+  --blok-color-red-text: #dd5e5a;
+  --blok-color-red-bg: #4e1a18;
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */

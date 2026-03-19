@@ -1,6 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK, colorVarName } from '../../../../src/components/shared/color-presets';
 
+function toLinear(c: number): number {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+function contrastRatio(fg: string, bg: string): number {
+  const l1 = relativeLuminance(fg);
+  const l2 = relativeLuminance(bg);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 describe('COLOR_PRESETS', () => {
   it('exports 10 color presets', () => {
     expect(COLOR_PRESETS).toHaveLength(10);
@@ -66,8 +86,15 @@ describe('COLOR_PRESETS_DARK', () => {
     const teal = COLOR_PRESETS_DARK.find((p) => p.name === 'teal');
 
     expect(teal).toBeDefined();
-    expect(teal?.text).toBe('#4dab9a');
-    expect(teal?.bg).toBe('#2e4d4b');
+    expect(teal?.text).toBe('#5cbcb3');
+    expect(teal?.bg).toBe('#1b4642');
+  });
+
+  it('each dark preset text on bg achieves at least 3.8:1 WCAG contrast ratio', () => {
+    for (const preset of COLOR_PRESETS_DARK) {
+      const cr = contrastRatio(preset.text, preset.bg);
+      expect(cr, `${preset.name}: ${preset.text} on ${preset.bg}`).toBeGreaterThanOrEqual(3.8);
+    }
   });
 });
 

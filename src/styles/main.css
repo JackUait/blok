@@ -721,6 +721,28 @@
   --blok-swatch-neutral-bg: #f7f7f5;
   --blok-swatch-ring-hover: rgba(0, 0, 0, 0.10);
   --blok-swatch-ring-active: rgba(0, 0, 0, 0.30);
+
+  /* Marker colors — light theme */
+  --blok-color-gray-text: #787774;
+  --blok-color-gray-bg: #f1f1ef;
+  --blok-color-brown-text: #9f6b53;
+  --blok-color-brown-bg: #f4eeee;
+  --blok-color-orange-text: #d9730d;
+  --blok-color-orange-bg: #fbecdd;
+  --blok-color-yellow-text: #cb9b00;
+  --blok-color-yellow-bg: #fbf3db;
+  --blok-color-green-text: #448361;
+  --blok-color-green-bg: #edf3ec;
+  --blok-color-teal-text: #2b9a8f;
+  --blok-color-teal-bg: #e4f5f3;
+  --blok-color-blue-text: #337ea9;
+  --blok-color-blue-bg: #e7f3f8;
+  --blok-color-purple-text: #9065b0;
+  --blok-color-purple-bg: #f6f3f9;
+  --blok-color-pink-text: #c14c8a;
+  --blok-color-pink-bg: #f9f0f5;
+  --blok-color-red-text: #d44c47;
+  --blok-color-red-bg: #fdebec;
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -783,6 +805,28 @@
     --blok-swatch-neutral-bg: #3a3a38;
     --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
     --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
+
+    /* Marker colors — dark theme */
+    --blok-color-gray-text: #9b9b9b;
+    --blok-color-gray-bg: #2f2f2f;
+    --blok-color-brown-text: #ba856f;
+    --blok-color-brown-bg: #4a3228;
+    --blok-color-orange-text: #c77d48;
+    --blok-color-orange-bg: #5c3b23;
+    --blok-color-yellow-text: #ca9849;
+    --blok-color-yellow-bg: #564328;
+    --blok-color-green-text: #529e72;
+    --blok-color-green-bg: #243d30;
+    --blok-color-teal-text: #4dab9a;
+    --blok-color-teal-bg: #2e4d4b;
+    --blok-color-blue-text: #5e87c9;
+    --blok-color-blue-bg: #143a4e;
+    --blok-color-purple-text: #9d68d3;
+    --blok-color-purple-bg: #3c2d49;
+    --blok-color-pink-text: #d15796;
+    --blok-color-pink-bg: #4e2c3c;
+    --blok-color-red-text: #df5452;
+    --blok-color-red-bg: #522e2a;
   }
 }
 
@@ -845,6 +889,28 @@
   --blok-swatch-neutral-bg: #3a3a38;
   --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
   --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
+
+  /* Marker colors — dark theme */
+  --blok-color-gray-text: #9b9b9b;
+  --blok-color-gray-bg: #2f2f2f;
+  --blok-color-brown-text: #ba856f;
+  --blok-color-brown-bg: #4a3228;
+  --blok-color-orange-text: #c77d48;
+  --blok-color-orange-bg: #5c3b23;
+  --blok-color-yellow-text: #ca9849;
+  --blok-color-yellow-bg: #564328;
+  --blok-color-green-text: #529e72;
+  --blok-color-green-bg: #243d30;
+  --blok-color-teal-text: #4dab9a;
+  --blok-color-teal-bg: #2e4d4b;
+  --blok-color-blue-text: #5e87c9;
+  --blok-color-blue-bg: #143a4e;
+  --blok-color-purple-text: #9d68d3;
+  --blok-color-purple-bg: #3c2d49;
+  --blok-color-pink-text: #d15796;
+  --blok-color-pink-bg: #4e2c3c;
+  --blok-color-red-text: #df5452;
+  --blok-color-red-bg: #522e2a;
 }
 
 /* ─── Checklist checkbox — custom styled ────────────────── */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { COLOR_PRESETS, COLOR_PRESETS_DARK } from '../../../../src/components/shared/color-presets';
+import { COLOR_PRESETS, COLOR_PRESETS_DARK, colorVarName } from '../../../../src/components/shared/color-presets';
 
 describe('COLOR_PRESETS', () => {
   it('exports 10 color presets', () => {
@@ -68,5 +68,20 @@ describe('COLOR_PRESETS_DARK', () => {
     expect(teal).toBeDefined();
     expect(teal?.text).toBe('#4dab9a');
     expect(teal?.bg).toBe('#2e4d4b');
+  });
+});
+
+describe('colorVarName', () => {
+  it('returns CSS var for text mode', () => {
+    expect(colorVarName('red', 'text')).toBe('var(--blok-color-red-text)');
+  });
+
+  it('returns CSS var for bg mode', () => {
+    expect(colorVarName('blue', 'bg')).toBe('var(--blok-color-blue-bg)');
+  });
+
+  it('handles all color names', () => {
+    expect(colorVarName('gray', 'text')).toBe('var(--blok-color-gray-text)');
+    expect(colorVarName('teal', 'bg')).toBe('var(--blok-color-teal-bg)');
   });
 });

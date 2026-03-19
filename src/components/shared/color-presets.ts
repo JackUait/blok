@@ -41,3 +41,14 @@ export const COLOR_PRESETS_DARK: ColorPreset[] = [
   { name: 'pink',   text: '#d15796', bg: '#4e2c3c' },
   { name: 'red',    text: '#df5452', bg: '#522e2a' },
 ];
+
+/**
+ * Construct a CSS custom property reference for a named preset color.
+ *
+ * @param name - The color preset name (e.g. 'red', 'blue')
+ * @param mode - 'text' for foreground, 'bg' for background
+ * @returns CSS var reference, e.g. `var(--blok-color-red-text)`
+ */
+export function colorVarName(name: string, mode: 'text' | 'bg'): string {
+  return `var(--blok-color-${name}-${mode})`;
+}

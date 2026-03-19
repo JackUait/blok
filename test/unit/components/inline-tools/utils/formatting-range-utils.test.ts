@@ -288,6 +288,35 @@ describe('formatting-range-utils', () => {
 
   describe('collectFormattingAncestors', () => {
     const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';
+    const isMark = (el: Element) => el.tagName === 'MARK';
+
+    it('finds formatting ancestors for a text-node-based range (commonAncestorContainer is a text node)', () => {
+      // This reproduces the bug in removeColor() after removeHighlightSpans() runs.
+      // removeHighlightSpans() reconstructs savedSelectionRange as:
+      //   range.setStart(textNode, 0) / range.setEnd(textNode, length)
+      // which produces a range where commonAncestorContainer is the text node itself.
+      // The TreeWalker with a text node as root finds no descendants, so the mark is missed.
+      const container = document.createElement('div');
+      container.innerHTML = '<mark>formatted text</mark>';
+      document.body.appendChild(container);
+
+      const mark = container.querySelector('mark');
+      if (!mark?.firstChild) {
+        throw new Error('mark element or its firstChild not found');
+      }
+      const textNode = mark.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, textNode.textContent?.length ?? 0);
+
+      // commonAncestorContainer must be the text node (not the mark element)
+      expect(range.commonAncestorContainer).toBe(textNode);
+
+      const ancestors = collectFormattingAncestors(range, isMark);
+
+      expect(ancestors).toHaveLength(1);
+      expect(ancestors[0]).toBe(mark);
+    });
 
     it('collects all unique formatting ancestors in range', () => {
       const container = document.createElement('div');

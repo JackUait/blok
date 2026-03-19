@@ -436,6 +436,33 @@ describe('FakeBackgroundManager', () => {
 
       expect(paragraph).toHaveTextContent('Important text here');
     });
+
+    it('reconstructs savedSelectionRange as a text-node range after removal', () => {
+      const container = createNestedStructure('<p>Hello World</p>');
+
+      const paragraph = container.querySelector('p');
+
+      if (!paragraph?.firstChild || !(paragraph.firstChild instanceof Text)) {
+        throw new Error('Expected text node');
+      }
+
+      setSelectionRange(paragraph.firstChild, 0, 5);
+
+      const mockState = createMockState();
+      const manager = new FakeBackgroundManager(mockState);
+
+      manager.setFakeBackground();
+
+      // After setFakeBackground, savedSelectionRange is an element-boundary range
+      // pointing to the fake background spans (startContainer is an Element, not Text)
+      manager.removeFakeBackground();
+
+      // savedSelectionRange must be reconstructed as a text-node-based range so that
+      // restore() does not collapse in Safari (which silently collapses element-boundary ranges)
+      expect(mockState.savedSelectionRange).not.toBeNull();
+      expect(mockState.savedSelectionRange!.startContainer.nodeType).toBe(Node.TEXT_NODE);
+      expect(mockState.savedSelectionRange!.endContainer.nodeType).toBe(Node.TEXT_NODE);
+    });
   });
 
   describe('removeOrphanedFakeBackgroundElements', () => {

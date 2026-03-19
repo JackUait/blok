@@ -27,8 +27,17 @@ const nodeIntersectsRange = (range: Range, node: Node): boolean => {
  * @param range - The range to iterate within
  */
 export const createRangeTextWalker = (range: Range): TreeWalker => {
+  // When commonAncestorContainer is a text node, it has no descendants —
+  // the TreeWalker would find nothing. Use the parent element as root so
+  // the text node itself is reachable as a child. The nodeIntersectsRange
+  // filter still restricts results to nodes within the range.
+  const container = range.commonAncestorContainer;
+  const root = container.nodeType === Node.TEXT_NODE
+    ? (container.parentNode ?? container)
+    : container;
+
   return document.createTreeWalker(
-    range.commonAncestorContainer,
+    root,
     NodeFilter.SHOW_TEXT,
     {
       acceptNode: (node) => {

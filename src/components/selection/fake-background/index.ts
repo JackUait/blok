@@ -119,18 +119,17 @@ export class FakeBackgroundManager {
    * Unwraps the highlight spans and restores the selection
    */
   removeFakeBackground(): void {
-    // Always clean up any orphaned fake background elements in the DOM
-    // This handles cleanup after undo/redo operations that may restore fake background elements
-    this.removeOrphanedFakeBackgroundElements();
-
-    if (!this.selectionUtils.isFakeBackgroundEnabled) {
-      return;
+    if (this.selectionUtils.isFakeBackgroundEnabled) {
+      // Remove highlight spans first while they still exist in the DOM,
+      // so that removeHighlightSpans() can reconstruct savedSelectionRange
+      // as a text-node-based range before the spans are gone.
+      this.removeHighlightSpans();
+      this.selectionUtils.isFakeBackgroundEnabled = false;
     }
 
-    // Remove the highlight spans
-    this.removeHighlightSpans();
-
-    this.selectionUtils.isFakeBackgroundEnabled = false;
+    // Clean up any remaining/orphaned fake background elements
+    // (handles undo/redo restoring spans, backwards compat, etc.)
+    this.removeOrphanedFakeBackgroundElements();
   }
 
   /**

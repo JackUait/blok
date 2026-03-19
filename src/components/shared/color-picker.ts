@@ -1,5 +1,6 @@
 import type { I18n } from '../../../types/api';
 import { parseColor } from '../utils/color-mapping';
+import { onHover } from '../utils/tooltip';
 import { twMerge } from '../utils/tw';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK } from './color-presets';
 
@@ -96,7 +97,7 @@ export interface ColorPickerHandle {
 /**
  * Base Tailwind classes shared by tab buttons
  */
-const TAB_BASE_CLASSES = 'flex-1 py-1.5 text-xs text-center text-text-primary rounded-md cursor-pointer border-none outline-hidden transition-colors';
+const TAB_BASE_CLASSES = 'px-2 py-1.5 text-xs text-center text-text-primary rounded-md cursor-pointer border-none outline-hidden transition-colors';
 
 /**
  * Neutral background for text-mode swatches so they render as visible buttons.
@@ -130,7 +131,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
    */
   const tabRow = document.createElement('div');
 
-  tabRow.className = 'flex gap-0.5 mb-0.5';
+  tabRow.className = 'grid grid-cols-2 gap-0.5 mb-0.5';
 
   const tabButtons: HTMLButtonElement[] = [];
 
@@ -163,13 +164,39 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   const grid = document.createElement('div');
 
   grid.setAttribute('data-blok-testid', `${testIdPrefix}-grid`);
-  grid.className = 'grid grid-cols-5 gap-1.5';
+  grid.className = 'grid gap-1';
+  grid.style.gridTemplateColumns = 'repeat(5, 2.25rem)';
 
   const renderSwatches = (): void => {
     grid.innerHTML = '';
 
     const currentMode = modes[state.modeIndex];
     const presets = getActivePresets();
+
+    // Default swatch (first position) — clears the active color
+    const defaultSwatch = document.createElement('button');
+    const isDefaultActive = state.activeColor === null;
+
+    defaultSwatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-default`);
+    defaultSwatch.className = twMerge(
+      'w-9 h-9 rounded-md cursor-pointer border-none outline-hidden',
+      'flex items-center justify-center text-sm font-semibold',
+      'transition-shadow ring-inset hover:ring-2 hover:ring-swatch-ring-hover',
+      isDefaultActive && 'ring-2 ring-swatch-ring-active'
+    );
+    defaultSwatch.textContent = 'A';
+
+    if (currentMode.presetField === 'text') {
+      defaultSwatch.style.backgroundColor = state.currentBgColor ?? SWATCH_NEUTRAL_BG;
+    } else {
+      defaultSwatch.style.color = state.currentTextColor ?? 'inherit';
+      defaultSwatch.style.backgroundColor = 'transparent';
+    }
+    defaultSwatch.addEventListener('click', () => {
+      onColorSelect(null, currentMode.key);
+    });
+    onHover(defaultSwatch, `${i18n.t('tools.marker.default')} ${i18n.t(currentMode.labelKey).toLowerCase()}`, { placement: 'top' });
+    grid.appendChild(defaultSwatch);
 
     for (const preset of presets) {
       const swatch = document.createElement('button');
@@ -178,7 +205,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
 
       swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${preset.name}`);
       swatch.className = twMerge(
-        'w-8 h-8 rounded-md cursor-pointer border-none outline-hidden',
+        'w-9 h-9 rounded-md cursor-pointer border-none outline-hidden',
         'flex items-center justify-center text-sm font-semibold',
         'transition-shadow ring-inset hover:ring-2 hover:ring-swatch-ring-hover',
         isActive && 'ring-2 ring-swatch-ring-active'
@@ -202,25 +229,10 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       swatch.addEventListener('click', () => {
         onColorSelect(swatchColor, currentMode.key);
       });
+      onHover(swatch, `${i18n.t('tools.colorPicker.color.' + preset.name)} ${i18n.t(currentMode.labelKey).toLowerCase()}`, { placement: 'top' });
       grid.appendChild(swatch);
     }
   };
-
-  /**
-   * Default button
-   */
-  const defaultBtn = document.createElement('button');
-
-  defaultBtn.setAttribute('data-blok-testid', `${testIdPrefix}-default-btn`);
-  defaultBtn.className = twMerge(
-    'w-full py-1.5 text-xs text-center text-text-primary rounded-md cursor-pointer',
-    'bg-transparent border-none outline-hidden hover:bg-item-hover-bg',
-    'mt-0.5 transition-colors'
-  );
-  defaultBtn.textContent = i18n.t('tools.marker.default');
-  defaultBtn.addEventListener('click', () => {
-    onColorSelect(null, modes[state.modeIndex].key);
-  });
 
   /**
    * Assemble
@@ -230,7 +242,6 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
 
   wrapper.appendChild(tabRow);
   wrapper.appendChild(grid);
-  wrapper.appendChild(defaultBtn);
 
   return {
     element: wrapper,

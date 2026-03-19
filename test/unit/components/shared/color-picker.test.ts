@@ -31,18 +31,26 @@ describe('createColorPicker', () => {
     expect(tabs[1].getAttribute('data-blok-testid')).toBe('test-tab-bg');
   });
 
-  it('renders all color swatches', () => {
+  it('renders all color swatches including the default swatch', () => {
     const { element } = createColorPicker(createOptions());
     const swatches = element.querySelectorAll('[data-blok-testid^="test-swatch-"]');
 
-    expect(swatches).toHaveLength(COLOR_PRESETS.length);
+    // 1 default swatch + one per preset
+    expect(swatches).toHaveLength(COLOR_PRESETS.length + 1);
   });
 
-  it('renders a default button', () => {
+  it('renders a default swatch in the first position', () => {
+    const { element } = createColorPicker(createOptions());
+    const defaultSwatch = element.querySelector('[data-blok-testid="test-swatch-default"]');
+
+    expect(defaultSwatch).not.toBeNull();
+  });
+
+  it('does not render a separate default button', () => {
     const { element } = createColorPicker(createOptions());
     const defaultBtn = element.querySelector('[data-blok-testid="test-default-btn"]');
 
-    expect(defaultBtn).not.toBeNull();
+    expect(defaultBtn).toBeNull();
   });
 
   it('first mode is active by default (defaultModeIndex=0)', () => {
@@ -105,13 +113,13 @@ describe('createColorPicker', () => {
     expect(onColorSelect).toHaveBeenCalledWith(COLOR_PRESETS[0].bg, 'bg');
   });
 
-  it('default button calls onColorSelect with null and current mode key', () => {
+  it('default swatch calls onColorSelect with null and current mode key', () => {
     const onColorSelect = vi.fn();
     const { element } = createColorPicker(createOptions({ onColorSelect }));
 
-    const defaultBtn = element.querySelector<HTMLElement>('[data-blok-testid="test-default-btn"]');
+    const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-default"]');
 
-    defaultBtn?.click();
+    defaultSwatch?.click();
 
     expect(onColorSelect).toHaveBeenCalledWith(null, 'text');
   });
@@ -155,36 +163,11 @@ describe('createColorPicker', () => {
     expect(swatch?.style.backgroundColor).toBeTruthy();
   });
 
-  it('teal swatch click calls onColorSelect with teal text color', () => {
-    const onColorSelect = vi.fn();
-    const { element } = createColorPicker(createOptions({ onColorSelect }));
+  it('teal swatch does not exist (teal removed in favour of default swatch)', () => {
+    const { element } = createColorPicker(createOptions());
+    const swatch = element.querySelector('[data-blok-testid="test-swatch-teal"]');
 
-    const swatch = element.querySelector<HTMLElement>(
-      '[data-blok-testid="test-swatch-teal"]'
-    );
-
-    expect(swatch).not.toBeNull();
-    swatch?.click();
-
-    expect(onColorSelect).toHaveBeenCalledWith('#2b9a8f', 'text');
-  });
-
-  it('teal swatch click in bg mode calls onColorSelect with teal bg color', () => {
-    const onColorSelect = vi.fn();
-    const { element } = createColorPicker(createOptions({ onColorSelect }));
-
-    const bgTab = element.querySelector<HTMLElement>('[data-blok-testid="test-tab-bg"]');
-
-    bgTab?.click();
-
-    const swatch = element.querySelector<HTMLElement>(
-      '[data-blok-testid="test-swatch-teal"]'
-    );
-
-    expect(swatch).not.toBeNull();
-    swatch?.click();
-
-    expect(onColorSelect).toHaveBeenCalledWith('#e4f5f3', 'bg');
+    expect(swatch).toBeNull();
   });
 
   describe('active color indicator (bug #4)', () => {
@@ -219,7 +202,7 @@ describe('createColorPicker', () => {
       expect(inactiveSwatch?.className).not.toContain('ring-swatch-ring-active');
     });
 
-    it('clears active indicator when setActiveColor is called with null', () => {
+    it('clears active indicator on preset swatches when setActiveColor is called with null', () => {
       const { element, setActiveColor } = createColorPicker(createOptions());
 
       setActiveColor(COLOR_PRESETS[0].text, 'text');
@@ -230,6 +213,35 @@ describe('createColorPicker', () => {
       );
 
       expect(swatch?.className).not.toContain('ring-swatch-ring-active');
+    });
+
+    it('default swatch shows active ring when no color is selected (initial state)', () => {
+      const { element } = createColorPicker(createOptions());
+
+      const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-default"]');
+
+      expect(defaultSwatch?.className).toContain('ring-swatch-ring-active');
+    });
+
+    it('default swatch shows active ring after setActiveColor is called with null', () => {
+      const { element, setActiveColor } = createColorPicker(createOptions());
+
+      setActiveColor(COLOR_PRESETS[0].text, 'text');
+      setActiveColor(null, 'text');
+
+      const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-default"]');
+
+      expect(defaultSwatch?.className).toContain('ring-swatch-ring-active');
+    });
+
+    it('default swatch does not show active ring when a color swatch is selected', () => {
+      const { element, setActiveColor } = createColorPicker(createOptions());
+
+      setActiveColor(COLOR_PRESETS[0].text, 'text');
+
+      const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-default"]');
+
+      expect(defaultSwatch?.className).not.toContain('ring-swatch-ring-active');
     });
   });
 
@@ -509,7 +521,7 @@ describe('createColorPicker', () => {
     expect(element.getAttribute('data-blok-testid')).toBe('custom-picker');
     expect(element.querySelector('[data-blok-testid="custom-tab-text"]')).not.toBeNull();
     expect(element.querySelector('[data-blok-testid="custom-grid"]')).not.toBeNull();
-    expect(element.querySelector('[data-blok-testid="custom-default-btn"]')).not.toBeNull();
+    expect(element.querySelector('[data-blok-testid="custom-swatch-default"]')).not.toBeNull();
     expect(element.querySelector(`[data-blok-testid="custom-swatch-${COLOR_PRESETS[0].name}"]`)).not.toBeNull();
   });
 
@@ -532,12 +544,12 @@ describe('createColorPicker', () => {
       }
     });
 
-    it('suppresses native focus outline on default button', () => {
+    it('suppresses native focus outline on default swatch', () => {
       const { element } = createColorPicker(createOptions());
-      const defaultBtn = element.querySelector<HTMLButtonElement>('[data-blok-testid="test-default-btn"]');
+      const defaultSwatch = element.querySelector<HTMLButtonElement>('[data-blok-testid="test-swatch-default"]');
 
-      expect(defaultBtn).not.toBeNull();
-      expect(defaultBtn?.className).toContain('outline-hidden');
+      expect(defaultSwatch).not.toBeNull();
+      expect(defaultSwatch?.className).toContain('outline-hidden');
     });
   });
 });

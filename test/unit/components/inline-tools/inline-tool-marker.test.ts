@@ -662,7 +662,7 @@ describe('MarkerInlineTool', () => {
       expect(api.inlineToolbar.close).not.toHaveBeenCalled();
     });
 
-    it('does not call inlineToolbar.close when Default button is clicked', () => {
+    it('does not call inlineToolbar.close when Default swatch is clicked', () => {
       container.innerHTML = '<mark style="color: #d44c47">colored</mark>';
 
       const markEl = container.querySelector('mark');
@@ -687,15 +687,15 @@ describe('MarkerInlineTool', () => {
       const api = createMockApi();
       const toolWithApi = new MarkerInlineTool({ api: api as never, config: undefined });
       const picker = getPickerElement(toolWithApi);
-      const defaultBtn = picker.querySelector<HTMLButtonElement>(
-        '[data-blok-testid="marker-default-btn"]'
+      const defaultSwatch = picker.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="marker-swatch-default"]'
       );
 
-      if (!defaultBtn) {
-        throw new Error('Test setup failed: default button not found');
+      if (!defaultSwatch) {
+        throw new Error('Test setup failed: default swatch not found');
       }
 
-      defaultBtn.click();
+      defaultSwatch.click();
 
       expect(api.inlineToolbar.close).not.toHaveBeenCalled();
     });

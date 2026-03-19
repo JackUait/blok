@@ -22,26 +22,22 @@ function contrastRatio(fg: string, bg: string): number {
 }
 
 describe('COLOR_PRESETS', () => {
-  it('exports 10 color presets', () => {
-    expect(COLOR_PRESETS).toHaveLength(10);
+  it('exports 9 color presets', () => {
+    expect(COLOR_PRESETS).toHaveLength(9);
   });
 
-  it('includes teal preset with correct hex values', () => {
+  it('does not include teal (removed in favour of default swatch)', () => {
     const teal = COLOR_PRESETS.find((p) => p.name === 'teal');
 
-    expect(teal).toBeDefined();
-    expect(teal?.text).toBe('#2b9a8f');
-    expect(teal?.bg).toBe('#e4f5f3');
+    expect(teal).toBeUndefined();
   });
 
-  it('has teal positioned between green and blue', () => {
+  it('has green positioned directly before blue', () => {
     const names = COLOR_PRESETS.map((p) => p.name);
     const greenIndex = names.indexOf('green');
-    const tealIndex = names.indexOf('teal');
     const blueIndex = names.indexOf('blue');
 
-    expect(greenIndex).toBeLessThan(tealIndex);
-    expect(tealIndex).toBeLessThan(blueIndex);
+    expect(blueIndex).toBe(greenIndex + 1);
   });
 
   it('each preset has name, text, and bg', () => {
@@ -54,8 +50,8 @@ describe('COLOR_PRESETS', () => {
 });
 
 describe('COLOR_PRESETS_DARK', () => {
-  it('exports 10 dark color presets', () => {
-    expect(COLOR_PRESETS_DARK).toHaveLength(10);
+  it('exports 9 dark color presets', () => {
+    expect(COLOR_PRESETS_DARK).toHaveLength(9);
   });
 
   it('has the same preset names in the same order as light presets', () => {
@@ -82,12 +78,10 @@ describe('COLOR_PRESETS_DARK', () => {
     }
   });
 
-  it('includes teal dark preset with correct hex values', () => {
+  it('does not include teal dark preset (removed in favour of default swatch)', () => {
     const teal = COLOR_PRESETS_DARK.find((p) => p.name === 'teal');
 
-    expect(teal).toBeDefined();
-    expect(teal?.text).toBe('#5cbcb3');
-    expect(teal?.bg).toBe('#1b4642');
+    expect(teal).toBeUndefined();
   });
 
   it('each dark preset text on bg achieves at least 3.8:1 WCAG contrast ratio', () => {
@@ -109,6 +103,6 @@ describe('colorVarName', () => {
 
   it('handles all color names', () => {
     expect(colorVarName('gray', 'text')).toBe('var(--blok-color-gray-text)');
-    expect(colorVarName('teal', 'bg')).toBe('var(--blok-color-teal-bg)');
+    expect(colorVarName('blue', 'bg')).toBe('var(--blok-color-blue-bg)');
   });
 });

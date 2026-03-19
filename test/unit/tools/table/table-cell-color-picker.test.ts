@@ -34,7 +34,7 @@ describe('createCellColorPicker', () => {
     expect(bgTab?.className).toContain('font-medium');
   });
 
-  it('renders all color swatches', () => {
+  it('renders all color swatches including the default swatch', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
@@ -42,7 +42,8 @@ describe('createCellColorPicker', () => {
 
     const swatches = element.querySelectorAll('[data-blok-testid^="cell-color-swatch-"]');
 
-    expect(swatches).toHaveLength(COLOR_PRESETS.length);
+    // 1 default swatch + one per preset
+    expect(swatches).toHaveLength(COLOR_PRESETS.length + 1);
   });
 
   it('clicking swatch in background mode calls onColorSelect with bg color and backgroundColor mode', () => {
@@ -93,18 +94,18 @@ describe('createCellColorPicker', () => {
     expect(onColorSelect).toHaveBeenCalledWith(COLOR_PRESETS[0].text, 'textColor');
   });
 
-  it('default button calls onColorSelect with null and current mode', () => {
+  it('default swatch calls onColorSelect with null and current mode', () => {
     const onColorSelect = vi.fn();
     const { element } = createCellColorPicker({ i18n: mockI18n, onColorSelect });
 
-    const defaultBtn = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-default-btn"]');
+    const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-swatch-default"]');
 
-    defaultBtn?.click();
+    defaultSwatch?.click();
 
     expect(onColorSelect).toHaveBeenCalledWith(null, 'backgroundColor');
   });
 
-  it('default button uses current mode (textColor)', () => {
+  it('default swatch uses current mode (textColor)', () => {
     const onColorSelect = vi.fn();
     const { element } = createCellColorPicker({ i18n: mockI18n, onColorSelect });
 
@@ -113,14 +114,25 @@ describe('createCellColorPicker', () => {
 
     textTab?.click();
 
-    const defaultBtn = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-default-btn"]');
+    const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-swatch-default"]');
 
-    defaultBtn?.click();
+    defaultSwatch?.click();
 
     expect(onColorSelect).toHaveBeenCalledWith(null, 'textColor');
   });
 
-  it('renders a default button', () => {
+  it('renders a default swatch in the first position', () => {
+    const { element } = createCellColorPicker({
+      i18n: mockI18n,
+      onColorSelect: vi.fn(),
+    });
+
+    const defaultSwatch = element.querySelector('[data-blok-testid="cell-color-swatch-default"]');
+
+    expect(defaultSwatch).toBeTruthy();
+  });
+
+  it('does not render a separate default button', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
@@ -128,7 +140,7 @@ describe('createCellColorPicker', () => {
 
     const defaultBtn = element.querySelector('[data-blok-testid="cell-color-default-btn"]');
 
-    expect(defaultBtn).toBeTruthy();
+    expect(defaultBtn).toBeNull();
   });
 
   it('swatches always display "A" text in both modes', () => {

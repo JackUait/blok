@@ -44,7 +44,7 @@ export const IconMarker = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M6.5 14L10 5l3.5 9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M7.5 11.5h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <rect x="4.5" y="16" width="11" height="1.5" rx="0.75" fill="var(--blok-marker-bar, currentColor)"/>
+  <rect x="4.5" y="16" width="11" height="1.5" rx="0.75" fill="currentColor"/>
 </svg>
 `;
 

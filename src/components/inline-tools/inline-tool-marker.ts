@@ -169,7 +169,7 @@ export class MarkerInlineTool implements InlineTool {
           this.activeBgColor = color;
         }
 
-        this.updateToolbarColorBar(this.activeTextColor ?? this.activeBgColor);
+        this.updateToolbarColors(this.activeTextColor, this.activeBgColor);
 
         this.selection.setFakeBackground();
         this.selection.save();
@@ -407,29 +407,36 @@ export class MarkerInlineTool implements InlineTool {
       }
     }
 
-    this.updateToolbarColorBar(this.activeTextColor ?? this.activeBgColor);
+    this.updateToolbarColors(this.activeTextColor, this.activeBgColor);
 
     this.selection.setFakeBackground();
     this.selection.save();
   }
 
   /**
-   * Update the color bar on the inline toolbar marker button.
-   * Sets --blok-marker-bar on the button element so the SVG rect reflects the active color.
-   * Text color takes priority over background color.
-   * @param color - CSS color value or null to reset to currentColor
+   * Update the color indicator on the inline toolbar marker button.
+   * Sets color and background-color inline so the button reflects both applied colors.
+   * Inline styles override the popover active-state Tailwind selectors.
+   * @param textColor - CSS color value for the icon/text, or null to reset
+   * @param bgColor - CSS color value for the button background, or null to reset
    */
-  private updateToolbarColorBar(color: string | null): void {
+  private updateToolbarColors(textColor: string | null, bgColor: string | null): void {
     const btn = document.querySelector<HTMLElement>('[data-blok-item-name="marker"]');
 
     if (!btn) {
       return;
     }
 
-    if (color !== null) {
-      btn.style.setProperty('--blok-marker-bar', color);
+    if (textColor !== null) {
+      btn.style.setProperty('color', textColor);
     } else {
-      btn.style.removeProperty('--blok-marker-bar');
+      btn.style.removeProperty('color');
+    }
+
+    if (bgColor !== null) {
+      btn.style.setProperty('background-color', bgColor);
+    } else {
+      btn.style.removeProperty('background-color');
     }
   }
 

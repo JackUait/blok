@@ -443,10 +443,11 @@ export class MarkerInlineTool implements InlineTool {
     if (bgColor !== null) {
       btn.style.setProperty('background-color', bgColor);
     } else if (textColor !== null) {
-      // Suppress the active-state blue background when only text color is applied.
-      // Without this, isActive() returning true causes the popover to add
-      // data-blok-popover-item-active which applies bg-icon-active-bg (blue).
-      btn.style.setProperty('background-color', 'transparent');
+      // Use a neutral background when only text color is applied so that:
+      // (a) the active-state blue (data-blok-popover-item-active:bg-icon-active-bg) is suppressed, and
+      // (b) light text colors remain visible regardless of the toolbar's own background.
+      // Same neutral bg used in the color picker for text-mode swatches.
+      btn.style.setProperty('background-color', 'var(--blok-swatch-neutral-bg)');
     } else {
       btn.style.removeProperty('background-color');
     }

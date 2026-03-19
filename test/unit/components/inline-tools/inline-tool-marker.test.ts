@@ -1684,12 +1684,13 @@ describe('MarkerInlineTool', () => {
 
       isActiveFn();
 
-      // background-color must be explicitly set (not removed) so the active-state
-      // blue CSS (`data-blok-popover-item-active:bg-icon-active-bg`) cannot apply
-      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      // background-color must be set to the neutral bg so:
+      // (a) the active-state blue CSS (`data-blok-popover-item-active:bg-icon-active-bg`) is suppressed, and
+      // (b) light text colors remain visible regardless of the toolbar's own background
+      expect(markerBtn.style.backgroundColor).toBe('var(--blok-swatch-neutral-bg)');
     });
 
-    it('sets transparent background on toolbar button after clicking a text color swatch (suppresses active-state blue)', () => {
+    it('sets neutral background on toolbar button after clicking a text color swatch (keeps color visible)', () => {
       container.innerHTML = 'hello';
       const range = document.createRange();
 
@@ -1700,7 +1701,7 @@ describe('MarkerInlineTool', () => {
 
       pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-red"]')!.click();
 
-      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      expect(markerBtn.style.backgroundColor).toBe('var(--blok-swatch-neutral-bg)');
     });
   });
 });

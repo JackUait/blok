@@ -73,17 +73,7 @@ export interface ColorPickerHandle {
    */
   setActiveColor: (color: string | null, modeKey: string) => void;
   /**
-   * Set the preview text color shown as the "A" label inside background-mode swatches.
-   * Pass null to revert to the default label color.
-   */
-  setPreviewTextColor: (color: string | null) => void;
-  /**
-   * Set the preview background color shown behind the "A" label inside text-mode swatches.
-   * Pass null to revert to the default neutral background.
-   */
-  setPreviewBgColor: (color: string | null) => void;
-  /**
-   * Reset the picker state back to defaults (clear all active colors and preview colors).
+   * Reset the picker state back to defaults (clear all active colors).
    */
   reset: () => void;
 }
@@ -104,8 +94,6 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   const { i18n, modes, testIdPrefix, onColorSelect } = options;
   const state = {
     activeColors: Object.fromEntries(modes.map((m) => [m.key, null])) as Record<string, string | null>,
-    currentTextColor: null as string | null,
-    currentBgColor: null as string | null,
   };
 
   const wrapper = document.createElement('div');
@@ -169,9 +157,9 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     defaultSwatch.textContent = 'A';
 
     if (mode.presetField === 'text') {
-      defaultSwatch.style.backgroundColor = state.currentBgColor ?? SWATCH_NEUTRAL_BG;
+      defaultSwatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
     } else {
-      defaultSwatch.style.color = state.currentTextColor ?? 'inherit';
+      defaultSwatch.style.color = 'inherit';
       defaultSwatch.style.backgroundColor = 'transparent';
     }
     defaultSwatch.addEventListener('click', () => {
@@ -196,12 +184,9 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
 
       if (mode.presetField === 'text') {
         swatch.style.color = preset.text;
-        swatch.style.backgroundColor = state.currentBgColor ?? SWATCH_NEUTRAL_BG;
+        swatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
       } else {
-        const labelColor = state.currentTextColor
-          ?? (presets === COLOR_PRESETS_DARK ? preset.text : '#37352f');
-
-        swatch.style.color = labelColor;
+        swatch.style.color = presets === COLOR_PRESETS_DARK ? preset.text : '#37352f';
         swatch.style.backgroundColor = preset.bg;
       }
 
@@ -217,10 +202,6 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     modes.forEach((_, i) => renderSection(i));
   };
 
-  // Precompute section indices for targeted re-renders
-  const bgSectionIndex = modes.findIndex((m) => m.presetField === 'bg');
-  const textSectionIndex = modes.findIndex((m) => m.presetField === 'text');
-
   renderAll();
 
   return {
@@ -233,20 +214,10 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         renderSection(matchingIndex);
       }
     },
-    setPreviewTextColor: (color: string | null) => {
-      state.currentTextColor = color;
-      if (bgSectionIndex !== -1) renderSection(bgSectionIndex);
-    },
-    setPreviewBgColor: (color: string | null) => {
-      state.currentBgColor = color;
-      if (textSectionIndex !== -1) renderSection(textSectionIndex);
-    },
     reset: () => {
       for (const mode of modes) {
         state.activeColors[mode.key] = null;
       }
-      state.currentTextColor = null;
-      state.currentBgColor = null;
       renderAll();
     },
   };

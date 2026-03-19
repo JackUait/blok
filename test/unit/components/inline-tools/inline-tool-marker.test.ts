@@ -1293,11 +1293,10 @@ describe('MarkerInlineTool', () => {
     });
   });
 
-  describe('text swatch preview after applying background color', () => {
-    it('text swatches show the newly applied background color when switching to the text tab', () => {
+  describe('swatch cross-section preview is absent', () => {
+    it('text swatch keeps neutral background after a bg color is applied', () => {
       container.textContent = 'Hello world';
 
-      // Select 'Hello'
       const textNode = container.firstChild!;
       const range = document.createRange();
 
@@ -1306,34 +1305,27 @@ describe('MarkerInlineTool', () => {
       window.getSelection()!.removeAllRanges();
       window.getSelection()!.addRange(range);
 
-      // Get the picker element from the render config
       const config = tool.render() as PopoverItemDefaultBaseParams;
       const pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
 
       document.body.appendChild(pickerEl);
 
       try {
-        // Click the yellow background swatch in the background section
         const yellowBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
         yellowBgSwatch?.click();
 
-        // Text swatches should now use the bg color just applied as their background.
-        // After hex→var translation, the preview color is stored as a CSS var.
         const yellowTextSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-yellow"]');
 
-        expect(yellowTextSwatch?.style.backgroundColor).toBe('var(--blok-color-yellow-bg)');
+        expect(yellowTextSwatch?.style.backgroundColor).toBe('var(--blok-swatch-neutral-bg)');
       } finally {
         document.body.removeChild(pickerEl);
       }
     });
-  });
 
-  describe('background swatch preview after applying text color', () => {
-    it('bg swatches show the newly applied text color when switching to the background tab', () => {
+    it('bg swatch label color is unchanged when a text color is applied', () => {
       container.textContent = 'Hello world';
 
-      // Select 'Hello'
       const textNode = container.firstChild!;
       const range = document.createRange();
 
@@ -1342,23 +1334,22 @@ describe('MarkerInlineTool', () => {
       window.getSelection()!.removeAllRanges();
       window.getSelection()!.addRange(range);
 
-      // Get the picker element from the render config
       const config = tool.render() as PopoverItemDefaultBaseParams;
       const pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
 
       document.body.appendChild(pickerEl);
 
       try {
-        // Click the gray text swatch in the text section (light mode: #787774)
+        const grayBgSwatchBefore = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-gray"]');
+        const colorBefore = grayBgSwatchBefore?.style.color;
+
         const graySwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-gray"]');
 
         graySwatch?.click();
 
-        // Bg swatches should now use the text color just applied as their A label.
-        // After hex→var translation, the preview color is stored as a CSS var.
-        const grayBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-gray"]');
+        const grayBgSwatchAfter = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-gray"]');
 
-        expect(grayBgSwatch?.style.color).toBe('var(--blok-color-gray-text)');
+        expect(grayBgSwatchAfter?.style.color).toBe(colorBefore);
       } finally {
         document.body.removeChild(pickerEl);
       }

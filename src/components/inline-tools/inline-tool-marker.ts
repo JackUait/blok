@@ -171,18 +171,6 @@ export class MarkerInlineTool implements InlineTool {
 
         this.updateToolbarColorBar(this.activeTextColor ?? this.activeBgColor);
 
-        // After a text color change, refresh the background-tab preview so
-        // the "A" labels reflect the new color when the user switches tabs.
-        if (modeKey === 'color') {
-          this.picker.setPreviewTextColor(this.getSelectionComputedColor());
-        }
-
-        // After a background color change, refresh the text-tab preview so
-        // the swatch backgrounds reflect the new color when the user switches tabs.
-        if (modeKey === 'background-color') {
-          this.picker.setPreviewBgColor(this.getSelectionMarkBgColor());
-        }
-
         this.selection.setFakeBackground();
         this.selection.save();
       },
@@ -406,8 +394,6 @@ export class MarkerInlineTool implements InlineTool {
     this.activeBgColor = null;
 
     this.picker.reset();
-    this.picker.setPreviewTextColor(this.getSelectionComputedColor());
-    this.picker.setPreviewBgColor(this.getSelectionMarkBgColor());
 
     const activeColor = this.detectSelectionColor();
 
@@ -499,49 +485,6 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     return null;
-  }
-
-  /**
-   * Return the computed text color of the current selection's start node.
-   * Used to populate the preview "A" label on background-mode swatches.
-   */
-  private getSelectionComputedColor(): string | null {
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      return null;
-    }
-
-    const node = selection.getRangeAt(0).startContainer;
-    const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as HTMLElement);
-
-    if (!(el instanceof HTMLElement)) {
-      return null;
-    }
-
-    return window.getComputedStyle(el).color || null;
-  }
-
-  /**
-   * Return the inline background-color of the mark at the current selection's start.
-   * Used to populate the preview background on text-mode swatches.
-   */
-  private getSelectionMarkBgColor(): string | null {
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      return null;
-    }
-
-    const mark = findMarkElement(selection.getRangeAt(0).startContainer);
-
-    if (!mark) {
-      return null;
-    }
-
-    const bg = mark.style.getPropertyValue('background-color');
-
-    return bg && bg !== 'transparent' ? bg : null;
   }
 
   /**

@@ -48,7 +48,8 @@ const TRACK_CLASSES = [
   'h-[20px]',
   'rounded-full',
   'transition-colors',
-  'duration-200',
+  'duration-[180ms]',
+  'ease-out',
   'shrink-0',
 ];
 
@@ -59,9 +60,9 @@ const THUMB_CLASSES = [
   'h-4',
   'rounded-full',
   'bg-white',
-  'shadow-xs',
   'transition-[left]',
-  'duration-200',
+  'duration-[220ms]',
+  '[transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]',
 ];
 
 interface HeadingToggleOptions {
@@ -110,8 +111,12 @@ export const createHeadingToggle = (options: HeadingToggleOptions): HTMLElement 
   row.appendChild(track);
 
   const applyState = (): void => {
-    track.style.backgroundColor = state.active ? '#3b82f6' : '#d1d5db';
+    track.style.backgroundColor = state.active ? 'var(--blok-toggle-on-bg)' : 'var(--blok-toggle-off-bg)';
     thumb.style.left = state.active ? '16px' : '2px';
+    thumb.style.backgroundColor = state.active ? 'var(--blok-toggle-thumb-on-bg)' : '';
+    thumb.style.boxShadow = state.active
+      ? '0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.04)'
+      : '0 1px 3px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.06)';
   };
 
   applyState();

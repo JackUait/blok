@@ -714,6 +714,11 @@
   --blok-table-grip-outline: transparent;
   --blok-table-drag-source-bg: #f3f4f6;
 
+  /* Toggle switch */
+  --blok-toggle-off-bg: #d4d4d8;
+  --blok-toggle-on-bg: #2383e2;
+  --blok-toggle-thumb-on-bg: #ffffff;
+
   /* Checklist */
   --blok-checklist-border: rgba(0, 0, 0, 0.28);
   --blok-checklist-shadow: rgba(0, 0, 0, 0.08);
@@ -801,6 +806,11 @@
     --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
     --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
 
+    /* Toggle switch */
+    --blok-toggle-off-bg: #3f3f46;
+    --blok-toggle-on-bg: #e4e4e7;
+    --blok-toggle-thumb-on-bg: #252525;
+
     /* Checklist */
     --blok-checklist-border: rgba(255, 255, 255, 0.22);
     --blok-checklist-shadow: rgba(0, 0, 0, 0.3);
@@ -887,6 +897,11 @@
   --blok-table-heading-bg: #272725;
   --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
   --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
+
+  /* Toggle switch */
+  --blok-toggle-off-bg: #3f3f46;
+  --blok-toggle-on-bg: #e4e4e7;
+  --blok-toggle-thumb-on-bg: #252525;
 
   /* Checklist */
   --blok-checklist-border: rgba(255, 255, 255, 0.22);

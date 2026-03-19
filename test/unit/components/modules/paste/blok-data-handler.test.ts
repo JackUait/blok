@@ -275,5 +275,86 @@ describe('BlokDataHandler', () => {
       expect(blockInstances[0].parentId).toBeNull();
       expect(blockInstances[1].parentId).toBeNull();
     });
+
+    it('does not replace current block when pasting hierarchical content (table+children)', async () => {
+      const { modules, insertedBlocks } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      /**
+       * Simulate pasting a table with two child paragraphs while the cursor is
+       * on an empty default block (canReplaceCurrentBlock: true).
+       *
+       * Without the fix, shouldReplaceFirst would be true and the table insertion
+       * would pass replace: true — but with children present, the fix forces
+       * replace: false to avoid replacing one of the already-inserted child
+       * paragraphs instead of the original empty block.
+       */
+      const pasteData = JSON.stringify([
+        {
+          id: 'table-1',
+          tool: 'table',
+          data: {
+            content: [
+              [{ blocks: ['child-1'] }, { blocks: ['child-2'] }],
+            ],
+            colWidths: [50, 50],
+          },
+          parentId: null,
+          contentIds: ['child-1', 'child-2'],
+        },
+        {
+          id: 'child-1',
+          tool: 'paragraph',
+          data: { text: 'Cell A' },
+          parentId: 'table-1',
+          contentIds: [],
+        },
+        {
+          id: 'child-2',
+          tool: 'paragraph',
+          data: { text: 'Cell B' },
+          parentId: 'table-1',
+          contentIds: [],
+        },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: true });
+
+      // Children inserted first (Pass 1), table last (Pass 2)
+      expect(insertedBlocks[0].tool).toBe('paragraph');
+      expect(insertedBlocks[1].tool).toBe('paragraph');
+      expect(insertedBlocks[2].tool).toBe('table');
+
+      // Table must NOT replace the current block — children.length > 0 disables replace
+      expect(insertedBlocks[2].replace).toBe(false);
+    });
+
+    it('replaces current block when pasting flat blocks (no children) with canReplaceCurrentBlock true', async () => {
+      const { modules, insertedBlocks } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      const pasteData = JSON.stringify([
+        {
+          id: 'block-1',
+          tool: 'paragraph',
+          data: { text: 'Hello' },
+        },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: true });
+
+      // With no hierarchy (no children), the first root block SHOULD apply replace
+      expect(insertedBlocks[0].replace).toBe(true);
+    });
   });
 });

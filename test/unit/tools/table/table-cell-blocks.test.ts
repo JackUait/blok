@@ -2026,6 +2026,121 @@ describe('TableCellBlocks', () => {
       // Newly created fallback paragraph should also have parent set
       expect(setBlockParentMock).toHaveBeenCalledWith('new-para-1', 'table-1');
     });
+
+    it('steals block from original table when called with existing block ID (documents the root cause)', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original cell DOM: a container that already holds an existing block holder
+      const existingBlockHolder = document.createElement('div');
+      const originalCellContainer = document.createElement('div');
+      originalCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalCellContainer.appendChild(existingBlockHolder);
+
+      // Pasted table grid: a 1x1 table (row > cell > container)
+      const pastedGridElement = document.createElement('div');
+      const pastedRow = document.createElement('div');
+      pastedRow.setAttribute('data-blok-table-row', '');
+      const pastedCell = document.createElement('div');
+      pastedCell.setAttribute('data-blok-table-cell', '');
+      const pastedCellContainer = document.createElement('div');
+      pastedCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      pastedCell.appendChild(pastedCellContainer);
+      pastedRow.appendChild(pastedCell);
+      pastedGridElement.appendChild(pastedRow);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'original-para-id') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'original-para-id', holder: existingBlockHolder };
+
+            return undefined;
+          }),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement: pastedGridElement,
+        tableBlockId: 'pasted-table',
+        model: createMockModel(),
+      });
+
+      // Call with the OLD ID — the one that already belongs to the original table
+      cellBlocks.initializeCells([[{ blocks: ['original-para-id'] }]]);
+
+      // The block was stolen: no longer in the original container
+      expect(originalCellContainer.contains(existingBlockHolder)).toBe(false);
+      // And now lives in the pasted table's cell container
+      expect(pastedCellContainer.contains(existingBlockHolder)).toBe(true);
+    });
+
+    it('does not disturb original table blocks when called with new remapped IDs (fix verification)', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original cell DOM: container holding the original block
+      const existingBlockHolder = document.createElement('div');
+      const originalCellContainer = document.createElement('div');
+      originalCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalCellContainer.appendChild(existingBlockHolder);
+
+      // Pasted table grid: 1x1
+      const pastedGridElement = document.createElement('div');
+      const pastedRow = document.createElement('div');
+      pastedRow.setAttribute('data-blok-table-row', '');
+      const pastedCell = document.createElement('div');
+      pastedCell.setAttribute('data-blok-table-cell', '');
+      const pastedCellContainer = document.createElement('div');
+      pastedCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      pastedCell.appendChild(pastedCellContainer);
+      pastedRow.appendChild(pastedCell);
+      pastedGridElement.appendChild(pastedRow);
+
+      // A new block holder simulating the block inserted in Pass 1 of the fix
+      const newBlockHolder = document.createElement('div');
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'original-para-id') return 0;
+            if (id === 'new-para-id') return 1;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'original-para-id', holder: existingBlockHolder };
+            if (index === 1) return { id: 'new-para-id', holder: newBlockHolder };
+
+            return undefined;
+          }),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement: pastedGridElement,
+        tableBlockId: 'pasted-table',
+        model: createMockModel(),
+      });
+
+      // Call with the REMAPPED (new) ID — the fix ensures this is what gets passed
+      cellBlocks.initializeCells([[{ blocks: ['new-para-id'] }]]);
+
+      // Original block is untouched — still in the original container
+      expect(originalCellContainer.contains(existingBlockHolder)).toBe(true);
+      // New block is correctly mounted in the pasted cell
+      expect(pastedCellContainer.contains(newBlockHolder)).toBe(true);
+    });
   });
 
   describe('stripPlaceholders safety for non-paragraph blocks', () => {

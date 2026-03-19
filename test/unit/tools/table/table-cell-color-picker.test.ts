@@ -10,7 +10,20 @@ describe('createCellColorPicker', () => {
     getEnglishTranslation: () => '',
   };
 
-  it('renders tab buttons for Text and Background', () => {
+  it('renders two sections for Text and Background', () => {
+    const { element } = createCellColorPicker({
+      i18n: mockI18n,
+      onColorSelect: vi.fn(),
+    });
+
+    const textSection = element.querySelector('[data-blok-testid="cell-color-section-textColor"]');
+    const bgSection = element.querySelector('[data-blok-testid="cell-color-section-backgroundColor"]');
+
+    expect(textSection).not.toBeNull();
+    expect(bgSection).not.toBeNull();
+  });
+
+  it('does not render tab buttons', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
@@ -18,40 +31,29 @@ describe('createCellColorPicker', () => {
 
     const tabs = element.querySelectorAll('[data-blok-testid^="cell-color-tab-"]');
 
-    expect(tabs).toHaveLength(2);
-    expect(tabs[0].getAttribute('data-blok-testid')).toBe('cell-color-tab-textColor');
-    expect(tabs[1].getAttribute('data-blok-testid')).toBe('cell-color-tab-backgroundColor');
+    expect(tabs).toHaveLength(0);
   });
 
-  it('Background tab is active by default', () => {
+  it('renders all color swatches in each section including the default swatch', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
     });
 
-    const bgTab = element.querySelector('[data-blok-testid="cell-color-tab-backgroundColor"]');
+    const textSwatches = element.querySelectorAll('[data-blok-testid^="cell-color-swatch-textColor-"]');
+    const bgSwatches = element.querySelectorAll('[data-blok-testid^="cell-color-swatch-backgroundColor-"]');
 
-    expect(bgTab?.className).toContain('font-medium');
+    // 1 default swatch + one per preset per section
+    expect(textSwatches).toHaveLength(COLOR_PRESETS.length + 1);
+    expect(bgSwatches).toHaveLength(COLOR_PRESETS.length + 1);
   });
 
-  it('renders all color swatches including the default swatch', () => {
-    const { element } = createCellColorPicker({
-      i18n: mockI18n,
-      onColorSelect: vi.fn(),
-    });
-
-    const swatches = element.querySelectorAll('[data-blok-testid^="cell-color-swatch-"]');
-
-    // 1 default swatch + one per preset
-    expect(swatches).toHaveLength(COLOR_PRESETS.length + 1);
-  });
-
-  it('clicking swatch in background mode calls onColorSelect with bg color and backgroundColor mode', () => {
+  it('clicking swatch in background section calls onColorSelect with bg color and backgroundColor mode', () => {
     const onColorSelect = vi.fn();
     const { element } = createCellColorPicker({ i18n: mockI18n, onColorSelect });
 
     const firstSwatch = element.querySelector<HTMLElement>(
-      `[data-blok-testid="cell-color-swatch-${COLOR_PRESETS[0].name}"]`
+      `[data-blok-testid="cell-color-swatch-backgroundColor-${COLOR_PRESETS[0].name}"]`
     );
 
     firstSwatch?.click();
@@ -59,34 +61,12 @@ describe('createCellColorPicker', () => {
     expect(onColorSelect).toHaveBeenCalledWith(COLOR_PRESETS[0].bg, 'backgroundColor');
   });
 
-  it('switching to text tab changes active tab', () => {
-    const { element } = createCellColorPicker({
-      i18n: mockI18n,
-      onColorSelect: vi.fn(),
-    });
-
-    const textTab = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-tab-textColor"]');
-
-    textTab?.click();
-
-    expect(textTab?.className).toContain('font-medium');
-
-    const bgTab = element.querySelector('[data-blok-testid="cell-color-tab-backgroundColor"]');
-
-    expect(bgTab?.className).not.toContain('font-medium');
-  });
-
-  it('clicking swatch in text mode calls onColorSelect with text color and textColor mode', () => {
+  it('clicking swatch in text section calls onColorSelect with text color and textColor mode', () => {
     const onColorSelect = vi.fn();
     const { element } = createCellColorPicker({ i18n: mockI18n, onColorSelect });
 
-    // Switch to text mode
-    const textTab = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-tab-textColor"]');
-
-    textTab?.click();
-
     const firstSwatch = element.querySelector<HTMLElement>(
-      `[data-blok-testid="cell-color-swatch-${COLOR_PRESETS[0].name}"]`
+      `[data-blok-testid="cell-color-swatch-textColor-${COLOR_PRESETS[0].name}"]`
     );
 
     firstSwatch?.click();
@@ -94,42 +74,36 @@ describe('createCellColorPicker', () => {
     expect(onColorSelect).toHaveBeenCalledWith(COLOR_PRESETS[0].text, 'textColor');
   });
 
-  it('default swatch calls onColorSelect with null and current mode', () => {
+  it('default swatch in background section calls onColorSelect with null and backgroundColor mode', () => {
     const onColorSelect = vi.fn();
     const { element } = createCellColorPicker({ i18n: mockI18n, onColorSelect });
 
-    const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-swatch-default"]');
+    const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-swatch-backgroundColor-default"]');
 
     defaultSwatch?.click();
 
     expect(onColorSelect).toHaveBeenCalledWith(null, 'backgroundColor');
   });
 
-  it('default swatch uses current mode (textColor)', () => {
+  it('default swatch in text section calls onColorSelect with null and textColor mode', () => {
     const onColorSelect = vi.fn();
     const { element } = createCellColorPicker({ i18n: mockI18n, onColorSelect });
 
-    // Switch to text mode
-    const textTab = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-tab-textColor"]');
-
-    textTab?.click();
-
-    const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-swatch-default"]');
+    const defaultSwatch = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-swatch-textColor-default"]');
 
     defaultSwatch?.click();
 
     expect(onColorSelect).toHaveBeenCalledWith(null, 'textColor');
   });
 
-  it('renders a default swatch in the first position', () => {
+  it('renders a default swatch in each section', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
     });
 
-    const defaultSwatch = element.querySelector('[data-blok-testid="cell-color-swatch-default"]');
-
-    expect(defaultSwatch).toBeTruthy();
+    expect(element.querySelector('[data-blok-testid="cell-color-swatch-textColor-default"]')).toBeTruthy();
+    expect(element.querySelector('[data-blok-testid="cell-color-swatch-backgroundColor-default"]')).toBeTruthy();
   });
 
   it('does not render a separate default button', () => {
@@ -143,7 +117,7 @@ describe('createCellColorPicker', () => {
     expect(defaultBtn).toBeNull();
   });
 
-  it('swatches always display "A" text in both modes', () => {
+  it('swatches always display "A" text in both sections', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
@@ -154,27 +128,16 @@ describe('createCellColorPicker', () => {
     for (const swatch of swatches) {
       expect(swatch.textContent).toBe('A');
     }
-
-    // Switch to text mode
-    const textTab = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-tab-textColor"]');
-
-    textTab?.click();
-
-    const textSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-"]'));
-
-    for (const swatch of textSwatches) {
-      expect(swatch.textContent).toBe('A');
-    }
   });
 
-  it('swatches show background color in background mode', () => {
+  it('swatches in background section show background color', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
     });
 
     const firstSwatch = element.querySelector<HTMLElement>(
-      `[data-blok-testid="cell-color-swatch-${COLOR_PRESETS[0].name}"]`
+      `[data-blok-testid="cell-color-swatch-backgroundColor-${COLOR_PRESETS[0].name}"]`
     );
 
     // JSDOM normalises hex to rgb(), so just check the property is set

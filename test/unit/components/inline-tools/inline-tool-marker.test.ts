@@ -650,7 +650,7 @@ describe('MarkerInlineTool', () => {
       const toolWithApi = new MarkerInlineTool({ api: api as never, config: undefined });
       const picker = getPickerElement(toolWithApi);
       const swatch = picker.querySelector<HTMLButtonElement>(
-        '[data-blok-testid="marker-swatch-red"]'
+        '[data-blok-testid="marker-swatch-color-red"]'
       );
 
       if (!swatch) {
@@ -688,7 +688,7 @@ describe('MarkerInlineTool', () => {
       const toolWithApi = new MarkerInlineTool({ api: api as never, config: undefined });
       const picker = getPickerElement(toolWithApi);
       const defaultSwatch = picker.querySelector<HTMLButtonElement>(
-        '[data-blok-testid="marker-swatch-default"]'
+        '[data-blok-testid="marker-swatch-color-default"]'
       );
 
       if (!defaultSwatch) {
@@ -722,7 +722,7 @@ describe('MarkerInlineTool', () => {
     it('renders text-mode swatches with a visible background', () => {
       const picker = getPickerElement();
       const swatch = picker.querySelector<HTMLButtonElement>(
-        '[data-blok-testid="marker-swatch-red"]'
+        '[data-blok-testid="marker-swatch-color-red"]'
       );
 
       expect(swatch).not.toBeNull();
@@ -731,15 +731,8 @@ describe('MarkerInlineTool', () => {
 
     it('renders background-mode swatches with their preset background color', () => {
       const picker = getPickerElement();
-
-      const bgTab = picker.querySelector<HTMLButtonElement>(
-        '[data-blok-testid="marker-tab-background-color"]'
-      );
-
-      bgTab?.click();
-
       const swatch = picker.querySelector<HTMLButtonElement>(
-        '[data-blok-testid="marker-swatch-red"]'
+        '[data-blok-testid="marker-swatch-background-color-red"]'
       );
 
       expect(swatch).not.toBeNull();
@@ -1320,24 +1313,14 @@ describe('MarkerInlineTool', () => {
       document.body.appendChild(pickerEl);
 
       try {
-        // Switch to the background tab
-        const bgTab = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-tab-background-color"]');
-
-        bgTab?.click();
-
-        // Click the yellow background swatch (light mode: #fbf3db = rgb(251, 243, 219))
-        const yellowBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-yellow"]');
+        // Click the yellow background swatch in the background section
+        const yellowBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
         yellowBgSwatch?.click();
 
-        // Switch to the text tab
-        const textTab = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-tab-color"]');
-
-        textTab?.click();
-
         // Text swatches should now use the bg color just applied as their background.
         // After hex→var translation, the preview color is stored as a CSS var.
-        const yellowTextSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-yellow"]');
+        const yellowTextSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-yellow"]');
 
         expect(yellowTextSwatch?.style.backgroundColor).toBe('var(--blok-color-yellow-bg)');
       } finally {
@@ -1366,19 +1349,14 @@ describe('MarkerInlineTool', () => {
       document.body.appendChild(pickerEl);
 
       try {
-        // Click the gray text swatch (light mode: #787774 = rgb(120, 119, 116))
-        const graySwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-gray"]');
+        // Click the gray text swatch in the text section (light mode: #787774)
+        const graySwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-gray"]');
 
         graySwatch?.click();
 
-        // Switch to the background tab
-        const bgTab = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-tab-background-color"]');
-
-        bgTab?.click();
-
         // Bg swatches should now use the text color just applied as their A label.
         // After hex→var translation, the preview color is stored as a CSS var.
-        const grayBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-gray"]');
+        const grayBgSwatch = pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-gray"]');
 
         expect(grayBgSwatch?.style.color).toBe('var(--blok-color-gray-text)');
       } finally {

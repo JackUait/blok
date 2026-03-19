@@ -42,7 +42,7 @@ function colorsEqual(a: string, b: string): boolean {
 }
 
 /**
- * Describes one tab in the color picker (e.g. "Text" or "Background")
+ * Describes one section in the color picker (e.g. "Text" or "Background")
  */
 export interface ColorPickerMode {
   key: string;
@@ -56,7 +56,6 @@ export interface ColorPickerMode {
 export interface ColorPickerOptions {
   i18n: I18n;
   modes: [ColorPickerMode, ColorPickerMode];
-  defaultModeIndex?: number;
   testIdPrefix: string;
   onColorSelect: (color: string | null, modeKey: string) => void;
 }
@@ -68,36 +67,26 @@ export interface ColorPickerHandle {
   element: HTMLDivElement;
   /**
    * Set the currently active color for visual indication on the matching swatch.
-   * Pass null to clear any active indicator.
+   * Pass null to clear any active indicator for that section.
    * @param color - CSS color value or null to clear
-   * @param modeKey - The mode key (e.g. 'color', 'background-color') to match the correct preset field
+   * @param modeKey - The mode key (e.g. 'color', 'background-color') to match the correct section
    */
   setActiveColor: (color: string | null, modeKey: string) => void;
   /**
    * Set the preview text color shown as the "A" label inside background-mode swatches.
-   * This lets users see how their current text color looks against each background option.
    * Pass null to revert to the default label color.
-   * @param color - CSS color value (e.g. computed style color) or null to clear
    */
   setPreviewTextColor: (color: string | null) => void;
   /**
    * Set the preview background color shown behind the "A" label inside text-mode swatches.
-   * This lets users see how their text color choices look against their current background.
    * Pass null to revert to the default neutral background.
-   * @param color - CSS color value (e.g. inline mark background-color) or null to clear
    */
   setPreviewBgColor: (color: string | null) => void;
   /**
-   * Reset the picker state (tab index) back to defaultModeIndex.
-   * Call this when the picker is reopened to ensure consistent initial state.
+   * Reset the picker state back to defaults (clear all active colors and preview colors).
    */
   reset: () => void;
 }
-
-/**
- * Base Tailwind classes shared by tab buttons
- */
-const TAB_BASE_CLASSES = 'px-2 py-1.5 text-xs text-center text-text-primary rounded-md cursor-pointer border-none outline-hidden transition-colors';
 
 /**
  * Neutral background for text-mode swatches so they render as visible buttons.
@@ -106,17 +95,15 @@ const TAB_BASE_CLASSES = 'px-2 py-1.5 text-xs text-center text-text-primary roun
 const SWATCH_NEUTRAL_BG = 'var(--blok-swatch-neutral-bg)';
 
 /**
- * Creates a color picker element with two tabs (e.g. Text / Background),
- * a 5-column swatch grid, and a "Default" reset button.
+ * Creates a color picker element with two always-visible sections (e.g. Text / Background),
+ * each containing a 5-column swatch grid with a "Default" reset swatch at position 0.
  *
  * Shared between the marker inline tool and the table cell color popover.
  */
 export function createColorPicker(options: ColorPickerOptions): ColorPickerHandle {
   const { i18n, modes, testIdPrefix, onColorSelect } = options;
-  const defaultModeIndex = options.defaultModeIndex ?? 0;
   const state = {
-    modeIndex: defaultModeIndex,
-    activeColor: null as string | null,
+    activeColors: Object.fromEntries(modes.map((m) => [m.key, null])) as Record<string, string | null>,
     currentTextColor: null as string | null,
     currentBgColor: null as string | null,
   };
@@ -124,60 +111,55 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   const wrapper = document.createElement('div');
 
   wrapper.setAttribute('data-blok-testid', `${testIdPrefix}-picker`);
-  wrapper.className = 'flex flex-col gap-2 p-2';
+  wrapper.className = 'flex flex-col gap-3 p-2';
 
   /**
-   * Tab row
+   * One grid element per section, stored so we can re-render independently.
    */
-  const tabRow = document.createElement('div');
+  const sectionGrids: HTMLDivElement[] = [];
 
-  tabRow.className = 'grid grid-cols-2 gap-0.5 mb-0.5';
+  /**
+   * Build sections once; re-render only the grids on state changes.
+   */
+  modes.forEach((mode) => {
+    const section = document.createElement('div');
 
-  const tabButtons: HTMLButtonElement[] = [];
+    section.setAttribute('data-blok-testid', `${testIdPrefix}-section-${mode.key}`);
+    section.className = 'flex flex-col gap-1';
 
-  modes.forEach((mode, modeIndex) => {
-    const tab = document.createElement('button');
+    const title = document.createElement('div');
 
-    tab.setAttribute('data-blok-testid', `${testIdPrefix}-tab-${mode.key}`);
-    tab.textContent = i18n.t(mode.labelKey);
-    tab.addEventListener('click', () => {
-      state.modeIndex = modeIndex;
-      updateTabs();
-      renderSwatches();
-    });
-    tabButtons.push(tab);
-    tabRow.appendChild(tab);
+    title.className = 'text-xs font-medium text-text-primary/60 px-0.5';
+    title.textContent = i18n.t(mode.labelKey);
+
+    const grid = document.createElement('div');
+
+    grid.className = 'grid gap-1';
+    grid.style.gridTemplateColumns = 'repeat(5, 2.25rem)';
+    sectionGrids.push(grid);
+
+    section.appendChild(title);
+    section.appendChild(grid);
+    wrapper.appendChild(section);
   });
 
-  const updateTabs = (): void => {
-    for (const [index, button] of tabButtons.entries()) {
-      button.className = twMerge(
-        TAB_BASE_CLASSES,
-        index === state.modeIndex ? 'bg-item-hover-bg font-medium' : 'bg-transparent hover:bg-item-hover-bg/50'
-      );
-    }
-  };
-
   /**
-   * Color grid
+   * Render the swatches for one section.
    */
-  const grid = document.createElement('div');
-
-  grid.setAttribute('data-blok-testid', `${testIdPrefix}-grid`);
-  grid.className = 'grid gap-1';
-  grid.style.gridTemplateColumns = 'repeat(5, 2.25rem)';
-
-  const renderSwatches = (): void => {
-    grid.innerHTML = '';
-
-    const currentMode = modes[state.modeIndex];
+  const renderSection = (modeIndex: number): void => {
+    const grid = sectionGrids[modeIndex];
+    const mode = modes[modeIndex];
     const presets = getActivePresets();
 
-    // Default swatch (first position) — clears the active color
-    const defaultSwatch = document.createElement('button');
-    const isDefaultActive = state.activeColor === null;
+    grid.innerHTML = '';
 
-    defaultSwatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-default`);
+    const activeColorForSection = state.activeColors[mode.key];
+
+    // Default swatch (first position) — clears the active color for this section
+    const defaultSwatch = document.createElement('button');
+    const isDefaultActive = activeColorForSection === null;
+
+    defaultSwatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${mode.key}-default`);
     defaultSwatch.className = twMerge(
       'w-9 h-9 rounded-md cursor-pointer border-none outline-hidden',
       'flex items-center justify-center text-sm font-semibold',
@@ -186,24 +168,24 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     );
     defaultSwatch.textContent = 'A';
 
-    if (currentMode.presetField === 'text') {
+    if (mode.presetField === 'text') {
       defaultSwatch.style.backgroundColor = state.currentBgColor ?? SWATCH_NEUTRAL_BG;
     } else {
       defaultSwatch.style.color = state.currentTextColor ?? 'inherit';
       defaultSwatch.style.backgroundColor = 'transparent';
     }
     defaultSwatch.addEventListener('click', () => {
-      onColorSelect(null, currentMode.key);
+      onColorSelect(null, mode.key);
     });
-    onHover(defaultSwatch, `${i18n.t('tools.marker.default')} ${i18n.t(currentMode.labelKey).toLowerCase()}`, { placement: 'top' });
+    onHover(defaultSwatch, `${i18n.t('tools.marker.default')} ${i18n.t(mode.labelKey).toLowerCase()}`, { placement: 'top' });
     grid.appendChild(defaultSwatch);
 
     for (const preset of presets) {
       const swatch = document.createElement('button');
-      const swatchColor = currentMode.presetField === 'text' ? preset.text : preset.bg;
-      const isActive = state.activeColor !== null && colorsEqual(swatchColor, state.activeColor);
+      const swatchColor = mode.presetField === 'text' ? preset.text : preset.bg;
+      const isActive = activeColorForSection !== null && colorsEqual(swatchColor, activeColorForSection);
 
-      swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${preset.name}`);
+      swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${mode.key}-${preset.name}`);
       swatch.className = twMerge(
         'w-9 h-9 rounded-md cursor-pointer border-none outline-hidden',
         'flex items-center justify-center text-sm font-semibold',
@@ -212,13 +194,10 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       );
       swatch.textContent = 'A';
 
-      if (currentMode.presetField === 'text') {
+      if (mode.presetField === 'text') {
         swatch.style.color = preset.text;
         swatch.style.backgroundColor = state.currentBgColor ?? SWATCH_NEUTRAL_BG;
       } else {
-        // Show the caller's current text color as the "A" label so users can
-        // preview how their text will look against each background. Fall back to
-        // a mode-appropriate default when no preview color has been provided.
         const labelColor = state.currentTextColor
           ?? (presets === COLOR_PRESETS_DARK ? preset.text : '#37352f');
 
@@ -227,51 +206,48 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       }
 
       swatch.addEventListener('click', () => {
-        onColorSelect(swatchColor, currentMode.key);
+        onColorSelect(swatchColor, mode.key);
       });
-      onHover(swatch, `${i18n.t('tools.colorPicker.color.' + preset.name)} ${i18n.t(currentMode.labelKey).toLowerCase()}`, { placement: 'top' });
+      onHover(swatch, `${i18n.t('tools.colorPicker.color.' + preset.name)} ${i18n.t(mode.labelKey).toLowerCase()}`, { placement: 'top' });
       grid.appendChild(swatch);
     }
   };
 
-  /**
-   * Assemble
-   */
-  updateTabs();
-  renderSwatches();
+  const renderAll = (): void => {
+    modes.forEach((_, i) => renderSection(i));
+  };
 
-  wrapper.appendChild(tabRow);
-  wrapper.appendChild(grid);
+  // Precompute section indices for targeted re-renders
+  const bgSectionIndex = modes.findIndex((m) => m.presetField === 'bg');
+  const textSectionIndex = modes.findIndex((m) => m.presetField === 'text');
+
+  renderAll();
 
   return {
     element: wrapper,
     setActiveColor: (color: string | null, modeKey: string) => {
-      state.activeColor = color;
-
       const matchingIndex = modes.findIndex((m) => m.key === modeKey);
 
       if (matchingIndex !== -1) {
-        state.modeIndex = matchingIndex;
-        updateTabs();
+        state.activeColors[modeKey] = color;
+        renderSection(matchingIndex);
       }
-
-      renderSwatches();
     },
     setPreviewTextColor: (color: string | null) => {
       state.currentTextColor = color;
-      renderSwatches();
+      if (bgSectionIndex !== -1) renderSection(bgSectionIndex);
     },
     setPreviewBgColor: (color: string | null) => {
       state.currentBgColor = color;
-      renderSwatches();
+      if (textSectionIndex !== -1) renderSection(textSectionIndex);
     },
     reset: () => {
-      state.modeIndex = defaultModeIndex;
-      state.activeColor = null;
+      for (const mode of modes) {
+        state.activeColors[mode.key] = null;
+      }
       state.currentTextColor = null;
       state.currentBgColor = null;
-      updateTabs();
-      renderSwatches();
+      renderAll();
     },
   };
 }

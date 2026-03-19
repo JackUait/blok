@@ -140,7 +140,6 @@ export class MarkerInlineTool implements InlineTool {
     this.picker = createColorPicker({
       i18n: this.i18n,
       testIdPrefix: 'marker',
-      defaultModeIndex: 0,
       modes: [
         { key: 'color', labelKey: 'tools.marker.textColor', presetField: 'text' },
         { key: 'background-color', labelKey: 'tools.marker.background', presetField: 'bg' },

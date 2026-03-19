@@ -20,7 +20,6 @@ export const createCellColorPicker = (options: CellColorPickerOptions): CellColo
   const handle = createColorPicker({
     i18n: options.i18n,
     testIdPrefix: 'cell-color',
-    defaultModeIndex: 1,
     modes: [
       { key: 'textColor', labelKey: 'tools.marker.textColor', presetField: 'text' },
       { key: 'backgroundColor', labelKey: 'tools.marker.background', presetField: 'bg' },

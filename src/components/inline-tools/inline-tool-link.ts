@@ -6,16 +6,11 @@ import type {
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconHash } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
 import { twMerge } from '../utils/tw';
-
-/** SVG icons for the link suggestion chip — 20×20 viewBox, stroke-width 1.25, matching project icon style */
-const ICON_GLOBE = '<svg width="28" height="28" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="1.25"/><path d="M10 4C8 6 7.5 8 7.5 10C7.5 12 8 14 10 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 4C12 6 12.5 8 12.5 10C12.5 12 12 14 10 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 10H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>';
-const ICON_MAIL = '<svg width="28" height="28" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5.5" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M3 7.5L10 12L17 7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const ICON_HASH = '<svg width="28" height="28" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 4L6 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M14 4L12.5 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M4 8.5H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M4 12H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>';
 
 const SUGGESTION_ROW_VALID = 'flex items-center gap-2 w-full mt-0.5 px-1.5 py-1.5 rounded-md text-left cursor-pointer can-hover:hover:bg-item-hover-bg transition-colors';
 const SUGGESTION_ROW_INVALID = 'flex items-center gap-2 w-full mt-0.5 px-1.5 py-1.5 rounded-md text-left pointer-events-none';
@@ -329,13 +324,13 @@ export class LinkInlineTool implements InlineTool {
    */
   private getLinkTypeInfo(url: string): { icon: string; label: string } {
     if (url.startsWith('mailto:')) {
-      return { icon: ICON_MAIL, label: 'Email address' };
+      return { icon: IconMail, label: 'Email address' };
     }
     if (url.startsWith('#')) {
-      return { icon: ICON_HASH, label: 'Jump to section' };
+      return { icon: IconHash, label: 'Jump to section' };
     }
 
-    return { icon: ICON_GLOBE, label: 'Link to web page' };
+    return { icon: IconGlobe, label: 'Link to web page' };
   }
 
   /**

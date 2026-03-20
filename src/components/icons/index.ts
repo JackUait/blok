@@ -386,3 +386,31 @@ export const IconToggleH3 = `
   <path d="M16 7l2.5 3-2.5 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
+
+// Globe icon (URL link type)
+export const IconGlobe = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M10 4C8 6 7.5 8 7.5 10C7.5 12 8 14 10 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 4C12 6 12.5 8 12.5 10C12.5 12 12 14 10 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 10H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Mail icon (email link type)
+export const IconMail = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="5.5" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M3 7.5L10 12L17 7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Hash icon (anchor link type)
+export const IconHash = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M7.5 4L6 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M14 4L12.5 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M4 8.5H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M4 12H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;

@@ -286,6 +286,14 @@ cd docs && yarn test
 - **Internal**: `src/types-internal/` - used within codebase
 - Key internal type: `BlokModules` interface
 
+## Icons
+
+All icons live in `src/components/icons/index.ts` as exported SVG string constants.
+
+The dev playground (`index.html`) has a `iconGroups` object (around line 909) that groups icons into named categories for the `/icons` gallery tab. **This list is manually maintained.**
+
+**Rule: whenever you add a new icon to `src/components/icons/index.ts`, you MUST also add its export name to the appropriate group in `iconGroups` in `index.html`. Place it in the most fitting existing category, or create a new named category if none fits.**
+
 ## Important Patterns
 
 1. **Event-Driven**: Custom EventsDispatcher for typed events (`src/components/events/`)

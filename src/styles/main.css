@@ -1275,12 +1275,16 @@
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
-  @apply bg-search-input-bg rounded-[4px] transition-colors duration-150 max-w-[240px];
+  @apply bg-search-input-bg rounded-md transition-colors duration-150 w-fit max-w-[240px] px-2;
 }
 
 [data-blok-slash-search]::after {
   content: attr(data-blok-slash-search);
   @apply text-gray-text font-medium text-base pointer-events-none;
+}
+
+[data-blok-slash-search]::before {
+  content: none !important;
 }
 
 /**

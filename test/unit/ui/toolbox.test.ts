@@ -1399,6 +1399,102 @@ describe('Toolbox', () => {
     });
   });
 
+  describe('open without slash mode (plus button)', () => {
+    it('should set data-blok-slash-search placeholder immediately on open (before any typing)', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open(false);
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]');
+
+      expect(contentEditable?.getAttribute('data-blok-slash-search')).toBe('Type to search');
+    });
+
+    it('should NOT close toolbox when user types without a "/" character', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open(false);
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      contentEditable.textContent = 'head';
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+
+      expect(toolbox.opened).toBe(true);
+      expect(mockPopoverInstance.hide).not.toHaveBeenCalled();
+    });
+
+    it('should filter by full text content when no "/" is present', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open(false);
+      vi.clearAllMocks();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      contentEditable.textContent = 'head';
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+
+      expect(mockPopoverInstance.filterItems).toHaveBeenCalledWith('head');
+    });
+
+    it('should filter by empty string when block content is empty', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open(false);
+      vi.clearAllMocks();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      contentEditable.textContent = '';
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+
+      expect(toolbox.opened).toBe(true);
+      expect(mockPopoverInstance.filterItems).toHaveBeenCalledWith('');
+    });
+  });
+
+  describe('open with slash mode (regression)', () => {
+    it('should close when block content has no "/" character', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+
+      const contentEditable = mocks.blockAPI.holder.querySelector('[contenteditable="true"]') as HTMLElement;
+
+      contentEditable.textContent = 'head';
+      contentEditable.dispatchEvent(new Event('input', { bubbles: true })); // eslint-disable-line internal-unit-test/no-direct-event-dispatch -- no DOM API to programmatically trigger input events on contenteditable
+
+      expect(toolbox.opened).toBe(false);
+      expect(mockPopoverInstance.hide).toHaveBeenCalled();
+    });
+  });
+
   describe('englishTitle for multilingual search', () => {
     it('should resolve englishTitle correctly for tools with dotted titleKey', () => {
       const headerTool = {

@@ -168,6 +168,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private isInsideTableCell = false;
 
   /**
+   * Whether the toolbox was opened in slash-search mode (via "/" key or existing slash paragraph).
+   * When false (opened via plus button), the input filter uses the full block text as the query
+   * instead of requiring a leading "/" and does not close on missing slash.
+   */
+  private openedWithSlash = true;
+
+  /**
    * Toolbox constructor
    * @param options - available parameters
    * @param options.api - Blok API methods
@@ -280,8 +287,10 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Open Toolbox with Tools
+   * @param withSlash - When true (default), inline search requires "/" and closes on its removal.
+   *                    When false (plus button), the full block text is used as the filter query.
    */
-  public open(): void {
+  public open(withSlash = true): void {
     if (this.isEmpty) {
       return;
     }
@@ -318,8 +327,20 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       const caretRect = SelectionUtils.rect;
 
       this.popover.updatePosition(caretRect);
+    } else if (!withSlash && this.popover instanceof PopoverDesktop) {
+      /**
+       * When opened without slash (via plus button), the trigger element (plus button)
+       * is at the top of the block. Position the popover below the block's bottom edge
+       * instead, so it doesn't overlap the block's placeholder text.
+       */
+      const currentBlock = this.api.blocks.getBlockByIndex(currentBlockIndex);
+
+      if (currentBlock) {
+        this.popover.updatePosition(currentBlock.holder.getBoundingClientRect());
+      }
     }
 
+    this.openedWithSlash = withSlash;
     this.opened = true;
     this.emit(ToolboxEvent.Opened);
     this.startListeningToBlockInput();
@@ -725,7 +746,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Handles input events on the block to filter the toolbox.
-   * Extracts text after "/" and applies it as a filter query.
+   *
+   * In slash mode (default): extracts text after "/" and filters by it.
+   * Closes if "/" is removed.
+   *
+   * In no-slash mode (opened via plus button): uses full block text as the
+   * filter query and does not close on missing "/".
    */
   private handleBlockInput = (): void => {
     if (this.currentContentEditable === null) {
@@ -733,15 +759,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     const text = this.currentContentEditable.textContent || '';
-    const slashIndex = text.lastIndexOf('/');
 
-    if (slashIndex === -1) {
-      this.close();
+    if (this.openedWithSlash) {
+      const slashIndex = text.lastIndexOf('/');
 
-      return;
+      if (slashIndex === -1) {
+        this.close();
+
+        return;
+      }
     }
 
-    const query = text.slice(slashIndex + 1);
+    const query = this.openedWithSlash ? text.slice(text.lastIndexOf('/') + 1) : text;
 
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(

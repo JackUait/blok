@@ -140,6 +140,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       {
         getToolboxOpened: () => this.toolbox.opened ?? false,
         openToolbox: () => this.toolbox.open(),
+        openToolboxWithoutSlash: () => this.toolbox.openWithoutSlash(),
         closeToolbox: () => this.toolbox.close(),
         moveAndOpenToolbar: (block, target) => this.moveAndOpen(block, target),
       }
@@ -202,6 +203,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     opened: boolean | undefined; // undefined is for the case when Toolbox is not initialized yet
     close: () => void;
     open: () => void;
+    openWithoutSlash: () => void;
     toggle: () => void;
     hasFocus: () => boolean | undefined;
     } {
@@ -209,6 +211,25 @@ export class Toolbar extends Module<ToolbarNodes> {
       opened: this.toolboxInstance?.opened,
       close: () => {
         this.toolboxInstance?.close();
+      },
+      openWithoutSlash: () => {
+        if (this.toolboxInstance === null) {
+          log('toolbox.openWithoutSlash() called before initialization is finished', 'warn');
+
+          return;
+        }
+
+        if (this.hoveredBlock && !this.hoveredBlockIsFromTableCell) {
+          const currentBlock = this.Blok.BlockManager.currentBlock;
+          const isCurrentBlockInsideTableCell = currentBlock !== undefined
+            && currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+          if (!isCurrentBlockInsideTableCell) {
+            this.Blok.BlockManager.currentBlock = this.hoveredBlock;
+          }
+        }
+
+        this.toolboxInstance.open(false);
       },
       open: () => {
         /**

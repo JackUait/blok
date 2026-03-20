@@ -27,9 +27,14 @@ export class PlusButtonHandler {
   private getToolboxOpened: () => boolean;
 
   /**
-   * Callback to open the toolbox
+   * Callback to open the toolbox in slash-search mode
    */
   private openToolbox: () => void;
+
+  /**
+   * Callback to open the toolbox in no-slash mode (used when clicking the plus button)
+   */
+  private openToolboxWithoutSlash: () => void;
 
   /**
    * Callback to close the toolbox
@@ -50,6 +55,7 @@ export class PlusButtonHandler {
     callbacks: {
       getToolboxOpened: () => boolean;
       openToolbox: () => void;
+      openToolboxWithoutSlash: () => void;
       closeToolbox: () => void;
       moveAndOpenToolbar: (block?: Block | null, target?: Element | null) => void;
     }
@@ -57,6 +63,7 @@ export class PlusButtonHandler {
     this.getBlok = getBlok;
     this.getToolboxOpened = callbacks.getToolboxOpened;
     this.openToolbox = callbacks.openToolbox;
+    this.openToolboxWithoutSlash = callbacks.openToolboxWithoutSlash;
     this.closeToolbox = callbacks.closeToolbox;
     this.moveAndOpenToolbar = callbacks.moveAndOpenToolbar;
   }
@@ -196,14 +203,17 @@ export class PlusButtonHandler {
       hoveredBlock?.holder.after(targetBlock.holder);
     }
 
-    // Insert "/" or position caret after existing one
+    // Position caret and open toolbox
     if (startsWithSlash) {
+      // Block already has "/" - keep slash-search mode, position after the slash
       Caret.setToBlock(targetBlock, Caret.positions.DEFAULT, 1);
+      this.moveAndOpenToolbar(targetBlock);
+      this.openToolbox();
     } else {
+      // New empty block - open toolbox directly without inserting "/"
       Caret.setToBlock(targetBlock, Caret.positions.START);
-      Caret.insertContentAtCaretPosition('/');
+      this.moveAndOpenToolbar(targetBlock);
+      this.openToolboxWithoutSlash();
     }
-    this.moveAndOpenToolbar(targetBlock);
-    this.openToolbox();
   }
 }

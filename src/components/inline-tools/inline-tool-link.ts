@@ -12,6 +12,14 @@ import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
 import { twMerge } from '../utils/tw';
 
+/** SVG icons for the link suggestion chip — 20×20 viewBox, stroke-width 1.25, matching project icon style */
+const ICON_GLOBE = '<svg width="28" height="28" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="1.25"/><path d="M10 4C8 6 7.5 8 7.5 10C7.5 12 8 14 10 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 4C12 6 12.5 8 12.5 10C12.5 12 12 14 10 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 10H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>';
+const ICON_MAIL = '<svg width="28" height="28" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5.5" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M3 7.5L10 12L17 7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_HASH = '<svg width="28" height="28" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 4L6 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M14 4L12.5 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M4 8.5H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M4 12H16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>';
+
+const SUGGESTION_ROW_VALID = 'flex items-center gap-2 w-full mt-0.5 px-1.5 py-1.5 rounded-md text-left cursor-pointer can-hover:hover:bg-item-hover-bg transition-colors';
+const SUGGESTION_ROW_INVALID = 'flex items-center gap-2 w-full mt-0.5 px-1.5 py-1.5 rounded-md text-left pointer-events-none';
+
 /**
  * Link Tool
  *
@@ -54,7 +62,7 @@ export class LinkInlineTool implements InlineTool {
   /**
    * Tailwind classes for input
    */
-  private readonly INPUT_BASE_CLASSES = 'hidden w-full m-0 px-2 py-1 text-sm leading-[22px] font-medium bg-item-hover-bg border border-link-input-border rounded-md outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text mobile:text-[15px] mobile:font-medium';
+  private readonly INPUT_BASE_CLASSES = 'hidden w-[200px] m-0 px-2 py-1 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-link-input-border rounded-lg! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text mobile:text-[15px] mobile:font-medium';
 
   /**
    * Data attributes for e2e selectors
@@ -70,9 +78,13 @@ export class LinkInlineTool implements InlineTool {
    */
   private nodes: {
     input: HTMLInputElement | null;
+    inputWrapper: HTMLElement | null;
+    suggestion: HTMLElement | null;
     button: HTMLButtonElement | null;
   } = {
       input: null,
+      inputWrapper: null,
+      suggestion: null,
       button: null,
     };
 
@@ -121,6 +133,9 @@ export class LinkInlineTool implements InlineTool {
     this.i18n = api.i18n;
     this.selection = new SelectionUtils();
     this.nodes.input = this.createInput();
+    this.nodes.suggestion = this.createSuggestion();
+    this.nodes.inputWrapper = document.createElement('div');
+    this.nodes.inputWrapper.append(this.nodes.input, this.nodes.suggestion);
   }
 
   /**
@@ -136,8 +151,8 @@ export class LinkInlineTool implements InlineTool {
         items: [
           {
             type: PopoverItemType.Html,
-            // Input is created in constructor, so it's always available here
-            element: this.nodes.input as HTMLInputElement,
+            // Wrapper contains the input and suggestion chip
+            element: this.nodes.inputWrapper as HTMLElement,
           },
         ],
         onOpen: () => {
@@ -166,8 +181,193 @@ export class LinkInlineTool implements InlineTool {
         this.enterPressed(event);
       }
     });
+    input.addEventListener('paste', () => {
+      requestAnimationFrame(() => {
+        this.updateSuggestion(input.value);
+      });
+    });
+    input.addEventListener('input', () => {
+      this.updateSuggestion(input.value);
+    });
 
     return input;
+  }
+
+  /**
+   * Create the suggestion chip shown below the input when a URL is present
+   */
+  private createSuggestion(): HTMLElement {
+    const wrapper = document.createElement('div');
+
+    wrapper.className = 'hidden';
+    wrapper.setAttribute('data-link-suggestion', '');
+
+    const divider = document.createElement('div');
+
+    divider.className = 'mt-1 mb-0.5 h-px bg-link-input-border';
+
+    const row = document.createElement('button');
+
+    row.type = 'button';
+    row.className = SUGGESTION_ROW_VALID;
+    row.setAttribute('data-link-suggestion-row', '');
+
+    const iconEl = document.createElement('span');
+
+    iconEl.className = 'text-gray-text shrink-0 flex';
+    iconEl.setAttribute('data-link-suggestion-icon', '');
+
+    const textEl = document.createElement('span');
+
+    textEl.className = 'flex-1 min-w-0';
+
+    const urlEl = document.createElement('span');
+
+    urlEl.className = 'block text-xs font-medium text-text-primary truncate';
+    urlEl.setAttribute('data-link-suggestion-url', '');
+
+    const typeEl = document.createElement('span');
+
+    typeEl.className = 'block text-[10.5px] text-gray-text leading-tight mt-px';
+    typeEl.setAttribute('data-link-suggestion-type', '');
+
+    textEl.append(urlEl, typeEl);
+    row.append(iconEl, textEl);
+    wrapper.append(divider, row);
+
+    row.addEventListener('mousedown', (e) => e.preventDefault());
+    row.addEventListener('click', () => this.confirmLink());
+
+    return wrapper;
+  }
+
+  /**
+   * Update the suggestion chip content and visibility based on current input value
+   */
+  private updateSuggestion(value: string): void {
+    if (!this.nodes.suggestion) {
+      return;
+    }
+
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      this.nodes.suggestion.classList.add('hidden');
+
+      return;
+    }
+
+    const isComplete = this.isLinkComplete(trimmed);
+    const { icon, label } = this.getLinkTypeInfo(trimmed);
+    const iconEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-icon]');
+    const urlEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-url]');
+    const typeEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-type]');
+    const row = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-row]');
+
+    if (iconEl) {
+      iconEl.innerHTML = icon;
+      iconEl.className = `${isComplete ? 'text-gray-text' : 'text-gray-text opacity-40'} shrink-0 flex`;
+    }
+    if (urlEl) {
+      urlEl.textContent = trimmed;
+      urlEl.className = `block text-xs font-medium truncate ${isComplete ? 'text-text-primary' : 'text-gray-text'}`;
+    }
+    if (typeEl) {
+      typeEl.textContent = isComplete ? label : 'Keep typing to add a link';
+      typeEl.className = 'block text-[10.5px] text-gray-text leading-tight mt-px';
+    }
+    if (row) {
+      row.className = isComplete ? SUGGESTION_ROW_VALID : SUGGESTION_ROW_INVALID;
+    }
+
+    this.nodes.suggestion.classList.remove('hidden');
+  }
+
+  /**
+   * Return true if the URL is complete enough to confirm as a link.
+   *
+   * Rules by category:
+   *  - http/https   → must have at least one character after "://"
+   *  - other ://    → same (ftp, ws, etc.)
+   *  - mailto/tel/… → must have something after the colon
+   *  - //host       → must have at least one character after "//"
+   *  - #anchor      → must have at least one character after "#"
+   *  - /path        → always valid (internal link)
+   *  - plain text   → must look like a domain (dot + 2+ letter TLD) or IP address
+   */
+  private isLinkComplete(url: string): boolean {
+    // http / https — require a non-empty host after "://"
+    if (/^https?:\/\//i.test(url)) {
+      return url.replace(/^https?:\/\//i, '').length > 0;
+    }
+    // Other double-slash protocols (ftp://, ws://, etc.)
+    if (/^\w+:\/\//.test(url)) {
+      return url.replace(/^\w+:\/\//, '').length > 0;
+    }
+    // Single-colon schemes: mailto:, tel:, sms:, etc. — require something after ":"
+    if (/^\w+:/.test(url)) {
+      return url.slice(url.indexOf(':') + 1).length > 0;
+    }
+    // Protocol-relative — require a non-empty host after "//"
+    if (url.startsWith('//')) {
+      return url.slice(2).length > 0;
+    }
+    // Anchor — require at least one character after "#"
+    if (url.startsWith('#')) {
+      return url.length > 1;
+    }
+    // Absolute internal path — always valid
+    if (url.startsWith('/')) {
+      return true;
+    }
+    // Plain text — must look like a domain or IP address
+    return /\.[a-zA-Z]{2,}/.test(url) || /^\d{1,3}(\.\d{1,3}){3}/.test(url);
+  }
+
+  /**
+   * Return the icon SVG and human-readable label for a given URL
+   */
+  private getLinkTypeInfo(url: string): { icon: string; label: string } {
+    if (url.startsWith('mailto:')) {
+      return { icon: ICON_MAIL, label: 'Email address' };
+    }
+    if (url.startsWith('#')) {
+      return { icon: ICON_HASH, label: 'Jump to section' };
+    }
+
+    return { icon: ICON_GLOBE, label: 'Link to web page' };
+  }
+
+  /**
+   * Insert the link from the input — called by the suggestion chip click
+   */
+  private confirmLink(): void {
+    if (!this.nodes.input) {
+      return;
+    }
+
+    const value = this.nodes.input.value || '';
+
+    if (!value.trim() || !this.isLinkComplete(value.trim())) {
+      return;
+    }
+
+    if (!this.validateURL(value)) {
+      this.notifier.show({
+        message: this.i18n.t('tools.link.invalidLink'),
+        style: 'error',
+      });
+
+      return;
+    }
+
+    const preparedValue = this.prepareLink(value);
+
+    this.selection.removeFakeBackground();
+    this.selection.restore();
+    this.insertLink(preparedValue);
+    this.selection.collapseToEnd();
+    this.inlineToolbar.close();
   }
 
   /**
@@ -200,6 +400,8 @@ export class LinkInlineTool implements InlineTool {
     } else {
       this.nodes.input.value = '';
     }
+
+    this.updateSuggestion(this.nodes.input.value);
 
     this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
@@ -309,6 +511,7 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.input.className = this.INPUT_BASE_CLASSES;
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.value = '';
+    this.nodes.suggestion?.classList.add('hidden');
     this.updateButtonStateAttributes(false);
     this.unlinkAvailable = false;
     if (clearSavedSelection) {

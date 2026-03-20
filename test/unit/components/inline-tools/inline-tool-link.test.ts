@@ -61,6 +61,20 @@ type LinkToolRenderResult = {
   };
 };
 
+const getInputFromWrapper = (wrapper: HTMLElement): HTMLInputElement => {
+  const input = wrapper.querySelector<HTMLInputElement>('input');
+
+  if (!input) {
+    throw new Error('Input not found in wrapper');
+  }
+
+  return input;
+};
+
+const getSuggestionChip = (itemWrapper: HTMLElement): HTMLElement | null => {
+  return itemWrapper.querySelector<HTMLElement>('[data-link-suggestion]');
+};
+
 const createTool = (): ToolSetup => {
   const toolbar = { close: vi.fn() };
   const inlineToolbar = { close: vi.fn() };
@@ -156,7 +170,8 @@ describe('LinkInlineTool', () => {
     const enterSpy = vi.spyOn(tool as unknown as { enterPressed(event: KeyboardEvent): void }, 'enterPressed');
 
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
-    const input = renderResult.children.items[0].element as HTMLInputElement;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
 
     expect(input.placeholder).toBe('tools.link.addLink');
     expect(input).toHaveAttribute('data-blok-testid', 'inline-tool-input');
@@ -202,7 +217,7 @@ describe('LinkInlineTool', () => {
     selection.findParentTag.mockReturnValue(anchor);
 
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
-    const input = renderResult.children.items[0].element as HTMLInputElement;
+    const input = getInputFromWrapper(renderResult.children.items[0].element);
 
     // Simulate onOpen
     renderResult.children.onOpen();
@@ -214,7 +229,7 @@ describe('LinkInlineTool', () => {
   it('removes link when input is submitted empty', () => {
     const { tool, inlineToolbar } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
-    const input = renderResult.children.items[0].element as HTMLInputElement;
+    const input = getInputFromWrapper(renderResult.children.items[0].element);
 
     input.value = '   ';
 
@@ -231,7 +246,7 @@ describe('LinkInlineTool', () => {
   it('shows notifier when URL validation fails', () => {
     const { tool, notifier } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
-    const input = renderResult.children.items[0].element as HTMLInputElement;
+    const input = getInputFromWrapper(renderResult.children.items[0].element);
     const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
 
     input.value = 'https://google .com';
@@ -248,7 +263,7 @@ describe('LinkInlineTool', () => {
   it('inserts prepared link and collapses selection when URL is valid', () => {
     const { tool, selection, inlineToolbar } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
-    const input = renderResult.children.items[0].element as HTMLInputElement;
+    const input = getInputFromWrapper(renderResult.children.items[0].element);
     const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
     const removeFakeBackgroundSpy = selection.removeFakeBackground as unknown as ReturnType<typeof vi.fn>;
 
@@ -320,5 +335,270 @@ describe('LinkInlineTool', () => {
 
     expect(anchorCheck).toBeNull();
     expect(document.body).toHaveTextContent('link text');
+  });
+
+  describe('suggestion chip', () => {
+    it('is hidden initially', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+      const chip = getSuggestionChip(itemWrapper);
+
+      expect(chip?.classList.contains('hidden')).toBe(true);
+    });
+
+    it('shows and populates chip when input has a URL', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('https://example.com');
+
+      const chip = getSuggestionChip(itemWrapper);
+      const urlEl = itemWrapper.querySelector('[data-link-suggestion-url]');
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+
+      expect(chip?.classList.contains('hidden')).toBe(false);
+      expect(urlEl?.textContent).toBe('https://example.com');
+      expect(typeEl?.textContent).toBe('Link to web page');
+    });
+
+    it('hides chip when input is cleared', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('https://example.com');
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('');
+
+      const chip = getSuggestionChip(itemWrapper);
+
+      expect(chip?.classList.contains('hidden')).toBe(true);
+    });
+
+    it('labels mailto: links as Email address', () => {
+      const { tool } = createTool();
+      const wrapper = tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = wrapper.children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('mailto:hello@example.com');
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+
+      expect(typeEl?.textContent).toBe('Email address');
+    });
+
+    it('shows invalid label and disables row for incomplete URLs', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('asd');
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+      const row = itemWrapper.querySelector('[data-link-suggestion-row]');
+
+      expect(typeEl?.textContent).toBe('Keep typing to add a link');
+      expect(row?.className).toContain('pointer-events-none');
+    });
+
+    it('shows valid label and enables row for complete URLs', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('google.com');
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+      const row = itemWrapper.querySelector('[data-link-suggestion-row]');
+
+      expect(typeEl?.textContent).toBe('Link to web page');
+      expect(row?.className).toContain('cursor-pointer');
+    });
+
+    it('labels anchor links as Jump to section', () => {
+      const { tool } = createTool();
+      const wrapper = tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = wrapper.children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('#results');
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+
+      expect(typeEl?.textContent).toBe('Jump to section');
+    });
+
+    it('shows suggestion for existing link when popover opens', () => {
+      const { tool, selection } = createTool();
+      const anchor = document.createElement('a');
+
+      anchor.setAttribute('href', 'https://notion.so');
+      selection.findParentTag.mockReturnValue(anchor);
+
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      const itemWrapper = renderResult.children.items[0].element;
+      const urlEl = itemWrapper.querySelector('[data-link-suggestion-url]');
+
+      expect(urlEl?.textContent).toBe('https://notion.so');
+    });
+
+    it('hides suggestion when popover closes', () => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const itemWrapper = renderResult.children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('https://example.com');
+      renderResult.children.onClose();
+
+      const chip = getSuggestionChip(itemWrapper);
+
+      expect(chip?.classList.contains('hidden')).toBe(true);
+    });
+
+    it('confirmLink inserts link and closes toolbar', () => {
+      const { tool, selection, inlineToolbar } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = 'example.com';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      expect(insertLinkSpy).toHaveBeenCalledWith('http://example.com');
+      expect(selection.collapseToEnd).toHaveBeenCalled();
+      expect(inlineToolbar.close).toHaveBeenCalled();
+    });
+
+    it('confirmLink shows notifier for complete-looking URL with spaces and does not insert', () => {
+      const { tool, notifier } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      // Has a protocol so isLinkComplete passes, but space makes validateURL fail
+      input.value = 'https://google .com';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      expect(notifier.show).toHaveBeenCalledWith({ message: 'tools.link.invalidLink', style: 'error' });
+      expect(insertLinkSpy).not.toHaveBeenCalled();
+    });
+
+    it('confirmLink does nothing silently for incomplete URLs', () => {
+      const { tool, notifier, inlineToolbar } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = 'asd';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      expect(insertLinkSpy).not.toHaveBeenCalled();
+      expect(notifier.show).not.toHaveBeenCalled();
+      expect(inlineToolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('confirmLink does nothing when input is empty', () => {
+      const { tool, inlineToolbar } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const insertLinkSpy = vi.spyOn(tool as unknown as { insertLink(link: string): void }, 'insertLink');
+
+      input.value = '';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      expect(insertLinkSpy).not.toHaveBeenCalled();
+      expect(inlineToolbar.close).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('isLinkComplete', () => {
+    const check = (tool: InstanceType<typeof LinkInlineTool>, url: string) =>
+      (tool as unknown as { isLinkComplete(u: string): boolean }).isLinkComplete(url);
+
+    it('accepts https:// with a host', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'https://g')).toBe(true);
+      expect(check(tool, 'https://google.com')).toBe(true);
+    });
+
+    it('rejects bare https:// with no host', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'https://')).toBe(false);
+      expect(check(tool, 'http://')).toBe(false);
+    });
+
+    it('accepts other ://  protocols with a host', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'ftp://server')).toBe(true);
+      expect(check(tool, 'ftp://')).toBe(false);
+    });
+
+    it('accepts mailto: with an address', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'mailto:a')).toBe(true);
+      expect(check(tool, 'mailto:user@example.com')).toBe(true);
+    });
+
+    it('rejects bare mailto:', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'mailto:')).toBe(false);
+    });
+
+    it('accepts other single-colon schemes with content', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'tel:+1234567890')).toBe(true);
+      expect(check(tool, 'sms:+1')).toBe(true);
+    });
+
+    it('accepts protocol-relative URLs with a host', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, '//cdn.example.com')).toBe(true);
+      expect(check(tool, '//')).toBe(false);
+    });
+
+    it('accepts anchors with content after #', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, '#section')).toBe(true);
+      expect(check(tool, '#')).toBe(false);
+    });
+
+    it('accepts any absolute internal path', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, '/')).toBe(true);
+      expect(check(tool, '/dashboard')).toBe(true);
+    });
+
+    it('accepts plain text with a recognisable TLD', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'google.com')).toBe(true);
+      expect(check(tool, 'sub.example.co.uk')).toBe(true);
+    });
+
+    it('accepts IP addresses', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, '192.168.1.1')).toBe(true);
+      expect(check(tool, '10.0.0.1')).toBe(true);
+    });
+
+    it('rejects plain words with no domain structure', () => {
+      const { tool } = createTool();
+
+      expect(check(tool, 'asd')).toBe(false);
+      expect(check(tool, 'localhost')).toBe(false);
+      expect(check(tool, 'google')).toBe(false);
+    });
   });
 });

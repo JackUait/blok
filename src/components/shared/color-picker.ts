@@ -151,8 +151,8 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     defaultSwatch.className = twMerge(
       'w-9 h-9 rounded-md cursor-pointer border-none outline-hidden',
       'flex items-center justify-center text-sm font-semibold',
-      'transition-shadow ring-inset hover:ring-2 hover:ring-swatch-ring-hover',
-      isDefaultActive && 'ring-2 ring-swatch-ring-active'
+      'transition-[box-shadow,transform] ring-inset hover:ring-2 hover:ring-swatch-ring-hover active:scale-90',
+      isDefaultActive && 'ring-2 ring-swatch-ring-hover'
     );
     defaultSwatch.textContent = mode.presetField === 'text' ? 'A' : '';
 
@@ -177,8 +177,8 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       swatch.className = twMerge(
         'w-9 h-9 rounded-md cursor-pointer border-none outline-hidden',
         'flex items-center justify-center text-sm font-semibold',
-        'transition-shadow ring-inset hover:ring-2 hover:ring-swatch-ring-hover',
-        isActive && 'ring-2 ring-swatch-ring-active'
+        'transition-[box-shadow,transform] ring-inset hover:ring-2 hover:ring-swatch-ring-hover active:scale-90',
+        isActive && 'ring-2 ring-swatch-ring-hover'
       );
       swatch.textContent = mode.presetField === 'text' ? 'A' : '';
 

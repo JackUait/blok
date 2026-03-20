@@ -12,7 +12,7 @@ export const css = {
  */
 export const cssInline = {
   // Inline context: horizontal separator
-  container: 'px-1 py-0',
+  container: 'px-1 py-0 max-h-none',
   line: 'h-full w-px',
   // Nested inline context: back to vertical separator
   nestedContainer: 'py-1 px-[3px]',

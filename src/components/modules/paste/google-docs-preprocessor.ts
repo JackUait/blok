@@ -85,6 +85,42 @@ function isDefaultBlack(color: string): boolean {
 }
 
 /**
+ * Compute the relative luminance of a CSS color value (rgb() or hex format).
+ * Returns a value in [0, 1], or -1 if the format is unrecognized.
+ * Uses simplified linear luminance (no gamma correction), adequate for
+ * threshold comparisons at this scale.
+ */
+function computeRelativeLuminance(color: string): number {
+  const normalized = color.replace(/\s/g, '').toLowerCase();
+
+  const rgbMatch = /^rgb\((\d+),(\d+),(\d+)\)$/.exec(normalized);
+
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10) / 255;
+    const g = parseInt(rgbMatch[2], 10) / 255;
+    const b = parseInt(rgbMatch[3], 10) / 255;
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  const hexMatch = /^#([0-9a-f]{6}|[0-9a-f]{3})$/.exec(normalized);
+
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    const expand = hex.length === 3
+      ? [hex[0] + hex[0], hex[1] + hex[1], hex[2] + hex[2]]
+      : [hex.substring(0, 2), hex.substring(2, 4), hex.substring(4, 6)];
+    const r = parseInt(expand[0], 16) / 255;
+    const g = parseInt(expand[1], 16) / 255;
+    const b = parseInt(expand[2], 16) / 255;
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  return -1;
+}
+
+/**
  * Check whether a CSS background-color value is the default white page background.
  * When the browser natively copies from a contenteditable, it adds computed styles
  * including `background-color: rgb(255, 255, 255)` — the resolved page background.
@@ -94,6 +130,35 @@ function isDefaultWhiteBackground(bgColor: string): boolean {
   const normalized = bgColor.replace(/\s/g, '').toLowerCase();
 
   return normalized === 'rgb(255,255,255)' || normalized === '#ffffff' || normalized === 'white';
+}
+
+/**
+ * Check whether a CSS background-color value is a near-black (dark mode page) background.
+ * When the browser natively copies from a contenteditable in dark mode, it adds computed
+ * styles including the resolved dark page background (e.g. rgb(25, 25, 24) for Blok's
+ * #191918 dark background). These should not be treated as intentional marker formatting.
+ *
+ * Uses relative luminance < 0.12, which is below all Blok dark background presets
+ * (~18% minimum lightness for #2f2f2f) while catching typical dark page backgrounds.
+ */
+function isDefaultDarkBackground(bgColor: string): boolean {
+  const luminance = computeRelativeLuminance(bgColor);
+
+  return luminance >= 0 && luminance < 0.12;
+}
+
+/**
+ * Check whether a CSS color value is a near-white (dark mode default text) color.
+ * When the browser natively copies from a contenteditable in dark mode, it includes
+ * the resolved light page text color (e.g. rgb(226, 224, 220) for Blok's #e2e0dc
+ * default text). These should not be treated as intentional marker formatting for
+ * non-Google-Docs content.
+ *
+ * Uses relative luminance > 0.75, which is above all Blok text presets while
+ * catching typical dark mode default text colors.
+ */
+function isDefaultLightText(color: string): boolean {
+  return computeRelativeLuminance(color) > 0.75;
 }
 
 /**
@@ -145,10 +210,12 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
   const color = colorMatch?.[1]?.trim();
   const bgColor = bgMatch?.[1]?.trim();
 
-  const hasColor = color !== undefined && !isDefaultBlack(color);
+  const hasColor = isGoogleDocs
+    ? color !== undefined && !isDefaultBlack(color)
+    : color !== undefined && !isDefaultBlack(color) && !isDefaultLightText(color);
   const hasBgColor = isGoogleDocs
     ? bgColor !== undefined && bgColor !== 'transparent'
-    : bgColor !== undefined && bgColor !== 'transparent' && !isDefaultWhiteBackground(bgColor);
+    : bgColor !== undefined && bgColor !== 'transparent' && !isDefaultWhiteBackground(bgColor) && !isDefaultDarkBackground(bgColor);
 
   if (!isBold && !isItalic && !hasColor && !hasBgColor) {
     return null;

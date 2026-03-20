@@ -83,6 +83,42 @@ describe('preprocessGoogleDocsHtml', () => {
 
       expect(result).not.toContain('<mark');
     });
+
+    it('should not convert dark mode browser clipboard span with near-black background to mark', () => {
+      /**
+       * When the browser natively copies text from a contenteditable in dark mode,
+       * it wraps content in a <span> with computed styles including the dark page
+       * background (e.g. rgb(25, 25, 24) for Blok's #191918 dark background).
+       * This near-black background must NOT be treated as intentional formatting.
+       */
+      const html = '<span style="color: rgb(226, 224, 220); background-color: rgb(25, 25, 24);">dark mode text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('should not convert Blok dark editor background #191918 to mark on paste', () => {
+      /**
+       * Specifically covers the Blok dark theme editor background color.
+       */
+      const html = '<span style="background-color: #191918;">dark mode text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).not.toContain('<mark');
+    });
+
+    it('should still convert a genuine dark highlight to mark', () => {
+      /**
+       * Intentional dark mode background highlights (like Blok dark gray preset #2f2f2f,
+       * ~18% luminance) must still be preserved — only near-black page backgrounds
+       * (~9% luminance) are filtered.
+       */
+      const html = '<span style="background-color: rgb(47, 47, 47);">highlighted text</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+      expect(result).toContain('highlighted text');
+    });
   });
 
   it('converts bold style spans to <b> tags', () => {

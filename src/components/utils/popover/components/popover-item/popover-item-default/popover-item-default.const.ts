@@ -37,7 +37,7 @@ export const cssInline = {
   /**
    * Item in inline context - more compact styling
    */
-  item: 'rounded p-1',
+  item: 'rounded-none p-1',
 };
 
 /**
@@ -47,5 +47,5 @@ export const cssNestedInline = {
   /**
    * Nested item - back to desktop popover styling
    */
-  item: 'rounded p-[3px] mobile:p-1',
+  item: 'rounded-none p-[3px] mobile:p-1',
 };

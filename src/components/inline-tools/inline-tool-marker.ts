@@ -169,6 +169,7 @@ export class MarkerInlineTool implements InlineTool {
           this.activeBgColor = color;
         }
 
+        this.picker.setActiveColor(color, modeKey);
         this.updateToolbarColors(this.activeTextColor, this.activeBgColor);
 
         this.selection.setFakeBackground();

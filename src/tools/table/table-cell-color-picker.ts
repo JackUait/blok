@@ -25,6 +25,7 @@ export const createCellColorPicker = (options: CellColorPickerOptions): CellColo
       { key: 'backgroundColor', labelKey: 'tools.marker.background', presetField: 'bg' },
     ],
     onColorSelect: (color, modeKey) => {
+      handle.setActiveColor(color, modeKey);
       options.onColorSelect(color, modeKey as CellColorMode);
     },
   });

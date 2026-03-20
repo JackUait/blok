@@ -154,13 +154,13 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       'transition-shadow ring-inset hover:ring-2 hover:ring-swatch-ring-hover',
       isDefaultActive && 'ring-2 ring-swatch-ring-active'
     );
-    defaultSwatch.textContent = 'A';
+    defaultSwatch.textContent = mode.presetField === 'text' ? 'A' : '';
 
     if (mode.presetField === 'text') {
+      defaultSwatch.style.color = 'var(--blok-text-primary)';
       defaultSwatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
     } else {
-      defaultSwatch.style.color = 'inherit';
-      defaultSwatch.style.backgroundColor = 'transparent';
+      defaultSwatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
     }
     defaultSwatch.addEventListener('click', () => {
       onColorSelect(null, mode.key);
@@ -180,7 +180,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         'transition-shadow ring-inset hover:ring-2 hover:ring-swatch-ring-hover',
         isActive && 'ring-2 ring-swatch-ring-active'
       );
-      swatch.textContent = 'A';
+      swatch.textContent = mode.presetField === 'text' ? 'A' : '';
 
       if (mode.presetField === 'text') {
         swatch.style.color = preset.text;

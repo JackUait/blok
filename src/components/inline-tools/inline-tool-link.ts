@@ -209,7 +209,7 @@ export class LinkInlineTool implements InlineTool {
 
     const iconEl = document.createElement('span');
 
-    iconEl.className = 'text-gray-text shrink-0 flex';
+    iconEl.className = 'text-gray-text shrink-0 flex [&>svg]:size-7';
     iconEl.setAttribute('data-link-suggestion-icon', '');
 
     const textEl = document.createElement('span');
@@ -261,7 +261,7 @@ export class LinkInlineTool implements InlineTool {
 
     if (iconEl) {
       iconEl.innerHTML = icon;
-      iconEl.className = `${isComplete ? 'text-gray-text' : 'text-gray-text opacity-40'} shrink-0 flex`;
+      iconEl.className = `${isComplete ? 'text-gray-text' : 'text-gray-text opacity-40'} shrink-0 flex [&>svg]:size-7`;
     }
     if (urlEl) {
       urlEl.textContent = trimmed;

@@ -1526,6 +1526,48 @@ describe('MarkerInlineTool', () => {
       expect(setActiveColorSpy).toHaveBeenCalledWith('rgb(253, 235, 236)', 'background-color');
       expect(setActiveColorSpy).not.toHaveBeenCalledWith('rgb(55, 53, 47)', 'color');
     });
+
+    it('highlights both text and background swatches when mark has both colors applied', () => {
+      // Mark with both text and background colors — both should be active in the picker.
+      // The regression: detectSelectionColor() returned only text (preferred), making bg look "gone".
+      container.innerHTML = '<mark style="color:var(--blok-color-red-text); background-color:var(--blok-color-orange-bg)">hello</mark>';
+      const mark = container.querySelector('mark') as HTMLElement;
+      const textNode = mark.firstChild as Text;
+
+      const originalGetComputedStyle = window.getComputedStyle.bind(window);
+
+      vi.spyOn(window, 'getComputedStyle').mockImplementation((el) => {
+        if (el === mark) {
+          return {
+            getPropertyValue: (prop: string) => {
+              if (prop === 'color') return 'rgb(212, 76, 71)';
+              if (prop === 'background-color') return 'rgb(251, 236, 221)';
+              return '';
+            },
+          } as unknown as CSSStyleDeclaration;
+        }
+        return originalGetComputedStyle(el);
+      });
+
+      const range = document.createRange();
+
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+
+      type PickerHandle = { setActiveColor: (value: string, mode: string) => void };
+      const picker = (tool as unknown as { picker: PickerHandle }).picker;
+      const setActiveColorSpy = vi.spyOn(picker, 'setActiveColor');
+
+      type MenuWithChildren = { children: { onOpen: () => void } };
+      const config = tool.render() as unknown as MenuWithChildren;
+
+      config.children.onOpen();
+
+      expect(setActiveColorSpy).toHaveBeenCalledWith('rgb(212, 76, 71)', 'color');
+      expect(setActiveColorSpy).toHaveBeenCalledWith('rgb(251, 236, 221)', 'background-color');
+    });
   });
 
   describe('toolbar button color indicator', () => {

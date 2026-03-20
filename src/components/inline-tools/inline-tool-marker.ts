@@ -402,16 +402,16 @@ export class MarkerInlineTool implements InlineTool {
 
     this.picker.reset();
 
-    const activeColor = this.detectSelectionColor();
+    const colors = this.detectBothSelectionComputedColors();
 
-    if (activeColor) {
-      this.picker.setActiveColor(activeColor.value, activeColor.mode);
+    if (colors.text !== null) {
+      this.picker.setActiveColor(colors.text, 'color');
+      this.activeTextColor = colors.text;
+    }
 
-      if (activeColor.mode === 'color') {
-        this.activeTextColor = activeColor.value;
-      } else {
-        this.activeBgColor = activeColor.value;
-      }
+    if (colors.bg !== null) {
+      this.picker.setActiveColor(colors.bg, 'background-color');
+      this.activeBgColor = colors.bg;
     }
 
     this.updateToolbarColors(this.activeTextColor, this.activeBgColor);
@@ -479,63 +479,55 @@ export class MarkerInlineTool implements InlineTool {
       return { text: null, bg: null };
     }
 
-    let text: string | null = null;
-    let bg: string | null = null;
+    const pickRaw = (prop: string): string | null => {
+      const raw = mark.style.getPropertyValue(prop);
 
-    const rawTextColor = mark.style.getPropertyValue('color');
+      return raw && raw !== 'transparent' ? raw : null;
+    };
 
-    if (rawTextColor && rawTextColor !== 'transparent') {
-      text = rawTextColor;
-    }
-
-    const rawBgColor = mark.style.getPropertyValue('background-color');
-
-    if (rawBgColor && rawBgColor !== 'transparent') {
-      bg = rawBgColor;
-    }
-
-    return { text, bg };
+    return {
+      text: pickRaw('color'),
+      bg: pickRaw('background-color'),
+    };
   }
 
   /**
-   * Detect the color of the current selection's mark element.
-   * Returns the first color mode found (text color preferred over background).
+   * Detect both text and background colors from the current selection's mark element
+   * using computed values (resolves CSS variables via getComputedStyle).
+   * Used by onPickerOpen() to highlight the correct swatches in both picker sections.
    */
-  private detectSelectionColor(): { value: string; mode: string } | null {
+  private detectBothSelectionComputedColors(): { text: string | null; bg: string | null } {
     const selection = window.getSelection();
 
     if (!selection || selection.rangeCount === 0) {
-      return null;
+      return { text: null, bg: null };
     }
 
     const range = selection.getRangeAt(0);
     const mark = findMarkElement(range.startContainer);
 
     if (!mark) {
-      return null;
+      return { text: null, bg: null };
     }
 
-    const rawTextColor = mark.style.getPropertyValue('color');
+    const computedStyle = window.getComputedStyle(mark);
 
-    if (rawTextColor && rawTextColor !== 'transparent') {
-      const textColor = window.getComputedStyle(mark).getPropertyValue('color');
+    const resolveColor = (prop: string): string | null => {
+      const raw = mark.style.getPropertyValue(prop);
 
-      if (textColor && textColor !== 'transparent') {
-        return { value: textColor, mode: 'color' };
+      if (!raw || raw === 'transparent') {
+        return null;
       }
-    }
 
-    const rawBgColor = mark.style.getPropertyValue('background-color');
+      const computed = computedStyle.getPropertyValue(prop);
 
-    if (rawBgColor && rawBgColor !== 'transparent') {
-      const bgColor = window.getComputedStyle(mark).getPropertyValue('background-color');
+      return computed && computed !== 'transparent' ? computed : null;
+    };
 
-      if (bgColor && bgColor !== 'transparent') {
-        return { value: bgColor, mode: 'background-color' };
-      }
-    }
-
-    return null;
+    return {
+      text: resolveColor('color'),
+      bg: resolveColor('background-color'),
+    };
   }
 
   /**

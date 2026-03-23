@@ -110,12 +110,17 @@ describe('createColorPicker', () => {
     expect(onColorSelect).toHaveBeenCalledWith(null, 'bg');
   });
 
-  it('all swatches display "A" text', () => {
+  it('text-mode swatches display "A" text, bg-mode swatches do not', () => {
     const { element } = createColorPicker(createOptions());
-    const swatches = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-"]'));
+    const textSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-text-"]'));
+    const bgSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-bg-"]'));
 
-    for (const swatch of swatches) {
+    for (const swatch of textSwatches) {
       expect(swatch.textContent).toBe('A');
+    }
+
+    for (const swatch of bgSwatches) {
+      expect(swatch.textContent).toBe('');
     }
   });
 
@@ -162,7 +167,7 @@ describe('createColorPicker', () => {
         `[data-blok-testid="test-swatch-text-${COLOR_PRESETS[0].name}"]`
       );
 
-      expect(activeSwatch?.className).toContain('ring-swatch-ring-active');
+      expect(activeSwatch?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('does not highlight non-matching swatches in the same section', () => {
@@ -174,7 +179,7 @@ describe('createColorPicker', () => {
         `[data-blok-testid="test-swatch-text-${COLOR_PRESETS[1].name}"]`
       );
 
-      expect(inactiveSwatch?.className).not.toContain('ring-swatch-ring-active');
+      expect(inactiveSwatch?.className).not.toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('does not highlight swatches in the other section', () => {
@@ -186,7 +191,7 @@ describe('createColorPicker', () => {
         `[data-blok-testid="test-swatch-bg-${COLOR_PRESETS[0].name}"]`
       );
 
-      expect(bgSwatch?.className).not.toContain('ring-swatch-ring-active');
+      expect(bgSwatch?.className).not.toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('clears active indicator on preset swatches when setActiveColor is called with null', () => {
@@ -199,7 +204,7 @@ describe('createColorPicker', () => {
         `[data-blok-testid="test-swatch-text-${COLOR_PRESETS[0].name}"]`
       );
 
-      expect(swatch?.className).not.toContain('ring-swatch-ring-active');
+      expect(swatch?.className).not.toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('default swatch in each section shows active ring when no color is selected (initial state)', () => {
@@ -208,8 +213,8 @@ describe('createColorPicker', () => {
       const textDefault = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-text-default"]');
       const bgDefault = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-bg-default"]');
 
-      expect(textDefault?.className).toContain('ring-swatch-ring-active');
-      expect(bgDefault?.className).toContain('ring-swatch-ring-active');
+      expect(textDefault?.className).toContain('ring-2 ring-swatch-ring-hover');
+      expect(bgDefault?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('default swatch in a section shows active ring after setActiveColor is called with null for that section', () => {
@@ -220,7 +225,7 @@ describe('createColorPicker', () => {
 
       const textDefault = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-text-default"]');
 
-      expect(textDefault?.className).toContain('ring-swatch-ring-active');
+      expect(textDefault?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('default swatch in active section does not show ring when a color swatch is selected', () => {
@@ -230,7 +235,7 @@ describe('createColorPicker', () => {
 
       const textDefault = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-text-default"]');
 
-      expect(textDefault?.className).not.toContain('ring-swatch-ring-active');
+      expect(textDefault?.className).not.toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('default swatch in unrelated section keeps its active ring when another section has a color selected', () => {
@@ -241,7 +246,7 @@ describe('createColorPicker', () => {
       // bg section has no active color — its default swatch should still show active ring
       const bgDefault = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-bg-default"]');
 
-      expect(bgDefault?.className).toContain('ring-swatch-ring-active');
+      expect(bgDefault?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('highlights the swatch in the bg section when setActiveColor is called with bg modeKey', () => {
@@ -253,7 +258,7 @@ describe('createColorPicker', () => {
         `[data-blok-testid="test-swatch-bg-${COLOR_PRESETS[0].name}"]`
       );
 
-      expect(bgSwatch?.className).toContain('ring-swatch-ring-active');
+      expect(bgSwatch?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('highlights the swatch in the text section when setActiveColor is called with text modeKey', () => {
@@ -265,7 +270,7 @@ describe('createColorPicker', () => {
         `[data-blok-testid="test-swatch-text-${COLOR_PRESETS[0].name}"]`
       );
 
-      expect(textSwatch?.className).toContain('ring-swatch-ring-active');
+      expect(textSwatch?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
   });
 
@@ -284,7 +289,7 @@ describe('createColorPicker', () => {
         '[data-blok-testid="test-swatch-text-red"]'
       );
 
-      expect(redSwatch?.className).toContain('ring-swatch-ring-active');
+      expect(redSwatch?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('does not highlight non-matching swatches when rgb color is used', () => {
@@ -296,7 +301,7 @@ describe('createColorPicker', () => {
         '[data-blok-testid="test-swatch-text-gray"]'
       );
 
-      expect(graySwatch?.className).not.toContain('ring-swatch-ring-active');
+      expect(graySwatch?.className).not.toContain('ring-2 ring-swatch-ring-hover');
     });
 
     it('highlights the matching swatch in bg section with rgb() format', () => {
@@ -311,7 +316,7 @@ describe('createColorPicker', () => {
         '[data-blok-testid="test-swatch-bg-red"]'
       );
 
-      expect(redSwatch?.className).toContain('ring-swatch-ring-active');
+      expect(redSwatch?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
   });
 
@@ -333,12 +338,12 @@ describe('createColorPicker', () => {
         `[data-blok-testid="test-swatch-text-${COLOR_PRESETS[0].name}"]`
       );
 
-      expect(swatch?.className).not.toContain('ring-swatch-ring-active');
+      expect(swatch?.className).not.toContain('ring-2 ring-swatch-ring-hover');
 
       // default swatch should show active ring after reset
       const textDefault = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-text-default"]');
 
-      expect(textDefault?.className).toContain('ring-swatch-ring-active');
+      expect(textDefault?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
   });
 
@@ -387,7 +392,7 @@ describe('createColorPicker', () => {
 
       const graySwatch = element.querySelector<HTMLElement>('[data-blok-testid="test-swatch-text-gray"]');
 
-      expect(graySwatch?.className).toContain('ring-swatch-ring-active');
+      expect(graySwatch?.className).toContain('ring-2 ring-swatch-ring-hover');
     });
   });
 

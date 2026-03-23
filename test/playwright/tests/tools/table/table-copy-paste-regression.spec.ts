@@ -165,7 +165,7 @@ test.describe('Table copy-paste regression', () => {
     // Find the table block in saved output
     const tableBlock = savedData?.blocks.find(
       (b: { type: string }) => b.type === 'table'
-    );
+    ) as { id: string; data: { content: { blocks: string[] }[][] } } | undefined;
 
     expect(tableBlock).toBeDefined();
 

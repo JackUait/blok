@@ -878,7 +878,7 @@ test.describe('inline tool marker', () => {
 
       // Force light theme so the test is deterministic regardless of OS preference
       await page.evaluate(() => {
-        (window as any).blokInstance.theme.set('light');
+        window.blokInstance?.theme.set('light');
       });
 
       const paragraph = page.locator(PARAGRAPH_SELECTOR);
@@ -905,7 +905,7 @@ test.describe('inline tool marker', () => {
 
       // Switch to dark mode
       await page.evaluate(() => {
-        (window as any).blokInstance.theme.set('dark');
+        window.blokInstance?.theme.set('dark');
       });
 
       // Get the computed color in dark mode

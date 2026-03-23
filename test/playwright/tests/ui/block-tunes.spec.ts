@@ -456,7 +456,7 @@ test.describe('ui.block-tunes', () => {
 
       await expect(nestedPopover).toBeVisible();
 
-      const width = await nestedPopover.evaluate((el) => el.offsetWidth);
+      const width = await nestedPopover.evaluate((el) => (el as HTMLElement).offsetWidth);
 
       expect(width).toBeGreaterThanOrEqual(200);
     });

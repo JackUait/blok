@@ -117,16 +117,21 @@ describe('createCellColorPicker', () => {
     expect(defaultBtn).toBeNull();
   });
 
-  it('swatches always display "A" text in both sections', () => {
+  it('text-color swatches display "A" text, background-color swatches do not', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
     });
 
-    const swatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-"]'));
+    const textSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-textColor-"]'));
+    const bgSwatches = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-swatch-backgroundColor-"]'));
 
-    for (const swatch of swatches) {
+    for (const swatch of textSwatches) {
       expect(swatch.textContent).toBe('A');
+    }
+
+    for (const swatch of bgSwatches) {
+      expect(swatch.textContent).toBe('');
     }
   });
 

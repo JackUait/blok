@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IconMarker } from '../../../../src/components/icons';
 import { MarkerInlineTool } from '../../../../src/components/inline-tools/inline-tool-marker';
 import { COLOR_PRESETS, colorVarName } from '../../../../src/components/shared/color-presets';
-import type { PopoverItemDefaultBaseParams, PopoverItemHtmlParams } from '../../../../types/utils/popover';
+import type { PopoverItemDefaultBaseParams, PopoverItemHtmlParams, WithChildren } from '../../../../types/utils/popover';
 
 /**
  * Convert a hex color string to the rgb() format that CSSOM produces
@@ -1305,8 +1305,8 @@ describe('MarkerInlineTool', () => {
       window.getSelection()!.removeAllRanges();
       window.getSelection()!.addRange(range);
 
-      const config = tool.render() as PopoverItemDefaultBaseParams;
-      const pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
+      const config = tool.render() as WithChildren<PopoverItemDefaultBaseParams>;
+      const pickerEl = (config.children.items![0] as PopoverItemHtmlParams).element;
 
       document.body.appendChild(pickerEl);
 
@@ -1334,8 +1334,8 @@ describe('MarkerInlineTool', () => {
       window.getSelection()!.removeAllRanges();
       window.getSelection()!.addRange(range);
 
-      const config = tool.render() as PopoverItemDefaultBaseParams;
-      const pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
+      const config = tool.render() as WithChildren<PopoverItemDefaultBaseParams>;
+      const pickerEl = (config.children.items![0] as PopoverItemHtmlParams).element;
 
       document.body.appendChild(pickerEl);
 
@@ -1580,10 +1580,19 @@ describe('MarkerInlineTool', () => {
     beforeEach(() => {
       markerBtn = document.createElement('button');
       markerBtn.setAttribute('data-blok-item-name', 'marker');
+
+      // The implementation uses rect.style.fill for the color indicator (clipped to SVG shape).
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      const rect = document.createElementNS(svgNS, 'rect');
+
+      svg.appendChild(rect);
+      markerBtn.appendChild(svg);
+
       document.body.appendChild(markerBtn);
 
-      const config = tool.render();
-      pickerEl = (config.children!.items[0] as PopoverItemHtmlParams).element;
+      const config = tool.render() as WithChildren<PopoverItemDefaultBaseParams>;
+      pickerEl = (config.children.items![0] as PopoverItemHtmlParams).element;
       document.body.appendChild(pickerEl);
     });
 
@@ -1617,7 +1626,11 @@ describe('MarkerInlineTool', () => {
 
       pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-red"]')!.click();
 
-      expect(markerBtn.style.backgroundColor).toBe(hexToRgb(RED.bg));
+      // Background color is rendered via SVG rect fill; the button itself uses transparent to suppress active-state styles.
+      const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
+
+      expect(rect?.style.fill).toBe(hexToRgb(RED.bg));
+      expect(markerBtn.style.backgroundColor).toBe('transparent');
     });
 
     it('sets both color and background-color independently when both are applied', () => {
@@ -1632,8 +1645,11 @@ describe('MarkerInlineTool', () => {
       pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-red"]')!.click();
       pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-background-color-orange"]')!.click();
 
+      const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
+
       expect(markerBtn.style.color).toBe(hexToRgb(RED.text));
-      expect(markerBtn.style.backgroundColor).toBe(hexToRgb(ORANGE.bg));
+      expect(rect?.style.fill).toBe(hexToRgb(ORANGE.bg));
+      expect(markerBtn.style.backgroundColor).toBe('transparent');
     });
 
     it('removes color from button when default text swatch is clicked', () => {
@@ -1707,7 +1723,10 @@ describe('MarkerInlineTool', () => {
 
       isActiveFn();
 
-      expect(markerBtn.style.backgroundColor).toBe(hexToRgb(ORANGE.bg));
+      const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
+
+      expect(rect?.style.fill).toBe(hexToRgb(ORANGE.bg));
+      expect(markerBtn.style.backgroundColor).toBe('transparent');
     });
 
     it('sets transparent background on toolbar button when only text color is active (suppresses active-state blue)', () => {
@@ -1726,10 +1745,12 @@ describe('MarkerInlineTool', () => {
 
       isActiveFn();
 
-      // background-color must be set to the neutral bg so:
-      // (a) the active-state blue CSS (`data-blok-popover-item-active:bg-icon-active-bg`) is suppressed, and
-      // (b) light text colors remain visible regardless of the toolbar's own background
-      expect(markerBtn.style.backgroundColor).toBe('var(--blok-swatch-neutral-bg)');
+      // button.backgroundColor is transparent to suppress active-state CSS;
+      // the neutral bg is rendered via SVG rect fill so the A letter remains visible.
+      const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
+
+      expect(markerBtn.style.backgroundColor).toBe('transparent');
+      expect(rect?.style.fill).toBe('var(--blok-swatch-neutral-bg)');
     });
 
     it('sets neutral background on toolbar button after clicking a text color swatch (keeps color visible)', () => {
@@ -1743,7 +1764,10 @@ describe('MarkerInlineTool', () => {
 
       pickerEl.querySelector<HTMLElement>('[data-blok-testid="marker-swatch-color-red"]')!.click();
 
-      expect(markerBtn.style.backgroundColor).toBe('var(--blok-swatch-neutral-bg)');
+      const rect = markerBtn.querySelector<SVGRectElement>('svg rect');
+
+      expect(rect?.style.fill).toBe('var(--blok-swatch-neutral-bg)');
+      expect(markerBtn.style.backgroundColor).toBe('transparent');
     });
   });
 });

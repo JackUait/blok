@@ -542,20 +542,18 @@ describe('PopoverAbstract', () => {
     });
   });
 
-  describe('nothing found message animation', () => {
-    it('applies fade-in animation when showing nothing found message', () => {
+  describe('nothing found message visibility', () => {
+    it('shows and hides nothing found message without animation', () => {
       const popover = createPopover({ items: createDefaultItems() });
       const nodes = popover.getNodesForTests();
 
       popover.invokeToggleNothingFoundMessage(true);
 
       expect(nodes.nothingFoundMessage.classList.contains('hidden')).toBe(false);
-      expect(nodes.nothingFoundMessage.className).toContain('animate-');
 
       popover.invokeToggleNothingFoundMessage(false);
 
       expect(nodes.nothingFoundMessage.classList.contains('hidden')).toBe(true);
-      expect(nodes.nothingFoundMessage.className).not.toContain('animate-');
     });
   });
 

@@ -9,7 +9,7 @@ export const IconCross = `
 export const IconBold = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path
-    d="M5.5 11h4.9231c.6528 0 1.2789-.3161 1.7405-.8787.4617-.56259.721-1.32565.721-2.1213 0-.79565-.2593-1.55871-.721-2.12132C11.702 5.31607 11.0759 5 10.4231 5H5.5v6Zm0 0h5.5385c.6528 0 1.2789.3161 1.7405.8787.4617.5626.721 1.3257.721 2.1213 0 .7956-.2593 1.5587-.721 2.1213-.4616.5626-1.0877.8787-1.7405.8787H5.5v-6Z"
+    d="M6 11h4.9231c.6528 0 1.2789-.3161 1.7405-.8787.4617-.56259.721-1.32565.721-2.1213 0-.79565-.2593-1.55871-.721-2.12132C12.202 5.31607 11.5759 5 10.9231 5H6v6Zm0 0h5.5385c.6528 0 1.2789.3161 1.7405.8787.4617.5626.721 1.3257.721 2.1213 0 .7956-.2593 1.5587-.721 2.1213-.4616.5626-1.0877.8787-1.7405.8787H6v-6Z"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -42,7 +42,7 @@ export const IconLink = `
 // Marker/Color icon (letter A in rounded square)
 export const IconMarker = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="1.5" y="1.5" width="17" height="17" rx="4.5" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="1.25" y="1.25" width="17.5" height="17.5" rx="4.5" stroke="currentColor" stroke-width="1.25"/>
   <path d="M6.5 14.5L10 5.5l3.5 9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M8.5 11h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>

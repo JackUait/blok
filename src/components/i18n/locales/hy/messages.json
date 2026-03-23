@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Տեքստ",
   "tools.marker.background": "Ֆոն",
   "tools.marker.default": "Կանխադրված",
+  "tools.colorPicker.color.gray": "Մոխրագույն",
+  "tools.colorPicker.color.brown": "Շականակագույն",
+  "tools.colorPicker.color.orange": "Նարնջագույն",
+  "tools.colorPicker.color.yellow": "Դեղին",
+  "tools.colorPicker.color.green": "Կանաչ",
+  "tools.colorPicker.color.blue": "Կապույտ",
+  "tools.colorPicker.color.purple": "Մանուշակագույն",
+  "tools.colorPicker.color.pink": "Վարդագույն",
+  "tools.colorPicker.color.red": "Կարմիր",
   "tools.stub.error": "Սխալ",
   "tools.stub.blockCannotBeDisplayed": "Այս բլոկը հնարավոր չէ ցուցադրել",
   "tools.header.heading1": "Վերնագիր 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Քաշեք տողեր ավելացնելու կամ հեռացնելու",
   "tools.table.clickToAddColumn": "Սեղմեք նոր սյունակ ավելացնելու",
   "tools.table.dragToAddRemoveColumns": "Քաշեք սյունակներ ավելացնելու կամ հեռացնելու",
-  "blockSettings.convertWithChildrenWarning": "Այս բլոկն ունի {count} ներդրված բլոկ: Փոխարկելու դեպքում դրանք կտեղափոխվեն բարձրագույն մակարդակ: Շարունակե՞լ:"
+  "blockSettings.convertWithChildrenWarning": "Այս բլոկն ունի {count} ներդրված բլոկ: Փոխարկելու դեպքում դրանք կտեղափոխվեն բարձրագույն մակարդակ: Շարունակե՞լ:",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

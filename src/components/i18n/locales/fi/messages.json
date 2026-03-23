@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Teksti",
   "tools.marker.background": "Tausta",
   "tools.marker.default": "Oletus",
+  "tools.colorPicker.color.gray": "Harmaa",
+  "tools.colorPicker.color.brown": "Ruskea",
+  "tools.colorPicker.color.orange": "Oranssi",
+  "tools.colorPicker.color.yellow": "Keltainen",
+  "tools.colorPicker.color.green": "Vihreä",
+  "tools.colorPicker.color.blue": "Sininen",
+  "tools.colorPicker.color.purple": "Violetti",
+  "tools.colorPicker.color.pink": "Pinkki",
+  "tools.colorPicker.color.red": "Punainen",
   "tools.stub.error": "Virhe",
   "tools.stub.blockCannotBeDisplayed": "Tätä lohkoa ei voida näyttää",
   "tools.header.heading1": "Otsikko 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Vedä lisätäksesi tai poistaaksesi rivejä",
   "tools.table.clickToAddColumn": "Napsauta lisätäksesi sarakkeen",
   "tools.table.dragToAddRemoveColumns": "Vedä lisätäksesi tai poistaaksesi sarakkeita",
-  "blockSettings.convertWithChildrenWarning": "Tässä lohkossa on {count} sisäkkäistä lohkoa. Muuntaminen siirtää ne ylimmälle tasolle. Jatketaanko?"
+  "blockSettings.convertWithChildrenWarning": "Tässä lohkossa on {count} sisäkkäistä lohkoa. Muuntaminen siirtää ne ylimmälle tasolle. Jatketaanko?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

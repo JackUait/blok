@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Metin",
   "tools.marker.background": "Arka plan",
   "tools.marker.default": "Varsayılan",
+  "tools.colorPicker.color.gray": "Gri",
+  "tools.colorPicker.color.brown": "Kahverengi",
+  "tools.colorPicker.color.orange": "Turuncu",
+  "tools.colorPicker.color.yellow": "Sarı",
+  "tools.colorPicker.color.green": "Yeşil",
+  "tools.colorPicker.color.blue": "Mavi",
+  "tools.colorPicker.color.purple": "Mor",
+  "tools.colorPicker.color.pink": "Pembe",
+  "tools.colorPicker.color.red": "Kırmızı",
   "tools.stub.error": "Hata",
   "tools.stub.blockCannotBeDisplayed": "Bu blok görüntülenemiyor",
   "tools.header.heading1": "Başlık 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Satır eklemek veya kaldırmak için sürükle",
   "tools.table.clickToAddColumn": "Yeni sütun eklemek için tıkla",
   "tools.table.dragToAddRemoveColumns": "Sütun eklemek veya kaldırmak için sürükle",
-  "blockSettings.convertWithChildrenWarning": "Bu bloğun {count} iç içe bloğu var. Dönüştürmek, bunları en üst düzeye taşıyacak. Devam edilsin mi?"
+  "blockSettings.convertWithChildrenWarning": "Bu bloğun {count} iç içe bloğu var. Dönüştürmek, bunları en üst düzeye taşıyacak. Devam edilsin mi?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

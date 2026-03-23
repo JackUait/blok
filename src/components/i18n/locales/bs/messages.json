@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Pozadina",
   "tools.marker.default": "Podrazumijevano",
+  "tools.colorPicker.color.gray": "Sivo",
+  "tools.colorPicker.color.brown": "Smeđe",
+  "tools.colorPicker.color.orange": "Narančasto",
+  "tools.colorPicker.color.yellow": "Žuto",
+  "tools.colorPicker.color.green": "Zeleno",
+  "tools.colorPicker.color.blue": "Plavo",
+  "tools.colorPicker.color.purple": "Ljubičasto",
+  "tools.colorPicker.color.pink": "Ružičasto",
+  "tools.colorPicker.color.red": "Crveno",
   "tools.stub.error": "Greška",
   "tools.stub.blockCannotBeDisplayed": "Ovaj blok se ne može prikazati",
   "tools.header.heading1": "Naslov 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Prevucite za dodavanje ili uklanjanje redova",
   "tools.table.clickToAddColumn": "Kliknite za dodavanje nove kolone",
   "tools.table.dragToAddRemoveColumns": "Prevucite za dodavanje ili uklanjanje kolona",
-  "blockSettings.convertWithChildrenWarning": "Ovaj blok sadrži {count} ugniježđenih blokova. Konverzijom će biti premješteni na najviši nivo. Nastaviti?"
+  "blockSettings.convertWithChildrenWarning": "Ovaj blok sadrži {count} ugniježđenih blokova. Konverzijom će biti premješteni na najviši nivo. Nastaviti?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

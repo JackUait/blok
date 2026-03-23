@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Teksts",
   "tools.marker.background": "Fons",
   "tools.marker.default": "Noklusējuma",
+  "tools.colorPicker.color.gray": "Pelēks",
+  "tools.colorPicker.color.brown": "Brūns",
+  "tools.colorPicker.color.orange": "Oranžs",
+  "tools.colorPicker.color.yellow": "Dzeltens",
+  "tools.colorPicker.color.green": "Zaļš",
+  "tools.colorPicker.color.blue": "Zils",
+  "tools.colorPicker.color.purple": "Violets",
+  "tools.colorPicker.color.pink": "Rozā",
+  "tools.colorPicker.color.red": "Sarkans",
   "tools.stub.error": "Kļūda",
   "tools.stub.blockCannotBeDisplayed": "Šo bloku nevar attēlot",
   "tools.header.heading1": "Virsraksts 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Velciet, lai pievienotu vai noņemtu rindas",
   "tools.table.clickToAddColumn": "Noklikšķiniet, lai pievienotu jaunu kolonnu",
   "tools.table.dragToAddRemoveColumns": "Velciet, lai pievienotu vai noņemtu kolonnas",
-  "blockSettings.convertWithChildrenWarning": "Šim blokam ir {count} iekļauti bloki. Pārvēršot to, tie tiks pārvietoti uz augšējo līmeni. Turpināt?"
+  "blockSettings.convertWithChildrenWarning": "Šim blokam ir {count} iekļauti bloki. Pārvēršot to, tie tiks pārvietoti uz augšējo līmeni. Turpināt?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

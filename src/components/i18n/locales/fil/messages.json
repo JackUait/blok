@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Teksto",
   "tools.marker.background": "Background",
   "tools.marker.default": "Default",
+  "tools.colorPicker.color.gray": "Kulay-abo",
+  "tools.colorPicker.color.brown": "Kayumanggi",
+  "tools.colorPicker.color.orange": "Kahel",
+  "tools.colorPicker.color.yellow": "Dilaw",
+  "tools.colorPicker.color.green": "Berde",
+  "tools.colorPicker.color.blue": "Asul",
+  "tools.colorPicker.color.purple": "Lila",
+  "tools.colorPicker.color.pink": "Rosas",
+  "tools.colorPicker.color.red": "Pula",
   "tools.stub.error": "Error",
   "tools.stub.blockCannotBeDisplayed": "Hindi maipakita ang block na ito",
   "tools.header.heading1": "Pamagat 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Inilipat ang block pababa sa posisyon {position} ng {total}",
   "a11y.atTop": "Ang block ay nasa itaas na, hindi mailipat pataas",
   "a11y.atBottom": "Ang block ay nasa ibaba na, hindi mailipat pababa",
-  "blockSettings.convertWithChildrenWarning": "Ang block na ito ay may {count} na mga nested block. Kapag na-convert, ililipat ang mga ito sa pinakamataas na antas. Ituloy?"
+  "blockSettings.convertWithChildrenWarning": "Ang block na ito ay may {count} na mga nested block. Kapag na-convert, ililipat ang mga ito sa pinakamataas na antas. Ituloy?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

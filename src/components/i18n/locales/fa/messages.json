@@ -23,6 +23,15 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس‌زمینه",
   "tools.marker.default": "پیش‌فرض",
+  "tools.colorPicker.color.gray": "خاکستری",
+  "tools.colorPicker.color.brown": "قهوه‌ای",
+  "tools.colorPicker.color.orange": "نارنجی",
+  "tools.colorPicker.color.yellow": "زرد",
+  "tools.colorPicker.color.green": "سبز",
+  "tools.colorPicker.color.blue": "آبی",
+  "tools.colorPicker.color.purple": "بنفش",
+  "tools.colorPicker.color.pink": "صورتی",
+  "tools.colorPicker.color.red": "قرمز",
   "tools.stub.error": "خطا",
   "tools.stub.blockCannotBeDisplayed": "این بلوک قابل نمایش نیست",
   "tools.header.heading1": "عنوان ۱",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "برای افزودن یا حذف سطرها بکشید",
   "tools.table.clickToAddColumn": "برای افزودن ستون جدید کلیک کنید",
   "tools.table.dragToAddRemoveColumns": "برای افزودن یا حذف ستون‌ها بکشید",
-  "blockSettings.convertWithChildrenWarning": "این بلوک دارای {count} بلوک تو در تو است. تبدیل آن، بلوک‌های تو در تو را به سطح اصلی منتقل می‌کند. آیا می‌خواهید ادامه دهید؟"
+  "blockSettings.convertWithChildrenWarning": "این بلوک دارای {count} بلوک تو در تو است. تبدیل آن، بلوک‌های تو در تو را به سطح اصلی منتقل می‌کند. آیا می‌خواهید ادامه دهید؟",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

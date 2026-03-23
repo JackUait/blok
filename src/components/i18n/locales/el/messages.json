@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Κείμενο",
   "tools.marker.background": "Φόντο",
   "tools.marker.default": "Προεπιλογή",
+  "tools.colorPicker.color.gray": "Γκρι",
+  "tools.colorPicker.color.brown": "Καφέ",
+  "tools.colorPicker.color.orange": "Πορτοκαλί",
+  "tools.colorPicker.color.yellow": "Κίτρινο",
+  "tools.colorPicker.color.green": "Πράσινο",
+  "tools.colorPicker.color.blue": "Μπλε",
+  "tools.colorPicker.color.purple": "Μωβ",
+  "tools.colorPicker.color.pink": "Ροζ",
+  "tools.colorPicker.color.red": "Κόκκινο",
   "tools.stub.error": "Σφάλμα",
   "tools.stub.blockCannotBeDisplayed": "Δεν είναι δυνατή η εμφάνιση του μπλοκ",
   "tools.header.heading1": "Επικεφαλίδα 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Σύρετε για προσθήκη ή αφαίρεση γραμμών",
   "tools.table.clickToAddColumn": "Κλικ για προσθήκη στήλης",
   "tools.table.dragToAddRemoveColumns": "Σύρετε για προσθήκη ή αφαίρεση στηλών",
-  "blockSettings.convertWithChildrenWarning": "Αυτό το μπλοκ έχει {count} ένθετα μπλοκ. Η μετατροπή του θα τα μετακινήσει στο ανώτατο επίπεδο. Να συνεχιστεί;"
+  "blockSettings.convertWithChildrenWarning": "Αυτό το μπλοκ έχει {count} ένθετα μπλοκ. Η μετατροπή του θα τα μετακινήσει στο ανώτατο επίπεδο. Να συνεχιστεί;",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

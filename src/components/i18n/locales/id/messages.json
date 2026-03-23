@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Teks",
   "tools.marker.background": "Latar belakang",
   "tools.marker.default": "Bawaan",
+  "tools.colorPicker.color.gray": "Abu-abu",
+  "tools.colorPicker.color.brown": "Coklat",
+  "tools.colorPicker.color.orange": "Oranye",
+  "tools.colorPicker.color.yellow": "Kuning",
+  "tools.colorPicker.color.green": "Hijau",
+  "tools.colorPicker.color.blue": "Biru",
+  "tools.colorPicker.color.purple": "Ungu",
+  "tools.colorPicker.color.pink": "Merah muda",
+  "tools.colorPicker.color.red": "Merah",
   "tools.stub.error": "Kesalahan",
   "tools.stub.blockCannotBeDisplayed": "Blok ini tidak dapat ditampilkan",
   "tools.header.heading1": "Judul 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Blok dipindahkan ke bawah, posisi {position} dari {total}",
   "a11y.atTop": "Blok sudah di paling atas, tidak bisa dipindahkan ke atas",
   "a11y.atBottom": "Blok sudah di paling bawah, tidak bisa dipindahkan ke bawah",
-  "blockSettings.convertWithChildrenWarning": "Blok ini memiliki {count} blok bersarang. Mengubahnya akan memindahkan blok-blok tersebut ke tingkat teratas. Lanjutkan?"
+  "blockSettings.convertWithChildrenWarning": "Blok ini memiliki {count} blok bersarang. Mengubahnya akan memindahkan blok-blok tersebut ke tingkat teratas. Lanjutkan?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

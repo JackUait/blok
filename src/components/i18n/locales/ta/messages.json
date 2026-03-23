@@ -23,6 +23,15 @@
   "tools.marker.textColor": "உரை",
   "tools.marker.background": "பின்னணி",
   "tools.marker.default": "இயல்பு",
+  "tools.colorPicker.color.gray": "சாம்பல்",
+  "tools.colorPicker.color.brown": "பழுப்பு",
+  "tools.colorPicker.color.orange": "ஆரஞ்சு",
+  "tools.colorPicker.color.yellow": "மஞ்சள்",
+  "tools.colorPicker.color.green": "பச்சை",
+  "tools.colorPicker.color.blue": "நீலம்",
+  "tools.colorPicker.color.purple": "ஊதா",
+  "tools.colorPicker.color.pink": "இளஞ்சிவப்பு",
+  "tools.colorPicker.color.red": "சிவப்பு",
   "tools.stub.error": "பிழை",
   "tools.stub.blockCannotBeDisplayed": "இந்த தொகுதியைக் காட்ட முடியவில்லை",
   "tools.header.heading1": "தலைப்பு 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "தொகுதி {total} இல் {position} நிலைக்கு கீழே நகர்த்தப்பட்டது",
   "a11y.atTop": "தொகுதி மேலே உள்ளது, மேலே நகர்த்த முடியாது",
   "a11y.atBottom": "தொகுதி கீழே உள்ளது, கீழே நகர்த்த முடியாது",
-  "blockSettings.convertWithChildrenWarning": "இந்த தொகுதியில் {count} உட்பொதிக்கப்பட்ட தொகுதிகள் உள்ளன. மாற்றினால் அவை மேல் நிலைக்கு நகர்த்தப்படும். தொடரவா?"
+  "blockSettings.convertWithChildrenWarning": "இந்த தொகுதியில் {count} உட்பொதிக்கப்பட்ட தொகுதிகள் உள்ளன. மாற்றினால் அவை மேல் நிலைக்கு நகர்த்தப்படும். தொடரவா?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

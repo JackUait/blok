@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ტექსტი",
   "tools.marker.background": "ფონი",
   "tools.marker.default": "ნაგულისხმევი",
+  "tools.colorPicker.color.gray": "ნაცრისფერი",
+  "tools.colorPicker.color.brown": "ყავისფერი",
+  "tools.colorPicker.color.orange": "ნარინჯისფერი",
+  "tools.colorPicker.color.yellow": "ყვითელი",
+  "tools.colorPicker.color.green": "მწვანე",
+  "tools.colorPicker.color.blue": "ლურჯი",
+  "tools.colorPicker.color.purple": "იისფერი",
+  "tools.colorPicker.color.pink": "ვარდისფერი",
+  "tools.colorPicker.color.red": "წითელი",
   "tools.stub.error": "შეცდომა",
   "tools.stub.blockCannotBeDisplayed": "ეს ბლოკი ვერ გამოჩნდება",
   "tools.header.heading1": "სათაური 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "გადაიტანეთ სტრიქონების დასამატებლად ან წასაშლელად",
   "tools.table.clickToAddColumn": "დააწკაპუნეთ ახალი სვეტის დასამატებლად",
   "tools.table.dragToAddRemoveColumns": "გადაიტანეთ სვეტების დასამატებლად ან წასაშლელად",
-  "blockSettings.convertWithChildrenWarning": "ამ ბლოკს აქვს {count} ჩადგმული ბლოკი. კონვერტაცია მათ მთავარ დონეზე გადაიტანს. გაგრძელება?"
+  "blockSettings.convertWithChildrenWarning": "ამ ბლოკს აქვს {count} ჩადგმული ბლოკი. კონვერტაცია მათ მთავარ დონეზე გადაიტანს. გაგრძელება?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

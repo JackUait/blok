@@ -23,6 +23,15 @@
   "tools.marker.textColor": "පෙළ",
   "tools.marker.background": "පසුබිම",
   "tools.marker.default": "පෙරනිමි",
+  "tools.colorPicker.color.gray": "අළු",
+  "tools.colorPicker.color.brown": "දුඹුරු",
+  "tools.colorPicker.color.orange": "තැඹිලි",
+  "tools.colorPicker.color.yellow": "කහ",
+  "tools.colorPicker.color.green": "කොළ",
+  "tools.colorPicker.color.blue": "නිල්",
+  "tools.colorPicker.color.purple": "දම්",
+  "tools.colorPicker.color.pink": "රෝස",
+  "tools.colorPicker.color.red": "රතු",
   "tools.stub.error": "දෝෂය",
   "tools.stub.blockCannotBeDisplayed": "මෙම කොටස පෙන්විය නොහැක",
   "tools.header.heading1": "ශීර්ෂය 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "පේළි එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
   "tools.table.clickToAddColumn": "නව තීරුවක් එක් කිරීමට ක්ලික් කරන්න",
   "tools.table.dragToAddRemoveColumns": "තීරු එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
-  "blockSettings.convertWithChildrenWarning": "මෙම බ්ලොක් එකේ {count} කූඩු කළ බ්ලොක් ඇත. පරිවර්තනය කිරීමෙන් ඒවා ඉහළ මට්ටමට ගෙන යනු ලැබේ. ඉදිරියට යන්නද?"
+  "blockSettings.convertWithChildrenWarning": "මෙම බ්ලොක් එකේ {count} කූඩු කළ බ්ලොක් ඇත. පරිවර්තනය කිරීමෙන් ඒවා ඉහළ මට්ටමට ගෙන යනු ලැබේ. ඉදිරියට යන්නද?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

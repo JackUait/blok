@@ -23,6 +23,15 @@
   "tools.marker.textColor": "စာသား",
   "tools.marker.background": "နောက်ခံ",
   "tools.marker.default": "မူလ",
+  "tools.colorPicker.color.gray": "မီးခိုးရောင်",
+  "tools.colorPicker.color.brown": "အညိုရောင်",
+  "tools.colorPicker.color.orange": "လိမ္မော်ရောင်",
+  "tools.colorPicker.color.yellow": "အဝါရောင်",
+  "tools.colorPicker.color.green": "အစိမ်းရောင်",
+  "tools.colorPicker.color.blue": "အပြာရောင်",
+  "tools.colorPicker.color.purple": "ခရမ်းရောင်",
+  "tools.colorPicker.color.pink": "နုဖြူရောင်",
+  "tools.colorPicker.color.red": "အနီရောင်",
   "tools.stub.error": "အမှား",
   "tools.stub.blockCannotBeDisplayed": "ဤဘလောက်ကို ပြသ၍မရပါ",
   "tools.header.heading1": "ခေါင်းစဉ် ၁",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "ဘလောက်ကို {total} တွင် အနေအထား {position} သို့ အောက်ရွှေ့ပြီး",
   "a11y.atTop": "ဘလောက်သည် ထိပ်ဆုံးတွင်ရှိပြီး အပေါ်သို့ ရွှေ့၍မရပါ",
   "a11y.atBottom": "ဘလောက်သည် အောက်ဆုံးတွင်ရှိပြီး အောက်သို့ ရွှေ့၍မရပါ",
-  "blockSettings.convertWithChildrenWarning": "ဤဘလောက်တွင် ထပ်ဆင့်ဘလောက် {count} ခု ပါဝင်သည်။ ပြောင်းလဲပါက ၎င်းတို့သည် အထက်ဆုံးအဆင့်သို့ ရောက်သွားမည်။ ဆက်လက်မည်လား?"
+  "blockSettings.convertWithChildrenWarning": "ဤဘလောက်တွင် ထပ်ဆင့်ဘလောက် {count} ခု ပါဝင်သည်။ ပြောင်းလဲပါက ၎င်းတို့သည် အထက်ဆုံးအဆင့်သို့ ရောက်သွားမည်။ ဆက်လက်မည်လား?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

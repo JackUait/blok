@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Texte",
   "tools.marker.background": "Arrière-plan",
   "tools.marker.default": "Par défaut",
+  "tools.colorPicker.color.gray": "Gris",
+  "tools.colorPicker.color.brown": "Marron",
+  "tools.colorPicker.color.orange": "Orange",
+  "tools.colorPicker.color.yellow": "Jaune",
+  "tools.colorPicker.color.green": "Vert",
+  "tools.colorPicker.color.blue": "Bleu",
+  "tools.colorPicker.color.purple": "Violet",
+  "tools.colorPicker.color.pink": "Rose",
+  "tools.colorPicker.color.red": "Rouge",
   "tools.stub.error": "Erreur",
   "tools.stub.blockCannotBeDisplayed": "Ce bloc ne peut pas être affiché",
   "tools.header.heading1": "Titre 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Glisser pour ajouter ou supprimer des lignes",
   "tools.table.clickToAddColumn": "Cliquer pour ajouter une colonne",
   "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes",
-  "blockSettings.convertWithChildrenWarning": "Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer ?"
+  "blockSettings.convertWithChildrenWarning": "Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

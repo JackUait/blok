@@ -81,5 +81,7 @@
   "a11y.movedUp": "Block moved up to position {position} of {total}",
   "a11y.movedDown": "Block moved down to position {position} of {total}",
   "a11y.atTop": "Block is at the top, cannot move up",
-  "a11y.atBottom": "Block is at the bottom, cannot move down"
+  "a11y.atBottom": "Block is at the bottom, cannot move down",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

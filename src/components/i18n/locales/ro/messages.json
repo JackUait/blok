@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Text",
   "tools.marker.background": "Fundal",
   "tools.marker.default": "Implicit",
+  "tools.colorPicker.color.gray": "Gri",
+  "tools.colorPicker.color.brown": "Maro",
+  "tools.colorPicker.color.orange": "Portocaliu",
+  "tools.colorPicker.color.yellow": "Galben",
+  "tools.colorPicker.color.green": "Verde",
+  "tools.colorPicker.color.blue": "Albastru",
+  "tools.colorPicker.color.purple": "Violet",
+  "tools.colorPicker.color.pink": "Roz",
+  "tools.colorPicker.color.red": "Roșu",
   "tools.stub.error": "Eroare",
   "tools.stub.blockCannotBeDisplayed": "Acest bloc nu poate fi afișat",
   "tools.header.heading1": "Titlu 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Trageți pentru a adăuga sau elimina rânduri",
   "tools.table.clickToAddColumn": "Clic pentru a adăuga o coloană nouă",
   "tools.table.dragToAddRemoveColumns": "Trageți pentru a adăuga sau elimina coloane",
-  "blockSettings.convertWithChildrenWarning": "Acest bloc are {count} blocuri incluse. Convertirea le va promova la nivelul principal. Continuați?"
+  "blockSettings.convertWithChildrenWarning": "Acest bloc are {count} blocuri incluse. Convertirea le va promova la nivelul principal. Continuați?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

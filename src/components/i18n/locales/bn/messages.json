@@ -23,6 +23,15 @@
   "tools.marker.textColor": "লেখা",
   "tools.marker.background": "পটভূমি",
   "tools.marker.default": "ডিফল্ট",
+  "tools.colorPicker.color.gray": "ধূসর",
+  "tools.colorPicker.color.brown": "বাদামী",
+  "tools.colorPicker.color.orange": "কমলা",
+  "tools.colorPicker.color.yellow": "হলুদ",
+  "tools.colorPicker.color.green": "সবুজ",
+  "tools.colorPicker.color.blue": "নীল",
+  "tools.colorPicker.color.purple": "বেগুনি",
+  "tools.colorPicker.color.pink": "গোলাপি",
+  "tools.colorPicker.color.red": "লাল",
   "tools.stub.error": "ত্রুটি",
   "tools.stub.blockCannotBeDisplayed": "এই ব্লকটি প্রদর্শন করা যাচ্ছে না",
   "tools.header.heading1": "শিরোনাম 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "সারি যোগ বা সরাতে টানুন",
   "tools.table.clickToAddColumn": "নতুন কলাম যোগ করতে ক্লিক করুন",
   "tools.table.dragToAddRemoveColumns": "কলাম যোগ বা সরাতে টানুন",
-  "blockSettings.convertWithChildrenWarning": "এই ব্লকে {count}টি নেস্টেড ব্লক রয়েছে। রূপান্তর করলে সেগুলি শীর্ষ স্তরে চলে আসবে। চালিয়ে যাবেন?"
+  "blockSettings.convertWithChildrenWarning": "এই ব্লকে {count}টি নেস্টেড ব্লক রয়েছে। রূপান্তর করলে সেগুলি শীর্ষ স্তরে চলে আসবে। চালিয়ে যাবেন?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

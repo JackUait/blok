@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Mətn",
   "tools.marker.background": "Arxa fon",
   "tools.marker.default": "Standart",
+  "tools.colorPicker.color.gray": "Boz",
+  "tools.colorPicker.color.brown": "Qəhvəyi",
+  "tools.colorPicker.color.orange": "Narıncı",
+  "tools.colorPicker.color.yellow": "Sarı",
+  "tools.colorPicker.color.green": "Yaşıl",
+  "tools.colorPicker.color.blue": "Mavi",
+  "tools.colorPicker.color.purple": "Bənövşəyi",
+  "tools.colorPicker.color.pink": "Çəhrayı",
+  "tools.colorPicker.color.red": "Qırmızı",
   "tools.stub.error": "Xəta",
   "tools.stub.blockCannotBeDisplayed": "Bu blok göstərilə bilmir",
   "tools.header.heading1": "Başlıq 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Blok aşağı köçürüldü ({total} içindən {position}-ci)",
   "a11y.atTop": "Blok ən yuxarıdadır, yuxarı köçürülə bilməz",
   "a11y.atBottom": "Blok ən aşağıdadır, aşağı köçürülə bilməz",
-  "blockSettings.convertWithChildrenWarning": "Bu blokun {count} iç-içə bloku var. Çevirdikdə onlar ən yuxarı səviyyəyə köçürüləcək. Davam edilsin?"
+  "blockSettings.convertWithChildrenWarning": "Bu blokun {count} iç-içə bloku var. Çevirdikdə onlar ən yuxarı səviyyəyə köçürüləcək. Davam edilsin?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

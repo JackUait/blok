@@ -23,6 +23,15 @@
   "tools.marker.textColor": "पाठ",
   "tools.marker.background": "पृष्ठभूमि",
   "tools.marker.default": "पूर्वनिर्धारित",
+  "tools.colorPicker.color.gray": "खैरो",
+  "tools.colorPicker.color.brown": "बदामी",
+  "tools.colorPicker.color.orange": "सुन्तला",
+  "tools.colorPicker.color.yellow": "पहेँलो",
+  "tools.colorPicker.color.green": "हरियो",
+  "tools.colorPicker.color.blue": "निलो",
+  "tools.colorPicker.color.purple": "बैजनी",
+  "tools.colorPicker.color.pink": "गुलाबी",
+  "tools.colorPicker.color.red": "रातो",
   "tools.stub.error": "त्रुटि",
   "tools.stub.blockCannotBeDisplayed": "यो ब्लक देखाउन सकिँदैन",
   "tools.header.heading1": "शीर्षक १",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "पङ्क्ति थप्न वा हटाउन तान्नुहोस्",
   "tools.table.clickToAddColumn": "नयाँ स्तम्भ थप्न क्लिक गर्नुहोस्",
   "tools.table.dragToAddRemoveColumns": "स्तम्भ थप्न वा हटाउन तान्नुहोस्",
-  "blockSettings.convertWithChildrenWarning": "यस ब्लकमा {count} नेस्टेड ब्लकहरू छन्। रूपान्तरण गर्दा ती शीर्ष स्तरमा आउनेछन्। जारी राख्ने?"
+  "blockSettings.convertWithChildrenWarning": "यस ब्लकमा {count} नेस्टेड ब्लकहरू छन्। रूपान्तरण गर्दा ती शीर्ष स्तरमा आउनेछन्। जारी राख्ने?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

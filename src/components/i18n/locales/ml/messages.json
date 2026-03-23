@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ടെക്സ്റ്റ്",
   "tools.marker.background": "പശ്ചാത്തലം",
   "tools.marker.default": "സ്ഥിരസ്ഥിതി",
+  "tools.colorPicker.color.gray": "ചാരം",
+  "tools.colorPicker.color.brown": "തവിട്ട്",
+  "tools.colorPicker.color.orange": "ഓറഞ്ച്",
+  "tools.colorPicker.color.yellow": "മഞ്ഞ",
+  "tools.colorPicker.color.green": "പച്ച",
+  "tools.colorPicker.color.blue": "നീല",
+  "tools.colorPicker.color.purple": "വയലറ്റ്",
+  "tools.colorPicker.color.pink": "പിങ്ക്",
+  "tools.colorPicker.color.red": "ചുവപ്പ്",
   "tools.stub.error": "പിശക്",
   "tools.stub.blockCannotBeDisplayed": "ഈ ബ്ലോക്ക് കാണിക്കാൻ കഴിയില്ല",
   "tools.header.heading1": "തലക്കെട്ട് 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "ബ്ലോക്ക് {total} ൽ {position} സ്ഥാനത്തേക്ക് താഴേക്ക് നീക്കി",
   "a11y.atTop": "ബ്ലോക്ക് മുകളിലാണ്, മുകളിലേക്ക് നീക്കാൻ കഴിയില്ല",
   "a11y.atBottom": "ബ്ലോക്ക് താഴെയാണ്, താഴേക്ക് നീക്കാൻ കഴിയില്ല",
-  "blockSettings.convertWithChildrenWarning": "ഈ ബ്ലോക്കിൽ {count} നെസ്റ്റഡ് ബ്ലോക്കുകൾ ഉണ്ട്. പരിവർത്തനം ചെയ്‌താൽ അവ ഉന്നത തലത്തിലേക്ക് മാറ്റപ്പെടും. തുടരണോ?"
+  "blockSettings.convertWithChildrenWarning": "ഈ ബ്ലോക്കിൽ {count} നെസ്റ്റഡ് ബ്ലോക്കുകൾ ഉണ്ട്. പരിവർത്തനം ചെയ്‌താൽ അവ ഉന്നത തലത്തിലേക്ക് മാറ്റപ്പെടും. തുടരണോ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

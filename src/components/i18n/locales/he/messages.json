@@ -23,6 +23,15 @@
   "tools.marker.textColor": "טקסט",
   "tools.marker.background": "רקע",
   "tools.marker.default": "ברירת מחדל",
+  "tools.colorPicker.color.gray": "אפור",
+  "tools.colorPicker.color.brown": "חום",
+  "tools.colorPicker.color.orange": "כתום",
+  "tools.colorPicker.color.yellow": "צהוב",
+  "tools.colorPicker.color.green": "ירוק",
+  "tools.colorPicker.color.blue": "כחול",
+  "tools.colorPicker.color.purple": "סגול",
+  "tools.colorPicker.color.pink": "ורוד",
+  "tools.colorPicker.color.red": "אדום",
   "tools.stub.error": "שגיאה",
   "tools.stub.blockCannotBeDisplayed": "לא ניתן להציג בלוק זה",
   "tools.header.heading1": "כותרת 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "הבלוק הועבר למטה למיקום {position} מתוך {total}",
   "a11y.atTop": "הבלוק בראש הרשימה, לא ניתן להעלות",
   "a11y.atBottom": "הבלוק בתחתית הרשימה, לא ניתן להוריד",
-  "blockSettings.convertWithChildrenWarning": "לבלוק זה יש {count} בלוקים מקוננים. המרתו תעביר אותם לרמה העליונה. להמשיך?"
+  "blockSettings.convertWithChildrenWarning": "לבלוק זה יש {count} בלוקים מקוננים. המרתו תעביר אותם לרמה העליונה. להמשיך?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ਟੈਕਸਟ",
   "tools.marker.background": "ਪਿਛੋਕੜ",
   "tools.marker.default": "ਮੂਲ",
+  "tools.colorPicker.color.gray": "ਸਲੇਟੀ",
+  "tools.colorPicker.color.brown": "ਭੂਰਾ",
+  "tools.colorPicker.color.orange": "ਸੰਤਰੀ",
+  "tools.colorPicker.color.yellow": "ਪੀਲਾ",
+  "tools.colorPicker.color.green": "ਹਰਾ",
+  "tools.colorPicker.color.blue": "ਨੀਲਾ",
+  "tools.colorPicker.color.purple": "ਜਾਮਨੀ",
+  "tools.colorPicker.color.pink": "ਗੁਲਾਬੀ",
+  "tools.colorPicker.color.red": "ਲਾਲ",
   "tools.stub.error": "ਗਲਤੀ",
   "tools.stub.blockCannotBeDisplayed": "ਇਹ ਬਲਾਕ ਦਿਖਾਇਆ ਨਹੀਂ ਜਾ ਸਕਦਾ",
   "tools.header.heading1": "ਸਿਰਲੇਖ 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "ਕਤਾਰਾਂ ਜੋੜਨ ਜਾਂ ਹਟਾਉਣ ਲਈ ਖਿੱਚੋ",
   "tools.table.clickToAddColumn": "ਨਵਾਂ ਕਾਲਮ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ",
   "tools.table.dragToAddRemoveColumns": "ਕਾਲਮ ਜੋੜਨ ਜਾਂ ਹਟਾਉਣ ਲਈ ਖਿੱਚੋ",
-  "blockSettings.convertWithChildrenWarning": "ਇਸ ਬਲਾਕ ਵਿੱਚ {count} ਨੇਸਟਡ ਬਲਾਕ ਹਨ। ਬਦਲਣ ਨਾਲ ਇਹ ਸਿਖਰ ਪੱਧਰ 'ਤੇ ਆ ਜਾਣਗੇ। ਕੀ ਜਾਰੀ ਰੱਖਣਾ ਹੈ?"
+  "blockSettings.convertWithChildrenWarning": "ਇਸ ਬਲਾਕ ਵਿੱਚ {count} ਨੇਸਟਡ ਬਲਾਕ ਹਨ। ਬਦਲਣ ਨਾਲ ਇਹ ਸਿਖਰ ਪੱਧਰ 'ਤੇ ਆ ਜਾਣਗੇ। ਕੀ ਜਾਰੀ ਰੱਖਣਾ ਹੈ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

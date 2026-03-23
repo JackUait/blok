@@ -23,6 +23,15 @@
   "tools.marker.textColor": "نص",
   "tools.marker.background": "خلفية",
   "tools.marker.default": "افتراضي",
+  "tools.colorPicker.color.gray": "رمادي",
+  "tools.colorPicker.color.brown": "بني",
+  "tools.colorPicker.color.orange": "برتقالي",
+  "tools.colorPicker.color.yellow": "أصفر",
+  "tools.colorPicker.color.green": "أخضر",
+  "tools.colorPicker.color.blue": "أزرق",
+  "tools.colorPicker.color.purple": "بنفسجي",
+  "tools.colorPicker.color.pink": "وردي",
+  "tools.colorPicker.color.red": "أحمر",
   "tools.stub.error": "خطأ",
   "tools.stub.blockCannotBeDisplayed": "تعذّر عرض هذه الكتلة",
   "tools.header.heading1": "عنوان 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "تم نقل الكتلة للأسفل، الموضع {position} من {total}",
   "a11y.atTop": "الكتلة في الأعلى، لا يمكن التحريك للأعلى",
   "a11y.atBottom": "الكتلة في الأسفل، لا يمكن التحريك للأسفل",
-  "blockSettings.convertWithChildrenWarning": "تحتوي هذه الكتلة على {count} كتل متداخلة. سيؤدي تحويلها إلى رفعها إلى المستوى الأعلى. هل تريد المتابعة؟"
+  "blockSettings.convertWithChildrenWarning": "تحتوي هذه الكتلة على {count} كتل متداخلة. سيؤدي تحويلها إلى رفعها إلى المستوى الأعلى. هل تريد المتابعة؟",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

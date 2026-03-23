@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Achtergrond",
   "tools.marker.default": "Standaard",
+  "tools.colorPicker.color.gray": "Grijs",
+  "tools.colorPicker.color.brown": "Bruin",
+  "tools.colorPicker.color.orange": "Oranje",
+  "tools.colorPicker.color.yellow": "Geel",
+  "tools.colorPicker.color.green": "Groen",
+  "tools.colorPicker.color.blue": "Blauw",
+  "tools.colorPicker.color.purple": "Paars",
+  "tools.colorPicker.color.pink": "Roze",
+  "tools.colorPicker.color.red": "Rood",
   "tools.stub.error": "Fout",
   "tools.stub.blockCannotBeDisplayed": "Dit blok kan niet worden weergegeven",
   "tools.header.heading1": "Kop 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Sleep om rijen toe te voegen of te verwijderen",
   "tools.table.clickToAddColumn": "Klik om een nieuwe kolom toe te voegen",
   "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen",
-  "blockSettings.convertWithChildrenWarning": "Dit blok bevat {count} geneste blokken. Door het te converteren worden ze naar het hoogste niveau verplaatst. Wilt u doorgaan?"
+  "blockSettings.convertWithChildrenWarning": "Dit blok bevat {count} geneste blokken. Door het te converteren worden ze naar het hoogste niveau verplaatst. Wilt u doorgaan?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

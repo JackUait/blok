@@ -23,6 +23,15 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس منظر",
   "tools.marker.default": "ڊفالٽ",
+  "tools.colorPicker.color.gray": "ڀورو",
+  "tools.colorPicker.color.brown": "بھورو",
+  "tools.colorPicker.color.orange": "نارنگي",
+  "tools.colorPicker.color.yellow": "پيلو",
+  "tools.colorPicker.color.green": "سائو",
+  "tools.colorPicker.color.blue": "آسماني",
+  "tools.colorPicker.color.purple": "جامني",
+  "tools.colorPicker.color.pink": "گلابي",
+  "tools.colorPicker.color.red": "ڳاڙهو",
   "tools.stub.error": "نقص",
   "tools.stub.blockCannotBeDisplayed": "ھي بلاڪ ڏيکاري نٿو سگھجي",
   "tools.header.heading1": "عنوان 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "بلاڪ ھيٺ پوزيشن {position} مان {total} تي ويو",
   "a11y.atTop": "بلاڪ مٿي آھي، مٿي نٿو وڃي سگھي",
   "a11y.atBottom": "بلاڪ ھيٺ آھي، ھيٺ نٿو وڃي سگھي",
-  "blockSettings.convertWithChildrenWarning": "هن بلاڪ ۾ {count} نيسٽيڊ بلاڪ آهن. ان کي تبديل ڪرڻ سان اهي مٿيان سطح تي اچي ويندا. ڇا توهان جاري رکڻ چاهيو ٿا؟"
+  "blockSettings.convertWithChildrenWarning": "هن بلاڪ ۾ {count} نيسٽيڊ بلاڪ آهن. ان کي تبديل ڪرڻ سان اهي مٿيان سطح تي اچي ويندا. ڇا توهان جاري رکڻ چاهيو ٿا؟",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

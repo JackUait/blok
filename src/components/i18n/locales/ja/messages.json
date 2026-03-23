@@ -23,6 +23,15 @@
   "tools.marker.textColor": "テキスト",
   "tools.marker.background": "背景",
   "tools.marker.default": "デフォルト",
+  "tools.colorPicker.color.gray": "グレー",
+  "tools.colorPicker.color.brown": "ブラウン",
+  "tools.colorPicker.color.orange": "オレンジ",
+  "tools.colorPicker.color.yellow": "イエロー",
+  "tools.colorPicker.color.green": "グリーン",
+  "tools.colorPicker.color.blue": "ブルー",
+  "tools.colorPicker.color.purple": "パープル",
+  "tools.colorPicker.color.pink": "ピンク",
+  "tools.colorPicker.color.red": "レッド",
   "tools.stub.error": "エラー",
   "tools.stub.blockCannotBeDisplayed": "このブロックは表示できません",
   "tools.header.heading1": "見出し 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "ブロックを下に移動しました（{total}個中{position}番目）",
   "a11y.atTop": "一番上のため、上に移動できません",
   "a11y.atBottom": "一番下のため、下に移動できません",
-  "blockSettings.convertWithChildrenWarning": "このブロックには {count} 個のネストされたブロックがあります。変換すると、それらはトップレベルに移動されます。続けますか？"
+  "blockSettings.convertWithChildrenWarning": "このブロックには {count} 個のネストされたブロックがあります。変換すると、それらはトップレベルに移動されます。続けますか？",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

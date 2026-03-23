@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ຂໍ້ຄວາມ",
   "tools.marker.background": "ພື້ນຫຼັງ",
   "tools.marker.default": "ຄ່າເລີ່ມຕົ້ນ",
+  "tools.colorPicker.color.gray": "ສີຂີ້ເຖົ່າ",
+  "tools.colorPicker.color.brown": "ສີນ້ຳຕານ",
+  "tools.colorPicker.color.orange": "ສີສົ້ມ",
+  "tools.colorPicker.color.yellow": "ສີເຫຼືອງ",
+  "tools.colorPicker.color.green": "ສີຂຽວ",
+  "tools.colorPicker.color.blue": "ສີຟ້າ",
+  "tools.colorPicker.color.purple": "ສີມ່ວງ",
+  "tools.colorPicker.color.pink": "ສີບົວ",
+  "tools.colorPicker.color.red": "ສີແດງ",
   "tools.stub.error": "ຂໍ້ຜິດພາດ",
   "tools.stub.blockCannotBeDisplayed": "ບລັອກນີ້ບໍ່ສາມາດສະແດງໄດ້",
   "tools.header.heading1": "ຫົວຂໍ້ 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບແຖວ",
   "tools.table.clickToAddColumn": "ຄລິກເພື່ອເພີ່ມຖັນໃໝ່",
   "tools.table.dragToAddRemoveColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບຖັນ",
-  "blockSettings.convertWithChildrenWarning": "ບລັອກນີ້ມີ {count} ບລັອກທີ່ຊ້ອນກັນ. ການປ່ຽນຮູບແບບຈະຍ້າຍພວກມັນໄປຢູ່ລະດັບສູງສຸດ. ສືບຕໍ່ບໍ?"
+  "blockSettings.convertWithChildrenWarning": "ບລັອກນີ້ມີ {count} ບລັອກທີ່ຊ້ອນກັນ. ການປ່ຽນຮູບແບບຈະຍ້າຍພວກມັນໄປຢູ່ລະດັບສູງສຸດ. ສືບຕໍ່ບໍ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

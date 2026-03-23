@@ -23,6 +23,15 @@
   "tools.marker.textColor": "వచనం",
   "tools.marker.background": "నేపథ్యం",
   "tools.marker.default": "అప్రమేయం",
+  "tools.colorPicker.color.gray": "బూడిద",
+  "tools.colorPicker.color.brown": "గోధుమ",
+  "tools.colorPicker.color.orange": "నారింజ",
+  "tools.colorPicker.color.yellow": "పసుపు",
+  "tools.colorPicker.color.green": "పచ్చ",
+  "tools.colorPicker.color.blue": "నీలం",
+  "tools.colorPicker.color.purple": "వైలెట్",
+  "tools.colorPicker.color.pink": "పింక్",
+  "tools.colorPicker.color.red": "ఎరుపు",
   "tools.stub.error": "లోపం",
   "tools.stub.blockCannotBeDisplayed": "ఈ విభాగాన్ని ప్రదర్శించలేము",
   "tools.header.heading1": "శీర్షిక 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "వరుసలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
   "tools.table.clickToAddColumn": "కొత్త స్తంభం జోడించడానికి నొక్కండి",
   "tools.table.dragToAddRemoveColumns": "స్తంభాలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
-  "blockSettings.convertWithChildrenWarning": "ఈ బ్లాక్‌లో {count} నెస్టెడ్ బ్లాక్‌లు ఉన్నాయి. మార్చినట్లయితే అవి అగ్రస్థాయికి తరలించబడతాయి. కొనసాగించాలా?"
+  "blockSettings.convertWithChildrenWarning": "ఈ బ్లాక్‌లో {count} నెస్టెడ్ బ్లాక్‌లు ఉన్నాయి. మార్చినట్లయితే అవి అగ్రస్థాయికి తరలించబడతాయి. కొనసాగించాలా?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

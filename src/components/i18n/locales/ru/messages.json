@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Фон",
   "tools.marker.default": "По умолчанию",
+  "tools.colorPicker.color.gray": "Серый",
+  "tools.colorPicker.color.brown": "Коричневый",
+  "tools.colorPicker.color.orange": "Оранжевый",
+  "tools.colorPicker.color.yellow": "Жёлтый",
+  "tools.colorPicker.color.green": "Зелёный",
+  "tools.colorPicker.color.blue": "Синий",
+  "tools.colorPicker.color.purple": "Фиолетовый",
+  "tools.colorPicker.color.pink": "Розовый",
+  "tools.colorPicker.color.red": "Красный",
   "tools.stub.error": "Ошибка",
   "tools.stub.blockCannotBeDisplayed": "Не удалось отобразить блок",
   "tools.header.heading1": "Заголовок 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Блок перемещён вниз, позиция {position} из {total}",
   "a11y.atTop": "Блок уже вверху",
   "a11y.atBottom": "Блок уже внизу",
-  "blockSettings.convertWithChildrenWarning": "Этот блок содержит {count} вложенных блоков. При конвертации они будут перемещены на верхний уровень. Продолжить?"
+  "blockSettings.convertWithChildrenWarning": "Этот блок содержит {count} вложенных блоков. При конвертации они будут перемещены на верхний уровень. Продолжить?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

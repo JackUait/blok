@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ಪಠ್ಯ",
   "tools.marker.background": "ಹಿನ್ನೆಲೆ",
   "tools.marker.default": "ಡೀಫಾಲ್ಟ್",
+  "tools.colorPicker.color.gray": "ಬೂದು",
+  "tools.colorPicker.color.brown": "ಕಂದು",
+  "tools.colorPicker.color.orange": "ಕಿತ್ತಳೆ",
+  "tools.colorPicker.color.yellow": "ಹಳದಿ",
+  "tools.colorPicker.color.green": "ಹಸಿರು",
+  "tools.colorPicker.color.blue": "ನೀಲಿ",
+  "tools.colorPicker.color.purple": "ನೇರಳೆ",
+  "tools.colorPicker.color.pink": "ಗುಲಾಬಿ",
+  "tools.colorPicker.color.red": "ಕೆಂಪು",
   "tools.stub.error": "ದೋಷ",
   "tools.stub.blockCannotBeDisplayed": "ಈ ಬ್ಲಾಕ್ ಅನ್ನು ತೋರಿಸಲಾಗುವುದಿಲ್ಲ",
   "tools.header.heading1": "ಶೀರ್ಷಿಕೆ 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "ಬ್ಲಾಕ್ {total} ರಲ್ಲಿ {position} ಸ್ಥಾನಕ್ಕೆ ಕೆಳಗೆ ಸರಿಸಲಾಗಿದೆ",
   "a11y.atTop": "ಬ್ಲಾಕ್ ಮೇಲ್ಭಾಗದಲ್ಲಿದೆ, ಮೇಲೆ ಸರಿಸಲಾಗುವುದಿಲ್ಲ",
   "a11y.atBottom": "ಬ್ಲಾಕ್ ಕೆಳಭಾಗದಲ್ಲಿದೆ, ಕೆಳಗೆ ಸರಿಸಲಾಗುವುದಿಲ್ಲ",
-  "blockSettings.convertWithChildrenWarning": "ಈ ಬ್ಲಾಕ್‌ನಲ್ಲಿ {count} ನೆಸ್ಟೆಡ್ ಬ್ಲಾಕ್‌ಗಳಿವೆ. ಪರಿವರ್ತಿಸಿದರೆ ಅವು ಮೇಲ್ಮಟ್ಟಕ್ಕೆ ಸ್ಥಳಾಂತರಗೊಳ್ಳುತ್ತವೆ. ಮುಂದುವರಿಯಲೇ?"
+  "blockSettings.convertWithChildrenWarning": "ಈ ಬ್ಲಾಕ್‌ನಲ್ಲಿ {count} ನೆಸ್ಟೆಡ್ ಬ್ಲಾಕ್‌ಗಳಿವೆ. ಪರಿವರ್ತಿಸಿದರೆ ಅವು ಮೇಲ್ಮಟ್ಟಕ್ಕೆ ಸ್ಥಳಾಂತರಗೊಳ್ಳುತ್ತವೆ. ಮುಂದುವರಿಯಲೇ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

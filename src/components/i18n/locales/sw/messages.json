@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Maandishi",
   "tools.marker.background": "Mandhari",
   "tools.marker.default": "Chaguo-msingi",
+  "tools.colorPicker.color.gray": "Kijivu",
+  "tools.colorPicker.color.brown": "Kahawia",
+  "tools.colorPicker.color.orange": "Chungwa",
+  "tools.colorPicker.color.yellow": "Njano",
+  "tools.colorPicker.color.green": "Kijani",
+  "tools.colorPicker.color.blue": "Bluu",
+  "tools.colorPicker.color.purple": "Zambarau",
+  "tools.colorPicker.color.pink": "Waridi",
+  "tools.colorPicker.color.red": "Nyekundu",
   "tools.stub.error": "Hitilafu",
   "tools.stub.blockCannotBeDisplayed": "Kizuizi hiki hakiwezi kuonyeshwa",
   "tools.header.heading1": "Kichwa 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Kizuizi kimesogezwa chini hadi nafasi {position} ya {total}",
   "a11y.atTop": "Kizuizi kiko juu, hakiwezi kusogezwa juu",
   "a11y.atBottom": "Kizuizi kiko chini, hakiwezi kusogezwa chini",
-  "blockSettings.convertWithChildrenWarning": "Kizuizi hiki kina vizuizi {count} vilivyowekwa ndani. Kubadilisha kutavihamisha hadi kiwango cha juu. Endelea?"
+  "blockSettings.convertWithChildrenWarning": "Kizuizi hiki kina vizuizi {count} vilivyowekwa ndani. Kubadilisha kutavihamisha hadi kiwango cha juu. Endelea?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Testo",
   "tools.marker.background": "Sfondo",
   "tools.marker.default": "Predefinito",
+  "tools.colorPicker.color.gray": "Grigio",
+  "tools.colorPicker.color.brown": "Marrone",
+  "tools.colorPicker.color.orange": "Arancione",
+  "tools.colorPicker.color.yellow": "Giallo",
+  "tools.colorPicker.color.green": "Verde",
+  "tools.colorPicker.color.blue": "Blu",
+  "tools.colorPicker.color.purple": "Viola",
+  "tools.colorPicker.color.pink": "Rosa",
+  "tools.colorPicker.color.red": "Rosso",
   "tools.stub.error": "Errore",
   "tools.stub.blockCannotBeDisplayed": "Impossibile visualizzare questo blocco",
   "tools.header.heading1": "Titolo 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Blocco spostato in basso, posizione {position} di {total}",
   "a11y.atTop": "Non è possibile salire oltre",
   "a11y.atBottom": "Non è possibile scendere oltre",
-  "blockSettings.convertWithChildrenWarning": "Questo blocco contiene {count} blocchi nidificati. La conversione li sposterà al livello superiore. Continuare?"
+  "blockSettings.convertWithChildrenWarning": "Questo blocco contiene {count} blocchi nidificati. La conversione li sposterà al livello superiore. Continuare?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

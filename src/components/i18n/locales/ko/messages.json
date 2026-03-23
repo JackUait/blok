@@ -23,6 +23,15 @@
   "tools.marker.textColor": "텍스트",
   "tools.marker.background": "배경",
   "tools.marker.default": "기본값",
+  "tools.colorPicker.color.gray": "회색",
+  "tools.colorPicker.color.brown": "갈색",
+  "tools.colorPicker.color.orange": "주황",
+  "tools.colorPicker.color.yellow": "노랑",
+  "tools.colorPicker.color.green": "초록",
+  "tools.colorPicker.color.blue": "파랑",
+  "tools.colorPicker.color.purple": "보라",
+  "tools.colorPicker.color.pink": "분홍",
+  "tools.colorPicker.color.red": "빨강",
   "tools.stub.error": "오류",
   "tools.stub.blockCannotBeDisplayed": "이 블록을 표시할 수 없습니다",
   "tools.header.heading1": "제목 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "블록을 아래로 이동함 ({total}개 중 {position}번째)",
   "a11y.atTop": "맨 위에 있어 위로 이동할 수 없음",
   "a11y.atBottom": "맨 아래에 있어 아래로 이동할 수 없음",
-  "blockSettings.convertWithChildrenWarning": "이 블록에는 {count}개의 중첩 블록이 있습니다. 변환하면 중첩 블록이 최상위 레벨로 이동됩니다. 계속하시겠습니까?"
+  "blockSettings.convertWithChildrenWarning": "이 블록에는 {count}개의 중첩 블록이 있습니다. 변환하면 중첩 블록이 최상위 레벨로 이동됩니다. 계속하시겠습니까?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ጽሑፍ",
   "tools.marker.background": "ዳራ",
   "tools.marker.default": "ነባሪ",
+  "tools.colorPicker.color.gray": "ግራጫ",
+  "tools.colorPicker.color.brown": "ቡናማ",
+  "tools.colorPicker.color.orange": "ብርቱካናማ",
+  "tools.colorPicker.color.yellow": "ቢጫ",
+  "tools.colorPicker.color.green": "አረንጓዴ",
+  "tools.colorPicker.color.blue": "ሰማያዊ",
+  "tools.colorPicker.color.purple": "ወይን ጠጅ",
+  "tools.colorPicker.color.pink": "ሮዝ",
+  "tools.colorPicker.color.red": "ቀይ",
   "tools.stub.error": "ስህተት",
   "tools.stub.blockCannotBeDisplayed": "ይህ ብሎክ ሊታይ አይችልም",
   "tools.header.heading1": "ርዕስ 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "ረድፎችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
   "tools.table.clickToAddColumn": "አዲስ አምድ ለመጨመር ጠቅ ያድርጉ",
   "tools.table.dragToAddRemoveColumns": "አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
-  "blockSettings.convertWithChildrenWarning": "ይህ ብሎክ {count} የተካተቱ ብሎኮች አሉት። ሲቀይሩ ወደ ከፍተኛ ደረጃ ይዛወራሉ። መቀጠል ይፈልጋሉ?"
+  "blockSettings.convertWithChildrenWarning": "ይህ ብሎክ {count} የተካተቱ ብሎኮች አሉት። ሲቀይሩ ወደ ከፍተኛ ደረጃ ይዛወራሉ። መቀጠል ይፈልጋሉ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

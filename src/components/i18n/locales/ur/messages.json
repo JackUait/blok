@@ -23,6 +23,15 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس منظر",
   "tools.marker.default": "طے شدہ",
+  "tools.colorPicker.color.gray": "سرمئی",
+  "tools.colorPicker.color.brown": "بھورا",
+  "tools.colorPicker.color.orange": "نارنجی",
+  "tools.colorPicker.color.yellow": "پیلا",
+  "tools.colorPicker.color.green": "سبز",
+  "tools.colorPicker.color.blue": "نیلا",
+  "tools.colorPicker.color.purple": "بنفشی",
+  "tools.colorPicker.color.pink": "گلابی",
+  "tools.colorPicker.color.red": "سرخ",
   "tools.stub.error": "خرابی",
   "tools.stub.blockCannotBeDisplayed": "یہ بلاک دکھایا نہیں جا سکتا",
   "tools.header.heading1": "عنوان 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "قطاریں شامل یا حذف کرنے کے لیے گھسیٹیں",
   "tools.table.clickToAddColumn": "نیا کالم شامل کرنے کے لیے کلک کریں",
   "tools.table.dragToAddRemoveColumns": "کالم شامل یا حذف کرنے کے لیے گھسیٹیں",
-  "blockSettings.convertWithChildrenWarning": "اس بلاک میں {count} نیسٹڈ بلاکس ہیں۔ اسے تبدیل کرنے سے وہ اعلیٰ سطح پر آ جائیں گے۔ کیا آپ جاری رکھنا چاہتے ہیں؟"
+  "blockSettings.convertWithChildrenWarning": "اس بلاک میں {count} نیسٹڈ بلاکس ہیں۔ اسے تبدیل کرنے سے وہ اعلیٰ سطح پر آ جائیں گے۔ کیا آپ جاری رکھنا چاہتے ہیں؟",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

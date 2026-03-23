@@ -23,6 +23,15 @@
   "tools.marker.textColor": "تېكىست",
   "tools.marker.background": "تەگلىك",
   "tools.marker.default": "سۈكۈتتىكى",
+  "tools.colorPicker.color.gray": "كۆكسىمان",
+  "tools.colorPicker.color.brown": "قوڭۇر",
+  "tools.colorPicker.color.orange": "تۈختۈرەڭ",
+  "tools.colorPicker.color.yellow": "سېرىق",
+  "tools.colorPicker.color.green": "يېشىل",
+  "tools.colorPicker.color.blue": "كۆك",
+  "tools.colorPicker.color.purple": "بىنەپشە",
+  "tools.colorPicker.color.pink": "ئوچ قىزىل",
+  "tools.colorPicker.color.red": "قىزىل",
   "tools.stub.error": "خاتالىق",
   "tools.stub.blockCannotBeDisplayed": "بۇ بۆلەكنى كۆرسەتكىلى بولمايدۇ",
   "tools.header.heading1": "ماۋزۇ 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "بۆلەك ئاستىغا ئورۇن {position} دىن {total} غا يۆتكەلدى",
   "a11y.atTop": "بۆلەك ئەڭ ئۈستىدە، ئۈستىگە يۆتكىگىلى بولمايدۇ",
   "a11y.atBottom": "بۆلەك ئەڭ ئاستىدا، ئاستىغا يۆتكىگىلى بولمايدۇ",
-  "blockSettings.convertWithChildrenWarning": "بۇ بۆلەكتە {count} قاتلاشقان بۆلەك بار. ئۇنى ئۆزگەرتسەڭىز، ئۇلار ئەڭ ئۈستكى قاتقا چىقىرىلىدۇ. داۋاملاشتۇرامسىز؟"
+  "blockSettings.convertWithChildrenWarning": "بۇ بۆلەكتە {count} قاتلاشقان بۆلەك بار. ئۇنى ئۆزگەرتسەڭىز، ئۇلار ئەڭ ئۈستكى قاتقا چىقىرىلىدۇ. داۋاملاشتۇرامسىز؟",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

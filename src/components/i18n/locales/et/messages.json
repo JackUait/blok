@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Taust",
   "tools.marker.default": "Vaikimisi",
+  "tools.colorPicker.color.gray": "Hall",
+  "tools.colorPicker.color.brown": "Pruun",
+  "tools.colorPicker.color.orange": "Oranž",
+  "tools.colorPicker.color.yellow": "Kollane",
+  "tools.colorPicker.color.green": "Roheline",
+  "tools.colorPicker.color.blue": "Sinine",
+  "tools.colorPicker.color.purple": "Lilla",
+  "tools.colorPicker.color.pink": "Roosa",
+  "tools.colorPicker.color.red": "Punane",
   "tools.stub.error": "Viga",
   "tools.stub.blockCannotBeDisplayed": "Seda plokki ei saa kuvada",
   "tools.header.heading1": "Pealkiri 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Plokk teisaldatud alla positsioonile {position}/{total}",
   "a11y.atTop": "Plokk on üleval, ei saa üles liigutada",
   "a11y.atBottom": "Plokk on all, ei saa alla liigutada",
-  "blockSettings.convertWithChildrenWarning": "Sellel plokil on {count} pesastatud plokki. Teisendamisel tõstetakse need ülemisele tasemele. Jätkata?"
+  "blockSettings.convertWithChildrenWarning": "Sellel plokil on {count} pesastatud plokki. Teisendamisel tõstetakse need ülemisele tasemele. Jätkata?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

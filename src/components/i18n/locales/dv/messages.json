@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ލިޔުން",
   "tools.marker.background": "ބެކްގްރައުންޑް",
   "tools.marker.default": "ޑީފޯލްޓް",
+  "tools.colorPicker.color.gray": "އަޅިކުލަ",
+  "tools.colorPicker.color.brown": "މިށިކުލަ",
+  "tools.colorPicker.color.orange": "ނިޔަންދުރު",
+  "tools.colorPicker.color.yellow": "ރީންދޫ",
+  "tools.colorPicker.color.green": "ފެހި",
+  "tools.colorPicker.color.blue": "ނޫ",
+  "tools.colorPicker.color.purple": "ދަނބުކުލަ",
+  "tools.colorPicker.color.pink": "ފިޔާތޮށިކުލަ",
+  "tools.colorPicker.color.red": "ރަތް",
   "tools.stub.error": "މައްސަލައެއް",
   "tools.stub.blockCannotBeDisplayed": "މި ބްލޮކް ދައްކާނެ ގޮތެއް ނެތް",
   "tools.header.heading1": "ސުރުޚީ 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "ރޯ އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
   "tools.table.clickToAddColumn": "އާ ކޮލަމެއް އިތުރުކުރަން ކްލިކް ކުރޭ",
   "tools.table.dragToAddRemoveColumns": "ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
-  "blockSettings.convertWithChildrenWarning": "މި ބްލޮކްގައި {count} ނެސްޓެޑް ބްލޮކް އެބަހުއްޓެވެ. ބަދަލު ކުރުމުން ނެސްޓެޑް ބްލޮކްތައް އެންމެ މަތީ ލެވެލަށް ގެނެވޭނެ. ކުރިޔަށް ދާންވީތަ?"
+  "blockSettings.convertWithChildrenWarning": "މި ބްލޮކްގައި {count} ނެސްޓެޑް ބްލޮކް އެބަހުއްޓެވެ. ބަދަލު ކުރުމުން ނެސްޓެޑް ބްލޮކްތައް އެންމެ މަތީ ލެވެލަށް ގެނެވޭނެ. ކުރިޔަށް ދާންވީތަ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

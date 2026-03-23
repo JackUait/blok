@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Texto",
   "tools.marker.background": "Fundo",
   "tools.marker.default": "Padrão",
+  "tools.colorPicker.color.gray": "Cinza",
+  "tools.colorPicker.color.brown": "Marrom",
+  "tools.colorPicker.color.orange": "Laranja",
+  "tools.colorPicker.color.yellow": "Amarelo",
+  "tools.colorPicker.color.green": "Verde",
+  "tools.colorPicker.color.blue": "Azul",
+  "tools.colorPicker.color.purple": "Roxo",
+  "tools.colorPicker.color.pink": "Rosa",
+  "tools.colorPicker.color.red": "Vermelho",
   "tools.stub.error": "Erro",
   "tools.stub.blockCannotBeDisplayed": "Não foi possível exibir este bloco",
   "tools.header.heading1": "Título 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Bloco movido para baixo, posição {position} de {total}",
   "a11y.atTop": "Não é possível subir mais",
   "a11y.atBottom": "Não é possível descer mais",
-  "blockSettings.convertWithChildrenWarning": "Este bloco contém {count} blocos aninhados. Ao convertê-lo, estes passarão para o nível superior. Pretende continuar?"
+  "blockSettings.convertWithChildrenWarning": "Este bloco contém {count} blocos aninhados. Ao convertê-lo, estes passarão para o nível superior. Pretende continuar?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

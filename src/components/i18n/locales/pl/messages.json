@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Tło",
   "tools.marker.default": "Domyślny",
+  "tools.colorPicker.color.gray": "Szary",
+  "tools.colorPicker.color.brown": "Brązowy",
+  "tools.colorPicker.color.orange": "Pomarańczowy",
+  "tools.colorPicker.color.yellow": "Żółty",
+  "tools.colorPicker.color.green": "Zielony",
+  "tools.colorPicker.color.blue": "Niebieski",
+  "tools.colorPicker.color.purple": "Fioletowy",
+  "tools.colorPicker.color.pink": "Różowy",
+  "tools.colorPicker.color.red": "Czerwony",
   "tools.stub.error": "Błąd",
   "tools.stub.blockCannotBeDisplayed": "Nie można wyświetlić tego bloku",
   "tools.header.heading1": "Nagłówek 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Blok przeniesiony w dół na pozycję {position} z {total}",
   "a11y.atTop": "Blok jest na górze, nie można przenieść wyżej",
   "a11y.atBottom": "Blok jest na dole, nie można przenieść niżej",
-  "blockSettings.convertWithChildrenWarning": "Ten blok zawiera {count} zagnieżdżonych bloków. Po konwersji zostaną one przeniesione na poziom główny. Kontynuować?"
+  "blockSettings.convertWithChildrenWarning": "Ten blok zawiera {count} zagnieżdżonych bloków. Po konwersji zostaną one przeniesione na poziom główny. Kontynuować?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

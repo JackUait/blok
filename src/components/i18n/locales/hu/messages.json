@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Szöveg",
   "tools.marker.background": "Háttér",
   "tools.marker.default": "Alapértelmezett",
+  "tools.colorPicker.color.gray": "Szürke",
+  "tools.colorPicker.color.brown": "Barna",
+  "tools.colorPicker.color.orange": "Narancs",
+  "tools.colorPicker.color.yellow": "Sárga",
+  "tools.colorPicker.color.green": "Zöld",
+  "tools.colorPicker.color.blue": "Kék",
+  "tools.colorPicker.color.purple": "Lila",
+  "tools.colorPicker.color.pink": "Rózsaszín",
+  "tools.colorPicker.color.red": "Piros",
   "tools.stub.error": "Hiba",
   "tools.stub.blockCannotBeDisplayed": "Ez a blokk nem jeleníthető meg",
   "tools.header.heading1": "Címsor 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Blokk lejjebb mozgatva, {position}. pozíció, összesen {total}",
   "a11y.atTop": "A blokk a lista elején van, nem mozgatható feljebb",
   "a11y.atBottom": "A blokk a lista végén van, nem mozgatható lejjebb",
-  "blockSettings.convertWithChildrenWarning": "Ennek a blokknak {count} beágyazott blokkja van. Az átalakítás ezeket a legfelső szintre helyezi. Folytatja?"
+  "blockSettings.convertWithChildrenWarning": "Ennek a blokknak {count} beágyazott blokkja van. Az átalakítás ezeket a legfelső szintre helyezi. Folytatja?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

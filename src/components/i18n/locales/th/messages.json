@@ -23,6 +23,15 @@
   "tools.marker.textColor": "ข้อความ",
   "tools.marker.background": "พื้นหลัง",
   "tools.marker.default": "ค่าเริ่มต้น",
+  "tools.colorPicker.color.gray": "สีเทา",
+  "tools.colorPicker.color.brown": "สีน้ำตาล",
+  "tools.colorPicker.color.orange": "สีส้ม",
+  "tools.colorPicker.color.yellow": "สีเหลือง",
+  "tools.colorPicker.color.green": "สีเขียว",
+  "tools.colorPicker.color.blue": "สีน้ำเงิน",
+  "tools.colorPicker.color.purple": "สีม่วง",
+  "tools.colorPicker.color.pink": "สีชมพู",
+  "tools.colorPicker.color.red": "สีแดง",
   "tools.stub.error": "ข้อผิดพลาด",
   "tools.stub.blockCannotBeDisplayed": "ไม่สามารถแสดงบล็อกนี้ได้",
   "tools.header.heading1": "หัวข้อ 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "ลากเพื่อเพิ่มหรือลบแถว",
   "tools.table.clickToAddColumn": "คลิกเพื่อเพิ่มคอลัมน์ใหม่",
   "tools.table.dragToAddRemoveColumns": "ลากเพื่อเพิ่มหรือลบคอลัมน์",
-  "blockSettings.convertWithChildrenWarning": "บล็อกนี้มี {count} บล็อกที่ซ้อนอยู่ การแปลงจะย้ายบล็อกเหล่านั้นขึ้นสู่ระดับบนสุด ต้องการดำเนินการต่อไหม?"
+  "blockSettings.convertWithChildrenWarning": "บล็อกนี้มี {count} บล็อกที่ซ้อนอยู่ การแปลงจะย้ายบล็อกเหล่านั้นขึ้นสู่ระดับบนสุด ต้องการดำเนินการต่อไหม?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

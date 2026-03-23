@@ -23,6 +23,15 @@
   "tools.marker.textColor": "טעקסט",
   "tools.marker.background": "הינטערגרונט",
   "tools.marker.default": "שטאַנדאַרד",
+  "tools.colorPicker.color.gray": "גרוי",
+  "tools.colorPicker.color.brown": "ברוין",
+  "tools.colorPicker.color.orange": "אָראַנזש",
+  "tools.colorPicker.color.yellow": "געל",
+  "tools.colorPicker.color.green": "גרין",
+  "tools.colorPicker.color.blue": "בלוי",
+  "tools.colorPicker.color.purple": "לילאַ",
+  "tools.colorPicker.color.pink": "ראָזעוו",
+  "tools.colorPicker.color.red": "רויט",
   "tools.stub.error": "פֿעלער",
   "tools.stub.blockCannotBeDisplayed": "דער בלאָק קען נישט געוויזן ווערן",
   "tools.header.heading1": "קעפּל 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "בלאָק באַוועגט אַראָפּ צו פּאָזיציע {position} פֿון {total}",
   "a11y.atTop": "בלאָק איז אויבן, קען נישט אַרויפֿגיין",
   "a11y.atBottom": "בלאָק איז אונטן, קען נישט אַראָפּגיין",
-  "blockSettings.convertWithChildrenWarning": "דער בלאָק האָט {count} אַרײַנגענעסטלטע בלאָקן. זיין איבערמאַכן וועט זיי אַרױפֿרוקן צום ערשטן מדרגה. פֿאָרזעצן?"
+  "blockSettings.convertWithChildrenWarning": "דער בלאָק האָט {count} אַרײַנגענעסטלטע בלאָקן. זיין איבערמאַכן וועט זיי אַרױפֿרוקן צום ערשטן מדרגה. פֿאָרזעצן?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

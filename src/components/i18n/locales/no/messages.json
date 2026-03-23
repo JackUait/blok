@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Bakgrunn",
   "tools.marker.default": "Standard",
+  "tools.colorPicker.color.gray": "Grå",
+  "tools.colorPicker.color.brown": "Brun",
+  "tools.colorPicker.color.orange": "Oransje",
+  "tools.colorPicker.color.yellow": "Gul",
+  "tools.colorPicker.color.green": "Grønn",
+  "tools.colorPicker.color.blue": "Blå",
+  "tools.colorPicker.color.purple": "Lilla",
+  "tools.colorPicker.color.pink": "Rosa",
+  "tools.colorPicker.color.red": "Rød",
   "tools.stub.error": "Feil",
   "tools.stub.blockCannotBeDisplayed": "Denne blokken kan ikke vises",
   "tools.header.heading1": "Overskrift 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Blokk flyttet ned til posisjon {position} av {total}",
   "a11y.atTop": "Blokken er øverst, kan ikke flyttes opp",
   "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned",
-  "blockSettings.convertWithChildrenWarning": "Denne blokken inneholder {count} nestede blokker. Konvertering vil flytte dem til øverste nivå. Vil du fortsette?"
+  "blockSettings.convertWithChildrenWarning": "Denne blokken inneholder {count} nestede blokker. Konvertering vil flytte dem til øverste nivå. Vil du fortsette?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

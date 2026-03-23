@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Дэвсгэр",
   "tools.marker.default": "Өгөгдмөл",
+  "tools.colorPicker.color.gray": "Саарал",
+  "tools.colorPicker.color.brown": "Хүрэн",
+  "tools.colorPicker.color.orange": "Улбар шар",
+  "tools.colorPicker.color.yellow": "Шар",
+  "tools.colorPicker.color.green": "Ногоон",
+  "tools.colorPicker.color.blue": "Цэнхэр",
+  "tools.colorPicker.color.purple": "Нил ягаан",
+  "tools.colorPicker.color.pink": "Ягаан",
+  "tools.colorPicker.color.red": "Улаан",
   "tools.stub.error": "Алдаа",
   "tools.stub.blockCannotBeDisplayed": "Энэ блокийг харуулах боломжгүй",
   "tools.header.heading1": "Гарчиг 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Блок {total}-ын {position} байрлал руу доош зөөгдлөө",
   "a11y.atTop": "Блок хамгийн дээд талд байна, дээш зөөх боломжгүй",
   "a11y.atBottom": "Блок хамгийн доод талд байна, доош зөөх боломжгүй",
-  "blockSettings.convertWithChildrenWarning": "Энэ блок {count} дотоод блок агуулж байна. Хөрвүүлэхэд тэдгээр нь дээд түвшинд шилжих болно. Үргэлжлүүлэх үү?"
+  "blockSettings.convertWithChildrenWarning": "Энэ блок {count} дотоод блок агуулж байна. Хөрвүүлэхэд тэдгээр нь дээд түвшинд шилжих болно. Үргэлжлүүлэх үү?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

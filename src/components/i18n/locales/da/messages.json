@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Baggrund",
   "tools.marker.default": "Standard",
+  "tools.colorPicker.color.gray": "Grå",
+  "tools.colorPicker.color.brown": "Brun",
+  "tools.colorPicker.color.orange": "Orange",
+  "tools.colorPicker.color.yellow": "Gul",
+  "tools.colorPicker.color.green": "Grøn",
+  "tools.colorPicker.color.blue": "Blå",
+  "tools.colorPicker.color.purple": "Lilla",
+  "tools.colorPicker.color.pink": "Pink",
+  "tools.colorPicker.color.red": "Rød",
   "tools.stub.error": "Fejl",
   "tools.stub.blockCannotBeDisplayed": "Denne blok kan ikke vises",
   "tools.header.heading1": "Overskrift 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Blok flyttet ned til position {position} af {total}",
   "a11y.atTop": "Blokken er øverst, kan ikke flyttes op",
   "a11y.atBottom": "Blokken er nederst, kan ikke flyttes ned",
-  "blockSettings.convertWithChildrenWarning": "Denne blok indeholder {count} indlejrede blokke. Konvertering vil flytte dem til øverste niveau. Vil du fortsætte?"
+  "blockSettings.convertWithChildrenWarning": "Denne blok indeholder {count} indlejrede blokke. Konvertering vil flytte dem til øverste niveau. Vil du fortsætte?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

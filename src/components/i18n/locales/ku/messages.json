@@ -23,6 +23,15 @@
   "tools.marker.textColor": "دەق",
   "tools.marker.background": "پاشبنەما",
   "tools.marker.default": "بنەڕەت",
+  "tools.colorPicker.color.gray": "Gewr",
+  "tools.colorPicker.color.brown": "Qehweyî",
+  "tools.colorPicker.color.orange": "Pirteqalî",
+  "tools.colorPicker.color.yellow": "Zer",
+  "tools.colorPicker.color.green": "Kesk",
+  "tools.colorPicker.color.blue": "Şîn",
+  "tools.colorPicker.color.purple": "Mor",
+  "tools.colorPicker.color.pink": "Pembe",
+  "tools.colorPicker.color.red": "Sor",
   "tools.stub.error": "هەڵە",
   "tools.stub.blockCannotBeDisplayed": "ئەم بلۆکە ناتوانرێت پیشان بدرێت",
   "tools.header.heading1": "سەردێڕ ١",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "بلۆک چووە خوارەوە بۆ شوێن {position} لە {total}",
   "a11y.atTop": "بلۆک لە سەرەوەیە، ناتوانێت بچێتە سەرەوە",
   "a11y.atBottom": "بلۆک لە خوارەوەیە، ناتوانێت بچێتە خوارەوە",
-  "blockSettings.convertWithChildrenWarning": "ئەم بلۆکە {count} بلۆکی ناوخۆی هەیە. گۆڕینەکە ئەوانەی بۆ ئاستی سەرەوە دەبات. بەردەوام بی؟"
+  "blockSettings.convertWithChildrenWarning": "ئەم بلۆکە {count} بلۆکی ناوخۆی هەیە. گۆڕینەکە ئەوانەی بۆ ئاستی سەرەوە دەبات. بەردەوام بی؟",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

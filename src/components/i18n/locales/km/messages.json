@@ -23,6 +23,15 @@
   "tools.marker.textColor": "អត្ថបទ",
   "tools.marker.background": "ផ្ទៃខាងក្រោយ",
   "tools.marker.default": "លំនាំដើម",
+  "tools.colorPicker.color.gray": "ប្រផេះ",
+  "tools.colorPicker.color.brown": "ត្នោត",
+  "tools.colorPicker.color.orange": "លឿងទុំ",
+  "tools.colorPicker.color.yellow": "លឿង",
+  "tools.colorPicker.color.green": "បៃតង",
+  "tools.colorPicker.color.blue": "ខៀវ",
+  "tools.colorPicker.color.purple": "ស្វាយ",
+  "tools.colorPicker.color.pink": "ផ្កាឈូក",
+  "tools.colorPicker.color.red": "ក្រហម",
   "tools.stub.error": "កំហុស",
   "tools.stub.blockCannotBeDisplayed": "ប្លុកនេះមិនអាចបង្ហាញបានទេ",
   "tools.header.heading1": "ចំណងជើង ១",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "ប្លុកបានផ្លាស់ទីចុះក្រោមទៅទីតាំង {position} នៃ {total}",
   "a11y.atTop": "ប្លុកនៅផ្នែកខាងលើ មិនអាចផ្លាស់ទីឡើងលើបានទេ",
   "a11y.atBottom": "ប្លុកនៅផ្នែកខាងក្រោម មិនអាចផ្លាស់ទីចុះក្រោមបានទេ",
-  "blockSettings.convertWithChildrenWarning": "ប្លុកនេះមាន {count} ប្លុករង។ ការបំលែងនឹងប្រែប្លុកទាំងនោះទៅកម្រិតកំពូល។ ចង់បន្តទេ?"
+  "blockSettings.convertWithChildrenWarning": "ប្លុកនេះមាន {count} ប្លុករង។ ការបំលែងនឹងប្រែប្លុកទាំងនោះទៅកម្រិតកំពូល។ ចង់បន្តទេ?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Позадина",
   "tools.marker.default": "Стандардно",
+  "tools.colorPicker.color.gray": "Сиво",
+  "tools.colorPicker.color.brown": "Кафено",
+  "tools.colorPicker.color.orange": "Портокалово",
+  "tools.colorPicker.color.yellow": "Жолто",
+  "tools.colorPicker.color.green": "Зелено",
+  "tools.colorPicker.color.blue": "Сино",
+  "tools.colorPicker.color.purple": "Виолетово",
+  "tools.colorPicker.color.pink": "Розово",
+  "tools.colorPicker.color.red": "Црвено",
   "tools.stub.error": "Грешка",
   "tools.stub.blockCannotBeDisplayed": "Овој блок не може да се прикаже",
   "tools.header.heading1": "Наслов 1",
@@ -72,5 +81,7 @@
   "a11y.movedDown": "Блокот е преместен надолу на позиција {position} од {total}",
   "a11y.atTop": "Блокот е на врвот, не може да се премести нагоре",
   "a11y.atBottom": "Блокот е на дното, не може да се премести надолу",
-  "blockSettings.convertWithChildrenWarning": "Овој блок содржи {count} вгнездени блокови. При конвертирање тие ќе бидат преместени на највисокото ниво. Продолжи?"
+  "blockSettings.convertWithChildrenWarning": "Овој блок содржи {count} вгнездени блокови. При конвертирање тие ќе бидат преместени на највисокото ниво. Продолжи?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

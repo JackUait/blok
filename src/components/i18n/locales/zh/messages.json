@@ -23,6 +23,15 @@
   "tools.marker.textColor": "文字",
   "tools.marker.background": "背景",
   "tools.marker.default": "默认",
+  "tools.colorPicker.color.gray": "灰色",
+  "tools.colorPicker.color.brown": "棕色",
+  "tools.colorPicker.color.orange": "橙色",
+  "tools.colorPicker.color.yellow": "黄色",
+  "tools.colorPicker.color.green": "绿色",
+  "tools.colorPicker.color.blue": "蓝色",
+  "tools.colorPicker.color.purple": "紫色",
+  "tools.colorPicker.color.pink": "粉色",
+  "tools.colorPicker.color.red": "红色",
   "tools.stub.error": "错误",
   "tools.stub.blockCannotBeDisplayed": "无法显示此内容块",
   "tools.header.heading1": "一级标题",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "拖动以添加或删除行",
   "tools.table.clickToAddColumn": "点击添加新列",
   "tools.table.dragToAddRemoveColumns": "拖动以添加或删除列",
-  "blockSettings.convertWithChildrenWarning": "此内容块包含 {count} 个嵌套块。转换后，这些嵌套块将被提升至顶层。是否继续？"
+  "blockSettings.convertWithChildrenWarning": "此内容块包含 {count} 个嵌套块。转换后，这些嵌套块将被提升至顶层。是否继续？",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

@@ -23,6 +23,15 @@
   "tools.marker.textColor": "टेक्स्ट",
   "tools.marker.background": "पृष्ठभूमि",
   "tools.marker.default": "डिफ़ॉल्ट",
+  "tools.colorPicker.color.gray": "ग्रे",
+  "tools.colorPicker.color.brown": "भूरा",
+  "tools.colorPicker.color.orange": "नारंगी",
+  "tools.colorPicker.color.yellow": "पीला",
+  "tools.colorPicker.color.green": "हरा",
+  "tools.colorPicker.color.blue": "नीला",
+  "tools.colorPicker.color.purple": "बैंगनी",
+  "tools.colorPicker.color.pink": "गुलाबी",
+  "tools.colorPicker.color.red": "लाल",
   "tools.stub.error": "त्रुटि",
   "tools.stub.blockCannotBeDisplayed": "यह ब्लॉक प्रदर्शित नहीं हो सकता",
   "tools.header.heading1": "शीर्षक 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "पंक्तियाँ जोड़ने या हटाने के लिए खींचें",
   "tools.table.clickToAddColumn": "नया स्तंभ जोड़ने के लिए क्लिक करें",
   "tools.table.dragToAddRemoveColumns": "स्तंभ जोड़ने या हटाने के लिए खींचें",
-  "blockSettings.convertWithChildrenWarning": "इस ब्लॉक में {count} नेस्टेड ब्लॉक हैं। रूपांतरित करने पर वे शीर्ष स्तर पर आ जाएँगे। जारी रखें?"
+  "blockSettings.convertWithChildrenWarning": "इस ब्लॉक में {count} नेस्टेड ब्लॉक हैं। रूपांतरित करने पर वे शीर्ष स्तर पर आ जाएँगे। जारी रखें?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

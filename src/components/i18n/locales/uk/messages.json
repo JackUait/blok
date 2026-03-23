@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Тло",
   "tools.marker.default": "За замовчуванням",
+  "tools.colorPicker.color.gray": "Сірий",
+  "tools.colorPicker.color.brown": "Коричневий",
+  "tools.colorPicker.color.orange": "Помаранчевий",
+  "tools.colorPicker.color.yellow": "Жовтий",
+  "tools.colorPicker.color.green": "Зелений",
+  "tools.colorPicker.color.blue": "Синій",
+  "tools.colorPicker.color.purple": "Фіолетовий",
+  "tools.colorPicker.color.pink": "Рожевий",
+  "tools.colorPicker.color.red": "Червоний",
   "tools.stub.error": "Помилка",
   "tools.stub.blockCannotBeDisplayed": "Не вдалося відобразити блок",
   "tools.header.heading1": "Заголовок 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Перетягніть, щоб додати або видалити рядки",
   "tools.table.clickToAddColumn": "Натисніть, щоб додати нову колонку",
   "tools.table.dragToAddRemoveColumns": "Перетягніть, щоб додати або видалити колонки",
-  "blockSettings.convertWithChildrenWarning": "Цей блок містить {count} вкладених блоків. Під час конвертації вони будуть переміщені на верхній рівень. Продовжити?"
+  "blockSettings.convertWithChildrenWarning": "Цей блок містить {count} вкладених блоків. Під час конвертації вони будуть переміщені на верхній рівень. Продовжити?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

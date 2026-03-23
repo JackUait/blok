@@ -23,6 +23,15 @@
   "tools.marker.textColor": "Text",
   "tools.marker.background": "Pozadie",
   "tools.marker.default": "Predvolené",
+  "tools.colorPicker.color.gray": "Šedá",
+  "tools.colorPicker.color.brown": "Hnedá",
+  "tools.colorPicker.color.orange": "Oranžová",
+  "tools.colorPicker.color.yellow": "Žltá",
+  "tools.colorPicker.color.green": "Zelená",
+  "tools.colorPicker.color.blue": "Modrá",
+  "tools.colorPicker.color.purple": "Fialová",
+  "tools.colorPicker.color.pink": "Ružová",
+  "tools.colorPicker.color.red": "Červená",
   "tools.stub.error": "Chyba",
   "tools.stub.blockCannotBeDisplayed": "Tento blok nie je možné zobraziť",
   "tools.header.heading1": "Nadpis 1",
@@ -72,5 +81,7 @@
   "tools.table.dragToAddRemoveRows": "Potiahnutím pridáte alebo odoberiete riadky",
   "tools.table.clickToAddColumn": "Kliknutím pridáte nový stĺpec",
   "tools.table.dragToAddRemoveColumns": "Potiahnutím pridáte alebo odoberiete stĺpce",
-  "blockSettings.convertWithChildrenWarning": "Tento blok obsahuje {count} vnorených blokov. Po konverzii budú presunuté na najvyššiu úroveň. Pokračovať?"
+  "blockSettings.convertWithChildrenWarning": "Tento blok obsahuje {count} vnorených blokov. Po konverzii budú presunuté na najvyššiu úroveň. Pokračovať?",
+  "toolNames.underline": "Underline",
+  "toolNames.strikethrough": "Strikethrough"
 }

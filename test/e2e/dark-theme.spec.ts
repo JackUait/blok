@@ -31,21 +31,22 @@ const resetBlok = async (page: Page): Promise<void> => {
   }, { holder: HOLDER_ID });
 };
 
-const createBlok = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
+const createBlok = async (page: Page, blocks: OutputData['blocks'], extraConfig: Record<string, unknown> = {}): Promise<void> => {
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
 
   await page.evaluate(
-    async ({ holder, blokBlocks }) => {
+    async ({ holder, blokBlocks, config }) => {
       const blok = new window.Blok({
         holder,
         data: { blocks: blokBlocks },
+        ...config,
       });
 
       window.blokInstance = blok;
       await blok.isReady;
     },
-    { holder: HOLDER_ID, blokBlocks: blocks }
+    { holder: HOLDER_ID, blokBlocks: blocks, config: extraConfig }
   );
 };
 
@@ -116,10 +117,7 @@ test.describe('Dark theme', () => {
   test.describe('Explicit dark mode (data-blok-theme="dark")', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto(TEST_PAGE_URL);
-      await page.evaluate(() => {
-        document.documentElement.setAttribute('data-blok-theme', 'dark');
-      });
-      await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }]);
+      await createBlok(page, [{ type: 'paragraph', data: { text: 'Hello world' } }], { theme: 'dark' });
     });
 
     test('--blok-popover-bg resolves to dark value (#252525)', async ({ page }) => {

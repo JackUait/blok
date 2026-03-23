@@ -26,7 +26,7 @@ export const ARIA_LABEL_EXPAND_KEY = 'tools.toggle.ariaLabelExpand';
 /**
  * Base styles for toggle wrapper
  *
- * Matches paragraph spacing: py-[3px] from blok-block + mt-[2px] mb-px
+ * py-[3px] matches blok-block (paragraph); mt-[2px] mb-px provides block margin.
  */
 export const BASE_STYLES = 'outline-hidden py-[3px] mt-[2px] mb-px';
 
@@ -52,8 +52,13 @@ export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBo
 
 /**
  * Styles for the body placeholder element
+ *
+ * Vertical padding matches a child paragraph's layout contribution:
+ *   - Paragraph element: py-[3px] (3px top, 3px bottom) + mt-px mb-px (1px margins)
+ *   - Combined per side: 3px padding + 1px margin = 4px
+ * Using fixed px values (not em) because py-[3px] and mt-px are also fixed.
  */
-export const BODY_PLACEHOLDER_STYLES = 'hidden pl-[1.1em] pt-[calc(0.5em+5px)] pb-[4px] text-gray-text leading-[1.5] cursor-pointer select-none';
+export const BODY_PLACEHOLDER_STYLES = 'hidden pl-[1.1em] pt-[4px] pb-[4px] text-gray-text leading-[1.5] cursor-pointer select-none';
 
 /**
  * Styles for the children container element.

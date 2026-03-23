@@ -10,11 +10,11 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).toContain('leading-[1.5]');
   });
 
-  it('uses pt-[calc(0.5em+5px)] to match block wrapper top padding + paragraph margins/padding', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pt-[calc(0.5em+5px)]');
+  it('uses pt-[4px] to match paragraph top padding (3px) + top margin (1px)', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('pt-[4px]');
   });
 
-  it('uses pb-[4px] to match paragraph bottom padding + margin', () => {
+  it('uses pb-[4px] to match paragraph bottom padding (3px) + bottom margin (1px)', () => {
     expect(BODY_PLACEHOLDER_STYLES).toContain('pb-[4px]');
   });
 
@@ -22,7 +22,7 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-1');
   });
 
-  it('does not contain py-[3px] (insufficient — missing block wrapper top padding)', () => {
+  it('does not contain py-[3px] (missing paragraph margin contribution)', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[3px]');
   });
 

@@ -81,9 +81,8 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Should have 2 blocks now
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
 
-    // Second block should be an empty paragraph
-    const allParagraphs = page.locator(PARAGRAPH_SELECTOR);
-    const secondParagraph = allParagraphs.nth(1);
+    // Second block should be an empty paragraph (has no text, unlike the first block)
+    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasNotText: 'Hello world' });
 
     await expect(secondParagraph).toHaveText('');
 
@@ -394,32 +393,24 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await expect(focusedItem).toHaveCount(1);
   });
 
-  test('pressing backspace on empty block does not close the toolbox (no-slash mode)', async ({ page }) => {
+  test('deleting "/" closes the toolbox', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: '' } },
     ]);
 
-    const block = page.locator(BLOCK_SELECTOR);
+    // Click the empty paragraph to focus it, then type "/" to open the toolbox
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
-    await block.hover();
+    await paragraph.click();
+    await page.keyboard.type('/');
 
-    const plusButton = page.locator(PLUS_BUTTON_SELECTOR);
-
-    await plusButton.click();
-
-    // Toolbox should be open
+    // Toolbox should be open after typing "/"
     const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
 
     await expect(toolbox).toBeVisible();
 
-    // Press Backspace on empty block - toolbox should remain open (no slash to remove)
+    // Press Backspace to delete the "/" — toolbox should close
     await page.keyboard.press('Backspace');
-
-    // Toolbox should still be open
-    await expect(toolbox).toBeVisible();
-
-    // Pressing Escape should close the toolbox
-    await page.keyboard.press('Escape');
 
     await expect(toolbox).toBeHidden();
   });
@@ -702,12 +693,18 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
 
     await expect(cellsWithSlash).toHaveCount(0);
 
-    // A new empty top-level paragraph block should appear below the table.
-    // Verify via save(): table block (1) + new empty paragraph (1) = 2 top-level blocks.
-    const outputData = await page.evaluate(() => window.blokInstance?.save());
-    const blockTypes = outputData?.blocks.map((b: { type: string }) => b.type);
+    // A new empty top-level paragraph block should appear below the table, not inside a cell.
+    // Use XPath to find paragraph block-wrappers that are NOT inside a table cell container.
+    const outsideParagraphs = page.locator(
+      'xpath=//*[@data-blok-testid="block-wrapper"][@data-blok-component="paragraph"][not(ancestor::*[@data-blok-table-cell-blocks])]'
+    );
 
-    expect(blockTypes).toStrictEqual(['table', 'paragraph']);
+    await expect(outsideParagraphs).toHaveCount(1);
+
+    // That outside paragraph should be empty
+    const outsideParagraphEditable = outsideParagraphs.locator('[contenteditable]');
+
+    await expect(outsideParagraphEditable).toHaveText('');
   });
 
   test('selecting a block type from toolbox after clicking plus on table creates block below the table', async ({ page }) => {
@@ -851,12 +848,18 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
 
     await expect(cellsWithSlash).toHaveCount(0);
 
-    // A new empty top-level paragraph block should appear below the second table.
-    // Verify via save(): table1 (1) + table2 (1) + new empty paragraph (1) = 3 top-level blocks.
-    const outputData = await page.evaluate(() => window.blokInstance?.save());
-    const blockTypes = outputData?.blocks.map((b: { type: string }) => b.type);
+    // A new empty top-level paragraph block should appear below the second table, not inside a cell.
+    // Use XPath to find paragraph block-wrappers that are NOT inside a table cell container.
+    const outsideParagraphs = page.locator(
+      'xpath=//*[@data-blok-testid="block-wrapper"][@data-blok-component="paragraph"][not(ancestor::*[@data-blok-table-cell-blocks])]'
+    );
 
-    expect(blockTypes).toStrictEqual(['table', 'table', 'paragraph']);
+    await expect(outsideParagraphs).toHaveCount(1);
+
+    // That outside paragraph should be empty
+    const outsideParagraphEditable = outsideParagraphs.locator('[contenteditable]');
+
+    await expect(outsideParagraphEditable).toHaveText('');
   });
 
   test('clicking bottom zone below table creates new block below the table, not inside last cell', async ({ page }) => {

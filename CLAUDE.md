@@ -82,7 +82,7 @@ yarn release 1.0.0                # stable release
 yarn release 1.0.0-beta.1         # beta release (auto-detected from version)
 ```
 
-See `scripts/release.mjs` for the full workflow. Publish happens **before** git push. The GitHub release is created as a **draft** — edit it to add categorized release notes before publishing.
+See `scripts/release.mjs` for the full workflow. Publish happens **before** git push.
 
 ### GitHub Release Notes
 

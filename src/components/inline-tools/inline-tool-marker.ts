@@ -423,8 +423,8 @@ export class MarkerInlineTool implements InlineTool {
 
   /**
    * Update the color indicator on the inline toolbar marker button.
-   * Sets color and background-color inline so the button reflects both applied colors.
-   * Inline styles override the popover active-state Tailwind selectors.
+   * Background color is applied via SVG rect fill so it stays clipped to the rounded square.
+   * Button background-color is set to transparent to suppress active-state Tailwind selectors.
    * @param textColor - CSS color value for the icon/text, or null to reset
    * @param bgColor - CSS color value for the button background, or null to reset
    */
@@ -441,15 +441,27 @@ export class MarkerInlineTool implements InlineTool {
       btn.style.removeProperty('color');
     }
 
+    const rect = btn.querySelector<SVGRectElement>('svg rect');
+
     if (bgColor !== null) {
-      btn.style.setProperty('background-color', bgColor);
+      // Fill the SVG rect so the color is clipped to the rounded square shape.
+      // Transparent on the button suppresses active-state bg-icon-active-bg.
+      if (rect) {
+        rect.style.fill = bgColor;
+      }
+      btn.style.setProperty('background-color', 'transparent');
     } else if (textColor !== null) {
-      // Use a neutral background when only text color is applied so that:
+      // Use a neutral fill when only text color is applied so that:
       // (a) the active-state blue (data-blok-popover-item-active:bg-icon-active-bg) is suppressed, and
       // (b) light text colors remain visible regardless of the toolbar's own background.
-      // Same neutral bg used in the color picker for text-mode swatches.
-      btn.style.setProperty('background-color', 'var(--blok-swatch-neutral-bg)');
+      if (rect) {
+        rect.style.fill = 'var(--blok-swatch-neutral-bg)';
+      }
+      btn.style.setProperty('background-color', 'transparent');
     } else {
+      if (rect) {
+        rect.style.fill = '';
+      }
       btn.style.removeProperty('background-color');
     }
   }

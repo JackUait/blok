@@ -39,12 +39,12 @@ export const IconLink = `
 </svg>
 `;
 
-// Marker/Color icon (letter A with color bar)
+// Marker/Color icon (letter A in rounded square)
 export const IconMarker = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M6.5 14L10 5l3.5 9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M7.5 11.5h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <rect x="4.5" y="16" width="11" height="1.5" rx="0.75" fill="currentColor"/>
+  <rect x="1.5" y="1.5" width="17" height="17" rx="4.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M6.5 14.5L10 5.5l3.5 9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.5 11h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 

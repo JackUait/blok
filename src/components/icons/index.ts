@@ -48,6 +48,23 @@ export const IconMarker = `
 </svg>
 `;
 
+// Underline icon
+export const IconUnderline = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M6 4v6a4 4 0 0 0 8 0V4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 16h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Strikethrough icon
+export const IconStrikethrough = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 10h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M8.5 10c-.83-.42-1.5-1.06-1.5-2 0-1.657 1.343-3 3-3s3 1.343 3 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.5 10c.83.42 1.5 1.06 1.5 2 0 1.657-1.343 3-3 3s-3-1.343-3-3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Replace/Convert icon
 export const IconReplace = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -562,6 +562,7 @@ export class PopoverDesktop extends PopoverAbstract {
       messages: this.messages,
       onNavigateBack: this.destroyNestedPopoverIfExists.bind(this),
       width: item.childrenWidth,
+      minWidth: item.childrenMinWidth,
       handleContentEditableNavigation: handleContentEditable,
       autoFocusFirstItem: this.params.autoFocusFirstItem,
     });

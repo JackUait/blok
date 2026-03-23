@@ -51,6 +51,12 @@ export interface PopoverItemChildren {
    * Use 'auto' to fit content width.
    */
   width?: string;
+
+  /**
+   * Minimum width of the nested popover when auto-sizing.
+   * Has no effect when `width` is set to an explicit value.
+   */
+  minWidth?: string;
 }
 
 /**

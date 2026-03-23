@@ -425,6 +425,42 @@ test.describe('ui.block-tunes', () => {
       ).toBeVisible();
     });
 
+    test('convert to submenu has a minimum width of 200px', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Blok.Header',
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaToolbar(page);
+
+      const convertToOption = page
+        .getByTestId('popover-item')
+        .filter({ hasText: 'Convert to' });
+
+      await convertToOption.dispatchEvent('mouseover');
+
+      const nestedPopover = page.locator(NESTED_POPOVER_SELECTOR);
+
+      await expect(nestedPopover).toBeVisible();
+
+      const width = await nestedPopover.evaluate((el) => el.offsetWidth);
+
+      expect(width).toBeGreaterThanOrEqual(200);
+    });
+
     test('hides convert option when there is nothing to convert to', async ({ page }) => {
       await createBlok(page, {
         tools: {

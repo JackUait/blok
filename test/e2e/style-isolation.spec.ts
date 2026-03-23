@@ -243,15 +243,15 @@ test.describe('Style isolation', () => {
     expect(h1FontSize).toBeGreaterThan(h6FontSize);
   });
 
-  test('H1 has font-weight bold (font-weight classes are not overridden)', async ({ page }) => {
+  test('H1 has font-weight semi-bold (font-weight classes are not overridden)', async ({ page }) => {
     await createBlok(page, [{ type: 'header', data: { text: 'Heading 1', level: 1 } }]);
 
     const h1FontWeight = await page
       .locator(`${BLOK_INTERFACE_SELECTOR} h1`)
       .evaluate((el) => window.getComputedStyle(el).fontWeight);
 
-    // H1 is font-bold → 700. With the regression it inherits the editor default (~400).
-    expect(h1FontWeight).toBe('700');
+    // H1 is font-semibold → 600. With the regression it inherits the editor default (~400).
+    expect(h1FontWeight).toBe('600');
   });
 
   test('host h2 letter-spacing override does not reach Header tool heading elements', async ({ page }) => {

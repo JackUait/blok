@@ -192,21 +192,14 @@ const openColorPicker = async (page: Page): Promise<void> => {
   await expect(colorPicker).toBeVisible();
 };
 
-const clickSwatch = async (page: Page, name: string): Promise<void> => {
-  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${name}"]`);
+const clickSwatch = async (page: Page, name: string, mode: 'textColor' | 'backgroundColor' = 'backgroundColor'): Promise<void> => {
+  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${mode}-${name}"]`);
 
   await expect(swatch).toBeVisible();
   await swatch.click({ force: true });
 };
 
-const switchColorTab = async (page: Page, mode: 'textColor' | 'backgroundColor'): Promise<void> => {
-  const tab = page.locator(`[data-blok-testid="cell-color-tab-${mode}"]`);
-
-  await expect(tab).toBeVisible();
-  await tab.click();
-};
-
-test.describe('Color Picker Tab Switching', () => {
+test.describe('Color Picker Sections (always visible)', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -220,8 +213,9 @@ test.describe('Color Picker Tab Switching', () => {
     await resetBlok(page);
   });
 
-  test('Switching from Background to Text tab resets swatch selection without clearing applied color', async ({ page }) => {
-    // 1. Initialize the editor and select cell (0,0); open the color picker (Background tab by default)
+  test('Applying background color does not clear text color, and vice versa', async ({ page }) => {
+    // Both sections (Background and Text) are always visible — no tab switching required.
+    // 1. Initialize the editor and select cell (0,0); open the color picker
     await create3x3TableWithContent(page);
 
     await selectSingleCell(page, 0, 0);
@@ -231,13 +225,15 @@ test.describe('Color Picker Tab Switching', () => {
     await expect(pill).toBeAttached();
     await openColorPicker(page);
 
-    // Verify Background tab is active by default
-    const backgroundTab = page.locator('[data-blok-testid="cell-color-tab-backgroundColor"]');
+    // Both sections should be visible simultaneously
+    const backgroundSection = page.locator('[data-blok-testid="cell-color-section-backgroundColor"]');
+    const textSection = page.locator('[data-blok-testid="cell-color-section-textColor"]');
 
-    await expect(backgroundTab).toBeVisible();
+    await expect(backgroundSection).toBeVisible();
+    await expect(textSection).toBeVisible();
 
     // 2. Click the orange background swatch
-    await clickSwatch(page, 'orange');
+    await clickSwatch(page, 'orange', 'backgroundColor');
 
     const cellBgAfterOrange = await getCell(page, 0, 0).evaluate(
       (el) => (el as HTMLElement).style.backgroundColor
@@ -245,24 +241,21 @@ test.describe('Color Picker Tab Switching', () => {
 
     expect(cellBgAfterOrange, 'Cell (0,0) should have non-empty backgroundColor after orange swatch').toBeTruthy();
 
-    // 3. Without closing the picker, switch to the Text Color tab
-    await switchColorTab(page, 'textColor');
-
-    // Cell backgroundColor should still be non-empty after tab switch
-    const cellBgAfterTabSwitch = await getCell(page, 0, 0).evaluate(
+    // Cell backgroundColor should still be non-empty when we proceed to text color
+    const cellBgBeforeText = await getCell(page, 0, 0).evaluate(
       (el) => (el as HTMLElement).style.backgroundColor
     );
 
-    expect(cellBgAfterTabSwitch, 'Cell (0,0) backgroundColor should remain after switching to Text tab').toBeTruthy();
-    expect(cellBgAfterTabSwitch).toBe(cellBgAfterOrange);
+    expect(cellBgBeforeText, 'Cell (0,0) backgroundColor should remain before applying text color').toBeTruthy();
+    expect(cellBgBeforeText).toBe(cellBgAfterOrange);
 
-    // Text tab swatches should be visible
+    // Text section swatches should be visible without any tab interaction
     const colorPicker = page.locator('[data-blok-testid="cell-color-picker"]');
 
     await expect(colorPicker).toBeVisible();
 
-    // 4. Click the blue text color swatch
-    await clickSwatch(page, 'blue');
+    // 3. Click the blue text color swatch directly (no tab switch needed)
+    await clickSwatch(page, 'blue', 'textColor');
 
     const styles = await getCell(page, 0, 0).evaluate(
       (el) => ({
@@ -275,7 +268,8 @@ test.describe('Color Picker Tab Switching', () => {
     expect(styles.backgroundColor, 'Cell (0,0) backgroundColor should remain after applying text color').toBeTruthy();
   });
 
-  test('Default button in Background tab only removes background color, not text color', async ({ page }) => {
+  test('Default swatch in Background section only removes background color, not text color', async ({ page }) => {
+    // Both sections are always visible — no tab switching required.
     // 1. Initialize, apply orange background and blue text color to cell (0,0)
     await create3x3TableWithContent(page);
 
@@ -285,13 +279,10 @@ test.describe('Color Picker Tab Switching', () => {
 
     await expect(pill).toBeAttached();
 
-    // Apply background color first
+    // Apply background color and text color in the same open picker session
     await openColorPicker(page);
-    await clickSwatch(page, 'orange');
-
-    // Switch to text tab and apply blue text color
-    await switchColorTab(page, 'textColor');
-    await clickSwatch(page, 'blue');
+    await clickSwatch(page, 'orange', 'backgroundColor');
+    await clickSwatch(page, 'blue', 'textColor');
 
     // Click outside to close
     await page.mouse.click(10, 10);
@@ -307,18 +298,16 @@ test.describe('Color Picker Tab Switching', () => {
     expect(stylesBefore.backgroundColor, 'Cell (0,0) should have backgroundColor before default').toBeTruthy();
     expect(stylesBefore.color, 'Cell (0,0) should have text color before default').toBeTruthy();
 
-    // 2. Re-select cell and open color picker; ensure Background tab is active; click Default
+    // 2. Re-select cell and open color picker; click the Background Default swatch
     await selectSingleCell(page, 0, 0);
     await expect(pill).toBeAttached();
     await openColorPicker(page);
 
-    // Ensure Background tab is active
-    const backgroundTab = page.locator('[data-blok-testid="cell-color-tab-backgroundColor"]');
+    const backgroundSection = page.locator('[data-blok-testid="cell-color-section-backgroundColor"]');
 
-    await expect(backgroundTab).toBeVisible();
-    await backgroundTab.click();
+    await expect(backgroundSection).toBeVisible();
 
-    const defaultBtn = page.locator('[data-blok-testid="cell-color-default-btn"]');
+    const defaultBtn = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-default"]');
 
     await expect(defaultBtn).toBeVisible();
     await defaultBtn.click();
@@ -331,11 +320,12 @@ test.describe('Color Picker Tab Switching', () => {
       })
     );
 
-    expect(stylesAfter.backgroundColor, 'Cell (0,0) backgroundColor should be empty after Default on Background tab').toBe('');
-    expect(stylesAfter.color, 'Cell (0,0) text color should remain after Default on Background tab').toBeTruthy();
+    expect(stylesAfter.backgroundColor, 'Cell (0,0) backgroundColor should be empty after Default in Background section').toBe('');
+    expect(stylesAfter.color, 'Cell (0,0) text color should remain after Default in Background section').toBeTruthy();
   });
 
-  test('Default button in Text tab only removes text color, not background color', async ({ page }) => {
+  test('Default swatch in Text section only removes text color, not background color', async ({ page }) => {
+    // Both sections are always visible — no tab switching required.
     // 1. Initialize, apply orange background and blue text color to cell (0,0)
     await create3x3TableWithContent(page);
 
@@ -345,13 +335,10 @@ test.describe('Color Picker Tab Switching', () => {
 
     await expect(pill).toBeAttached();
 
-    // Apply background color
+    // Apply background color and text color in the same open picker session
     await openColorPicker(page);
-    await clickSwatch(page, 'orange');
-
-    // Switch to text tab and apply text color
-    await switchColorTab(page, 'textColor');
-    await clickSwatch(page, 'blue');
+    await clickSwatch(page, 'orange', 'backgroundColor');
+    await clickSwatch(page, 'blue', 'textColor');
 
     // Click outside to close
     await page.mouse.click(10, 10);
@@ -367,13 +354,16 @@ test.describe('Color Picker Tab Switching', () => {
     expect(stylesBefore.backgroundColor, 'Cell (0,0) should have backgroundColor before default').toBeTruthy();
     expect(stylesBefore.color, 'Cell (0,0) should have text color before default').toBeTruthy();
 
-    // 2. Re-select cell, open color picker, switch to Text tab, click Default
+    // 2. Re-select cell, open color picker, click the Text Default swatch directly
     await selectSingleCell(page, 0, 0);
     await expect(pill).toBeAttached();
     await openColorPicker(page);
-    await switchColorTab(page, 'textColor');
 
-    const defaultBtn = page.locator('[data-blok-testid="cell-color-default-btn"]');
+    const textSection = page.locator('[data-blok-testid="cell-color-section-textColor"]');
+
+    await expect(textSection).toBeVisible();
+
+    const defaultBtn = page.locator('[data-blok-testid="cell-color-swatch-textColor-default"]');
 
     await expect(defaultBtn).toBeVisible();
     await defaultBtn.click();
@@ -386,7 +376,7 @@ test.describe('Color Picker Tab Switching', () => {
       })
     );
 
-    expect(stylesAfter.color, 'Cell (0,0) text color should be empty after Default on Text tab').toBe('');
-    expect(stylesAfter.backgroundColor, 'Cell (0,0) backgroundColor should remain after Default on Text tab').toBeTruthy();
+    expect(stylesAfter.color, 'Cell (0,0) text color should be empty after Default in Text section').toBe('');
+    expect(stylesAfter.backgroundColor, 'Cell (0,0) backgroundColor should remain after Default in Text section').toBeTruthy();
   });
 });

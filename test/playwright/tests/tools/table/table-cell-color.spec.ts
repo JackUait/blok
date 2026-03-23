@@ -250,24 +250,15 @@ const openColorPicker = async (page: Page): Promise<void> => {
 
 /**
  * Helper to click a color swatch by name inside the nested color picker.
+ * The mode parameter selects which section's swatch to click ('textColor' or 'backgroundColor').
  * Uses force:true because the nested popover animation can cause
  * adjacent swatches to briefly intercept pointer events.
  */
-const clickSwatch = async (page: Page, name: string): Promise<void> => {
-  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${name}"]`);
+const clickSwatch = async (page: Page, name: string, mode: 'textColor' | 'backgroundColor' = 'backgroundColor'): Promise<void> => {
+  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${mode}-${name}"]`);
 
   await expect(swatch).toBeVisible();
   await swatch.click({ force: true });
-};
-
-/**
- * Helper to switch to a specific tab in the color picker.
- */
-const switchColorTab = async (page: Page, mode: 'textColor' | 'backgroundColor'): Promise<void> => {
-  const tab = page.locator(`[data-blok-testid="cell-color-tab-${mode}"]`);
-
-  await expect(tab).toBeVisible();
-  await tab.click();
 };
 
 test.describe('Cell Background Color', () => {
@@ -375,7 +366,7 @@ test.describe('Cell Background Color', () => {
     // 5. Open pill -> Color -> click the Default button
     await openColorPicker(page);
 
-    const defaultBtn = page.locator('[data-blok-testid="cell-color-default-btn"]');
+    const defaultBtn = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-default"]');
 
     await expect(defaultBtn).toBeVisible();
     await defaultBtn.click();
@@ -448,12 +439,9 @@ test.describe('Cell Text Color', () => {
 
     await expect(pill).toBeAttached();
 
-    // Open color picker and switch to Text tab
+    // Open color picker and click the orange text color swatch
     await openColorPicker(page);
-    await switchColorTab(page, 'textColor');
-
-    // Click the orange swatch
-    await clickSwatch(page, 'orange');
+    await clickSwatch(page, 'orange', 'textColor');
 
     // Verify cell (0,0) has a non-empty color style
     const cellColor = await getCell(page, 0, 0).evaluate(
@@ -474,10 +462,9 @@ test.describe('Cell Text Color', () => {
 
     await expect(pill).toBeAttached();
 
-    // Open color picker, switch to Text tab, pick orange
+    // Open color picker and pick orange text color
     await openColorPicker(page);
-    await switchColorTab(page, 'textColor');
-    await clickSwatch(page, 'orange');
+    await clickSwatch(page, 'orange', 'textColor');
 
     // Save and verify textColor field
     const savedData = await page.evaluate(async () => {
@@ -509,8 +496,7 @@ test.describe('Cell Text Color', () => {
 
     await expect(pill).toBeAttached();
     await openColorPicker(page);
-    await switchColorTab(page, 'textColor');
-    await clickSwatch(page, 'orange');
+    await clickSwatch(page, 'orange', 'textColor');
 
     // Verify color is set
     const cellColorBefore = await getCell(page, 0, 0).evaluate(
@@ -523,11 +509,10 @@ test.describe('Cell Text Color', () => {
     await selectSingleCell(page, 0, 0);
     await expect(pill).toBeAttached();
 
-    // Open picker, switch to text tab, click Default
+    // Open picker and click the text color Default swatch
     await openColorPicker(page);
-    await switchColorTab(page, 'textColor');
 
-    const defaultBtn = page.locator('[data-blok-testid="cell-color-default-btn"]');
+    const defaultBtn = page.locator('[data-blok-testid="cell-color-swatch-textColor-default"]');
 
     await expect(defaultBtn).toBeVisible();
     await defaultBtn.click();
@@ -581,8 +566,7 @@ test.describe('Cell Text Color', () => {
     await selectSingleCell(page, 0, 0);
     await expect(pill).toBeAttached();
     await openColorPicker(page);
-    await switchColorTab(page, 'textColor');
-    await clickSwatch(page, 'blue');
+    await clickSwatch(page, 'blue', 'textColor');
 
     // Verify both styles are set
     const styles = await getCell(page, 0, 0).evaluate(

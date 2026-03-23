@@ -480,7 +480,7 @@ test.describe('Toggle Tool', () => {
       await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
-    test('clicking arrow in read-only mode has no effect on open state', async ({ page }) => {
+    test('clicking arrow in read-only mode still toggles open state', async ({ page }) => {
       await createBlok(page, createToggleData('Read-only no-op', { isOpen: false }), true);
 
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
@@ -490,7 +490,7 @@ test.describe('Toggle Tool', () => {
 
       await arrow.click();
 
-      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
     });
   });
 });

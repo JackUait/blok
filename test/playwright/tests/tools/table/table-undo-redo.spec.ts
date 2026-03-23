@@ -249,9 +249,10 @@ const openColorPicker = async (page: Page): Promise<void> => {
 
 /**
  * Click a color swatch by name inside the color picker.
+ * The mode parameter selects which section's swatch to click ('textColor' or 'backgroundColor').
  */
-const clickSwatch = async (page: Page, name: string): Promise<void> => {
-  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${name}"]`);
+const clickSwatch = async (page: Page, name: string, mode: 'textColor' | 'backgroundColor' = 'backgroundColor'): Promise<void> => {
+  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${mode}-${name}"]`);
 
   await expect(swatch).toBeVisible();
   await swatch.click({ force: true });
@@ -1219,7 +1220,7 @@ test.describe('Table Undo/Redo', () => {
     // during undo (full table DOM rebuild).
 
     // 1. Create a document with many paragraphs above a table to force scrolling
-    const manyParagraphs = Array.from({ length: 30 }, (_, i) => ({
+    const manyParagraphs = Array.from({ length: 50 }, (_, i) => ({
       type: 'paragraph',
       data: { text: `Paragraph ${i + 1} — filler content to push the table below the fold.` },
     }));

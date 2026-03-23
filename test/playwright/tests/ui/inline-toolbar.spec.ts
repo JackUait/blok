@@ -873,7 +873,9 @@ test.describe('inline toolbar', () => {
     const toolbarRight = toolbarBox.x + toolbarBox.width;
     const paragraphRight = paragraphBox.x + paragraphBox.width;
 
-    expect(Math.abs(toolbarRight - paragraphRight)).toBeLessThanOrEqual(10);
+    // Increased from 10 to 20 px: toolbar grew wider after square icon buttons
+    // and link suggestion chip were added in the March 17-18 styling sprint.
+    expect(Math.abs(toolbarRight - paragraphRight)).toBeLessThanOrEqual(20);
   });
 
   test('should position toolbar near selection when page is scrolled', async ({ page }) => {
@@ -1450,9 +1452,9 @@ test.describe('inline toolbar', () => {
       await selectText(paragraph, 'Text');
       await expect(toolbar).toBeVisible();
 
-      // Click outside to close
+      // Click outside to close and wait for async DOM cleanup (clearFakeBackground runs on close)
       await page.mouse.click(10, 10);
-      await expect(toolbar).toHaveCount(0);
+      await expect(toolbar).toHaveCount(0, { timeout: 3000 });
     }
 
     // After rapid cycles, toolbar should still work

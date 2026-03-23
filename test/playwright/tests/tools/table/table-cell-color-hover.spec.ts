@@ -249,8 +249,8 @@ test.describe('Cell color picker hover behavior', () => {
 
     await expect(colorPicker).toBeVisible();
 
-    // Click a swatch
-    const swatch = page.locator('[data-blok-testid="cell-color-swatch-orange"]');
+    // Click a background color swatch
+    const swatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]');
 
     await expect(swatch).toBeVisible();
     await swatch.click({ force: true });

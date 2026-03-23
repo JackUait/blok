@@ -202,13 +202,13 @@ test.describe('inline tool marker', () => {
     // Open the marker picker
     await openMarkerPicker(page);
 
-    // Verify text color tab is visible (it should be active by default)
-    const colorTab = page.locator('[data-blok-testid="marker-tab-color"]');
+    // Verify text color section is visible (always visible, no tabs)
+    const colorSection = page.locator('[data-blok-testid="marker-section-color"]');
 
-    await expect(colorTab).toBeVisible();
+    await expect(colorSection).toBeVisible();
 
     // Click a color swatch (e.g., red)
-    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
     await redSwatch.click();
 
@@ -253,13 +253,8 @@ test.describe('inline tool marker', () => {
     // Open the marker picker
     await openMarkerPicker(page);
 
-    // Switch to background color tab
-    const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
-
-    await bgTab.click();
-
-    // Click a color swatch (e.g., yellow)
-    const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-yellow"]');
+    // Both sections are always visible — click the yellow swatch in the background section directly
+    const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
     await yellowSwatch.click();
 
@@ -287,7 +282,7 @@ test.describe('inline tool marker', () => {
     expect(html).toMatch(/<mark style="background-color:[^"]+">Highlight<\/mark>/);
   });
 
-  test('removes color with Default button', async ({ page }) => {
+  test('removes color with Default swatch', async ({ page }) => {
     // Start with text that already has a mark with color
     await createBlokWithBlocks(page, [
       {
@@ -306,8 +301,8 @@ test.describe('inline tool marker', () => {
     // Open the marker picker
     await openMarkerPicker(page);
 
-    // Click the Default button to remove color
-    const defaultBtn = page.locator('[data-blok-testid="marker-default-btn"]');
+    // Click the Default swatch in the text color section to remove color
+    const defaultBtn = page.locator('[data-blok-testid="marker-swatch-color-default"]');
 
     await defaultBtn.click();
 
@@ -348,7 +343,7 @@ test.describe('inline tool marker', () => {
     await openMarkerPicker(page);
 
     // Click a color swatch
-    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
     await redSwatch.click();
 
@@ -374,8 +369,8 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Step 1: Apply text color (red)
-    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+    // Step 1: Apply text color (red) — both sections are always visible
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
     await redSwatch.click();
 
@@ -384,13 +379,8 @@ test.describe('inline tool marker', () => {
 
     await expect(picker).toBeVisible();
 
-    // Step 2: Switch to background tab
-    const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
-
-    await bgTab.click();
-
-    // Step 3: Apply background color (yellow)
-    const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-yellow"]');
+    // Step 2: Apply background color (yellow) — background section is always visible, no tab switch needed
+    const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
     await yellowSwatch.click();
 
@@ -439,7 +429,7 @@ test.describe('inline tool marker', () => {
     await openMarkerPicker(page);
 
     // Apply a color — picker should stay open
-    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
     await redSwatch.click();
 
@@ -487,7 +477,7 @@ test.describe('inline tool marker', () => {
     await expect(picker).toBeVisible();
   });
 
-  test('keeps color picker open after clicking Default button', async ({ page }) => {
+  test('keeps color picker open after clicking Default swatch', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -503,7 +493,7 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    const defaultBtn = page.locator('[data-blok-testid="marker-default-btn"]');
+    const defaultBtn = page.locator('[data-blok-testid="marker-swatch-color-default"]');
 
     await defaultBtn.click();
 
@@ -559,7 +549,7 @@ test.describe('inline tool marker', () => {
     await expect(isActive).not.toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
-  test('color picker grid renders exactly 10 swatch buttons', async ({ page }) => {
+  test('each color picker section renders exactly 10 swatch buttons (1 default + 9 colors)', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -575,39 +565,47 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    const grid = page.locator('[data-blok-testid="marker-grid"]');
+    const colorSection = page.locator('[data-blok-testid="marker-section-color"]');
 
-    await expect(grid).toBeVisible();
+    await expect(colorSection).toBeVisible();
 
-    const swatchCount = grid.getByRole('button');
+    const colorSwatchCount = colorSection.getByRole('button');
 
-    await expect(swatchCount).toHaveCount(10);
+    await expect(colorSwatchCount).toHaveCount(10);
+
+    const bgSection = page.locator('[data-blok-testid="marker-section-background-color"]');
+
+    await expect(bgSection).toBeVisible();
+
+    const bgSwatchCount = bgSection.getByRole('button');
+
+    await expect(bgSwatchCount).toHaveCount(10);
   });
 
-  test('color picker contains two tabs labeled Text and Background', async ({ page }) => {
+  test('color picker contains two always-visible sections: Text and Background', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
         data: {
-          text: 'Tab structure test',
+          text: 'Section structure test',
         },
       },
     ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
-    await selectText(paragraph, 'Tab structure');
+    await selectText(paragraph, 'Section structure');
 
     await openMarkerPicker(page);
 
-    const colorTab = page.locator('[data-blok-testid="marker-tab-color"]');
-    const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
+    const colorSection = page.locator('[data-blok-testid="marker-section-color"]');
+    const bgSection = page.locator('[data-blok-testid="marker-section-background-color"]');
 
-    await expect(colorTab).toBeVisible();
-    await expect(bgTab).toBeVisible();
+    await expect(colorSection).toBeVisible();
+    await expect(bgSection).toBeVisible();
   });
 
-  test('Default button on Background tab removes only background-color and keeps text color', async ({ page }) => {
+  test('Default swatch in Background section removes only background-color and keeps text color', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -623,13 +621,8 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Switch to background tab
-    const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
-
-    await bgTab.click();
-
-    // Click Default button
-    const defaultBtn = page.locator('[data-blok-testid="marker-default-btn"]');
+    // Background section is always visible — click its Default swatch directly
+    const defaultBtn = page.locator('[data-blok-testid="marker-swatch-background-color-default"]');
 
     await defaultBtn.click();
 
@@ -645,7 +638,7 @@ test.describe('inline tool marker', () => {
     expect(html).not.toMatch(/background-color:\s*rgb\(251/);
   });
 
-  test('Default button on Text tab removes only text color and keeps background color', async ({ page }) => {
+  test('Default swatch in Text section removes only text color and keeps background color', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -661,8 +654,8 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Text tab is active by default, click Default
-    const defaultBtn = page.locator('[data-blok-testid="marker-default-btn"]');
+    // Text section is always visible — click its Default swatch directly
+    const defaultBtn = page.locator('[data-blok-testid="marker-swatch-color-default"]');
 
     await defaultBtn.click();
 
@@ -692,8 +685,8 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Click orange swatch (text tab is default)
-    const orangeSwatch = page.locator('[data-blok-testid="marker-swatch-orange"]');
+    // Click orange swatch in the text color section
+    const orangeSwatch = page.locator('[data-blok-testid="marker-swatch-color-orange"]');
 
     await orangeSwatch.click();
 
@@ -727,13 +720,8 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Switch to background tab
-    const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
-
-    await bgTab.click();
-
-    // Click purple swatch
-    const purpleSwatch = page.locator('[data-blok-testid="marker-swatch-purple"]');
+    // Background section is always visible — click purple swatch directly
+    const purpleSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-purple"]');
 
     await purpleSwatch.click();
 
@@ -766,17 +754,13 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Apply text color (red)
-    const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+    // Apply text color (red) from the text color section
+    const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
     await redSwatch.click();
 
-    // Switch to background and apply yellow
-    const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
-
-    await bgTab.click();
-
-    const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-yellow"]');
+    // Apply background color (yellow) from the background section — always visible, no tab switch needed
+    const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
     await yellowSwatch.click();
 
@@ -822,9 +806,9 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    const tealSwatch = page.locator('[data-blok-testid="marker-swatch-teal"]');
+    const blueSwatch = page.locator('[data-blok-testid="marker-swatch-color-blue"]');
 
-    await tealSwatch.click();
+    await blueSwatch.click();
 
     // Close picker
     await page.mouse.click(10, 10);
@@ -886,8 +870,8 @@ test.describe('inline tool marker', () => {
       await selectText(paragraph, 'Hello');
       await openMarkerPicker(page);
 
-      // Click the red swatch on the text tab (default tab)
-      const redSwatch = page.locator('[data-blok-testid="marker-swatch-red"]');
+      // Click the red swatch in the text color section (always visible)
+      const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
       await redSwatch.click();
 
@@ -961,12 +945,8 @@ test.describe('inline tool marker', () => {
       await selectText(paragraph, 'Highlight');
       await openMarkerPicker(page);
 
-      // Switch to background color tab
-      const bgTab = page.locator('[data-blok-testid="marker-tab-background-color"]');
-
-      await bgTab.click();
-
-      const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-yellow"]');
+      // Background section is always visible — click yellow swatch directly
+      const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
       await yellowSwatch.click();
 

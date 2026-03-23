@@ -233,6 +233,19 @@ export class TableCellBlocks {
       const totalBlocks = this.api.blocks.getBlocksCount();
       const newBlock = this.api.blocks.insert(undefined, {}, {}, totalBlocks, true);
 
+      /**
+       * insertToDOM places the new block's holder adjacent (afterend) to the last
+       * block in the flat array, which is a cell paragraph inside the table grid.
+       * Move the holder out of the grid so focus lands outside the table.
+       */
+      const tableBlockApi = this.gridElement.contains(newBlock.holder)
+        ? this.api.blocks.getBlockByIndex(tableIndex)
+        : null;
+
+      if (tableBlockApi) {
+        tableBlockApi.holder.after(newBlock.holder);
+      }
+
       this.api.caret.setToBlock(newBlock.id, 'start');
     } finally {
       this.isExitingTable = false;
@@ -671,6 +684,18 @@ export class TableCellBlocks {
     // For those, check that the current block at the time of insertion belongs
     // to this table — indicating the user was editing inside a cell.
     if (!this.gridElement.contains(holder)) {
+      // If the holder is outside the table block's own wrapper (e.g. placed
+      // directly in the editor working area via appendToWorkingArea), it is
+      // a top-level block and must not be claimed into a cell.
+      const tableBlockIdx = this.api.blocks.getBlockIndex(this.tableBlockId);
+      const tableBlockApi = tableBlockIdx !== undefined
+        ? this.api.blocks.getBlockByIndex(tableBlockIdx)
+        : null;
+
+      if (tableBlockApi && !tableBlockApi.holder.contains(holder)) {
+        return;
+      }
+
       const currentIndex = this.api.blocks.getCurrentBlockIndex();
       const currentBlock = currentIndex >= 0
         ? this.api.blocks.getBlockByIndex(currentIndex)

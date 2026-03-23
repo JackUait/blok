@@ -128,10 +128,10 @@ test.describe('Dark theme', () => {
       expect(value).toBe('#252525');
     });
 
-    test('--blok-text-primary resolves to dark value (#f0efed)', async ({ page }) => {
+    test('--blok-text-primary resolves to dark value (#e2e0dc)', async ({ page }) => {
       const value = await getCustomProperty(page, '--blok-text-primary');
 
-      expect(value).toBe('#f0efed');
+      expect(value).toBe('#e2e0dc');
     });
 
     test('body-mounted popover --blok-popover-bg resolves to dark value (#252525)', async ({ page }) => {

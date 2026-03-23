@@ -54,7 +54,7 @@ const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): P
   );
 };
 
-test.describe('plus button inserts slash paragraph', () => {
+test.describe('plus button opens toolbox on empty paragraph', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
   });
@@ -63,7 +63,7 @@ test.describe('plus button inserts slash paragraph', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
-  test('clicking plus button on block with content creates new paragraph with "/" below', async ({ page }) => {
+  test('clicking plus button on block with content creates new empty paragraph below', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: 'Hello world' } },
     ]);
@@ -81,16 +81,17 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should have 2 blocks now
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
 
-    // Second block should be a paragraph with "/"
-    const secondParagraph = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+    // Second block should be an empty paragraph
+    const allParagraphs = page.locator(PARAGRAPH_SELECTOR);
+    const secondParagraph = allParagraphs.nth(1);
 
-    await expect(secondParagraph).toHaveText('/');
+    await expect(secondParagraph).toHaveText('');
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
   });
 
-  test('clicking plus button on empty paragraph reuses it and inserts "/"', async ({ page }) => {
+  test('clicking plus button on empty paragraph reuses it and keeps it empty', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: '' } },
     ]);
@@ -107,16 +108,16 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should still have 1 block (reused the empty paragraph)
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
 
-    // Block should now contain "/"
+    // Block should remain empty
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
-    await expect(paragraph).toHaveText('/');
+    await expect(paragraph).toHaveText('');
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
   });
 
-  test('clicking plus button on empty header creates new paragraph with "/" below', async ({ page }) => {
+  test('clicking plus button on empty header creates new empty paragraph below', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'header', data: { text: '', level: 2 } },
     ]);
@@ -133,10 +134,10 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should have 2 blocks now (header + new paragraph)
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
 
-    // Second block should be a paragraph with "/"
+    // Second block should be an empty paragraph
     const paragraph = page.locator(PARAGRAPH_SELECTOR);
 
-    await expect(paragraph).toHaveText('/');
+    await expect(paragraph).toHaveText('');
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
@@ -215,7 +216,7 @@ test.describe('plus button inserts slash paragraph', () => {
     await expect(paragraph).toHaveText('/test');
   });
 
-  test('alt+clicking plus button inserts paragraph with "/" above current block', async ({ page }) => {
+  test('alt+clicking plus button inserts empty paragraph above current block', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: 'First block' } },
       { type: 'paragraph', data: { text: 'Second block' } },
@@ -237,18 +238,18 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should have 3 blocks now
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(3);
 
-    // Verify the new paragraph with "/" was inserted between First and Second blocks
+    // Verify the new empty paragraph was inserted between First and Second blocks
     // by checking the output data order
     const outputData = await page.evaluate(() => window.blokInstance?.save());
     const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
 
-    expect(blockTexts).toStrictEqual(['First block', '/', 'Second block']);
+    expect(blockTexts).toStrictEqual(['First block', '', 'Second block']);
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
   });
 
-  test('alt+clicking plus button on first block inserts paragraph at the very top', async ({ page }) => {
+  test('alt+clicking plus button on first block inserts empty paragraph at the very top', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: 'Only block' } },
     ]);
@@ -268,11 +269,11 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should have 2 blocks now
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
 
-    // Verify the new paragraph with "/" was inserted at the top
+    // Verify the new empty paragraph was inserted at the top
     const outputData = await page.evaluate(() => window.blokInstance?.save());
     const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
 
-    expect(blockTexts).toStrictEqual(['/', 'Only block']);
+    expect(blockTexts).toStrictEqual(['', 'Only block']);
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
@@ -300,17 +301,17 @@ test.describe('plus button inserts slash paragraph', () => {
     // Should still have 2 blocks (empty paragraph was reused)
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
 
-    // Verify the second block now contains "/"
+    // Verify the second block remains empty (no "/" inserted)
     const outputData = await page.evaluate(() => window.blokInstance?.save());
     const blockTexts = outputData?.blocks.map((b: { data: { text: string } }) => b.data.text);
 
-    expect(blockTexts).toStrictEqual(['First block', '/']);
+    expect(blockTexts).toStrictEqual(['First block', '']);
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
   });
 
-  test('typing after "/" filters toolbox items', async ({ page }) => {
+  test('typing after opening toolbox via plus button filters toolbox items', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: '' } },
     ]);
@@ -393,7 +394,7 @@ test.describe('plus button inserts slash paragraph', () => {
     await expect(focusedItem).toHaveCount(1);
   });
 
-  test('deleting "/" closes the toolbox', async ({ page }) => {
+  test('pressing backspace on empty block does not close the toolbox (no-slash mode)', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: '' } },
     ]);
@@ -411,10 +412,15 @@ test.describe('plus button inserts slash paragraph', () => {
 
     await expect(toolbox).toBeVisible();
 
-    // Delete the "/" character
+    // Press Backspace on empty block - toolbox should remain open (no slash to remove)
     await page.keyboard.press('Backspace');
 
-    // Toolbox should now be closed
+    // Toolbox should still be open
+    await expect(toolbox).toBeVisible();
+
+    // Pressing Escape should close the toolbox
+    await page.keyboard.press('Escape');
+
     await expect(toolbox).toBeHidden();
   });
 
@@ -521,7 +527,7 @@ test.describe('plus button inserts slash paragraph', () => {
     await expect(headerBlock).toBeVisible();
   });
 
-  test('selecting filtered item replaces the slash paragraph instead of adding below', async ({ page }) => {
+  test('selecting filtered item inserts the new block below the typed-text paragraph', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: '' } },
     ]);
@@ -537,7 +543,7 @@ test.describe('plus button inserts slash paragraph', () => {
 
     await plusButton.click();
 
-    // Type "head" to filter
+    // Type "head" to filter - in no-slash mode this goes directly into the block
     await page.keyboard.type('head');
 
     // Wait for filter to apply
@@ -550,13 +556,15 @@ test.describe('plus button inserts slash paragraph', () => {
 
     await headingItem.click();
 
-    // That block should be a header (wait for it first)
+    // The header block should be visible
     const headerBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="header"]`);
 
     await expect(headerBlock).toBeVisible();
 
-    // Should still have only 1 block (paragraph was replaced, not a new block added)
-    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
+    // In no-slash mode, the block now has text "head" so it is not empty and not slash-search-only.
+    // shouldReplaceBlock = false → header is inserted BELOW the "head" paragraph.
+    // Result: 2 blocks (the "head" paragraph + the new header).
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
   });
 
   test('fuzzy search: subsequence match finds tools', async ({ page }) => {
@@ -689,15 +697,17 @@ test.describe('plus button inserts slash paragraph', () => {
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
 
-    // The "/" should be in a NEW paragraph block OUTSIDE the table, not inside a cell.
+    // No '/' should have been inserted anywhere in the table cells
     const cellsWithSlash = page.locator('[data-blok-table-cell] [contenteditable]', { hasText: '/' });
 
     await expect(cellsWithSlash).toHaveCount(0);
 
-    // There should be a paragraph block (outside the table) containing "/"
-    const slashParagraph = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+    // A new empty top-level paragraph block should appear below the table.
+    // Verify via save(): table block (1) + new empty paragraph (1) = 2 top-level blocks.
+    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const blockTypes = outputData?.blocks.map((b: { type: string }) => b.type);
 
-    await expect(slashParagraph).toHaveCount(1);
+    expect(blockTypes).toStrictEqual(['table', 'paragraph']);
   });
 
   test('selecting a block type from toolbox after clicking plus on table creates block below the table', async ({ page }) => {
@@ -771,12 +781,15 @@ test.describe('plus button inserts slash paragraph', () => {
     await expect(headerInsideTable).toHaveCount(0);
 
     // Verify output data: header should be a separate top-level block after the table.
+    // In no-slash mode, typing "head" leaves the filter paragraph in place (it's not replaced
+    // because the block now has content and isBlockSlashSearchOnly returns false).
     // The table's 2x2 grid produces 4 cell paragraph blocks in the flat save output.
+    // Order: table, paragraph('head'), 4 cell paragraphs, header
     const blockTypes = await page.evaluate(() =>
       window.blokInstance?.save().then(data => data.blocks.map(b => b.type))
     );
 
-    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'header']);
+    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'header']);
   });
 
   test('clicking plus button on table block works when multiple tables exist in the article', async ({ page }) => {
@@ -833,15 +846,17 @@ test.describe('plus button inserts slash paragraph', () => {
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
 
-    // The "/" should be in a NEW paragraph block OUTSIDE any table, not inside a cell.
+    // No '/' should have been inserted anywhere in the table cells
     const cellsWithSlash = page.locator('[data-blok-table-cell] [contenteditable]', { hasText: '/' });
 
     await expect(cellsWithSlash).toHaveCount(0);
 
-    // There should be a paragraph block (outside the table) containing "/"
-    const slashParagraph = page.locator(PARAGRAPH_SELECTOR, { hasText: '/' });
+    // A new empty top-level paragraph block should appear below the second table.
+    // Verify via save(): table1 (1) + table2 (1) + new empty paragraph (1) = 3 top-level blocks.
+    const outputData = await page.evaluate(() => window.blokInstance?.save());
+    const blockTypes = outputData?.blocks.map((b: { type: string }) => b.type);
 
-    await expect(slashParagraph).toHaveCount(1);
+    expect(blockTypes).toStrictEqual(['table', 'table', 'paragraph']);
   });
 
   test('clicking bottom zone below table creates new block below the table, not inside last cell', async ({ page }) => {

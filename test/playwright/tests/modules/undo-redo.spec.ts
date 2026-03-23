@@ -2035,10 +2035,7 @@ test.describe('yjs undo/redo', () => {
       await expect(plusButton).toBeVisible();
       await plusButton.click();
 
-      // Type to filter to list and click on Bulleted List option
-      await page.keyboard.type('bullet');
-      await waitForDelay(page, 100);
-
+      // Click on Bulleted List option directly (no filter text needed)
       const listOption = page.locator(TOOLBOX_ITEM_SELECTOR('bulleted-list'));
       await expect(listOption).toBeVisible();
       await listOption.click();

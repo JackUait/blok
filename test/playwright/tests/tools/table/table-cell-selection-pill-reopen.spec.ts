@@ -288,7 +288,7 @@ test.describe('Pill popover reopens for different cell', () => {
 
     await page.mouse.move(colorBox.x + colorBox.width / 2, colorBox.y + colorBox.height / 2);
 
-    const swatch = page.locator('[data-blok-testid="cell-color-swatch-orange"]');
+    const swatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]');
 
     await expect(swatch).toBeVisible();
     await swatch.click({ force: true });
@@ -393,7 +393,7 @@ test.describe('Pill popover reopens for different cell', () => {
     await expect(colorPicker).toBeVisible();
 
     // Pick a color while color picker is visible
-    const swatch = page.locator('[data-blok-testid="cell-color-swatch-orange"]');
+    const swatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]');
 
     await expect(swatch).toBeVisible();
     await swatch.click({ force: true });

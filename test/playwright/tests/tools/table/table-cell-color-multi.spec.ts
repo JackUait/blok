@@ -217,8 +217,8 @@ const openColorPicker = async (page: Page): Promise<void> => {
   await expect(colorPicker).toBeVisible();
 };
 
-const clickSwatch = async (page: Page, name: string): Promise<void> => {
-  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${name}"]`);
+const clickSwatch = async (page: Page, name: string, mode: 'textColor' | 'backgroundColor' = 'backgroundColor'): Promise<void> => {
+  const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${mode}-${name}"]`);
 
   await expect(swatch).toBeVisible();
   await swatch.click({ force: true });

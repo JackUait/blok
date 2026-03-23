@@ -437,6 +437,9 @@ export class MarkerInlineTool implements InlineTool {
 
     if (textColor !== null) {
       btn.style.setProperty('color', textColor);
+    } else if (bgColor !== null) {
+      // Suppress active-state blue (text-icon-active-text) when only a background color is set.
+      btn.style.setProperty('color', 'var(--blok-text-primary)');
     } else {
       btn.style.removeProperty('color');
     }

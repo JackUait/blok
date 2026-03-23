@@ -978,8 +978,10 @@ test.describe('drag and drop', () => {
   });
 
   test('should auto-scroll viewport up when dragging near top edge', async ({ page }) => {
-    // Create many blocks to ensure the page is scrollable
-    const blocks = Array.from({ length: 20 }, (_, i) => ({
+    // Create many blocks to ensure the page is scrollable.
+    // 35 blocks are needed because reduced paragraph margins (mt-px) and line-height
+    // mean 20 blocks no longer generate enough page height to scroll 300px in a 1280×720 viewport.
+    const blocks = Array.from({ length: 35 }, (_, i) => ({
       type: 'paragraph',
       data: { text: `Block ${i}` },
     }));
@@ -2566,11 +2568,16 @@ test.describe('drag and drop', () => {
 
       await expect(settingsButton).toBeVisible();
 
-      // Target the toggle's inner wrapper (not the block-wrapper) to avoid overlap
-      // with the next block's negative margins
-      const toggleInner = page.locator('[data-blok-toggle-open="true"]');
+      // Target the header block-wrapper (which includes the body placeholder) so the
+      // bottom edge of the bounding box lands in the bottom half of the block-wrapper.
+      // Using only the H2 element ([data-blok-toggle-open="true"]) caused CSS margin
+      // collapse to make the bottom edge land in the top half of the block-wrapper,
+      // resulting in edge='top' instead of edge='bottom' and no reparenting.
+      const headerBlockWrapper = page.getByTestId('block-wrapper').filter({
+        has: page.locator('[data-blok-toggle-open="true"]'),
+      });
 
-      await performDragDrop(page, settingsButton, toggleInner, 'bottom');
+      await performDragDrop(page, settingsButton, headerBlockWrapper, 'bottom');
 
       // Verify reparenting
       const savedData = await page.evaluate(() => window.blokInstance?.save());

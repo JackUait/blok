@@ -1076,7 +1076,10 @@ test.describe('ui module', () => {
 
       expect(toolbarOpenedBefore).toBe(true);
 
-      // Get the position to start selection - use the toolbar position which is inside the redactor
+      // Get the position to start selection - start from inside a paragraph (contentEditable)
+      // but within the editor's horizontal content bounds. The source fix in
+      // rectangleSelection.processMouseDown closes the toolbar even when starting from
+      // contentEditable, as long as the pointer is within the horizontal content bounds.
       // Using locators for auto-waiting and better error messages
       const toolbarLocator = page.locator('[data-blok-testid="toolbar"]');
       const redactorLocator = page.locator('[data-blok-testid="redactor"]');
@@ -1085,8 +1088,8 @@ test.describe('ui module', () => {
       const redactorBox = await getRequiredBoundingBox(redactorLocator);
 
       const startPos = {
-        x: toolbarBox.x + toolbarBox.width / 2, // Center of toolbar (inside redactor)
-        y: redactorBox.y + 50, // Near top of redactor
+        x: toolbarBox.x + toolbarBox.width / 2, // Center horizontally (inside editor bounds)
+        y: redactorBox.y + 50, // Inside redactor (within a paragraph's contentEditable)
       };
 
       // Start selection from inside the redactor (toolbar position)

@@ -66,6 +66,13 @@ export class RectangleSelection extends Module {
   private mousedown = false;
 
   /**
+   * Set when mousedown starts from a contentEditable element that is within the
+   * editor's horizontal content bounds.  Prevents the toolbar from re-opening via
+   * the BlockHovered event while the user is dragging.  Cleared on mouseup.
+   */
+  private mouseDownWithinBoundsFromContentEditable = false;
+
+  /**
    *  Is scrolling now
    */
   private isScrolling = false;
@@ -213,6 +220,7 @@ export class RectangleSelection extends Module {
    */
   public endSelection(): void {
     this.mousedown = false;
+    this.mouseDownWithinBoundsFromContentEditable = false;
     this.startX = 0;
     this.startY = 0;
     this.anchorBlockIndex = null;
@@ -227,6 +235,18 @@ export class RectangleSelection extends Module {
    */
   public isRectActivated(): boolean {
     return this.isRectSelectionActivated || this.mousedown;
+  }
+
+  /**
+   * Returns true when the user pressed down a mouse button within the editor's horizontal
+   * content bounds, even if the click originated on a contentEditable element (in which
+   * case rubber-band selection is not started but the toolbar is still closed).
+   *
+   * Used by the Toolbar module to suppress toolbar reopening while the user is dragging
+   * inside the editor content area.
+   */
+  public get isMouseDownWithinBounds(): boolean {
+    return this.mouseDownWithinBoundsFromContentEditable;
   }
 
   /**
@@ -305,6 +325,24 @@ export class RectangleSelection extends Module {
 
     if (!startedFromContentEditable) {
       this.startSelection(mouseEvent.pageX, mouseEvent.pageY, mouseEvent.shiftKey);
+
+      return;
+    }
+
+    /**
+     * When dragging starts from a contentEditable element, track whether the
+     * pointer is within the editor's horizontal content bounds.
+     * On the first subsequent mousemove (i.e. when the user actually drags rather
+     * than just clicking), the toolbar will be closed and hover-based reopening
+     * will be suppressed while the mouse button is held.
+     */
+    const scrollLeft = this.getScrollLeft();
+    const pointerX = mouseEvent.pageX - scrollLeft;
+    const contentRect = this.Blok.UI.contentRect;
+    const withinEditorHorizontally = pointerX >= contentRect.left && pointerX <= contentRect.right;
+
+    if (withinEditorHorizontally) {
+      this.mouseDownWithinBoundsFromContentEditable = true;
     }
   }
 
@@ -313,6 +351,16 @@ export class RectangleSelection extends Module {
    * @param {MouseEvent} mouseEvent - mouse event payload
    */
   private processMouseMove(mouseEvent: MouseEvent): void {
+    /**
+     * When the user clicked inside a contentEditable element within the editor's
+     * horizontal bounds and is now dragging, close the toolbar on the first move.
+     * We defer this to mousemove (rather than mousedown) so that a plain click
+     * does not accidentally close the toolbar.
+     */
+    if (this.mouseDownWithinBoundsFromContentEditable) {
+      this.Blok.Toolbar.close();
+    }
+
     this.changingRectangle(mouseEvent);
     this.scrollByZones(mouseEvent.clientY);
   }

@@ -1009,9 +1009,12 @@ export class Toolbar extends Module<ToolbarNodes> {
        */
       this.eventsDispatcher.on(BlockHovered, (data) => {
         /**
-         * Do not move toolbar during drag or rectangle selection operations
+         * Do not move toolbar during drag, rectangle selection, or when the user
+         * started a mouse-drag from within the editor's content area (even if the
+         * drag originated on a contentEditable element, i.e. rubber-band is not
+         * activated but the toolbar was closed and should stay closed).
          */
-        if (this.Blok.DragManager.isDragging || this.Blok.RectangleSelection.isRectActivated()) {
+        if (this.Blok.DragManager.isDragging || this.Blok.RectangleSelection.isRectActivated() || this.Blok.RectangleSelection.isMouseDownWithinBounds) {
           return;
         }
 

@@ -13,7 +13,7 @@
 <body>
   <script type="module">
     import { Blok, DATA_ATTR, version } from '/dist/blok.mjs?_v=1';
-    import { Header, Paragraph, List, Table, Toggle, Bold, Italic, Link, Convert, Marker } from '/dist/tools.mjs?_v=1';
+    import { Header, Paragraph, List, Table, Toggle, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough } from '/dist/tools.mjs?_v=1';
 
     // Create default tools configuration (mimics pre-modular behavior)
     // Block tools with inlineToolbar enabled
@@ -43,6 +43,8 @@
       italic: { class: Italic },
       link: { class: Link },
       marker: { class: Marker },
+      underline: { class: Underline },
+      strikethrough: { class: Strikethrough },
       convertTo: { class: Convert },
     };
 
@@ -76,6 +78,8 @@
     window.BlokConvert = Convert;
     window.BlokToggle = Toggle;
     window.BlokMarker = Marker;
+    window.BlokUnderline = Underline;
+    window.BlokStrikethrough = Strikethrough;
     window.BlokDataAttr = DATA_ATTR;
     window.BlokVersion = version;
     window.defaultTools = defaultTools;

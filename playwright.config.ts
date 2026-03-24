@@ -50,6 +50,7 @@ const CROSS_BROWSER_TESTS = [
 
   // UI components with browser-specific rendering
   '**/ui/inline-toolbar.spec.ts',
+  '**/ui/inline-toolbar-underline-strikethrough.spec.ts',
   '**/ui/toolbox.spec.ts',
   '**/ui/placeholders.spec.ts',
   '**/ui/keyboard-shortcuts.spec.ts',

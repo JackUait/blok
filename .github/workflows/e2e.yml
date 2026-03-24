@@ -89,6 +89,9 @@ jobs:
       - name: Mark Build as Available
         run: echo "BLOK_BUILT=true" >> $GITHUB_ENV
 
+      - name: Build React Vendor Files
+        run: node scripts/build-react-vendor.mjs
+
       - name: Restore Playwright Browsers from Cache
         uses: actions/cache/restore@v4
         with:

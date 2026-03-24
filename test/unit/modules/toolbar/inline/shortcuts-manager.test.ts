@@ -47,6 +47,7 @@ describe('InlineShortcutManager', () => {
       },
       BlockManager: {
         currentBlock: undefined,
+        getBlockByChildNode: vi.fn(() => undefined),
       },
       I18n: {
         t: vi.fn((key: string) => key),

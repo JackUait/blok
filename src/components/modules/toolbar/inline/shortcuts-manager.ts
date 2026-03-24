@@ -172,13 +172,14 @@ export class InlineShortcutManager {
       name: shortcut,
       handler: (event) => {
         const { BlockManager } = this.getBlok();
-        const { currentBlock } = BlockManager;
+        const block = BlockManager.currentBlock
+          ?? BlockManager.getBlockByChildNode(window.getSelection()?.anchorNode as Node);
 
-        if (!currentBlock) {
+        if (!block) {
           return;
         }
 
-        if (currentBlock.tool.enabledInlineTools === false) {
+        if (block.tool.enabledInlineTools === false) {
           return;
         }
 

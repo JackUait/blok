@@ -221,7 +221,8 @@ const clickSwatch = async (page: Page, name: string, mode: 'textColor' | 'backgr
   const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${mode}-${name}"]`);
 
   await expect(swatch).toBeVisible();
-  await swatch.click({ force: true });
+  await swatch.hover();
+  await swatch.click();
 };
 
 /**

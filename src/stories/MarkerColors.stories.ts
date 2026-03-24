@@ -93,8 +93,8 @@ const INLINE_TOOLBAR_TESTID = '[data-blok-testid="inline-toolbar"]';
 const CONTENTEDITABLE_SELECTOR = '[contenteditable="true"]';
 const MARKER_TOOL_SELECTOR = '[data-blok-item-name="marker"]';
 const MARKER_PICKER_SELECTOR = '[data-blok-testid="marker-picker"]';
-const MARKER_TAB_BG_SELECTOR = '[data-blok-testid="marker-tab-background-color"]';
-const MARKER_GRID_SELECTOR = '[data-blok-testid="marker-grid"]';
+const MARKER_COLOR_SECTION_SELECTOR = '[data-blok-testid="marker-section-color"] button';
+const MARKER_BG_SECTION_SELECTOR = '[data-blok-testid="marker-section-background-color"] button';
 const TIMEOUT_INIT = { timeout: 5000 };
 const TIMEOUT_ACTION = { timeout: 5000 };
 
@@ -411,8 +411,7 @@ export const PickerTextTab: Story = {
 
       await waitFor(
         () => {
-          const grid = document.querySelector(MARKER_GRID_SELECTOR);
-          const swatches = grid?.querySelectorAll('button');
+          const swatches = document.querySelectorAll(MARKER_COLOR_SECTION_SELECTOR);
 
           expect(swatches?.length).toBe(10);
         },
@@ -434,24 +433,14 @@ export const PickerBackgroundTab: Story = {
     chromatic: { delay: 500 },
   },
   play: async ({ canvasElement, step }) => {
-    await step('Open marker picker', async () => {
+    await step('Open marker picker and verify background section', async () => {
       await openMarkerPicker(canvasElement);
-    });
-
-    await step('Switch to background tab', async () => {
-      const bgTab = document.querySelector(MARKER_TAB_BG_SELECTOR);
-
-      expect(bgTab).toBeInTheDocument();
-
-      if (bgTab) {
-        simulateClick(bgTab);
-      }
 
       await waitFor(
         () => {
-          const grid = document.querySelector(MARKER_GRID_SELECTOR);
+          const swatches = document.querySelectorAll(MARKER_BG_SECTION_SELECTOR);
 
-          expect(grid?.querySelectorAll('button')?.length).toBe(10);
+          expect(swatches?.length).toBe(10);
         },
         TIMEOUT_ACTION
       );
@@ -475,7 +464,7 @@ export const PickerDefaultButton: Story = {
 
       await waitFor(
         () => {
-          const defaultBtn = document.querySelector('[data-blok-testid="marker-default-btn"]');
+          const defaultBtn = document.querySelector('[data-blok-testid="marker-swatch-color-default"]');
 
           expect(defaultBtn).toBeInTheDocument();
         },
@@ -502,13 +491,12 @@ export const PickerNoActiveSwatch: Story = {
 
       await waitFor(
         () => {
-          const grid = document.querySelector(MARKER_GRID_SELECTOR);
-          const swatches = grid?.querySelectorAll('button');
+          const swatches = document.querySelectorAll(MARKER_COLOR_SECTION_SELECTOR);
 
           expect(swatches?.length).toBe(10);
 
           swatches?.forEach((swatch) => {
-            expect(swatch.className).not.toContain('ring-black/30');
+            expect(swatch.className).not.toContain('ring-swatch-ring-hover');
           });
         },
         TIMEOUT_ACTION
@@ -581,9 +569,9 @@ export const PickerActiveTextSwatch: Story = {
       // Verify the red swatch has the active ring
       await waitFor(
         () => {
-          const redSwatch = document.querySelector('[data-blok-testid="marker-swatch-red"]');
+          const redSwatch = document.querySelector('[data-blok-testid="marker-swatch-color-red"]');
 
-          expect(redSwatch?.className).toContain('ring-black/30');
+          expect(redSwatch?.className).toContain('ring-swatch-ring-hover');
         },
         TIMEOUT_ACTION
       );
@@ -653,21 +641,12 @@ export const PickerActiveBackgroundSwatch: Story = {
         TIMEOUT_ACTION
       );
 
-      // Switch to background tab
-      const bgTab = document.querySelector(MARKER_TAB_BG_SELECTOR);
-
-      expect(bgTab).toBeInTheDocument();
-
-      if (bgTab) {
-        simulateClick(bgTab);
-      }
-
       // Verify the orange swatch has the active ring
       await waitFor(
         () => {
-          const orangeSwatch = document.querySelector('[data-blok-testid="marker-swatch-orange"]');
+          const orangeSwatch = document.querySelector('[data-blok-testid="marker-swatch-background-color-orange"]');
 
-          expect(orangeSwatch?.className).toContain('ring-black/30');
+          expect(orangeSwatch?.className).toContain('ring-swatch-ring-hover');
         },
         TIMEOUT_ACTION
       );

@@ -474,6 +474,58 @@ const editor = new Blok({
   },
 });`,
   },
+  {
+    id: 'underline',
+    exportName: 'Underline',
+    type: 'inline',
+    badge: 'Inline Tool',
+    title: 'Underline',
+    description:
+      'Wraps selected text in `<u>`. Activated with Cmd/Ctrl+U or by clicking the U button in the inline toolbar.',
+    importExample: `import { Underline } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `// Stored as HTML inside the block's text field.
+// "Hello <u>world</u>"`,
+    saveDataExample: `{
+  "type": "paragraph",
+  "data": { "text": "Hello <u>world</u>" }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Underline } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    underline: Underline,
+  },
+});`,
+  },
+  {
+    id: 'strikethrough',
+    exportName: 'Strikethrough',
+    type: 'inline',
+    badge: 'Inline Tool',
+    title: 'Strikethrough',
+    description:
+      'Wraps selected text in `<s>`. Activated with Cmd/Ctrl+Shift+S or by clicking the S button in the inline toolbar.',
+    importExample: `import { Strikethrough } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `// Stored as HTML inside the block's text field.
+// "Hello <s>world</s>"`,
+    saveDataExample: `{
+  "type": "paragraph",
+  "data": { "text": "Hello <s>world</s>" }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Strikethrough } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    strikethrough: Strikethrough,
+  },
+});`,
+  },
 ];
 
 // Derived lookup sets used by the documentation coverage unit test.

@@ -52,8 +52,8 @@ export const IconMarker = `
 // Underline icon
 export const IconUnderline = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M6 4v6a4 4 0 0 0 8 0V4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4 16h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M5.5 3.5v7.5a4.5 4.5 0 0 0 9 0V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.5 18.5h13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 

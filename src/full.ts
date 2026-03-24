@@ -72,8 +72,8 @@ export const allTools = {
   ...defaultTools,
   bold: { class: Bold },
   italic: { class: Italic },
-  link: { class: Link },
   marker: { class: Marker },
   underline: { class: Underline },
   strikethrough: { class: Strikethrough },
+  link: { class: Link },
 } as const;

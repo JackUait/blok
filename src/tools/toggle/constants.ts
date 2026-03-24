@@ -57,14 +57,16 @@ export const ARROW_ICON = '<svg aria-hidden="true" width="12" height="12" viewBo
  *   - Paragraph element: py-[7px] (7px top, 7px bottom) + mt-px mb-px (1px margins)
  *   - Combined per side: 7px padding + 1px margin = 8px
  * Using fixed px values (not em) because py-[7px] and mt-px are also fixed.
+ *
+ * pl-7 (28px) aligns the placeholder with the title text start (arrow button width: 8px + 12px SVG + 8px = 28px).
  */
-export const BODY_PLACEHOLDER_STYLES = 'hidden pl-[1.1em] pt-[8px] pb-[8px] text-gray-text leading-[1.5] cursor-pointer select-none';
+export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 pt-[8px] pb-[8px] text-gray-text leading-[1.5] cursor-pointer select-none';
 
 /**
  * Styles for the children container element.
- * pl-[1.1em] (~17.6px at 16px base) matches Notion's toggle children indent (margin-left: 1.1em).
+ * pl-7 (28px) aligns children with the toggle list title text start (arrow button total width).
  */
-export const TOGGLE_CHILDREN_STYLES = 'pl-[1.1em]';
+export const TOGGLE_CHILDREN_STYLES = 'pl-7';
 
 /**
  * Data attributes specific to the toggle tool

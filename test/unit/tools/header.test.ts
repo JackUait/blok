@@ -447,6 +447,26 @@ describe('Header Tool - Custom Configurations', () => {
 
         expect(element.classList.contains('pl-8')).toBe(false);
       });
+
+      it('applies pl-8 to children container so body aligns with heading text start', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const wrapper = header.render();
+        const childContainer = wrapper.querySelector('[data-blok-toggle-children]') as HTMLElement;
+
+        expect(childContainer).not.toBeNull();
+        expect(childContainer.classList.contains('pl-8')).toBe(true);
+      });
+
+      it('applies pl-8 to body placeholder so it aligns with heading text start', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const wrapper = header.render();
+        const bodyPlaceholder = wrapper.querySelector('[data-blok-toggle-body-placeholder]') as HTMLElement;
+
+        expect(bodyPlaceholder).not.toBeNull();
+        expect(bodyPlaceholder.classList.contains('pl-8')).toBe(true);
+      });
     });
 
     describe('toggle arrow click', () => {

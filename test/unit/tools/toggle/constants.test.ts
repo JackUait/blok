@@ -26,8 +26,12 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[7px]');
   });
 
-  it('uses pl-[1.1em] to match Notion toggle children indent', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pl-[1.1em]');
+  it('uses pl-7 to align body placeholder with toggle list title text start', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('pl-7');
+  });
+
+  it('does not use pl-[1.1em] (body should align with title, not use Notion indent)', () => {
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('pl-[1.1em]');
   });
 });
 
@@ -37,12 +41,12 @@ describe('CONTENT_STYLES (Notion alignment)', () => {
   });
 });
 
-describe('TOGGLE_CHILDREN_STYLES (Notion alignment)', () => {
-  it('uses pl-[1.1em] to match Notion toggle children indent', () => {
-    expect(TOGGLE_CHILDREN_STYLES).toContain('pl-[1.1em]');
+describe('TOGGLE_CHILDREN_STYLES (title alignment)', () => {
+  it('uses pl-7 to align children with toggle list title text start (arrow button width)', () => {
+    expect(TOGGLE_CHILDREN_STYLES).toContain('pl-7');
   });
 
-  it('does not use pl-7 (28px too wide, Notion uses 1.1em)', () => {
-    expect(TOGGLE_CHILDREN_STYLES).not.toContain('pl-7');
+  it('does not use pl-[1.1em] (children should start at same point as title, not Notion indent)', () => {
+    expect(TOGGLE_CHILDREN_STYLES).not.toContain('pl-[1.1em]');
   });
 });

@@ -732,7 +732,8 @@ export class Header implements BlockTool {
     wrapper.appendChild(headerRow);
 
     const bodyPlaceholder = document.createElement('div');
-    bodyPlaceholder.className = BODY_PLACEHOLDER_STYLES;
+    // pl-8 (32px) matches the heading's left padding so body aligns with the title text start.
+    bodyPlaceholder.className = twMerge(BODY_PLACEHOLDER_STYLES, 'pl-8');
     bodyPlaceholder.setAttribute(TOGGLE_ATTR.toggleBodyPlaceholder, '');
     // Class changes on the body placeholder (show/hide) must not trigger didMutated →
     // syncBlockDataToYjs, which would create a spurious Yjs undo entry when a child
@@ -746,7 +747,8 @@ export class Header implements BlockTool {
     wrapper.appendChild(bodyPlaceholder);
 
     const childContainer = document.createElement('div');
-    childContainer.className = TOGGLE_CHILDREN_STYLES;
+    // pl-8 (32px) matches the heading's left padding so children align with the title text start.
+    childContainer.className = 'pl-8';
     childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
     // Block DOM mutations inside the children container from triggering the header tool's
     // didMutated → syncBlockDataToYjs path (same rationale as the toggle list tool).

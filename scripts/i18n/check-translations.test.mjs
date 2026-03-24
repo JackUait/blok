@@ -40,6 +40,12 @@ describe('extractKeysFromSource', () => {
     assert.equal(keys.size, 0);
   });
 
+  it('skips dynamic key prefixes ending with a dot', () => {
+    const source = `i18n.t('tools.colorPicker.color.' + preset.name)`;
+    const keys = extractKeysFromSource(source);
+    assert.equal(keys.size, 0);
+  });
+
   it('extracts multiple keys from multi-line source', () => {
     const source = `
       this.t('blockSettings.delete')

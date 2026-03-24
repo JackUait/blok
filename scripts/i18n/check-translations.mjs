@@ -88,7 +88,7 @@ export function extractKeysFromSource(source) {
   let match;
   while ((match = regex.exec(source)) !== null) {
     const key = match[2];
-    if (key.includes('.')) {
+    if (key.includes('.') && !key.endsWith('.')) {
       keys.add(key);
     }
   }

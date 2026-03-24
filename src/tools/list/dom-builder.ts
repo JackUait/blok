@@ -271,6 +271,7 @@ export const createMarker = (style: ListItemStyle, depth: number): HTMLElement =
     marker.style.paddingRight = '13px';
     marker.style.fontSize = '24px';
     marker.style.fontFamily = 'Arial';
+    marker.style.lineHeight = '1.5rem';
   }
 
   return marker;

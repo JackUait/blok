@@ -177,6 +177,17 @@ describe('dom-builder', () => {
 
       expect(contentContainer?.contentEditable).toBe('false');
     });
+
+    it('uses items-start so marker top aligns with content top regardless of font-size difference', () => {
+      for (const style of ['unordered', 'ordered'] as const) {
+        const context = createContext({ data: { text: '', style, depth: 0 } });
+        const content = buildStandardContent(context);
+
+        expect(content.classList.contains('items-start')).toBe(true);
+        expect(content.classList.contains('items-center')).toBe(false);
+        expect(content.classList.contains('items-baseline')).toBe(false);
+      }
+    });
   });
 
   describe('buildChecklistContent', () => {
@@ -301,6 +312,15 @@ describe('dom-builder', () => {
       expect(marker.style.paddingRight).toBe('13px');
       expect(marker.style.fontSize).toBe('24px');
       expect(marker.style.fontFamily).toBe('Arial');
+    });
+
+    it('sets line-height on unordered marker to match content line box so bullet aligns with text', () => {
+      const marker = createMarker('unordered', 0);
+
+      // Without this, the marker inherits line-height: 1.5 from the parent, giving it a
+      // 36px line box (1.5 × 24px) while the content has a 24px line box (1.5 × 16px).
+      // items-start would then misalign the bullet downward within the taller box.
+      expect(marker.style.lineHeight).toBe('1.5rem');
     });
   });
 

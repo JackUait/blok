@@ -9,6 +9,7 @@ export const IconCross = `
 export const IconBold = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path
+    transform="translate(0,-1)"
     d="M6 11h4.9231c.6528 0 1.2789-.3161 1.7405-.8787.4617-.56259.721-1.32565.721-2.1213 0-.79565-.2593-1.55871-.721-2.12132C12.202 5.31607 11.5759 5 10.9231 5H6v6Zm0 0h5.5385c.6528 0 1.2789.3161 1.7405.8787.4617.5626.721 1.3257.721 2.1213 0 .7956-.2593 1.5587-.721 2.1213-.4616.5626-1.0877.8787-1.7405.8787H6v-6Z"
     stroke="currentColor"
     stroke-width="1.25"
@@ -60,8 +61,8 @@ export const IconUnderline = `
 export const IconStrikethrough = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M4 10h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M8.5 10c-.83-.42-1.5-1.06-1.5-2 0-1.657 1.343-3 3-3s3 1.343 3 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11.5 10c.83.42 1.5 1.06 1.5 2 0 1.657-1.343 3-3 3s-3-1.343-3-3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.2 10c-1-.5-1.8-1.27-1.8-2.4 0-1.99 1.61-3.6 3.6-3.6s3.6 1.61 3.6 3.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.8 10c1 .5 1.8 1.27 1.8 2.4 0 1.99-1.61 3.6-3.6 3.6s-3.6-1.61-3.6-3.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

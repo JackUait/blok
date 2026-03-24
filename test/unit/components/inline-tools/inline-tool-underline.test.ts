@@ -7,6 +7,7 @@ describe('UnderlineInlineTool', () => {
   let tool: UnderlineInlineTool;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     tool = new UnderlineInlineTool();
   });
 
@@ -203,7 +204,8 @@ describe('UnderlineInlineTool', () => {
 
       const outerU = container.querySelector('u');
 
-      if (outerU) {
+      expect(outerU).not.toBeNull();
+      if (outerU !== null) {
         expect(outerU.querySelector('u')).toBeNull();
       }
 

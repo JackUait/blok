@@ -115,6 +115,13 @@ export abstract class BasePasteHandler implements PasteHandler {
     if (isMultipleItems) {
       this.redirectToTableParentIfNeeded(data, BlockManager);
 
+      const currentBlock = BlockManager.currentBlock;
+      const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
+      const isInContainerTitle = childContainer !== null &&
+        !childContainer.contains(currentBlock?.currentInput ?? null);
+      const contextParentId = isInContainerTitle
+        ? (currentBlock?.id ?? null)
+        : (currentBlock?.parentId ?? null);
       const insertedByIndex: Array<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>> = [];
 
       for (const [index, pasteData] of data.entries()) {
@@ -136,7 +143,7 @@ export abstract class BasePasteHandler implements PasteHandler {
         Caret.setToBlock(block, Caret.positions.END);
         insertedByIndex.push(block);
 
-        this.applyPastedBlockParent(block, pasteData, insertedByIndex, BlockManager);
+        this.applyPastedBlockParent(block, pasteData, insertedByIndex, BlockManager, contextParentId);
       }
 
       BlockManager.currentBlock && Caret.setToBlock(BlockManager.currentBlock, Caret.positions.END);
@@ -163,7 +170,8 @@ export abstract class BasePasteHandler implements PasteHandler {
     block: Awaited<ReturnType<BlokModules['BlockManager']['paste']>>,
     pasteData: PasteData,
     insertedByIndex: Array<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>>,
-    BlockManager: BlokModules['BlockManager']
+    BlockManager: BlokModules['BlockManager'],
+    contextParentId: string | null
   ): void {
     if (pasteData.parentPasteIndex !== undefined) {
       const parentBlock = insertedByIndex[pasteData.parentPasteIndex];
@@ -171,9 +179,11 @@ export abstract class BasePasteHandler implements PasteHandler {
       if (parentBlock) {
         BlockManager.setBlockParent(block, parentBlock.id);
       }
+    } else if (contextParentId !== null) {
+      // Container-title paste context: assign all flat blocks to the container
+      BlockManager.setBlockParent(block, contextParentId);
     } else if (block.parentId != null) {
-      // Root-level pasted block: clear any parent that was inherited from
-      // the predecessor (e.g. the previous child block that had a parent).
+      // Root-level paste context: clear any parent inherited from predecessor
       BlockManager.setBlockParent(block, null);
     }
   }

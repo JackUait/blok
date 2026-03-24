@@ -23,6 +23,8 @@
   "tools.marker.textColor": "ટેક્સ્ટ",
   "tools.marker.background": "પૃષ્ઠભૂમિ",
   "tools.marker.default": "ડિફૉલ્ટ",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ગ્રે",
   "tools.colorPicker.color.brown": "ભૂરો",
   "tools.colorPicker.color.orange": "નારંગી",

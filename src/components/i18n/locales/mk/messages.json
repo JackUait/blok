@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Позадина",
   "tools.marker.default": "Стандардно",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Сиво",
   "tools.colorPicker.color.brown": "Кафено",
   "tools.colorPicker.color.orange": "Портокалово",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "អត្ថបទ",
   "tools.marker.background": "ផ្ទៃខាងក្រោយ",
   "tools.marker.default": "លំនាំដើម",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "ប្រផេះ",
   "tools.colorPicker.color.brown": "ត្នោត",
   "tools.colorPicker.color.orange": "លឿងទុំ",

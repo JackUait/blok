@@ -23,6 +23,8 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس‌زمینه",
   "tools.marker.default": "پیش‌فرض",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "خاکستری",
   "tools.colorPicker.color.brown": "قهوه‌ای",
   "tools.colorPicker.color.orange": "نارنجی",

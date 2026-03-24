@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Κείμενο",
   "tools.marker.background": "Φόντο",
   "tools.marker.default": "Προεπιλογή",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Γκρι",
   "tools.colorPicker.color.brown": "Καφέ",
   "tools.colorPicker.color.orange": "Πορτοκαλί",

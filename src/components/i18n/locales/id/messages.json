@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Teks",
   "tools.marker.background": "Latar belakang",
   "tools.marker.default": "Bawaan",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Abu-abu",
   "tools.colorPicker.color.brown": "Coklat",
   "tools.colorPicker.color.orange": "Oranye",

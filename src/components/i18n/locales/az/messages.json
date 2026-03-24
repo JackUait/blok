@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Mətn",
   "tools.marker.background": "Arxa fon",
   "tools.marker.default": "Standart",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Boz",
   "tools.colorPicker.color.brown": "Qəhvəyi",
   "tools.colorPicker.color.orange": "Narıncı",

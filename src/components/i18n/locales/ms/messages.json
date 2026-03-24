@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Teks",
   "tools.marker.background": "Latar belakang",
   "tools.marker.default": "Lalai",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Kelabu",
   "tools.colorPicker.color.brown": "Coklat",
   "tools.colorPicker.color.orange": "Oren",

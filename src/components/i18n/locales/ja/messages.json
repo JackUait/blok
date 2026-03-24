@@ -23,6 +23,8 @@
   "tools.marker.textColor": "テキスト",
   "tools.marker.background": "背景",
   "tools.marker.default": "デフォルト",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "グレー",
   "tools.colorPicker.color.brown": "ブラウン",
   "tools.colorPicker.color.orange": "オレンジ",

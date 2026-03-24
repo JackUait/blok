@@ -3,6 +3,7 @@ import { createColorPicker } from '../../../../src/components/shared/color-picke
 import type { ColorPickerOptions } from '../../../../src/components/shared/color-picker';
 import { COLOR_PRESETS } from '../../../../src/components/shared/color-presets';
 import type { I18n } from '../../../../types/api';
+import * as tooltipModule from '../../../../src/components/utils/tooltip';
 
 const mockI18n: I18n = {
   t: (key: string) => key,
@@ -406,6 +407,94 @@ describe('createColorPicker', () => {
     expect(element.querySelector('[data-blok-testid="custom-swatch-bg-default"]')).not.toBeNull();
     expect(element.querySelector(`[data-blok-testid="custom-swatch-text-${COLOR_PRESETS[0].name}"]`)).not.toBeNull();
     expect(element.querySelector(`[data-blok-testid="custom-swatch-bg-${COLOR_PRESETS[0].name}"]`)).not.toBeNull();
+  });
+
+  describe('tooltip templates for locale-aware word order', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const makeI18n = (translations: Record<string, string>): I18n => ({
+      t: (key: string) => translations[key] ?? key,
+      has: () => false,
+      getEnglishTranslation: () => '',
+    });
+
+    it('calls i18n.t with tools.colorPicker.defaultSwatchLabel for default swatch tooltip', () => {
+      const tSpy = vi.fn().mockReturnValue('');
+      const i18n: I18n = { t: tSpy, has: () => false, getEnglishTranslation: () => '' };
+
+      createColorPicker(createOptions({ i18n }));
+
+      expect(tSpy).toHaveBeenCalledWith('tools.colorPicker.defaultSwatchLabel');
+    });
+
+    it('calls i18n.t with tools.colorPicker.colorSwatchLabel for color swatch tooltip', () => {
+      const tSpy = vi.fn().mockReturnValue('');
+      const i18n: I18n = { t: tSpy, has: () => false, getEnglishTranslation: () => '' };
+
+      createColorPicker(createOptions({ i18n }));
+
+      expect(tSpy).toHaveBeenCalledWith('tools.colorPicker.colorSwatchLabel');
+    });
+
+    it('default swatch tooltip uses {default} {mode} template for English word order', () => {
+      const onHoverSpy = vi.spyOn(tooltipModule, 'onHover');
+      const i18n = makeI18n({
+        'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
+        'tools.colorPicker.colorSwatchLabel': '{color} {mode}',
+        'tools.marker.default': 'Default',
+        'label.text': 'Text',
+        'label.bg': 'Background',
+      });
+
+      createColorPicker(createOptions({ i18n }));
+
+      const call = onHoverSpy.mock.calls.find(
+        ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-default'
+      );
+
+      expect(call?.[1]).toBe('Default text');
+    });
+
+    it('default swatch tooltip reverses word order with {mode} {default} template (Russian-style)', () => {
+      const onHoverSpy = vi.spyOn(tooltipModule, 'onHover');
+      const i18n = makeI18n({
+        'tools.colorPicker.defaultSwatchLabel': '{mode} {default}',
+        'tools.colorPicker.colorSwatchLabel': '{color} {mode}',
+        'tools.marker.default': 'по умолчанию',
+        'label.text': 'Текст',
+        'label.bg': 'Фон',
+      });
+
+      createColorPicker(createOptions({ i18n }));
+
+      const call = onHoverSpy.mock.calls.find(
+        ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-default'
+      );
+
+      expect(call?.[1]).toBe('текст по умолчанию');
+    });
+
+    it('color swatch tooltip reverses word order with {mode} {color} template (Vietnamese-style)', () => {
+      const onHoverSpy = vi.spyOn(tooltipModule, 'onHover');
+      const i18n = makeI18n({
+        'tools.colorPicker.defaultSwatchLabel': '{mode} {default}',
+        'tools.colorPicker.colorSwatchLabel': '{mode} {color}',
+        'tools.marker.default': 'mặc định',
+        'label.text': 'Chữ',
+        'label.bg': 'Nền',
+        'tools.colorPicker.color.gray': 'Xám',
+      });
+
+      createColorPicker(createOptions({ i18n }));
+
+      const call = onHoverSpy.mock.calls.find(
+        ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-gray'
+      );
+
+      expect(call?.[1]).toBe('chữ Xám');
+    });
   });
 
   describe('focus outline suppression', () => {

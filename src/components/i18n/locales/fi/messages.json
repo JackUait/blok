@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Teksti",
   "tools.marker.background": "Tausta",
   "tools.marker.default": "Oletus",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Harmaa",
   "tools.colorPicker.color.brown": "Ruskea",
   "tools.colorPicker.color.orange": "Oranssi",

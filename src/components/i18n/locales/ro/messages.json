@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Text",
   "tools.marker.background": "Fundal",
   "tools.marker.default": "Implicit",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Maro",
   "tools.colorPicker.color.orange": "Portocaliu",

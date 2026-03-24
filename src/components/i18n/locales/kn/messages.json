@@ -23,6 +23,8 @@
   "tools.marker.textColor": "ಪಠ್ಯ",
   "tools.marker.background": "ಹಿನ್ನೆಲೆ",
   "tools.marker.default": "ಡೀಫಾಲ್ಟ್",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ಬೂದು",
   "tools.colorPicker.color.brown": "ಕಂದು",
   "tools.colorPicker.color.orange": "ಕಿತ್ತಳೆ",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Pozadina",
   "tools.marker.default": "Zadano",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Sivo",
   "tools.colorPicker.color.brown": "Smeđe",
   "tools.colorPicker.color.orange": "Narančasto",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Baggrund",
   "tools.marker.default": "Standard",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Grå",
   "tools.colorPicker.color.brown": "Brun",
   "tools.colorPicker.color.orange": "Orange",

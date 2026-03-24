@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Teksts",
   "tools.marker.background": "Fons",
   "tools.marker.default": "Noklusējuma",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Pelēks",
   "tools.colorPicker.color.brown": "Brūns",
   "tools.colorPicker.color.orange": "Oranžs",

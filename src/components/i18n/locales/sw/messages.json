@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Maandishi",
   "tools.marker.background": "Mandhari",
   "tools.marker.default": "Chaguo-msingi",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "Kijivu",
   "tools.colorPicker.color.brown": "Kahawia",
   "tools.colorPicker.color.orange": "Chungwa",

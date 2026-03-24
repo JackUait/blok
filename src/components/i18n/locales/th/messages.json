@@ -23,6 +23,8 @@
   "tools.marker.textColor": "ข้อความ",
   "tools.marker.background": "พื้นหลัง",
   "tools.marker.default": "ค่าเริ่มต้น",
+  "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
+  "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
   "tools.colorPicker.color.gray": "สีเทา",
   "tools.colorPicker.color.brown": "สีน้ำตาล",
   "tools.colorPicker.color.orange": "สีส้ม",

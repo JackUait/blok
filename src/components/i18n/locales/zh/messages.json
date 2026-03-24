@@ -23,6 +23,8 @@
   "tools.marker.textColor": "文字",
   "tools.marker.background": "背景",
   "tools.marker.default": "默认",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "灰色",
   "tools.colorPicker.color.brown": "棕色",
   "tools.colorPicker.color.orange": "橙色",

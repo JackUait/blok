@@ -23,6 +23,8 @@
   "tools.marker.textColor": "पाठ",
   "tools.marker.background": "पृष्ठभूमि",
   "tools.marker.default": "पूर्वनिर्धारित",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "खैरो",
   "tools.colorPicker.color.brown": "बदामी",
   "tools.colorPicker.color.orange": "सुन्तला",

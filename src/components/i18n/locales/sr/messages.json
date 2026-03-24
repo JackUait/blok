@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Позадина",
   "tools.marker.default": "Подразумевано",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Сиво",
   "tools.colorPicker.color.brown": "Смеђе",
   "tools.colorPicker.color.orange": "Наранџасто",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Տեքստ",
   "tools.marker.background": "Ֆոն",
   "tools.marker.default": "Կանխադրված",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Մոխրագույն",
   "tools.colorPicker.color.brown": "Շականակագույն",
   "tools.colorPicker.color.orange": "Նարնջագույն",

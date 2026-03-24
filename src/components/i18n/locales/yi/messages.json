@@ -23,6 +23,8 @@
   "tools.marker.textColor": "טעקסט",
   "tools.marker.background": "הינטערגרונט",
   "tools.marker.default": "שטאַנדאַרד",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "גרוי",
   "tools.colorPicker.color.brown": "ברוין",
   "tools.colorPicker.color.orange": "אָראַנזש",

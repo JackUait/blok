@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Sfond",
   "tools.marker.default": "Parazgjedhur",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Kafe",
   "tools.colorPicker.color.orange": "Portokalli",

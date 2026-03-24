@@ -23,6 +23,8 @@
   "tools.marker.textColor": "వచనం",
   "tools.marker.background": "నేపథ్యం",
   "tools.marker.default": "అప్రమేయం",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "బూడిద",
   "tools.colorPicker.color.brown": "గోధుమ",
   "tools.colorPicker.color.orange": "నారింజ",

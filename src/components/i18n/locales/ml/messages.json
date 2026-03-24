@@ -23,6 +23,8 @@
   "tools.marker.textColor": "ടെക്സ്റ്റ്",
   "tools.marker.background": "പശ്ചാത്തലം",
   "tools.marker.default": "സ്ഥിരസ്ഥിതി",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ചാരം",
   "tools.colorPicker.color.brown": "തവിട്ട്",
   "tools.colorPicker.color.orange": "ഓറഞ്ച്",

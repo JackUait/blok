@@ -23,6 +23,8 @@
   "tools.marker.textColor": "පෙළ",
   "tools.marker.background": "පසුබිම",
   "tools.marker.default": "පෙරනිමි",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "අළු",
   "tools.colorPicker.color.brown": "දුඹුරු",
   "tools.colorPicker.color.orange": "තැඹිලි",

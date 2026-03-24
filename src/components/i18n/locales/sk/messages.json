@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Text",
   "tools.marker.background": "Pozadie",
   "tools.marker.default": "Predvolené",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Šedá",
   "tools.colorPicker.color.brown": "Hnedá",
   "tools.colorPicker.color.orange": "Oranžová",

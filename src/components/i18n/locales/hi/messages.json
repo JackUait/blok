@@ -23,6 +23,8 @@
   "tools.marker.textColor": "टेक्स्ट",
   "tools.marker.background": "पृष्ठभूमि",
   "tools.marker.default": "डिफ़ॉल्ट",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ग्रे",
   "tools.colorPicker.color.brown": "भूरा",
   "tools.colorPicker.color.orange": "नारंगी",

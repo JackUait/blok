@@ -23,6 +23,8 @@
   "tools.marker.textColor": "تېكىست",
   "tools.marker.background": "تەگلىك",
   "tools.marker.default": "سۈكۈتتىكى",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "كۈلرەڭ",
   "tools.colorPicker.color.brown": "قوڭۇر",
   "tools.colorPicker.color.orange": "تۈختۈرەڭ",

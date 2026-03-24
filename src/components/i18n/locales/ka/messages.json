@@ -23,6 +23,8 @@
   "tools.marker.textColor": "ტექსტი",
   "tools.marker.background": "ფონი",
   "tools.marker.default": "ნაგულისხმევი",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ნაცრისფერი",
   "tools.colorPicker.color.brown": "ყავისფერი",
   "tools.colorPicker.color.orange": "ნარინჯისფერი",

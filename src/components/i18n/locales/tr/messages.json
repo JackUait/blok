@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Metin",
   "tools.marker.background": "Arka plan",
   "tools.marker.default": "Varsayılan",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Kahverengi",
   "tools.colorPicker.color.orange": "Turuncu",

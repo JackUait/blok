@@ -23,6 +23,8 @@
   "tools.marker.textColor": "စာသား",
   "tools.marker.background": "နောက်ခံ",
   "tools.marker.default": "မူလ",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "မီးခိုးရောင်",
   "tools.colorPicker.color.brown": "အညိုရောင်",
   "tools.colorPicker.color.orange": "လိမ္မော်ရောင်",

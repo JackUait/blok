@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Tekst",
   "tools.marker.background": "Achtergrond",
   "tools.marker.default": "Standaard",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Grijs",
   "tools.colorPicker.color.brown": "Bruin",
   "tools.colorPicker.color.orange": "Oranje",

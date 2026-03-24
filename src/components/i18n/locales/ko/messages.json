@@ -23,6 +23,8 @@
   "tools.marker.textColor": "텍스트",
   "tools.marker.background": "배경",
   "tools.marker.default": "기본값",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "회색",
   "tools.colorPicker.color.brown": "갈색",
   "tools.colorPicker.color.orange": "주황",

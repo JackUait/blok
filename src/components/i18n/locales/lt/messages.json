@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Tekstas",
   "tools.marker.background": "Fonas",
   "tools.marker.default": "Numatytoji",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Pilka",
   "tools.colorPicker.color.brown": "Ruda",
   "tools.colorPicker.color.orange": "Oranžinė",

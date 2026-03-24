@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Szöveg",
   "tools.marker.background": "Háttér",
   "tools.marker.default": "Alapértelmezett",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Szürke",
   "tools.colorPicker.color.brown": "Barna",
   "tools.colorPicker.color.orange": "Narancs",

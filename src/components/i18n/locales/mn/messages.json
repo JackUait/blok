@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Текст",
   "tools.marker.background": "Дэвсгэр",
   "tools.marker.default": "Өгөгдмөл",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Саарал",
   "tools.colorPicker.color.brown": "Хүрэн",
   "tools.colorPicker.color.orange": "Улбар шар",

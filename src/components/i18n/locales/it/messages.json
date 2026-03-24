@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Testo",
   "tools.marker.background": "Sfondo",
   "tools.marker.default": "Predefinito",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Grigio",
   "tools.colorPicker.color.brown": "Marrone",
   "tools.colorPicker.color.orange": "Arancione",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "লেখা",
   "tools.marker.background": "পটভূমি",
   "tools.marker.default": "ডিফল্ট",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ধূসর",
   "tools.colorPicker.color.brown": "বাদামী",
   "tools.colorPicker.color.orange": "কমলা",

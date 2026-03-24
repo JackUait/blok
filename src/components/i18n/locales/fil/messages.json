@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Teksto",
   "tools.marker.background": "Background",
   "tools.marker.default": "Default",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Kulay-abo",
   "tools.colorPicker.color.brown": "Kayumanggi",
   "tools.colorPicker.color.orange": "Kahel",

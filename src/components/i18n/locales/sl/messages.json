@@ -23,6 +23,8 @@
   "tools.marker.textColor": "Besedilo",
   "tools.marker.background": "Ozadje",
   "tools.marker.default": "Privzeto",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "Siva",
   "tools.colorPicker.color.brown": "Rjava",
   "tools.colorPicker.color.orange": "Oranžna",

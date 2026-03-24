@@ -165,7 +165,11 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     defaultSwatch.addEventListener('click', () => {
       onColorSelect(null, mode.key);
     });
-    onHover(defaultSwatch, `${i18n.t('tools.marker.default')} ${i18n.t(mode.labelKey).toLowerCase()}`, { placement: 'top' });
+    const defaultLabel = i18n.t('tools.colorPicker.defaultSwatchLabel')
+      .replace('{default}', i18n.t('tools.marker.default'))
+      .replace('{mode}', i18n.t(mode.labelKey).toLowerCase());
+
+    onHover(defaultSwatch, defaultLabel, { placement: 'top' });
     grid.appendChild(defaultSwatch);
 
     for (const preset of presets) {
@@ -193,7 +197,11 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       swatch.addEventListener('click', () => {
         onColorSelect(swatchColor, mode.key);
       });
-      onHover(swatch, `${i18n.t('tools.colorPicker.color.' + preset.name)} ${i18n.t(mode.labelKey).toLowerCase()}`, { placement: 'top' });
+      const colorLabel = i18n.t('tools.colorPicker.colorSwatchLabel')
+        .replace('{color}', i18n.t('tools.colorPicker.color.' + preset.name))
+        .replace('{mode}', i18n.t(mode.labelKey).toLowerCase());
+
+      onHover(swatch, colorLabel, { placement: 'top' });
       grid.appendChild(swatch);
     }
   };

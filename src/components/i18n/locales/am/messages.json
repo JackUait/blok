@@ -23,6 +23,8 @@
   "tools.marker.textColor": "ጽሑፍ",
   "tools.marker.background": "ዳራ",
   "tools.marker.default": "ነባሪ",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ግራጫ",
   "tools.colorPicker.color.brown": "ቡናማ",
   "tools.colorPicker.color.orange": "ብርቱካናማ",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "نص",
   "tools.marker.background": "خلفية",
   "tools.marker.default": "افتراضي",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "رمادي",
   "tools.colorPicker.color.brown": "بني",
   "tools.colorPicker.color.orange": "برتقالي",

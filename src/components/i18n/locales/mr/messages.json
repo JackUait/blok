@@ -23,6 +23,8 @@
   "tools.marker.textColor": "मजकूर",
   "tools.marker.background": "पार्श्वभूमी",
   "tools.marker.default": "डीफॉल्ट",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "राखाडी",
   "tools.colorPicker.color.brown": "तपकिरी",
   "tools.colorPicker.color.orange": "नारिंगी",

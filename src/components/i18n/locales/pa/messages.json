@@ -23,6 +23,8 @@
   "tools.marker.textColor": "ਟੈਕਸਟ",
   "tools.marker.background": "ਪਿਛੋਕੜ",
   "tools.marker.default": "ਮੂਲ",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "ਸਲੇਟੀ",
   "tools.colorPicker.color.brown": "ਭੂਰਾ",
   "tools.colorPicker.color.orange": "ਸੰਤਰੀ",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "شالید",
   "tools.marker.default": "اصلي",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "خاکستري",
   "tools.colorPicker.color.brown": "نسواري",
   "tools.colorPicker.color.orange": "نارنجي",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "متن",
   "tools.marker.background": "پس منظر",
   "tools.marker.default": "ڊفالٽ",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "سلیٹی",
   "tools.colorPicker.color.brown": "بھورو",
   "tools.colorPicker.color.orange": "نارنگي",

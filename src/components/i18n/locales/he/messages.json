@@ -23,6 +23,8 @@
   "tools.marker.textColor": "טקסט",
   "tools.marker.background": "רקע",
   "tools.marker.default": "ברירת מחדל",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "אפור",
   "tools.colorPicker.color.brown": "חום",
   "tools.colorPicker.color.orange": "כתום",

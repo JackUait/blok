@@ -23,6 +23,8 @@
   "tools.marker.textColor": "دەق",
   "tools.marker.background": "پاشبنەما",
   "tools.marker.default": "بنەڕەت",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "خاکستەری",
   "tools.colorPicker.color.brown": "قاوەیی",
   "tools.colorPicker.color.orange": "پرتەقاڵی",

@@ -23,6 +23,8 @@
   "tools.marker.textColor": "உரை",
   "tools.marker.background": "பின்னணி",
   "tools.marker.default": "இயல்பு",
+  "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
+  "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
   "tools.colorPicker.color.gray": "சாம்பல்",
   "tools.colorPicker.color.brown": "பழுப்பு",
   "tools.colorPicker.color.orange": "ஆரஞ்சு",

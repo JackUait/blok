@@ -223,9 +223,6 @@ const setSelectionRange = async (locator: Locator, start: number, end: number): 
 
       selection.removeAllRanges();
       selection.addRange(range);
-
-      // Dispatch selectionchange to trigger the inline toolbar to appear
-      ownerDocument.dispatchEvent(new Event('selectionchange'));
     },
     { start,
       end }
@@ -307,7 +304,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="underline"]`).click();
 
-      await expect(paragraph.locator('u')).not.toBeVisible();
+      await expect(paragraph.locator('u')).not.toBeAttached();
     });
 
     // CMD+U (Meta+U) is intercepted at the browser/OS level on Firefox and WebKit:
@@ -346,7 +343,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.keyboard.press('Meta+u');
 
-      await expect(paragraph.locator('u')).not.toBeVisible();
+      await expect(paragraph.locator('u')).not.toBeAttached();
     });
   });
 
@@ -390,7 +387,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="strikethrough"]`).click();
 
-      await expect(paragraph.locator('s')).not.toBeVisible();
+      await expect(paragraph.locator('s')).not.toBeAttached();
     });
 
     // CMD+SHIFT+S (Meta+Shift+S) is "Save As" in Chromium-based browsers and is similarly
@@ -426,7 +423,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.keyboard.press('Meta+Shift+s');
 
-      await expect(paragraph.locator('s')).not.toBeVisible();
+      await expect(paragraph.locator('s')).not.toBeAttached();
     });
   });
 });

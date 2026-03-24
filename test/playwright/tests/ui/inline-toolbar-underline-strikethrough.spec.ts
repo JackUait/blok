@@ -124,7 +124,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 
       const blok = new window.Blok(blokConfig);
 
-      window.blokInstance = blok as Blok;
+      window.blokInstance = blok;
 
       await blok.isReady;
     },
@@ -288,7 +288,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="underline"]`).click();
 
-      await expect(paragraph.locator('u')).toBeVisible();
+      await expect(paragraph.locator('xpath=.//u')).toBeVisible();
     });
 
     test('removes <u> tag when clicked on already-underlined text', async ({ page }) => {
@@ -304,7 +304,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="underline"]`).click();
 
-      await expect(paragraph.locator('u')).not.toBeAttached();
+      await expect(paragraph.locator('xpath=.//u')).not.toBeAttached();
     });
 
     // CMD+U (Meta+U) is intercepted at the browser/OS level on Firefox and WebKit:
@@ -324,7 +324,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.keyboard.press('Meta+u');
 
-      await expect(paragraph.locator('u')).toBeVisible();
+      await expect(paragraph.locator('xpath=.//u')).toBeVisible();
     });
 
     test('CMD+U shortcut removes underline from already-underlined text', async ({ page, browserName }) => {
@@ -343,7 +343,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.keyboard.press('Meta+u');
 
-      await expect(paragraph.locator('u')).not.toBeAttached();
+      await expect(paragraph.locator('xpath=.//u')).not.toBeAttached();
     });
   });
 
@@ -371,7 +371,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="strikethrough"]`).click();
 
-      await expect(paragraph.locator('s')).toBeVisible();
+      await expect(paragraph.locator('xpath=.//s')).toBeVisible();
     });
 
     test('removes <s> tag when clicked on already-strikethrough text', async ({ page }) => {
@@ -387,7 +387,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="strikethrough"]`).click();
 
-      await expect(paragraph.locator('s')).not.toBeAttached();
+      await expect(paragraph.locator('xpath=.//s')).not.toBeAttached();
     });
 
     // CMD+SHIFT+S (Meta+Shift+S) is "Save As" in Chromium-based browsers and is similarly
@@ -405,7 +405,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.keyboard.press('Meta+Shift+s');
 
-      await expect(paragraph.locator('s')).toBeVisible();
+      await expect(paragraph.locator('xpath=.//s')).toBeVisible();
     });
 
     test('CMD+SHIFT+S shortcut removes strikethrough from already-strikethrough text', async ({ page }) => {
@@ -423,7 +423,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
       await selectText(paragraph, 'Hello world');
       await page.keyboard.press('Meta+Shift+s');
 
-      await expect(paragraph.locator('s')).not.toBeAttached();
+      await expect(paragraph.locator('xpath=.//s')).not.toBeAttached();
     });
   });
 });

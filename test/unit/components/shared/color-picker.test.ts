@@ -451,7 +451,7 @@ describe('createColorPicker', () => {
       createColorPicker(createOptions({ i18n }));
 
       const call = onHoverSpy.mock.calls.find(
-        ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-default'
+        ([el]) => el.getAttribute?.('data-blok-testid') === 'test-swatch-text-default'
       );
 
       expect(call?.[1]).toBe('Default text');
@@ -470,7 +470,7 @@ describe('createColorPicker', () => {
       createColorPicker(createOptions({ i18n }));
 
       const call = onHoverSpy.mock.calls.find(
-        ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-default'
+        ([el]) => el.getAttribute?.('data-blok-testid') === 'test-swatch-text-default'
       );
 
       expect(call?.[1]).toBe('Текст по умолчанию');
@@ -490,7 +490,7 @@ describe('createColorPicker', () => {
       createColorPicker(createOptions({ i18n }));
 
       const call = onHoverSpy.mock.calls.find(
-        ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-gray'
+        ([el]) => el.getAttribute?.('data-blok-testid') === 'test-swatch-text-gray'
       );
 
       expect(call?.[1]).toBe('Chữ Xám');

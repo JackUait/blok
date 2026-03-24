@@ -473,7 +473,7 @@ describe('createColorPicker', () => {
         ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-default'
       );
 
-      expect(call?.[1]).toBe('текст по умолчанию');
+      expect(call?.[1]).toBe('Текст по умолчанию');
     });
 
     it('color swatch tooltip reverses word order with {mode} {color} template (Vietnamese-style)', () => {
@@ -493,7 +493,7 @@ describe('createColorPicker', () => {
         ([el]) => (el as HTMLElement).getAttribute?.('data-blok-testid') === 'test-swatch-text-gray'
       );
 
-      expect(call?.[1]).toBe('chữ Xám');
+      expect(call?.[1]).toBe('Chữ Xám');
     });
   });
 

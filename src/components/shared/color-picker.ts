@@ -169,7 +169,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       .replace('{default}', i18n.t('tools.marker.default'))
       .replace('{mode}', i18n.t(mode.labelKey).toLowerCase());
 
-    onHover(defaultSwatch, defaultLabel, { placement: 'top' });
+    onHover(defaultSwatch, defaultLabel.charAt(0).toUpperCase() + defaultLabel.slice(1), { placement: 'top' });
     grid.appendChild(defaultSwatch);
 
     for (const preset of presets) {
@@ -201,7 +201,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         .replace('{color}', i18n.t('tools.colorPicker.color.' + preset.name))
         .replace('{mode}', i18n.t(mode.labelKey).toLowerCase());
 
-      onHover(swatch, colorLabel, { placement: 'top' });
+      onHover(swatch, colorLabel.charAt(0).toUpperCase() + colorLabel.slice(1), { placement: 'top' });
       grid.appendChild(swatch);
     }
   };

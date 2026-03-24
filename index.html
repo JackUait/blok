@@ -268,7 +268,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Bold, Italic, Link, Marker } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Bold, Italic, Link, Marker, Underline, Strikethrough } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -697,6 +697,8 @@
         italic: Italic,
         link: Link,
         marker: Marker,
+        underline: Underline,
+        strikethrough: Strikethrough,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
       if (state.tools.header) tools.header = { class: Header };

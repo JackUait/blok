@@ -17,9 +17,9 @@ export const ORDERED_INDENT_PER_LEVEL = 26;
 /**
  * Base styles for list wrapper
  *
- * Matches paragraph spacing: py-[3px] from blok-block + mt-[2px] mb-px
+ * Matches paragraph spacing: py-[7px] from blok-block + mt-[2px] mb-px
  */
-export const BASE_STYLES = 'outline-hidden py-[3px] mt-[2px] mb-px';
+export const BASE_STYLES = 'outline-hidden py-[7px] mt-[2px] mb-px';
 
 /**
  * Styles for standard list items (unordered, ordered)

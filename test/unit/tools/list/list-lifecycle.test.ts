@@ -309,7 +309,7 @@ describe('list-lifecycle', () => {
   /**
    * Regression test for: list items and paragraphs must have same total height
    *
-   * Paragraph wrapper uses blok-block (py-[3px]) + mt-[2px] mb-px
+   * Paragraph wrapper uses blok-block (py-[7px]) + mt-[2px] mb-px
    * List wrapper should match this exactly
    */
   it('has same vertical spacing as paragraph', () => {
@@ -318,7 +318,7 @@ describe('list-lifecycle', () => {
 
     // Check wrapper has the BASE_STYLES that provide vertical spacing
     // These match the paragraph wrapper spacing
-    expect(result.className).toContain('py-[3px]');
+    expect(result.className).toContain('py-[7px]');
     expect(result.className).toContain('mt-[2px]');
     expect(result.className).toContain('mb-px');
 
@@ -338,7 +338,7 @@ describe('list-lifecycle', () => {
 
     // Check wrapper has the BASE_STYLES that provide vertical spacing
     // These match the paragraph wrapper spacing
-    expect(result.className).toContain('py-[3px]');
+    expect(result.className).toContain('py-[7px]');
     expect(result.className).toContain('mt-[2px]');
     expect(result.className).toContain('mb-px');
   });

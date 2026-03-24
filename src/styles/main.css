@@ -1041,7 +1041,7 @@
  */
 @utility blok-block {
   /* Base Blok styles - applied to block tool wrappers */
-  @apply py-[3px] px-[2px] [&::-webkit-input-placeholder]:leading-normal!;
+  @apply py-[7px] px-[2px] [&::-webkit-input-placeholder]:leading-normal!;
 }
 @utility blok-inline-tool-button {
   /* Inline Tools styles */

@@ -10,20 +10,20 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
     expect(BODY_PLACEHOLDER_STYLES).toContain('leading-[1.5]');
   });
 
-  it('uses pt-[4px] to match paragraph top padding (3px) + top margin (1px)', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pt-[4px]');
+  it('uses pt-[8px] to match paragraph top padding (7px) + top margin (1px)', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('pt-[8px]');
   });
 
-  it('uses pb-[4px] to match paragraph bottom padding (3px) + bottom margin (1px)', () => {
-    expect(BODY_PLACEHOLDER_STYLES).toContain('pb-[4px]');
+  it('uses pb-[8px] to match paragraph bottom padding (7px) + bottom margin (1px)', () => {
+    expect(BODY_PLACEHOLDER_STYLES).toContain('pb-[8px]');
   });
 
   it('does not contain py-1 (would cause layout shift vs paragraph block)', () => {
     expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-1');
   });
 
-  it('does not contain py-[3px] (missing paragraph margin contribution)', () => {
-    expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[3px]');
+  it('does not contain py-[7px] (missing paragraph margin contribution)', () => {
+    expect(BODY_PLACEHOLDER_STYLES).not.toContain('py-[7px]');
   });
 
   it('uses pl-[1.1em] to match Notion toggle children indent', () => {

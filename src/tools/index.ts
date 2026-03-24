@@ -32,6 +32,8 @@ export { ItalicInlineTool as Italic } from '../components/inline-tools/inline-to
 export { LinkInlineTool as Link } from '../components/inline-tools/inline-tool-link';
 export { ConvertInlineTool as Convert } from '../components/inline-tools/inline-tool-convert';
 export { MarkerInlineTool as Marker } from '../components/inline-tools/inline-tool-marker';
+export { UnderlineInlineTool as Underline } from '../components/inline-tools/inline-tool-underline';
+export { StrikethroughInlineTool as Strikethrough } from '../components/inline-tools/inline-tool-strikethrough';
 
 // Default tools configuration for convenience
 // Note: inlineToolbar defaults to true, so it doesn't need to be specified
@@ -48,4 +50,6 @@ export const defaultInlineTools = {
   italic: {},
   link: {},
   marker: {},
+  underline: {},
+  strikethrough: {},
 } as const;

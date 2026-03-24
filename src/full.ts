@@ -19,6 +19,8 @@ import { BoldInlineTool as Bold } from './components/inline-tools/inline-tool-bo
 import { ItalicInlineTool as Italic } from './components/inline-tools/inline-tool-italic';
 import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-link';
 import { MarkerInlineTool as Marker } from './components/inline-tools/inline-tool-marker';
+import { UnderlineInlineTool as Underline } from './components/inline-tools/inline-tool-underline';
+import { StrikethroughInlineTool as Strikethrough } from './components/inline-tools/inline-tool-strikethrough';
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
@@ -35,6 +37,8 @@ export {
   Italic,
   Link,
   Marker,
+  Underline,
+  Strikethrough,
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
@@ -70,4 +74,6 @@ export const allTools = {
   italic: { class: Italic },
   link: { class: Link },
   marker: { class: Marker },
+  underline: { class: Underline },
+  strikethrough: { class: Strikethrough },
 } as const;

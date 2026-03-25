@@ -185,13 +185,17 @@ export class CalloutTool implements BlockTool {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
+    if (this._dom === null) {
+      return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void handleCalloutEnter({
         api: this.api,
         blockId: this.blockId,
         data: this._data,
-        textElement: this._dom!.textElement,
+        textElement: this._dom.textElement,
       });
       return;
     }
@@ -201,7 +205,7 @@ export class CalloutTool implements BlockTool {
         api: this.api,
         blockId: this.blockId,
         data: this._data,
-        textElement: this._dom!.textElement,
+        textElement: this._dom.textElement,
         event: e,
       });
     }

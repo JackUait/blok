@@ -24,11 +24,39 @@ export const CURATED_CALLOUT_EMOJIS: string[] = [
   '🚫', '⏰', '♻️', '🔒', '📖', '👣', '➡️', '📢', '🛠️', '⚙️',
 ];
 
-let cachedData: ProcessedEmoji[] | null = null;
+const cache: { data: ProcessedEmoji[] | null } = { data: null };
+
+function processCategory(category: { id: string; emojis: string[] }, emojis: EmojiMartData['emojis']): ProcessedEmoji[] {
+  const result: ProcessedEmoji[] = [];
+
+  for (const emojiId of category.emojis) {
+    const emoji = emojis[emojiId];
+
+    if (emoji === undefined) {
+      continue;
+    }
+
+    const skin = emoji.skins[0];
+
+    if (skin === undefined) {
+      continue;
+    }
+
+    result.push({
+      native: skin.native,
+      id: emoji.id,
+      name: emoji.name,
+      keywords: emoji.keywords,
+      category: category.id,
+    });
+  }
+
+  return result;
+}
 
 export async function loadEmojiData(): Promise<ProcessedEmoji[]> {
-  if (cachedData !== null) {
-    return cachedData;
+  if (cache.data !== null) {
+    return cache.data;
   }
 
   const raw = await import('@emoji-mart/data') as unknown as { default: EmojiMartData } | EmojiMartData;
@@ -36,33 +64,9 @@ export async function loadEmojiData(): Promise<ProcessedEmoji[]> {
     ? raw.default
     : (raw as unknown as EmojiMartData);
 
-  const processed: ProcessedEmoji[] = [];
+  const processed = data.categories.flatMap(category => processCategory(category, data.emojis));
 
-  for (const category of data.categories) {
-    for (const emojiId of category.emojis) {
-      const emoji = data.emojis[emojiId];
-
-      if (emoji === undefined) {
-        continue;
-      }
-
-      const skin = emoji.skins[0];
-
-      if (skin === undefined) {
-        continue;
-      }
-
-      processed.push({
-        native: skin.native,
-        id: emoji.id,
-        name: emoji.name,
-        keywords: emoji.keywords,
-        category: category.id,
-      });
-    }
-  }
-
-  cachedData = processed;
+  cache.data = processed;
   return processed;
 }
 

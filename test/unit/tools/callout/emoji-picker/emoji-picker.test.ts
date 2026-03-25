@@ -1,16 +1,17 @@
 // test/unit/tools/callout/emoji-picker/emoji-picker.test.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { ProcessedEmoji } from '../../../../../src/tools/callout/emoji-picker/emoji-data';
 
 vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([
     { native: '💡', id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
     { native: '😀', id: 'grinning', name: 'Grinning Face', keywords: ['face', 'happy'], category: 'people' },
     { native: '✅', id: 'check', name: 'Check Mark', keywords: ['ok', 'done'], category: 'symbols' },
-  ]),
-  searchEmojis: vi.fn((emojis, q) => emojis.filter((e: { name: string }) => e.name.toLowerCase().includes(q))),
-  groupEmojisByCategory: vi.fn((emojis) => {
-    const m = new Map();
+  ] as ProcessedEmoji[]),
+  searchEmojis: vi.fn((emojis: ProcessedEmoji[], q: string) => emojis.filter((e) => e.name.toLowerCase().includes(q))),
+  groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => {
+    const m = new Map<string, ProcessedEmoji[]>();
     for (const e of emojis) {
       const g = m.get(e.category) ?? [];
       g.push(e);

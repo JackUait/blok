@@ -139,7 +139,8 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const toolbox = CalloutTool.toolbox;
       expect(toolbox).toMatchObject({ title: 'Callout', titleKey: 'callout' });
-      expect(typeof toolbox.icon).toBe('string');
+      const entry = Array.isArray(toolbox) ? toolbox[0] : toolbox;
+      expect(typeof entry.icon).toBe('string');
     });
 
     it('isReadOnlySupported returns true', async () => {

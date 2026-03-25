@@ -1,5 +1,7 @@
 // src/tools/callout/types.ts
 
+import type { BlockToolData } from '../../../types';
+
 export type CalloutColor =
   | 'default'
   | 'gray'
@@ -13,7 +15,7 @@ export type CalloutColor =
   | 'pink'
   | 'red';
 
-export interface CalloutData {
+export interface CalloutData extends BlockToolData {
   text: string;
   emoji: string;
   color: CalloutColor;

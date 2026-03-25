@@ -12,7 +12,6 @@ const createMockAPI = (): API => ({
   },
   caret: {
     setToBlock: vi.fn(),
-    isAtStart: vi.fn().mockReturnValue(false),
   },
   events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
   i18n: { t: (k: string) => k, has: vi.fn().mockReturnValue(false) },
@@ -47,9 +46,18 @@ describe('handleCalloutBackspace', () => {
   it('converts to paragraph when text is empty and caret is at start', async () => {
     const { handleCalloutBackspace } = await import('../../../../src/tools/callout/callout-keyboard');
     const api = createMockAPI();
-    (api.caret.isAtStart as ReturnType<typeof vi.fn>).mockReturnValue(true);
     const textElement = document.createElement('div');
     textElement.innerHTML = '';
+    document.body.appendChild(textElement);
+
+    // Place caret at offset 0 (start) in the empty element
+    const range = document.createRange();
+    range.setStart(textElement, 0);
+    range.collapse(true);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
     const event = new KeyboardEvent('keydown', { key: 'Backspace' });
     const preventDefault = vi.spyOn(event, 'preventDefault');
 
@@ -63,12 +71,12 @@ describe('handleCalloutBackspace', () => {
 
     expect(preventDefault).toHaveBeenCalled();
     expect(api.blocks.convert).toHaveBeenCalledWith('callout-id', 'paragraph');
+    document.body.removeChild(textElement);
   });
 
   it('does NOT convert when text is non-empty', async () => {
     const { handleCalloutBackspace } = await import('../../../../src/tools/callout/callout-keyboard');
     const api = createMockAPI();
-    (api.caret.isAtStart as ReturnType<typeof vi.fn>).mockReturnValue(true);
     const textElement = document.createElement('div');
     textElement.innerHTML = 'some text';
     const event = new KeyboardEvent('keydown', { key: 'Backspace' });

@@ -67,12 +67,37 @@ export class BlockHoverController extends Controller {
       const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**
+       * When the cursor is in the gap between children inside a [data-blok-child-toolbar]
+       * container, the closest block-wrapper is the parent — not a child.
+       * Skip the event so the toolbar stays on the previous child block.
+       */
+      const targetChildToolbar = (event.target as Element | null)?.closest('[data-blok-child-toolbar]');
+
+      if (targetChildToolbar && closestBlockWrapper && !targetChildToolbar.contains(closestBlockWrapper)) {
+        return;
+      }
+
+      /**
        * If the hovered block is inside a table cell or toggle-children container,
        * resolve to the parent block instead.
        * Without this, the toolbar targets nested child blocks and the parent's
        * block tune settings become inaccessible.
+       *
+       * Containers with [data-blok-child-toolbar] opt out of parent resolution,
+       * allowing non-first children to have independent toolbars (e.g. callout blocks).
+       * The first child still resolves to parent so the container's own controls display.
        */
-      const nestedContainer = closestBlockWrapper?.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]');
+      const alwaysResolveContainer = closestBlockWrapper?.closest(
+        '[data-blok-table-cell-blocks], [data-blok-toggle-children]:not([data-blok-child-toolbar])'
+      );
+      const childToolbarContainer = !alwaysResolveContainer
+        ? closestBlockWrapper?.closest('[data-blok-child-toolbar]') ?? null
+        : null;
+      const isFirstChildOfContainer = childToolbarContainer !== null
+        && childToolbarContainer.querySelector(':scope > [data-blok-testid="block-wrapper"]') === closestBlockWrapper;
+
+      const nestedContainer = alwaysResolveContainer
+        ?? (isFirstChildOfContainer ? childToolbarContainer : null);
       const hoveredBlockElement = nestedContainer
         ? nestedContainer.closest('[data-blok-testid="block-wrapper"]') ?? null
         : closestBlockWrapper;

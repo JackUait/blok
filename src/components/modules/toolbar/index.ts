@@ -414,16 +414,18 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Adjust toolbar button visibility when focus is inside a table cell.
-     * The plus button always stays visible so users can add blocks below the table.
-     * The settings toggler is hidden because drag/settings don't apply to individual cells.
+     * Adjust toolbar button visibility based on context:
+     * - Table cell focus: settings toggler hidden (drag/settings don't apply to cells)
+     * - Callout first child: both plus button and settings toggler hidden
+     *   to prevent overlap with the callout's emoji icon
      */
     const focusIsInsideCell = this.isFocusInsideTableCell();
+    const isCalloutFirstChild = this.isFirstChildOfCallout(targetBlock);
 
-    plusButton.style.display = '';
+    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = focusIsInsideCell ? 'none' : '';
+      settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -710,6 +712,24 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Used to decide whether the plus button and settings toggler should be hidden.
    * Focus-based check distinguishes click (buttons hidden) from hover (buttons visible).
    */
+  /**
+   * Checks whether the given block is the first child of a callout block.
+   * Used to hide the plus button and prevent it from overlapping the callout emoji icon.
+   */
+  private isFirstChildOfCallout(block: Block): boolean {
+    if (!block.parentId) {
+      return false;
+    }
+
+    const parentBlock = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    if (!parentBlock || parentBlock.name !== 'callout') {
+      return false;
+    }
+
+    return parentBlock.contentIds[0] === block.id;
+  }
+
   private isFocusInsideTableCell(): boolean {
     const active = document.activeElement;
 
@@ -736,11 +756,12 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     const focusIsInsideCell = this.isFocusInsideTableCell();
+    const isCalloutFirstChild = this.hoveredBlock !== null && this.isFirstChildOfCallout(this.hoveredBlock);
 
-    plusButton.style.display = '';
+    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = focusIsInsideCell ? 'none' : '';
+      settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
     }
   }
 

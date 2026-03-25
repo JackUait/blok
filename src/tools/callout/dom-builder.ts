@@ -43,6 +43,7 @@ export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs
   const childContainer = document.createElement('div');
   childContainer.className = CHILDREN_STYLES;
   childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+  childContainer.setAttribute('data-blok-child-toolbar', '');
   childContainer.setAttribute('data-blok-mutation-free', 'true');
 
   wrapper.appendChild(emojiButton);

@@ -76,7 +76,7 @@ export const createRedactorTouchHandler = (
        * Without this, moveAndOpen falls back to currentBlock (the nested child),
        * and the parent's block tune settings become inaccessible.
        */
-      const nestedContainer = clickedNode.closest?.('[data-blok-table-cell-blocks], [data-blok-toggle-children]');
+      const nestedContainer = clickedNode.closest?.('[data-blok-table-cell-blocks], [data-blok-toggle-children]:not([data-blok-child-toolbar])');
       const parentBlockWrapper = nestedContainer?.closest('[data-blok-testid="block-wrapper"]');
       const resolvedBlock = parentBlockWrapper
         ? deps.Blok.BlockManager.getBlockByChildNode(parentBlockWrapper)

@@ -175,12 +175,12 @@ export class PlusButtonHandler {
     // If hoveredBlock is not empty (e.g. a table), check if the focused block
     // is empty and nested inside it (e.g. an empty paragraph in a table cell).
     const currentBlock = BlockManager.currentBlock ?? null;
-    const emptyBlockToReuse = hoveredBlock !== null && hoveredBlock.isEmpty
-      ? hoveredBlock
-      : currentBlock !== null && currentBlock !== hoveredBlock && currentBlock.isEmpty
-          && hoveredBlock !== null && hoveredBlock.holder.contains(currentBlock.holder)
-        ? currentBlock
-        : null;
+    const hoveredIsEmpty = hoveredBlock !== null && hoveredBlock.isEmpty;
+    const nestedCurrentBlockIsEmpty = !hoveredIsEmpty && currentBlock !== null
+      && currentBlock !== hoveredBlock && currentBlock.isEmpty
+      && hoveredBlock !== null && hoveredBlock.holder.contains(currentBlock.holder);
+    const emptyBlockToReuse: Block | null =
+      (hoveredIsEmpty && hoveredBlock) || (nestedCurrentBlockIsEmpty && currentBlock) || null;
 
     // Calculate insert index based on direction
     const hoveredBlockIndex = hoveredBlock !== null
@@ -201,11 +201,11 @@ export class PlusButtonHandler {
       : 0;
     const insertIndex = baseInsertIndex + (firstNonNestedOffset === -1 ? blocksAfterInsert.length : firstNonNestedOffset);
 
-    const targetBlock = startsWithSlash
+    // startsWithSlash is only true when isParagraph is true, which requires
+    // hoveredBlock to be non-null. TypeScript narrows this correctly.
+    const targetBlock: Block = startsWithSlash
       ? hoveredBlock
-      : emptyBlockToReuse !== null
-        ? emptyBlockToReuse
-        : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
+      : (emptyBlockToReuse ?? BlockManager.insertDefaultBlockAtIndex(insertIndex, true));
 
     // The DOM insertion may place the new block's holder inside a nested
     // container (e.g. a table cell) because the previous block in the array

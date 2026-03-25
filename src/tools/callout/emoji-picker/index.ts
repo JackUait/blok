@@ -1,19 +1,22 @@
 // src/tools/callout/emoji-picker/index.ts
 
-import type { API } from '../../../../types';
 import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
 import { REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY } from '../constants';
+
+interface I18n {
+  t: (key: string) => string;
+}
 
 interface EmojiPickerOptions {
   onSelect: (native: string) => void;
   onRemove: () => void;
-  i18n: Pick<API['i18n'], 't'>;
+  i18n: I18n;
 }
 
 export class EmojiPicker {
   private readonly onSelect: (native: string) => void;
   private readonly onRemove: () => void;
-  private readonly i18n: Pick<API['i18n'], 't'>;
+  private readonly i18n: I18n;
 
   private _element: HTMLElement;
   private _body: HTMLElement;

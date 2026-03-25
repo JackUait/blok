@@ -67,12 +67,14 @@ export class BlockHoverController extends Controller {
       const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**
-       * If the hovered block is inside a table cell, resolve to the table block instead.
-       * Without this, the toolbar hides itself for nested cell blocks and the table's
+       * If the hovered block is inside a table cell or toggle-children container,
+       * resolve to the parent block instead.
+       * Without this, the toolbar targets nested child blocks and the parent's
        * block tune settings become inaccessible.
        */
-      const hoveredBlockElement = closestBlockWrapper?.closest('[data-blok-table-cell-blocks]')
-        ? closestBlockWrapper.closest('[data-blok-table-cell-blocks]')?.closest('[data-blok-testid="block-wrapper"]') ?? null
+      const nestedContainer = closestBlockWrapper?.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]');
+      const hoveredBlockElement = nestedContainer
+        ? nestedContainer.closest('[data-blok-testid="block-wrapper"]') ?? null
         : closestBlockWrapper;
 
       /**
@@ -158,13 +160,13 @@ export class BlockHoverController extends Controller {
     }
 
     /**
-     * Filter out blocks whose holders are inside a table cell container.
-     * Cell blocks should not participate in nearest-block detection —
-     * the parent table block should be found instead.
-     * This matches the direct-hit path which also resolves cell blocks to their parent table block.
+     * Filter out blocks whose holders are inside a table cell or toggle-children container.
+     * Nested child blocks should not participate in nearest-block detection —
+     * the parent block should be found instead.
+     * This matches the direct-hit path which also resolves nested blocks to their parent.
      */
     const topLevelBlocks = blocks.filter(block =>
-      block.holder.closest('[data-blok-table-cell-blocks]') === null
+      block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
     if (topLevelBlocks.length === 0) {

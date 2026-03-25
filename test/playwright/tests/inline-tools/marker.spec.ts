@@ -549,7 +549,7 @@ test.describe('inline tool marker', () => {
     await expect(isActive).not.toHaveAttribute('data-blok-popover-item-active', 'true');
   });
 
-  test('each color picker section renders exactly 10 swatch buttons (1 default + 9 colors)', async ({ page }) => {
+  test('each color picker section renders exactly 11 swatch buttons (1 default + 10 colors)', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -571,7 +571,7 @@ test.describe('inline tool marker', () => {
 
     const colorSwatchCount = colorSection.getByRole('button');
 
-    await expect(colorSwatchCount).toHaveCount(10);
+    await expect(colorSwatchCount).toHaveCount(11);
 
     const bgSection = page.locator('[data-blok-testid="marker-section-background-color"]');
 
@@ -579,7 +579,7 @@ test.describe('inline tool marker', () => {
 
     const bgSwatchCount = bgSection.getByRole('button');
 
-    await expect(bgSwatchCount).toHaveCount(10);
+    await expect(bgSwatchCount).toHaveCount(11);
   });
 
   test('color picker contains two always-visible sections: Text and Background', async ({ page }) => {

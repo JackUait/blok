@@ -42,6 +42,7 @@ export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs
   emojiButton.textContent = emoji || '';
   emojiButton.setAttribute('aria-label', emoji !== '' ? emoji : addEmojiLabel);
   emojiButton.setAttribute('tabindex', '0');
+  emojiButton.setAttribute('data-blok-testid', 'callout-emoji-btn');
 
   if (readOnly) {
     emojiButton.disabled = true;

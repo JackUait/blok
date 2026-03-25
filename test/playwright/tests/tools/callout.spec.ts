@@ -8,9 +8,7 @@ import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/component
 
 const HOLDER_ID = 'blok';
 const CALLOUT_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="callout"]`;
-const CALLOUT_EMOJI_BTN_SELECTOR = `${CALLOUT_BLOCK_SELECTOR} button`;
 const CALLOUT_TEXT_SELECTOR = `${CALLOUT_BLOCK_SELECTOR} [contenteditable="true"]`;
-const SETTINGS_BTN_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 
 declare global {
   interface Window {
@@ -66,45 +64,44 @@ test('creates callout via slash menu and shows default emoji', async ({ page }) 
   await expect(calloutItem).toBeVisible();
   await calloutItem.click();
   await expect(page.locator(CALLOUT_BLOCK_SELECTOR)).toBeVisible();
-  await expect(page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first()).toHaveText('💡');
+  await expect(page.getByTestId('callout-emoji-btn')).toHaveText('💡');
 });
 
 test('renders callout with existing data', async ({ page }) => {
   await createBlok(page, createCalloutData({ text: '<b>Note</b>', emoji: '✅', color: 'green' }));
   await expect(page.locator(CALLOUT_BLOCK_SELECTOR)).toBeVisible();
-  await expect(page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first()).toHaveText('✅');
+  await expect(page.getByTestId('callout-emoji-btn')).toHaveText('✅');
   await expect(page.locator(CALLOUT_TEXT_SELECTOR).first()).toContainText('Note');
 });
 
 test('opens emoji picker on emoji button click', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  await page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first().click();
+  await page.getByTestId('callout-emoji-btn').click();
   await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
 });
 
 test('selects emoji from picker and updates button', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  await page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first().click();
-  await page.waitForSelector('[data-emoji-picker-body]');
+  await page.getByTestId('callout-emoji-btn').click();
+  await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
   const firstEmoji = page.locator('[data-emoji-native]').first();
   const emojiChar = await firstEmoji.getAttribute('data-emoji-native');
   await firstEmoji.click();
-  await expect(page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first()).toHaveText(emojiChar!);
+  await expect(page.getByTestId('callout-emoji-btn')).toHaveText(emojiChar ?? '');
 });
 
 test('removes emoji via Remove button', async ({ page }) => {
   await createBlok(page, createCalloutData({ emoji: '💡' }));
-  await page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first().click();
-  await page.waitForSelector('[data-emoji-picker-remove]');
+  await page.getByTestId('callout-emoji-btn').click();
+  await expect(page.locator('[data-emoji-picker-remove]')).toBeVisible();
   await page.locator('[data-emoji-picker-remove]').click();
-  const btn = page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first();
-  await expect(btn).toHaveText('');
+  await expect(page.getByTestId('callout-emoji-btn')).toHaveText('');
 });
 
 test('closes emoji picker on Escape', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  await page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first().click();
-  await page.waitForSelector('[data-emoji-picker-body]');
+  await page.getByTestId('callout-emoji-btn').click();
+  await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-emoji-picker-body]')).not.toBeVisible();
 });
@@ -113,7 +110,7 @@ test('applies color from block settings menu', async ({ page }) => {
   await createBlok(page, createCalloutData());
   const textArea = page.locator(CALLOUT_TEXT_SELECTOR).first();
   await textArea.click();
-  const settingsBtn = page.locator(SETTINGS_BTN_SELECTOR);
+  const settingsBtn = page.getByTestId('settings-toggler');
   await expect(settingsBtn).toBeVisible();
   await settingsBtn.click();
   await page.getByText('Blue').click();
@@ -129,7 +126,8 @@ test('text area supports inline tool formatting', async ({ page }) => {
   await page.keyboard.press(`${MODIFIER_KEY}+A`);
   await page.keyboard.press(`${MODIFIER_KEY}+B`);
   // Bold tool wraps in <strong>
-  await expect(textArea.locator('strong')).toBeVisible();
+  const hasBold = await textArea.evaluate((el) => el.querySelector('strong') !== null);
+  expect(hasBold).toBe(true);
 });
 
 test('Enter at end of text creates a child block', async ({ page }) => {
@@ -163,6 +161,5 @@ test('read-only mode: emoji button is not interactive', async ({ page }) => {
     window.blokInstance = blok;
     await blok.isReady;
   }, { holder: HOLDER_ID });
-  const btn = page.locator(CALLOUT_EMOJI_BTN_SELECTOR).first();
-  await expect(btn).toBeDisabled();
+  await expect(page.getByTestId('callout-emoji-btn')).toBeDisabled();
 });

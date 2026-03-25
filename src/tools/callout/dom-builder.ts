@@ -51,6 +51,7 @@ export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs
   const textElement = document.createElement('div');
   textElement.className = TEXT_STYLES;
   textElement.contentEditable = readOnly ? 'false' : 'true';
+  textElement.setAttribute('contenteditable', readOnly ? 'false' : 'true');
   textElement.innerHTML = text;
 
   if (!text && placeholder) {

@@ -85,5 +85,22 @@
   "a11y.atBottom": "ဘလောက်သည် အောက်ဆုံးတွင်ရှိပြီး အောက်သို့ ရွှေ့၍မရပါ",
   "blockSettings.convertWithChildrenWarning": "ဤဘလောက်တွင် ထပ်ဆင့်ဘလောက် {count} ခု ပါဝင်သည်။ ပြောင်းလဲပါက ၎င်းတို့သည် အထက်ဆုံးအဆင့်သို့ ရောက်သွားမည်။ ဆက်လက်မည်လား?",
   "toolNames.underline": "Underline",
-  "toolNames.strikethrough": "Strikethrough"
+  "toolNames.strikethrough": "Strikethrough",
+  "toolNames.callout": "Callout",
+  "tools.callout.placeholder": "Callout",
+  "tools.callout.addEmoji": "Add emoji",
+  "tools.callout.removeEmoji": "Remove",
+  "tools.callout.filterEmojis": "Filter…",
+  "tools.callout.calloutEmojiCategory": "Callout",
+  "tools.callout.colorDefault": "Default",
+  "tools.callout.colorGray": "Gray",
+  "tools.callout.colorBrown": "Brown",
+  "tools.callout.colorOrange": "Orange",
+  "tools.callout.colorYellow": "Yellow",
+  "tools.callout.colorGreen": "Green",
+  "tools.callout.colorTeal": "Teal",
+  "tools.callout.colorBlue": "Blue",
+  "tools.callout.colorPurple": "Purple",
+  "tools.callout.colorPink": "Pink",
+  "tools.callout.colorRed": "Red"
 }

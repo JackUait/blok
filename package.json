@@ -181,6 +181,7 @@
     "yaml": "^2.8.2"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
     "i18next": "25.8.18",
     "nanoid": "5.1.6",
     "yjs": "13.6.30"

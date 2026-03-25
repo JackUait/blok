@@ -6,23 +6,20 @@ describe('saveCallout', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('returns text from textElement innerHTML, plus emoji and color from data', async () => {
+  it('returns emoji and color only (no text field)', async () => {
     const { saveCallout } = await import('../../../../src/tools/callout/block-operations');
-    const textElement = document.createElement('div');
-    textElement.innerHTML = '<b>Hello</b>';
 
-    const result = saveCallout({ textElement, emoji: '💡', color: 'blue' });
+    const result = saveCallout({ emoji: '💡', color: 'blue' });
 
-    expect(result).toEqual({ text: '<b>Hello</b>', emoji: '💡', color: 'blue' });
+    expect(result).toEqual({ emoji: '💡', color: 'blue' });
+    expect(result).not.toHaveProperty('text');
   });
 
-  it('returns empty string for text when textElement is empty', async () => {
+  it('returns default values when given defaults', async () => {
     const { saveCallout } = await import('../../../../src/tools/callout/block-operations');
-    const textElement = document.createElement('div');
-    textElement.innerHTML = '';
 
-    const result = saveCallout({ textElement, emoji: '', color: 'default' });
+    const result = saveCallout({ emoji: '', color: 'default' });
 
-    expect(result.text).toBe('');
+    expect(result).toEqual({ emoji: '', color: 'default' });
   });
 });

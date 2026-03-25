@@ -16,11 +16,8 @@ export type CalloutColor =
   | 'red';
 
 export interface CalloutData extends BlockToolData {
-  text: string;
   emoji: string;
   color: CalloutColor;
 }
 
-export interface CalloutConfig {
-  placeholder?: string;
-}
+export interface CalloutConfig {}

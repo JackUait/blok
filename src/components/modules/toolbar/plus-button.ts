@@ -166,11 +166,21 @@ export class PlusButtonHandler {
       return;
     }
 
-    // Determine target block: reuse empty/slash paragraph, or create new one
+    // Determine target block: reuse any empty block, or create a new one
     const hoveredBlock = this.hoveredBlockInternal;
     const isParagraph = hoveredBlock?.name === 'paragraph';
     const startsWithSlash = isParagraph && hoveredBlock.pluginsContent.textContent?.startsWith('/');
-    const isEmptyParagraph = isParagraph && hoveredBlock.isEmpty;
+
+    // Reuse the hovered block if it's empty (any type, not just paragraphs).
+    // If hoveredBlock is not empty (e.g. a table), check if the focused block
+    // is empty and nested inside it (e.g. an empty paragraph in a table cell).
+    const currentBlock = BlockManager.currentBlock ?? null;
+    const emptyBlockToReuse = hoveredBlock !== null && hoveredBlock.isEmpty
+      ? hoveredBlock
+      : currentBlock !== null && currentBlock !== hoveredBlock && currentBlock.isEmpty
+          && hoveredBlock !== null && hoveredBlock.holder.contains(currentBlock.holder)
+        ? currentBlock
+        : null;
 
     // Calculate insert index based on direction
     const hoveredBlockIndex = hoveredBlock !== null
@@ -191,15 +201,17 @@ export class PlusButtonHandler {
       : 0;
     const insertIndex = baseInsertIndex + (firstNonNestedOffset === -1 ? blocksAfterInsert.length : firstNonNestedOffset);
 
-    const targetBlock = isEmptyParagraph || startsWithSlash
+    const targetBlock = startsWithSlash
       ? hoveredBlock
-      : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
+      : emptyBlockToReuse !== null
+        ? emptyBlockToReuse
+        : BlockManager.insertDefaultBlockAtIndex(insertIndex, true);
 
     // The DOM insertion may place the new block's holder inside a nested
     // container (e.g. a table cell) because the previous block in the array
     // is inside another block's DOM. Move the holder to be a sibling after
     // the hovered block so it becomes a top-level block.
-    if (targetBlock !== hoveredBlock && isNested(targetBlock)) {
+    if (targetBlock !== hoveredBlock && emptyBlockToReuse === null && isNested(targetBlock)) {
       hoveredBlock?.holder.after(targetBlock.holder);
     }
 

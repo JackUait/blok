@@ -32,6 +32,8 @@ export const Italic: InlineToolConstructable;
 export const Link: InlineToolConstructable;
 export const Convert: InlineToolConstructable;
 export const Marker: InlineToolConstructable;
+export const Strikethrough: InlineToolConstructable;
+export const Underline: InlineToolConstructable;
 
 // Block tunes
 export const Delete: BlockTuneConstructable;
@@ -54,4 +56,6 @@ export const defaultInlineTools: {
   readonly italic: {};
   readonly link: {};
   readonly marker: {};
+  readonly strikethrough: {};
+  readonly underline: {};
 };

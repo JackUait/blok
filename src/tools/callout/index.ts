@@ -12,13 +12,12 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import type { CalloutData, CalloutConfig } from './types';
 import { buildCalloutDOM, type CalloutDOMRefs } from './dom-builder';
 import { saveCallout } from './block-operations';
-import { handleCalloutEnter, handleCalloutBackspace } from './callout-keyboard';
+import { handleCalloutFirstChildBackspace } from './callout-keyboard';
 import { COLOR_CONFIGS, colorVarStyle } from './style-config';
 import { EmojiPicker } from './emoji-picker';
 import { IconCallout } from '../../components/icons';
 import {
   TOOL_NAME,
-  PLACEHOLDER_KEY,
   ADD_EMOJI_KEY,
   DEFAULT_EMOJI,
   DEFAULT_COLOR,
@@ -27,16 +26,14 @@ import {
 export class CalloutTool implements BlockTool {
   private readonly api: API;
   private readonly readOnly: boolean;
-  private readonly _settings: CalloutConfig;
   private _data: CalloutData;
   private _dom: CalloutDOMRefs | null = null;
   private _picker: EmojiPicker | null = null;
   private blockId?: string;
 
-  constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
+  constructor({ data, api, readOnly, block }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
     this.api = api;
     this.readOnly = readOnly;
-    this._settings = config ?? {};
     this._data = this.normalizeData(data);
 
     if (block) {
@@ -46,25 +43,15 @@ export class CalloutTool implements BlockTool {
 
   private normalizeData(data: Partial<CalloutData>): CalloutData {
     return {
-      text: typeof data.text === 'string' ? data.text : '',
       emoji: typeof data.emoji === 'string' ? data.emoji : DEFAULT_EMOJI,
       color: typeof data.color === 'string' ? data.color : DEFAULT_COLOR,
     };
   }
 
-  private get placeholder(): string {
-    const fromConfig = this._settings.placeholder;
-    if (fromConfig) return fromConfig;
-    const translated = this.api.i18n.t(PLACEHOLDER_KEY);
-    return translated !== PLACEHOLDER_KEY ? translated : 'Callout';
-  }
-
   public render(): HTMLElement {
     const dom = buildCalloutDOM({
       emoji: this._data.emoji,
-      text: this._data.text,
       readOnly: this.readOnly,
-      placeholder: this.placeholder,
       addEmojiLabel: this.api.i18n.t(ADD_EMOJI_KEY),
     });
 
@@ -79,7 +66,13 @@ export class CalloutTool implements BlockTool {
           this.openEmojiPicker();
         }
       });
-      dom.textElement.addEventListener('keydown', (e: KeyboardEvent) => this.handleKeyDown(e));
+
+      // Backspace delegation: intercept on first child block when it's empty
+      dom.childContainer.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Backspace') {
+          this.handleChildBackspace(e);
+        }
+      });
     }
 
     return dom.wrapper;
@@ -91,26 +84,35 @@ export class CalloutTool implements BlockTool {
     }
 
     const children = this.api.blocks.getChildren(this.blockId);
+
+    // Append existing children to the container
     for (const child of children) {
-      // Guard against double-append on re-render (same pattern as Toggle lifecycle)
       if (child.holder.parentElement !== this._dom.childContainer) {
         this._dom.childContainer.appendChild(child.holder);
+      }
+    }
+
+    // Auto-create initial paragraph child when callout has no children
+    if (children.length === 0) {
+      const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
+
+      if (blockIndex !== undefined) {
+        const newBlock = this.api.blocks.insertInsideParent(this.blockId, blockIndex + 1);
+
+        // Manually append the new child's holder — insertInsideParent places it in the
+        // flat block list but doesn't know about our childContainer DOM.
+        this._dom.childContainer.appendChild(newBlock.holder);
+
+        this.api.caret.setToBlock(newBlock.id, 'start');
       }
     }
   }
 
   public save(): CalloutData {
-    if (this._dom === null) {
-      return this._data;
-    }
-
-    this._data = saveCallout({
-      textElement: this._dom.textElement,
+    return saveCallout({
       emoji: this._data.emoji,
       color: this._data.color,
     });
-
-    return this._data;
   }
 
   public validate(_data: CalloutData): boolean {
@@ -155,6 +157,46 @@ export class CalloutTool implements BlockTool {
     this._dom.wrapper.style.border = '';
   }
 
+  private handleChildBackspace(e: KeyboardEvent): void {
+    if (this.blockId === undefined || this._dom === null) {
+      return;
+    }
+
+    const children = this.api.blocks.getChildren(this.blockId);
+
+    if (children.length === 0) {
+      return;
+    }
+
+    const firstChild = children[0];
+
+    // Only handle when the event target is inside the first child block
+    const target = e.target as HTMLElement;
+
+    if (!firstChild.holder.contains(target)) {
+      return;
+    }
+
+    // Only handle when the first child is empty and caret is at start
+    const selection = window.getSelection();
+    const isAtStart = selection !== null &&
+      selection.rangeCount > 0 &&
+      selection.getRangeAt(0).startOffset === 0 &&
+      selection.getRangeAt(0).collapsed;
+    const isEmpty = firstChild.holder.textContent === '';
+
+    if (!isEmpty || !isAtStart) {
+      return;
+    }
+
+    void handleCalloutFirstChildBackspace({
+      api: this.api,
+      calloutBlockId: this.blockId,
+      firstChildBlockId: firstChild.id,
+      event: e,
+    });
+  }
+
   private openEmojiPicker(): void {
     if (this._dom === null) {
       return;
@@ -186,33 +228,6 @@ export class CalloutTool implements BlockTool {
     );
   }
 
-  private handleKeyDown(e: KeyboardEvent): void {
-    if (this._dom === null) {
-      return;
-    }
-
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void handleCalloutEnter({
-        api: this.api,
-        blockId: this.blockId,
-        data: this._data,
-        textElement: this._dom.textElement,
-      });
-      return;
-    }
-
-    if (e.key === 'Backspace') {
-      void handleCalloutBackspace({
-        api: this.api,
-        blockId: this.blockId,
-        data: this._data,
-        textElement: this._dom.textElement,
-        event: e,
-      });
-    }
-  }
-
   public static get toolbox(): ToolboxConfig {
     return {
       icon: IconCallout,
@@ -225,9 +240,7 @@ export class CalloutTool implements BlockTool {
 
   public static get conversionConfig(): ConversionConfig<CalloutData> {
     return {
-      export: (data: CalloutData): string => data.text,
-      import: (text: string): CalloutData => ({
-        text,
+      import: (): CalloutData => ({
         emoji: DEFAULT_EMOJI,
         color: DEFAULT_COLOR,
       }),
@@ -236,14 +249,6 @@ export class CalloutTool implements BlockTool {
 
   public static get sanitize(): ToolSanitizerConfig {
     return {
-      text: {
-        br: true,
-        a: { href: true, target: '_blank', rel: 'nofollow' },
-        b: true,
-        i: true,
-        mark: { class: true, style: true },
-        code: true,
-      },
       emoji: false,
       color: false,
     };

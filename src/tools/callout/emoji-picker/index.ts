@@ -32,8 +32,15 @@ export class EmojiPicker {
     this.onRemove = options.onRemove;
     this.i18n = options.i18n;
     this._element = this.buildElement();
-    this._body = this._element.querySelector('[data-emoji-picker-body]')!;
-    this._filterInput = this._element.querySelector('input[type="text"]')!;
+    const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
+    const filterInput = this._element.querySelector<HTMLInputElement>('input[type="text"]');
+
+    if (body === null || filterInput === null) {
+      throw new Error('EmojiPicker: failed to build required elements');
+    }
+
+    this._body = body;
+    this._filterInput = filterInput;
   }
 
   public getElement(): HTMLElement {
@@ -64,15 +71,23 @@ export class EmojiPicker {
       }
     };
 
-    requestAnimationFrame(() => {
-      document.addEventListener('mousedown', this._outsideClickHandler!);
-    });
+    const handler = this._outsideClickHandler;
+
+    if (handler !== null) {
+      requestAnimationFrame(() => {
+        document.addEventListener('mousedown', handler);
+      });
+    }
   }
 
   public close(): void {
     this._open = false;
     this._element.hidden = true;
-    document.removeEventListener('mousedown', this._outsideClickHandler!);
+
+    if (this._outsideClickHandler !== null) {
+      document.removeEventListener('mousedown', this._outsideClickHandler);
+    }
+
     this._outsideClickHandler = null;
     this._anchorEl?.focus();
   }
@@ -88,7 +103,7 @@ export class EmojiPicker {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.textContent = this.i18n.t(REMOVE_EMOJI_KEY);
-    removeBtn.dataset.emojiPickerRemove = '';
+    removeBtn.setAttribute('data-emoji-picker-remove', '');
     removeBtn.className = 'text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300';
     removeBtn.addEventListener('click', () => {
       this.onRemove();
@@ -110,7 +125,7 @@ export class EmojiPicker {
 
     // Scrollable body
     const body = document.createElement('div');
-    body.dataset.emojiPickerBody = '';
+    body.setAttribute('data-emoji-picker-body', '');
     body.className = 'overflow-y-auto max-h-[250px] px-2 pb-2';
     el.appendChild(body);
 
@@ -178,7 +193,7 @@ export class EmojiPicker {
       btn.type = 'button';
       btn.textContent = emoji.native;
       btn.title = emoji.name;
-      btn.dataset.emojiNative = emoji.native;
+      btn.setAttribute('data-emoji-native', emoji.native);
       btn.className = 'text-[1.1rem] p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer leading-none';
       btn.addEventListener('click', () => {
         this.onSelect(emoji.native);
@@ -197,18 +212,13 @@ export class EmojiPicker {
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
-    let top = rect.bottom + window.scrollY + 4;
-    let left = rect.left + window.scrollX;
+    const top = rect.bottom + pickerHeight > viewportHeight
+      ? rect.top + window.scrollY - pickerHeight - 4
+      : rect.bottom + window.scrollY + 4;
 
-    // Flip up if would overflow bottom
-    if (rect.bottom + pickerHeight > viewportHeight) {
-      top = rect.top + window.scrollY - pickerHeight - 4;
-    }
-
-    // Align right edge if would overflow right
-    if (left + pickerWidth > viewportWidth) {
-      left = rect.right + window.scrollX - pickerWidth;
-    }
+    const left = rect.left + window.scrollX + pickerWidth > viewportWidth
+      ? rect.right + window.scrollX - pickerWidth
+      : rect.left + window.scrollX;
 
     this._element.style.top = `${top}px`;
     this._element.style.left = `${left}px`;

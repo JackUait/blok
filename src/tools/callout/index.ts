@@ -48,7 +48,7 @@ export class CalloutTool implements BlockTool {
     return {
       text: typeof data.text === 'string' ? data.text : '',
       emoji: typeof data.emoji === 'string' ? data.emoji : DEFAULT_EMOJI,
-      color: typeof data.color === 'string' ? data.color as CalloutData['color'] : DEFAULT_COLOR,
+      color: typeof data.color === 'string' ? data.color : DEFAULT_COLOR,
     };
   }
 
@@ -221,7 +221,7 @@ export class CalloutTool implements BlockTool {
     };
   }
 
-  public static get conversionConfig(): ConversionConfig {
+  public static get conversionConfig(): ConversionConfig<CalloutData> {
     return {
       export: (data: CalloutData): string => data.text,
       import: (text: string): CalloutData => ({

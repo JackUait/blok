@@ -22,22 +22,22 @@ function contrastRatio(fg: string, bg: string): number {
 }
 
 describe('COLOR_PRESETS', () => {
-  it('exports 9 color presets', () => {
-    expect(COLOR_PRESETS).toHaveLength(9);
+  it('exports 10 color presets', () => {
+    expect(COLOR_PRESETS).toHaveLength(10);
   });
 
-  it('does not include teal (removed in favour of default swatch)', () => {
+  it('includes teal', () => {
     const teal = COLOR_PRESETS.find((p) => p.name === 'teal');
 
-    expect(teal).toBeUndefined();
+    expect(teal).toBeDefined();
   });
 
-  it('has green positioned directly before blue', () => {
+  it('has teal positioned directly before blue', () => {
     const names = COLOR_PRESETS.map((p) => p.name);
-    const greenIndex = names.indexOf('green');
+    const tealIndex = names.indexOf('teal');
     const blueIndex = names.indexOf('blue');
 
-    expect(blueIndex).toBe(greenIndex + 1);
+    expect(blueIndex).toBe(tealIndex + 1);
   });
 
   it('each preset has name, text, and bg', () => {
@@ -50,8 +50,8 @@ describe('COLOR_PRESETS', () => {
 });
 
 describe('COLOR_PRESETS_DARK', () => {
-  it('exports 9 dark color presets', () => {
-    expect(COLOR_PRESETS_DARK).toHaveLength(9);
+  it('exports 10 dark color presets', () => {
+    expect(COLOR_PRESETS_DARK).toHaveLength(10);
   });
 
   it('has the same preset names in the same order as light presets', () => {
@@ -78,10 +78,10 @@ describe('COLOR_PRESETS_DARK', () => {
     }
   });
 
-  it('does not include teal dark preset (removed in favour of default swatch)', () => {
+  it('includes teal dark preset', () => {
     const teal = COLOR_PRESETS_DARK.find((p) => p.name === 'teal');
 
-    expect(teal).toBeUndefined();
+    expect(teal).toBeDefined();
   });
 
   it('each dark preset text on bg achieves at least 3.8:1 WCAG contrast ratio', () => {

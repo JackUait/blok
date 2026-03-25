@@ -35,10 +35,14 @@ export async function handleCalloutBackspace(ctx: BackspaceContext): Promise<voi
   }
 
   const isEmpty = ctx.textElement.innerHTML === '' || ctx.textElement.textContent === '';
-  const isAtStart = ctx.api.caret.isAtStart(ctx.textElement);
+  const selection = window.getSelection();
+  const isAtStart = selection !== null &&
+    selection.rangeCount > 0 &&
+    selection.getRangeAt(0).startOffset === 0 &&
+    selection.getRangeAt(0).collapsed;
 
   if (isEmpty && isAtStart) {
     ctx.event.preventDefault();
-    ctx.api.blocks.convert(ctx.blockId, 'paragraph');
+    await ctx.api.blocks.convert(ctx.blockId, 'paragraph');
   }
 }

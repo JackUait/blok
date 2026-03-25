@@ -1,0 +1,86 @@
+// src/tools/callout/emoji-picker/emoji-data.ts
+
+interface EmojiMartData {
+  categories: Array<{ id: string; emojis: string[] }>;
+  emojis: Record<string, {
+    id: string;
+    name: string;
+    keywords: string[];
+    skins: Array<{ native: string; unified: string }>;
+    version: number;
+  }>;
+}
+
+export interface ProcessedEmoji {
+  native: string;
+  id: string;
+  name: string;
+  keywords: string[];
+  category: string;
+}
+
+export const CURATED_CALLOUT_EMOJIS: string[] = [
+  '💡', '👉', '☝️', '✅', '⚠️', '🔑', '🔥', '📌', '✂️', '❓',
+  '🚫', '⏰', '♻️', '🔒', '📖', '👣', '➡️', '📢', '🛠️', '⚙️',
+];
+
+let cachedData: ProcessedEmoji[] | null = null;
+
+export async function loadEmojiData(): Promise<ProcessedEmoji[]> {
+  if (cachedData !== null) {
+    return cachedData;
+  }
+
+  const raw = await import('@emoji-mart/data') as unknown as { default: EmojiMartData } | EmojiMartData;
+  const data: EmojiMartData = 'default' in raw && raw.default !== undefined
+    ? raw.default
+    : (raw as unknown as EmojiMartData);
+
+  const processed: ProcessedEmoji[] = [];
+
+  for (const category of data.categories) {
+    for (const emojiId of category.emojis) {
+      const emoji = data.emojis[emojiId];
+
+      if (emoji === undefined) {
+        continue;
+      }
+
+      const skin = emoji.skins[0];
+
+      if (skin === undefined) {
+        continue;
+      }
+
+      processed.push({
+        native: skin.native,
+        id: emoji.id,
+        name: emoji.name,
+        keywords: emoji.keywords,
+        category: category.id,
+      });
+    }
+  }
+
+  cachedData = processed;
+  return processed;
+}
+
+export function searchEmojis(emojis: ProcessedEmoji[], query: string): ProcessedEmoji[] {
+  const lower = query.toLowerCase();
+  return emojis.filter(
+    emoji =>
+      emoji.name.toLowerCase().includes(lower) ||
+      emoji.keywords.some(k => k.includes(lower))
+  );
+}
+
+export function groupEmojisByCategory(emojis: ProcessedEmoji[]): Map<string, ProcessedEmoji[]> {
+  const groups = new Map<string, ProcessedEmoji[]>();
+  for (const emoji of emojis) {
+    const group = groups.get(emoji.category) ?? [];
+    group.push(emoji);
+    groups.set(emoji.category, group);
+  }
+  return groups;
+}

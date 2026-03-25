@@ -7,69 +7,73 @@ describe('buildCalloutDOM', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('returns wrapper, emojiButton, textElement, childContainer', async () => {
+  it('returns wrapper, emojiButton, and childContainer (no textElement)', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const result = buildCalloutDOM({ emoji: '💡', text: 'hello', readOnly: false, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
+    const result = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
     expect(result.wrapper).toBeInstanceOf(HTMLElement);
     expect(result.emojiButton).toBeInstanceOf(HTMLButtonElement);
-    expect(result.textElement).toBeInstanceOf(HTMLElement);
     expect(result.childContainer).toBeInstanceOf(HTMLElement);
+    expect(result).not.toHaveProperty('textElement');
+  });
+
+  it('wrapper is a flex row with emoji and childContainer as direct children', async () => {
+    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
+    const { wrapper, emojiButton, childContainer } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
+
+    expect(wrapper.children).toHaveLength(2);
+    expect(wrapper.children[0]).toBe(emojiButton);
+    expect(wrapper.children[1]).toBe(childContainer);
   });
 
   it('child container has data-blok-toggle-children attribute', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { childContainer } = buildCalloutDOM({ emoji: '💡', text: '', readOnly: false, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
+    const { childContainer } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
     expect(childContainer.hasAttribute(TOGGLE_ATTR.toggleChildren)).toBe(true);
   });
 
   it('child container has data-blok-mutation-free attribute', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { childContainer } = buildCalloutDOM({ emoji: '💡', text: '', readOnly: false, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
+    const { childContainer } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
     expect(childContainer.getAttribute('data-blok-mutation-free')).toBe('true');
   });
 
-  it('textElement is contentEditable in non-readOnly mode', async () => {
-    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { textElement } = buildCalloutDOM({ emoji: '💡', text: 'hi', readOnly: false, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
-
-    expect(textElement.contentEditable).toBe('true');
-  });
-
-  it('textElement is not contentEditable in readOnly mode', async () => {
-    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { textElement } = buildCalloutDOM({ emoji: '💡', text: 'hi', readOnly: true, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
-
-    expect(textElement.contentEditable).toBe('false');
-  });
-
   it('emoji button is disabled in readOnly mode', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { emojiButton } = buildCalloutDOM({ emoji: '💡', text: '', readOnly: true, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
+    const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: true, addEmojiLabel: 'Add emoji' });
 
     expect(emojiButton.disabled).toBe(true);
   });
 
   it('emoji button aria-label = addEmojiLabel when emoji is empty', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { emojiButton } = buildCalloutDOM({ emoji: '', text: '', readOnly: false, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
+    const { emojiButton } = buildCalloutDOM({ emoji: '', readOnly: false, addEmojiLabel: 'Add emoji' });
 
     expect(emojiButton.getAttribute('aria-label')).toBe('Add emoji');
   });
 
   it('emoji button aria-label = emoji char when emoji is set', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { emojiButton } = buildCalloutDOM({ emoji: '💡', text: '', readOnly: false, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
+    const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
     expect(emojiButton.getAttribute('aria-label')).toBe('💡');
   });
 
-  it('textElement has the provided HTML text as innerHTML', async () => {
+  it('emoji button aligns to start of first line', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
-    const { textElement } = buildCalloutDOM({ emoji: '💡', text: '<b>Bold</b>', readOnly: false, placeholder: 'Callout', addEmojiLabel: 'Add emoji' });
+    const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
-    expect(textElement.innerHTML).toBe('<b>Bold</b>');
+    expect(emojiButton.className).toContain('py-[7px]');
+    expect(emojiButton.className).toContain('flex-shrink-0');
+  });
+
+  it('childContainer fills remaining space', async () => {
+    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
+    const { childContainer } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
+
+    expect(childContainer.className).toContain('flex-1');
+    expect(childContainer.className).toContain('min-w-0');
   });
 });

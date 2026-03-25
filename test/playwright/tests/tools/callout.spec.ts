@@ -8,7 +8,6 @@ import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/component
 
 const HOLDER_ID = 'blok';
 const CALLOUT_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="callout"]`;
-const CALLOUT_TEXT_SELECTOR = `${CALLOUT_BLOCK_SELECTOR} [contenteditable="true"]`;
 
 declare global {
   interface Window {
@@ -48,7 +47,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
 };
 
 const createCalloutData = (overrides = {}): OutputData => ({
-  blocks: [{ type: 'callout', data: { text: '', emoji: '💡', color: 'default', ...overrides } }],
+  blocks: [{ type: 'callout', data: { emoji: '💡', color: 'default', ...overrides } }],
 });
 
 test.beforeEach(async ({ page }) => {
@@ -67,11 +66,12 @@ test('creates callout via slash menu and shows default emoji', async ({ page }) 
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText('💡');
 });
 
-test('renders callout with existing data', async ({ page }) => {
-  await createBlok(page, createCalloutData({ text: '<b>Note</b>', emoji: '✅', color: 'green' }));
+test('renders callout with auto-created first child paragraph', async ({ page }) => {
+  await createBlok(page, createCalloutData());
   await expect(page.locator(CALLOUT_BLOCK_SELECTOR)).toBeVisible();
-  await expect(page.getByTestId('callout-emoji-btn')).toHaveText('✅');
-  await expect(page.locator(CALLOUT_TEXT_SELECTOR).first()).toContainText('Note');
+  // The callout should contain a child paragraph block inside the children container
+  const childBlock = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"]`);
+  await expect(childBlock.first()).toBeVisible();
 });
 
 test('opens emoji picker on emoji button click', async ({ page }) => {
@@ -108,8 +108,9 @@ test('closes emoji picker on Escape', async ({ page }) => {
 
 test('applies color from block settings menu', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  const textArea = page.locator(CALLOUT_TEXT_SELECTOR).first();
-  await textArea.click();
+  // Click the child paragraph to focus the callout
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`).first();
+  await childEditable.click();
   const settingsBtn = page.getByTestId('settings-toggler');
   await expect(settingsBtn).toBeVisible();
   await settingsBtn.click();
@@ -118,35 +119,25 @@ test('applies color from block settings menu', async ({ page }) => {
   await expect(wrapper).toHaveCSS('background-color', /rgb/);
 });
 
-test('text area supports inline tool formatting', async ({ page }) => {
+test('child blocks support inline tool formatting', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  const textArea = page.locator(CALLOUT_TEXT_SELECTOR).first();
-  await textArea.click();
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`).first();
+  await childEditable.click();
   await page.keyboard.type('hello');
   await page.keyboard.press(`${MODIFIER_KEY}+A`);
   await page.keyboard.press(`${MODIFIER_KEY}+B`);
-  // Bold tool wraps in <strong>
-  const hasBold = await textArea.evaluate((el) => el.querySelector('strong') !== null);
+  const hasBold = await childEditable.evaluate((el) => el.querySelector('b, strong') !== null);
   expect(hasBold).toBe(true);
 });
 
-test('Enter at end of text creates a child block', async ({ page }) => {
-  await createBlok(page, createCalloutData({ text: 'header' }));
-  const textArea = page.locator(CALLOUT_TEXT_SELECTOR).first();
-  await textArea.click();
-  await page.keyboard.press('End');
+test('Enter in child block creates another child block', async ({ page }) => {
+  await createBlok(page, createCalloutData());
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`).first();
+  await childEditable.click();
+  await page.keyboard.type('first line');
   await page.keyboard.press('Enter');
   const childBlocks = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`);
-  await expect(childBlocks.first()).toBeVisible();
-});
-
-test('Backspace on empty text converts callout to paragraph', async ({ page }) => {
-  await createBlok(page, createCalloutData({ text: '' }));
-  const textArea = page.locator(CALLOUT_TEXT_SELECTOR).first();
-  await textArea.click();
-  await page.keyboard.press('Backspace');
-  await expect(page.locator(CALLOUT_BLOCK_SELECTOR)).toHaveCount(0);
-  await expect(page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"]`)).toBeVisible();
+  await expect(childBlocks).toHaveCount(2);
 });
 
 test('read-only mode: emoji button is not interactive', async ({ page }) => {
@@ -156,7 +147,7 @@ test('read-only mode: emoji button is not interactive', async ({ page }) => {
     const blok = new window.Blok({
       holder,
       readOnly: true,
-      data: { blocks: [{ type: 'callout', data: { text: 'hi', emoji: '💡', color: 'default' } }] },
+      data: { blocks: [{ type: 'callout', data: { emoji: '💡', color: 'default' } }] },
     });
     window.blokInstance = blok;
     await blok.isReady;

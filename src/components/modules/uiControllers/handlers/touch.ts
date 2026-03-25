@@ -71,15 +71,15 @@ export const createRedactorTouchHandler = (
      */
     if (!deps.Blok.ReadOnly.isEnabled && !deps.Blok.Toolbar.contains(initialTarget)) {
       /**
-       * When the clicked node is inside a table cell, resolve to the parent table block
-       * so moveAndOpen receives the table block (not undefined / the inner cell paragraph).
-       * Without this, moveAndOpen falls back to currentBlock (the cell paragraph), detects
-       * it's inside a table cell, and hides the plus button and settings toggler.
+       * When the clicked node is inside a table cell or toggle-children container,
+       * resolve to the parent block so moveAndOpen receives the correct parent block.
+       * Without this, moveAndOpen falls back to currentBlock (the nested child),
+       * and the parent's block tune settings become inaccessible.
        */
-      const tableCellContainer = clickedNode.closest?.('[data-blok-table-cell-blocks]');
-      const tableBlockWrapper = tableCellContainer?.closest('[data-blok-testid="block-wrapper"]');
-      const resolvedBlock = tableBlockWrapper
-        ? deps.Blok.BlockManager.getBlockByChildNode(tableBlockWrapper)
+      const nestedContainer = clickedNode.closest?.('[data-blok-table-cell-blocks], [data-blok-toggle-children]');
+      const parentBlockWrapper = nestedContainer?.closest('[data-blok-testid="block-wrapper"]');
+      const resolvedBlock = parentBlockWrapper
+        ? deps.Blok.BlockManager.getBlockByChildNode(parentBlockWrapper)
         : undefined;
 
       deps.Blok.Toolbar.moveAndOpen(resolvedBlock, clickedNode);

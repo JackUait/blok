@@ -14,8 +14,8 @@ export const DEFAULT_EMOJI = '💡';
 export const DEFAULT_COLOR = 'default' as const;
 
 // CSS — Tailwind classes
-export const WRAPPER_STYLES = 'rounded-[6px] px-4 py-3 my-1 flex flex-col gap-2';
-export const HEADER_STYLES = 'flex items-start gap-2';
-export const EMOJI_BUTTON_STYLES = 'text-[1.25rem] leading-[1.5] cursor-pointer bg-transparent border-0 p-0 flex-shrink-0 select-none';
-export const TEXT_STYLES = 'flex-1 min-w-0 outline-hidden leading-[1.5]';
-export const CHILDREN_STYLES = 'pl-7';
+export const WRAPPER_STYLES = 'rounded-[6px] px-4 py-[5px] my-1 flex flex-col';
+export const HEADER_STYLES = 'flex items-start gap-2 leading-[1.5em]';
+export const EMOJI_BUTTON_STYLES = 'text-[1.25rem] cursor-pointer bg-transparent border-0 px-0 py-[7px] flex-shrink-0 select-none';
+export const TEXT_STYLES = 'flex-1 min-w-0 outline-hidden leading-[1.5] py-[7px]';
+export const CHILDREN_STYLES = 'pl-7 empty:hidden';

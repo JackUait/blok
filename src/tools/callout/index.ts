@@ -146,11 +146,13 @@ export class CalloutTool implements BlockTool {
     if (cfg === undefined || cfg.bgVar === '') {
       this._dom.wrapper.style.backgroundColor = '';
       this._dom.wrapper.style.color = '';
+      this._dom.wrapper.style.border = '1px solid var(--blok-callout-default-border, #e5e7eb)';
       return;
     }
 
     this._dom.wrapper.style.backgroundColor = colorVarStyle(cfg.bgVar);
     this._dom.wrapper.style.color = colorVarStyle(cfg.textVar);
+    this._dom.wrapper.style.border = '';
   }
 
   private openEmojiPicker(): void {

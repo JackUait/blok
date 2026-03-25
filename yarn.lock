@@ -650,6 +650,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@emoji-mart/data@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "@emoji-mart/data@npm:1.2.1"
+  checksum: 10c0/6784b97bf49a0d3ff110d8447bbd3b0449fcbc497294be3d1c3a6cb1609308776895c7520200be604cbecaa5e172c76927e47f34419c72ba8a76fd4e5a53674b
+  languageName: node
+  linkType: hard
+
 "@es-joy/jsdoccomment@npm:~0.84.0":
   version: 0.84.0
   resolution: "@es-joy/jsdoccomment@npm:0.84.0"
@@ -1197,6 +1204,7 @@ __metadata:
     "@babel/register": "npm:7.28.6"
     "@commitlint/cli": "npm:20.4.4"
     "@commitlint/config-conventional": "npm:20.4.4"
+    "@emoji-mart/data": "npm:^1.2.1"
     "@playwright/test": "npm:1.58.2"
     "@size-limit/esbuild-why": "npm:12.0.1"
     "@size-limit/preset-small-lib": "npm:12.0.1"

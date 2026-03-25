@@ -85,5 +85,22 @@
   "tools.table.dragToAddRemoveColumns": "స్తంభాలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
   "blockSettings.convertWithChildrenWarning": "ఈ బ్లాక్‌లో {count} నెస్టెడ్ బ్లాక్‌లు ఉన్నాయి. మార్చినట్లయితే అవి అగ్రస్థాయికి తరలించబడతాయి. కొనసాగించాలా?",
   "toolNames.underline": "Underline",
-  "toolNames.strikethrough": "Strikethrough"
+  "toolNames.strikethrough": "Strikethrough",
+  "toolNames.callout": "Callout",
+  "tools.callout.placeholder": "Callout",
+  "tools.callout.addEmoji": "Add emoji",
+  "tools.callout.removeEmoji": "Remove",
+  "tools.callout.filterEmojis": "Filter…",
+  "tools.callout.calloutEmojiCategory": "Callout",
+  "tools.callout.colorDefault": "Default",
+  "tools.callout.colorGray": "Gray",
+  "tools.callout.colorBrown": "Brown",
+  "tools.callout.colorOrange": "Orange",
+  "tools.callout.colorYellow": "Yellow",
+  "tools.callout.colorGreen": "Green",
+  "tools.callout.colorTeal": "Teal",
+  "tools.callout.colorBlue": "Blue",
+  "tools.callout.colorPurple": "Purple",
+  "tools.callout.colorPink": "Pink",
+  "tools.callout.colorRed": "Red"
 }

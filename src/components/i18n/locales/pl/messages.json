@@ -85,5 +85,22 @@
   "a11y.atBottom": "Blok jest na dole, nie można przenieść niżej",
   "blockSettings.convertWithChildrenWarning": "Ten blok zawiera {count} zagnieżdżonych bloków. Po konwersji zostaną one przeniesione na poziom główny. Kontynuować?",
   "toolNames.underline": "Underline",
-  "toolNames.strikethrough": "Strikethrough"
+  "toolNames.strikethrough": "Strikethrough",
+  "toolNames.callout": "Callout",
+  "tools.callout.placeholder": "Callout",
+  "tools.callout.addEmoji": "Add emoji",
+  "tools.callout.removeEmoji": "Remove",
+  "tools.callout.filterEmojis": "Filter…",
+  "tools.callout.calloutEmojiCategory": "Callout",
+  "tools.callout.colorDefault": "Default",
+  "tools.callout.colorGray": "Gray",
+  "tools.callout.colorBrown": "Brown",
+  "tools.callout.colorOrange": "Orange",
+  "tools.callout.colorYellow": "Yellow",
+  "tools.callout.colorGreen": "Green",
+  "tools.callout.colorTeal": "Teal",
+  "tools.callout.colorBlue": "Blue",
+  "tools.callout.colorPurple": "Purple",
+  "tools.callout.colorPink": "Pink",
+  "tools.callout.colorRed": "Red"
 }

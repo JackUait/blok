@@ -85,5 +85,22 @@
   "tools.table.dragToAddRemoveColumns": "තීරු එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
   "blockSettings.convertWithChildrenWarning": "මෙම බ්ලොක් එකේ {count} කූඩු කළ බ්ලොක් ඇත. පරිවර්තනය කිරීමෙන් ඒවා ඉහළ මට්ටමට ගෙන යනු ලැබේ. ඉදිරියට යන්නද?",
   "toolNames.underline": "Underline",
-  "toolNames.strikethrough": "Strikethrough"
+  "toolNames.strikethrough": "Strikethrough",
+  "toolNames.callout": "Callout",
+  "tools.callout.placeholder": "Callout",
+  "tools.callout.addEmoji": "Add emoji",
+  "tools.callout.removeEmoji": "Remove",
+  "tools.callout.filterEmojis": "Filter…",
+  "tools.callout.calloutEmojiCategory": "Callout",
+  "tools.callout.colorDefault": "Default",
+  "tools.callout.colorGray": "Gray",
+  "tools.callout.colorBrown": "Brown",
+  "tools.callout.colorOrange": "Orange",
+  "tools.callout.colorYellow": "Yellow",
+  "tools.callout.colorGreen": "Green",
+  "tools.callout.colorTeal": "Teal",
+  "tools.callout.colorBlue": "Blue",
+  "tools.callout.colorPurple": "Purple",
+  "tools.callout.colorPink": "Pink",
+  "tools.callout.colorRed": "Red"
 }

@@ -66,6 +66,58 @@ describe('CalloutTool', () => {
       expect(editable).not.toBeNull();
       expect(editable!.innerHTML).toBe('<b>hi</b>');
     });
+
+    it('emoji button inherits line-height from header for first-line alignment', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+      const header = el.firstElementChild!;
+      const btn = el.querySelector('button')!;
+
+      // Header sets an absolute line-height (1.5em) so the emoji inherits the
+      // same computed value as the text, regardless of the emoji's larger font-size.
+      expect(header.className).toContain('leading-[1.5em]');
+      // Emoji button must NOT have its own leading-* class that would override inheritance
+      expect(btn.className).not.toMatch(/leading-/);
+    });
+
+    it('text element has block-level vertical padding matching paragraph blocks', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+      const textEl = el.querySelector('[contenteditable="true"]')!;
+
+      expect(textEl.className).toContain('py-[7px]');
+    });
+
+    it('emoji button has matching vertical padding for alignment with text', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+      const btn = el.querySelector('button')!;
+
+      expect(btn.className).toContain('py-[7px]');
+    });
+
+    it('wrapper has reduced vertical padding that complements block padding', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+
+      // Wrapper provides inner spacing between border/background and content,
+      // complementing each block's own py-[7px] (5 + 7 = 12px total)
+      expect(el.className).toContain('py-[5px]');
+      expect(el.className).not.toMatch(/\bgap-/);
+    });
+
+    it('child container is hidden when empty to avoid extra bottom spacing', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+      const childContainer = el.querySelector('[data-blok-toggle-children]');
+      expect(childContainer).not.toBeNull();
+      expect(childContainer!.className).toContain('empty:hidden');
+    });
   });
 
   describe('save()', () => {
@@ -120,7 +172,7 @@ describe('CalloutTool', () => {
       expect(wrapper.style.color).toBe('var(--blok-color-blue-text)');
     });
 
-    it('applying default color removes inline styles', async () => {
+    it('applying default color removes inline styles and adds a border', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const tool = new CalloutTool(createOptions({ color: 'blue' }));
       const wrapper = tool.render();
@@ -131,6 +183,29 @@ describe('CalloutTool', () => {
 
       expect(wrapper.style.backgroundColor).toBe('');
       expect(wrapper.style.color).toBe('');
+      expect(wrapper.style.border).toBe('1px solid var(--blok-callout-default-border, #e5e7eb)');
+    });
+
+    it('renders with a border when initial color is default', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions({ color: 'default' }));
+      const wrapper = tool.render();
+
+      expect(wrapper.style.border).toBe('1px solid var(--blok-callout-default-border, #e5e7eb)');
+    });
+
+    it('removes the border when switching from default to a color', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions({ color: 'default' }));
+      const wrapper = tool.render();
+
+      expect(wrapper.style.border).toBe('1px solid var(--blok-callout-default-border, #e5e7eb)');
+
+      const settings = tool.renderSettings() as Array<{ title: string; onActivate: () => void }>;
+      const blueItem = settings.find(s => s.title.includes('tools.callout.colorBlue'));
+      blueItem?.onActivate();
+
+      expect(wrapper.style.border).toBe('');
     });
   });
 

@@ -483,7 +483,7 @@ describe('Toolbar — callout background color override on control buttons', () 
 
     toolbar.moveAndOpen(child);
 
-    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 50%, var(--blok-popover-bg))');
+    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 50%, white)');
 
     document.body.removeChild(callout.holder);
   });
@@ -569,7 +569,7 @@ describe('Toolbar — callout background color override on control buttons', () 
 
     // Move to callout child — variable should be overridden
     toolbar.moveAndOpen(child);
-    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 50%, var(--blok-popover-bg))');
+    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 50%, white)');
 
     // Move to regular block — variable override should be cleared
     toolbar.moveAndOpen(regularBlock);

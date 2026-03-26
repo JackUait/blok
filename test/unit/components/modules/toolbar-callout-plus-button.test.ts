@@ -402,9 +402,9 @@ describe('Toolbar — callout first-child plus button visibility', () => {
   });
 });
 
-// ─── color adaptation tests ────────────────────────────────────────────────
+// ─── button background color override tests ───────────────────────────────
 
-describe('Toolbar — callout color adaptation for child blocks', () => {
+describe('Toolbar — callout background color override on control buttons', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -413,11 +413,6 @@ describe('Toolbar — callout color adaptation for child blocks', () => {
     vi.restoreAllMocks();
   });
 
-  /**
-   * Helper: create a callout block whose holder contains a wrapper element
-   * with data-blok-component="callout" and optional inline color styles,
-   * matching the real DOM structure produced by CalloutTool + ToolRenderer.
-   */
   function createCalloutBlockWithColors(options: {
     id: string;
     contentIds: string[];
@@ -425,44 +420,114 @@ describe('Toolbar — callout color adaptation for child blocks', () => {
     backgroundColor?: string;
   }): Block {
     const holder = document.createElement('div');
-    const wrapper = document.createElement('div');
 
-    wrapper.setAttribute('data-blok-component', 'callout');
+    holder.setAttribute('data-blok-component', 'callout');
+
+    const contentElement = document.createElement('div');
+
+    contentElement.setAttribute('data-blok-element-content', '');
+
+    const toolRendered = document.createElement('div');
 
     if (options.textColor) {
-      wrapper.style.color = options.textColor;
+      toolRendered.style.color = options.textColor;
     }
 
     if (options.backgroundColor) {
-      wrapper.style.backgroundColor = options.backgroundColor;
+      toolRendered.style.backgroundColor = options.backgroundColor;
     }
 
-    holder.appendChild(wrapper);
+    contentElement.appendChild(toolRendered);
+    holder.appendChild(contentElement);
 
     return createBlock({
       id: options.id,
       name: 'callout',
       contentIds: options.contentIds,
       holder,
-    });
+      pluginsContent: toolRendered,
+    } as Partial<Block> & { id: string });
   }
 
-  function createToolbarForCalloutColor(callout: Block): ReturnType<typeof createToolbar> {
-    return createToolbar({
+  it('sets backgroundColor on plus button when inside callout with background color', () => {
+    const callout = createCalloutBlockWithColors({
+      id: 'callout-1',
+      contentIds: ['child-1', 'child-2'],
+      backgroundColor: 'var(--blok-color-brown-bg)',
+    });
+
+    const childHolder = document.createElement('div');
+
+    callout.holder.appendChild(childHolder);
+    document.body.appendChild(callout.holder);
+
+    const child = createBlock({
+      id: 'child-2',
+      name: 'paragraph',
+      parentId: 'callout-1',
+      holder: childHolder,
+    });
+
+    const { toolbar, plusButton } = createToolbar({
       BlockManager: {
         currentBlock: null,
         blocks: [],
         getBlockByChildNode: vi.fn().mockReturnValue(null),
         getBlockById: vi.fn().mockImplementation((id: string) => {
-          if (id === callout.id) return callout;
+          if (id === 'callout-1') return callout;
 
           return undefined;
         }),
       } as unknown as BlokModules['BlockManager'],
     });
-  }
 
-  it('sets color to inherit on plus button when targeting child of a callout with custom text color', () => {
+    toolbar.moveAndOpen(child);
+
+    expect(plusButton.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 85%, white)');
+
+    document.body.removeChild(callout.holder);
+  });
+
+  it('sets backgroundColor on settings toggler when inside callout with background color', () => {
+    const callout = createCalloutBlockWithColors({
+      id: 'callout-1',
+      contentIds: ['child-1', 'child-2'],
+      backgroundColor: 'var(--blok-color-brown-bg)',
+    });
+
+    const childHolder = document.createElement('div');
+
+    callout.holder.appendChild(childHolder);
+    document.body.appendChild(callout.holder);
+
+    const child = createBlock({
+      id: 'child-2',
+      name: 'paragraph',
+      parentId: 'callout-1',
+      holder: childHolder,
+    });
+
+    const { toolbar, settingsToggler } = createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockImplementation((id: string) => {
+          if (id === 'callout-1') return callout;
+
+          return undefined;
+        }),
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    toolbar.moveAndOpen(child);
+
+    expect(settingsToggler.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 85%, white)');
+
+    document.body.removeChild(callout.holder);
+  });
+
+  it('does NOT set backgroundColor when callout has no background color', () => {
     const callout = createCalloutBlockWithColors({
       id: 'callout-1',
       contentIds: ['child-1', 'child-2'],
@@ -481,26 +546,40 @@ describe('Toolbar — callout color adaptation for child blocks', () => {
       holder: childHolder,
     });
 
-    const { toolbar, plusButton } = createToolbarForCalloutColor(callout);
+    const { toolbar, plusButton, settingsToggler } = createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockImplementation((id: string) => {
+          if (id === 'callout-1') return callout;
+
+          return undefined;
+        }),
+      } as unknown as BlokModules['BlockManager'],
+    });
 
     toolbar.moveAndOpen(child);
 
-    expect(plusButton.style.color).toBe('inherit');
+    expect(plusButton.style.backgroundColor).toBe('');
+    expect(settingsToggler.style.backgroundColor).toBe('');
 
     document.body.removeChild(callout.holder);
   });
 
-  it('sets color to inherit on settings toggler when targeting child of a callout with custom text color', () => {
+  it('clears backgroundColor when moving from callout child to regular block', () => {
     const callout = createCalloutBlockWithColors({
       id: 'callout-1',
       contentIds: ['child-1', 'child-2'],
-      textColor: 'var(--blok-color-blue-text)',
+      backgroundColor: 'var(--blok-color-blue-bg)',
     });
 
     const childHolder = document.createElement('div');
+    const regularHolder = document.createElement('div');
 
     callout.holder.appendChild(childHolder);
     document.body.appendChild(callout.holder);
+    document.body.appendChild(regularHolder);
 
     const child = createBlock({
       id: 'child-2',
@@ -509,131 +588,66 @@ describe('Toolbar — callout color adaptation for child blocks', () => {
       holder: childHolder,
     });
 
-    const { toolbar, settingsToggler } = createToolbarForCalloutColor(callout);
-
-    toolbar.moveAndOpen(child);
-
-    expect(settingsToggler.style.color).toBe('inherit');
-
-    document.body.removeChild(callout.holder);
-  });
-
-  it('sets color to inherit when callout has only custom background color (no text color)', () => {
-    const callout = createCalloutBlockWithColors({
-      id: 'callout-1',
-      contentIds: ['child-1', 'child-2'],
-      backgroundColor: 'var(--blok-color-yellow-bg)',
-    });
-
-    const childHolder = document.createElement('div');
-
-    callout.holder.appendChild(childHolder);
-    document.body.appendChild(callout.holder);
-
-    const child = createBlock({
-      id: 'child-2',
+    const regularBlock = createBlock({
+      id: 'para-1',
       name: 'paragraph',
-      parentId: 'callout-1',
-      holder: childHolder,
+      holder: regularHolder,
     });
 
-    const { toolbar, plusButton } = createToolbarForCalloutColor(callout);
+    const { toolbar, plusButton, settingsToggler } = createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockImplementation((id: string) => {
+          if (id === 'callout-1') return callout;
 
+          return undefined;
+        }),
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    // Move to callout child — bg should be overridden
     toolbar.moveAndOpen(child);
+    expect(plusButton.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 85%, white)');
+    expect(settingsToggler.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 85%, white)');
 
-    expect(plusButton.style.color).toBe('inherit');
+    // Move to regular block — bg override should be cleared
+    toolbar.moveAndOpen(regularBlock);
+    expect(plusButton.style.backgroundColor).toBe('');
+    expect(settingsToggler.style.backgroundColor).toBe('');
 
     document.body.removeChild(callout.holder);
+    document.body.removeChild(regularHolder);
   });
 
-  it('does NOT set color when callout has no custom colors', () => {
-    const callout = createCalloutBlockWithColors({
-      id: 'callout-1',
-      contentIds: ['child-1', 'child-2'],
-    });
-
-    const childHolder = document.createElement('div');
-
-    callout.holder.appendChild(childHolder);
-    document.body.appendChild(callout.holder);
-
-    const child = createBlock({
-      id: 'child-2',
-      name: 'paragraph',
-      parentId: 'callout-1',
-      holder: childHolder,
-    });
-
-    const { toolbar, plusButton } = createToolbarForCalloutColor(callout);
-
-    toolbar.moveAndOpen(child);
-
-    expect(plusButton.style.color).toBe('');
-
-    document.body.removeChild(callout.holder);
-  });
-
-  it('clears color when moving from callout child to a regular block', () => {
+  it('does NOT set backgroundColor when target IS the callout block itself', () => {
     const callout = createCalloutBlockWithColors({
       id: 'callout-1',
       contentIds: ['child-1'],
-      textColor: 'var(--blok-color-red-text)',
-      backgroundColor: 'var(--blok-color-red-bg)',
+      backgroundColor: 'var(--blok-color-green-bg)',
     });
 
-    const childHolder = document.createElement('div');
-    const regularHolder = document.createElement('div');
-
-    callout.holder.appendChild(childHolder);
     document.body.appendChild(callout.holder);
-    document.body.appendChild(regularHolder);
 
-    const child = createBlock({
-      id: 'child-1',
-      name: 'paragraph',
-      parentId: 'callout-1',
-      holder: childHolder,
+    const result = createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [callout],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockReturnValue(undefined),
+      } as unknown as BlokModules['BlockManager'],
     });
 
-    const regularBlock = createBlock({
-      id: 'para-1',
-      name: 'paragraph',
-      holder: regularHolder,
-    });
+    const priv = result.toolbar as unknown as Record<string, unknown>;
 
-    const { toolbar, plusButton, settingsToggler } = createToolbarForCalloutColor(callout);
+    (priv.toolboxInstance as Record<string, unknown>).updateLeftAlignElement = vi.fn();
 
-    // Move to callout child — color should be set
-    toolbar.moveAndOpen(child);
-    expect(plusButton.style.color).toBe('inherit');
-    expect(settingsToggler.style.color).toBe('inherit');
+    result.toolbar.moveAndOpen(callout);
 
-    // Move to regular block — color should be cleared
-    toolbar.moveAndOpen(regularBlock);
-    expect(plusButton.style.color).toBe('');
-    expect(settingsToggler.style.color).toBe('');
+    expect(result.plusButton.style.backgroundColor).toBe('');
+    expect(result.settingsToggler.style.backgroundColor).toBe('');
 
     document.body.removeChild(callout.holder);
-    document.body.removeChild(regularHolder);
-  });
-
-  it('does NOT set color for blocks that are not inside a callout', () => {
-    const regularHolder = document.createElement('div');
-
-    document.body.appendChild(regularHolder);
-
-    const regularBlock = createBlock({
-      id: 'para-1',
-      name: 'paragraph',
-      holder: regularHolder,
-    });
-
-    const { toolbar, plusButton } = createToolbar();
-
-    toolbar.moveAndOpen(regularBlock);
-
-    expect(plusButton.style.color).toBe('');
-
-    document.body.removeChild(regularHolder);
   });
 });

@@ -1626,55 +1626,45 @@ describe('Toolbox', () => {
     });
   });
 
-  describe('setCalloutColors', () => {
-    const createToolboxForCalloutTest = (): { toolbox: Toolbox; popoverEl: HTMLElement } => {
+  describe('setCalloutBackground', () => {
+    it('sets --blok-search-input-bg and transparent border on popover element when color is provided', () => {
       const popoverEl = document.createElement('div');
 
       mockPopoverInstance.getElement.mockReturnValue(popoverEl);
 
       const toolbox = new Toolbox({
-        api: {
-          blocks: {
-            getCurrentBlockIndex: vi.fn(() => 0),
-            getBlockByIndex: vi.fn(() => undefined),
-            convert: vi.fn(),
-            composeBlockData: vi.fn(async () => ({})),
-            insert: vi.fn(),
-            setBlockParent: vi.fn(),
-            transact: vi.fn((fn: () => void) => fn()),
-            stopBlockMutationWatching: vi.fn(),
-          },
-          caret: { setToBlock: vi.fn() },
-          toolbar: { close: vi.fn() },
-          ui: { nodes: { redactor: document.createElement('div') } },
-          events: { on: vi.fn(), off: vi.fn() },
-        } as unknown as API,
+        api: mocks.api,
         tools: createToolsCollection([]),
-        i18nLabels: { filter: 'Filter', nothingFound: 'Nothing found', slashSearchPlaceholder: 'Type to search' },
-        i18n: { t: vi.fn((key: string) => key), has: vi.fn(() => false) },
+        i18nLabels,
+        i18n: mockI18n,
       });
 
-      return { toolbox, popoverEl };
-    };
+      toolbox.setCalloutBackground('var(--blok-color-brown-bg)');
 
-    it('sets --color-search-input-bg to transparent when hasCalloutColors is true', () => {
-      const { toolbox, popoverEl } = createToolboxForCalloutTest();
-
-      toolbox.setCalloutColors(true);
-
-      expect(popoverEl.style.getPropertyValue('--color-search-input-bg')).toBe('transparent');
+      expect(popoverEl.style.getPropertyValue('--blok-search-input-bg')).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 85%, white)');
+      expect(popoverEl.style.getPropertyValue('--blok-search-input-border')).toBe('transparent');
     });
 
-    it('removes --color-search-input-bg when hasCalloutColors is false', () => {
-      const { toolbox, popoverEl } = createToolboxForCalloutTest();
+    it('removes overrides from popover element when color is null', () => {
+      const popoverEl = document.createElement('div');
 
-      // First set it
-      toolbox.setCalloutColors(true);
-      expect(popoverEl.style.getPropertyValue('--color-search-input-bg')).toBe('transparent');
+      popoverEl.style.setProperty('--blok-search-input-bg', 'var(--blok-color-brown-bg)');
+      popoverEl.style.setProperty('--blok-search-input-border', 'transparent');
 
-      // Then clear it
-      toolbox.setCalloutColors(false);
-      expect(popoverEl.style.getPropertyValue('--color-search-input-bg')).toBe('');
+      mockPopoverInstance.getElement.mockReturnValue(popoverEl);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: createToolsCollection([]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.setCalloutBackground(null);
+
+      expect(popoverEl.style.getPropertyValue('--blok-search-input-bg')).toBe('');
+      expect(popoverEl.style.getPropertyValue('--blok-search-input-border')).toBe('');
     });
   });
+
 });

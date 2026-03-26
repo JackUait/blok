@@ -262,3 +262,24 @@ test('emoji is vertically centered against H2 heading in callout', async ({ page
 
   expect(Math.abs(emojiCenter - headerFirstLineCenter)).toBeLessThanOrEqual(2);
 });
+
+test('search input border is not forced transparent inside colored callout', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { id: 'callout-1', type: 'callout', data: { emoji: '💡', backgroundColor: 'red' }, content: ['para-1'] },
+      { id: 'para-1', type: 'paragraph', data: { text: '' }, parent: 'callout-1' },
+    ],
+  });
+
+  // The callout wrapper must NOT override --blok-search-input-border to transparent.
+  // Empty string or absent means the theme default border (visible) applies.
+  const calloutComponent = page.locator(CALLOUT_BLOCK_SELECTOR);
+  const borderVar = await calloutComponent.evaluate(el => {
+    const contentEl = el.querySelector('[data-blok-element-content]');
+    const wrapperEl = contentEl?.firstElementChild as HTMLElement | null;
+
+    return wrapperEl?.style.getPropertyValue('--blok-search-input-border') ?? '';
+  });
+
+  expect(borderVar).not.toBe('transparent');
+});

@@ -123,15 +123,15 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     const arrow = element.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
     expect(arrow).not.toBeNull();
 
-    // In read-only mode the toggle starts closed (no saved isOpen, default = !readOnly = false).
+    // Toggle starts open by default (no saved isOpen, default = true).
     const attrBefore = element.getAttribute('data-blok-toggle-open');
-    expect(attrBefore).toBe('false');
+    expect(attrBefore).toBe('true');
 
     // After arrow click, the state MUST flip — read-only should not block expand/collapse.
     arrow.click();
     const attrAfter = element.getAttribute('data-blok-toggle-open');
 
-    expect(attrAfter).toBe('true');
+    expect(attrAfter).toBe('false');
   });
 
   it('header buildArrow DOES toggle when read-only', () => {
@@ -144,16 +144,16 @@ describe('Bug 10: Toggle arrow click guard in read-only mode', () => {
     const arrow = element.querySelector('[data-blok-toggle-arrow]') as HTMLElement;
     expect(arrow).not.toBeNull();
 
-    // In read-only mode the toggle starts closed (default = !readOnly = false).
+    // Toggle starts open by default (default = true).
     const heading = element.querySelector('[data-blok-toggle-open]');
     const attrBefore = heading?.getAttribute('data-blok-toggle-open');
-    expect(attrBefore).toBe('false');
+    expect(attrBefore).toBe('true');
 
     // Clicking the arrow MUST flip the open state.
     arrow.click();
     const attrAfter = heading?.getAttribute('data-blok-toggle-open');
 
-    expect(attrAfter).toBe('true');
+    expect(attrAfter).toBe('false');
   });
 });
 
@@ -230,14 +230,14 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
       expect(element.getAttribute('data-blok-toggle-open')).toBe('false');
     });
 
-    it('falls back to closed when data.isOpen is undefined (no saved state)', () => {
+    it('falls back to open when data.isOpen is undefined (no saved state)', () => {
       const { toggle: toggleEdit } = createToggle({ text: '' }, { readOnly: false });
       const elEdit = toggleEdit.render();
-      expect(elEdit.getAttribute('data-blok-toggle-open')).toBe('false');
+      expect(elEdit.getAttribute('data-blok-toggle-open')).toBe('true');
 
       const { toggle: toggleRO } = createToggle({ text: '' }, { readOnly: true });
       const elRO = toggleRO.render();
-      expect(elRO.getAttribute('data-blok-toggle-open')).toBe('false');
+      expect(elRO.getAttribute('data-blok-toggle-open')).toBe('true');
     });
   });
 
@@ -265,20 +265,20 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
       expect(heading?.getAttribute('data-blok-toggle-open')).toBe('false');
     });
 
-    it('falls back to closed when data.isOpen is undefined', () => {
+    it('falls back to open when data.isOpen is undefined', () => {
       const { header: hEdit } = createHeader(
         { text: 'H', level: 2, isToggleable: true },
         { readOnly: false }
       );
       const wEdit = hEdit.render();
-      expect(wEdit.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('false');
+      expect(wEdit.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('true');
 
       const { header: hRO } = createHeader(
         { text: 'H', level: 2, isToggleable: true },
         { readOnly: true }
       );
       const wRO = hRO.render();
-      expect(wRO.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('false');
+      expect(wRO.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('true');
     });
   });
 });
@@ -380,12 +380,12 @@ describe('Bug 5: Toggle collapsed state persisted in save()', () => {
     });
 
     it('saves current state when no explicit isOpen was provided in data', () => {
-      // When no isOpen in data, _isOpen = data.isOpen ?? false = false (always closed by default)
+      // When no isOpen in data, _isOpen = data.isOpen ?? true = true (always open by default)
       const { toggle } = createToggle({ text: '' }, { readOnly: false });
       toggle.render();
       const saved = toggle.save();
 
-      expect(saved.isOpen).toBe(false);
+      expect(saved.isOpen).toBe(true);
     });
   });
 

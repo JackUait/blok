@@ -1166,6 +1166,22 @@
 }
 
 /**
+ * Callout emoji vertical centering for heading first children.
+ * Headings have taller line boxes than the emoji button, so the emoji
+ * needs a top margin to shift its center down to match the heading's
+ * first line center.  Values: (heading-line-height − emoji-content) / 2 + 1px mt-px.
+ */
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h1) {
+  margin-top: 7.5px;
+}
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h2) {
+  margin-top: 3.6px;
+}
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h3) {
+  margin-top: 1px;
+}
+
+/**
  * Table cell block wrapper overrides
  * Strip all nested spacing so only the cell's own padding (py-1 px-2) provides spacing.
  * Targets: block wrapper (py/my), .blok-block (py/px), and tool elements (mt/mb).

@@ -1157,6 +1157,15 @@
 }
 
 /**
+ * Child-container heading overrides (callout, toggle heading)
+ * Inside [data-blok-toggle-children], headings should match paragraph spacing
+ * rather than using their large root-level top margins (mt-8, mt-[26px], etc.).
+ */
+[data-blok-toggle-children] :is(h1, h2, h3, h4, h5, h6) {
+  @apply mt-px;
+}
+
+/**
  * Table cell block wrapper overrides
  * Strip all nested spacing so only the cell's own padding (py-1 px-2) provides spacing.
  * Targets: block wrapper (py/my), .blok-block (py/px), and tool elements (mt/mb).

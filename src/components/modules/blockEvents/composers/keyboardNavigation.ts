@@ -197,6 +197,23 @@ export class KeyboardNavigation extends BlockEventComposer {
       return null;
     }
 
+    const isToggleParent = parentBlock.holder.querySelector('[data-blok-toggle-open]') !== null;
+
+    if (!isToggleParent) {
+      /**
+       * Non-toggle containers (e.g. callout): when the only child is empty,
+       * exit by inserting a new block after the container. The container and
+       * its child are preserved so the user can return to it.
+       */
+      if (parentBlock.contentIds.length !== 1) {
+        return null;
+      }
+
+      const parentIndex = this.Blok.BlockManager.getBlockIndex(parentBlock);
+
+      return this.Blok.BlockManager.insertDefaultBlockAtIndex(parentIndex + 1);
+    }
+
     this.Blok.BlockManager.setBlockParent(currentBlock, null);
     const parentIndex = this.Blok.BlockManager.getBlockIndex(parentBlock);
     const currentIndex = this.Blok.BlockManager.getBlockIndex(currentBlock);

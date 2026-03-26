@@ -211,7 +211,7 @@ export class CalloutTool implements BlockTool {
 
       this._dom.wrapper.style.backgroundColor = bgVar;
       this._dom.wrapper.style.border = '';
-      this._dom.wrapper.style.setProperty('--blok-search-input-bg', `color-mix(in srgb, ${bgVar} 80%, white)`);
+      this._dom.wrapper.style.setProperty('--blok-search-input-bg', `color-mix(in srgb, ${bgVar} 90%, white)`);
     } else {
       this._dom.wrapper.style.backgroundColor = '';
       this._dom.wrapper.style.border = '1px solid var(--blok-callout-default-border, #e5e7eb)';

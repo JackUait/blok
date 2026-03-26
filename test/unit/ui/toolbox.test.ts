@@ -1641,7 +1641,7 @@ describe('Toolbox', () => {
 
       toolbox.setCalloutBackground('var(--blok-color-brown-bg)');
 
-      expect(popoverEl.style.getPropertyValue('--blok-search-input-bg')).toBe('light-dark(color-mix(in srgb, var(--blok-color-brown-bg) 70%, white), color-mix(in srgb, var(--blok-color-brown-bg) 95%, white))');
+      expect(popoverEl.style.getPropertyValue('--blok-search-input-bg')).toBe('light-dark(color-mix(in srgb, var(--blok-color-brown-bg) 70%, white), color-mix(in srgb, var(--blok-color-brown-bg) 85%, white))');
     });
 
     it('removes overrides from popover element when color is null', () => {

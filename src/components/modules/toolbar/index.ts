@@ -442,7 +442,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       : this.getCalloutBackgroundColor(targetBlock);
 
     if (calloutBg !== null) {
-      wrapper.style.setProperty('--blok-bg-light', `light-dark(color-mix(in srgb, ${calloutBg} 70%, white), color-mix(in srgb, ${calloutBg} 95%, white))`);
+      wrapper.style.setProperty('--blok-bg-light', `light-dark(color-mix(in srgb, ${calloutBg} 70%, white), color-mix(in srgb, ${calloutBg} 85%, white))`);
     } else {
       wrapper.style.removeProperty('--blok-bg-light');
     }

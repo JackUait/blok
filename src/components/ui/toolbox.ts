@@ -346,7 +346,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * instead of at the trigger element (which is outside the table).
      * Must be called after show() so the popover is in the DOM.
      */
-    if (this.isInsideTableCell && this.popover instanceof PopoverDesktop) {
+    const triggerHidden = this.triggerElement?.getBoundingClientRect().height === 0;
+
+    if ((this.isInsideTableCell || triggerHidden) && this.popover instanceof PopoverDesktop) {
       const caretRect = SelectionUtils.rect;
 
       this.popover.updatePosition(caretRect);
@@ -749,7 +751,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     this.currentBlockForSearch = currentBlock.holder;
-    this.currentContentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
+
+    const activeEl = document.activeElement;
+
+    this.currentContentEditable = activeEl instanceof HTMLElement && activeEl.isContentEditable && this.currentBlockForSearch.contains(activeEl)
+      ? activeEl
+      : this.currentBlockForSearch.querySelector('[contenteditable="true"]');
+
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
     }

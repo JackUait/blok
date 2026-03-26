@@ -212,7 +212,7 @@ describe('CalloutTool', () => {
       expect(wrapper.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
     });
 
-    it('sets --blok-search-input-bg to transparent when background color is applied', async () => {
+    it('sets --blok-search-input-bg to color-mix variant when background color is applied', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const tool = new CalloutTool(createOptions());
       const wrapper = tool.render();
@@ -226,7 +226,8 @@ describe('CalloutTool', () => {
         '[data-blok-testid="callout-color-swatch-background-color-blue"]'
       )!.click();
 
-      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('transparent');
+      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 85%, white)');
+      expect(wrapper.style.getPropertyValue('--blok-search-input-border')).toBe('transparent');
     });
 
     it('removes --blok-search-input-bg when background color is cleared', async () => {
@@ -234,7 +235,7 @@ describe('CalloutTool', () => {
       const tool = new CalloutTool(createOptions({ backgroundColor: 'blue' }));
       const wrapper = tool.render();
 
-      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('transparent');
+      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 85%, white)');
 
       const settings = tool.renderSettings() as {
         children: { items: Array<{ element: HTMLElement }> };

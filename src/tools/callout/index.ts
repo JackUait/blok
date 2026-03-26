@@ -207,13 +207,17 @@ export class CalloutTool implements BlockTool {
     }
 
     if (backgroundColor !== null) {
-      this._dom.wrapper.style.backgroundColor = colorVarName(backgroundColor, 'bg');
+      const bgVar = colorVarName(backgroundColor, 'bg');
+
+      this._dom.wrapper.style.backgroundColor = bgVar;
       this._dom.wrapper.style.border = '';
-      this._dom.wrapper.style.setProperty('--blok-search-input-bg', 'transparent');
+      this._dom.wrapper.style.setProperty('--blok-search-input-bg', `color-mix(in srgb, ${bgVar} 85%, white)`);
+      this._dom.wrapper.style.setProperty('--blok-search-input-border', 'transparent');
     } else {
       this._dom.wrapper.style.backgroundColor = '';
       this._dom.wrapper.style.border = '1px solid var(--blok-callout-default-border, #e5e7eb)';
       this._dom.wrapper.style.removeProperty('--blok-search-input-bg');
+      this._dom.wrapper.style.removeProperty('--blok-search-input-border');
     }
   }
 

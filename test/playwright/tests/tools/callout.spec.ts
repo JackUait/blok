@@ -198,3 +198,67 @@ test('header inside callout has same margin-top as paragraph', async ({ page }) 
 
   expect(headerMarginTop).toBe(paragraphMarginTop);
 });
+
+test('emoji is vertically centered against heading first line in callout', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['header-1'] },
+      { id: 'header-1', type: 'header', data: { text: 'Heading 1', level: 1 }, parent: 'callout-1' },
+    ],
+  });
+
+  const emojiBtn = page.getByTestId('callout-emoji-btn');
+  const headerEl = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-tool="header"]`);
+
+  await expect(emojiBtn).toBeVisible();
+  await expect(headerEl).toBeVisible();
+
+  // Compare vertical centers: emoji center should be within 2px of the heading's first line center
+  const emojiCenter = await emojiBtn.evaluate(el => {
+    const r = el.getBoundingClientRect();
+
+    return (r.top + r.bottom) / 2;
+  });
+  const headerFirstLineCenter = await headerEl.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    const paddingTop = parseFloat(style.paddingTop);
+    const lineHeight = parseFloat(style.lineHeight);
+
+    // First line center = element top + padding-top + half the line height
+    return r.top + paddingTop + lineHeight / 2;
+  });
+
+  expect(Math.abs(emojiCenter - headerFirstLineCenter)).toBeLessThanOrEqual(2);
+});
+
+test('emoji is vertically centered against H2 heading in callout', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['header-1'] },
+      { id: 'header-1', type: 'header', data: { text: 'Heading 2', level: 2 }, parent: 'callout-1' },
+    ],
+  });
+
+  const emojiBtn = page.getByTestId('callout-emoji-btn');
+  const headerEl = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-tool="header"]`);
+
+  await expect(emojiBtn).toBeVisible();
+  await expect(headerEl).toBeVisible();
+
+  const emojiCenter = await emojiBtn.evaluate(el => {
+    const r = el.getBoundingClientRect();
+
+    return (r.top + r.bottom) / 2;
+  });
+  const headerFirstLineCenter = await headerEl.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    const paddingTop = parseFloat(style.paddingTop);
+    const lineHeight = parseFloat(style.lineHeight);
+
+    return r.top + paddingTop + lineHeight / 2;
+  });
+
+  expect(Math.abs(emojiCenter - headerFirstLineCenter)).toBeLessThanOrEqual(2);
+});

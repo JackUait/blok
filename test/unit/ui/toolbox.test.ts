@@ -1058,6 +1058,52 @@ describe('Toolbox', () => {
       expect(mocks.api.blocks.transact).not.toHaveBeenCalled();
       expect(mocks.api.blocks.setBlockParent).not.toHaveBeenCalled();
     });
+
+    it('should replace block containing search text when toolbox was opened without slash (plus button)', async () => {
+      /**
+       * Simulate the plus-button flow:
+       * 1. Plus button creates an empty block and opens toolbox without slash
+       * 2. User types "head" to search — this goes into the block's contentEditable
+       * 3. Block is no longer empty (contains "head") but should still be replaced
+       */
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = 'head';
+      holderElement.appendChild(contentEditableElement);
+
+      const blockWithSearchText = {
+        ...mocks.blockAPI,
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(blockWithSearchText as unknown as BlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      // Open toolbox without slash (plus button mode)
+      toolbox.open(false);
+
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // Block should be replaced (index 0, shouldReplace=true) despite containing search text
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        undefined,
+        undefined,
+        0,
+        undefined,
+        true
+      );
+    });
   });
 
   describe('table tool filtering inside table cells', () => {
@@ -1577,6 +1623,58 @@ describe('Toolbox', () => {
 
       expect(textItem).toBeDefined();
       expect(textItem?.englishTitle).toBe('Text');
+    });
+  });
+
+  describe('setCalloutColors', () => {
+    const createToolboxForCalloutTest = (): { toolbox: Toolbox; popoverEl: HTMLElement } => {
+      const popoverEl = document.createElement('div');
+
+      mockPopoverInstance.getElement.mockReturnValue(popoverEl);
+
+      const toolbox = new Toolbox({
+        api: {
+          blocks: {
+            getCurrentBlockIndex: vi.fn(() => 0),
+            getBlockByIndex: vi.fn(() => undefined),
+            convert: vi.fn(),
+            composeBlockData: vi.fn(async () => ({})),
+            insert: vi.fn(),
+            setBlockParent: vi.fn(),
+            transact: vi.fn((fn: () => void) => fn()),
+            stopBlockMutationWatching: vi.fn(),
+          },
+          caret: { setToBlock: vi.fn() },
+          toolbar: { close: vi.fn() },
+          ui: { nodes: { redactor: document.createElement('div') } },
+          events: { on: vi.fn(), off: vi.fn() },
+        } as unknown as API,
+        tools: createToolsCollection([]),
+        i18nLabels: { filter: 'Filter', nothingFound: 'Nothing found', slashSearchPlaceholder: 'Type to search' },
+        i18n: { t: vi.fn((key: string) => key), has: vi.fn(() => false) },
+      });
+
+      return { toolbox, popoverEl };
+    };
+
+    it('sets --color-search-input-bg to transparent when hasCalloutColors is true', () => {
+      const { toolbox, popoverEl } = createToolboxForCalloutTest();
+
+      toolbox.setCalloutColors(true);
+
+      expect(popoverEl.style.getPropertyValue('--color-search-input-bg')).toBe('transparent');
+    });
+
+    it('removes --color-search-input-bg when hasCalloutColors is false', () => {
+      const { toolbox, popoverEl } = createToolboxForCalloutTest();
+
+      // First set it
+      toolbox.setCalloutColors(true);
+      expect(popoverEl.style.getPropertyValue('--color-search-input-bg')).toBe('transparent');
+
+      // Then clear it
+      toolbox.setCalloutColors(false);
+      expect(popoverEl.style.getPropertyValue('--color-search-input-bg')).toBe('');
     });
   });
 });

@@ -227,6 +227,28 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
+   * Applies or clears callout color overrides on the popover element.
+   * When the toolbox opens inside a callout with custom colors, the search
+   * input background should blend with the callout background instead of
+   * using the hardcoded search-input-bg variable.
+   *
+   * @param hasCalloutColors - true when the toolbox is inside a colored callout
+   */
+  public setCalloutColors(hasCalloutColors: boolean): void {
+    const popoverEl = this.popover?.getElement();
+
+    if (!popoverEl) {
+      return;
+    }
+
+    if (hasCalloutColors) {
+      popoverEl.style.setProperty('--color-search-input-bg', 'transparent');
+    } else {
+      popoverEl.style.removeProperty('--color-search-input-bg');
+    }
+  }
+
+  /**
    * Returns root block settings element
    */
   public getElement(): HTMLElement | null {
@@ -629,8 +651,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     /**
      * Check if the block contains only slash search text (e.g., "/head").
      * If so, treat it as empty and replace it with the new block.
+     *
+     * When opened without slash (via plus button), any text in the block
+     * is a search query, not user content — always replace.
      */
-    const shouldReplaceBlock = currentBlock.isEmpty || this.isBlockSlashSearchOnly(currentBlock.holder);
+    const shouldReplaceBlock = currentBlock.isEmpty
+      || this.isBlockSlashSearchOnly(currentBlock.holder)
+      || !this.openedWithSlash;
 
     /**
      * On mobile version, we see the Plus Button even near non-empty blocks,

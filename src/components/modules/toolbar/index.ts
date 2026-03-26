@@ -428,6 +428,19 @@ export class Toolbar extends Module<ToolbarNodes> {
       settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
     }
 
+    /**
+     * Adapt toolbar button colors for blocks inside a callout with custom colors.
+     * Using 'inherit' lets the SVG icons pick up the callout wrapper's text color
+     * via CSS inheritance instead of the hardcoded text-text-secondary class.
+     */
+    const insideColoredCallout = this.isInsideColoredCallout(targetBlock);
+
+    plusButton.style.color = insideColoredCallout ? 'inherit' : '';
+
+    if (settingsToggler) {
+      settingsToggler.style.color = insideColoredCallout ? 'inherit' : '';
+    }
+
     const targetBlockHolder = targetBlock.holder;
     const { isMobile } = this.Blok.UI;
 
@@ -563,9 +576,11 @@ export class Toolbar extends Module<ToolbarNodes> {
      * in case they were hidden for table cell blocks.
      */
     plusButton.style.display = '';
+    plusButton.style.color = '';
 
     if (settingsToggler) {
       settingsToggler.style.display = '';
+      settingsToggler.style.color = '';
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -659,10 +674,12 @@ export class Toolbar extends Module<ToolbarNodes> {
      */
     if (this.nodes.plusButton) {
       this.nodes.plusButton.style.display = '';
+      this.nodes.plusButton.style.color = '';
     }
 
     if (this.nodes.settingsToggler) {
       this.nodes.settingsToggler.style.display = '';
+      this.nodes.settingsToggler.style.color = '';
     }
 
     /**
@@ -728,6 +745,35 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     return parentBlock.contentIds[0] === block.id;
+  }
+
+  /**
+   * Checks whether the given block is inside a callout that has custom
+   * text or background color applied via inline styles.
+   *
+   * @returns true when the parent callout wrapper has a non-empty
+   *          style.color or style.backgroundColor
+   */
+  private isInsideColoredCallout(block: Block): boolean {
+    if (!block.parentId) {
+      return false;
+    }
+
+    const parentBlock = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    if (!parentBlock || parentBlock.name !== 'callout') {
+      return false;
+    }
+
+    const calloutWrapper = parentBlock.holder.querySelector<HTMLElement>(
+      '[data-blok-component="callout"]'
+    );
+
+    if (!calloutWrapper) {
+      return false;
+    }
+
+    return calloutWrapper.style.color !== '' || calloutWrapper.style.backgroundColor !== '';
   }
 
   private isFocusInsideTableCell(): boolean {
@@ -920,6 +966,13 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.toolboxOpened, 'true');
+
+      /**
+       * Adapt search input colors when toolbox opens inside a colored callout.
+       */
+      const insideCallout = this.hoveredBlock !== null && this.isInsideColoredCallout(this.hoveredBlock);
+
+      this.toolboxInstance?.setCalloutColors(insideCallout);
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {

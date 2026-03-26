@@ -106,12 +106,12 @@ test.describe('Toggle Headings', () => {
       await expect(arrow).toHaveCount(0);
     });
 
-    test('toggle heading starts expanded by default in editing mode', async ({ page }) => {
-      await createBlok(page, createHeaderData('Expanded H2', 2, true));
+    test('toggle heading starts collapsed by default in editing mode', async ({ page }) => {
+      await createBlok(page, createHeaderData('Collapsed H2', 2, true));
 
-      const header = page.getByRole('heading', { level: 2, name: 'Expanded H2' });
+      const header = page.getByRole('heading', { level: 2, name: 'Collapsed H2' });
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('arrow is vertically centered in toggle heading', async ({ page }) => {
@@ -182,32 +182,32 @@ test.describe('Toggle Headings', () => {
   });
 
   test.describe('expand/collapse', () => {
-    test('collapses when arrow is clicked (starts expanded)', async ({ page }) => {
-      await createBlok(page, createHeaderData('Collapsible H2', 2, true));
+    test('expands when arrow is clicked (starts collapsed)', async ({ page }) => {
+      await createBlok(page, createHeaderData('Expandable H2', 2, true));
 
-      const header = page.getByRole('heading', { level: 2, name: 'Collapsible H2' });
+      const header = page.getByRole('heading', { level: 2, name: 'Expandable H2' });
       const arrow = page.locator('[data-blok-toggle-arrow]');
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
 
       await arrow.click();
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
-    test('re-expands when arrow is clicked again', async ({ page }) => {
-      await createBlok(page, createHeaderData('Re-expandable H2', 2, true));
+    test('re-collapses when arrow is clicked again', async ({ page }) => {
+      await createBlok(page, createHeaderData('Re-collapsible H2', 2, true));
 
-      const header = page.getByRole('heading', { level: 2, name: 'Re-expandable H2' });
+      const header = page.getByRole('heading', { level: 2, name: 'Re-collapsible H2' });
       const arrow = page.locator('[data-blok-toggle-arrow]');
 
-      // Collapse (starts expanded)
-      await arrow.click();
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
-
-      // Expand again
+      // Expand (starts collapsed)
       await arrow.click();
       await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+
+      // Collapse again
+      await arrow.click();
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
   });
 

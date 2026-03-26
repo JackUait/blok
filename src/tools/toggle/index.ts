@@ -50,7 +50,7 @@ export class ToggleItem implements BlockTool {
     this.readOnly = readOnly;
     this._settings = config || {};
     this._data = this.normalizeData(data);
-    this._isOpen = this._data.isOpen ?? !readOnly;
+    this._isOpen = this._data.isOpen ?? false;
 
     if (block) {
       this.blockId = block.id;

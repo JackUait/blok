@@ -1275,7 +1275,7 @@
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
-  @apply bg-search-input-bg rounded-md transition-colors duration-150 w-fit max-w-[240px] px-2 py-1;
+  @apply bg-search-input-bg rounded-[10px] transition-colors duration-150 w-fit max-w-[240px] px-2;
 }
 
 [data-blok-slash-search]::after {

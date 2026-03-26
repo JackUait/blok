@@ -154,3 +154,47 @@ test('read-only mode: emoji button is not interactive', async ({ page }) => {
   }, { holder: HOLDER_ID });
   await expect(page.getByTestId('callout-emoji-btn')).toBeDisabled();
 });
+
+test('header and paragraph inside callout have the same left text position', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['header-1', 'para-1'] },
+      { id: 'header-1', type: 'header', data: { text: 'Heading', level: 2 }, parent: 'callout-1' },
+      { id: 'para-1', type: 'paragraph', data: { text: 'Paragraph text' }, parent: 'callout-1' },
+    ],
+  });
+
+  const childrenContainer = `${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children]`;
+  const headerEl = page.locator(`${childrenContainer} [data-blok-tool="header"]`);
+  const paragraphEl = page.locator(`${childrenContainer} [data-blok-tool="paragraph"]`);
+
+  await expect(headerEl).toBeVisible();
+  await expect(paragraphEl).toBeVisible();
+
+  const headerLeft = await headerEl.evaluate(el => el.getBoundingClientRect().left);
+  const paragraphLeft = await paragraphEl.evaluate(el => el.getBoundingClientRect().left);
+
+  expect(headerLeft).toBe(paragraphLeft);
+});
+
+test('header inside callout has same margin-top as paragraph', async ({ page }) => {
+  await createBlok(page, {
+    blocks: [
+      { id: 'callout-1', type: 'callout', data: { emoji: '💡', color: 'default' }, content: ['header-1', 'para-1'] },
+      { id: 'header-1', type: 'header', data: { text: 'Heading', level: 2 }, parent: 'callout-1' },
+      { id: 'para-1', type: 'paragraph', data: { text: 'Paragraph text' }, parent: 'callout-1' },
+    ],
+  });
+
+  const childrenContainer = `${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children]`;
+  const headerEl = page.locator(`${childrenContainer} [data-blok-tool="header"]`);
+  const paragraphEl = page.locator(`${childrenContainer} [data-blok-tool="paragraph"]`);
+
+  await expect(headerEl).toBeVisible();
+  await expect(paragraphEl).toBeVisible();
+
+  const headerMarginTop = await headerEl.evaluate(el => getComputedStyle(el).marginTop);
+  const paragraphMarginTop = await paragraphEl.evaluate(el => getComputedStyle(el).marginTop);
+
+  expect(headerMarginTop).toBe(paragraphMarginTop);
+});

@@ -440,14 +440,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     const calloutBg = isCalloutFirstChild || targetBlock.name === 'callout'
       ? null
       : this.getCalloutBackgroundColor(targetBlock);
-    const buttonBg = calloutBg !== null
-      ? `color-mix(in srgb, ${calloutBg} 85%, white)`
-      : '';
 
-    plusButton.style.backgroundColor = buttonBg;
-
-    if (settingsToggler) {
-      settingsToggler.style.backgroundColor = buttonBg;
+    if (calloutBg !== null) {
+      wrapper.style.setProperty('--blok-bg-light', `color-mix(in srgb, ${calloutBg} 85%, white)`);
+    } else {
+      wrapper.style.removeProperty('--blok-bg-light');
     }
 
     const targetBlockHolder = targetBlock.holder;

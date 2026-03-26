@@ -449,7 +449,7 @@ describe('Toolbar — callout background color override on control buttons', () 
     } as Partial<Block> & { id: string });
   }
 
-  it('sets backgroundColor on plus button when inside callout with background color', () => {
+  it('overrides --blok-bg-light on wrapper when inside callout with background color', () => {
     const callout = createCalloutBlockWithColors({
       id: 'callout-1',
       contentIds: ['child-1', 'child-2'],
@@ -468,7 +468,7 @@ describe('Toolbar — callout background color override on control buttons', () 
       holder: childHolder,
     });
 
-    const { toolbar, plusButton } = createToolbar({
+    const { toolbar, wrapper } = createToolbar({
       BlockManager: {
         currentBlock: null,
         blocks: [],
@@ -483,51 +483,12 @@ describe('Toolbar — callout background color override on control buttons', () 
 
     toolbar.moveAndOpen(child);
 
-    expect(plusButton.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 85%, white)');
+    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 85%, white)');
 
     document.body.removeChild(callout.holder);
   });
 
-  it('sets backgroundColor on settings toggler when inside callout with background color', () => {
-    const callout = createCalloutBlockWithColors({
-      id: 'callout-1',
-      contentIds: ['child-1', 'child-2'],
-      backgroundColor: 'var(--blok-color-brown-bg)',
-    });
-
-    const childHolder = document.createElement('div');
-
-    callout.holder.appendChild(childHolder);
-    document.body.appendChild(callout.holder);
-
-    const child = createBlock({
-      id: 'child-2',
-      name: 'paragraph',
-      parentId: 'callout-1',
-      holder: childHolder,
-    });
-
-    const { toolbar, settingsToggler } = createToolbar({
-      BlockManager: {
-        currentBlock: null,
-        blocks: [],
-        getBlockByChildNode: vi.fn().mockReturnValue(null),
-        getBlockById: vi.fn().mockImplementation((id: string) => {
-          if (id === 'callout-1') return callout;
-
-          return undefined;
-        }),
-      } as unknown as BlokModules['BlockManager'],
-    });
-
-    toolbar.moveAndOpen(child);
-
-    expect(settingsToggler.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-brown-bg) 85%, white)');
-
-    document.body.removeChild(callout.holder);
-  });
-
-  it('does NOT set backgroundColor when callout has no background color', () => {
+  it('does NOT override --blok-bg-light when callout has no background color', () => {
     const callout = createCalloutBlockWithColors({
       id: 'callout-1',
       contentIds: ['child-1', 'child-2'],
@@ -546,7 +507,7 @@ describe('Toolbar — callout background color override on control buttons', () 
       holder: childHolder,
     });
 
-    const { toolbar, plusButton, settingsToggler } = createToolbar({
+    const { toolbar, wrapper } = createToolbar({
       BlockManager: {
         currentBlock: null,
         blocks: [],
@@ -561,13 +522,12 @@ describe('Toolbar — callout background color override on control buttons', () 
 
     toolbar.moveAndOpen(child);
 
-    expect(plusButton.style.backgroundColor).toBe('');
-    expect(settingsToggler.style.backgroundColor).toBe('');
+    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('');
 
     document.body.removeChild(callout.holder);
   });
 
-  it('clears backgroundColor when moving from callout child to regular block', () => {
+  it('clears --blok-bg-light override when moving from callout child to regular block', () => {
     const callout = createCalloutBlockWithColors({
       id: 'callout-1',
       contentIds: ['child-1', 'child-2'],
@@ -594,7 +554,7 @@ describe('Toolbar — callout background color override on control buttons', () 
       holder: regularHolder,
     });
 
-    const { toolbar, plusButton, settingsToggler } = createToolbar({
+    const { toolbar, wrapper } = createToolbar({
       BlockManager: {
         currentBlock: null,
         blocks: [],
@@ -607,21 +567,19 @@ describe('Toolbar — callout background color override on control buttons', () 
       } as unknown as BlokModules['BlockManager'],
     });
 
-    // Move to callout child — bg should be overridden
+    // Move to callout child — variable should be overridden
     toolbar.moveAndOpen(child);
-    expect(plusButton.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 85%, white)');
-    expect(settingsToggler.style.backgroundColor).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 85%, white)');
+    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 85%, white)');
 
-    // Move to regular block — bg override should be cleared
+    // Move to regular block — variable override should be cleared
     toolbar.moveAndOpen(regularBlock);
-    expect(plusButton.style.backgroundColor).toBe('');
-    expect(settingsToggler.style.backgroundColor).toBe('');
+    expect(wrapper.style.getPropertyValue('--blok-bg-light')).toBe('');
 
     document.body.removeChild(callout.holder);
     document.body.removeChild(regularHolder);
   });
 
-  it('does NOT set backgroundColor when target IS the callout block itself', () => {
+  it('does NOT override --blok-bg-light when target IS the callout block itself', () => {
     const callout = createCalloutBlockWithColors({
       id: 'callout-1',
       contentIds: ['child-1'],
@@ -645,8 +603,7 @@ describe('Toolbar — callout background color override on control buttons', () 
 
     result.toolbar.moveAndOpen(callout);
 
-    expect(result.plusButton.style.backgroundColor).toBe('');
-    expect(result.settingsToggler.style.backgroundColor).toBe('');
+    expect(result.wrapper.style.getPropertyValue('--blok-bg-light')).toBe('');
 
     document.body.removeChild(callout.holder);
   });

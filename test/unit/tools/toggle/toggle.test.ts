@@ -95,12 +95,12 @@ describe('ToggleItem', () => {
       expect(contentEl?.innerHTML).toBe('Hello world');
     });
 
-    it('starts expanded by default in editing mode (data-blok-toggle-open="true")', async () => {
+    it('starts collapsed by default in editing mode (data-blok-toggle-open="false")', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions());
       const element = toggle.render();
 
-      expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+      expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
     });
 
     it('starts collapsed by default in readonly mode (data-blok-toggle-open="false")', async () => {
@@ -256,9 +256,9 @@ describe('ToggleItem', () => {
       toggle.render();
       toggle.rendered();
 
-      // Children should be visible (toggle starts expanded in editing mode)
+      // Children should be hidden (toggle starts collapsed by default)
       for (const holder of childHolders) {
-        expect(holder.classList.contains('hidden')).toBe(false);
+        expect(holder.classList.contains('hidden')).toBe(true);
       }
 
       // Simulate undo/redo calling setData — this should reconcile child visibility
@@ -272,7 +272,7 @@ describe('ToggleItem', () => {
   });
 
   describe('arrow aria-label updates', () => {
-    it('updates aria-label to Collapse when expanded', async () => {
+    it('has aria-label Expand when collapsed (default state)', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
@@ -286,11 +286,11 @@ describe('ToggleItem', () => {
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Toggle starts expanded in editing mode — aria-label should already be Collapse
-      expect(arrow.getAttribute('aria-label')).toBe('Collapse');
+      // Toggle starts collapsed by default — aria-label should be Expand
+      expect(arrow.getAttribute('aria-label')).toBe('Expand');
     });
 
-    it('updates aria-label to Expand when collapsed', async () => {
+    it('updates aria-label to Collapse when expanded via click', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
@@ -304,10 +304,10 @@ describe('ToggleItem', () => {
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Click once to collapse (starts expanded)
+      // Click once to expand (starts collapsed)
       arrow.click();
 
-      expect(arrow.getAttribute('aria-label')).toBe('Expand');
+      expect(arrow.getAttribute('aria-label')).toBe('Collapse');
     });
   });
 

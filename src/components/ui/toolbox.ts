@@ -241,7 +241,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     if (color) {
-      popoverEl.style.setProperty('--blok-search-input-bg', `color-mix(in srgb, ${color} 80%, white)`);
+      popoverEl.style.setProperty('--blok-search-input-bg', `color-mix(in srgb, ${color} 90%, white)`);
     } else {
       popoverEl.style.removeProperty('--blok-search-input-bg');
       popoverEl.style.removeProperty('--blok-search-input-border');

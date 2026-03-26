@@ -226,7 +226,7 @@ describe('CalloutTool', () => {
         '[data-blok-testid="callout-color-swatch-background-color-blue"]'
       )!.click();
 
-      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 80%, white)');
+      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 90%, white)');
     });
 
     it('removes --blok-search-input-bg when background color is cleared', async () => {
@@ -234,7 +234,7 @@ describe('CalloutTool', () => {
       const tool = new CalloutTool(createOptions({ backgroundColor: 'blue' }));
       const wrapper = tool.render();
 
-      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 80%, white)');
+      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('color-mix(in srgb, var(--blok-color-blue-bg) 90%, white)');
 
       const settings = tool.renderSettings() as {
         children: { items: Array<{ element: HTMLElement }> };

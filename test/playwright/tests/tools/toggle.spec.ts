@@ -125,12 +125,12 @@ test.describe('Toggle Tool', () => {
       await expect(arrow).toHaveAttribute('tabindex', '0');
     });
 
-    test('defaults to open (data-blok-toggle-open="true") in edit mode when isOpen not in saved data', async ({ page }) => {
-      await createBlok(page, createToggleData('Open by default'));
+    test('defaults to closed (data-blok-toggle-open="false") in edit mode when isOpen not in saved data', async ({ page }) => {
+      await createBlok(page, createToggleData('Closed by default'));
 
       const wrapper = page.locator('[data-blok-toggle-open]');
 
-      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('renders with isOpen=false when saved data specifies it', async ({ page }) => {

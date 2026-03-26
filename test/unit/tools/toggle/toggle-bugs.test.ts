@@ -170,7 +170,7 @@ describe('Bug 9: Body placeholder reappears after last child block is deleted', 
     const api = makeApi(blocks);
 
     const toggle = new ToggleItem({
-      data: { text: '' },
+      data: { text: '', isOpen: true },
       config: {} as ToggleItemConfig,
       api,
       readOnly: false,
@@ -230,10 +230,10 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
       expect(element.getAttribute('data-blok-toggle-open')).toBe('false');
     });
 
-    it('falls back to !readOnly when data.isOpen is undefined (no saved state)', () => {
+    it('falls back to closed when data.isOpen is undefined (no saved state)', () => {
       const { toggle: toggleEdit } = createToggle({ text: '' }, { readOnly: false });
       const elEdit = toggleEdit.render();
-      expect(elEdit.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(elEdit.getAttribute('data-blok-toggle-open')).toBe('false');
 
       const { toggle: toggleRO } = createToggle({ text: '' }, { readOnly: true });
       const elRO = toggleRO.render();
@@ -265,13 +265,13 @@ describe('Bug 6: Saved isOpen state respected in constructor', () => {
       expect(heading?.getAttribute('data-blok-toggle-open')).toBe('false');
     });
 
-    it('falls back to !readOnly when data.isOpen is undefined', () => {
+    it('falls back to closed when data.isOpen is undefined', () => {
       const { header: hEdit } = createHeader(
         { text: 'H', level: 2, isToggleable: true },
         { readOnly: false }
       );
       const wEdit = hEdit.render();
-      expect(wEdit.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('true');
+      expect(wEdit.querySelector('[data-blok-toggle-open]')?.getAttribute('data-blok-toggle-open')).toBe('false');
 
       const { header: hRO } = createHeader(
         { text: 'H', level: 2, isToggleable: true },
@@ -380,12 +380,12 @@ describe('Bug 5: Toggle collapsed state persisted in save()', () => {
     });
 
     it('saves current state when no explicit isOpen was provided in data', () => {
-      // When no isOpen in data, _isOpen = data.isOpen ?? !readOnly = undefined ?? true = true
+      // When no isOpen in data, _isOpen = data.isOpen ?? false = false (always closed by default)
       const { toggle } = createToggle({ text: '' }, { readOnly: false });
       toggle.render();
       const saved = toggle.save();
 
-      expect(saved.isOpen).toBe(true);
+      expect(saved.isOpen).toBe(false);
     });
   });
 

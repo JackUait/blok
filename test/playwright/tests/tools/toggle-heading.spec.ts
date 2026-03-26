@@ -209,27 +209,26 @@ test.describe('Toggle Heading', () => {
     });
 
     test('shows body placeholder when open toggle heading has no children', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle', 2, true)]);
 
-      // The toggle is open by default and has no children — placeholder must be visible
+      // Toggle is explicitly open and has no children — placeholder must be visible
       await expect(page.locator('[data-blok-toggle-body-placeholder]')).toBeVisible();
     });
 
-    test('body placeholder is hidden when toggle heading is collapsed', async ({ page }) => {
+    test('body placeholder is hidden when toggle heading is collapsed (default state)', async ({ page }) => {
       await createBlokWithData(page, [makeToggleHeadingBlock('Collapsed No Placeholder', 2)]);
 
-      await page.locator(TOGGLE_ARROW_SELECTOR).click();
-
+      // Toggle starts collapsed by default — body placeholder should be hidden
       await expect(page.locator('[data-blok-toggle-body-placeholder]')).not.toBeVisible();
     });
 
-    test('toggle heading defaults to open in edit mode when isOpen is absent from saved data', async ({ page }) => {
-      // Saved data has isToggleable but no isOpen — should default to expanded in editing mode.
-      await createBlokWithData(page, [makeToggleHeadingBlock('Default Open', 2)]);
+    test('toggle heading defaults to closed in edit mode when isOpen is absent from saved data', async ({ page }) => {
+      // Saved data has isToggleable but no isOpen — should default to collapsed.
+      await createBlokWithData(page, [makeToggleHeadingBlock('Default Closed', 2)]);
 
-      const header = page.getByRole('heading', { level: 2, name: 'Default Open' });
+      const header = page.getByRole('heading', { level: 2, name: 'Default Closed' });
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('renders toggle H1 correctly', async ({ page }) => {
@@ -269,32 +268,32 @@ test.describe('Toggle Heading', () => {
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('tabindex', '0');
     });
 
-    test('arrow has aria-expanded="true" when heading is open', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Expanded Aria', 2)]);
+    test('arrow has aria-expanded="false" when heading is collapsed (default)', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsed Aria', 2)]);
+
+      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    test('arrow has aria-expanded="true" after expanding', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Expand Aria', 2)]);
+
+      await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-expanded', 'true');
     });
 
-    test('arrow has aria-expanded="false" after collapsing', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Collapse Aria', 2)]);
+    test('arrow aria-label is "Expand" when heading is collapsed (default)', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Label Closed', 2)]);
 
-      await page.locator(TOGGLE_ARROW_SELECTOR).click();
-
-      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-expanded', 'false');
+      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-label', 'Expand');
     });
 
     test('arrow aria-label is "Collapse" when heading is open', async ({ page }) => {
       await createBlokWithData(page, [makeToggleHeadingBlock('Label Open', 2)]);
 
-      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-label', 'Collapse');
-    });
-
-    test('arrow aria-label is "Expand" when heading is collapsed', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Label Closed', 2)]);
-
       await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
-      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-label', 'Expand');
+      await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-label', 'Collapse');
     });
   });
 
@@ -303,30 +302,30 @@ test.describe('Toggle Heading', () => {
   // =========================================================================
 
   test.describe('expand and collapse', () => {
-    test('collapses when arrow is clicked — data-blok-toggle-open changes to "false"', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsible H2', 2)]);
+    test('expands when arrow is clicked — data-blok-toggle-open changes to "true"', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Expandable H2', 2)]);
 
-      const header = page.getByRole('heading', { level: 2, name: 'Collapsible H2' });
+      const header = page.getByRole('heading', { level: 2, name: 'Expandable H2' });
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
 
       await arrow.click();
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
-    test('re-expands when arrow is clicked again', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Re-expandable H2', 2)]);
+    test('re-collapses when arrow is clicked again', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Re-collapsible H2', 2)]);
 
-      const header = page.getByRole('heading', { level: 2, name: 'Re-expandable H2' });
+      const header = page.getByRole('heading', { level: 2, name: 'Re-collapsible H2' });
       const arrow = page.locator(TOGGLE_ARROW_SELECTOR);
 
       await arrow.click();
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
 
       await arrow.click();
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
     });
 
     test('child blocks are hidden when toggle heading is collapsed', async ({ page }) => {
@@ -608,21 +607,21 @@ test.describe('Toggle Heading', () => {
       expect(data.isToggleable).toBe(true);
     });
 
-    test('saves isOpen reflecting the current collapsed state', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsible Save', 2)]);
+    test('saves isOpen reflecting the current expanded state', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Expandable Save', 2)]);
 
       await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
-      // After collapsing, heading attribute should be "false"
-      await expect(page.getByRole('heading', { level: 2, name: 'Collapsible Save' })).toHaveAttribute(
+      // After expanding (starts collapsed), heading attribute should be "true"
+      await expect(page.getByRole('heading', { level: 2, name: 'Expandable Save' })).toHaveAttribute(
         'data-blok-toggle-open',
-        'false'
+        'true'
       );
 
       const savedData = await page.evaluate(async () => window.blokInstance?.save());
       const data = getHeaderData(savedData);
 
-      expect(data.isOpen).toBe(false);
+      expect(data.isOpen).toBe(true);
     });
 
     test('does not save isToggleable for regular headers', async ({ page }) => {
@@ -695,7 +694,7 @@ test.describe('Toggle Heading', () => {
 
   test.describe('keyboard interactions', () => {
     test('pressing Enter at end of open toggle heading creates a child block inside the toggle', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('My Toggle', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('My Toggle', 2, true)]);
 
       const heading = page.getByRole('heading', { level: 2, name: 'My Toggle' });
 
@@ -724,7 +723,7 @@ test.describe('Toggle Heading', () => {
 
   test.describe('body placeholder click', () => {
     test('clicking body placeholder creates a child paragraph and hides placeholder', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle H2', 2, true)]);
 
       const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
 
@@ -744,7 +743,7 @@ test.describe('Toggle Heading', () => {
     });
 
     test('clicking body placeholder focuses the new child paragraph', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Focus Test H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Focus Test H2', 2, true)]);
 
       const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
 
@@ -768,7 +767,7 @@ test.describe('Toggle Heading', () => {
     });
 
     test('clicking body placeholder: typing immediately enters text in the new child block', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Type Test H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Type Test H2', 2, true)]);
 
       const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
 

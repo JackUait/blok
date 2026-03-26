@@ -183,7 +183,7 @@ export class Header implements BlockTool {
     this.readOnly = readOnly;
     this._settings = config || {};
     this._data = this.normalizeData(data);
-    this._isOpen = this._data.isOpen ?? !readOnly;
+    this._isOpen = this._data.isOpen ?? false;
     this._element = this.getTag();
 
     if (block) {

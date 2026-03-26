@@ -102,12 +102,12 @@ test.describe('Toggle redo regression', () => {
   });
 
   test('redo after undoing Enter inside toggle list keeps child block inside toggle', async ({ page }) => {
-    // 1. Start with a toggle that has no children
+    // 1. Start with a toggle that has no children (explicitly open for this test)
     await createBlok(page, {
-      blocks: [{ type: 'toggle', data: { text: 'My toggle' } }],
+      blocks: [{ type: 'toggle', data: { text: 'My toggle', isOpen: true } }],
     });
 
-    // Toggle starts expanded in editing mode
+    // Toggle is explicitly open via isOpen: true
     await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
 
     // 2. Click the toggle content and press Enter to add a child block inside
@@ -447,12 +447,12 @@ test.describe('Toggle redo regression', () => {
   });
 
   test('redo after undoing Enter inside toggle heading keeps child block inside toggle heading', async ({ page }) => {
-    // 1. Start with a toggle heading that has no children
+    // 1. Start with a toggle heading that has no children (explicitly open for this test)
     await createBlok(page, {
-      blocks: [{ type: 'header', data: { text: 'Toggle heading', level: 2, isToggleable: true } }],
+      blocks: [{ type: 'header', data: { text: 'Toggle heading', level: 2, isToggleable: true, isOpen: true } }],
     });
 
-    // Toggle heading starts expanded in editing mode
+    // Toggle heading is explicitly open via isOpen: true
     const header = page.getByRole('heading', { level: 2, name: 'Toggle heading' });
 
     await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
@@ -520,7 +520,7 @@ test.describe('Toggle redo regression', () => {
     // 1. Create a toggle with an existing child paragraph
     await createBlok(page, {
       blocks: [
-        { id: 'toggle-1', type: 'toggle', data: { text: 'My toggle' }, content: ['child-1'] },
+        { id: 'toggle-1', type: 'toggle', data: { text: 'My toggle', isOpen: true }, content: ['child-1'] },
         { id: 'child-1', type: 'paragraph', data: { text: 'existing child' }, parent: 'toggle-1' },
       ],
     });

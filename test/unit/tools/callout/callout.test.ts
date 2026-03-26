@@ -2,6 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
+import { PopoverItemType } from '../../../../types/utils/popover/popover-item-type';
 import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/types';
 
 vi.mock('../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
@@ -31,7 +32,7 @@ const createOptions = (
   data: Partial<CalloutData> = {},
   overrides: { readOnly?: boolean } = {}
 ): BlockToolConstructorOptions<CalloutData, CalloutConfig> => ({
-  data: { emoji: '💡', color: 'default', ...data } as CalloutData,
+  data: { emoji: '💡', textColor: null, backgroundColor: null, ...data } as CalloutData,
   config: {},
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,
@@ -124,13 +125,20 @@ describe('CalloutTool', () => {
   });
 
   describe('save()', () => {
-    it('returns emoji and color only', async () => {
+    it('returns emoji, textColor, and backgroundColor', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
-      const tool = new CalloutTool(createOptions({ emoji: '✅', color: 'green' }));
+      const tool = new CalloutTool(createOptions({ emoji: '✅', textColor: 'green', backgroundColor: 'green' }));
       tool.render();
       const saved = tool.save();
-      expect(saved).toEqual({ emoji: '✅', color: 'green' });
-      expect(saved).not.toHaveProperty('text');
+      expect(saved).toEqual({ emoji: '✅', textColor: 'green', backgroundColor: 'green' });
+    });
+
+    it('returns null colors for defaults', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      tool.render();
+      const saved = tool.save();
+      expect(saved).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
     });
   });
 
@@ -138,55 +146,129 @@ describe('CalloutTool', () => {
     it('always returns true', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const tool = new CalloutTool(createOptions());
-      expect(tool.validate({ emoji: '', color: 'default' })).toBe(true);
-      expect(tool.validate({ emoji: '💡', color: 'blue' })).toBe(true);
+      expect(tool.validate({ emoji: '', textColor: null, backgroundColor: null })).toBe(true);
+      expect(tool.validate({ emoji: '💡', textColor: 'blue', backgroundColor: 'blue' })).toBe(true);
     });
   });
 
   describe('renderSettings()', () => {
-    it('returns an array of 11 items (default + 10 colors)', async () => {
+    it('returns a single parent item (not a flat array)', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const tool = new CalloutTool(createOptions());
+      tool.render();
       const settings = tool.renderSettings();
-      expect(Array.isArray(settings)).toBe(true);
-      expect((settings as unknown[]).length).toBe(11);
+      expect(Array.isArray(settings)).toBe(false);
+      expect(settings).toHaveProperty('children');
     });
 
-    it('marks the current color as active', async () => {
+    it('parent item has title, paint roller icon, and name', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
-      const tool = new CalloutTool(createOptions({ color: 'blue' }));
-      const settings = tool.renderSettings() as Array<{ isActive: boolean }>;
-      const activeItems = settings.filter(s => s.isActive);
-      expect(activeItems).toHaveLength(1);
+      const tool = new CalloutTool(createOptions());
+      tool.render();
+      const settings = tool.renderSettings() as { title: string; icon: string; name: string };
+      expect(settings.title).toBe('tools.callout.color');
+      expect(settings.name).toBe('callout-color');
+      const { IconPaintRoller } = await import('../../../../src/components/icons');
+      expect(settings.icon).toBe(IconPaintRoller);
+    });
+
+    it('children contain a single Html item with the shared color picker', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      tool.render();
+      const settings = tool.renderSettings() as {
+        children: { items: Array<{ type: PopoverItemType; element: HTMLElement }> };
+      };
+      expect(settings.children.items).toHaveLength(1);
+      expect(settings.children.items[0].type).toBe(PopoverItemType.Html);
+      expect(settings.children.items[0].element.getAttribute('data-blok-testid')).toBe('callout-color-picker');
+    });
+
+    it('shows chevron on children (submenu arrow)', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      tool.render();
+      const settings = tool.renderSettings() as { children: { hideChevron?: boolean } };
+      expect(settings.children.hideChevron).toBeUndefined();
     });
   });
 
-  describe('color change', () => {
-    it('applying a color sets backgroundColor on the wrapper', async () => {
+  describe('color change via picker', () => {
+    it('clicking a background swatch applies backgroundColor to wrapper', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
-      const tool = new CalloutTool(createOptions({ color: 'default' }));
+      const tool = new CalloutTool(createOptions());
       const wrapper = tool.render();
 
-      const settings = tool.renderSettings() as Array<{ title: string; onActivate: () => void }>;
-      const blueItem = settings.find(s => s.title.includes('tools.callout.colorBlue'));
-      blueItem?.onActivate();
+      const settings = tool.renderSettings() as {
+        children: { items: Array<{ element: HTMLElement }> };
+      };
+      const pickerEl = settings.children.items[0].element;
+      const blueBgSwatch = pickerEl.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-background-color-blue"]'
+      );
+
+      blueBgSwatch!.click();
 
       expect(wrapper.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
+    });
+
+    it('clicking a text swatch applies text color to wrapper', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const wrapper = tool.render();
+
+      const settings = tool.renderSettings() as {
+        children: { items: Array<{ element: HTMLElement }> };
+      };
+      const pickerEl = settings.children.items[0].element;
+      const blueTextSwatch = pickerEl.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-color-blue"]'
+      );
+
+      blueTextSwatch!.click();
+
       expect(wrapper.style.color).toBe('var(--blok-color-blue-text)');
     });
 
-    it('applying default color removes inline styles and adds a border', async () => {
+    it('clicking default background swatch removes bg and adds border', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
-      const tool = new CalloutTool(createOptions({ color: 'blue' }));
+      const tool = new CalloutTool(createOptions({ backgroundColor: 'blue' }));
       const wrapper = tool.render();
 
-      const settings = tool.renderSettings() as Array<{ title: string; onActivate: () => void }>;
-      const defaultItem = settings.find(s => s.title.includes('tools.callout.colorDefault'));
-      defaultItem?.onActivate();
+      const settings = tool.renderSettings() as {
+        children: { items: Array<{ element: HTMLElement }> };
+      };
+      const pickerEl = settings.children.items[0].element;
+      const defaultBgSwatch = pickerEl.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-background-color-default"]'
+      );
+
+      defaultBgSwatch!.click();
 
       expect(wrapper.style.backgroundColor).toBe('');
-      expect(wrapper.style.color).toBe('');
-      expect(wrapper.style.border).toBe('1px solid var(--blok-callout-default-border, #e5e7eb)');
+      expect(wrapper.style.border).toContain('var(--blok-callout-default-border');
+    });
+
+    it('save reflects picker selections', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      tool.render();
+
+      const settings = tool.renderSettings() as {
+        children: { items: Array<{ element: HTMLElement }> };
+      };
+      const pickerEl = settings.children.items[0].element;
+
+      pickerEl.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-color-blue"]'
+      )!.click();
+      pickerEl.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-background-color-green"]'
+      )!.click();
+
+      const saved = tool.save();
+      expect(saved.textColor).toBe('blue');
+      expect(saved.backgroundColor).toBe('green');
     });
   });
 
@@ -209,11 +291,11 @@ describe('CalloutTool', () => {
       expect(CalloutTool.sanitize).not.toHaveProperty('text');
     });
 
-    it('conversionConfig imports with default emoji and color', async () => {
+    it('conversionConfig imports with default emoji and null colors', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const cfg = CalloutTool.conversionConfig;
       const imported = (cfg.import as (text: string) => CalloutData)('hello');
-      expect(imported).toEqual({ emoji: '💡', color: 'default' });
+      expect(imported).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
     });
   });
 });

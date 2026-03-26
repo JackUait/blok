@@ -401,3 +401,239 @@ describe('Toolbar — callout first-child plus button visibility', () => {
     document.body.removeChild(editorWrapper);
   });
 });
+
+// ─── color adaptation tests ────────────────────────────────────────────────
+
+describe('Toolbar — callout color adaptation for child blocks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * Helper: create a callout block whose holder contains a wrapper element
+   * with data-blok-component="callout" and optional inline color styles,
+   * matching the real DOM structure produced by CalloutTool + ToolRenderer.
+   */
+  function createCalloutBlockWithColors(options: {
+    id: string;
+    contentIds: string[];
+    textColor?: string;
+    backgroundColor?: string;
+  }): Block {
+    const holder = document.createElement('div');
+    const wrapper = document.createElement('div');
+
+    wrapper.setAttribute('data-blok-component', 'callout');
+
+    if (options.textColor) {
+      wrapper.style.color = options.textColor;
+    }
+
+    if (options.backgroundColor) {
+      wrapper.style.backgroundColor = options.backgroundColor;
+    }
+
+    holder.appendChild(wrapper);
+
+    return createBlock({
+      id: options.id,
+      name: 'callout',
+      contentIds: options.contentIds,
+      holder,
+    });
+  }
+
+  function createToolbarForCalloutColor(callout: Block): ReturnType<typeof createToolbar> {
+    return createToolbar({
+      BlockManager: {
+        currentBlock: null,
+        blocks: [],
+        getBlockByChildNode: vi.fn().mockReturnValue(null),
+        getBlockById: vi.fn().mockImplementation((id: string) => {
+          if (id === callout.id) return callout;
+
+          return undefined;
+        }),
+      } as unknown as BlokModules['BlockManager'],
+    });
+  }
+
+  it('sets color to inherit on plus button when targeting child of a callout with custom text color', () => {
+    const callout = createCalloutBlockWithColors({
+      id: 'callout-1',
+      contentIds: ['child-1', 'child-2'],
+      textColor: 'var(--blok-color-red-text)',
+    });
+
+    const childHolder = document.createElement('div');
+
+    callout.holder.appendChild(childHolder);
+    document.body.appendChild(callout.holder);
+
+    const child = createBlock({
+      id: 'child-2',
+      name: 'paragraph',
+      parentId: 'callout-1',
+      holder: childHolder,
+    });
+
+    const { toolbar, plusButton } = createToolbarForCalloutColor(callout);
+
+    toolbar.moveAndOpen(child);
+
+    expect(plusButton.style.color).toBe('inherit');
+
+    document.body.removeChild(callout.holder);
+  });
+
+  it('sets color to inherit on settings toggler when targeting child of a callout with custom text color', () => {
+    const callout = createCalloutBlockWithColors({
+      id: 'callout-1',
+      contentIds: ['child-1', 'child-2'],
+      textColor: 'var(--blok-color-blue-text)',
+    });
+
+    const childHolder = document.createElement('div');
+
+    callout.holder.appendChild(childHolder);
+    document.body.appendChild(callout.holder);
+
+    const child = createBlock({
+      id: 'child-2',
+      name: 'paragraph',
+      parentId: 'callout-1',
+      holder: childHolder,
+    });
+
+    const { toolbar, settingsToggler } = createToolbarForCalloutColor(callout);
+
+    toolbar.moveAndOpen(child);
+
+    expect(settingsToggler.style.color).toBe('inherit');
+
+    document.body.removeChild(callout.holder);
+  });
+
+  it('sets color to inherit when callout has only custom background color (no text color)', () => {
+    const callout = createCalloutBlockWithColors({
+      id: 'callout-1',
+      contentIds: ['child-1', 'child-2'],
+      backgroundColor: 'var(--blok-color-yellow-bg)',
+    });
+
+    const childHolder = document.createElement('div');
+
+    callout.holder.appendChild(childHolder);
+    document.body.appendChild(callout.holder);
+
+    const child = createBlock({
+      id: 'child-2',
+      name: 'paragraph',
+      parentId: 'callout-1',
+      holder: childHolder,
+    });
+
+    const { toolbar, plusButton } = createToolbarForCalloutColor(callout);
+
+    toolbar.moveAndOpen(child);
+
+    expect(plusButton.style.color).toBe('inherit');
+
+    document.body.removeChild(callout.holder);
+  });
+
+  it('does NOT set color when callout has no custom colors', () => {
+    const callout = createCalloutBlockWithColors({
+      id: 'callout-1',
+      contentIds: ['child-1', 'child-2'],
+    });
+
+    const childHolder = document.createElement('div');
+
+    callout.holder.appendChild(childHolder);
+    document.body.appendChild(callout.holder);
+
+    const child = createBlock({
+      id: 'child-2',
+      name: 'paragraph',
+      parentId: 'callout-1',
+      holder: childHolder,
+    });
+
+    const { toolbar, plusButton } = createToolbarForCalloutColor(callout);
+
+    toolbar.moveAndOpen(child);
+
+    expect(plusButton.style.color).toBe('');
+
+    document.body.removeChild(callout.holder);
+  });
+
+  it('clears color when moving from callout child to a regular block', () => {
+    const callout = createCalloutBlockWithColors({
+      id: 'callout-1',
+      contentIds: ['child-1'],
+      textColor: 'var(--blok-color-red-text)',
+      backgroundColor: 'var(--blok-color-red-bg)',
+    });
+
+    const childHolder = document.createElement('div');
+    const regularHolder = document.createElement('div');
+
+    callout.holder.appendChild(childHolder);
+    document.body.appendChild(callout.holder);
+    document.body.appendChild(regularHolder);
+
+    const child = createBlock({
+      id: 'child-1',
+      name: 'paragraph',
+      parentId: 'callout-1',
+      holder: childHolder,
+    });
+
+    const regularBlock = createBlock({
+      id: 'para-1',
+      name: 'paragraph',
+      holder: regularHolder,
+    });
+
+    const { toolbar, plusButton, settingsToggler } = createToolbarForCalloutColor(callout);
+
+    // Move to callout child — color should be set
+    toolbar.moveAndOpen(child);
+    expect(plusButton.style.color).toBe('inherit');
+    expect(settingsToggler.style.color).toBe('inherit');
+
+    // Move to regular block — color should be cleared
+    toolbar.moveAndOpen(regularBlock);
+    expect(plusButton.style.color).toBe('');
+    expect(settingsToggler.style.color).toBe('');
+
+    document.body.removeChild(callout.holder);
+    document.body.removeChild(regularHolder);
+  });
+
+  it('does NOT set color for blocks that are not inside a callout', () => {
+    const regularHolder = document.createElement('div');
+
+    document.body.appendChild(regularHolder);
+
+    const regularBlock = createBlock({
+      id: 'para-1',
+      name: 'paragraph',
+      holder: regularHolder,
+    });
+
+    const { toolbar, plusButton } = createToolbar();
+
+    toolbar.moveAndOpen(regularBlock);
+
+    expect(plusButton.style.color).toBe('');
+
+    document.body.removeChild(regularHolder);
+  });
+});

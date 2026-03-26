@@ -212,6 +212,42 @@ describe('CalloutTool', () => {
       expect(wrapper.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
     });
 
+    it('sets --blok-search-input-bg to transparent when background color is applied', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const wrapper = tool.render();
+
+      const settings = tool.renderSettings() as {
+        children: { items: Array<{ element: HTMLElement }> };
+      };
+      const pickerEl = settings.children.items[0].element;
+
+      pickerEl.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-background-color-blue"]'
+      )!.click();
+
+      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('transparent');
+    });
+
+    it('removes --blok-search-input-bg when background color is cleared', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions({ backgroundColor: 'blue' }));
+      const wrapper = tool.render();
+
+      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('transparent');
+
+      const settings = tool.renderSettings() as {
+        children: { items: Array<{ element: HTMLElement }> };
+      };
+      const pickerEl = settings.children.items[0].element;
+
+      pickerEl.querySelector<HTMLButtonElement>(
+        '[data-blok-testid="callout-color-swatch-background-color-default"]'
+      )!.click();
+
+      expect(wrapper.style.getPropertyValue('--blok-search-input-bg')).toBe('');
+    });
+
     it('clicking a text swatch applies text color to wrapper', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
       const tool = new CalloutTool(createOptions());

@@ -227,24 +227,25 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
-   * Applies or clears callout color overrides on the popover element.
-   * When the toolbox opens inside a callout with custom colors, the search
-   * input background should blend with the callout background instead of
-   * using the hardcoded search-input-bg variable.
+   * Applies or clears callout background color on the popover's search input.
+   * When the toolbox opens inside a callout with a custom background, the search
+   * input container should match the callout background instead of its default.
    *
-   * @param hasCalloutColors - true when the toolbox is inside a colored callout
+   * @param color - the callout background CSS value, or null to clear
    */
-  public setCalloutColors(hasCalloutColors: boolean): void {
+  public setCalloutBackground(color: string | null): void {
     const popoverEl = this.popover?.getElement();
 
     if (!popoverEl) {
       return;
     }
 
-    if (hasCalloutColors) {
-      popoverEl.style.setProperty('--color-search-input-bg', 'transparent');
+    if (color) {
+      popoverEl.style.setProperty('--blok-search-input-bg', `color-mix(in srgb, ${color} 85%, white)`);
+      popoverEl.style.setProperty('--blok-search-input-border', 'transparent');
     } else {
-      popoverEl.style.removeProperty('--color-search-input-bg');
+      popoverEl.style.removeProperty('--blok-search-input-bg');
+      popoverEl.style.removeProperty('--blok-search-input-border');
     }
   }
 

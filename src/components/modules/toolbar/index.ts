@@ -429,16 +429,25 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Adapt toolbar button colors for blocks inside a callout with custom colors.
-     * Using 'inherit' lets the SVG icons pick up the callout wrapper's text color
-     * via CSS inheritance instead of the hardcoded text-text-secondary class.
+     * Adapt toolbar button background for blocks inside a callout with custom colors.
+     * Use color-mix() to create a subtly lighter variant of the callout background
+     * so buttons are distinguishable from the callout surface.
+     * Icon color stays default (text-text-secondary) regardless of callout colors.
+     *
+     * Skip when the target is the callout itself or its first child — their toolbar
+     * buttons render outside the callout's visual background area.
      */
-    const insideColoredCallout = this.isInsideColoredCallout(targetBlock);
+    const calloutBg = isCalloutFirstChild || targetBlock.name === 'callout'
+      ? null
+      : this.getCalloutBackgroundColor(targetBlock);
+    const buttonBg = calloutBg !== null
+      ? `color-mix(in srgb, ${calloutBg} 85%, white)`
+      : '';
 
-    plusButton.style.color = insideColoredCallout ? 'inherit' : '';
+    plusButton.style.backgroundColor = buttonBg;
 
     if (settingsToggler) {
-      settingsToggler.style.color = insideColoredCallout ? 'inherit' : '';
+      settingsToggler.style.backgroundColor = buttonBg;
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -748,32 +757,45 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
-   * Checks whether the given block is inside a callout that has custom
-   * text or background color applied via inline styles.
-   *
-   * @returns true when the parent callout wrapper has a non-empty
-   *          style.color or style.backgroundColor
+   * Returns the background color of the callout containing the given block,
+   * or null if the block is not inside a colored callout (or the callout has
+   * no background color set).
    */
-  private isInsideColoredCallout(block: Block): boolean {
+  private getCalloutBackgroundColor(block: Block): string | null {
+    const calloutBlock = this.resolveCalloutBlock(block);
+
+    if (!calloutBlock) {
+      return null;
+    }
+
+    try {
+      const bg = calloutBlock.pluginsContent.style.backgroundColor;
+
+      return bg || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Returns the callout block if the given block is a callout or is a child of one.
+   */
+  private resolveCalloutBlock(block: Block): Block | null {
+    if (block.name === 'callout') {
+      return block;
+    }
+
     if (!block.parentId) {
-      return false;
+      return null;
     }
 
-    const parentBlock = this.Blok.BlockManager.getBlockById(block.parentId);
+    const parent = this.Blok.BlockManager.getBlockById(block.parentId);
 
-    if (!parentBlock || parentBlock.name !== 'callout') {
-      return false;
+    if (!parent || parent.name !== 'callout') {
+      return null;
     }
 
-    const calloutWrapper = parentBlock.holder.querySelector<HTMLElement>(
-      '[data-blok-component="callout"]'
-    );
-
-    if (!calloutWrapper) {
-      return false;
-    }
-
-    return calloutWrapper.style.color !== '' || calloutWrapper.style.backgroundColor !== '';
+    return parent;
   }
 
   private isFocusInsideTableCell(): boolean {
@@ -970,9 +992,11 @@ export class Toolbar extends Module<ToolbarNodes> {
       /**
        * Adapt search input colors when toolbox opens inside a colored callout.
        */
-      const insideCallout = this.hoveredBlock !== null && this.isInsideColoredCallout(this.hoveredBlock);
+      const calloutBg = this.hoveredBlock !== null
+        ? this.getCalloutBackgroundColor(this.hoveredBlock)
+        : null;
 
-      this.toolboxInstance?.setCalloutColors(insideCallout);
+      this.toolboxInstance?.setCalloutBackground(calloutBg);
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {

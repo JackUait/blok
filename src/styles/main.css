@@ -761,7 +761,7 @@
     --blok-selection: rgba(35, 131, 226, 0.2);
     --blok-selection-inline: rgba(35, 131, 226, 0.3);
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
-    --blok-bg-light: #191918;
+    --blok-bg-light: rgba(255, 255, 255, 0.08);
     --blok-gray-text: #a39e98;
     --blok-dark: #191918;
     --blok-active-icon: #529cca;
@@ -854,7 +854,7 @@
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
-  --blok-bg-light: #191918;
+  --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;
   --blok-dark: #191918;
   --blok-active-icon: #529cca;

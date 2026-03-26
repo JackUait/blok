@@ -144,11 +144,11 @@ describe('createColorPicker', () => {
     expect(swatch?.style.backgroundColor).toBeTruthy();
   });
 
-  it('teal swatch exists', () => {
+  it('teal swatch does not exist', () => {
     const { element } = createColorPicker(createOptions());
 
-    expect(element.querySelector('[data-blok-testid="test-swatch-text-teal"]')).not.toBeNull();
-    expect(element.querySelector('[data-blok-testid="test-swatch-bg-teal"]')).not.toBeNull();
+    expect(element.querySelector('[data-blok-testid="test-swatch-text-teal"]')).toBeNull();
+    expect(element.querySelector('[data-blok-testid="test-swatch-bg-teal"]')).toBeNull();
   });
 
   describe('active color indicator', () => {

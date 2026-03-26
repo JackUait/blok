@@ -9,18 +9,21 @@ import type {
   ToolSanitizerConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+import { PopoverItemType } from '../../components/utils/popover';
 import type { CalloutData, CalloutConfig } from './types';
 import { buildCalloutDOM, type CalloutDOMRefs } from './dom-builder';
 import { saveCallout } from './block-operations';
 import { handleCalloutFirstChildBackspace } from './callout-keyboard';
-import { COLOR_CONFIGS, colorVarStyle } from './style-config';
+import { createColorPicker, type ColorPickerHandle } from '../../components/shared/color-picker';
+import { colorVarName } from '../../components/shared/color-presets';
+import { mapToNearestPresetName } from '../../components/utils/color-mapping';
 import { EmojiPicker } from './emoji-picker';
-import { IconCallout } from '../../components/icons';
+import { IconCallout, IconPaintRoller } from '../../components/icons';
 import {
   TOOL_NAME,
+  COLOR_KEY,
   ADD_EMOJI_KEY,
   DEFAULT_EMOJI,
-  DEFAULT_COLOR,
 } from './constants';
 
 export class CalloutTool implements BlockTool {
@@ -28,7 +31,8 @@ export class CalloutTool implements BlockTool {
   private readonly readOnly: boolean;
   private _data: CalloutData;
   private _dom: CalloutDOMRefs | null = null;
-  private _picker: EmojiPicker | null = null;
+  private _emojiPicker: EmojiPicker | null = null;
+  private _colorPicker: ColorPickerHandle | null = null;
   private blockId?: string;
 
   constructor({ data, api, readOnly, block }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
@@ -44,7 +48,8 @@ export class CalloutTool implements BlockTool {
   private normalizeData(data: Partial<CalloutData>): CalloutData {
     return {
       emoji: typeof data.emoji === 'string' ? data.emoji : DEFAULT_EMOJI,
-      color: typeof data.color === 'string' ? data.color : DEFAULT_COLOR,
+      textColor: typeof data.textColor === 'string' ? data.textColor : null,
+      backgroundColor: typeof data.backgroundColor === 'string' ? data.backgroundColor : null,
     };
   }
 
@@ -56,7 +61,7 @@ export class CalloutTool implements BlockTool {
     });
 
     this._dom = dom;
-    this.applyColor(this._data.color);
+    this.applyColors();
 
     if (!this.readOnly) {
       dom.emojiButton.addEventListener('click', () => this.openEmojiPicker());
@@ -111,7 +116,8 @@ export class CalloutTool implements BlockTool {
   public save(): CalloutData {
     return saveCallout({
       emoji: this._data.emoji,
-      color: this._data.color,
+      textColor: this._data.textColor,
+      backgroundColor: this._data.backgroundColor,
     });
   }
 
@@ -120,41 +126,93 @@ export class CalloutTool implements BlockTool {
   }
 
   public renderSettings(): MenuConfig {
-    return COLOR_CONFIGS.map(cfg => ({
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="${cfg.bgVar !== '' ? `var(${cfg.bgVar})` : '#e5e7eb'}"/></svg>`,
-      title: this.api.i18n.t(cfg.i18nKey),
-      onActivate: () => this.setColor(cfg.name),
-      closeOnActivate: true,
-      isActive: this._data.color === cfg.name,
-    }));
+    if (this._colorPicker === null) {
+      const picker = createColorPicker({
+        i18n: this.api.i18n,
+        testIdPrefix: 'callout-color',
+        modes: [
+          { key: 'color', labelKey: 'tools.marker.textColor', presetField: 'text' },
+          { key: 'background-color', labelKey: 'tools.marker.background', presetField: 'bg' },
+        ],
+        onColorSelect: (color, modeKey) => {
+          const presetName = color !== null ? mapToNearestPresetName(color, modeKey === 'color' ? 'text' : 'bg') : null;
+
+          if (modeKey === 'color') {
+            this._data.textColor = presetName;
+          } else {
+            this._data.backgroundColor = presetName;
+          }
+
+          picker.setActiveColor(color, modeKey);
+          this.applyColors();
+        },
+      });
+
+      this._colorPicker = picker;
+    }
+
+    // Sync active state with current data
+    this.syncPickerActiveColors();
+
+    return {
+      icon: IconPaintRoller,
+      title: this.api.i18n.t(COLOR_KEY),
+      name: 'callout-color',
+      children: {
+        items: [
+          {
+            type: PopoverItemType.Html,
+            element: this._colorPicker.element,
+          },
+        ],
+      },
+    };
   }
 
   public removed(): void {
     // No-op — no subscriptions to clean up
   }
 
-  private setColor(name: CalloutData['color']): void {
-    this._data.color = name;
-    this.applyColor(name);
+  private syncPickerActiveColors(): void {
+    if (this._colorPicker === null) {
+      return;
+    }
+
+    const textName = this._data.textColor;
+    const bgName = this._data.backgroundColor;
+
+    // The picker expects hex values; convert from preset name by looking up the light preset
+    // The picker's internal `colorsEqual` handles the comparison regardless of theme
+    this._colorPicker.setActiveColor(
+      textName !== null ? colorVarName(textName, 'text') : null,
+      'color'
+    );
+    this._colorPicker.setActiveColor(
+      bgName !== null ? colorVarName(bgName, 'bg') : null,
+      'background-color'
+    );
   }
 
-  private applyColor(name: CalloutData['color']): void {
+  private applyColors(): void {
     if (this._dom === null) {
       return;
     }
 
-    const cfg = COLOR_CONFIGS.find(c => c.name === name);
+    const { textColor, backgroundColor } = this._data;
 
-    if (cfg === undefined || cfg.bgVar === '') {
-      this._dom.wrapper.style.backgroundColor = '';
+    if (textColor !== null) {
+      this._dom.wrapper.style.color = colorVarName(textColor, 'text');
+    } else {
       this._dom.wrapper.style.color = '';
-      this._dom.wrapper.style.border = '1px solid var(--blok-callout-default-border, #e5e7eb)';
-      return;
     }
 
-    this._dom.wrapper.style.backgroundColor = colorVarStyle(cfg.bgVar);
-    this._dom.wrapper.style.color = colorVarStyle(cfg.textVar);
-    this._dom.wrapper.style.border = '';
+    if (backgroundColor !== null) {
+      this._dom.wrapper.style.backgroundColor = colorVarName(backgroundColor, 'bg');
+      this._dom.wrapper.style.border = '';
+    } else {
+      this._dom.wrapper.style.backgroundColor = '';
+      this._dom.wrapper.style.border = '1px solid var(--blok-callout-default-border, #e5e7eb)';
+    }
   }
 
   private handleChildBackspace(e: KeyboardEvent): void {
@@ -202,16 +260,16 @@ export class CalloutTool implements BlockTool {
       return;
     }
 
-    if (this._picker === null) {
-      this._picker = new EmojiPicker({
+    if (this._emojiPicker === null) {
+      this._emojiPicker = new EmojiPicker({
         onSelect: (native: string) => this.setEmoji(native),
         onRemove: () => this.setEmoji(''),
         i18n: this.api.i18n,
       });
-      document.body.appendChild(this._picker.getElement());
+      document.body.appendChild(this._emojiPicker.getElement());
     }
 
-    void this._picker.open(this._dom.emojiButton);
+    void this._emojiPicker.open(this._dom.emojiButton);
   }
 
   private setEmoji(native: string): void {
@@ -242,7 +300,8 @@ export class CalloutTool implements BlockTool {
     return {
       import: (): CalloutData => ({
         emoji: DEFAULT_EMOJI,
-        color: DEFAULT_COLOR,
+        textColor: null,
+        backgroundColor: null,
       }),
     };
   }
@@ -250,7 +309,8 @@ export class CalloutTool implements BlockTool {
   public static get sanitize(): ToolSanitizerConfig {
     return {
       emoji: false,
-      color: false,
+      textColor: false,
+      backgroundColor: false,
     };
   }
 

@@ -1,15 +1,17 @@
 // src/tools/callout/block-operations.ts
 
-import type { CalloutData, CalloutColor } from './types';
+import type { CalloutData } from './types';
 
 interface SaveCalloutOptions {
   emoji: string;
-  color: CalloutColor;
+  textColor: string | null;
+  backgroundColor: string | null;
 }
 
 export function saveCallout(options: SaveCalloutOptions): CalloutData {
   return {
     emoji: options.emoji,
-    color: options.color,
+    textColor: options.textColor,
+    backgroundColor: options.backgroundColor,
   };
 }

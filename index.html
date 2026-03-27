@@ -687,6 +687,122 @@
           ]
         }
       },
+      {
+        type: "header",
+        id: "callout-section-header",
+        data: {
+          text: "Callout Blocks",
+          level: 2
+        }
+      },
+      {
+        id: "callout-default",
+        type: "callout",
+        data: {
+          emoji: "💡",
+          textColor: null,
+          backgroundColor: null
+        },
+        content: ["callout-default-child"]
+      },
+      {
+        id: "callout-default-child",
+        type: "paragraph",
+        data: {
+          text: "This is a default callout. Great for tips and general notes."
+        },
+        parent: "callout-default"
+      },
+      {
+        id: "callout-warning",
+        type: "callout",
+        data: {
+          emoji: "⚠️",
+          textColor: null,
+          backgroundColor: "yellow"
+        },
+        content: ["callout-warning-child"]
+      },
+      {
+        id: "callout-warning-child",
+        type: "paragraph",
+        data: {
+          text: "A warning callout with a yellow background. Use it to highlight important caveats."
+        },
+        parent: "callout-warning"
+      },
+      {
+        id: "callout-success",
+        type: "callout",
+        data: {
+          emoji: "✅",
+          textColor: null,
+          backgroundColor: "green"
+        },
+        content: ["callout-success-child"]
+      },
+      {
+        id: "callout-success-child",
+        type: "paragraph",
+        data: {
+          text: "A success callout with a green background. Perfect for confirmations and completed steps."
+        },
+        parent: "callout-success"
+      },
+      {
+        id: "callout-danger",
+        type: "callout",
+        data: {
+          emoji: "🚫",
+          textColor: null,
+          backgroundColor: "red"
+        },
+        content: ["callout-danger-child"]
+      },
+      {
+        id: "callout-danger-child",
+        type: "paragraph",
+        data: {
+          text: "A danger callout with a red background. Use for critical warnings and destructive actions."
+        },
+        parent: "callout-danger"
+      },
+      {
+        id: "callout-info",
+        type: "callout",
+        data: {
+          emoji: "📖",
+          textColor: null,
+          backgroundColor: "blue"
+        },
+        content: ["callout-info-child"]
+      },
+      {
+        id: "callout-info-child",
+        type: "paragraph",
+        data: {
+          text: "An info callout with a blue background. Ideal for documentation and reference notes."
+        },
+        parent: "callout-info"
+      },
+      {
+        id: "callout-purple",
+        type: "callout",
+        data: {
+          emoji: "🔑",
+          textColor: null,
+          backgroundColor: "purple"
+        },
+        content: ["callout-purple-child"]
+      },
+      {
+        id: "callout-purple-child",
+        type: "paragraph",
+        data: {
+          text: "A purple callout. Each callout's emoji and colors can be customized via the block settings menu."
+        },
+        parent: "callout-purple"
+      },
     ];
 
     /**

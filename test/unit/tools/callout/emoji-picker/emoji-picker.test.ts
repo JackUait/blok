@@ -5,9 +5,9 @@ import type { ProcessedEmoji } from '../../../../../src/tools/callout/emoji-pick
 
 vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([
-    { native: '💡', id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
-    { native: '😀', id: 'grinning', name: 'Grinning Face', keywords: ['face', 'happy'], category: 'people' },
-    { native: '✅', id: 'check', name: 'Check Mark', keywords: ['ok', 'done'], category: 'symbols' },
+    { native: '💡', skins: ['💡'], id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
+    { native: '😀', skins: ['😀'], id: 'grinning', name: 'Grinning Face', keywords: ['face', 'happy'], category: 'people' },
+    { native: '✅', skins: ['✅'], id: 'check', name: 'Check Mark', keywords: ['ok', 'done'], category: 'symbols' },
   ] as ProcessedEmoji[]),
   searchEmojis: vi.fn((emojis: ProcessedEmoji[], q: string) => emojis.filter((e) => e.name.toLowerCase().includes(q))),
   groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => {
@@ -29,6 +29,13 @@ describe('EmojiPicker', () => {
     vi.clearAllMocks();
     container = document.createElement('div');
     document.body.appendChild(container);
+
+    // resolveTheme() calls matchMedia — stub it for jsdom
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockReturnValue({ matches: false }),
+    });
   });
 
   afterEach(() => {

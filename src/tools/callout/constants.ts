@@ -8,6 +8,9 @@ export const ADD_EMOJI_KEY = 'tools.callout.addEmoji';
 export const REMOVE_EMOJI_KEY = 'tools.callout.removeEmoji';
 export const FILTER_EMOJIS_KEY = 'tools.callout.filterEmojis';
 export const CALLOUT_EMOJI_CATEGORY_KEY = 'tools.callout.calloutEmojiCategory';
+export const NO_EMOJIS_FOUND_KEY = 'tools.callout.noEmojisFound';
+export const PICK_RANDOM_KEY = 'tools.callout.pickRandom';
+export const SKIN_TONE_KEY = 'tools.callout.skinTone';
 
 // Defaults
 export const DEFAULT_EMOJI = '💡';

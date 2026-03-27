@@ -13,6 +13,7 @@ interface EmojiMartData {
 
 export interface ProcessedEmoji {
   native: string;
+  skins: string[];
   id: string;
   name: string;
   keywords: string[];
@@ -36,14 +37,15 @@ function processCategory(category: { id: string; emojis: string[] }, emojis: Emo
       continue;
     }
 
-    const skin = emoji.skins[0];
+    const firstSkin = emoji.skins[0];
 
-    if (skin === undefined) {
+    if (firstSkin === undefined) {
       continue;
     }
 
     result.push({
-      native: skin.native,
+      native: firstSkin.native,
+      skins: emoji.skins.map(s => s.native),
       id: emoji.id,
       name: emoji.name,
       keywords: emoji.keywords,

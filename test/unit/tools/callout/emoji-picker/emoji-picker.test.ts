@@ -7,6 +7,7 @@ vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([
     { native: '💡', skins: ['💡'], id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
     { native: '😀', skins: ['😀'], id: 'grinning', name: 'Grinning Face', keywords: ['face', 'happy'], category: 'people' },
+    { native: '👍', skins: ['👍', '👍🏻', '👍🏼', '👍🏽', '👍🏾', '👍🏿'], id: 'thumbsup', name: 'Thumbs Up', keywords: ['ok', 'yes'], category: 'people' },
     { native: '✅', skins: ['✅'], id: 'check', name: 'Check Mark', keywords: ['ok', 'done'], category: 'symbols' },
   ] as ProcessedEmoji[]),
   searchEmojis: vi.fn((emojis: ProcessedEmoji[], q: string) => emojis.filter((e) => e.name.toLowerCase().includes(q))),
@@ -105,6 +106,86 @@ describe('EmojiPicker', () => {
     expect(picker.isOpen()).toBe(true);
     picker.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(picker.isOpen()).toBe(false);
+  });
+
+  describe('skin tone selector', () => {
+    it('renders the toggle outside the search wrapper, showing the default hand', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const el = picker.getElement();
+
+      const searchInput = el.querySelector('input[type="text"]')!;
+      const searchWrapper = searchInput.parentElement!;
+      const toggle = el.querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+      expect(toggle).not.toBeNull();
+      expect(searchWrapper.contains(toggle)).toBe(false);
+      expect(toggle.textContent).toBe('✋');
+    });
+
+    it('opens a popover with 6 hand variants when toggle is clicked', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+      const popover = picker.getElement().querySelector('[data-emoji-picker-skin-tone]') as HTMLElement;
+
+      expect(popover.hidden).toBe(true);
+      toggle.click();
+      expect(popover.hidden).toBe(false);
+
+      const options = popover.querySelectorAll('button');
+
+      expect(options.length).toBe(6);
+    });
+
+    it('updates emojis and toggle when a skin tone is selected', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+      toggle.click();
+
+      const popover = picker.getElement().querySelector('[data-emoji-picker-skin-tone]') as HTMLElement;
+      const options = popover.querySelectorAll('button');
+
+      // Select second skin tone (light)
+      options[1].click();
+
+      expect(toggle.textContent).toBe('✋🏻');
+      expect(popover.hidden).toBe(true);
+
+      const emojiButtons = Array.from(picker.getElement().querySelectorAll('[data-emoji-native]'));
+      const thumbsUp = emojiButtons.find(btn => btn.getAttribute('data-emoji-native') === '👍') as HTMLButtonElement;
+
+      expect(thumbsUp).not.toBeUndefined();
+      expect(thumbsUp.textContent).toBe('👍🏻');
+    });
+
+    it('closes popover on Escape without closing the picker', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+      toggle.click();
+
+      const popover = picker.getElement().querySelector('[data-emoji-picker-skin-tone]') as HTMLElement;
+
+      expect(popover.hidden).toBe(false);
+
+      picker.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      expect(popover.hidden).toBe(true);
+      expect(picker.isOpen()).toBe(true);
+    });
   });
 
   it('open() appends the picker element to document.body', async () => {

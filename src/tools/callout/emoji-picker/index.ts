@@ -38,9 +38,9 @@ const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string, label: str
   ['flags', IconEmojiFlag, 'Flags'],
 ];
 
-/** Skin tone hex colours — default yellow + 5 Fitzpatrick modifiers. */
-const SKIN_TONE_COLORS: readonly string[] = [
-  '#ffc83d', '#fadcbc', '#e0bb95', '#bf8f68', '#9b643d', '#594539',
+/** Raised-hand emoji for each skin tone (default + 5 Fitzpatrick modifiers). */
+const SKIN_TONE_HANDS: readonly string[] = [
+  '✋', '✋🏻', '✋🏼', '✋🏽', '✋🏾', '✋🏿',
 ];
 
 /** Dice SVG for the random button. */
@@ -72,6 +72,8 @@ export class EmojiPicker {
   private _navRafId = 0;
   /** Skin tone selector buttons for visual updates. */
   private _skinToneButtons: HTMLButtonElement[] = [];
+  private _skinToneToggle!: HTMLButtonElement;
+  private _skinTonePopover!: HTMLElement;
 
   constructor(options: EmojiPickerOptions) {
     this.onSelect = options.onSelect;
@@ -144,6 +146,7 @@ export class EmojiPicker {
   public close(): void {
     this._open = false;
     this._element.hidden = true;
+    this.closeSkinTonePopover();
 
     if (this._outsideClickHandler !== null) {
       document.removeEventListener('mousedown', this._outsideClickHandler);
@@ -195,6 +198,32 @@ export class EmojiPicker {
     searchWrapper.appendChild(iconSpan);
     searchWrapper.appendChild(input);
 
+    // Skin tone hand toggle (separate button next to search input)
+    const skinToneWrapper = document.createElement('div');
+
+    skinToneWrapper.className = 'relative flex-shrink-0';
+
+    const skinToggle = document.createElement('button');
+
+    skinToggle.type = 'button';
+    skinToggle.setAttribute('data-emoji-picker-skin-toggle', '');
+    skinToggle.setAttribute('aria-label', this.i18n.t(SKIN_TONE_KEY));
+    skinToggle.title = this.i18n.t(SKIN_TONE_KEY);
+    skinToggle.className = [
+      'w-[30px] h-[30px] flex items-center justify-center rounded-lg',
+      'text-[17px] leading-none cursor-pointer select-none',
+      'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
+      'active:scale-90 transition-all duration-100',
+    ].join(' ');
+    skinToggle.textContent = SKIN_TONE_HANDS[this._skinTone];
+    skinToggle.addEventListener('click', () => this.toggleSkinTonePopover());
+    this._skinToneToggle = skinToggle;
+    skinToneWrapper.appendChild(skinToggle);
+
+    // Skin tone popover (hidden by default, anchored below toggle)
+    this._skinTonePopover = this.buildSkinTonePopover();
+    skinToneWrapper.appendChild(this._skinTonePopover);
+
     // Random button
     const randomBtn = document.createElement('button');
     randomBtn.type = 'button';
@@ -229,6 +258,7 @@ export class EmojiPicker {
     });
 
     header.appendChild(searchWrapper);
+    header.appendChild(skinToneWrapper);
     header.appendChild(randomBtn);
     header.appendChild(removeBtn);
     el.appendChild(header);
@@ -248,12 +278,26 @@ export class EmojiPicker {
     ].join(' ');
     el.appendChild(nav);
 
-    // Footer: skin tone selector
-    el.appendChild(this.buildSkinToneFooter());
+    // Close skin tone popover on click outside toggle/popover
+    el.addEventListener('mousedown', (e: MouseEvent) => {
+      const target = e.target as Node;
+
+      if (!this._skinTonePopover.hidden
+        && !this._skinTonePopover.contains(target)
+        && !this._skinToneToggle.contains(target)) {
+        this.closeSkinTonePopover();
+      }
+    });
 
     // Keyboard handler
     el.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (!this._skinTonePopover.hidden) {
+          this.closeSkinTonePopover();
+
+          return;
+        }
+
         this.close();
       }
     });
@@ -263,55 +307,71 @@ export class EmojiPicker {
 
   // ─── Skin Tone Selector ─────────────────────────────────────
 
-  private buildSkinToneFooter(): HTMLElement {
-    const footer = document.createElement('div');
-    footer.setAttribute('data-emoji-picker-footer', '');
-    footer.className = [
-      'flex items-center justify-between px-3 py-2',
-      'border-t border-neutral-100 theme-dark:border-neutral-800',
+  private buildSkinTonePopover(): HTMLElement {
+    const popover = document.createElement('div');
+
+    popover.setAttribute('data-emoji-picker-skin-tone', '');
+    popover.className = [
+      'absolute right-0 top-full mt-1.5 z-20',
+      'flex items-center gap-0.5 p-1 rounded-xl',
+      'bg-white border border-neutral-200/70 shadow-lg',
+      'theme-dark:bg-neutral-800 theme-dark:border-neutral-700/50',
     ].join(' ');
-
-    const label = document.createElement('span');
-    label.className = 'text-[11px] text-neutral-400 theme-dark:text-neutral-500 select-none';
-    label.textContent = this.i18n.t(SKIN_TONE_KEY);
-
-    const circles = document.createElement('div');
-    circles.className = 'flex items-center gap-1.5';
+    popover.hidden = true;
 
     this._skinToneButtons = [];
 
-    for (const [index, color] of SKIN_TONE_COLORS.entries()) {
+    for (const [index, hand] of SKIN_TONE_HANDS.entries()) {
       const btn = document.createElement('button');
+
       btn.type = 'button';
+      btn.textContent = hand;
       btn.setAttribute('aria-label', `${this.i18n.t(SKIN_TONE_KEY)} ${index + 1}`);
-      btn.className = 'w-[18px] h-[18px] rounded-full cursor-pointer transition-all duration-100';
-      btn.style.backgroundColor = color;
-      this.applySkinToneStyle(btn, index === this._skinTone);
-      btn.addEventListener('click', () => this.setSkinTone(index));
-      circles.appendChild(btn);
+      btn.className = [
+        'w-[32px] h-[32px] flex items-center justify-center rounded-lg',
+        'text-[1.2rem] leading-none cursor-pointer select-none',
+        'hover:bg-neutral-100 theme-dark:hover:bg-neutral-700',
+        'active:scale-90 transition-all duration-100',
+      ].join(' ');
+      this.applySkinToneActiveStyle(btn, index === this._skinTone);
+      btn.addEventListener('click', () => {
+        this.setSkinTone(index);
+        this.closeSkinTonePopover();
+      });
+      popover.appendChild(btn);
       this._skinToneButtons.push(btn);
     }
 
-    footer.appendChild(label);
-    footer.appendChild(circles);
-
-    return footer;
+    return popover;
   }
 
-  private applySkinToneStyle(btn: HTMLButtonElement, active: boolean): void {
-    const s = btn.style;
+  private applySkinToneActiveStyle(btn: HTMLButtonElement, active: boolean): void {
+    const classes = ['bg-neutral-100', 'theme-dark:bg-neutral-700', 'ring-2', 'ring-neutral-300/60', 'theme-dark:ring-neutral-600/60'];
 
-    s.setProperty('transform', active ? 'scale(1.25)' : 'scale(1)');
-    s.setProperty('box-shadow', active ? '0 0 0 1.5px rgba(0,0,0,0.15)' : 'none');
-    s.setProperty('opacity', active ? '1' : '0.65');
+    if (active) {
+      btn.classList.add(...classes);
+    } else {
+      btn.classList.remove(...classes);
+    }
+  }
+
+  private toggleSkinTonePopover(): void {
+    this._skinTonePopover.hidden = !this._skinTonePopover.hidden;
+  }
+
+  private closeSkinTonePopover(): void {
+    this._skinTonePopover.hidden = true;
   }
 
   private setSkinTone(index: number): void {
     this._skinTone = index;
 
-    // Update skin tone button visuals
+    // Update the hand toggle to reflect current skin tone
+    this._skinToneToggle.textContent = SKIN_TONE_HANDS[index];
+
+    // Update skin tone popover button visuals
     for (const [i, btn] of this._skinToneButtons.entries()) {
-      this.applySkinToneStyle(btn, i === index);
+      this.applySkinToneActiveStyle(btn, i === index);
     }
 
     // Update all emoji buttons in-place (no re-render, preserves scroll)

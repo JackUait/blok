@@ -493,23 +493,21 @@ export const IconEmojiBall = `
 </svg>
 `;
 
-// Compass icon (Travel category)
-export const IconEmojiCompass = `
+// Globe icon (Travel category)
+export const IconEmojiGlobe = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M10 5l1.5 5-1.5 5-1.5-5z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M10 5l1.5 5h-3z" fill="currentColor"/>
+  <ellipse cx="10" cy="10" rx="2.75" ry="6.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M3.5 10h13" stroke="currentColor" stroke-width="1.25"/>
 </svg>
 `;
 
-// Key icon (Objects category)
-export const IconEmojiKey = `
+// Lightbulb icon (Objects category)
+export const IconEmojiLightbulb = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="7" cy="10" r="3" stroke="currentColor" stroke-width="1.25"/>
-  <circle cx="7" cy="10" r="1" fill="currentColor"/>
-  <path d="M10 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M13.5 10v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M15.5 10v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M8 13a3.5 3.5 0 1 1 4 0" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M8 13v2a2 2 0 0 0 4 0v-2" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M8.5 15h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 

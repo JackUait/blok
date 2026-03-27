@@ -493,27 +493,33 @@ export const IconEmojiBall = `
 </svg>
 `;
 
-// Location pin icon (Travel category)
-export const IconEmojiPin = `
+// Compass icon (Travel category)
+export const IconEmojiCompass = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 16.5c-3.5-4-4.5-6-4.5-8a4.5 4.5 0 1 1 9 0c0 2-1 4-4.5 8z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <circle cx="10" cy="8.5" r="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M10 5l1.5 5-1.5 5-1.5-5z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M10 5l1.5 5h-3z" fill="currentColor"/>
 </svg>
 `;
 
-// Lightbulb icon (Objects category)
-export const IconEmojiLightbulb = `
+// Key icon (Objects category)
+export const IconEmojiKey = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M8 13.5c-1.5-1.2-3-3-3-5.5a5 5 0 0 1 10 0c0 2.5-1.5 4.3-3 5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8 13.5v2c0 .8.9 1.5 2 1.5s2-.7 2-1.5v-2" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M8.5 15h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="7" cy="10" r="3" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="7" cy="10" r="1" fill="currentColor"/>
+  <path d="M10 10h6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M13.5 10v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M15.5 10v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
-// Heart icon (Symbols category)
-export const IconEmojiHeart = `
+// Hash/pound icon (Symbols category)
+export const IconEmojiHash = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 16.5C7 14 4 10.5 4 8.5 4 6 5.8 4.5 7.5 4.5c1 0 1.8.5 2.5 1.5.7-1 1.5-1.5 2.5-1.5 1.7 0 3.5 1.5 3.5 4 0 2-3 5.5-6 8z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M8.5 5l-1 10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M12.5 5l-1 10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M5 8h10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M5 12h10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 

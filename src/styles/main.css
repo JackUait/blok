@@ -476,6 +476,15 @@
 @custom-variant not-mobile (@media (min-width: 651px));
 @custom-variant can-hover (@media (hover: hover));
 
+/*
+  Theme-aware dark variant for components outside the scoped preflight
+  (e.g. emoji picker, which is appended to document.body).
+  The component sets data-theme="dark"|"light" on its root element after
+  resolving the Blok theme; this variant replaces Tailwind's built-in dark:
+  which incorrectly keys off prefers-color-scheme alone.
+*/
+@custom-variant theme-dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Non-overridable tokens — compiled statically */
 @theme {
   /* Z-index */
@@ -1331,4 +1340,74 @@
 }
 [data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
   background: var(--blok-gray-text);
+}
+
+/**
+ * Emoji picker — element resets.
+ * The picker lives outside [data-blok-popover] scope so it does not
+ * inherit the scoped preflight.  :where() keeps specificity at zero
+ * so Tailwind utility classes override freely.
+ */
+:where([data-blok-emoji-picker]) :where(button, input) {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+/* The picker sits outside [data-blok-popover] so the scoped preflight's
+   [hidden] { display: none !important } rule does not apply. Without this,
+   Tailwind's `flex` class overrides the UA `display: none` for [hidden]. */
+:where([data-blok-emoji-picker][hidden]),
+:where([data-blok-emoji-picker]) :where([hidden]) {
+  display: none !important;
+}
+
+/**
+ * Emoji picker — opening animation
+ */
+[data-blok-emoji-picker] {
+  animation: blok-emoji-picker-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+}
+
+@keyframes blok-emoji-picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/**
+ * Emoji picker — thin scrollbar (only visible on hover)
+ */
+[data-emoji-picker-body] {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+[data-emoji-picker-body]:hover {
+  scrollbar-color: color-mix(in srgb, currentColor 12%, transparent) transparent;
+}
+[data-emoji-picker-body]::-webkit-scrollbar {
+  width: 6px;
+}
+[data-emoji-picker-body]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-emoji-picker-body]::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+[data-emoji-picker-body]:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+[data-emoji-picker-body]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 22%, transparent);
 }

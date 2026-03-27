@@ -440,3 +440,79 @@ export const IconPaintRoller = `<svg xmlns="http://www.w3.org/2000/svg" width="2
   <path d="M14.5 6H16a1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1h-6a1 1 0 0 0-1 1V14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="8" y="14" width="3" height="3.5" rx="0.75" stroke="currentColor" stroke-width="1.25"/>
 </svg>`;
+
+// Emoji Picker Category Icons
+
+// Star icon (Callout category)
+export const IconEmojiStar = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 3l2.2 4.4 4.8.7-3.5 3.4.8 4.8L10 14l-4.3 2.3.8-4.8L3 8.1l4.8-.7L10 3z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Smiley face icon (People category)
+export const IconEmojiSmile = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="7.5" cy="8.5" r="0.75" fill="currentColor"/>
+  <circle cx="12.5" cy="8.5" r="0.75" fill="currentColor"/>
+  <path d="M7.5 12a3 3 0 0 0 5 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Leaf icon (Nature category)
+export const IconEmojiLeaf = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M6 16C6 16 4 10 8 6c4-4 9-3 9-3s1 5-3 9c-4 4-8 4-8 4z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 10L6 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Fork and knife icon (Food category)
+export const IconEmojiUtensils = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M7 3v4.5a2.5 2.5 0 0 1-5 0V3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 7.5V17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M15 3c0 0-2 1.5-2 4.5S15 11 15 11v6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Ball icon (Activity category)
+export const IconEmojiBall = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M5 6c3 2 7 2 10 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M5 14c3-2 7-2 10 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Compass icon (Travel category)
+export const IconEmojiCompass = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M12.5 7.5l-5 2 2 5 5-2-2-5z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Lightbulb icon (Objects category)
+export const IconEmojiLightbulb = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 14.5h4M8.5 16.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M8 14.5c-1.5-1-2.5-2.7-2.5-4.7a4.5 4.5 0 0 1 9 0c0 2-1 3.7-2.5 4.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Heart icon (Symbols category)
+export const IconEmojiHeart = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 16s-6-3.5-6-7.5C4 5.5 6 4 8 4c1.2 0 1.8.5 2 1 .2-.5.8-1 2-1 2 0 4 1.5 4 4.5 0 4-6 7.5-6 7.5z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Flag icon (Flags category)
+export const IconEmojiFlag = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M5 17V3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M5 3c2 0 3 1.5 5 1.5S14 3 16 3v8c-2 0-3 1.5-5 1.5S7 11 5 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;

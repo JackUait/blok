@@ -9,9 +9,9 @@ import {
   IconEmojiSprout,
   IconEmojiUtensils,
   IconEmojiBall,
-  IconEmojiPin,
-  IconEmojiLightbulb,
-  IconEmojiHeart,
+  IconEmojiCompass,
+  IconEmojiKey,
+  IconEmojiHash,
   IconEmojiFlag,
 } from '../../../components/icons';
 
@@ -32,9 +32,9 @@ const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string, label: str
   ['nature', IconEmojiSprout, 'Nature'],
   ['foods', IconEmojiUtensils, 'Food'],
   ['activity', IconEmojiBall, 'Activity'],
-  ['places', IconEmojiPin, 'Travel'],
-  ['objects', IconEmojiLightbulb, 'Objects'],
-  ['symbols', IconEmojiHeart, 'Symbols'],
+  ['places', IconEmojiCompass, 'Travel'],
+  ['objects', IconEmojiKey, 'Objects'],
+  ['symbols', IconEmojiHash, 'Symbols'],
   ['flags', IconEmojiFlag, 'Flags'],
 ];
 

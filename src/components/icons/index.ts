@@ -480,12 +480,16 @@ export const IconEmojiUtensils = `
 </svg>
 `;
 
-// Tennis ball icon (Activity category)
+// Soccer ball icon (Activity category)
 export const IconEmojiBall = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M7 4.5c-1.5 3-1.5 8 0 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M13 4.5c1.5 3 1.5 8 0 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10 7.5l2.4 1.7-.9 2.8h-3l-.9-2.8z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M10 7.5V4" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M12.4 9.2l3.1-1.1" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M11.5 12l2 2.6" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M8.5 12l-2 2.6" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M7.6 9.2l-3.1-1.1" stroke="currentColor" stroke-width="1.25"/>
 </svg>
 `;
 
@@ -500,15 +504,16 @@ export const IconEmojiPin = `
 // Lightbulb icon (Objects category)
 export const IconEmojiLightbulb = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M8.5 14c-1.5-1-2.5-2.8-2.5-5a4 4 0 0 1 8 0c0 2.2-1 4-2.5 5" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M8.5 14v1.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5V14" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M8 13.5c-1.5-1.2-3-3-3-5.5a5 5 0 0 1 10 0c0 2.5-1.5 4.3-3 5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 13.5v2c0 .8.9 1.5 2 1.5s2-.7 2-1.5v-2" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M8.5 15h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
 // Heart icon (Symbols category)
 export const IconEmojiHeart = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 16.5c-2.8-2.5-5-5-5-7.5 0-2 1.2-3.5 2.8-3.5 1 0 1.7.6 2.2 1.5.5-.9 1.2-1.5 2.2-1.5 1.6 0 2.8 1.5 2.8 3.5 0 2.5-2.2 5-5 7.5z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M10 16.5C7 14 4 10.5 4 8.5 4 6 5.8 4.5 7.5 4.5c1 0 1.8.5 2.5 1.5.7-1 1.5-1.5 2.5-1.5 1.7 0 3.5 1.5 3.5 4 0 2-3 5.5-6 8z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
 </svg>
 `;
 

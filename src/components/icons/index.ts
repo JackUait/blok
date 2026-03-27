@@ -505,9 +505,8 @@ export const IconEmojiGlobe = `
 // Lightbulb icon (Objects category)
 export const IconEmojiLightbulb = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M8 13a3.5 3.5 0 1 1 4 0" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M8 13v2a2 2 0 0 0 4 0v-2" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M8.5 15h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M8 12a4 4 0 1 1 4 0v2c0 .41-.34.75-.75.75h-2.5A.75.75 0 0 1 8 14z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M8.5 13.25h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 

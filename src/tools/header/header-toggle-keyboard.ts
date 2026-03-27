@@ -10,7 +10,7 @@
 import type { API } from '../../../types';
 
 import { isCaretAtStartOfInput } from '../../components/utils/caret';
-import { splitContentAtRange } from '../toggle/toggle-keyboard';
+import { getInsertAfterLastDescendantIndex, splitContentAtRange } from '../toggle/toggle-keyboard';
 
 export interface HeaderToggleKeyboardContext {
   api: API;
@@ -57,7 +57,8 @@ export const handleHeaderToggleEnter = async (
     // Caret at end of an open toggle heading → insert child paragraph.
     // insertInsideParent() groups both block creation and parent assignment into
     // a single Yjs undo entry, so one CMD+Z removes the new block completely.
-    const newBlock = api.blocks.insertInsideParent(blockId, currentBlockIndex + 1);
+    const insertIndex = getInsertAfterLastDescendantIndex(api, blockId, currentBlockIndex);
+    const newBlock = api.blocks.insertInsideParent(blockId, insertIndex);
 
     api.caret.setToBlock(newBlock.id, 'start');
 

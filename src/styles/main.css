@@ -476,6 +476,15 @@
 @custom-variant not-mobile (@media (min-width: 651px));
 @custom-variant can-hover (@media (hover: hover));
 
+/*
+  Theme-aware dark variant for components outside the scoped preflight
+  (e.g. emoji picker, which is appended to document.body).
+  The component sets data-theme="dark"|"light" on its root element after
+  resolving the Blok theme; this variant replaces Tailwind's built-in dark:
+  which incorrectly keys off prefers-color-scheme alone.
+*/
+@custom-variant theme-dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Non-overridable tokens — compiled statically */
 @theme {
   /* Z-index */
@@ -761,7 +770,7 @@
     --blok-selection: rgba(35, 131, 226, 0.2);
     --blok-selection-inline: rgba(35, 131, 226, 0.3);
     --blok-selection-highlight: rgba(35, 131, 226, 0.25);
-    --blok-bg-light: #191918;
+    --blok-bg-light: rgba(255, 255, 255, 0.08);
     --blok-gray-text: #a39e98;
     --blok-dark: #191918;
     --blok-active-icon: #529cca;
@@ -854,7 +863,7 @@
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
-  --blok-bg-light: #191918;
+  --blok-bg-light: rgba(255, 255, 255, 0.08);
   --blok-gray-text: #a39e98;
   --blok-dark: #191918;
   --blok-active-icon: #529cca;
@@ -1157,6 +1166,31 @@
 }
 
 /**
+ * Child-container heading overrides (callout, toggle heading)
+ * Inside [data-blok-toggle-children], headings should match paragraph spacing
+ * rather than using their large root-level top margins (mt-8, mt-[26px], etc.).
+ */
+[data-blok-toggle-children] :is(h1, h2, h3, h4, h5, h6) {
+  @apply mt-px;
+}
+
+/**
+ * Callout emoji vertical centering for heading first children.
+ * Headings have taller line boxes than the emoji button, so the emoji
+ * needs a top margin to shift its center down to match the heading's
+ * first line center.  Values: (heading-line-height − emoji-content) / 2 + 1px mt-px.
+ */
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h1) {
+  margin-top: 7.5px;
+}
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h2) {
+  margin-top: 3.6px;
+}
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h3) {
+  margin-top: 1px;
+}
+
+/**
  * Table cell block wrapper overrides
  * Strip all nested spacing so only the cell's own padding (py-1 px-2) provides spacing.
  * Targets: block wrapper (py/my), .blok-block (py/px), and tool elements (mt/mb).
@@ -1275,7 +1309,7 @@
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
-  @apply bg-search-input-bg rounded-md transition-colors duration-150 w-fit max-w-[240px] px-2 py-1;
+  @apply bg-search-input-bg rounded-[10px] transition-colors duration-150 w-fit max-w-[240px] px-2;
 }
 
 [data-blok-slash-search]::after {
@@ -1306,4 +1340,74 @@
 }
 [data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
   background: var(--blok-gray-text);
+}
+
+/**
+ * Emoji picker — element resets.
+ * The picker lives outside [data-blok-popover] scope so it does not
+ * inherit the scoped preflight.  :where() keeps specificity at zero
+ * so Tailwind utility classes override freely.
+ */
+:where([data-blok-emoji-picker]) :where(button, input) {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+/* The picker sits outside [data-blok-popover] so the scoped preflight's
+   [hidden] { display: none !important } rule does not apply. Without this,
+   Tailwind's `flex` class overrides the UA `display: none` for [hidden]. */
+:where([data-blok-emoji-picker][hidden]),
+:where([data-blok-emoji-picker]) :where([hidden]) {
+  display: none !important;
+}
+
+/**
+ * Emoji picker — opening animation
+ */
+[data-blok-emoji-picker] {
+  animation: blok-emoji-picker-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+}
+
+@keyframes blok-emoji-picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/**
+ * Emoji picker — thin scrollbar (only visible on hover)
+ */
+[data-emoji-picker-body] {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+[data-emoji-picker-body]:hover {
+  scrollbar-color: color-mix(in srgb, currentColor 12%, transparent) transparent;
+}
+[data-emoji-picker-body]::-webkit-scrollbar {
+  width: 6px;
+}
+[data-emoji-picker-body]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-emoji-picker-body]::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+[data-emoji-picker-body]:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+[data-emoji-picker-body]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 22%, transparent);
 }

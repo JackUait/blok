@@ -2204,13 +2204,13 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' } },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true } },
             { id: 'para-1', type: 'paragraph', data: { text: 'Outside block' } },
           ],
         },
       });
 
-      // Toggle starts expanded
+      // Toggle is explicitly open via isOpen: true
       await expect(page.locator('[data-blok-toggle-open="true"]')).toBeVisible();
 
       // Hover over the paragraph to show settings button
@@ -2241,7 +2241,7 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'Empty Toggle' } },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Empty Toggle', isOpen: true } },
             { id: 'para-1', type: 'paragraph', data: { text: 'Drag me' } },
           ],
         },
@@ -2285,10 +2285,7 @@ test.describe('drag and drop', () => {
         },
       });
 
-      // Collapse the toggle
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-
-      await arrow.click();
+      // Toggle starts collapsed by default
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
       // Hover over paragraph
@@ -2322,9 +2319,7 @@ test.describe('drag and drop', () => {
         },
       });
 
-      // Collapse the toggle
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-      await arrow.click();
+      // Toggle starts collapsed by default
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
       // Hover over paragraph to reveal drag handle
@@ -2372,9 +2367,7 @@ test.describe('drag and drop', () => {
         },
       });
 
-      // Collapse the toggle
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-      await arrow.click();
+      // Toggle starts collapsed by default
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
       // Hover over paragraph to reveal drag handle
@@ -2424,9 +2417,7 @@ test.describe('drag and drop', () => {
         },
       });
 
-      // Collapse the toggle
-      const arrow = page.locator('[data-blok-toggle-arrow]');
-      await arrow.click();
+      // Toggle starts collapsed by default
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
       // Hover over paragraph to reveal drag handle
@@ -2483,7 +2474,7 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'Parent' }, content: ['child-1', 'child-2'] },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Parent', isOpen: true }, content: ['child-1', 'child-2'] },
             { id: 'child-1', type: 'paragraph', data: { text: 'Child A' }, parent: 'toggle-1' },
             { id: 'child-2', type: 'paragraph', data: { text: 'Child B' }, parent: 'toggle-1' },
             { id: 'outsider', type: 'paragraph', data: { text: 'Outsider' } },
@@ -2518,7 +2509,7 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'Parent' }, content: ['child-1'] },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Parent', isOpen: true }, content: ['child-1'] },
             { id: 'child-1', type: 'paragraph', data: { text: 'Trapped child' }, parent: 'toggle-1' },
             { id: 'para-1', type: 'paragraph', data: { text: 'Bottom block' } },
           ],
@@ -2592,7 +2583,7 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'Empty Toggle' } },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Empty Toggle', isOpen: true } },
             { id: 'para-1', type: 'paragraph', data: { text: 'Drop me' } },
           ],
         },
@@ -2631,7 +2622,7 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' } },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true } },
             { id: 'para-1', type: 'paragraph', data: { text: 'Indent me' } },
           ],
         },
@@ -2672,7 +2663,7 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'Has Child' }, content: ['child-1'] },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'Has Child', isOpen: true }, content: ['child-1'] },
             { id: 'child-1', type: 'paragraph', data: { text: 'Only child' }, parent: 'toggle-1' },
             { id: 'para-1', type: 'paragraph', data: { text: 'Bottom' } },
           ],
@@ -2712,7 +2703,7 @@ test.describe('drag and drop', () => {
       await createBlok(page, {
         data: {
           blocks: [
-            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' } },
+            { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle', isOpen: true } },
             { id: 'para-1', type: 'paragraph', data: { text: 'Drag source' } },
           ],
         },

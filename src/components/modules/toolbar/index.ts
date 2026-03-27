@@ -414,16 +414,37 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
-     * Adjust toolbar button visibility when focus is inside a table cell.
-     * The plus button always stays visible so users can add blocks below the table.
-     * The settings toggler is hidden because drag/settings don't apply to individual cells.
+     * Adjust toolbar button visibility based on context:
+     * - Table cell focus: settings toggler hidden (drag/settings don't apply to cells)
+     * - Callout first child: both plus button and settings toggler hidden
+     *   to prevent overlap with the callout's emoji icon
      */
     const focusIsInsideCell = this.isFocusInsideTableCell();
+    const isCalloutFirstChild = this.isFirstChildOfCallout(targetBlock);
 
-    plusButton.style.display = '';
+    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = focusIsInsideCell ? 'none' : '';
+      settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
+    }
+
+    /**
+     * Adapt toolbar button background for blocks inside a callout with custom colors.
+     * Use color-mix() to create a subtly lighter variant of the callout background
+     * so buttons are distinguishable from the callout surface.
+     * Icon color stays default (text-text-secondary) regardless of callout colors.
+     *
+     * Skip when the target is the callout itself or its first child — their toolbar
+     * buttons render outside the callout's visual background area.
+     */
+    const calloutBg = isCalloutFirstChild || targetBlock.name === 'callout'
+      ? null
+      : this.getCalloutBackgroundColor(targetBlock);
+
+    if (calloutBg !== null) {
+      wrapper.style.setProperty('--blok-bg-light', `light-dark(color-mix(in srgb, ${calloutBg} 70%, white), color-mix(in srgb, ${calloutBg} 85%, white))`);
+    } else {
+      wrapper.style.removeProperty('--blok-bg-light');
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -561,9 +582,11 @@ export class Toolbar extends Module<ToolbarNodes> {
      * in case they were hidden for table cell blocks.
      */
     plusButton.style.display = '';
+    plusButton.style.color = '';
 
     if (settingsToggler) {
       settingsToggler.style.display = '';
+      settingsToggler.style.color = '';
     }
 
     const targetBlockHolder = targetBlock.holder;
@@ -657,10 +680,12 @@ export class Toolbar extends Module<ToolbarNodes> {
      */
     if (this.nodes.plusButton) {
       this.nodes.plusButton.style.display = '';
+      this.nodes.plusButton.style.color = '';
     }
 
     if (this.nodes.settingsToggler) {
       this.nodes.settingsToggler.style.display = '';
+      this.nodes.settingsToggler.style.color = '';
     }
 
     /**
@@ -710,6 +735,66 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Used to decide whether the plus button and settings toggler should be hidden.
    * Focus-based check distinguishes click (buttons hidden) from hover (buttons visible).
    */
+  /**
+   * Checks whether the given block is the first child of a callout block.
+   * Used to hide the plus button and prevent it from overlapping the callout emoji icon.
+   */
+  private isFirstChildOfCallout(block: Block): boolean {
+    if (!block.parentId) {
+      return false;
+    }
+
+    const parentBlock = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    if (!parentBlock || parentBlock.name !== 'callout') {
+      return false;
+    }
+
+    return parentBlock.contentIds[0] === block.id;
+  }
+
+  /**
+   * Returns the background color of the callout containing the given block,
+   * or null if the block is not inside a colored callout (or the callout has
+   * no background color set).
+   */
+  private getCalloutBackgroundColor(block: Block): string | null {
+    const calloutBlock = this.resolveCalloutBlock(block);
+
+    if (!calloutBlock) {
+      return null;
+    }
+
+    try {
+      const bg = calloutBlock.pluginsContent.style.backgroundColor;
+
+      return bg || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Returns the callout block if the given block is a callout or is a child of one.
+   */
+  private resolveCalloutBlock(block: Block): Block | null {
+    if (block.name === 'callout') {
+      return block;
+    }
+
+    if (!block.parentId) {
+      return null;
+    }
+
+    const parent = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    if (!parent || parent.name !== 'callout') {
+      return null;
+    }
+
+    return parent;
+  }
+
   private isFocusInsideTableCell(): boolean {
     const active = document.activeElement;
 
@@ -736,11 +821,12 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     const focusIsInsideCell = this.isFocusInsideTableCell();
+    const isCalloutFirstChild = this.hoveredBlock !== null && this.isFirstChildOfCallout(this.hoveredBlock);
 
-    plusButton.style.display = '';
+    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
 
     if (settingsToggler) {
-      settingsToggler.style.display = focusIsInsideCell ? 'none' : '';
+      settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
     }
   }
 
@@ -899,6 +985,15 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.toolboxOpened, 'true');
+
+      /**
+       * Adapt search input colors when toolbox opens inside a colored callout.
+       */
+      const calloutBg = this.hoveredBlock !== null
+        ? this.getCalloutBackgroundColor(this.hoveredBlock)
+        : null;
+
+      this.toolboxInstance?.setCalloutBackground(calloutBg);
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {

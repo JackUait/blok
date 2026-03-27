@@ -518,7 +518,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await expect(headerBlock).toBeVisible();
   });
 
-  test('selecting filtered item inserts the new block below the typed-text paragraph', async ({ page }) => {
+  test('selecting filtered item replaces the search paragraph with the new block', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'paragraph', data: { text: '' } },
     ]);
@@ -552,10 +552,9 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
 
     await expect(headerBlock).toBeVisible();
 
-    // In no-slash mode, the block now has text "head" so it is not empty and not slash-search-only.
-    // shouldReplaceBlock = false → header is inserted BELOW the "head" paragraph.
-    // Result: 2 blocks (the "head" paragraph + the new header).
-    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
+    // In no-slash mode (plus button), the search text "head" is just a filter query,
+    // not user content. The block should be replaced, leaving only the new header.
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
   });
 
   test('fuzzy search: subsequence match finds tools', async ({ page }) => {

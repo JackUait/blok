@@ -28,6 +28,7 @@ const createMockContext = (overrides: Partial<ToggleKeyboardContext> = {}): Togg
         getBlockIndex: vi.fn().mockReturnValue(0),
         getCurrentBlockIndex: vi.fn().mockReturnValue(0),
         insertInsideParent: vi.fn().mockReturnValue({ id: 'new-block-id' }),
+        getChildren: vi.fn().mockReturnValue([]),
       },
       caret: {
         setToBlock: vi.fn(),
@@ -110,6 +111,7 @@ describe('Toggle Keyboard Handlers', () => {
             getBlockIndex: vi.fn().mockReturnValue(0),
             getCurrentBlockIndex: vi.fn().mockReturnValue(0),
             insertInsideParent: mockInsertInsideParent,
+            getChildren: vi.fn().mockReturnValue([]),
           },
           caret: { setToBlock: mockSetToBlock },
         } as unknown as API,
@@ -127,6 +129,132 @@ describe('Toggle Keyboard Handlers', () => {
 
       // insertInsideParent should be called with (parentId, insertIndex)
       expect(mockInsertInsideParent).toHaveBeenCalledWith('test-block-id', 1);
+      expect(mockSetToBlock).toHaveBeenCalledWith('new-block-id', 'start');
+
+      contentElement.remove();
+    });
+
+    it('inserts child after last descendant when toggle already has children', async () => {
+      const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
+
+      const mockSetToBlock = vi.fn();
+      const mockInsertInsideParent = vi.fn().mockReturnValue({ id: 'new-block-id' });
+      const mockGetBlockIndex = vi.fn().mockImplementation((id: string) => {
+        const indices: Record<string, number> = {
+          'test-block-id': 5,
+          'child-1': 6,
+          'child-2': 7,
+          'child-3': 8,
+        };
+
+        return indices[id];
+      });
+      const mockGetChildren = vi.fn().mockImplementation((parentId: string) => {
+        if (parentId === 'test-block-id') {
+          return [{ id: 'child-1' }, { id: 'child-2' }, { id: 'child-3' }];
+        }
+
+        return [];
+      });
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'Toggle heading';
+      document.body.appendChild(contentElement);
+
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+        isOpen: true,
+        api: {
+          blocks: {
+            splitBlock: vi.fn(),
+            convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
+            getBlockIndex: mockGetBlockIndex,
+            getCurrentBlockIndex: vi.fn().mockReturnValue(5),
+            insertInsideParent: mockInsertInsideParent,
+            getChildren: mockGetChildren,
+          },
+          caret: { setToBlock: mockSetToBlock },
+        } as unknown as API,
+      });
+
+      // Selection at end of content
+      const range = document.createRange();
+      range.selectNodeContents(contentElement);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      await handleToggleEnter(context);
+
+      // Should insert AFTER the last child (index 8), not after toggle (index 5)
+      expect(mockInsertInsideParent).toHaveBeenCalledWith('test-block-id', 9);
+      expect(mockSetToBlock).toHaveBeenCalledWith('new-block-id', 'start');
+
+      contentElement.remove();
+    });
+
+    it('inserts child after deepest last descendant when last child has nested children', async () => {
+      const { handleToggleEnter } = await import('../../../../src/tools/toggle/toggle-keyboard');
+
+      const mockSetToBlock = vi.fn();
+      const mockInsertInsideParent = vi.fn().mockReturnValue({ id: 'new-block-id' });
+      const mockGetBlockIndex = vi.fn().mockImplementation((id: string) => {
+        const indices: Record<string, number> = {
+          'test-block-id': 5,
+          'child-1': 6,
+          'child-2': 7,  // nested toggle
+          'grandchild-1': 8,
+          'grandchild-2': 9,
+        };
+
+        return indices[id];
+      });
+      const mockGetChildren = vi.fn().mockImplementation((parentId: string) => {
+        if (parentId === 'test-block-id') {
+          return [{ id: 'child-1' }, { id: 'child-2' }];
+        }
+        if (parentId === 'child-2') {
+          return [{ id: 'grandchild-1' }, { id: 'grandchild-2' }];
+        }
+
+        return [];
+      });
+
+      const contentElement = document.createElement('div');
+      contentElement.setAttribute('contenteditable', 'true');
+      contentElement.textContent = 'Toggle heading';
+      document.body.appendChild(contentElement);
+
+      const context = createMockContext({
+        getContentElement: () => contentElement,
+        isOpen: true,
+        api: {
+          blocks: {
+            splitBlock: vi.fn(),
+            convert: vi.fn().mockResolvedValue({ holder: document.createElement('div') }),
+            getBlockIndex: mockGetBlockIndex,
+            getCurrentBlockIndex: vi.fn().mockReturnValue(5),
+            insertInsideParent: mockInsertInsideParent,
+            getChildren: mockGetChildren,
+          },
+          caret: { setToBlock: mockSetToBlock },
+        } as unknown as API,
+      });
+
+      // Selection at end of content
+      const range = document.createRange();
+      range.selectNodeContents(contentElement);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      await handleToggleEnter(context);
+
+      // Should insert AFTER the deepest last descendant (grandchild-2 at index 9)
+      expect(mockInsertInsideParent).toHaveBeenCalledWith('test-block-id', 10);
       expect(mockSetToBlock).toHaveBeenCalledWith('new-block-id', 'start');
 
       contentElement.remove();

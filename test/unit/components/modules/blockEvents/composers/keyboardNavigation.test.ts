@@ -311,13 +311,19 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
-    it('promotes empty last toggle child to sibling after toggle on Enter', () => {
+    it('creates a new child inside the toggle when Enter is pressed on an empty last child', () => {
       const toggleParentId = 'toggle-parent';
       const childBlockId = 'child-block';
+
+      const toggleHolder = document.createElement('div');
+      const toggleWrapper = document.createElement('div');
+      toggleWrapper.setAttribute('data-blok-toggle-open', 'true');
+      toggleHolder.appendChild(toggleWrapper);
 
       const toggleParent = createBlock({
         id: toggleParentId,
         contentIds: [childBlockId],
+        holder: toggleHolder,
       });
 
       const emptyChildBlock = createBlock({
@@ -331,13 +337,9 @@ describe('KeyboardNavigation', () => {
         })(),
       });
 
+      const newBlock = createBlock({ id: 'new-block' });
       const setBlockParent = vi.fn();
-      const move = vi.fn();
-      const getBlockIndex = vi.fn((block: Block) => {
-        if (block === toggleParent) return 0;
-        if (block === emptyChildBlock) return 1;
-        return -1;
-      });
+      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
       const getBlockById = vi.fn((id: string) => {
         if (id === toggleParentId) return toggleParent;
         if (id === childBlockId) return emptyChildBlock;
@@ -350,11 +352,11 @@ describe('KeyboardNavigation', () => {
         BlockManager: {
           currentBlock: emptyChildBlock,
           currentBlockIndex: 1,
-          insertDefaultBlockAtIndex: vi.fn(),
+          insertDefaultBlockAtIndex,
           split: vi.fn(),
           setBlockParent,
-          move,
-          getBlockIndex,
+          move: vi.fn(),
+          getBlockIndex: vi.fn(),
           getBlockById,
           transactForTool: vi.fn((fn: () => void) => fn()),
         } as unknown as BlokModules['BlockManager'],
@@ -379,11 +381,192 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleEnter(event);
 
-      // The child block should be un-parented from the toggle
-      expect(setBlockParent).toHaveBeenCalledWith(emptyChildBlock, null);
-      // The block should be moved after the toggle parent
-      expect(move).toHaveBeenCalled();
+      // The block should NOT be promoted out — it should stay inside the toggle.
+      // setBlockParent should NOT be called with null (no un-parenting).
+      expect(setBlockParent).not.toHaveBeenCalledWith(emptyChildBlock, null);
+      // A new block should be created inside the toggle at currentBlockIndex + 1
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+      // The new block should inherit the toggle parent
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, toggleParentId);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('exits empty callout on Enter by inserting a block after it, preserving the callout', () => {
+      const calloutParentId = 'callout-parent';
+      const childBlockId = 'child-block';
+
+      const calloutHolder = document.createElement('div');
+      const childContainer = document.createElement('div');
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      calloutHolder.appendChild(childContainer);
+
+      const calloutParent = createBlock({
+        id: calloutParentId,
+        contentIds: [childBlockId],
+        holder: calloutHolder,
+      });
+
+      const emptyChildBlock = createBlock({
+        id: childBlockId,
+        isEmpty: true,
+        parentId: calloutParentId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+          input.contentEditable = 'true';
+          return input;
+        })(),
+      });
+
+      const newBlock = createBlock({ id: 'new-block' });
+      const setBlockParent = vi.fn();
+      const move = vi.fn();
+      const removeBlock = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === calloutParent) return 0;
+        if (block === emptyChildBlock) return 1;
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === calloutParentId) return calloutParent;
+        if (id === childBlockId) return emptyChildBlock;
+        return undefined;
+      });
+      const setToBlock = vi.fn();
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyChildBlock,
+          currentBlockIndex: 1,
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent,
+          move,
+          removeBlock,
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // Should NOT promote the child or remove the callout
+      expect(setBlockParent).not.toHaveBeenCalledWith(emptyChildBlock, null);
+      expect(move).not.toHaveBeenCalled();
+      expect(removeBlock).not.toHaveBeenCalled();
+      // Should insert a new block after the callout (index 0 + 1 = 1)
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(1);
+      // New block should NOT be parented to the callout
+      expect(setBlockParent).not.toHaveBeenCalled();
+      // Focus should move to the new block
+      expect(setToBlock).toHaveBeenCalledWith(newBlock);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('does not promote when callout has multiple children (last child empty)', () => {
+      const calloutParentId = 'callout-parent';
+      const firstChildId = 'first-child';
+      const lastChildId = 'last-child';
+
+      const calloutHolder = document.createElement('div');
+      const childContainer = document.createElement('div');
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      calloutHolder.appendChild(childContainer);
+
+      const calloutParent = createBlock({
+        id: calloutParentId,
+        contentIds: [firstChildId, lastChildId],
+        holder: calloutHolder,
+      });
+
+      const emptyLastChild = createBlock({
+        id: lastChildId,
+        isEmpty: true,
+        parentId: calloutParentId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+          input.contentEditable = 'true';
+          return input;
+        })(),
+      });
+
+      const newBlock = createBlock({ id: 'new-block' });
+      const setBlockParent = vi.fn();
+      const move = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === calloutParent) return 0;
+        if (block === emptyLastChild) return 2;
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === calloutParentId) return calloutParent;
+        if (id === lastChildId) return emptyLastChild;
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyLastChild,
+          currentBlockIndex: 2,
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent,
+          move,
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // Should NOT promote — callout has content (multiple children)
+      expect(setBlockParent).not.toHaveBeenCalledWith(emptyLastChild, null);
+      expect(move).not.toHaveBeenCalled();
+      // Should insert a new block inside the callout
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(3);
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, calloutParentId);
 
       isCaretAtStartOfInputSpy.mockRestore();
       isCaretAtEndOfInputSpy.mockRestore();

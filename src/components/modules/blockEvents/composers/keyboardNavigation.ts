@@ -197,13 +197,30 @@ export class KeyboardNavigation extends BlockEventComposer {
       return null;
     }
 
-    this.Blok.BlockManager.setBlockParent(currentBlock, null);
+    const isToggleParent = parentBlock.holder.querySelector('[data-blok-toggle-open]') !== null;
+
+    if (isToggleParent) {
+      /**
+       * Toggle children should never be promoted out — pressing Enter on an
+       * empty last child creates a new sibling inside the toggle instead.
+       * The caller (createBlockOnEnter) handles this via the normal Case 2
+       * path: insertDefaultBlockAtIndex + setBlockParent to inherit the parent.
+       */
+      return null;
+    }
+
+    /**
+     * Non-toggle containers (e.g. callout): when the only child is empty,
+     * exit by inserting a new block after the container. The container and
+     * its child are preserved so the user can return to it.
+     */
+    if (parentBlock.contentIds.length !== 1) {
+      return null;
+    }
+
     const parentIndex = this.Blok.BlockManager.getBlockIndex(parentBlock);
-    const currentIndex = this.Blok.BlockManager.getBlockIndex(currentBlock);
 
-    this.Blok.BlockManager.move(parentIndex + 1, currentIndex, false);
-
-    return currentBlock;
+    return this.Blok.BlockManager.insertDefaultBlockAtIndex(parentIndex + 1);
   }
 
   private createBlockOnEnter(currentBlock: Block): Block {

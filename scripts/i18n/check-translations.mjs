@@ -75,6 +75,70 @@ function getAvailableLocales() {
 }
 
 /**
+ * Detects double-encoded UTF-8 values in a translation object.
+ *
+ * Double-encoding occurs when UTF-8 bytes are misinterpreted as Latin-1 and
+ * re-encoded to UTF-8. This produces mojibake like "Ð¦Ð²ÐµÑ" instead of "Цвет".
+ *
+ * Uses round-trip verification: decode as latin1 → re-encode as utf8 → compare
+ * to original. Only true double-encoding round-trips cleanly.
+ *
+ * @param {Record<string, string>} translation - Flat key-value translation object
+ * @returns {Array<{key: string, value: string, corrected: string}>} Detected issues
+ */
+export function detectDoubleEncoding(translation) {
+  const issues = [];
+
+  for (const [key, value] of Object.entries(translation)) {
+    // Only check values with characters above ASCII (potential multi-byte)
+    if (!/[^\x00-\x7F]/.test(value)) continue;
+
+    // Check if all non-ASCII codepoints fall within Latin-1 range (U+0080–U+00FF).
+    // Correctly-encoded non-Latin scripts (Tamil, Japanese, Arabic, etc.) use codepoints
+    // well above U+00FF, so they are excluded immediately — no false positives.
+    const hasHighCodepoints = [...value].some((ch) => ch.codePointAt(0) > 0xff);
+    if (hasHighCodepoints) continue;
+
+    // All codepoints are within Latin-1 range — attempt round-trip decode
+    const buf = Buffer.from(value, 'latin1');
+    const decoded = buf.toString('utf8');
+
+    // Must not produce replacement characters (U+FFFD)
+    if (decoded.includes('\ufffd')) continue;
+
+    // Must differ from original (if identical, it's just ASCII/Latin-1 text)
+    if (decoded === value) continue;
+
+    // Round-trip: re-encoding the decoded string should reproduce the original
+    const roundTrip = Buffer.from(decoded, 'utf8').toString('latin1');
+    if (roundTrip === value) {
+      issues.push({ key, value, corrected: decoded });
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Finds translation keys whose values are identical to the English source.
+ *
+ * @param {Record<string, string>} sourceTranslation - English source key-values
+ * @param {Record<string, string>} translation - Target locale key-values
+ * @returns {string[]} Keys with values identical to English
+ */
+export function findUntranslatedKeys(sourceTranslation, translation) {
+  const untranslated = [];
+
+  for (const [key, sourceValue] of Object.entries(sourceTranslation)) {
+    if (key in translation && translation[key] === sourceValue) {
+      untranslated.push(key);
+    }
+  }
+
+  return untranslated;
+}
+
+/**
  * Extracts all statically-known i18n keys from a TypeScript source string.
  * Matches .t('key') and .t("key") — skips dynamic arguments.
  *
@@ -249,6 +313,52 @@ function main() {
     hasErrors = true;
   } else {
     console.log(`${colors.green}Source coverage check passed!${colors.reset}\n`);
+  }
+
+  // --- Phase 3: encoding quality ---
+
+  console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}\n`);
+  console.log(`${colors.dim}Checking encoding quality...${colors.reset}\n`);
+
+  let encodingErrors = false;
+  let untranslatedWarnings = false;
+
+  for (const locale of locales) {
+    const translation = loadTranslation(locale);
+
+    // Check for double-encoded values
+    const doubleEncoded = detectDoubleEncoding(translation);
+    if (doubleEncoded.length > 0) {
+      encodingErrors = true;
+      console.log(
+        `${colors.red}✗${colors.reset} ${locale}: ${doubleEncoded.length} double-encoded value${doubleEncoded.length === 1 ? '' : 's'}`
+      );
+      for (const issue of doubleEncoded) {
+        console.log(`  ${colors.red}-${colors.reset} ${issue.key}: "${issue.value}" → should be "${issue.corrected}"`);
+      }
+    }
+
+    // Check for untranslated values (identical to English)
+    const untranslated = findUntranslatedKeys(sourceTranslation, translation);
+    if (untranslated.length > 0) {
+      untranslatedWarnings = true;
+      console.log(
+        `${colors.yellow}⚠${colors.reset} ${locale}: ${untranslated.length} untranslated value${untranslated.length === 1 ? '' : 's'} (identical to English)`
+      );
+    }
+  }
+
+  if (encodingErrors) {
+    console.log(
+      `\n${colors.red}Encoding quality check failed.${colors.reset} Fix double-encoded values.\n`
+    );
+    hasErrors = true;
+  } else if (untranslatedWarnings) {
+    console.log(
+      `\n${colors.yellow}Encoding quality check passed with warnings.${colors.reset} Consider translating values identical to English.\n`
+    );
+  } else {
+    console.log(`${colors.green}Encoding quality check passed!${colors.reset}\n`);
   }
 
   if (hasErrors) {

@@ -67,12 +67,39 @@ export class BlockHoverController extends Controller {
       const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**
-       * If the hovered block is inside a table cell, resolve to the table block instead.
-       * Without this, the toolbar hides itself for nested cell blocks and the table's
-       * block tune settings become inaccessible.
+       * When the cursor is in the gap between children inside a [data-blok-child-toolbar]
+       * container, the closest block-wrapper is the parent — not a child.
+       * Skip the event so the toolbar stays on the previous child block.
        */
-      const hoveredBlockElement = closestBlockWrapper?.closest('[data-blok-table-cell-blocks]')
-        ? closestBlockWrapper.closest('[data-blok-table-cell-blocks]')?.closest('[data-blok-testid="block-wrapper"]') ?? null
+      const targetChildToolbar = (event.target as Element | null)?.closest('[data-blok-child-toolbar]');
+
+      if (targetChildToolbar && closestBlockWrapper && !targetChildToolbar.contains(closestBlockWrapper)) {
+        return;
+      }
+
+      /**
+       * If the hovered block is inside a table cell or toggle-children container,
+       * resolve to the parent block instead.
+       * Without this, the toolbar targets nested child blocks and the parent's
+       * block tune settings become inaccessible.
+       *
+       * Containers with [data-blok-child-toolbar] opt out of parent resolution,
+       * allowing non-first children to have independent toolbars (e.g. callout blocks).
+       * The first child still resolves to parent so the container's own controls display.
+       */
+      const alwaysResolveContainer = closestBlockWrapper?.closest(
+        '[data-blok-table-cell-blocks], [data-blok-toggle-children]:not([data-blok-child-toolbar])'
+      );
+      const childToolbarContainer = !alwaysResolveContainer
+        ? closestBlockWrapper?.closest('[data-blok-child-toolbar]') ?? null
+        : null;
+      const isFirstChildOfContainer = childToolbarContainer !== null
+        && childToolbarContainer.querySelector(':scope > [data-blok-testid="block-wrapper"]') === closestBlockWrapper;
+
+      const nestedContainer = alwaysResolveContainer
+        ?? (isFirstChildOfContainer ? childToolbarContainer : null);
+      const hoveredBlockElement = nestedContainer
+        ? nestedContainer.closest('[data-blok-testid="block-wrapper"]') ?? null
         : closestBlockWrapper;
 
       /**
@@ -158,13 +185,13 @@ export class BlockHoverController extends Controller {
     }
 
     /**
-     * Filter out blocks whose holders are inside a table cell container.
-     * Cell blocks should not participate in nearest-block detection —
-     * the parent table block should be found instead.
-     * This matches the direct-hit path which also resolves cell blocks to their parent table block.
+     * Filter out blocks whose holders are inside a table cell or toggle-children container.
+     * Nested child blocks should not participate in nearest-block detection —
+     * the parent block should be found instead.
+     * This matches the direct-hit path which also resolves nested blocks to their parent.
      */
     const topLevelBlocks = blocks.filter(block =>
-      block.holder.closest('[data-blok-table-cell-blocks]') === null
+      block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
     );
 
     if (topLevelBlocks.length === 0) {

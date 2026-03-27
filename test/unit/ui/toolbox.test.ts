@@ -1058,6 +1058,52 @@ describe('Toolbox', () => {
       expect(mocks.api.blocks.transact).not.toHaveBeenCalled();
       expect(mocks.api.blocks.setBlockParent).not.toHaveBeenCalled();
     });
+
+    it('should replace block containing search text when toolbox was opened without slash (plus button)', async () => {
+      /**
+       * Simulate the plus-button flow:
+       * 1. Plus button creates an empty block and opens toolbox without slash
+       * 2. User types "head" to search — this goes into the block's contentEditable
+       * 3. Block is no longer empty (contains "head") but should still be replaced
+       */
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = 'head';
+      holderElement.appendChild(contentEditableElement);
+
+      const blockWithSearchText = {
+        ...mocks.blockAPI,
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(blockWithSearchText as unknown as BlockAPI);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      // Open toolbox without slash (plus button mode)
+      toolbox.open(false);
+
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // Block should be replaced (index 0, shouldReplace=true) despite containing search text
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        undefined,
+        undefined,
+        0,
+        undefined,
+        true
+      );
+    });
   });
 
   describe('table tool filtering inside table cells', () => {
@@ -1579,4 +1625,43 @@ describe('Toolbox', () => {
       expect(textItem?.englishTitle).toBe('Text');
     });
   });
+
+  describe('setCalloutBackground', () => {
+    it('sets --blok-search-input-bg on popover element when color is provided', () => {
+      const popoverEl = document.createElement('div');
+
+      mockPopoverInstance.getElement.mockReturnValue(popoverEl);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: createToolsCollection([]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.setCalloutBackground('var(--blok-color-brown-bg)');
+
+      expect(popoverEl.style.getPropertyValue('--blok-search-input-bg')).toBe('light-dark(color-mix(in srgb, var(--blok-color-brown-bg) 70%, white), color-mix(in srgb, var(--blok-color-brown-bg) 85%, white))');
+    });
+
+    it('removes overrides from popover element when color is null', () => {
+      const popoverEl = document.createElement('div');
+
+      popoverEl.style.setProperty('--blok-search-input-bg', 'var(--blok-color-brown-bg)');
+
+      mockPopoverInstance.getElement.mockReturnValue(popoverEl);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: createToolsCollection([]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.setCalloutBackground(null);
+
+      expect(popoverEl.style.getPropertyValue('--blok-search-input-bg')).toBe('');
+    });
+  });
+
 });

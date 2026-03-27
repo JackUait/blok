@@ -233,20 +233,20 @@ export class EmojiPicker {
     header.appendChild(removeBtn);
     el.appendChild(header);
 
-    // Category navigation bar
-    const nav = document.createElement('div');
-    nav.setAttribute('data-emoji-picker-nav', '');
-    nav.className = [
-      'flex items-center px-3 pb-2',
-      'border-b border-neutral-100 theme-dark:border-neutral-800',
-    ].join(' ');
-    el.appendChild(nav);
-
     // Scrollable body
     const body = document.createElement('div');
     body.setAttribute('data-emoji-picker-body', '');
     body.className = 'overflow-y-auto max-h-[320px] px-1.5 pb-2';
     el.appendChild(body);
+
+    // Category navigation bar (below emoji grid)
+    const nav = document.createElement('div');
+    nav.setAttribute('data-emoji-picker-nav', '');
+    nav.className = [
+      'flex items-center px-3 pt-2 pb-1',
+      'border-t border-neutral-100 theme-dark:border-neutral-800',
+    ].join(' ');
+    el.appendChild(nav);
 
     // Footer: skin tone selector
     el.appendChild(this.buildSkinToneFooter());
@@ -369,10 +369,10 @@ export class EmojiPicker {
       btn.setAttribute('aria-label', catLabel);
       btn.setAttribute('data-emoji-nav', catId);
       btn.className = [
-        'flex-1 h-[28px] flex items-center justify-center',
+        'flex-1 h-[36px] flex items-center justify-center',
         'rounded-md cursor-pointer opacity-50',
         'text-neutral-500 theme-dark:text-neutral-400',
-        '[&>svg]:w-[16px] [&>svg]:h-[16px]',
+        '[&>svg]:w-[20px] [&>svg]:h-[20px]',
         'hover:opacity-100 hover:bg-neutral-100',
         'theme-dark:hover:bg-neutral-800',
         'transition-all duration-100',

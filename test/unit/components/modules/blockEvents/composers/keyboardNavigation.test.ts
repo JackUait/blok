@@ -311,7 +311,7 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
-    it('promotes empty last toggle child to sibling after toggle on Enter', () => {
+    it('creates a new child inside the toggle when Enter is pressed on an empty last child', () => {
       const toggleParentId = 'toggle-parent';
       const childBlockId = 'child-block';
 
@@ -337,13 +337,9 @@ describe('KeyboardNavigation', () => {
         })(),
       });
 
+      const newBlock = createBlock({ id: 'new-block' });
       const setBlockParent = vi.fn();
-      const move = vi.fn();
-      const getBlockIndex = vi.fn((block: Block) => {
-        if (block === toggleParent) return 0;
-        if (block === emptyChildBlock) return 1;
-        return -1;
-      });
+      const insertDefaultBlockAtIndex = vi.fn(() => newBlock);
       const getBlockById = vi.fn((id: string) => {
         if (id === toggleParentId) return toggleParent;
         if (id === childBlockId) return emptyChildBlock;
@@ -356,11 +352,11 @@ describe('KeyboardNavigation', () => {
         BlockManager: {
           currentBlock: emptyChildBlock,
           currentBlockIndex: 1,
-          insertDefaultBlockAtIndex: vi.fn(),
+          insertDefaultBlockAtIndex,
           split: vi.fn(),
           setBlockParent,
-          move,
-          getBlockIndex,
+          move: vi.fn(),
+          getBlockIndex: vi.fn(),
           getBlockById,
           transactForTool: vi.fn((fn: () => void) => fn()),
         } as unknown as BlokModules['BlockManager'],
@@ -385,10 +381,13 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleEnter(event);
 
-      // The child block should be un-parented from the toggle
-      expect(setBlockParent).toHaveBeenCalledWith(emptyChildBlock, null);
-      // The block should be moved after the toggle parent
-      expect(move).toHaveBeenCalled();
+      // The block should NOT be promoted out — it should stay inside the toggle.
+      // setBlockParent should NOT be called with null (no un-parenting).
+      expect(setBlockParent).not.toHaveBeenCalledWith(emptyChildBlock, null);
+      // A new block should be created inside the toggle at currentBlockIndex + 1
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2);
+      // The new block should inherit the toggle parent
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, toggleParentId);
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
       isCaretAtStartOfInputSpy.mockRestore();

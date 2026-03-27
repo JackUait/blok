@@ -460,52 +460,55 @@ export const IconEmojiSmile = `
 </svg>
 `;
 
-// Leaf icon (Nature category)
-export const IconEmojiLeaf = `
+// Sprout icon (Nature category)
+export const IconEmojiSprout = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M6 16C6 16 4 10 8 6c4-4 9-3 9-3s1 5-3 9c-4 4-8 4-8 4z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M12 10L6 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10 17v-7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10 13c-3 0-6-2-6-5 3 0 6 2 6 5z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M10 10c3 0 6-2.5 6-5.5-3 0-6 2.5-6 5.5z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Fork and knife icon (Food category)
 export const IconEmojiUtensils = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M7 3v4.5a2.5 2.5 0 0 1-5 0V3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4.5 7.5V17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M15 3c0 0-2 1.5-2 4.5S15 11 15 11v6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5 3v4c0 1.1.9 2 2 2v8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 3v4c0 1.1-.9 2-2 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 3v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M13 3v14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M13 3c1.7 0 3 1.5 3 3.5S13 10 13 10" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Ball icon (Activity category)
+// Tennis ball icon (Activity category)
 export const IconEmojiBall = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M5 6c3 2 7 2 10 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M5 14c3-2 7-2 10 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M7 4.5c-1.5 3-1.5 8 0 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M13 4.5c1.5 3 1.5 8 0 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
-// Compass icon (Travel category)
-export const IconEmojiCompass = `
+// Location pin icon (Travel category)
+export const IconEmojiPin = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M12.5 7.5l-5 2 2 5 5-2-2-5z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 16.5c-3.5-4-4.5-6-4.5-8a4.5 4.5 0 1 1 9 0c0 2-1 4-4.5 8z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <circle cx="10" cy="8.5" r="1.5" stroke="currentColor" stroke-width="1.25"/>
 </svg>
 `;
 
 // Lightbulb icon (Objects category)
 export const IconEmojiLightbulb = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M8 14.5h4M8.5 16.5h3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M8 14.5c-1.5-1-2.5-2.7-2.5-4.7a4.5 4.5 0 0 1 9 0c0 2-1 3.7-2.5 4.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.5 14c-1.5-1-2.5-2.8-2.5-5a4 4 0 0 1 8 0c0 2.2-1 4-2.5 5" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M8.5 14v1.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5V14" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Heart icon (Symbols category)
 export const IconEmojiHeart = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 16s-6-3.5-6-7.5C4 5.5 6 4 8 4c1.2 0 1.8.5 2 1 .2-.5.8-1 2-1 2 0 4 1.5 4 4.5 0 4-6 7.5-6 7.5z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 16.5c-2.8-2.5-5-5-5-7.5 0-2 1.2-3.5 2.8-3.5 1 0 1.7.6 2.2 1.5.5-.9 1.2-1.5 2.2-1.5 1.6 0 2.8 1.5 2.8 3.5 0 2.5-2.2 5-5 7.5z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
 </svg>
 `;
 

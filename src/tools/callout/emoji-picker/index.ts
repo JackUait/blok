@@ -147,7 +147,7 @@ export class EmojiPicker {
 
     el.setAttribute('data-blok-emoji-picker', '');
     el.className = [
-      'fixed z-50 w-[340px] overflow-hidden rounded-xl',
+      'fixed z-50 w-[400px] overflow-hidden rounded-xl',
       'border border-neutral-200/70 bg-white shadow-2xl',
       'theme-dark:border-neutral-700/50 theme-dark:bg-neutral-900',
     ].join(' ');
@@ -256,14 +256,14 @@ export class EmojiPicker {
     // Scrollable body
     const body = document.createElement('div');
     body.setAttribute('data-emoji-picker-body', '');
-    body.className = 'overflow-y-auto max-h-[320px] px-1.5 pb-2';
+    body.className = 'overflow-y-auto max-h-[260px] px-1.5 pb-2';
     el.appendChild(body);
 
     // Category navigation bar (below emoji grid)
     const nav = document.createElement('div');
     nav.setAttribute('data-emoji-picker-nav', '');
     nav.className = [
-      'flex items-center px-3 pt-1 pb-1',
+      'flex items-center gap-1 px-2 pt-1 pb-1',
       'border-t border-neutral-100 theme-dark:border-neutral-800',
     ].join(' ');
     el.appendChild(nav);
@@ -593,7 +593,7 @@ export class EmojiPicker {
 
   private buildGrid(emojis: ProcessedEmoji[]): HTMLElement {
     const grid = document.createElement('div');
-    grid.className = 'grid grid-cols-8 gap-0.5 px-0.5 pt-1';
+    grid.className = 'grid grid-cols-10 gap-0.5 px-0.5 pt-1';
 
     for (const emoji of emojis) {
       const btn = document.createElement('button');
@@ -688,8 +688,8 @@ export class EmojiPicker {
 
   private position(anchor: HTMLElement): void {
     const rect = anchor.getBoundingClientRect();
-    const pickerHeight = 480;
-    const pickerWidth = 340;
+    const pickerHeight = 420;
+    const pickerWidth = 400;
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 

@@ -331,6 +331,15 @@ describe('EmojiPicker', () => {
     }
   });
 
+  it('nav bar has gap between category icons and 8px horizontal padding', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const nav = picker.getElement().querySelector('[data-emoji-picker-nav]') as HTMLElement;
+
+    expect(nav.className).toContain('gap-1');
+    expect(nav.className).toContain('px-2');
+  });
+
   it('nav bar uses 4px top padding (pt-1)', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
@@ -352,6 +361,28 @@ describe('EmojiPicker', () => {
     for (const btn of navButtons) {
       expect(btn.className).toContain('rounded-lg');
       expect(btn.className).not.toContain('rounded-md');
+    }
+  });
+
+  it('emoji body max height is 260px', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const body = picker.getElement().querySelector('[data-emoji-picker-body]') as HTMLElement;
+
+    expect(body.className).toContain('max-h-[260px]');
+  });
+
+  it('emoji grid uses 10 columns', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    const grids = picker.getElement().querySelectorAll('.grid');
+
+    expect(grids.length).toBeGreaterThan(0);
+    for (const grid of grids) {
+      expect(grid.className).toContain('grid-cols-10');
     }
   });
 

@@ -1259,6 +1259,33 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('size cache', () => {
+    it('invalidates size cache when search filtering changes item visibility', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+        ],
+      });
+
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // Prime the size cache
+      const initialSize = instance.size;
+
+      expect(initialSize).toBeDefined();
+
+      // Manually set cache to a known value to detect invalidation
+      instance._size = { height: 999, width: 999 };
+
+      // Trigger a search which should hide some items and invalidate cache
+      popover.filterItems('alpha');
+
+      expect(instance._size).toBeUndefined();
+    });
+  });
+
   describe('handleMouseLeave', () => {
     it('destroys nested popover and resets hover state when mouse leaves popover container', () => {
       const popover = createPopover({

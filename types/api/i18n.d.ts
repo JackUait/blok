@@ -27,4 +27,11 @@ export interface I18n {
    * @returns English translation string, or empty string if not found
    */
   getEnglishTranslation(key: string): string;
+
+  /**
+   * Get the current locale code.
+   *
+   * @returns The active locale code (e.g., 'en', 'fr', 'ja')
+   */
+  getLocale(): string;
 }

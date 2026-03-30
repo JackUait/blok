@@ -49,6 +49,17 @@ describe('EmojiPicker', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.removeChild(container);
+    // Clear any scroll lock left by tests that open the picker without closing it
+    document.documentElement.style.overflow = '';
+  });
+
+  it('uses fixed positioning so it stays in place when the page scrolls', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const el = picker.getElement();
+
+    expect(el.className).toContain('fixed');
+    expect(el.className).not.toContain('absolute');
   });
 
   it('builds a picker element with filter input and body', async () => {
@@ -329,7 +340,7 @@ describe('EmojiPicker', () => {
     expect(nav.className).not.toContain('pt-2');
   });
 
-  it('nav button corners use rounded-lg to match the outer rounded-2xl container', async () => {
+  it('nav button corners use rounded-lg to match the outer rounded-xl container', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
     container.appendChild(picker.getElement());
@@ -393,6 +404,30 @@ describe('EmojiPicker', () => {
       // Clicking directly on backdrop closes
       backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       expect(picker.isOpen()).toBe(false);
+
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+
+    it('locks page scroll when open and restores it on close', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const anchor = document.createElement('button');
+      document.body.appendChild(anchor);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      document.body.appendChild(picker.getElement());
+
+      // Before open — no scroll lock
+      expect(document.documentElement.style.overflow).not.toBe('hidden');
+
+      await picker.open(anchor);
+
+      // While open — scroll is locked
+      expect(document.documentElement.style.overflow).toBe('hidden');
+
+      picker.close();
+
+      // After close — scroll restored
+      expect(document.documentElement.style.overflow).not.toBe('hidden');
 
       document.body.removeChild(anchor);
       document.body.removeChild(picker.getElement());

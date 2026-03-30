@@ -320,6 +320,30 @@ describe('EmojiPicker', () => {
     }
   });
 
+  it('nav bar uses 4px top padding (pt-1)', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const nav = picker.getElement().querySelector('[data-emoji-picker-nav]') as HTMLElement;
+
+    expect(nav.className).toContain('pt-1');
+    expect(nav.className).not.toContain('pt-2');
+  });
+
+  it('nav button corners use rounded-lg to match the outer rounded-2xl container', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    const navButtons = picker.getElement().querySelectorAll('[data-emoji-nav]');
+
+    expect(navButtons.length).toBeGreaterThan(0);
+    for (const btn of navButtons) {
+      expect(btn.className).toContain('rounded-lg');
+      expect(btn.className).not.toContain('rounded-md');
+    }
+  });
+
   it('emoji grid has top padding so hover-scaled emojis do not overlap section headings', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
@@ -334,6 +358,65 @@ describe('EmojiPicker', () => {
     }
   });
 
+  describe('backdrop', () => {
+    it('wraps the picker in a fixed backdrop to block pointer events behind it', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const anchor = document.createElement('button');
+      document.body.appendChild(anchor);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      document.body.appendChild(picker.getElement());
+      await picker.open(anchor);
+
+      const backdrop = document.querySelector('[data-blok-emoji-picker-backdrop]') as HTMLElement;
+
+      expect(backdrop).not.toBeNull();
+      expect(backdrop.style.position).toBe('fixed');
+      expect(backdrop.style.inset).toBe('0px');
+      // Picker is inside the backdrop wrapper
+      expect(backdrop.contains(picker.getElement())).toBe(true);
+
+      picker.close();
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+
+    it('closes picker when backdrop is clicked (not when picker is clicked)', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const anchor = document.createElement('button');
+      document.body.appendChild(anchor);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      document.body.appendChild(picker.getElement());
+      await picker.open(anchor);
+
+      const backdrop = document.querySelector('[data-blok-emoji-picker-backdrop]') as HTMLElement;
+
+      // Clicking directly on backdrop closes
+      backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      expect(picker.isOpen()).toBe(false);
+
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+
+    it('removes backdrop and moves picker back on close', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const anchor = document.createElement('button');
+      document.body.appendChild(anchor);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      document.body.appendChild(picker.getElement());
+      await picker.open(anchor);
+
+      expect(document.querySelector('[data-blok-emoji-picker-backdrop]')).not.toBeNull();
+      picker.close();
+      expect(document.querySelector('[data-blok-emoji-picker-backdrop]')).toBeNull();
+      // Picker is back in document.body
+      expect(document.body.contains(picker.getElement())).toBe(true);
+
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+  });
+
   it('open() appends the picker element to document.body', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const anchor = document.createElement('button');
@@ -346,6 +429,7 @@ describe('EmojiPicker', () => {
 
     expect(document.body.contains(picker.getElement())).toBe(true);
     expect(picker.isOpen()).toBe(true);
+    picker.close();
     document.body.removeChild(anchor);
     document.body.removeChild(picker.getElement());
   });

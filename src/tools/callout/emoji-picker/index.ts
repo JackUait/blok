@@ -61,7 +61,7 @@ export class EmojiPicker {
   private _skinTone = 0;
 
   private _anchorEl: HTMLElement | null = null;
-  private _outsideClickHandler: ((e: MouseEvent) => void) | null = null;
+  private _backdrop: HTMLElement | null = null;
 
   /** Maps category id -> nav button for active-state management. */
   private _navButtons = new Map<string, HTMLButtonElement>();
@@ -119,6 +119,7 @@ export class EmojiPicker {
     }
 
     this.renderEmojiGrid(this._allEmojis);
+    this.showBackdrop();
     this.position(anchor);
     this._element.hidden = false;
 
@@ -128,32 +129,13 @@ export class EmojiPicker {
     this._element.style.animation = '';
 
     this._filterInput.focus();
-
-    this._outsideClickHandler = (e: MouseEvent) => {
-      if (!this._element.contains(e.target as Node) && e.target !== anchor) {
-        this.close();
-      }
-    };
-
-    const handler = this._outsideClickHandler;
-
-    if (handler !== null) {
-      requestAnimationFrame(() => {
-        document.addEventListener('mousedown', handler);
-      });
-    }
   }
 
   public close(): void {
     this._open = false;
     this._element.hidden = true;
     this.closeSkinTonePopover();
-
-    if (this._outsideClickHandler !== null) {
-      document.removeEventListener('mousedown', this._outsideClickHandler);
-    }
-
-    this._outsideClickHandler = null;
+    this.removeBackdrop();
     this._anchorEl?.focus();
   }
 
@@ -280,7 +262,7 @@ export class EmojiPicker {
     const nav = document.createElement('div');
     nav.setAttribute('data-emoji-picker-nav', '');
     nav.className = [
-      'flex items-center px-3 pt-2 pb-1',
+      'flex items-center px-3 pt-1 pb-1',
       'border-t border-neutral-100 theme-dark:border-neutral-800',
     ].join(' ');
     el.appendChild(nav);
@@ -450,7 +432,7 @@ export class EmojiPicker {
       btn.setAttribute('data-emoji-nav', catId);
       btn.className = [
         'flex-1 h-[36px] flex items-center justify-center',
-        'rounded-md cursor-pointer opacity-50',
+        'rounded-lg cursor-pointer opacity-50',
         'text-neutral-500 theme-dark:text-neutral-400',
         '[&>svg]:w-[20px] [&>svg]:h-[20px]',
         'hover:opacity-100 hover:bg-neutral-100',
@@ -658,6 +640,42 @@ export class EmojiPicker {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
+  // ─── Backdrop ──────────────────────────────────────────────
+
+  private showBackdrop(): void {
+    this.removeBackdrop();
+
+    const backdrop = document.createElement('div');
+
+    backdrop.setAttribute('data-blok-emoji-picker-backdrop', '');
+    backdrop.style.position = 'fixed';
+    backdrop.style.inset = '0';
+    backdrop.style.zIndex = '50';
+
+    // Close only when clicking the backdrop itself, not the picker inside it
+    backdrop.addEventListener('mousedown', (e: MouseEvent) => {
+      if (e.target === backdrop) {
+        this.close();
+      }
+    });
+
+    // Wrap: insert backdrop where the picker is, then move picker inside it
+    this._element.parentElement?.insertBefore(backdrop, this._element);
+    backdrop.appendChild(this._element);
+    this._backdrop = backdrop;
+  }
+
+  private removeBackdrop(): void {
+    if (this._backdrop === null) {
+      return;
+    }
+
+    // Move picker back to where the backdrop is before removing it
+    this._backdrop.parentElement?.insertBefore(this._element, this._backdrop);
+    this._backdrop.remove();
+    this._backdrop = null;
+  }
+
   // ─── Positioning ──────────────────────────────────────────
 
   private position(anchor: HTMLElement): void {
@@ -667,13 +685,14 @@ export class EmojiPicker {
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
+    // Coordinates are viewport-relative (picker is inside a fixed backdrop)
     const top = rect.bottom + pickerHeight > viewportHeight
-      ? rect.top + window.scrollY - pickerHeight - 4
-      : rect.bottom + window.scrollY + 4;
+      ? rect.top - pickerHeight - 4
+      : rect.bottom + 4;
 
-    const left = rect.left + window.scrollX + pickerWidth > viewportWidth
-      ? rect.right + window.scrollX - pickerWidth
-      : rect.left + window.scrollX;
+    const left = rect.left + pickerWidth > viewportWidth
+      ? rect.right - pickerWidth
+      : rect.left;
 
     this._element.style.top = `${top}px`;
     this._element.style.left = `${left}px`;

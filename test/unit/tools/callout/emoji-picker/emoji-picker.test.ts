@@ -233,7 +233,7 @@ describe('EmojiPicker', () => {
   });
 
   describe('header button sizing matches search input', () => {
-    it('skin tone toggle, random, and remove buttons use size classes matching the search input height', async () => {
+    it('skin tone toggle uses 28px size, random and remove buttons use 34px to match the search input height', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
       const el = picker.getElement();
@@ -242,14 +242,16 @@ describe('EmojiPicker', () => {
       const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
       const removeBtn = el.querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
 
-      // All header buttons should match the search input's height (~28px)
-      for (const btn of [skinToggle, randomBtn, removeBtn]) {
-        expect(btn.className).toContain('w-[28px]');
-        expect(btn.className).toContain('h-[28px]');
-      }
-
-      // Skin tone emoji should be text-[14px] to match the search icon scale
+      // Skin tone toggle stays compact at 28px
+      expect(skinToggle.className).toContain('w-[28px]');
+      expect(skinToggle.className).toContain('h-[28px]');
       expect(skinToggle.className).toContain('text-[14px]');
+
+      // Random and remove buttons match the search input height (~34px)
+      for (const btn of [randomBtn, removeBtn]) {
+        expect(btn.className).toContain('w-[34px]');
+        expect(btn.className).toContain('h-[34px]');
+      }
     });
 
     it('random and remove buttons are grouped with a tight gap', async () => {
@@ -265,7 +267,7 @@ describe('EmojiPicker', () => {
       expect(randomBtn.parentElement!.className).toContain('gap-1');
     });
 
-    it('random and remove button SVG icons are 12×12 to match header proportions', async () => {
+    it('random and remove button SVG icons are 14×14 to match larger button proportions', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
       const el = picker.getElement();
@@ -276,10 +278,10 @@ describe('EmojiPicker', () => {
       const randomSvg = randomBtn.querySelector('svg') as SVGElement;
       const removeSvg = removeBtn.querySelector('svg') as SVGElement;
 
-      expect(randomSvg.getAttribute('width')).toBe('12');
-      expect(randomSvg.getAttribute('height')).toBe('12');
-      expect(removeSvg.getAttribute('width')).toBe('12');
-      expect(removeSvg.getAttribute('height')).toBe('12');
+      expect(randomSvg.getAttribute('width')).toBe('14');
+      expect(randomSvg.getAttribute('height')).toBe('14');
+      expect(removeSvg.getAttribute('width')).toBe('14');
+      expect(removeSvg.getAttribute('height')).toBe('14');
     });
   });
 

@@ -11,6 +11,14 @@ export const CALLOUT_EMOJI_CATEGORY_KEY = 'tools.callout.calloutEmojiCategory';
 export const NO_EMOJIS_FOUND_KEY = 'tools.callout.noEmojisFound';
 export const PICK_RANDOM_KEY = 'tools.callout.pickRandom';
 export const SKIN_TONE_KEY = 'tools.callout.skinTone';
+export const EMOJI_CATEGORY_PEOPLE_KEY = 'tools.callout.emojiCategoryPeople';
+export const EMOJI_CATEGORY_NATURE_KEY = 'tools.callout.emojiCategoryNature';
+export const EMOJI_CATEGORY_FOOD_KEY = 'tools.callout.emojiCategoryFood';
+export const EMOJI_CATEGORY_ACTIVITY_KEY = 'tools.callout.emojiCategoryActivity';
+export const EMOJI_CATEGORY_TRAVEL_KEY = 'tools.callout.emojiCategoryTravel';
+export const EMOJI_CATEGORY_OBJECTS_KEY = 'tools.callout.emojiCategoryObjects';
+export const EMOJI_CATEGORY_SYMBOLS_KEY = 'tools.callout.emojiCategorySymbols';
+export const EMOJI_CATEGORY_FLAGS_KEY = 'tools.callout.emojiCategoryFlags';
 
 // Defaults
 export const DEFAULT_EMOJI = '💡';

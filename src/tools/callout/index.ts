@@ -270,6 +270,7 @@ export class CalloutTool implements BlockTool {
         onSelect: (native: string) => this.setEmoji(native),
         onRemove: () => this.setEmoji(''),
         i18n: this.api.i18n,
+        locale: this.api.i18n.getLocale(),
       });
       document.body.appendChild(this._emojiPicker.getElement());
     }

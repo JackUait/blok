@@ -1,6 +1,7 @@
 // src/tools/callout/emoji-picker/index.ts
 
 import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
+import { loadEmojiLocale, getTranslatedName, type EmojiLocaleData } from './emoji-locale';
 import { onHover } from '../../../components/utils/tooltip';
 import {
   REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
@@ -41,6 +42,7 @@ interface EmojiPickerOptions {
   onSelect: (native: string) => void;
   onRemove: () => void;
   i18n: I18n;
+  locale: string;
 }
 
 /** SVG icon for each emoji category (display order). */
@@ -68,6 +70,8 @@ export class EmojiPicker {
   private readonly onSelect: (native: string) => void;
   private readonly onRemove: () => void;
   private readonly i18n: I18n;
+  private readonly _locale: string;
+  private _localeData: EmojiLocaleData | null = null;
 
   private _element: HTMLElement;
   private _body: HTMLElement;
@@ -99,6 +103,7 @@ export class EmojiPicker {
     this.onSelect = options.onSelect;
     this.onRemove = options.onRemove;
     this.i18n = options.i18n;
+    this._locale = options.locale;
     this._element = this.buildElement();
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
@@ -135,6 +140,14 @@ export class EmojiPicker {
 
     if (this._allEmojis.length === 0) {
       this._allEmojis = await loadEmojiData();
+    }
+
+    if (this._locale !== 'en' && this._localeData === null) {
+      const localeData = await loadEmojiLocale(this._locale);
+
+      if (localeData !== null) {
+        this._localeData = localeData;
+      }
     }
 
     this.renderEmojiGrid(this._allEmojis);
@@ -521,7 +534,7 @@ export class EmojiPicker {
     }
 
     this._nav.hidden = true;
-    const results = searchEmojis(this._allEmojis, query);
+    const results = searchEmojis(this._allEmojis, query, this._localeData);
 
     if (results.length === 0) {
       if (!this._showingEmptyState) {
@@ -628,6 +641,10 @@ export class EmojiPicker {
     return section;
   }
 
+  private getDisplayName(emoji: ProcessedEmoji): string {
+    return getTranslatedName(emoji.native, this._locale) ?? emoji.name;
+  }
+
   private buildGrid(emojis: ProcessedEmoji[]): HTMLElement {
     const grid = document.createElement('div');
     grid.className = 'grid grid-cols-10 gap-0.5 px-0.5 pt-1';
@@ -636,7 +653,7 @@ export class EmojiPicker {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = this.getSkinnedNative(emoji);
-      btn.title = emoji.name;
+      btn.title = this.getDisplayName(emoji);
       btn.setAttribute('data-emoji-native', emoji.native);
       btn.className = [
         'aspect-square flex items-center justify-center',
@@ -649,7 +666,7 @@ export class EmojiPicker {
         this.onSelect(this.getSkinnedNative(emoji));
         this.close();
       });
-      onHover(btn, emoji.name, { placement: 'bottom' });
+      onHover(btn, this.getDisplayName(emoji), { placement: 'bottom' });
       grid.appendChild(btn);
     }
 

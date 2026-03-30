@@ -14,7 +14,7 @@ vi.mock('../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
 
 const createMockAPI = (): API => ({
   styles: { block: 'ce-block', inlineToolbar: '', inlineToolButton: '', inlineToolButtonActive: '', settingsButton: '', settingsButtonActive: '', selected: '' },
-  i18n: { t: (k: string) => k, has: vi.fn().mockReturnValue(false) },
+  i18n: { t: (k: string) => k, has: vi.fn().mockReturnValue(false), getLocale: vi.fn().mockReturnValue('en'), getEnglishTranslation: vi.fn().mockReturnValue('') },
   events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
   blocks: {
     insertInsideParent: vi.fn().mockReturnValue({ id: 'child-id', holder: document.createElement('div') }),

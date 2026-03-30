@@ -83,6 +83,51 @@ describe('emoji-data', () => {
     expect(results).toHaveLength(0);
   });
 
+  it('searchEmojis matches against translated names when locale data is provided', async () => {
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const emojis = await loadEmojiData();
+    const localeData = {
+      '💡': { n: 'ampoule', k: ['idée', 'lumière'] },
+    };
+    const results = searchEmojis(emojis, 'ampoule', localeData);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].native).toBe('💡');
+  });
+
+  it('searchEmojis matches against translated keywords when locale data is provided', async () => {
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const emojis = await loadEmojiData();
+    const localeData = {
+      '💡': { n: 'ampoule', k: ['idée', 'lumière'] },
+    };
+    const results = searchEmojis(emojis, 'idée', localeData);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].native).toBe('💡');
+  });
+
+  it('searchEmojis still matches English names when locale data is provided', async () => {
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const emojis = await loadEmojiData();
+    const localeData = {
+      '💡': { n: 'ampoule', k: ['idée'] },
+    };
+    const results = searchEmojis(emojis, 'light', localeData);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].native).toBe('💡');
+  });
+
+  it('searchEmojis works without locale data (backward compatible)', async () => {
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const emojis = await loadEmojiData();
+    const results = searchEmojis(emojis, 'light');
+
+    expect(results).toHaveLength(1);
+    expect(results[0].native).toBe('💡');
+  });
+
   it('CURATED_CALLOUT_EMOJIS contains 💡 and has ~20 entries', async () => {
     const { CURATED_CALLOUT_EMOJIS } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
 

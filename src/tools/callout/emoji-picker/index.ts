@@ -59,6 +59,7 @@ export class EmojiPicker {
   private _open = false;
   private _allEmojis: ProcessedEmoji[] = [];
   private _skinTone = 0;
+  private _showingEmptyState = false;
 
   private _anchorEl: HTMLElement | null = null;
   private _backdrop: HTMLElement | null = null;
@@ -504,7 +505,9 @@ export class EmojiPicker {
     const results = searchEmojis(this._allEmojis, query);
 
     if (results.length === 0) {
-      this.renderEmptyState();
+      if (!this._showingEmptyState) {
+        this.renderEmptyState();
+      }
     } else {
       this.renderFlatGrid(results);
     }
@@ -513,6 +516,7 @@ export class EmojiPicker {
   private renderEmojiGrid(emojis: ProcessedEmoji[]): void {
     this._body.innerHTML = '';
     this._sectionEls.clear();
+    this._showingEmptyState = false;
 
     const visibleCategories = new Set<string>();
 
@@ -550,25 +554,28 @@ export class EmojiPicker {
   private renderFlatGrid(emojis: ProcessedEmoji[]): void {
     this._body.innerHTML = '';
     this._sectionEls.clear();
+    this._showingEmptyState = false;
     this._body.appendChild(this.buildGrid(emojis));
   }
 
   private renderEmptyState(): void {
     this._body.innerHTML = '';
+    this._showingEmptyState = true;
     this._sectionEls.clear();
 
     const empty = document.createElement('div');
     empty.className = [
       'flex flex-col items-center justify-center py-10',
       'text-neutral-400 theme-dark:text-neutral-500 select-none',
+      'animate-[blok-emoji-empty-in_300ms_ease-out_both]',
     ].join(' ');
 
     const icon = document.createElement('span');
-    icon.className = 'text-2xl mb-2 opacity-40';
-    icon.textContent = '🔎';
+    icon.className = 'mb-3 opacity-20 [&>svg]:w-9 [&>svg]:h-9';
+    icon.innerHTML = IconSearch;
 
     const text = document.createElement('span');
-    text.className = 'text-[13px]';
+    text.className = 'text-[13px] font-medium';
     text.textContent = this.i18n.t(NO_EMOJIS_FOUND_KEY);
 
     empty.appendChild(icon);

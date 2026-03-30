@@ -83,18 +83,11 @@ export function searchEmojis(emojis: ProcessedEmoji[], query: string, localeData
     }
 
     // Translated match (when locale data is loaded)
-    if (localeData !== undefined && localeData !== null) {
-      const entry = localeData[emoji.native];
+    const entry = localeData?.[emoji.native];
 
-      if (entry !== undefined) {
-        if (entry.n.toLowerCase().includes(lower)) {
-          return true;
-        }
-
-        if (entry.k !== undefined && entry.k.some(k => k.toLowerCase().includes(lower))) {
-          return true;
-        }
-      }
+    if (entry !== undefined) {
+      return entry.n.toLowerCase().includes(lower) ||
+        (entry.k !== undefined && entry.k.some(k => k.toLowerCase().includes(lower)));
     }
 
     return false;

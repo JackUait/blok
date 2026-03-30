@@ -44,7 +44,7 @@ const SKIN_TONE_HANDS: readonly string[] = [
 ];
 
 /** Dice SVG for the random button. */
-const ICON_DICE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><circle cx="4.5" cy="4.5" r=".9" fill="currentColor"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="9.5" cy="9.5" r=".9" fill="currentColor"/></svg>';
+const ICON_DICE = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><circle cx="4.5" cy="4.5" r=".9" fill="currentColor"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="9.5" cy="9.5" r=".9" fill="currentColor"/></svg>';
 
 export class EmojiPicker {
   private readonly onSelect: (native: string) => void;
@@ -171,15 +171,15 @@ export class EmojiPicker {
 
     // Header: search input + random button + remove button
     const header = document.createElement('div');
-    header.className = 'flex items-center gap-1.5 px-3 pt-3 pb-2';
+    header.className = 'flex items-center gap-2.5 px-3 pt-3 pb-2';
 
     const searchWrapper = document.createElement('div');
     searchWrapper.className = 'relative flex-1 min-w-0';
 
     const iconSpan = document.createElement('span');
     iconSpan.className = [
-      'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2',
-      'text-neutral-400 theme-dark:text-neutral-500 [&>svg]:w-[14px] [&>svg]:h-[14px]',
+      'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center',
+      'text-neutral-400 theme-dark:text-neutral-500 [&>svg]:w-[16px] [&>svg]:h-[16px]',
     ].join(' ');
     iconSpan.innerHTML = IconSearch;
 
@@ -210,8 +210,8 @@ export class EmojiPicker {
     skinToggle.setAttribute('aria-label', this.i18n.t(SKIN_TONE_KEY));
     skinToggle.title = this.i18n.t(SKIN_TONE_KEY);
     skinToggle.className = [
-      'w-[30px] h-[30px] flex items-center justify-center rounded-lg',
-      'text-[17px] leading-none cursor-pointer select-none',
+      'w-[28px] h-[28px] flex items-center justify-center rounded-lg',
+      'text-[14px] leading-none cursor-pointer select-none',
       'hover:bg-neutral-100 theme-dark:hover:bg-neutral-800',
       'active:scale-90 transition-all duration-100',
     ].join(' ');
@@ -231,7 +231,7 @@ export class EmojiPicker {
     randomBtn.setAttribute('aria-label', this.i18n.t(PICK_RANDOM_KEY));
     randomBtn.title = this.i18n.t(PICK_RANDOM_KEY);
     randomBtn.className = [
-      'flex-shrink-0 w-[30px] h-[30px] flex items-center justify-center rounded-lg',
+      'flex-shrink-0 w-[28px] h-[28px] flex items-center justify-center rounded-lg',
       'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600',
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
@@ -246,21 +246,25 @@ export class EmojiPicker {
     removeBtn.setAttribute('aria-label', this.i18n.t(REMOVE_EMOJI_KEY));
     removeBtn.title = this.i18n.t(REMOVE_EMOJI_KEY);
     removeBtn.className = [
-      'flex-shrink-0 w-[30px] h-[30px] flex items-center justify-center rounded-lg',
+      'flex-shrink-0 w-[28px] h-[28px] flex items-center justify-center rounded-lg',
       'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600',
       'theme-dark:hover:bg-neutral-800 theme-dark:hover:text-neutral-300',
       'transition-colors duration-100 cursor-pointer',
     ].join(' ');
-    removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    removeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     removeBtn.addEventListener('click', () => {
       this.onRemove();
       this.close();
     });
 
+    const actionGroup = document.createElement('div');
+    actionGroup.className = 'flex items-center gap-1';
+    actionGroup.appendChild(randomBtn);
+    actionGroup.appendChild(removeBtn);
+
     header.appendChild(searchWrapper);
     header.appendChild(skinToneWrapper);
-    header.appendChild(randomBtn);
-    header.appendChild(removeBtn);
+    header.appendChild(actionGroup);
     el.appendChild(header);
 
     // Scrollable body
@@ -357,10 +361,23 @@ export class EmojiPicker {
 
   private toggleSkinTonePopover(): void {
     this._skinTonePopover.hidden = !this._skinTonePopover.hidden;
+    this.updateSkinToneToggleActive();
   }
 
   private closeSkinTonePopover(): void {
     this._skinTonePopover.hidden = true;
+    this.updateSkinToneToggleActive();
+  }
+
+  private updateSkinToneToggleActive(): void {
+    const active = !this._skinTonePopover.hidden;
+    const classes = ['bg-neutral-100', 'theme-dark:bg-neutral-700'];
+
+    if (active) {
+      this._skinToneToggle.classList.add(...classes);
+    } else {
+      this._skinToneToggle.classList.remove(...classes);
+    }
   }
 
   private setSkinTone(index: number): void {

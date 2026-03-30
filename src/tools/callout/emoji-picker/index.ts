@@ -509,7 +509,19 @@ export class EmojiPicker {
         this.renderEmptyState();
       }
     } else {
-      this.renderFlatGrid(results);
+      this._body.innerHTML = '';
+      this._sectionEls.clear();
+      this._showingEmptyState = false;
+
+      const byCategory = groupEmojisByCategory(results);
+
+      for (const [category, categoryEmojis] of byCategory) {
+        const section = this.buildSection(category, categoryEmojis);
+
+        section.setAttribute('data-emoji-section', category);
+        this._sectionEls.set(category, section);
+        this._body.appendChild(section);
+      }
     }
   }
 
@@ -549,13 +561,6 @@ export class EmojiPicker {
 
     // Set initial active nav after layout
     requestAnimationFrame(() => this.updateActiveNav());
-  }
-
-  private renderFlatGrid(emojis: ProcessedEmoji[]): void {
-    this._body.innerHTML = '';
-    this._sectionEls.clear();
-    this._showingEmptyState = false;
-    this._body.appendChild(this.buildGrid(emojis));
   }
 
   private renderEmptyState(): void {

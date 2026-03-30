@@ -119,6 +119,49 @@ describe('EmojiPicker', () => {
     expect(buttons.length).toBe(1);
   });
 
+  it('preserves category sections when searching', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    const input = container.querySelector('input[type="text"]') as HTMLInputElement;
+
+    // 'thumbs' matches 👍 (people category) — mock searchEmojis returns name-based matches
+    input.value = 'thumbs';
+    input.dispatchEvent(new Event('input'));
+
+    // Sections should still be present in search results
+    const sections = container.querySelectorAll('[data-emoji-section]');
+    expect(sections.length).toBeGreaterThan(0);
+
+    // The section should belong to the matching emoji's category
+    const sectionCategories = Array.from(sections).map(s => s.getAttribute('data-emoji-section'));
+    expect(sectionCategories).toContain('people');
+  });
+
+  it('hides sections with no matching emojis during search', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    // Before search: should have multiple sections (callout, people, objects, symbols)
+    const sectionsBefore = container.querySelectorAll('[data-emoji-section]');
+    expect(sectionsBefore.length).toBeGreaterThan(1);
+
+    const input = container.querySelector('input[type="text"]') as HTMLInputElement;
+
+    // 'light' matches only 💡 (objects category, also in curated callout)
+    input.value = 'light';
+    input.dispatchEvent(new Event('input'));
+
+    const sectionsAfter = container.querySelectorAll('[data-emoji-section]');
+    // Only sections containing matches should remain — fewer than before
+    expect(sectionsAfter.length).toBeLessThan(sectionsBefore.length);
+    expect(sectionsAfter.length).toBeGreaterThan(0);
+  });
+
   it('closes when Escape is pressed', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });

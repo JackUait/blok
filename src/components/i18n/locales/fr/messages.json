@@ -89,6 +89,7 @@
   "toolNames.callout": "Mise en avant",
   "tools.callout.placeholder": "Mise en avant",
   "tools.callout.addEmoji": "Ajouter un emoji",
+  "tools.callout.editIcon": "Modifier l'icône",
   "tools.callout.removeEmoji": "Supprimer l'icône",
   "tools.callout.filterEmojis": "Filtrer…",
   "tools.callout.calloutEmojiCategory": "Mise en avant",

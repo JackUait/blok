@@ -89,6 +89,7 @@
   "toolNames.callout": "Isticanje",
   "tools.callout.placeholder": "Isticanje",
   "tools.callout.addEmoji": "Dodaj emoji",
+  "tools.callout.editIcon": "Uredi ikonu",
   "tools.callout.removeEmoji": "Ukloni ikonu",
   "tools.callout.filterEmojis": "Filter…",
   "tools.callout.calloutEmojiCategory": "Isticanje",

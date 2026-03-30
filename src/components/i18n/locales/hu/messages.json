@@ -89,6 +89,7 @@
   "toolNames.callout": "Kiemelés",
   "tools.callout.placeholder": "Kiemelés",
   "tools.callout.addEmoji": "Emoji hozzáadása",
+  "tools.callout.editIcon": "Ikon szerkesztése",
   "tools.callout.removeEmoji": "Ikon eltávolítása",
   "tools.callout.filterEmojis": "Szűrés…",
   "tools.callout.calloutEmojiCategory": "Kiemelés",

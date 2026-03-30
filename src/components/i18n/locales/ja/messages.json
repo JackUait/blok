@@ -89,6 +89,7 @@
   "toolNames.callout": "コールアウト",
   "tools.callout.placeholder": "コールアウト",
   "tools.callout.addEmoji": "絵文字を追加",
+  "tools.callout.editIcon": "アイコンを編集",
   "tools.callout.removeEmoji": "アイコンを削除",
   "tools.callout.filterEmojis": "検索…",
   "tools.callout.calloutEmojiCategory": "コールアウト",

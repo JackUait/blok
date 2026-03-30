@@ -89,6 +89,7 @@
   "toolNames.callout": "Vihjekast",
   "tools.callout.placeholder": "Vihjekast",
   "tools.callout.addEmoji": "Lisa emoji",
+  "tools.callout.editIcon": "Muuda ikooni",
   "tools.callout.removeEmoji": "Eemalda ikoon",
   "tools.callout.filterEmojis": "Filtreeri…",
   "tools.callout.calloutEmojiCategory": "Vihjekast",

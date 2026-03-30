@@ -89,6 +89,7 @@
   "toolNames.callout": "Merknad",
   "tools.callout.placeholder": "Merknad",
   "tools.callout.addEmoji": "Legg til emoji",
+  "tools.callout.editIcon": "Rediger ikon",
   "tools.callout.removeEmoji": "Fjern ikon",
   "tools.callout.filterEmojis": "Filtrer…",
   "tools.callout.calloutEmojiCategory": "Merknad",

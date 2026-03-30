@@ -89,6 +89,7 @@
   "toolNames.callout": "콜아웃",
   "tools.callout.placeholder": "콜아웃",
   "tools.callout.addEmoji": "이모지 추가",
+  "tools.callout.editIcon": "아이콘 편집",
   "tools.callout.removeEmoji": "아이콘 삭제",
   "tools.callout.filterEmojis": "검색…",
   "tools.callout.calloutEmojiCategory": "콜아웃",

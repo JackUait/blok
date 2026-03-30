@@ -89,6 +89,7 @@
   "toolNames.callout": "Hervorhebung",
   "tools.callout.placeholder": "Hervorhebung",
   "tools.callout.addEmoji": "Emoji hinzufügen",
+  "tools.callout.editIcon": "Symbol bearbeiten",
   "tools.callout.removeEmoji": "Symbol entfernen",
   "tools.callout.filterEmojis": "Filtern…",
   "tools.callout.calloutEmojiCategory": "Hervorhebung",

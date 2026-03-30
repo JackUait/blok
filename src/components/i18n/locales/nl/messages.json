@@ -89,6 +89,7 @@
   "toolNames.callout": "Toelichting",
   "tools.callout.placeholder": "Toelichting",
   "tools.callout.addEmoji": "Emoji toevoegen",
+  "tools.callout.editIcon": "Pictogram bewerken",
   "tools.callout.removeEmoji": "Pictogram verwijderen",
   "tools.callout.filterEmojis": "Filteren…",
   "tools.callout.calloutEmojiCategory": "Toelichting",

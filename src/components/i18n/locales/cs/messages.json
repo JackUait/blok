@@ -89,6 +89,7 @@
   "toolNames.callout": "Popisek",
   "tools.callout.placeholder": "Popisek",
   "tools.callout.addEmoji": "Přidat emoji",
+  "tools.callout.editIcon": "Upravit ikonu",
   "tools.callout.removeEmoji": "Odebrat ikonu",
   "tools.callout.filterEmojis": "Filtr…",
   "tools.callout.calloutEmojiCategory": "Popisek",

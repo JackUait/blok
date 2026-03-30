@@ -2,7 +2,24 @@
 
 import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
 import { onHover } from '../../../components/utils/tooltip';
-import { REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY } from '../constants';
+import {
+  REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
+  EMOJI_CATEGORY_PEOPLE_KEY, EMOJI_CATEGORY_NATURE_KEY, EMOJI_CATEGORY_FOOD_KEY, EMOJI_CATEGORY_ACTIVITY_KEY,
+  EMOJI_CATEGORY_TRAVEL_KEY, EMOJI_CATEGORY_OBJECTS_KEY, EMOJI_CATEGORY_SYMBOLS_KEY, EMOJI_CATEGORY_FLAGS_KEY,
+} from '../constants';
+
+/** Maps emoji-mart category IDs to their i18n key. */
+const CATEGORY_I18N_KEYS: Readonly<Record<string, string>> = {
+  callout: CALLOUT_EMOJI_CATEGORY_KEY,
+  people: EMOJI_CATEGORY_PEOPLE_KEY,
+  nature: EMOJI_CATEGORY_NATURE_KEY,
+  foods: EMOJI_CATEGORY_FOOD_KEY,
+  activity: EMOJI_CATEGORY_ACTIVITY_KEY,
+  places: EMOJI_CATEGORY_TRAVEL_KEY,
+  objects: EMOJI_CATEGORY_OBJECTS_KEY,
+  symbols: EMOJI_CATEGORY_SYMBOLS_KEY,
+  flags: EMOJI_CATEGORY_FLAGS_KEY,
+};
 import {
   IconSearch,
   IconEmojiStar,
@@ -26,17 +43,17 @@ interface EmojiPickerOptions {
   i18n: I18n;
 }
 
-/** SVG icon and label for each emoji category (display order). */
-const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string, label: string]> = [
-  ['callout', IconEmojiStar, 'Callout'],
-  ['people', IconEmojiSmile, 'People'],
-  ['nature', IconEmojiSprout, 'Nature'],
-  ['foods', IconEmojiUtensils, 'Food'],
-  ['activity', IconEmojiBall, 'Activity'],
-  ['places', IconEmojiGlobe, 'Travel'],
-  ['objects', IconEmojiLightbulb, 'Objects'],
-  ['symbols', IconEmojiHash, 'Symbols'],
-  ['flags', IconEmojiFlag, 'Flags'],
+/** SVG icon for each emoji category (display order). */
+const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
+  ['callout', IconEmojiStar],
+  ['people', IconEmojiSmile],
+  ['nature', IconEmojiSprout],
+  ['foods', IconEmojiUtensils],
+  ['activity', IconEmojiBall],
+  ['places', IconEmojiGlobe],
+  ['objects', IconEmojiLightbulb],
+  ['symbols', IconEmojiHash],
+  ['flags', IconEmojiFlag],
 ];
 
 /** Raised-hand emoji for each skin tone (default + 5 Fitzpatrick modifiers). */
@@ -422,11 +439,12 @@ export class EmojiPicker {
     this._navButtons.clear();
     this._activeNavId = '';
 
-    for (const [catId, catIcon, catLabel] of CATEGORY_NAV) {
+    for (const [catId, catIcon] of CATEGORY_NAV) {
       if (!visibleCategories.has(catId)) {
         continue;
       }
 
+      const catLabel = this.translateCategory(catId);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.innerHTML = catIcon;
@@ -517,7 +535,7 @@ export class EmojiPicker {
       const byCategory = groupEmojisByCategory(results);
 
       for (const [category, categoryEmojis] of byCategory) {
-        const section = this.buildSection(category, categoryEmojis);
+        const section = this.buildSection(this.translateCategory(category), categoryEmojis);
 
         section.setAttribute('data-emoji-section', category);
         this._sectionEls.set(category, section);
@@ -540,7 +558,7 @@ export class EmojiPicker {
 
     if (calloutEmojis.length > 0) {
       visibleCategories.add('callout');
-      const section = this.buildSection(this.i18n.t(CALLOUT_EMOJI_CATEGORY_KEY), calloutEmojis);
+      const section = this.buildSection(this.translateCategory('callout'), calloutEmojis);
       section.setAttribute('data-emoji-section', 'callout');
       this._sectionEls.set('callout', section);
       this._body.appendChild(section);
@@ -551,7 +569,7 @@ export class EmojiPicker {
 
     for (const [category, categoryEmojis] of byCategory) {
       visibleCategories.add(category);
-      const section = this.buildSection(category, categoryEmojis);
+      const section = this.buildSection(this.translateCategory(category), categoryEmojis);
       section.setAttribute('data-emoji-section', category);
       this._sectionEls.set(category, section);
       this._body.appendChild(section);
@@ -587,6 +605,12 @@ export class EmojiPicker {
     empty.appendChild(icon);
     empty.appendChild(text);
     this._body.appendChild(empty);
+  }
+
+  private translateCategory(categoryId: string): string {
+    const key = CATEGORY_I18N_KEYS[categoryId];
+
+    return key !== undefined ? this.i18n.t(key) : categoryId;
   }
 
   private buildSection(title: string, emojis: ProcessedEmoji[]): HTMLElement {

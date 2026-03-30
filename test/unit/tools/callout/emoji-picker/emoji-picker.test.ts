@@ -445,6 +445,78 @@ describe('EmojiPicker', () => {
     }
   });
 
+  describe('emoji category i18n', () => {
+    it('uses i18n-translated text for standard category section headings, not raw IDs', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const i18nSpy = vi.fn((k: string) => `[translated:${k}]`);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      // Get all section headings (first child of each [data-emoji-section])
+      const sections = picker.getElement().querySelectorAll('[data-emoji-section]');
+      const headings = new Map<string, string>();
+
+      for (const section of sections) {
+        const id = section.getAttribute('data-emoji-section')!;
+        const heading = section.querySelector('div')!;
+
+        headings.set(id, heading.textContent!);
+      }
+
+      // Standard categories should use translated text, not raw category IDs
+      const standardCategories = ['people', 'objects', 'symbols'];
+
+      for (const catId of standardCategories) {
+        if (headings.has(catId)) {
+          const text = headings.get(catId)!;
+
+          // Should NOT be the raw category ID
+          expect(text).not.toBe(catId);
+          // Should be translated (our mock prefixes with [translated:])
+          expect(text).toContain('[translated:');
+        }
+      }
+    });
+
+    it('uses i18n-translated text for nav button tooltips and aria-labels', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const i18nSpy = vi.fn((k: string) => `[translated:${k}]`);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const navButtons = picker.getElement().querySelectorAll('[data-emoji-nav]');
+
+      expect(navButtons.length).toBeGreaterThan(0);
+
+      for (const btn of navButtons) {
+        const title = btn.getAttribute('title')!;
+        const ariaLabel = btn.getAttribute('aria-label')!;
+
+        // Should be translated, not hardcoded English
+        expect(title).toContain('[translated:');
+        expect(ariaLabel).toContain('[translated:');
+      }
+    });
+
+    it('calls i18n.t with emoji category keys for each visible standard category', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const i18nSpy = vi.fn((k: string) => `[translated:${k}]`);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      // i18n.t should have been called with keys containing 'emojiCategory'
+      const categoryKeyCalls = i18nSpy.mock.calls
+        .map(([key]) => key as string)
+        .filter((key: string) => key.includes('emojiCategory'));
+
+      // At least the callout category + visible standard categories
+      expect(categoryKeyCalls.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
   it('emoji grid has top padding so hover-scaled emojis do not overlap section headings', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });

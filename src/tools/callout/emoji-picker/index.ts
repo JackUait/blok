@@ -413,7 +413,6 @@ export class EmojiPicker {
     }
 
     this.onSelect(this.getSkinnedNative(emoji));
-    this.close();
   }
 
   // ─── Category Navigation ──────────────────────────────────

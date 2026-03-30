@@ -346,6 +346,22 @@ describe('EmojiPicker', () => {
     });
   });
 
+  it('does not close the picker when the random button is clicked', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const onSelect = vi.fn();
+    const picker = new EmojiPicker({ onSelect, onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    expect(picker.isOpen()).toBe(true);
+
+    const randomBtn = picker.getElement().querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
+    randomBtn.click();
+
+    expect(onSelect).toHaveBeenCalled();
+    expect(picker.isOpen()).toBe(true);
+  });
+
   it('attaches JS tooltips to random and remove buttons via onHover', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });

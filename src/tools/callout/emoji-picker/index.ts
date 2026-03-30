@@ -62,6 +62,7 @@ export class EmojiPicker {
 
   private _anchorEl: HTMLElement | null = null;
   private _backdrop: HTMLElement | null = null;
+  private _savedOverflow = '';
 
   /** Maps category id -> nav button for active-state management. */
   private _navButtons = new Map<string, HTMLButtonElement>();
@@ -146,7 +147,7 @@ export class EmojiPicker {
 
     el.setAttribute('data-blok-emoji-picker', '');
     el.className = [
-      'absolute z-50 w-[340px] overflow-hidden rounded-2xl',
+      'fixed z-50 w-[340px] overflow-hidden rounded-xl',
       'border border-neutral-200/70 bg-white shadow-2xl',
       'theme-dark:border-neutral-700/50 theme-dark:bg-neutral-900',
     ].join(' ');
@@ -663,12 +664,19 @@ export class EmojiPicker {
     this._element.parentElement?.insertBefore(backdrop, this._element);
     backdrop.appendChild(this._element);
     this._backdrop = backdrop;
+
+    // Lock page scroll so the picker stays in place
+    this._savedOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
   }
 
   private removeBackdrop(): void {
     if (this._backdrop === null) {
       return;
     }
+
+    // Restore page scroll
+    document.documentElement.style.overflow = this._savedOverflow;
 
     // Move picker back to where the backdrop is before removing it
     this._backdrop.parentElement?.insertBefore(this._element, this._backdrop);

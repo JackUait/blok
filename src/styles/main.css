@@ -1386,6 +1386,20 @@
 }
 
 /**
+ * Emoji picker — empty-state fade
+ */
+@keyframes blok-emoji-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/**
  * Emoji picker — thin scrollbar (only visible on hover)
  */
 [data-emoji-picker-body] {

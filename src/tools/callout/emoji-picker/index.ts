@@ -711,9 +711,10 @@ export class EmojiPicker {
       ? rect.top - pickerRect.height - 4
       : rect.bottom + 4;
 
-    const left = rect.left + pickerRect.width > viewportWidth
+    const idealLeft = rect.left - 8;
+    const left = idealLeft + pickerRect.width > viewportWidth
       ? rect.right - pickerRect.width
-      : rect.left;
+      : Math.max(0, idealLeft);
 
     this._element.style.top = `${top}px`;
     this._element.style.left = `${left}px`;

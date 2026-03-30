@@ -108,14 +108,16 @@ test('closes emoji picker on Escape', async ({ page }) => {
 
 test('applies color from block settings menu', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  // Click the child paragraph to focus the callout
+  // Click the child paragraph to focus the callout, then hover to reveal toolbar
   const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`).first();
   await childEditable.click();
+  const wrapper = page.locator(CALLOUT_BLOCK_SELECTOR);
+  await wrapper.hover();
   const settingsBtn = page.getByTestId('settings-toggler');
   await expect(settingsBtn).toBeVisible();
   await settingsBtn.click();
-  await page.getByText('Blue').click();
-  const wrapper = page.locator(CALLOUT_BLOCK_SELECTOR);
+  await page.getByText('Color').click();
+  await page.getByTestId('callout-color-swatch-background-color-blue').click();
   await expect(wrapper).toHaveCSS('background-color', /rgb/);
 });
 
@@ -273,11 +275,16 @@ test('emoji picker left edge is offset slightly left of emoji button', async ({ 
   await expect(picker).toBeVisible();
 
   // Wait for the opening animation to complete so the final position is stable
-  await page.waitForTimeout(250);
+  await expect(picker).toHaveCSS('animation-duration', /.*/);
+  await picker.evaluate(el => el.getAnimations().forEach(a => a.finish()));
 
   const positions = await page.evaluate(() => {
-    const btn = document.querySelector('[data-blok-testid="callout-emoji-btn"]')!;
-    const pick = document.querySelector('[data-blok-emoji-picker]')!;
+    const btn = document.querySelector('[data-blok-testid="callout-emoji-btn"]');
+    const pick = document.querySelector('[data-blok-emoji-picker]');
+
+    if (!btn || !pick) {
+      throw new Error('Emoji button or picker not found');
+    }
 
     return {
       btnLeft: btn.getBoundingClientRect().left,

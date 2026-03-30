@@ -248,6 +248,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (!this.trigger) {
       const containerRect = this.nodes.popoverContainer.getBoundingClientRect();
+      // offset: 0 because the visual gap is handled by CSS calc (0.5rem), not pixel positioning
       const { openTop, openLeft } = resolvePosition({
         anchor: containerRect,
         popoverSize: measuredSize,

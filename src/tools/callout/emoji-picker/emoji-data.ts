@@ -1,5 +1,7 @@
 // src/tools/callout/emoji-picker/emoji-data.ts
 
+import type { EmojiLocaleData } from './emoji-locale';
+
 interface EmojiMartData {
   categories: Array<{ id: string; emojis: string[] }>;
   emojis: Record<string, {
@@ -72,13 +74,31 @@ export async function loadEmojiData(): Promise<ProcessedEmoji[]> {
   return processed;
 }
 
-export function searchEmojis(emojis: ProcessedEmoji[], query: string): ProcessedEmoji[] {
+export function searchEmojis(emojis: ProcessedEmoji[], query: string, localeData?: EmojiLocaleData | null): ProcessedEmoji[] {
   const lower = query.toLowerCase();
-  return emojis.filter(
-    emoji =>
-      emoji.name.toLowerCase().includes(lower) ||
-      emoji.keywords.some(k => k.includes(lower))
-  );
+  return emojis.filter(emoji => {
+    // English match (always available from emoji-mart)
+    if (emoji.name.toLowerCase().includes(lower) || emoji.keywords.some(k => k.includes(lower))) {
+      return true;
+    }
+
+    // Translated match (when locale data is loaded)
+    if (localeData !== undefined && localeData !== null) {
+      const entry = localeData[emoji.native];
+
+      if (entry !== undefined) {
+        if (entry.n.toLowerCase().includes(lower)) {
+          return true;
+        }
+
+        if (entry.k !== undefined && entry.k.some(k => k.toLowerCase().includes(lower))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  });
 }
 
 export function groupEmojisByCategory(emojis: ProcessedEmoji[]): Map<string, ProcessedEmoji[]> {

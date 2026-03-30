@@ -51,6 +51,10 @@ describe('EmojiPicker', () => {
 
     expect(el.querySelector('input[type="text"]')).not.toBeNull();
     expect(el.querySelector('[data-emoji-picker-body]')).not.toBeNull();
+
+    // Header uses gap-2.5 for spacing between search input and action buttons
+    const header = el.querySelector('input[type="text"]')!.closest('.flex')!;
+    expect(header.className).toContain('gap-2.5');
   });
 
   it('calls onSelect with emoji native char when emoji button is clicked', async () => {
@@ -167,6 +171,26 @@ describe('EmojiPicker', () => {
       expect(thumbsUp.textContent).toBe('👍🏻');
     });
 
+    it('shows active state on toggle when popover is open, removes it when closed', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+      // No active state initially
+      expect(toggle.classList.contains('bg-neutral-100')).toBe(false);
+
+      // Open popover — toggle gets active background
+      toggle.click();
+      expect(toggle.classList.contains('bg-neutral-100')).toBe(true);
+
+      // Close popover — active state removed
+      toggle.click();
+      expect(toggle.classList.contains('bg-neutral-100')).toBe(false);
+    });
+
     it('closes popover on Escape without closing the picker', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
@@ -185,6 +209,77 @@ describe('EmojiPicker', () => {
 
       expect(popover.hidden).toBe(true);
       expect(picker.isOpen()).toBe(true);
+    });
+  });
+
+  it('search icon is 16×16 and vertically centered inside the input', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const el = picker.getElement();
+
+    const input = el.querySelector('input[type="text"]') as HTMLInputElement;
+    const iconSpan = input.parentElement!.querySelector('span') as HTMLSpanElement;
+    const svg = iconSpan.querySelector('svg') as SVGElement;
+
+    // Icon should be 16×16
+    expect(iconSpan.className).toContain('[&>svg]:w-[16px]');
+    expect(iconSpan.className).toContain('[&>svg]:h-[16px]');
+
+    // Vertically centered — flex removes inline baseline offset
+    expect(iconSpan.className).toContain('flex');
+    expect(iconSpan.className).toContain('items-center');
+    expect(iconSpan.className).toContain('top-1/2');
+    expect(iconSpan.className).toContain('-translate-y-1/2');
+  });
+
+  describe('header button sizing matches search input', () => {
+    it('skin tone toggle, random, and remove buttons use size classes matching the search input height', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const el = picker.getElement();
+
+      const skinToggle = el.querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+      const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
+      const removeBtn = el.querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
+
+      // All header buttons should match the search input's height (~28px)
+      for (const btn of [skinToggle, randomBtn, removeBtn]) {
+        expect(btn.className).toContain('w-[28px]');
+        expect(btn.className).toContain('h-[28px]');
+      }
+
+      // Skin tone emoji should be text-[14px] to match the search icon scale
+      expect(skinToggle.className).toContain('text-[14px]');
+    });
+
+    it('random and remove buttons are grouped with a tight gap', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const el = picker.getElement();
+
+      const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
+      const removeBtn = el.querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
+
+      // Both should share a parent wrapper with gap-1
+      expect(randomBtn.parentElement).toBe(removeBtn.parentElement);
+      expect(randomBtn.parentElement!.className).toContain('gap-1');
+    });
+
+    it('random and remove button SVG icons are 12×12 to match header proportions', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const el = picker.getElement();
+
+      const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
+      const removeBtn = el.querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
+
+      const randomSvg = randomBtn.querySelector('svg') as SVGElement;
+      const removeSvg = removeBtn.querySelector('svg') as SVGElement;
+
+      expect(randomSvg.getAttribute('width')).toBe('12');
+      expect(randomSvg.getAttribute('height')).toBe('12');
+      expect(removeSvg.getAttribute('width')).toBe('12');
+      expect(removeSvg.getAttribute('height')).toBe('12');
     });
   });
 

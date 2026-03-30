@@ -18,10 +18,11 @@ import { createColorPicker, type ColorPickerHandle } from '../../components/shar
 import { colorVarName } from '../../components/shared/color-presets';
 import { mapToNearestPresetName } from '../../components/utils/color-mapping';
 import { EmojiPicker } from './emoji-picker';
-import { IconCallout, IconPaintRoller } from '../../components/icons';
+import { IconCallout, IconEmojiSmile, IconPaintRoller } from '../../components/icons';
 import {
   TOOL_NAME,
   COLOR_KEY,
+  EDIT_ICON_KEY,
   ADD_EMOJI_KEY,
   DEFAULT_EMOJI,
 } from './constants';
@@ -154,19 +155,28 @@ export class CalloutTool implements BlockTool {
     // Sync active state with current data
     this.syncPickerActiveColors();
 
-    return {
-      icon: IconPaintRoller,
-      title: this.api.i18n.t(COLOR_KEY),
-      name: 'callout-color',
-      children: {
-        items: [
-          {
-            type: PopoverItemType.Html,
-            element: this._colorPicker.element,
-          },
-        ],
+    return [
+      {
+        icon: IconEmojiSmile,
+        title: this.api.i18n.t(EDIT_ICON_KEY),
+        name: 'callout-edit-icon',
+        closeOnActivate: true,
+        onActivate: (): void => this.openEmojiPicker(),
       },
-    };
+      {
+        icon: IconPaintRoller,
+        title: this.api.i18n.t(COLOR_KEY),
+        name: 'callout-color',
+        children: {
+          items: [
+            {
+              type: PopoverItemType.Html,
+              element: this._colorPicker.element,
+            },
+          ],
+        },
+      },
+    ];
   }
 
   public removed(): void {

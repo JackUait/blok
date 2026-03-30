@@ -89,6 +89,7 @@
   "toolNames.callout": "Llamada",
   "tools.callout.placeholder": "Llamada",
   "tools.callout.addEmoji": "Añadir emoji",
+  "tools.callout.editIcon": "Editar icono",
   "tools.callout.removeEmoji": "Eliminar icono",
   "tools.callout.filterEmojis": "Filtrar…",
   "tools.callout.calloutEmojiCategory": "Llamada",

@@ -89,6 +89,7 @@
   "toolNames.callout": "Info",
   "tools.callout.placeholder": "Info",
   "tools.callout.addEmoji": "Tambah emoji",
+  "tools.callout.editIcon": "Edit ikon",
   "tools.callout.removeEmoji": "Hapus ikon",
   "tools.callout.filterEmojis": "Cari…",
   "tools.callout.calloutEmojiCategory": "Info",

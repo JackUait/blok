@@ -89,6 +89,7 @@
   "toolNames.callout": "Opomba",
   "tools.callout.placeholder": "Opomba",
   "tools.callout.addEmoji": "Dodaj emoji",
+  "tools.callout.editIcon": "Uredi ikono",
   "tools.callout.removeEmoji": "Odstrani ikono",
   "tools.callout.filterEmojis": "Filter…",
   "tools.callout.calloutEmojiCategory": "Opomba",

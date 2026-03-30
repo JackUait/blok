@@ -89,6 +89,7 @@
   "toolNames.callout": "Выноска",
   "tools.callout.placeholder": "Выноска",
   "tools.callout.addEmoji": "Добавить эмодзи",
+  "tools.callout.editIcon": "Изменить иконку",
   "tools.callout.removeEmoji": "Удалить иконку",
   "tools.callout.filterEmojis": "Фильтр…",
   "tools.callout.calloutEmojiCategory": "Выноска",

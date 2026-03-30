@@ -89,6 +89,7 @@
   "toolNames.callout": "Бележка",
   "tools.callout.placeholder": "Бележка",
   "tools.callout.addEmoji": "Добави емоджи",
+  "tools.callout.editIcon": "Редактирай иконата",
   "tools.callout.removeEmoji": "Премахни иконата",
   "tools.callout.filterEmojis": "Филтър…",
   "tools.callout.calloutEmojiCategory": "Бележка",

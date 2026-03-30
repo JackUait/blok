@@ -89,6 +89,7 @@
   "toolNames.callout": "Notering",
   "tools.callout.placeholder": "Notering",
   "tools.callout.addEmoji": "Lägg till emoji",
+  "tools.callout.editIcon": "Redigera ikon",
   "tools.callout.removeEmoji": "Ta bort ikon",
   "tools.callout.filterEmojis": "Filtrera…",
   "tools.callout.calloutEmojiCategory": "Notering",

@@ -89,6 +89,7 @@
   "toolNames.callout": "Chú thích",
   "tools.callout.placeholder": "Chú thích",
   "tools.callout.addEmoji": "Thêm biểu tượng",
+  "tools.callout.editIcon": "Chỉnh sửa biểu tượng",
   "tools.callout.removeEmoji": "Xóa biểu tượng",
   "tools.callout.filterEmojis": "Tìm kiếm…",
   "tools.callout.calloutEmojiCategory": "Chú thích",

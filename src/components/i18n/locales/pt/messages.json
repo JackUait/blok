@@ -89,6 +89,7 @@
   "toolNames.callout": "Destaque",
   "tools.callout.placeholder": "Destaque",
   "tools.callout.addEmoji": "Adicionar emoji",
+  "tools.callout.editIcon": "Editar ícone",
   "tools.callout.removeEmoji": "Remover ícone",
   "tools.callout.filterEmojis": "Pesquisar…",
   "tools.callout.calloutEmojiCategory": "Destaque",

@@ -89,6 +89,7 @@
   "toolNames.callout": "Callout",
   "tools.callout.placeholder": "Callout",
   "tools.callout.addEmoji": "Add emoji",
+  "tools.callout.editIcon": "Edit icon",
   "tools.callout.removeEmoji": "Remove icon",
   "tools.callout.filterEmojis": "Filter…",
   "tools.callout.calloutEmojiCategory": "Callout",

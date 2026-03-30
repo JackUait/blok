@@ -89,7 +89,7 @@
   "toolNames.callout": "Huomioruutu",
   "tools.callout.placeholder": "Huomioruutu",
   "tools.callout.addEmoji": "Lisää emoji",
-  "tools.callout.removeEmoji": "Poista",
+  "tools.callout.removeEmoji": "Poista kuvake",
   "tools.callout.filterEmojis": "Suodata…",
   "tools.callout.calloutEmojiCategory": "Huomioruutu",
   "tools.callout.noEmojisFound": "Emojeja ei löytynyt",

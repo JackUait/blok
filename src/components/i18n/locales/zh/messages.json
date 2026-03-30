@@ -89,7 +89,7 @@
   "toolNames.callout": "标注",
   "tools.callout.placeholder": "标注",
   "tools.callout.addEmoji": "添加表情",
-  "tools.callout.removeEmoji": "删除",
+  "tools.callout.removeEmoji": "删除图标",
   "tools.callout.filterEmojis": "搜索…",
   "tools.callout.calloutEmojiCategory": "标注",
   "tools.callout.noEmojisFound": "未找到表情符号",

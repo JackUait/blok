@@ -1,6 +1,7 @@
 // src/tools/callout/emoji-picker/index.ts
 
 import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
+import { onHover } from '../../../components/utils/tooltip';
 import { REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY } from '../constants';
 import {
   IconSearch,
@@ -238,6 +239,7 @@ export class EmojiPicker {
     ].join(' ');
     randomBtn.innerHTML = ICON_DICE;
     randomBtn.addEventListener('click', () => this.pickRandom());
+    onHover(randomBtn, this.i18n.t(PICK_RANDOM_KEY), { placement: 'bottom' });
 
     // Remove button
     const removeBtn = document.createElement('button');
@@ -256,6 +258,7 @@ export class EmojiPicker {
       this.onRemove();
       this.close();
     });
+    onHover(removeBtn, this.i18n.t(REMOVE_EMOJI_KEY), { placement: 'bottom' });
 
     const actionGroup = document.createElement('div');
     actionGroup.className = 'flex items-center gap-1';
@@ -607,7 +610,7 @@ export class EmojiPicker {
 
   private buildGrid(emojis: ProcessedEmoji[]): HTMLElement {
     const grid = document.createElement('div');
-    grid.className = 'grid grid-cols-8 gap-0.5 px-0.5';
+    grid.className = 'grid grid-cols-8 gap-0.5 px-0.5 pt-1';
 
     for (const emoji of emojis) {
       const btn = document.createElement('button');
@@ -626,6 +629,7 @@ export class EmojiPicker {
         this.onSelect(this.getSkinnedNative(emoji));
         this.close();
       });
+      onHover(btn, emoji.name, { placement: 'bottom' });
       grid.appendChild(btn);
     }
 

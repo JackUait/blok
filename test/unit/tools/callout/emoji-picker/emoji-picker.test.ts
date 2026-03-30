@@ -3,6 +3,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ProcessedEmoji } from '../../../../../src/tools/callout/emoji-picker/emoji-data';
 
+const mockOnHover = vi.fn();
+
+vi.mock('../../../../../src/components/utils/tooltip', () => ({
+  onHover: (...args: unknown[]) => mockOnHover(...args),
+  hide: vi.fn(),
+}));
+
 vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([
     { native: '💡', skins: ['💡'], id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
@@ -283,6 +290,48 @@ describe('EmojiPicker', () => {
       expect(removeSvg.getAttribute('width')).toBe('14');
       expect(removeSvg.getAttribute('height')).toBe('14');
     });
+  });
+
+  it('attaches JS tooltips to random and remove buttons via onHover', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const el = picker.getElement();
+
+    const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
+    const removeBtn = el.querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
+
+    expect(mockOnHover).toHaveBeenCalledWith(randomBtn, randomBtn.getAttribute('title'), { placement: 'bottom' });
+    expect(mockOnHover).toHaveBeenCalledWith(removeBtn, removeBtn.getAttribute('title'), { placement: 'bottom' });
+  });
+
+  it('attaches JS tooltips to emoji buttons via onHover with placement top', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    const emojiButtons = picker.getElement().querySelectorAll('[data-emoji-native]');
+
+    expect(emojiButtons.length).toBeGreaterThan(0);
+
+    // Each emoji button should have onHover called with (button, name, { placement: 'top' })
+    for (const btn of emojiButtons) {
+      expect(mockOnHover).toHaveBeenCalledWith(btn, btn.getAttribute('title'), { placement: 'bottom' });
+    }
+  });
+
+  it('emoji grid has top padding so hover-scaled emojis do not overlap section headings', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    const grids = picker.getElement().querySelectorAll('.grid');
+
+    expect(grids.length).toBeGreaterThan(0);
+    for (const grid of grids) {
+      expect(grid.className).toContain('pt-1');
+    }
   });
 
   it('open() appends the picker element to document.body', async () => {

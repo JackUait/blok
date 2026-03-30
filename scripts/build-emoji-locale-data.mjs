@@ -47,12 +47,6 @@ const BLOK_LOCALES = [
   'tr', 'ug', 'uk', 'ur', 'vi', 'yi', 'zh',
 ];
 
-/**
- * Map Blok locale codes to CLDR directory names where they differ.
- * CLDR uses 'no' directly (not 'nb'), so no mapping needed for Norwegian.
- */
-const CLDR_LOCALE_MAP = {};
-
 /* ------------------------------------------------------------------ */
 /*  3. Process each locale                                            */
 /* ------------------------------------------------------------------ */
@@ -64,7 +58,7 @@ mkdirSync(OUTPUT_DIR, { recursive: true });
 const report = [];
 
 for (const locale of BLOK_LOCALES) {
-  const cldrLocale = CLDR_LOCALE_MAP[locale] ?? locale;
+  const cldrLocale = locale;
   const cldrPath = join(
     ROOT,
     'node_modules/cldr-annotations-full/annotations',
@@ -112,7 +106,7 @@ for (const locale of BLOK_LOCALES) {
   if (count > 0) {
     const outPath = join(OUTPUT_DIR, `${locale}.json`);
 
-    writeFileSync(outPath, JSON.stringify(output, null, 2) + '\n', 'utf-8');
+    writeFileSync(outPath, JSON.stringify(output), 'utf-8');
   }
 
   report.push({ locale, cldrLocale, entries: count });

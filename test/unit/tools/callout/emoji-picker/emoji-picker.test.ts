@@ -662,7 +662,7 @@ describe('EmojiPicker', () => {
       expect(bulbBtn!.title).toBe('ampoule');
     });
 
-    it('falls back to English name when translated name is not available', async () => {
+    it('falls back to English name in lowercase when translated name is not available', async () => {
       mockLoadEmojiLocale.mockResolvedValue({
         '💡': { n: 'ampoule', k: ['idée'] },
       });
@@ -680,10 +680,10 @@ describe('EmojiPicker', () => {
       const thumbsBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '👍');
 
       expect(thumbsBtn).toBeDefined();
-      expect(thumbsBtn!.title).toBe('Thumbs Up');
+      expect(thumbsBtn!.title).toBe('thumbs up');
     });
 
-    it('uses English names when locale is en', async () => {
+    it('displays English emoji names in lowercase', async () => {
       mockGetTranslatedName.mockReturnValue(null);
 
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
@@ -695,8 +695,26 @@ describe('EmojiPicker', () => {
       const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
 
       expect(bulbBtn).toBeDefined();
-      expect(bulbBtn!.title).toBe('Light Bulb');
+      expect(bulbBtn!.title).toBe('light bulb');
       expect(mockLoadEmojiLocale).not.toHaveBeenCalled();
+    });
+
+    it('displays locale-translated emoji names in lowercase', async () => {
+      mockLoadEmojiLocale.mockResolvedValue({
+        '💡': { n: 'Ampoule Électrique', k: ['idée'] },
+        '😀': { n: 'Visage Souriant', k: ['joyeux'] },
+      });
+
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'fr' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const allBtns = Array.from(picker.getElement().querySelectorAll<HTMLButtonElement>('[data-emoji-native]'));
+      const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
+
+      expect(bulbBtn).toBeDefined();
+      expect(bulbBtn!.title).toBe('ampoule électrique');
     });
   });
 });

@@ -642,7 +642,7 @@ export class EmojiPicker {
   }
 
   private getDisplayName(emoji: ProcessedEmoji): string {
-    return this._localeData?.[emoji.native]?.n ?? emoji.name;
+    return (this._localeData?.[emoji.native]?.n ?? emoji.name).toLocaleLowerCase();
   }
 
   private buildGrid(emojis: ProcessedEmoji[]): HTMLElement {

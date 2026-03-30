@@ -1013,6 +1013,9 @@ export class PopoverDesktop extends PopoverAbstract {
         item.toggleHidden(isHidden);
       });
 
+    // Invalidate size cache since item visibility changed
+    this._size = undefined;
+
     // Reorder top-level DOM elements to reflect ranking
     if (!isEmptyQuery && matchingTopLevel.length > 0) {
       this.reorderItemsByRank(matchingTopLevel);

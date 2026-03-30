@@ -359,6 +359,43 @@ const editor = new Blok({
 });`,
   },
 
+  {
+    id: 'callout',
+    exportName: 'Callout',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Callout',
+    description:
+      'A container block for highlighted content with an emoji icon. Supports customisable text and background colours via a colour picker. Child blocks are nested inside the callout. Useful for tips, warnings, notes, and other call-to-action content.',
+    importExample: `import { Callout } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface CalloutData {
+  emoji: string;             // Emoji character (e.g. "💡")
+  textColor: string | null;  // Colour preset name, or null for default
+  backgroundColor: string | null; // Colour preset name, or null for default
+}`,
+    saveDataExample: `{
+  "id": "pqr678",
+  "type": "callout",
+  "data": {
+    "emoji": "💡",
+    "textColor": null,
+    "backgroundColor": "yellow"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Callout } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    callout: {
+      class: Callout,
+    },
+  },
+});`,
+  },
+
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {
     id: 'bold',

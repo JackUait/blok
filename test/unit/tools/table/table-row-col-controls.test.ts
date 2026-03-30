@@ -78,6 +78,7 @@ describe('TableRowColControls', () => {
     t: vi.fn((key: string) => key),
     has: vi.fn(() => false),
     getEnglishTranslation: vi.fn((key: string) => key),
+    getLocale: vi.fn(() => 'en'),
   };
 
   beforeEach(() => {

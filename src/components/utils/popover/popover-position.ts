@@ -71,9 +71,14 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
 
   const openTop = shouldFlip(popoverSize.height, spaceBelow, spaceAbove);
 
-  const top = openTop
+  const rawTop = openTop
     ? anchor.top - offset - popoverSize.height + scrollOffset.y
     : anchor.bottom + offset + scrollOffset.y;
+
+  // Clamp: ensure popover doesn't overflow above top boundary
+  const top = rawTop < boundaryTop + scrollOffset.y
+    ? boundaryTop + scrollOffset.y
+    : rawTop;
 
   // --- Horizontal ---
   const boundaryRight = Math.min(viewportSize.width, scopeBounds.right);

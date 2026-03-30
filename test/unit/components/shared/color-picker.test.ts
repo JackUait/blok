@@ -9,6 +9,7 @@ const mockI18n: I18n = {
   t: (key: string) => key,
   has: () => false,
   getEnglishTranslation: () => '',
+  getLocale: () => 'en',
 };
 
 const createOptions = (overrides: Partial<ColorPickerOptions> = {}): ColorPickerOptions => ({
@@ -418,11 +419,12 @@ describe('createColorPicker', () => {
       t: (key: string) => translations[key] ?? key,
       has: () => false,
       getEnglishTranslation: () => '',
+      getLocale: () => 'en',
     });
 
     it('calls i18n.t with tools.colorPicker.defaultSwatchLabel for default swatch tooltip', () => {
       const tSpy = vi.fn().mockReturnValue('');
-      const i18n: I18n = { t: tSpy, has: () => false, getEnglishTranslation: () => '' };
+      const i18n: I18n = { t: tSpy, has: () => false, getEnglishTranslation: () => '', getLocale: () => 'en' };
 
       createColorPicker(createOptions({ i18n }));
 
@@ -431,7 +433,7 @@ describe('createColorPicker', () => {
 
     it('calls i18n.t with tools.colorPicker.colorSwatchLabel for color swatch tooltip', () => {
       const tSpy = vi.fn().mockReturnValue('');
-      const i18n: I18n = { t: tSpy, has: () => false, getEnglishTranslation: () => '' };
+      const i18n: I18n = { t: tSpy, has: () => false, getEnglishTranslation: () => '', getLocale: () => 'en' };
 
       createColorPicker(createOptions({ i18n }));
 

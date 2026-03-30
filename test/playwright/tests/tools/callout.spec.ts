@@ -263,6 +263,33 @@ test('emoji is vertically centered against H2 heading in callout', async ({ page
   expect(Math.abs(emojiCenter - headerFirstLineCenter)).toBeLessThanOrEqual(2);
 });
 
+test('emoji picker left edge is offset slightly left of emoji button', async ({ page }) => {
+  await createBlok(page, createCalloutData());
+
+  const emojiBtn = page.getByTestId('callout-emoji-btn');
+  await emojiBtn.click();
+
+  const picker = page.locator('[data-blok-emoji-picker]');
+  await expect(picker).toBeVisible();
+
+  // Wait for the opening animation to complete so the final position is stable
+  await page.waitForTimeout(250);
+
+  const positions = await page.evaluate(() => {
+    const btn = document.querySelector('[data-blok-testid="callout-emoji-btn"]')!;
+    const pick = document.querySelector('[data-blok-emoji-picker]')!;
+
+    return {
+      btnLeft: btn.getBoundingClientRect().left,
+      pickerLeft: pick.getBoundingClientRect().left,
+    };
+  });
+
+  // Picker starts 8px to the left of the emoji button for visual balance
+  // (aligns inner grid content with the callout emoji)
+  expect(positions.pickerLeft).toBe(positions.btnLeft - 8);
+});
+
 test('search input border is not forced transparent inside colored callout', async ({ page }) => {
   await createBlok(page, {
     blocks: [

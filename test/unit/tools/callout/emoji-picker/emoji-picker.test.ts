@@ -10,6 +10,14 @@ vi.mock('../../../../../src/components/utils/tooltip', () => ({
   hide: vi.fn(),
 }));
 
+const mockLoadEmojiLocale = vi.fn().mockResolvedValue(null);
+const mockGetTranslatedName = vi.fn().mockReturnValue(null);
+
+vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-locale', () => ({
+  loadEmojiLocale: (...args: unknown[]) => mockLoadEmojiLocale(...args),
+  getTranslatedName: (...args: unknown[]) => mockGetTranslatedName(...args),
+}));
+
 vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([
     { native: '💡', skins: ['💡'], id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
@@ -55,7 +63,7 @@ describe('EmojiPicker', () => {
 
   it('uses fixed positioning so it stays in place when the page scrolls', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     const el = picker.getElement();
 
     expect(el.className).toContain('fixed');
@@ -64,7 +72,7 @@ describe('EmojiPicker', () => {
 
   it('builds a picker element with filter input and body', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     const el = picker.getElement();
 
     expect(el.querySelector('input[type="text"]')).not.toBeNull();
@@ -78,7 +86,7 @@ describe('EmojiPicker', () => {
   it('calls onSelect with emoji native char when emoji button is clicked', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const onSelect = vi.fn();
-    const picker = new EmojiPicker({ onSelect, onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect, onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
 
     await picker.open(container);
@@ -93,7 +101,7 @@ describe('EmojiPicker', () => {
   it('calls onRemove when remove button is clicked', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const onRemove = vi.fn();
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove, i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove, i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -106,7 +114,7 @@ describe('EmojiPicker', () => {
 
   it('filters emojis when typing in the filter input', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -121,7 +129,7 @@ describe('EmojiPicker', () => {
 
   it('preserves category sections when searching', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -142,7 +150,7 @@ describe('EmojiPicker', () => {
 
   it('hides sections with no matching emojis during search', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -164,7 +172,7 @@ describe('EmojiPicker', () => {
 
   it('closes when Escape is pressed', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -176,7 +184,7 @@ describe('EmojiPicker', () => {
   describe('skin tone selector', () => {
     it('renders the toggle outside the search wrapper, showing the default hand', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       const el = picker.getElement();
 
       const searchInput = el.querySelector('input[type="text"]')!;
@@ -190,7 +198,7 @@ describe('EmojiPicker', () => {
 
     it('opens a popover with 6 hand variants when toggle is clicked', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       container.appendChild(picker.getElement());
       await picker.open(container);
 
@@ -208,7 +216,7 @@ describe('EmojiPicker', () => {
 
     it('updates emojis and toggle when a skin tone is selected', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       container.appendChild(picker.getElement());
       await picker.open(container);
 
@@ -234,7 +242,7 @@ describe('EmojiPicker', () => {
 
     it('shows active state on toggle when popover is open, removes it when closed', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       container.appendChild(picker.getElement());
       await picker.open(container);
 
@@ -254,7 +262,7 @@ describe('EmojiPicker', () => {
 
     it('closes popover on Escape without closing the picker', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       container.appendChild(picker.getElement());
       await picker.open(container);
 
@@ -275,7 +283,7 @@ describe('EmojiPicker', () => {
 
   it('search icon is 16×16 and vertically centered inside the input', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     const el = picker.getElement();
 
     const input = el.querySelector('input[type="text"]') as HTMLInputElement;
@@ -296,7 +304,7 @@ describe('EmojiPicker', () => {
   describe('header button sizing matches search input', () => {
     it('skin tone toggle uses 28px size, random and remove buttons use 34px to match the search input height', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       const el = picker.getElement();
 
       const skinToggle = el.querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
@@ -317,7 +325,7 @@ describe('EmojiPicker', () => {
 
     it('random and remove buttons are grouped with a tight gap', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       const el = picker.getElement();
 
       const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
@@ -330,7 +338,7 @@ describe('EmojiPicker', () => {
 
     it('random and remove button SVG icons are 14×14 to match larger button proportions', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       const el = picker.getElement();
 
       const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
@@ -349,7 +357,7 @@ describe('EmojiPicker', () => {
   it('does not close the picker when the random button is clicked', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const onSelect = vi.fn();
-    const picker = new EmojiPicker({ onSelect, onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect, onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -364,7 +372,7 @@ describe('EmojiPicker', () => {
 
   it('attaches JS tooltips to random and remove buttons via onHover', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     const el = picker.getElement();
 
     const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
@@ -376,7 +384,7 @@ describe('EmojiPicker', () => {
 
   it('attaches JS tooltips to emoji buttons via onHover with placement top', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -392,7 +400,7 @@ describe('EmojiPicker', () => {
 
   it('nav bar has gap between category icons and 8px horizontal padding', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     const nav = picker.getElement().querySelector('[data-emoji-picker-nav]') as HTMLElement;
 
     expect(nav.className).toContain('gap-1');
@@ -401,7 +409,7 @@ describe('EmojiPicker', () => {
 
   it('nav bar uses 4px top padding (pt-1)', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     const nav = picker.getElement().querySelector('[data-emoji-picker-nav]') as HTMLElement;
 
     expect(nav.className).toContain('pt-1');
@@ -410,7 +418,7 @@ describe('EmojiPicker', () => {
 
   it('nav button corners use rounded-lg to match the outer rounded-xl container', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -425,7 +433,7 @@ describe('EmojiPicker', () => {
 
   it('emoji body max height is 260px', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     const body = picker.getElement().querySelector('[data-emoji-picker-body]') as HTMLElement;
 
     expect(body.className).toContain('max-h-[260px]');
@@ -433,7 +441,7 @@ describe('EmojiPicker', () => {
 
   it('emoji grid uses 10 columns', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -449,7 +457,7 @@ describe('EmojiPicker', () => {
     it('uses i18n-translated text for standard category section headings, not raw IDs', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const i18nSpy = vi.fn((k: string) => `[translated:${k}]`);
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never, locale: 'en' });
       container.appendChild(picker.getElement());
       await picker.open(container);
 
@@ -482,7 +490,7 @@ describe('EmojiPicker', () => {
     it('uses i18n-translated text for nav button tooltips and aria-labels', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const i18nSpy = vi.fn((k: string) => `[translated:${k}]`);
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never, locale: 'en' });
       container.appendChild(picker.getElement());
       await picker.open(container);
 
@@ -503,7 +511,7 @@ describe('EmojiPicker', () => {
     it('calls i18n.t with emoji category keys for each visible standard category', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const i18nSpy = vi.fn((k: string) => `[translated:${k}]`);
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: i18nSpy } as never, locale: 'en' });
       container.appendChild(picker.getElement());
       await picker.open(container);
 
@@ -519,7 +527,7 @@ describe('EmojiPicker', () => {
 
   it('emoji grid has top padding so hover-scaled emojis do not overlap section headings', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
     await picker.open(container);
 
@@ -536,7 +544,7 @@ describe('EmojiPicker', () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const anchor = document.createElement('button');
       document.body.appendChild(anchor);
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       document.body.appendChild(picker.getElement());
       await picker.open(anchor);
 
@@ -557,7 +565,7 @@ describe('EmojiPicker', () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const anchor = document.createElement('button');
       document.body.appendChild(anchor);
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       document.body.appendChild(picker.getElement());
       await picker.open(anchor);
 
@@ -575,7 +583,7 @@ describe('EmojiPicker', () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const anchor = document.createElement('button');
       document.body.appendChild(anchor);
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       document.body.appendChild(picker.getElement());
 
       // Before open — no scroll lock
@@ -599,7 +607,7 @@ describe('EmojiPicker', () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const anchor = document.createElement('button');
       document.body.appendChild(anchor);
-      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
       document.body.appendChild(picker.getElement());
       await picker.open(anchor);
 
@@ -618,7 +626,7 @@ describe('EmojiPicker', () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const anchor = document.createElement('button');
     document.body.appendChild(anchor);
-    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never });
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
 
     // Manually append picker to body (as CalloutTool does in openEmojiPicker)
     document.body.appendChild(picker.getElement());
@@ -629,5 +637,66 @@ describe('EmojiPicker', () => {
     picker.close();
     document.body.removeChild(anchor);
     document.body.removeChild(picker.getElement());
+  });
+
+  describe('emoji name translations', () => {
+    it('shows translated emoji names in tooltips when locale data is available', async () => {
+      mockLoadEmojiLocale.mockResolvedValue({
+        '💡': { n: 'ampoule', k: ['idée'] },
+        '😀': { n: 'visage souriant', k: ['joyeux'] },
+      });
+      mockGetTranslatedName.mockImplementation((native: string) => {
+        const names: Record<string, string> = { '💡': 'ampoule', '😀': 'visage souriant' };
+        return names[native] ?? null;
+      });
+
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'fr' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const allBtns = Array.from(picker.getElement().querySelectorAll<HTMLButtonElement>('[data-emoji-native]'));
+      const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
+
+      expect(bulbBtn).toBeDefined();
+      expect(bulbBtn!.title).toBe('ampoule');
+    });
+
+    it('falls back to English name when translated name is not available', async () => {
+      mockLoadEmojiLocale.mockResolvedValue({
+        '💡': { n: 'ampoule', k: ['idée'] },
+      });
+      mockGetTranslatedName.mockImplementation((native: string) => {
+        if (native === '💡') return 'ampoule';
+        return null;
+      });
+
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'fr' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const allBtns = Array.from(picker.getElement().querySelectorAll<HTMLButtonElement>('[data-emoji-native]'));
+      const thumbsBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '👍');
+
+      expect(thumbsBtn).toBeDefined();
+      expect(thumbsBtn!.title).toBe('Thumbs Up');
+    });
+
+    it('uses English names when locale is en', async () => {
+      mockGetTranslatedName.mockReturnValue(null);
+
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const allBtns = Array.from(picker.getElement().querySelectorAll<HTMLButtonElement>('[data-emoji-native]'));
+      const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
+
+      expect(bulbBtn).toBeDefined();
+      expect(bulbBtn!.title).toBe('Light Bulb');
+      expect(mockLoadEmojiLocale).not.toHaveBeenCalled();
+    });
   });
 });

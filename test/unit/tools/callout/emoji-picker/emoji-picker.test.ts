@@ -6,7 +6,7 @@ import type { ProcessedEmoji } from '../../../../../src/tools/callout/emoji-pick
 const mockOnHover = vi.fn();
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
-  onHover: (...args: unknown[]) => mockOnHover(...args),
+  onHover: (...args: unknown[]) => { mockOnHover(...args); },
   hide: vi.fn(),
 }));
 
@@ -14,8 +14,8 @@ const mockLoadEmojiLocale = vi.fn().mockResolvedValue(null);
 const mockGetTranslatedName = vi.fn().mockReturnValue(null);
 
 vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-locale', () => ({
-  loadEmojiLocale: (...args: unknown[]) => mockLoadEmojiLocale(...args),
-  getTranslatedName: (...args: unknown[]) => mockGetTranslatedName(...args),
+  loadEmojiLocale: (...args: unknown[]): unknown => mockLoadEmojiLocale(...args),
+  getTranslatedName: (...args: unknown[]): unknown => mockGetTranslatedName(...args),
 }));
 
 vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
@@ -288,8 +288,6 @@ describe('EmojiPicker', () => {
 
     const input = el.querySelector('input[type="text"]') as HTMLInputElement;
     const iconSpan = input.parentElement!.querySelector('span') as HTMLSpanElement;
-    const svg = iconSpan.querySelector('svg') as SVGElement;
-
     // Icon should be 16×16
     expect(iconSpan.className).toContain('[&>svg]:w-[16px]');
     expect(iconSpan.className).toContain('[&>svg]:h-[16px]');
@@ -393,7 +391,7 @@ describe('EmojiPicker', () => {
     expect(emojiButtons.length).toBeGreaterThan(0);
 
     // Each emoji button should have onHover called with (button, name, { placement: 'top' })
-    for (const btn of emojiButtons) {
+    for (const btn of Array.from(emojiButtons)) {
       expect(mockOnHover).toHaveBeenCalledWith(btn, btn.getAttribute('title'), { placement: 'bottom' });
     }
   });
@@ -425,7 +423,7 @@ describe('EmojiPicker', () => {
     const navButtons = picker.getElement().querySelectorAll('[data-emoji-nav]');
 
     expect(navButtons.length).toBeGreaterThan(0);
-    for (const btn of navButtons) {
+    for (const btn of Array.from(navButtons)) {
       expect(btn.className).toContain('rounded-lg');
       expect(btn.className).not.toContain('rounded-md');
     }
@@ -448,7 +446,7 @@ describe('EmojiPicker', () => {
     const grids = picker.getElement().querySelectorAll('.grid');
 
     expect(grids.length).toBeGreaterThan(0);
-    for (const grid of grids) {
+    for (const grid of Array.from(grids)) {
       expect(grid.className).toContain('grid-cols-10');
     }
   });
@@ -465,11 +463,13 @@ describe('EmojiPicker', () => {
       const sections = picker.getElement().querySelectorAll('[data-emoji-section]');
       const headings = new Map<string, string>();
 
-      for (const section of sections) {
-        const id = section.getAttribute('data-emoji-section')!;
-        const heading = section.querySelector('div')!;
+      for (const section of Array.from(sections)) {
+        const id = section.getAttribute('data-emoji-section');
+        const heading = section.querySelector('div');
 
-        headings.set(id, heading.textContent!);
+        if (id !== null && heading?.textContent != null) {
+          headings.set(id, heading.textContent);
+        }
       }
 
       // Standard categories should use translated text, not raw category IDs
@@ -498,9 +498,9 @@ describe('EmojiPicker', () => {
 
       expect(navButtons.length).toBeGreaterThan(0);
 
-      for (const btn of navButtons) {
-        const title = btn.getAttribute('title')!;
-        const ariaLabel = btn.getAttribute('aria-label')!;
+      for (const btn of Array.from(navButtons)) {
+        const title = btn.getAttribute('title');
+        const ariaLabel = btn.getAttribute('aria-label');
 
         // Should be translated, not hardcoded English
         expect(title).toContain('[translated:');
@@ -517,7 +517,7 @@ describe('EmojiPicker', () => {
 
       // i18n.t should have been called with keys containing 'emojiCategory'
       const categoryKeyCalls = i18nSpy.mock.calls
-        .map(([key]) => key as string)
+        .map(([key]) => key)
         .filter((key: string) => key.includes('emojiCategory'));
 
       // At least the callout category + visible standard categories
@@ -534,7 +534,7 @@ describe('EmojiPicker', () => {
     const grids = picker.getElement().querySelectorAll('.grid');
 
     expect(grids.length).toBeGreaterThan(0);
-    for (const grid of grids) {
+    for (const grid of Array.from(grids)) {
       expect(grid.className).toContain('pt-1');
     }
   });

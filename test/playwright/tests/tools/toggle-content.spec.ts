@@ -108,10 +108,10 @@ test.describe('Toggle Content - Adding blocks inside toggles', () => {
 
     test('Enter at end of closed toggle creates sibling toggle', async ({ page }) => {
       await createBlok(page, {
-        blocks: [{ type: 'toggle', data: { text: 'Closed toggle' } }],
+        blocks: [{ type: 'toggle', data: { text: 'Closed toggle', isOpen: false } }],
       });
 
-      // Toggle starts collapsed by default — verify
+      // Toggle is explicitly closed — verify
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
       // Click the toggle content and move to end

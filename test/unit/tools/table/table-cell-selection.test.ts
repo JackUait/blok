@@ -237,6 +237,7 @@ describe('TableCellSelection', () => {
     }),
     has: vi.fn(() => false),
     getEnglishTranslation: vi.fn((key: string) => key),
+    getLocale: vi.fn(() => 'en'),
   };
 
   beforeEach(() => {

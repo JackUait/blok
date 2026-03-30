@@ -116,7 +116,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
   });
 
-  test('clicking plus button on empty header creates new empty paragraph below', async ({ page }) => {
+  test('clicking plus button on empty header opens toolbox on that header', async ({ page }) => {
     await createBlokWithBlocks(page, [
       { type: 'header', data: { text: '', level: 2 } },
     ]);
@@ -130,13 +130,8 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await expect(plusButton).toBeVisible();
     await plusButton.click();
 
-    // Should have 2 blocks now (header + new paragraph)
-    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(2);
-
-    // Second block should be an empty paragraph
-    const paragraph = page.locator(PARAGRAPH_SELECTOR);
-
-    await expect(paragraph).toHaveText('');
+    // Should still have 1 block (reused the empty header)
+    await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
 
     // Toolbox should be open
     await expect(page.locator(TOOLBOX_POPOVER_SELECTOR)).toBeVisible();
@@ -777,15 +772,15 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     await expect(headerInsideTable).toHaveCount(0);
 
     // Verify output data: header should be a separate top-level block after the table.
-    // In no-slash mode, typing "head" leaves the filter paragraph in place (it's not replaced
-    // because the block now has content and isBlockSlashSearchOnly returns false).
+    // In no-slash mode, the filter paragraph is replaced by the selected block type
+    // because shouldReplaceBlock returns true when !openedWithSlash.
     // The table's 2x2 grid produces 4 cell paragraph blocks in the flat save output.
-    // Order: table, paragraph('head'), 4 cell paragraphs, header
+    // Order: table, 4 cell paragraphs, header
     const blockTypes = await page.evaluate(() =>
       window.blokInstance?.save().then(data => data.blocks.map(b => b.type))
     );
 
-    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'header']);
+    expect(blockTypes).toStrictEqual(['table', 'paragraph', 'paragraph', 'paragraph', 'paragraph', 'header']);
   });
 
   test('clicking plus button on table block works when multiple tables exist in the article', async ({ page }) => {

@@ -63,8 +63,43 @@ describe('resolvePosition', () => {
       });
 
       // spaceBelow = 102, spaceAbove = 342
+      // raw top = 350 - 8 - 400 = -58, clamped to boundaryTop (0) + scrollOffset.y (0) = 0
       expect(result.openTop).toBe(true);
-      expect(result.top).toBe(-58);
+      expect(result.top).toBe(0);
+    });
+
+    it('clamps popover to not overflow above viewport when opening top', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 150, bottom: 190, left: 50, right: 200 }),
+        popoverSize: { width: 200, height: 500 },
+        scopeBounds: rect({ top: 0, bottom: 300, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 300 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+      });
+
+      // spaceBelow = 300 - 190 - 8 = 102, spaceAbove = 150 - 8 = 142
+      // openTop = true (more space above, neither fits)
+      // raw top = 150 - 8 - 500 = -358, clamped to 0
+      expect(result.openTop).toBe(true);
+      expect(result.top).toBe(0);
+    });
+
+    it('clamps vertical position with scroll offset when opening top', () => {
+      const result = resolvePosition({
+        anchor: rect({ top: 150, bottom: 190, left: 50, right: 200 }),
+        popoverSize: { width: 200, height: 500 },
+        scopeBounds: rect({ top: 0, bottom: 300, left: 0, right: 1000 }),
+        viewportSize: { width: 1024, height: 300 },
+        scrollOffset: { x: 0, y: 200 },
+        offset: 8,
+      });
+
+      // spaceBelow = 300 - 190 - 8 = 102, spaceAbove = 150 - 8 = 142
+      // openTop = true
+      // raw top = 150 - 8 - 500 + 200 = -158, clamped to 0 + 200 = 200
+      expect(result.openTop).toBe(true);
+      expect(result.top).toBe(200);
     });
 
     it('accounts for scroll offset in vertical positioning', () => {

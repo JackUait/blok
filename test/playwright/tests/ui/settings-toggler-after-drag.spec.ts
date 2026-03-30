@@ -12,7 +12,7 @@ const HOLDER_ID = "blok";
 const BLOCK_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="block-wrapper"]`;
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
 const BLOCK_TUNES_POPOVER_SELECTOR =
-  '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
+  '[data-blok-testid="block-tunes-popover"] > [data-blok-testid="popover-container"]';
 
 declare global {
   interface Window {

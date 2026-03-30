@@ -148,6 +148,7 @@
     "@vitest/eslint-plugin": "1.6.12",
     "@vitest/ui": "4.1.0",
     "chromatic": "15.2.0",
+    "cldr-annotations-full": "^48.2.0",
     "eslint": "10.0.3",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-jest": "29.15.0",

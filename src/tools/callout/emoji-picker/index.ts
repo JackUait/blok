@@ -1,7 +1,7 @@
 // src/tools/callout/emoji-picker/index.ts
 
 import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
-import { loadEmojiLocale, getTranslatedName, type EmojiLocaleData } from './emoji-locale';
+import { loadEmojiLocale, type EmojiLocaleData } from './emoji-locale';
 import { onHover } from '../../../components/utils/tooltip';
 import {
   REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
@@ -642,7 +642,7 @@ export class EmojiPicker {
   }
 
   private getDisplayName(emoji: ProcessedEmoji): string {
-    return getTranslatedName(emoji.native, this._locale) ?? emoji.name;
+    return this._localeData?.[emoji.native]?.n ?? emoji.name;
   }
 
   private buildGrid(emojis: ProcessedEmoji[]): HTMLElement {

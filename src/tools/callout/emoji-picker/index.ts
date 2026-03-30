@@ -122,11 +122,13 @@ export class EmojiPicker {
 
     this.renderEmojiGrid(this._allEmojis);
     this.showBackdrop();
-    this.position(anchor);
+
+    // Unhide before positioning so getBoundingClientRect returns real dimensions
+    this._element.style.animation = 'none';
     this._element.hidden = false;
+    this.position(anchor);
 
     // Replay the opening animation
-    this._element.style.animation = 'none';
     void this._element.offsetHeight;
     this._element.style.animation = '';
 
@@ -700,18 +702,17 @@ export class EmojiPicker {
 
   private position(anchor: HTMLElement): void {
     const rect = anchor.getBoundingClientRect();
-    const pickerHeight = 420;
-    const pickerWidth = 400;
+    const pickerRect = this._element.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
     // Coordinates are viewport-relative (picker is inside a fixed backdrop)
-    const top = rect.bottom + pickerHeight > viewportHeight
-      ? rect.top - pickerHeight - 4
+    const top = rect.bottom + pickerRect.height > viewportHeight
+      ? rect.top - pickerRect.height - 4
       : rect.bottom + 4;
 
-    const left = rect.left + pickerWidth > viewportWidth
-      ? rect.right - pickerWidth
+    const left = rect.left + pickerRect.width > viewportWidth
+      ? rect.right - pickerRect.width
       : rect.left;
 
     this._element.style.top = `${top}px`;

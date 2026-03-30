@@ -223,6 +223,14 @@ const createPopover = (params: Partial<PopoverParams> = {}): PopoverDesktop => {
 
   document.body.appendChild(scopeElement);
 
+  // In jsdom, elements have zero-size getBoundingClientRect.
+  // Mock it to span the full viewport so scope bounds don't artificially constrain positioning.
+  if (!params.scopeElement) {
+    vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+      createRect({ top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight })
+    );
+  }
+
   const popoverParams: PopoverParams = {
     items: params.items ?? createDefaultItems(),
     scopeElement,
@@ -1200,6 +1208,42 @@ describe('PopoverDesktop', () => {
       expect(popover.getElement().style.left).toBe(`${50 + window.scrollX}px`);
 
       trigger.remove();
+    });
+
+    it('sets openTop data attribute when popover flips above trigger', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 500, bottom: 540, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300, width: 200 });
+
+      const originalInnerHeight = window.innerHeight;
+
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        value: 600,
+        writable: true,
+      });
+
+      try {
+        popover.show();
+
+        expect(popover.getElement()).toHaveAttribute(DATA_ATTR.popoverOpenTop);
+      } finally {
+        Object.defineProperty(window, 'innerHeight', {
+          configurable: true,
+          value: originalInnerHeight,
+          writable: true,
+        });
+        trigger.remove();
+      }
     });
   });
 

@@ -10,6 +10,7 @@ import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
+import { resolvePosition } from './popover-position';
 import { twMerge } from '../tw';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -224,12 +225,14 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (this.trigger) {
-      const { top, left } = this.calculatePosition();
+      const { top, left, openTop, openLeft } = this.calculatePosition();
       this.nodes.popover.style.position = 'absolute';
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
       this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, '0px');
       this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, '0px');
+      this.setOpenTop(openTop);
+      this.setOpenLeft(openLeft);
     }
 
     const measuredSize = this.size;
@@ -294,45 +297,34 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Recalculate and apply position if already shown
     if (this.nodes.popover.hasAttribute('data-blok-popover-opened')) {
-      const { top, left } = this.calculatePosition();
+      const { top, left, openTop, openLeft } = this.calculatePosition();
 
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
+      this.setOpenTop(openTop);
+      this.setOpenLeft(openLeft);
     }
   }
 
   /**
    * Calculates position for the popover
    */
-  private calculatePosition(): { top: number; left: number } {
-    // Use provided position if available, otherwise fall back to trigger element
+  private calculatePosition(): { top: number; left: number; openTop: boolean; openLeft: boolean } {
     const rect = this.params.position ?? this.trigger?.getBoundingClientRect();
 
     if (!rect) {
-      return {
-        top: 0,
-        left: 0,
-      };
+      return { top: 0, left: 0, openTop: false, openLeft: false };
     }
 
-    const popoverRect = this.size;
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const offset = 8;
-
-    const initialTop = rect.bottom + offset + window.scrollY;
-    const shouldFlipTop = (rect.bottom + offset + popoverRect.height > windowHeight + window.scrollY) &&
-      (rect.top - offset - popoverRect.height > window.scrollY);
-    const top = shouldFlipTop ? rect.top - offset - popoverRect.height + window.scrollY : initialTop;
-
-    const initialLeft = (this.leftAlignElement?.getBoundingClientRect().left ?? rect.left) + window.scrollX;
-    const shouldFlipLeft = initialLeft + popoverRect.width > windowWidth + window.scrollX;
-    const left = shouldFlipLeft ? Math.max(0, rect.right - popoverRect.width + window.scrollX) : initialLeft;
-
-    return {
-      top,
-      left,
-    };
+    return resolvePosition({
+      anchor: rect,
+      popoverSize: this.size,
+      scopeBounds: this.scopeElement.getBoundingClientRect(),
+      viewportSize: { width: window.innerWidth, height: window.innerHeight },
+      scrollOffset: { x: window.scrollX, y: window.scrollY },
+      offset: 8,
+      leftAlignRect: this.leftAlignElement?.getBoundingClientRect(),
+    });
   }
 
   /**

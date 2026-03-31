@@ -27,6 +27,20 @@ import {
   DEFAULT_EMOJI,
 } from './constants';
 
+/**
+ * Map legacy callout variant to backgroundColor preset name.
+ * Used when receiving data from older format that has variant instead of backgroundColor.
+ */
+const VARIANT_TO_BG_PRESET: Record<string, string | null> = {
+  general: null,
+  note: 'blue',
+  important: 'purple',
+  warning: 'orange',
+  additional: 'yellow',
+  recommendation: 'green',
+  caution: 'red',
+};
+
 export class CalloutTool implements BlockTool {
   private readonly api: API;
   private readonly readOnly: boolean;
@@ -47,10 +61,40 @@ export class CalloutTool implements BlockTool {
   }
 
   private normalizeData(data: Partial<CalloutData>): CalloutData {
+    const legacyData = data as Record<string, unknown>;
+    const hasLegacyFields = 'variant' in legacyData || 'isEmojiVisible' in legacyData;
+
+    if (hasLegacyFields) {
+      return this.normalizeLegacyData(legacyData);
+    }
+
     return {
       emoji: typeof data.emoji === 'string' ? data.emoji : DEFAULT_EMOJI,
       textColor: typeof data.textColor === 'string' ? data.textColor : null,
       backgroundColor: typeof data.backgroundColor === 'string' ? data.backgroundColor : null,
+    };
+  }
+
+  private normalizeLegacyData(data: Record<string, unknown>): CalloutData {
+    // Map variant to backgroundColor
+    const variant = typeof data.variant === 'string' ? data.variant : 'general';
+    const backgroundColor = variant in VARIANT_TO_BG_PRESET ? VARIANT_TO_BG_PRESET[variant] : null;
+
+    // Map isEmojiVisible + emoji to emoji string
+    let emoji: string;
+
+    if (data.isEmojiVisible === false) {
+      emoji = '';
+    } else if (typeof data.emoji === 'string' && data.emoji.length > 0) {
+      emoji = data.emoji;
+    } else {
+      emoji = DEFAULT_EMOJI;
+    }
+
+    return {
+      emoji,
+      textColor: null,
+      backgroundColor: backgroundColor ?? null,
     };
   }
 

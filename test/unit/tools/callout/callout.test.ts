@@ -348,6 +348,63 @@ describe('CalloutTool', () => {
     });
   });
 
+  describe('normalizeData handles legacy fields', () => {
+    it('maps variant to backgroundColor when no backgroundColor present', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'note',
+        backgroundColor: undefined,
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBe('blue');
+    });
+
+    it('maps isEmojiVisible false to empty emoji', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        isEmojiVisible: false,
+        emoji: '💡',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.emoji).toBe('');
+    });
+
+    it('maps isEmojiVisible true with null emoji to default emoji', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        isEmojiVisible: true,
+        emoji: null,
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.emoji).toBe('💡');
+    });
+
+    it('preserves new-format data when no legacy fields present', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        emoji: '🔥',
+        textColor: 'red',
+        backgroundColor: 'blue',
+      });
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.emoji).toBe('🔥');
+      expect(saved.textColor).toBe('red');
+      expect(saved.backgroundColor).toBe('blue');
+    });
+  });
+
   describe('static getters', () => {
     it('toolbox returns icon, title, titleKey', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');

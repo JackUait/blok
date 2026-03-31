@@ -11,8 +11,11 @@ import {
 const HOLDER_ID = "blok";
 const BLOCK_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="block-wrapper"]`;
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
-const BLOCK_TUNES_POPOVER_SELECTOR =
-  '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
+const getBlockTunesPopover = (page: Page): ReturnType<Page["locator"]> =>
+  page
+    .getByTestId("block-tunes-popover")
+    .getByTestId("popover-container")
+    .filter({ has: page.getByRole("searchbox") });
 
 declare global {
   interface Window {
@@ -151,12 +154,12 @@ test.describe("ui.settings-toggler-after-drag", () => {
     await performDragDrop(page, settingsButton, secondBlock, "bottom");
 
     // The block settings menu should NOT be open after drag-drop
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toHaveCount(0);
+    await expect(getBlockTunesPopover(page)).toHaveCount(0);
 
     // Now click on the settings button - it should open the menu
     await settingsButton.click();
 
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
+    await expect(getBlockTunesPopover(page)).toBeVisible();
   });
 
   test("should open block settings menu on click after drag-drop has settled", async ({
@@ -189,7 +192,7 @@ test.describe("ui.settings-toggler-after-drag", () => {
     await settingsButton.click();
 
     // Now the menu should open
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
+    await expect(getBlockTunesPopover(page)).toBeVisible();
   });
 
   test("should distinguish between click and drag on settings toggler", async ({
@@ -224,7 +227,7 @@ test.describe("ui.settings-toggler-after-drag", () => {
     await page.mouse.up();
 
     // Block settings should open on click
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
+    await expect(getBlockTunesPopover(page)).toBeVisible();
 
     // Close the menu
     await page.mouse.click(clickX + 10, clickY + 10);
@@ -237,7 +240,7 @@ test.describe("ui.settings-toggler-after-drag", () => {
     await performDragDrop(page, settingsButton, secondBlock, "bottom");
 
     // Block settings should NOT open after drag
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toHaveCount(0);
+    await expect(getBlockTunesPopover(page)).toHaveCount(0);
   });
 
   test("should allow click after drag-drop has fully completed", async ({
@@ -268,7 +271,7 @@ test.describe("ui.settings-toggler-after-drag", () => {
     // Now click should work
     await settingsButton.click();
 
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
+    await expect(getBlockTunesPopover(page)).toBeVisible();
   });
 
   test("should handle multiple consecutive drag-drop operations correctly", async ({
@@ -327,11 +330,11 @@ test.describe("ui.settings-toggler-after-drag", () => {
     );
 
     // No block settings menu should be open after all the dragging
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toHaveCount(0);
+    await expect(getBlockTunesPopover(page)).toHaveCount(0);
 
     // But clicking should still work
     await settingsButton.click();
 
-    await expect(page.locator(BLOCK_TUNES_POPOVER_SELECTOR)).toBeVisible();
+    await expect(getBlockTunesPopover(page)).toBeVisible();
   });
 });

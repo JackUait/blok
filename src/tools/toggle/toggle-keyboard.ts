@@ -61,7 +61,8 @@ export const handleToggleEnter = async (context: ToggleKeyboardContext): Promise
    * a single Yjs undo entry, so one CMD+Z removes the new block completely.
    */
   if (isOpen && afterContent === '') {
-    const newBlock = api.blocks.insertInsideParent(blockId, currentBlockIndex + 1);
+    const insertIndex = getInsertAfterLastDescendantIndex(api, blockId, currentBlockIndex);
+    const newBlock = api.blocks.insertInsideParent(blockId, insertIndex);
 
     api.caret.setToBlock(newBlock.id, 'start');
 
@@ -120,6 +121,33 @@ export const handleToggleBackspace = async (
   event.preventDefault();
 
   await api.blocks.convert(blockId, 'paragraph', { text });
+};
+
+/**
+ * Returns the flat-array index at which a new child should be inserted so that
+ * it appears as the **last** child of `parentId`. Walks descendants recursively
+ * so nested toggles are accounted for.
+ *
+ * @param api - Blocks API
+ * @param parentId - ID of the parent block
+ * @param parentIndex - Flat-array index of the parent block
+ * @returns The insertion index (one past the last descendant)
+ */
+export const getInsertAfterLastDescendantIndex = (
+  api: Pick<API, 'blocks'>,
+  parentId: string,
+  parentIndex: number
+): number => {
+  const children = api.blocks.getChildren(parentId);
+
+  if (children.length === 0) {
+    return parentIndex + 1;
+  }
+
+  const lastChild = children[children.length - 1];
+  const lastChildIndex = api.blocks.getBlockIndex(lastChild.id) ?? parentIndex;
+
+  return getInsertAfterLastDescendantIndex(api, lastChild.id, lastChildIndex);
 };
 
 /**

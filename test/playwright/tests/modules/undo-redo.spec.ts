@@ -2161,15 +2161,18 @@ test.describe('yjs undo/redo', () => {
       await expect(plusButton).toBeVisible();
       await plusButton.click();
 
-      // Click header option
+      // Click header option (inserts new empty paragraph below, then replaces it with header)
       const headerOption = page.locator(TOOLBOX_ITEM_SELECTOR('header-2'));
       await expect(headerOption).toBeVisible();
       await headerOption.click();
 
       await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+
+      // Type text into the header so it becomes non-empty
+      await page.keyboard.type('My Heading');
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 
-      // Now insert a list via toolbox (hover on header)
+      // Now insert a list via toolbox (hover on the non-empty header)
       const header = page.locator(HEADER_SELECTOR);
       await header.hover();
 
@@ -2183,7 +2186,7 @@ test.describe('yjs undo/redo', () => {
       await expect(listOption).toBeVisible();
       await listOption.click();
 
-      // Now we have header + list (plus original paragraph may or may not be there)
+      // Plus button on a non-empty block inserts a new block below, then replaces it
       await expect(page.locator(LIST_SELECTOR)).toHaveCount(1);
       await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);

@@ -10,6 +10,7 @@ import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
+import { resolvePosition } from './popover-position';
 import { twMerge } from '../tw';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
@@ -224,12 +225,14 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (this.trigger) {
-      const { top, left } = this.calculatePosition();
+      const { top, left, openTop, openLeft } = this.calculatePosition();
       this.nodes.popover.style.position = 'absolute';
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
       this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, '0px');
       this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, '0px');
+      this.setOpenTop(openTop);
+      this.setOpenLeft(openLeft);
     }
 
     const measuredSize = this.size;
@@ -243,16 +246,27 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nodes.popover.style.setProperty('--width', width + 'px');
     }
 
-    if (!this.trigger && !this.shouldOpenBottom) {
-      this.setOpenTop(true);
-      // Apply open-top positioning (moved from popover.css)
-      this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
-    }
+    if (!this.trigger) {
+      const containerRect = this.nodes.popoverContainer.getBoundingClientRect();
+      // offset: 0 because the visual gap is handled by CSS calc (0.5rem), not pixel positioning
+      const { openTop, openLeft } = resolvePosition({
+        anchor: containerRect,
+        popoverSize: measuredSize,
+        scopeBounds: this.scopeElement.getBoundingClientRect(),
+        viewportSize: { width: window.innerWidth, height: window.innerHeight },
+        scrollOffset: { x: window.scrollX, y: window.scrollY },
+        offset: 0,
+      });
 
-    if (!this.trigger && !this.shouldOpenRight) {
-      this.setOpenLeft(true);
-      // Apply open-left positioning (moved from popover.css)
-      this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
+      if (openTop) {
+        this.setOpenTop(true);
+        this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
+      }
+
+      if (openLeft) {
+        this.setOpenLeft(true);
+        this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
+      }
     }
 
     super.show();
@@ -294,45 +308,34 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Recalculate and apply position if already shown
     if (this.nodes.popover.hasAttribute('data-blok-popover-opened')) {
-      const { top, left } = this.calculatePosition();
+      const { top, left, openTop, openLeft } = this.calculatePosition();
 
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
+      this.setOpenTop(openTop);
+      this.setOpenLeft(openLeft);
     }
   }
 
   /**
    * Calculates position for the popover
    */
-  private calculatePosition(): { top: number; left: number } {
-    // Use provided position if available, otherwise fall back to trigger element
+  private calculatePosition(): { top: number; left: number; openTop: boolean; openLeft: boolean } {
     const rect = this.params.position ?? this.trigger?.getBoundingClientRect();
 
     if (!rect) {
-      return {
-        top: 0,
-        left: 0,
-      };
+      return { top: 0, left: 0, openTop: false, openLeft: false };
     }
 
-    const popoverRect = this.size;
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const offset = 8;
-
-    const initialTop = rect.bottom + offset + window.scrollY;
-    const shouldFlipTop = (rect.bottom + offset + popoverRect.height > windowHeight + window.scrollY) &&
-      (rect.top - offset - popoverRect.height > window.scrollY);
-    const top = shouldFlipTop ? rect.top - offset - popoverRect.height + window.scrollY : initialTop;
-
-    const initialLeft = (this.leftAlignElement?.getBoundingClientRect().left ?? rect.left) + window.scrollX;
-    const shouldFlipLeft = initialLeft + popoverRect.width > windowWidth + window.scrollX;
-    const left = shouldFlipLeft ? Math.max(0, rect.right - popoverRect.width + window.scrollX) : initialLeft;
-
-    return {
-      top,
-      left,
-    };
+    return resolvePosition({
+      anchor: rect,
+      popoverSize: this.size,
+      scopeBounds: this.scopeElement.getBoundingClientRect(),
+      viewportSize: { width: window.innerWidth, height: window.innerHeight },
+      scrollOffset: { x: window.scrollX, y: window.scrollY },
+      offset: 8,
+      leftAlignRect: this.leftAlignElement?.getBoundingClientRect(),
+    });
   }
 
   /**
@@ -647,42 +650,6 @@ export class PopoverDesktop extends PopoverAbstract {
     nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
   }
 
-  /**
-   * Checks if popover should be opened bottom.
-   * It should happen when there is enough space below or not enough space above
-   */
-  private get shouldOpenBottom(): boolean {
-    if (this.nodes.popover === undefined || this.nodes.popover === null) {
-      return false;
-    }
-    const popoverRect = this.nodes.popoverContainer.getBoundingClientRect();
-    const scopeElementRect = this.scopeElement.getBoundingClientRect();
-    const popoverHeight = this.size.height;
-    const popoverPotentialBottomEdge = popoverRect.top + popoverHeight;
-    const popoverPotentialTopEdge = popoverRect.top - popoverHeight;
-    const bottomEdgeForComparison = Math.min(window.innerHeight, scopeElementRect.bottom);
-
-    return popoverPotentialTopEdge < scopeElementRect.top || popoverPotentialBottomEdge <= bottomEdgeForComparison;
-  }
-
-  /**
-   * Checks if popover should be opened left.
-   * It should happen when there is enough space in the right or not enough space in the left
-   */
-  private get shouldOpenRight(): boolean {
-    if (this.nodes.popover === undefined || this.nodes.popover === null) {
-      return false;
-    }
-
-    const popoverRect = this.nodes.popover.getBoundingClientRect();
-    const scopeElementRect = this.scopeElement.getBoundingClientRect();
-    const popoverWidth = this.size.width;
-    const popoverPotentialRightEdge = popoverRect.right + popoverWidth;
-    const popoverPotentialLeftEdge = popoverRect.left - popoverWidth;
-    const rightEdgeForComparison = Math.min(window.innerWidth, scopeElementRect.right);
-
-    return popoverPotentialLeftEdge < scopeElementRect.left || popoverPotentialRightEdge <= rightEdgeForComparison;
-  }
 
   /**
    * Helps to calculate size of popover that is only resolved when popover is displayed on screen.
@@ -724,6 +691,13 @@ export class PopoverDesktop extends PopoverAbstract {
     this._size = size;
 
     return size;
+  }
+
+  /**
+   * Invalidates the cached popover size so the next access to `size` re-measures.
+   */
+  public invalidateSizeCache(): void {
+    this._size = undefined;
   }
 
   /**
@@ -1046,6 +1020,9 @@ export class PopoverDesktop extends PopoverAbstract {
 
         item.toggleHidden(isHidden);
       });
+
+    // Invalidate size cache since item visibility changed
+    this._size = undefined;
 
     // Reorder top-level DOM elements to reflect ranking
     if (!isEmptyQuery && matchingTopLevel.length > 0) {

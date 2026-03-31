@@ -511,6 +511,235 @@ describe('BlockHoverController', () => {
     });
   });
 
+  describe('callout child toolbar (data-blok-child-toolbar)', () => {
+    it('resolves first child to parent when container has data-blok-child-toolbar', () => {
+      /**
+       * The first child of a callout overlaps with the emoji icon.
+       * On hover, it should resolve to the parent callout so the callout's
+       * own toolbar controls display normally outside the callout.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const calloutBlock = createMockBlock('callout-block', 100, 400);
+
+      const calloutWrapper = calloutBlock.holder;
+
+      calloutWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const childrenContainer = document.createElement('div');
+
+      childrenContainer.setAttribute('data-blok-toggle-children', '');
+      childrenContainer.setAttribute('data-blok-child-toolbar', '');
+      calloutWrapper.appendChild(childrenContainer);
+
+      const firstChildWrapper = document.createElement('div');
+
+      firstChildWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(firstChildWrapper);
+
+      const paragraphContent = document.createElement('p');
+
+      paragraphContent.textContent = 'First child text';
+      firstChildWrapper.appendChild(paragraphContent);
+
+      document.body.appendChild(calloutWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [calloutBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(calloutBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 150,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: paragraphContent });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: calloutBlock,
+        target: paragraphContent,
+      });
+
+      // First child resolves to the PARENT callout wrapper
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(calloutWrapper);
+    });
+
+    it('emits BlockHovered for non-first child when container has data-blok-child-toolbar', () => {
+      /**
+       * Non-first children of a callout get their own toolbar inside the callout.
+       * Hovering over a non-first child should emit BlockHovered for the child itself.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const calloutBlock = createMockBlock('callout-block', 100, 400);
+      const secondChild = createMockBlock('child-2', 200, 250);
+
+      const calloutWrapper = calloutBlock.holder;
+
+      calloutWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const childrenContainer = document.createElement('div');
+
+      childrenContainer.setAttribute('data-blok-toggle-children', '');
+      childrenContainer.setAttribute('data-blok-child-toolbar', '');
+      calloutWrapper.appendChild(childrenContainer);
+
+      // First child (not the one being hovered)
+      const firstChildWrapper = document.createElement('div');
+
+      firstChildWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(firstChildWrapper);
+
+      // Second child (the one being hovered)
+      const secondChildWrapper = secondChild.holder;
+
+      secondChildWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(secondChildWrapper);
+
+      const paragraphContent = document.createElement('p');
+
+      paragraphContent.textContent = 'Second child text';
+      secondChildWrapper.appendChild(paragraphContent);
+
+      document.body.appendChild(calloutWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [calloutBlock, secondChild];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(secondChild);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 225,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: paragraphContent });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: secondChild,
+        target: paragraphContent,
+      });
+
+      // Non-first child keeps its OWN wrapper
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(secondChildWrapper);
+    });
+
+    it('does not emit BlockHovered when cursor is in the gap between children', () => {
+      /**
+       * When the cursor is between two child blocks (on the children container itself,
+       * not on any child block-wrapper), the toolbar should NOT jump to the parent callout.
+       * Instead, no event is emitted so the toolbar stays at its previous position.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const calloutBlock = createMockBlock('callout-block', 100, 400);
+
+      const calloutWrapper = calloutBlock.holder;
+
+      calloutWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const childrenContainer = document.createElement('div');
+
+      childrenContainer.setAttribute('data-blok-toggle-children', '');
+      childrenContainer.setAttribute('data-blok-child-toolbar', '');
+      calloutWrapper.appendChild(childrenContainer);
+
+      // Two child blocks with a gap between them
+      const firstChildWrapper = document.createElement('div');
+
+      firstChildWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(firstChildWrapper);
+
+      const secondChildWrapper = document.createElement('div');
+
+      secondChildWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(secondChildWrapper);
+
+      document.body.appendChild(calloutWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [calloutBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(calloutBlock);
+
+      // Cursor hovers the children container itself (the gap), not a child block
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 200,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: childrenContainer });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      // No BlockHovered event should be emitted — toolbar stays at previous position
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('still resolves to parent when toggle-children does NOT have data-blok-child-toolbar', () => {
+      /**
+       * Toggle blocks use data-blok-toggle-children but do NOT have data-blok-child-toolbar.
+       * Hovering over a toggle child should still resolve to the parent toggle block.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const toggleBlock = createMockBlock('toggle-block', 100, 400);
+
+      const toggleWrapper = toggleBlock.holder;
+
+      toggleWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const childrenContainer = document.createElement('div');
+
+      childrenContainer.setAttribute('data-blok-toggle-children', '');
+      // NO data-blok-child-toolbar attribute
+      toggleWrapper.appendChild(childrenContainer);
+
+      const nestedWrapper = document.createElement('div');
+
+      nestedWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(nestedWrapper);
+
+      const paragraphContent = document.createElement('p');
+
+      paragraphContent.textContent = 'Toggle child text';
+      nestedWrapper.appendChild(paragraphContent);
+
+      document.body.appendChild(toggleWrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(toggleBlock);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 250,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: paragraphContent });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: toggleBlock,
+        target: paragraphContent,
+      });
+
+      // Verify resolution went to the parent wrapper
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(toggleWrapper);
+    });
+  });
+
   describe('edge cases', () => {
     it('handles MouseEvent type check', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController();

@@ -227,6 +227,28 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
+   * Applies or clears callout background color on the popover's search input.
+   * When the toolbox opens inside a callout with a custom background, the search
+   * input container should match the callout background instead of its default.
+   *
+   * @param color - the callout background CSS value, or null to clear
+   */
+  public setCalloutBackground(color: string | null): void {
+    const popoverEl = this.popover?.getElement();
+
+    if (!popoverEl) {
+      return;
+    }
+
+    if (color) {
+      popoverEl.style.setProperty('--blok-search-input-bg', `light-dark(color-mix(in srgb, ${color} 70%, white), color-mix(in srgb, ${color} 85%, white))`);
+    } else {
+      popoverEl.style.removeProperty('--blok-search-input-bg');
+      popoverEl.style.removeProperty('--blok-search-input-border');
+    }
+  }
+
+  /**
    * Returns root block settings element
    */
   public getElement(): HTMLElement | null {
@@ -323,7 +345,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * instead of at the trigger element (which is outside the table).
      * Must be called after show() so the popover is in the DOM.
      */
-    if (this.isInsideTableCell && this.popover instanceof PopoverDesktop) {
+    const triggerHidden = this.triggerElement?.getBoundingClientRect().height === 0;
+
+    if ((this.isInsideTableCell || triggerHidden) && this.popover instanceof PopoverDesktop) {
       const caretRect = SelectionUtils.rect;
 
       this.popover.updatePosition(caretRect);
@@ -629,8 +653,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     /**
      * Check if the block contains only slash search text (e.g., "/head").
      * If so, treat it as empty and replace it with the new block.
+     *
+     * When opened without slash (via plus button), any text in the block
+     * is a search query, not user content — always replace.
      */
-    const shouldReplaceBlock = currentBlock.isEmpty || this.isBlockSlashSearchOnly(currentBlock.holder);
+    const shouldReplaceBlock = currentBlock.isEmpty
+      || this.isBlockSlashSearchOnly(currentBlock.holder)
+      || !this.openedWithSlash;
 
     /**
      * On mobile version, we see the Plus Button even near non-empty blocks,
@@ -721,7 +750,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     this.currentBlockForSearch = currentBlock.holder;
-    this.currentContentEditable = this.currentBlockForSearch.querySelector('[contenteditable="true"]');
+
+    const activeEl = document.activeElement;
+
+    this.currentContentEditable = activeEl instanceof HTMLElement && activeEl.isContentEditable && this.currentBlockForSearch.contains(activeEl)
+      ? activeEl
+      : this.currentBlockForSearch.querySelector('[contenteditable="true"]');
+
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
     }

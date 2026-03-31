@@ -217,10 +217,10 @@ test.describe('Table copy-paste regression', () => {
     ]);
 
     // --- Step 3: Click the leading paragraph to set focus, then paste ---
-    // eslint-disable-next-line playwright/no-nth-methods -- first() targets the leading empty paragraph explicitly
-    const leadingParagraph = page
-      .locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`)
-      .first();
+    // The leading paragraph is the only top-level paragraph (not nested inside a table cell).
+    const leadingParagraph = page.locator(
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]:not([data-blok-table-cell] *)`
+    );
 
     await leadingParagraph.click();
 
@@ -244,10 +244,11 @@ test.describe('Table copy-paste regression', () => {
     await expect(tables).toHaveCount(2, { timeout: 5000 });
 
     // --- Step 5: Verify pasted table has correct cell content ---
-    // Insertion order: children are inserted first (Pass 1), then the pasted table
-    // (Pass 2) — all before the original table in the block list.
-    // DOM order: nth(0) = pasted table, nth(1) = original table.
-    const pastedTable = tables.nth(0);
+    // The pasted table is the one whose block wrapper does NOT carry the original
+    // table's `data-blok-id` (IDs are remapped during paste).
+    const pastedTable = page.locator(
+      `${BLOK_INTERFACE_SELECTOR} [data-blok-element]:not([data-blok-id="${tableId}"]) [data-blok-tool="table"]`
+    );
     const pastedCells = pastedTable.locator(CELL_SELECTOR);
 
     await expect(pastedCells).toHaveCount(4);
@@ -272,7 +273,10 @@ test.describe('Table copy-paste regression', () => {
     }
 
     // --- Step 7: Verify original table still has its content ---
-    const originalTable = tables.nth(1);
+    // The original table is identified by its known `data-blok-id`.
+    const originalTable = page.locator(
+      `[data-blok-id="${tableId}"] [data-blok-tool="table"]`
+    );
     const originalCells = originalTable.locator(CELL_SELECTOR);
 
     await expect(originalCells).toHaveCount(4);

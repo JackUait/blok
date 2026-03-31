@@ -95,7 +95,7 @@ describe('ToggleItem', () => {
       expect(contentEl?.innerHTML).toBe('Hello world');
     });
 
-    it('starts expanded by default in editing mode (data-blok-toggle-open="true")', async () => {
+    it('starts open by default in editing mode (data-blok-toggle-open="true")', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions());
       const element = toggle.render();
@@ -103,12 +103,12 @@ describe('ToggleItem', () => {
       expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
     });
 
-    it('starts collapsed by default in readonly mode (data-blok-toggle-open="false")', async () => {
+    it('starts open by default in readonly mode (data-blok-toggle-open="true")', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions({}, {}, { readOnly: true }));
       const element = toggle.render();
 
-      expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('false');
+      expect(element.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
     });
   });
 
@@ -256,7 +256,7 @@ describe('ToggleItem', () => {
       toggle.render();
       toggle.rendered();
 
-      // Children should be visible (toggle starts expanded in editing mode)
+      // Children should be visible (toggle starts open by default)
       for (const holder of childHolders) {
         expect(holder.classList.contains('hidden')).toBe(false);
       }
@@ -272,7 +272,7 @@ describe('ToggleItem', () => {
   });
 
   describe('arrow aria-label updates', () => {
-    it('updates aria-label to Collapse when expanded', async () => {
+    it('has aria-label Collapse when expanded (default state)', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
@@ -286,11 +286,11 @@ describe('ToggleItem', () => {
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Toggle starts expanded in editing mode — aria-label should already be Collapse
+      // Toggle starts open by default — aria-label should be Collapse
       expect(arrow.getAttribute('aria-label')).toBe('Collapse');
     });
 
-    it('updates aria-label to Expand when collapsed', async () => {
+    it('updates aria-label to Expand when collapsed via click', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
@@ -304,7 +304,7 @@ describe('ToggleItem', () => {
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Click once to collapse (starts expanded)
+      // Click once to collapse (starts open)
       arrow.click();
 
       expect(arrow.getAttribute('aria-label')).toBe('Expand');
@@ -343,14 +343,14 @@ describe('ToggleItem', () => {
       return { toggle, mockAPI, childHolders };
     };
 
-    it('shows child block holders when toggle starts expanded in editing mode on rendered()', async () => {
+    it('shows child block holders when toggle starts open by default on rendered()', async () => {
       const { toggle, childHolders } = await setupToggleWithChildren();
       toggle.render();
 
       // Simulate the rendered() lifecycle hook
       toggle.rendered();
 
-      // Toggle starts expanded in editing mode — children should be visible
+      // Toggle starts open by default — children should be visible
       for (const holder of childHolders) {
         expect(holder.classList.contains('hidden')).toBe(false);
       }
@@ -361,7 +361,7 @@ describe('ToggleItem', () => {
       const element = toggle.render();
       toggle.rendered();
 
-      // All children should be visible initially (editing mode starts expanded)
+      // All children should be visible initially (starts open)
       for (const holder of childHolders) {
         expect(holder.classList.contains('hidden')).toBe(false);
       }
@@ -383,7 +383,7 @@ describe('ToggleItem', () => {
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
 
-      // Collapse
+      // Collapse (starts open)
       arrow.click();
 
       for (const holder of childHolders) {
@@ -460,7 +460,7 @@ describe('ToggleItem', () => {
       expect(bodyPlaceholder?.textContent).toBe('Empty toggle. Click or drop blocks inside.');
     });
 
-    it('is visible when toggle is open and has no children', async () => {
+    it('is visible when toggle starts open by default (with no children)', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
@@ -475,6 +475,26 @@ describe('ToggleItem', () => {
 
       const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
 
+      // Toggle starts open — body placeholder should be visible when no children
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(false);
+    });
+
+    it('is visible when toggle is open and has no children (no click needed)', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+
+      // Toggle starts open by default — placeholder should already be visible
       expect(bodyPlaceholder.classList.contains('hidden')).toBe(false);
     });
 
@@ -499,7 +519,7 @@ describe('ToggleItem', () => {
       expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
     });
 
-    it('is hidden when toggle is collapsed', async () => {
+    it('is hidden when toggle is collapsed after starting open', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
@@ -512,8 +532,9 @@ describe('ToggleItem', () => {
       const element = toggle.render();
       toggle.rendered();
 
-      // Collapse the toggle
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+      // Collapse (starts open)
       arrow.click();
 
       const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
@@ -553,7 +574,7 @@ describe('ToggleItem', () => {
       (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = vi.fn();
       (mockAPI as unknown as Record<string, unknown>).caret = { setToBlock: mockSetToBlock };
 
-      const options = createToggleOptions();
+      const options = createToggleOptions({ isOpen: true });
       options.api = mockAPI;
 
       const toggle = new ToggleItem(options);
@@ -572,7 +593,7 @@ describe('ToggleItem', () => {
       expect(mockAPI.blocks.setBlockParent).not.toHaveBeenCalled();
     });
 
-    it('reappears when children are removed and toggle is re-expanded', async () => {
+    it('reappears when children are removed and toggle is expanded', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const childHolder = document.createElement('div');
@@ -580,7 +601,7 @@ describe('ToggleItem', () => {
       const getChildrenMock = vi.fn().mockReturnValue([{ id: 'child-1', holder: childHolder }]);
       (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = getChildrenMock;
 
-      const options = createToggleOptions({ text: 'toggle' });
+      const options = createToggleOptions({ text: 'toggle', isOpen: true });
       options.api = mockAPI;
 
       const toggle = new ToggleItem(options);
@@ -659,7 +680,25 @@ describe('ToggleItem', () => {
     });
 
     // Fix 3: aria-hidden on collapsed container
-    it('child container has aria-hidden="true" when toggle is collapsed', async () => {
+    it('child container has aria-hidden removed when toggle is open (default state)', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      // Toggle starts open by default — aria-hidden should not be "true"
+      const childContainer = element.querySelector('[data-blok-toggle-children]') as HTMLElement;
+
+      expect(childContainer.getAttribute('aria-hidden')).not.toBe('true');
+    });
+
+    it('child container has aria-hidden="true" when toggle is collapsed via click', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
 
       const mockAPI = createMockAPI();
@@ -672,34 +711,12 @@ describe('ToggleItem', () => {
       toggle.rendered();
 
       const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
-      // Toggle starts expanded — collapse it
+      // Collapse (starts open)
       arrow.click();
 
       const childContainer = element.querySelector('[data-blok-toggle-children]') as HTMLElement;
 
       expect(childContainer.getAttribute('aria-hidden')).toBe('true');
-    });
-
-    it('child container has aria-hidden removed when toggle is expanded', async () => {
-      const { ToggleItem } = await import('../../../../src/tools/toggle');
-
-      const mockAPI = createMockAPI();
-      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
-
-      const options = createToggleOptions();
-      options.api = mockAPI;
-      const toggle = new ToggleItem(options);
-      const element = toggle.render();
-      toggle.rendered();
-
-      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
-      // Collapse then re-expand
-      arrow.click(); // collapse
-      arrow.click(); // expand
-
-      const childContainer = element.querySelector('[data-blok-toggle-children]') as HTMLElement;
-
-      expect(childContainer.getAttribute('aria-hidden')).not.toBe('true');
     });
 
     // Fix 4: Focus moved to arrow when collapsing with focus inside
@@ -722,12 +739,13 @@ describe('ToggleItem', () => {
       document.body.appendChild(element);
       toggle.rendered();
 
-      // Focus inside the child
+      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+      // Toggle starts open — focus inside the child
       innerInput.focus();
       expect(innerInput).toHaveFocus();
 
-      // Collapse the toggle
-      const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+      // Collapse the toggle (one click, starts open)
       arrow.click();
 
       expect(arrow).toHaveFocus();

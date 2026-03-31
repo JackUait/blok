@@ -160,6 +160,140 @@ describe('PlusButtonHandler.handleClick — plus button opens toolbox without sl
     expect(slashParagraph.pluginsContent.textContent).toBe('/');
   });
 
+  it('reuses an empty non-paragraph block (e.g. header) instead of inserting a new one', () => {
+    const emptyHeader = createBlock({ name: 'header', isEmpty: true, textContent: '' });
+    const insertMock = vi.fn(() => createBlock({ isEmpty: true }));
+    const { handler, callbacks } = createHandler(emptyHeader, {
+      BlockManager: {
+        getBlockIndex: vi.fn(() => 0),
+        currentBlockIndex: 0,
+        blocks: [emptyHeader],
+        insertDefaultBlockAtIndex: insertMock,
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    handler.handleClick();
+
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(callbacks.openToolboxWithoutSlash).toHaveBeenCalledTimes(1);
+    // Block content stays empty — no "/" injected into the reused header
+    expect(emptyHeader.pluginsContent.textContent).toBe('');
+  });
+
+  it('reuses empty currentBlock nested inside hoveredBlock (e.g. table cell paragraph)', () => {
+    // DOM hierarchy: table holder > cell container > paragraph holder
+    const tableHolder = document.createElement('div');
+    const cellContainer = document.createElement('div');
+    const paragraphHolder = document.createElement('div');
+
+    tableHolder.appendChild(cellContainer);
+    cellContainer.appendChild(paragraphHolder);
+
+    const tableBlock = createBlock({ name: 'table', isEmpty: false, textContent: 'cell content', holder: tableHolder });
+    const cellParagraph = createBlock({ name: 'paragraph', isEmpty: true, textContent: '', holder: paragraphHolder });
+
+    const insertMock = vi.fn(() => createBlock({ isEmpty: true }));
+    const { handler, callbacks } = createHandler(tableBlock, {
+      BlockManager: {
+        getBlockIndex: vi.fn(() => 0),
+        currentBlockIndex: 1,
+        currentBlock: cellParagraph,
+        blocks: [tableBlock, cellParagraph],
+        insertDefaultBlockAtIndex: insertMock,
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    handler.handleClick();
+
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(callbacks.openToolboxWithoutSlash).toHaveBeenCalledTimes(1);
+    // Nested paragraph must remain inside its container in the DOM
+    expect(cellContainer.contains(paragraphHolder)).toBe(true);
+  });
+
+  it('does not move a reused nested block out of its container', () => {
+    const tableHolder = document.createElement('div');
+    const cellContainer = document.createElement('div');
+    const paragraphHolder = document.createElement('div');
+
+    tableHolder.appendChild(cellContainer);
+    cellContainer.appendChild(paragraphHolder);
+
+    const tableBlock = createBlock({ name: 'table', isEmpty: false, textContent: 'cell content', holder: tableHolder });
+    const cellParagraph = createBlock({ name: 'paragraph', isEmpty: true, textContent: '', holder: paragraphHolder });
+
+    const { handler } = createHandler(tableBlock, {
+      BlockManager: {
+        getBlockIndex: vi.fn(() => 0),
+        currentBlockIndex: 1,
+        currentBlock: cellParagraph,
+        blocks: [tableBlock, cellParagraph],
+        insertDefaultBlockAtIndex: vi.fn(() => createBlock({ isEmpty: true })),
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    handler.handleClick();
+
+    // The paragraph holder must remain inside its cell container
+    expect(cellContainer.contains(paragraphHolder)).toBe(true);
+  });
+
+  it('sets caret on the reused nested block, not the hovered parent', () => {
+    const tableHolder = document.createElement('div');
+    const cellContainer = document.createElement('div');
+    const paragraphHolder = document.createElement('div');
+
+    tableHolder.appendChild(cellContainer);
+    cellContainer.appendChild(paragraphHolder);
+
+    const tableBlock = createBlock({ name: 'table', isEmpty: false, textContent: 'cell content', holder: tableHolder });
+    const cellParagraph = createBlock({ name: 'paragraph', isEmpty: true, textContent: '', holder: paragraphHolder });
+
+    const caretMock = {
+      setToBlock: vi.fn(),
+      positions: { DEFAULT: 'default', START: 'start' },
+    };
+    const { handler } = createHandler(tableBlock, {
+      BlockManager: {
+        getBlockIndex: vi.fn(() => 0),
+        currentBlockIndex: 1,
+        currentBlock: cellParagraph,
+        blocks: [tableBlock, cellParagraph],
+        insertDefaultBlockAtIndex: vi.fn(() => createBlock({ isEmpty: true })),
+      } as unknown as BlokModules['BlockManager'],
+      Caret: caretMock as unknown as BlokModules['Caret'],
+    });
+
+    handler.handleClick();
+
+    expect(caretMock.setToBlock).toHaveBeenCalledWith(cellParagraph, 'start');
+  });
+
+  it('does NOT reuse a distant empty currentBlock that is not nested inside hoveredBlock', () => {
+    // hoveredBlock and currentBlock are separate, unrelated blocks
+    const nonEmptyParagraph = createBlock({ name: 'paragraph', isEmpty: false, textContent: 'Hello' });
+    const distantEmptyBlock = createBlock({ name: 'paragraph', isEmpty: true, textContent: '' });
+
+    const insertMock = vi.fn(() => createBlock({ isEmpty: true }));
+    const { handler, callbacks } = createHandler(nonEmptyParagraph, {
+      BlockManager: {
+        getBlockIndex: vi.fn(() => 0),
+        currentBlockIndex: 1,
+        currentBlock: distantEmptyBlock,
+        blocks: [nonEmptyParagraph, distantEmptyBlock],
+        insertDefaultBlockAtIndex: insertMock,
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    handler.handleClick();
+
+    // A new block must be inserted — the distant empty block must NOT be reused
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(callbacks.openToolboxWithoutSlash).toHaveBeenCalledTimes(1);
+    // Original block content must be untouched
+    expect(nonEmptyParagraph.pluginsContent.textContent).toBe('Hello');
+  });
+
   it('closes toolbox if already open instead of reopening', () => {
     const emptyParagraph = createBlock({ name: 'paragraph', isEmpty: true, textContent: '' });
     const { handler, callbacks } = createHandler(emptyParagraph);

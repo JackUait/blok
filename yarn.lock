@@ -650,6 +650,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@emoji-mart/data@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "@emoji-mart/data@npm:1.2.1"
+  checksum: 10c0/6784b97bf49a0d3ff110d8447bbd3b0449fcbc497294be3d1c3a6cb1609308776895c7520200be604cbecaa5e172c76927e47f34419c72ba8a76fd4e5a53674b
+  languageName: node
+  linkType: hard
+
 "@es-joy/jsdoccomment@npm:~0.84.0":
   version: 0.84.0
   resolution: "@es-joy/jsdoccomment@npm:0.84.0"
@@ -1197,6 +1204,7 @@ __metadata:
     "@babel/register": "npm:7.28.6"
     "@commitlint/cli": "npm:20.4.4"
     "@commitlint/config-conventional": "npm:20.4.4"
+    "@emoji-mart/data": "npm:^1.2.1"
     "@playwright/test": "npm:1.58.2"
     "@size-limit/esbuild-why": "npm:12.0.1"
     "@size-limit/preset-small-lib": "npm:12.0.1"
@@ -1214,6 +1222,7 @@ __metadata:
     "@vitest/eslint-plugin": "npm:1.6.12"
     "@vitest/ui": "npm:4.1.0"
     chromatic: "npm:15.2.0"
+    cldr-annotations-full: "npm:^48.2.0"
     eslint: "npm:10.0.3"
     eslint-plugin-import: "npm:2.32.0"
     eslint-plugin-jest: "npm:29.15.0"
@@ -3842,6 +3851,13 @@ __metadata:
   dependencies:
     ip-regex: "npm:5.0.0"
   checksum: 10c0/befed1513a74eb421d100606b58e528222981dc9ce9b68ad75a95c5f2d7f1c31d6d3a81a31fea5f943d6e64947efecc405e4eb9a3dc11d213c74c532ed0666f7
+  languageName: node
+  linkType: hard
+
+"cldr-annotations-full@npm:^48.2.0":
+  version: 48.2.0
+  resolution: "cldr-annotations-full@npm:48.2.0"
+  checksum: 10c0/508e26f3da07731b8aad17918dbb3ff07c24d93f802af54526511a19debed3e999b489fa4154e972745580cb73c74b7e216cf87cee390d586b1d441540f4a6f3
   languageName: node
   linkType: hard
 

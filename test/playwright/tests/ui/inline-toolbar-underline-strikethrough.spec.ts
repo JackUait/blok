@@ -312,7 +312,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
     // preventing the page's keydown listener from receiving the event consistently.
     // This is a known cross-browser shortcut conflict that cannot be worked around in E2E tests.
     test('CMD+U shortcut applies underline', async ({ page, browserName }) => {
-      test.skip(browserName === 'firefox' || browserName === 'webkit',
+      test.fixme(browserName === 'firefox' || browserName === 'webkit',
         'Meta+U is intercepted by Firefox and WebKit at the browser level before the page keydown listener fires');
 
       await createBlok(page, {
@@ -328,7 +328,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
     });
 
     test('CMD+U shortcut removes underline from already-underlined text', async ({ page, browserName }) => {
-      test.skip(browserName === 'firefox' || browserName === 'webkit',
+      test.fixme(browserName === 'firefox' || browserName === 'webkit',
         'Meta+U is intercepted by Firefox and WebKit at the browser level before the page keydown listener fires');
 
       await createBlok(page, {
@@ -394,7 +394,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
     // intercepted by Firefox and WebKit at the browser/OS level. The page keydown listener
     // does not reliably receive this event in a headless browser test environment.
     test('CMD+SHIFT+S shortcut applies strikethrough', async ({ page }) => {
-      test.skip(true, 'Meta+Shift+S is intercepted by all browsers as "Save As" before the page keydown listener fires');
+      test.fixme(true, 'Meta+Shift+S is intercepted by all browsers as "Save As" before the page keydown listener fires');
 
       await createBlok(page, {
         data: { blocks: [{ type: 'paragraph', data: { text: 'Hello world' } }] },
@@ -409,7 +409,7 @@ test.describe('Underline and Strikethrough inline tools', () => {
     });
 
     test('CMD+SHIFT+S shortcut removes strikethrough from already-strikethrough text', async ({ page }) => {
-      test.skip(true, 'Meta+Shift+S is intercepted by all browsers as "Save As" before the page keydown listener fires');
+      test.fixme(true, 'Meta+Shift+S is intercepted by all browsers as "Save As" before the page keydown listener fires');
 
       await createBlok(page, {
         data: { blocks: [{ type: 'paragraph', data: { text: 'Hello world' } }] },

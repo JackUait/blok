@@ -8,6 +8,7 @@ describe('createCellColorPicker', () => {
     t: (key: string) => key,
     has: () => false,
     getEnglishTranslation: () => '',
+    getLocale: () => 'en',
   };
 
   it('renders two sections for Text and Background', () => {

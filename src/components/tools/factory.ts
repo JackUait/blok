@@ -114,6 +114,10 @@ export class ToolsFactory {
       getEnglishTranslation: (key: string): string => {
         return baseApi.i18n.getEnglishTranslation(key);
       },
+
+      getLocale: (): string => {
+        return baseApi.i18n.getLocale();
+      },
     };
 
     return {

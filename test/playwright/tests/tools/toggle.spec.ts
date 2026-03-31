@@ -472,12 +472,12 @@ test.describe('Toggle Tool', () => {
       await expect(arrow).toBeVisible();
     });
 
-    test('toggle defaults to closed (isOpen=false) in read-only mode when isOpen not in saved data', async ({ page }) => {
-      await createBlok(page, createToggleData('Read-only closed'), true);
+    test('toggle defaults to open (isOpen=true) in read-only mode when isOpen not in saved data', async ({ page }) => {
+      await createBlok(page, createToggleData('Read-only open'), true);
 
       const wrapper = page.locator('[data-blok-toggle-open]');
 
-      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(wrapper).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
     test('clicking arrow in read-only mode still toggles open state', async ({ page }) => {

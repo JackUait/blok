@@ -2470,6 +2470,9 @@ describe('RectangleSelection', () => {
 
     expect(blockSelection.disableNavigationMode).toHaveBeenCalled();
 
+    // Observable state: selection is now active after starting
+    expect(rectangleSelection.isRectActivated()).toBe(true);
+
     elementFromPointSpy.mockRestore();
   });
 

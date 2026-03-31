@@ -209,22 +209,21 @@ test.describe('Toggle Heading', () => {
     });
 
     test('shows body placeholder when open toggle heading has no children', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle', 2, true)]);
 
-      // The toggle is open by default and has no children — placeholder must be visible
+      // Toggle is explicitly open and has no children — placeholder must be visible
       await expect(page.locator('[data-blok-toggle-body-placeholder]')).toBeVisible();
     });
 
-    test('body placeholder is hidden when toggle heading is collapsed', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Collapsed No Placeholder', 2)]);
+    test('body placeholder is visible when toggle heading is open (default state) with no children', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Open No Children', 2)]);
 
-      await page.locator(TOGGLE_ARROW_SELECTOR).click();
-
-      await expect(page.locator('[data-blok-toggle-body-placeholder]')).not.toBeVisible();
+      // Toggle starts open by default — body placeholder should be visible
+      await expect(page.locator('[data-blok-toggle-body-placeholder]')).toBeVisible();
     });
 
     test('toggle heading defaults to open in edit mode when isOpen is absent from saved data', async ({ page }) => {
-      // Saved data has isToggleable but no isOpen — should default to expanded in editing mode.
+      // Saved data has isToggleable but no isOpen — should default to open.
       await createBlokWithData(page, [makeToggleHeadingBlock('Default Open', 2)]);
 
       const header = page.getByRole('heading', { level: 2, name: 'Default Open' });
@@ -269,8 +268,8 @@ test.describe('Toggle Heading', () => {
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('tabindex', '0');
     });
 
-    test('arrow has aria-expanded="true" when heading is open', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Expanded Aria', 2)]);
+    test('arrow has aria-expanded="true" when heading is open (default)', async ({ page }) => {
+      await createBlokWithData(page, [makeToggleHeadingBlock('Open Aria', 2)]);
 
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-expanded', 'true');
     });
@@ -283,7 +282,7 @@ test.describe('Toggle Heading', () => {
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-expanded', 'false');
     });
 
-    test('arrow aria-label is "Collapse" when heading is open', async ({ page }) => {
+    test('arrow aria-label is "Collapse" when heading is open (default)', async ({ page }) => {
       await createBlokWithData(page, [makeToggleHeadingBlock('Label Open', 2)]);
 
       await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveAttribute('aria-label', 'Collapse');
@@ -613,7 +612,7 @@ test.describe('Toggle Heading', () => {
 
       await page.locator(TOGGLE_ARROW_SELECTOR).click();
 
-      // After collapsing, heading attribute should be "false"
+      // After collapsing (starts open), heading attribute should be "false"
       await expect(page.getByRole('heading', { level: 2, name: 'Collapsible Save' })).toHaveAttribute(
         'data-blok-toggle-open',
         'false'
@@ -657,13 +656,13 @@ test.describe('Toggle Heading', () => {
   // =========================================================================
 
   test.describe('read-only mode', () => {
-    test('toggle heading starts collapsed in read-only mode when no isOpen in saved data', async ({ page }) => {
-      // isToggleable true but no isOpen — read-only default is collapsed
-      await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Closed', 2)], true);
+    test('toggle heading starts open in read-only mode when no isOpen in saved data', async ({ page }) => {
+      // isToggleable true but no isOpen — default is open
+      await createBlokWithData(page, [makeToggleHeadingBlock('Read-Only Open', 2)], true);
 
-      const header = page.getByRole('heading', { level: 2, name: 'Read-Only Closed' });
+      const header = page.getByRole('heading', { level: 2, name: 'Read-Only Open' });
 
-      await expect(header).toHaveAttribute('data-blok-toggle-open', 'false');
+      await expect(header).toHaveAttribute('data-blok-toggle-open', 'true');
     });
 
     test('toggle heading arrow is present in read-only mode', async ({ page }) => {
@@ -695,7 +694,7 @@ test.describe('Toggle Heading', () => {
 
   test.describe('keyboard interactions', () => {
     test('pressing Enter at end of open toggle heading creates a child block inside the toggle', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('My Toggle', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('My Toggle', 2, true)]);
 
       const heading = page.getByRole('heading', { level: 2, name: 'My Toggle' });
 
@@ -724,7 +723,7 @@ test.describe('Toggle Heading', () => {
 
   test.describe('body placeholder click', () => {
     test('clicking body placeholder creates a child paragraph and hides placeholder', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Empty Toggle H2', 2, true)]);
 
       const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
 
@@ -744,7 +743,7 @@ test.describe('Toggle Heading', () => {
     });
 
     test('clicking body placeholder focuses the new child paragraph', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Focus Test H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Focus Test H2', 2, true)]);
 
       const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
 
@@ -768,7 +767,7 @@ test.describe('Toggle Heading', () => {
     });
 
     test('clicking body placeholder: typing immediately enters text in the new child block', async ({ page }) => {
-      await createBlokWithData(page, [makeToggleHeadingBlock('Type Test H2', 2)]);
+      await createBlokWithData(page, [makeToggleHeadingBlock('Type Test H2', 2, true)]);
 
       const placeholder = page.locator('[data-blok-toggle-body-placeholder]');
 

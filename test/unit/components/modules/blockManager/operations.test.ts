@@ -1295,9 +1295,13 @@ describe('BlockOperations', () => {
     });
 
     it('calls YjsManager.transact for atomic operation', () => {
-      operations.insertInsideParent('block-1', 1, blocksStore);
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore);
 
       expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+
+      // The transacted operation must still produce a valid block
+      expect(newBlock).toBeDefined();
+      expect(newBlock.parentId).toBe('block-1');
     });
 
     it('calls YjsManager.addBlock with parent id', () => {
@@ -1335,9 +1339,14 @@ describe('BlockOperations', () => {
     });
 
     it('wraps operation in withAtomicOperation', () => {
+      const initialCount = repository.length;
+
       operations.insertInsideParent('block-1', 1, blocksStore);
 
       expect(yjsSync.withAtomicOperation).toHaveBeenCalled();
+
+      // The atomic wrapper must still allow the block to be created
+      expect(repository.length).toBe(initialCount + 1);
     });
 
     it('returns the newly created block', () => {

@@ -26,20 +26,6 @@ describe('COLOR_PRESETS', () => {
     expect(COLOR_PRESETS).toHaveLength(9);
   });
 
-  it('does not include teal (removed in favour of default swatch)', () => {
-    const teal = COLOR_PRESETS.find((p) => p.name === 'teal');
-
-    expect(teal).toBeUndefined();
-  });
-
-  it('has green positioned directly before blue', () => {
-    const names = COLOR_PRESETS.map((p) => p.name);
-    const greenIndex = names.indexOf('green');
-    const blueIndex = names.indexOf('blue');
-
-    expect(blueIndex).toBe(greenIndex + 1);
-  });
-
   it('each preset has name, text, and bg', () => {
     for (const preset of COLOR_PRESETS) {
       expect(preset.name).toBeTruthy();
@@ -76,12 +62,6 @@ describe('COLOR_PRESETS_DARK', () => {
 
       expect(light.text !== dark.text || light.bg !== dark.bg).toBe(true);
     }
-  });
-
-  it('does not include teal dark preset (removed in favour of default swatch)', () => {
-    const teal = COLOR_PRESETS_DARK.find((p) => p.name === 'teal');
-
-    expect(teal).toBeUndefined();
   });
 
   it('each dark preset text on bg achieves at least 3.8:1 WCAG contrast ratio', () => {

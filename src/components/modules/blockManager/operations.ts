@@ -580,6 +580,7 @@ export class BlockOperations {
      * Regular (non-toggleable) headers have no children container.
      */
     const newToolCanHostChildren = newTool === 'toggle' ||
+      newTool === 'callout' ||
       (newTool === 'header' && (data as { isToggleable?: boolean }).isToggleable === true);
 
     if (oldContentIds.length > 0 && !newToolCanHostChildren) {

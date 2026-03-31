@@ -130,6 +130,7 @@ const createMockAPIMethods = (): APIInterface => ({
     t: vi.fn((key: string) => key),
     has: vi.fn(() => false),
     getEnglishTranslation: vi.fn(() => ''),
+    getLocale: vi.fn(() => 'en'),
   },
   readOnly: {
     toggle: vi.fn().mockResolvedValue(false),

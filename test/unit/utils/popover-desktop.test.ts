@@ -172,13 +172,14 @@ import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverItemDefault, PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
 import { Flipper } from '../../../src/components/flipper';
 
-type PopoverDesktopInternal = Omit<PopoverDesktop, 'shouldOpenBottom' | 'shouldOpenRight'> & {
+type PopoverDesktopInternal = PopoverDesktop & {
   flippableElements: HTMLElement[];
   size: { height: number; width: number };
   setTriggerItemPosition: (nestedPopoverEl: HTMLElement, item: PopoverItemDefault) => void;
   showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop;
   destroyNestedPopoverIfExists: () => void;
   handleHover: (event: Event) => void;
+  handleMouseLeave: (event: Event) => void;
   readonly itemsDefault: PopoverItemDefault[];
   readonly items: Array<PopoverItemDefault | PopoverItemSeparator>;
   nodes: {
@@ -189,7 +190,6 @@ type PopoverDesktopInternal = Omit<PopoverDesktop, 'shouldOpenBottom' | 'shouldO
   };
   nestedPopover: PopoverDesktop | null | undefined;
   nestedPopoverTriggerItem: PopoverItemDefault | null;
-  _size: { height: number; width: number } | undefined;
 };
 
 const createRect = (overrides: Partial<DOMRect>): DOMRect => ({
@@ -222,6 +222,14 @@ const createPopover = (params: Partial<PopoverParams> = {}): PopoverDesktop => {
   const scopeElement = params.scopeElement ?? document.createElement('div');
 
   document.body.appendChild(scopeElement);
+
+  // In jsdom, elements have zero-size getBoundingClientRect.
+  // Mock it to span the full viewport so scope bounds don't artificially constrain positioning.
+  if (!params.scopeElement) {
+    vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+      createRect({ top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight })
+    );
+  }
 
   const popoverParams: PopoverParams = {
     items: params.items ?? createDefaultItems(),
@@ -382,22 +390,22 @@ describe('PopoverDesktop', () => {
   });
 
   describe('position helpers', () => {
-    it('determines when popover should stay below the trigger', () => {
+    it('opens below when space is available', () => {
       const scopeElement = document.createElement('div');
       const popover = createPopover({ scopeElement });
       const instance = popover as unknown as PopoverDesktopInternal;
 
-      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 150,
-        width: 100 });
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 150, width: 100 });
       vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
-        createRect({ top: 50 })
+        createRect({ top: 50, bottom: 200, left: 0, right: 100 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
-        createRect({ top: 40,
-          bottom: 500 })
+        createRect({ top: 0, bottom: 500, left: 0, right: 800 })
       );
 
-      expect((instance as unknown as { shouldOpenBottom: boolean }).shouldOpenBottom).toBe(true);
+      popover.show();
+
+      expect(popover.getElement()).not.toHaveAttribute(DATA_ATTR.popoverOpenTop);
     });
 
     it('opens upward when there is not enough space below', () => {
@@ -405,14 +413,12 @@ describe('PopoverDesktop', () => {
       const popover = createPopover({ scopeElement });
       const instance = popover as unknown as PopoverDesktopInternal;
 
-      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300,
-        width: 100 });
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300, width: 100 });
       vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
-        createRect({ top: 400 })
+        createRect({ top: 400, bottom: 500, left: 0, right: 100 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
-        createRect({ top: 0,
-          bottom: 600 })
+        createRect({ top: 0, bottom: 600, left: 0, right: 800 })
       );
 
       const originalInnerHeight = window.innerHeight;
@@ -424,7 +430,8 @@ describe('PopoverDesktop', () => {
       });
 
       try {
-        expect((instance as unknown as { shouldOpenBottom: boolean }).shouldOpenBottom).toBe(false);
+        popover.show();
+        expect(popover.getElement()).toHaveAttribute(DATA_ATTR.popoverOpenTop);
       } finally {
         Object.defineProperty(window, 'innerHeight', {
           configurable: true,
@@ -434,23 +441,22 @@ describe('PopoverDesktop', () => {
       }
     });
 
-    it('chooses opening to the right when there is no space on the left', () => {
+    it('opens to the right when there is no space on the left', () => {
       const scopeElement = document.createElement('div');
       const popover = createPopover({ scopeElement });
       const instance = popover as unknown as PopoverDesktopInternal;
 
-      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100,
-        width: 200 });
-      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
-        createRect({ left: 50,
-          right: 150 })
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 50, bottom: 150, left: 50, right: 150 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
-        createRect({ left: 0,
-          right: 600 })
+        createRect({ top: 0, bottom: 800, left: 0, right: 600 })
       );
 
-      expect((instance as unknown as { shouldOpenRight: boolean }).shouldOpenRight).toBe(true);
+      popover.show();
+
+      expect(popover.getElement()).not.toHaveAttribute(DATA_ATTR.popoverOpenLeft);
     });
 
     it('opens to the left when the right side is constrained', () => {
@@ -458,15 +464,12 @@ describe('PopoverDesktop', () => {
       const popover = createPopover({ scopeElement });
       const instance = popover as unknown as PopoverDesktopInternal;
 
-      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100,
-        width: 300 });
-      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
-        createRect({ left: 400,
-          right: 500 })
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 300 });
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 50, bottom: 150, left: 400, right: 500 })
       );
       vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
-        createRect({ left: 0,
-          right: 650 })
+        createRect({ top: 0, bottom: 800, left: 0, right: 600 })
       );
 
       const originalInnerWidth = window.innerWidth;
@@ -478,7 +481,8 @@ describe('PopoverDesktop', () => {
       });
 
       try {
-        expect((instance as unknown as { shouldOpenRight: boolean }).shouldOpenRight).toBe(false);
+        popover.show();
+        expect(popover.getElement()).toHaveAttribute(DATA_ATTR.popoverOpenLeft);
       } finally {
         Object.defineProperty(window, 'innerWidth', {
           configurable: true,
@@ -543,28 +547,44 @@ describe('PopoverDesktop', () => {
 
   describe('show', () => {
     it('applies position classes, sets height variable and activates flipper', () => {
-      const popover = createPopover();
+      const scopeElement = document.createElement('div');
+      const popover = createPopover({ scopeElement });
       const instance = popover as unknown as PopoverDesktopInternal;
-      const sizeSpy = vi.spyOn(instance, 'size', 'get').mockReturnValue({
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({
         height: 120,
-        width: 80,
+        width: 200,
       });
-      const openBottomSpy = vi.spyOn(instance as unknown as { readonly shouldOpenBottom: boolean }, 'shouldOpenBottom', 'get').mockReturnValue(false);
-      const openRightSpy = vi.spyOn(instance as unknown as { readonly shouldOpenRight: boolean }, 'shouldOpenRight', 'get').mockReturnValue(false);
 
-      popover.show();
+      // Position the anchor near the bottom-right so resolvePosition returns openTop + openLeft
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 500, bottom: 550, left: 500, right: 550 })
+      );
+      vi.spyOn(scopeElement, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 0, bottom: 600, left: 0, right: 600 })
+      );
 
-      const flipper = getMockFlipper();
-      const popoverElement = popover.getElement();
+      const originalInnerHeight = window.innerHeight;
+      const originalInnerWidth = window.innerWidth;
 
-      expect(sizeSpy).toHaveBeenCalled();
-      expect(openBottomSpy).toHaveBeenCalled();
-      expect(openRightSpy).toHaveBeenCalled();
-      expect(popoverElement).toHaveAttribute('data-blok-popover-opened');
-      expect(popoverElement).toHaveAttribute(DATA_ATTR.popoverOpenTop);
-      expect(popoverElement).toHaveAttribute(DATA_ATTR.popoverOpenLeft);
-      expect(popoverElement.style.getPropertyValue(CSSVariables.PopoverHeight)).toBe('120px');
-      expect(flipper.activate).toHaveBeenCalledWith(instance.flippableElements);
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600, writable: true });
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 600, writable: true });
+
+      try {
+        popover.show();
+
+        const flipper = getMockFlipper();
+        const popoverElement = popover.getElement();
+
+        expect(popoverElement).toHaveAttribute('data-blok-popover-opened');
+        expect(popoverElement).toHaveAttribute(DATA_ATTR.popoverOpenTop);
+        expect(popoverElement).toHaveAttribute(DATA_ATTR.popoverOpenLeft);
+        expect(popoverElement.style.getPropertyValue(CSSVariables.PopoverHeight)).toBe('120px');
+        expect(flipper.activate).toHaveBeenCalledWith(instance.flippableElements);
+      } finally {
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
+      }
     });
 
     it('defers focusInitialElement to microtask after show()', async () => {
@@ -986,7 +1006,7 @@ describe('PopoverDesktop', () => {
       });
 
       // Invalidate cache and re-measure
-      instance._size = undefined;
+      popover.invalidateSizeCache();
       void instance.size;
 
       // The clone's container should include the opened-state padding (p-1.5)
@@ -1201,6 +1221,69 @@ describe('PopoverDesktop', () => {
 
       trigger.remove();
     });
+
+    it('sets openTop data attribute when popover flips above trigger', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 500, bottom: 540, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300, width: 200 });
+
+      const originalInnerHeight = window.innerHeight;
+
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        value: 600,
+        writable: true,
+      });
+
+      try {
+        popover.show();
+
+        expect(popover.getElement()).toHaveAttribute(DATA_ATTR.popoverOpenTop);
+      } finally {
+        Object.defineProperty(window, 'innerHeight', {
+          configurable: true,
+          value: originalInnerHeight,
+          writable: true,
+        });
+        trigger.remove();
+      }
+    });
+  });
+
+  describe('size cache', () => {
+    it('invalidates size cache when search filtering changes item visibility', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+        ],
+      });
+
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // Prime the size cache
+      const initialSize = instance.size;
+
+      expect(initialSize).toBeDefined();
+
+      // Trigger a search which should hide some items and invalidate cache
+      popover.filterItems('alpha');
+
+      // Access size again — should return a new object, proving the cache was invalidated
+      const sizeAfterFilter = instance.size;
+
+      expect(sizeAfterFilter).not.toBe(initialSize);
+    });
   });
 
   describe('handleMouseLeave', () => {
@@ -1251,7 +1334,7 @@ describe('PopoverDesktop', () => {
         bubbles: false,
       });
 
-      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+      instance.handleMouseLeave(mouseLeaveEvent);
 
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
@@ -1302,7 +1385,7 @@ describe('PopoverDesktop', () => {
         bubbles: false,
       });
 
-      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+      instance.handleMouseLeave(mouseLeaveEvent);
 
       // Nested popover should still be open
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);

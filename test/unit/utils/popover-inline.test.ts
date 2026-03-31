@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Flipper } from '../../../src/components/flipper';
 import { PopoverInline } from '../../../src/components/utils/popover/popover-inline';
 import { PopoverItemDefault, PopoverItemType } from '../../../src/components/utils/popover/components/popover-item';
 import type { PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
@@ -26,6 +25,7 @@ type PopoverInlineInternal = PopoverInline & {
   nestedPopover: PopoverDesktop | null | undefined;
   nestedPopoverTriggerItem: PopoverItemDefault | null;
   showNestedItems: (item: PopoverItemDefault) => void;
+  handleMouseLeave: (event: Event) => void;
   nodes: {
     popover: HTMLElement;
     popoverContainer: HTMLElement;
@@ -226,8 +226,8 @@ describe('PopoverInline', () => {
     it('defers flipper deactivate to microtask after show()', async () => {
       const popover = createPopoverInline();
 
-      // Spy set up after construction to ignore constructor-time deactivate call
-      const deactivateSpy = vi.spyOn(Flipper.prototype, 'deactivate');
+      // Spy on the instance's flipper (not the prototype) to observe deactivation deferral
+      const deactivateSpy = vi.spyOn(popover.flipper!, 'deactivate');
 
       popover.show();
 
@@ -346,7 +346,7 @@ describe('PopoverInline', () => {
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
       expect(popover.hasNestedPopoverOpen).toBe(true);
 
-      // Mouse leaves the popover container to an unrelated element
+      // Simulate mouse leaving the popover container by calling the overridden handler directly
       const outsideElement = document.createElement('div');
 
       document.body.appendChild(outsideElement);
@@ -356,7 +356,7 @@ describe('PopoverInline', () => {
         bubbles: false,
       });
 
-      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+      instance.handleMouseLeave(mouseLeaveEvent);
 
       // Nested popover should still be open — inline toolbar uses click-to-close, not hover-to-close
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);

@@ -100,6 +100,7 @@ const LOGIC_TESTS = [
   '**/tools/table*.spec.ts',
   '**/tools/table/**/*.spec.ts',
   '**/tools/toggle*.spec.ts',
+  '**/tools/callout.spec.ts',
   '**/tools/tools-factory.spec.ts',
   '**/tools/tools-collection.spec.ts',
 

@@ -8,7 +8,7 @@ import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
-const createI18nApi = (): { api: I18nAPI; i18nMock: { t: ReturnType<typeof vi.fn>; has: ReturnType<typeof vi.fn> } } => {
+const createI18nApi = (): { api: I18nAPI; i18nMock: { t: ReturnType<typeof vi.fn>; has: ReturnType<typeof vi.fn>; getLocale: ReturnType<typeof vi.fn> } } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
     config: {} as BlokConfig,
@@ -21,6 +21,7 @@ const createI18nApi = (): { api: I18nAPI; i18nMock: { t: ReturnType<typeof vi.fn
   const i18nMock = {
     t: vi.fn((key: string) => key),
     has: vi.fn(() => true),
+    getLocale: vi.fn(() => 'en'),
   };
 
   // Set up state with mocked I18n
@@ -62,6 +63,16 @@ describe('I18nAPI', () => {
       const secondAccess = api.methods;
 
       expect(firstAccess).toBe(secondAccess);
+    });
+
+    it('delegates getLocale to the I18n module', () => {
+      const { api, i18nMock } = createI18nApi();
+
+      i18nMock.getLocale.mockReturnValue('fr');
+      const result = api.methods.getLocale();
+
+      expect(i18nMock.getLocale).toHaveBeenCalled();
+      expect(result).toBe('fr');
     });
   });
 });

@@ -890,7 +890,7 @@ test.describe('inline toolbar', () => {
     await createBlok(page, { data: { blocks } });
 
     // Scroll to the last paragraph and select text in it
-    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).last();
+    const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'Paragraph number 20' });
 
     await lastParagraph.scrollIntoViewIfNeeded();
 

@@ -379,11 +379,11 @@ describe('EmojiPicker', () => {
     const randomBtn = el.querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
     const removeBtn = el.querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
 
-    expect(mockOnHover).toHaveBeenCalledWith(randomBtn, randomBtn.getAttribute('title'), { placement: 'bottom' });
-    expect(mockOnHover).toHaveBeenCalledWith(removeBtn, removeBtn.getAttribute('title'), { placement: 'bottom' });
+    expect(mockOnHover).toHaveBeenCalledWith(randomBtn, expect.any(String), { placement: 'bottom' });
+    expect(mockOnHover).toHaveBeenCalledWith(removeBtn, expect.any(String), { placement: 'bottom' });
   });
 
-  it('attaches JS tooltips to emoji buttons via onHover with placement top', async () => {
+  it('attaches JS tooltips to emoji buttons via onHover with placement bottom', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
     container.appendChild(picker.getElement());
@@ -393,9 +393,28 @@ describe('EmojiPicker', () => {
 
     expect(emojiButtons.length).toBeGreaterThan(0);
 
-    // Each emoji button should have onHover called with (button, name, { placement: 'top' })
     for (const btn of Array.from(emojiButtons)) {
-      expect(mockOnHover).toHaveBeenCalledWith(btn, btn.getAttribute('title'), { placement: 'bottom' });
+      expect(mockOnHover).toHaveBeenCalledWith(btn, expect.any(String), { placement: 'bottom' });
+    }
+  });
+
+  it('does not set title attribute on elements that use JS tooltip via onHover', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+    container.appendChild(picker.getElement());
+    await picker.open(container);
+
+    const randomBtn = picker.getElement().querySelector('[data-emoji-picker-random]') as HTMLButtonElement;
+    const removeBtn = picker.getElement().querySelector('[data-emoji-picker-remove]') as HTMLButtonElement;
+    const emojiButtons = picker.getElement().querySelectorAll('[data-emoji-native]');
+
+    // These elements use onHover for JS tooltip — they must NOT have a title attribute
+    // to avoid showing both browser tooltip and JS tooltip simultaneously
+    expect(randomBtn.title).toBe('');
+    expect(removeBtn.title).toBe('');
+
+    for (const btn of Array.from(emojiButtons)) {
+      expect((btn as HTMLButtonElement).title).toBe('');
     }
   });
 

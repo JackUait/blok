@@ -496,7 +496,14 @@ export const PickerNoActiveSwatch: Story = {
           expect(swatches?.length).toBe(10);
 
           swatches?.forEach((swatch) => {
-            expect(swatch.className).not.toContain('ring-swatch-ring-hover');
+            // Default swatch correctly shows active ring when no color is set
+            if (swatch.getAttribute('data-blok-testid')?.endsWith('-default')) {
+              return;
+            }
+
+            // Use classList.contains for exact token match — className.includes
+            // would false-positive on the hover:ring-swatch-ring-hover variant
+            expect(swatch.classList.contains('ring-swatch-ring-hover')).toBe(false);
           });
         },
         TIMEOUT_ACTION

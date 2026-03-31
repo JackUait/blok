@@ -55,6 +55,50 @@ interface LegacyToggleListData {
 }
 
 /**
+ * Legacy callout data structure for data model transformation.
+ * Old format: { title?: string, body: { blocks: [] } | null, variant, emoji, isEmojiVisible }
+ */
+interface LegacyCalloutData {
+  title?: string;
+  body?: {
+    blocks?: OutputBlockData[];
+  } | null;
+  variant?: string;
+  emoji?: string | null;
+  isEmojiVisible?: boolean;
+}
+
+/**
+ * Map legacy callout variant to backgroundColor preset name
+ */
+const VARIANT_TO_BG_PRESET: Record<string, string | null> = {
+  general: null,
+  note: 'blue',
+  important: 'purple',
+  warning: 'orange',
+  additional: 'yellow',
+  recommendation: 'green',
+  caution: 'red',
+};
+
+/**
+ * Map backgroundColor preset name back to legacy variant
+ */
+const BG_PRESET_TO_VARIANT: Record<string, string> = {
+  blue: 'note',
+  purple: 'important',
+  orange: 'warning',
+  yellow: 'additional',
+  green: 'recommendation',
+  red: 'caution',
+};
+
+/**
+ * Default emoji for callout blocks
+ */
+const CALLOUT_DEFAULT_EMOJI = '💡';
+
+/**
  * Result of analyzing the input data format
  */
 export interface DataFormatAnalysis {
@@ -173,6 +217,21 @@ const isLegacyToggleListBlock = (block: OutputBlockData): block is OutputBlockDa
 };
 
 /**
+ * Check if a block is in legacy callout format
+ * Legacy format: { type: "callout", data: { body: { blocks: [...] }, variant, emoji, isEmojiVisible } }
+ * New format has textColor/backgroundColor instead of variant/body
+ */
+const isLegacyCalloutBlock = (block: OutputBlockData): block is OutputBlockData<string, LegacyCalloutData> => {
+  if (block.type !== 'callout') {
+    return false;
+  }
+
+  const data = block.data as Record<string, unknown>;
+
+  return typeof data === 'object' && data !== null && 'body' in data;
+};
+
+/**
  * Check if a block contains nested hierarchy in its items
  */
 const hasNestedItems = (block: OutputBlockData): boolean => {
@@ -211,10 +270,15 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
   // Check if any block uses legacy toggleList format
   const foundLegacyToggle = blocks.some(isLegacyToggleListBlock);
 
-  if (foundLegacyList || foundLegacyToggle) {
+  // Check if any block uses legacy callout format (has body field)
+  const foundLegacyCallout = blocks.some(isLegacyCalloutBlock);
+
+  if (foundLegacyList || foundLegacyToggle || foundLegacyCallout) {
     // Check if there's actual nesting for the hasHierarchy flag
     const hasNesting = blocks.some(hasNestedItems) || blocks.some(block =>
       isLegacyToggleListBlock(block) && block.data.body?.blocks !== undefined && block.data.body.blocks.length > 0
+    ) || blocks.some(block =>
+      isLegacyCalloutBlock(block) && block.data.body?.blocks !== undefined && block.data.body.blocks.length > 0
     );
 
     return { format: 'legacy', hasHierarchy: hasNesting };
@@ -364,6 +428,57 @@ const expandToggleListToHierarchical = (
 };
 
 /**
+ * Expand a legacy callout block into flat callout block + child blocks
+ */
+const expandCalloutToHierarchical = (
+  block: OutputBlockData<string, LegacyCalloutData>
+): OutputBlockData[] => {
+  const blocks: OutputBlockData[] = [];
+  const calloutId = block.id ?? generateBlockId();
+  const bodyBlocks = block.data.body?.blocks ?? [];
+
+  // Collect child IDs, ensuring each child has an ID
+  const childIds: BlockId[] = [];
+  const childBlocks: OutputBlockData[] = [];
+
+  for (const childBlock of bodyBlocks) {
+    const childId = childBlock.id ?? generateBlockId();
+
+    childIds.push(childId);
+    childBlocks.push({
+      ...childBlock,
+      id: childId,
+      parent: calloutId,
+    });
+  }
+
+  // Map variant → backgroundColor preset
+  const variant = block.data.variant ?? 'general';
+  const backgroundColor = variant in VARIANT_TO_BG_PRESET ? VARIANT_TO_BG_PRESET[variant] : null;
+
+  // Map emoji + isEmojiVisible → emoji string
+  const emoji: string = block.data.isEmojiVisible === false
+    ? ''
+    : (block.data.emoji ?? CALLOUT_DEFAULT_EMOJI);
+
+  blocks.push({
+    id: calloutId,
+    type: 'callout',
+    data: {
+      emoji,
+      textColor: null,
+      backgroundColor,
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+    ...(childIds.length > 0 ? { content: childIds } : {}),
+  });
+
+  blocks.push(...childBlocks);
+
+  return blocks;
+};
+
+/**
  * Expand legacy nested format to hierarchical flat-with-references format
  * @param blocks - array of blocks potentially containing nested structures
  * @returns expanded array of flat blocks with parent/content references
@@ -381,6 +496,11 @@ export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData
     } else if (isLegacyToggleListBlock(block)) {
       // Expand toggleList to flat toggle + child blocks
       const expanded = expandToggleListToHierarchical(block);
+
+      expandedBlocks.push(...expanded);
+    } else if (isLegacyCalloutBlock(block)) {
+      // Expand legacy callout to flat callout + child blocks
+      const expanded = expandCalloutToHierarchical(block);
 
       expandedBlocks.push(...expanded);
     } else {
@@ -640,6 +760,71 @@ const isFlatModelListBlock = (block: OutputBlockData): boolean => {
 };
 
 /**
+ * Check if a block is a flat-model callout block (has no 'body' field)
+ */
+const isFlatModelCalloutBlock = (block: OutputBlockData): boolean => {
+  if (block.type !== 'callout') {
+    return false;
+  }
+
+  const data = block.data as Record<string, unknown>;
+
+  return typeof data === 'object' && data !== null && !('body' in data);
+};
+
+/**
+ * Process a root callout block (flat model) and convert to a legacy callout block
+ */
+const processRootCalloutItem = (
+  block: OutputBlockData,
+  blockMap: Map<BlockId, OutputBlockData>,
+  processedIds: Set<BlockId>
+): OutputBlockData => {
+  markBlockAsProcessed(block.id, processedIds);
+
+  const data = block.data as Record<string, unknown>;
+
+  // Map backgroundColor preset → variant
+  const backgroundColor = data.backgroundColor as string | null | undefined;
+  const variant = backgroundColor !== null && backgroundColor !== undefined
+    ? (BG_PRESET_TO_VARIANT[backgroundColor] ?? 'general')
+    : 'general';
+
+  // Map emoji string → isEmojiVisible + emoji
+  const emojiValue = data.emoji as string | undefined;
+  const isEmojiVisible = typeof emojiValue === 'string' && emojiValue.length > 0;
+  const emoji = isEmojiVisible ? emojiValue : null;
+
+  // Collect child blocks
+  const childBlocks: OutputBlockData[] = [];
+  const contentIds = block.content ?? [];
+
+  for (const childId of contentIds) {
+    const childBlock = blockMap.get(childId);
+
+    if (childBlock) {
+      markBlockAsProcessed(childId, processedIds);
+      childBlocks.push(stripHierarchyFields(childBlock));
+    }
+  }
+
+  const legacyBlock: OutputBlockData = {
+    id: block.id,
+    type: 'callout',
+    data: {
+      title: '',
+      variant,
+      emoji,
+      isEmojiVisible,
+      ...(childBlocks.length > 0 ? { body: { blocks: childBlocks } } : {}),
+    },
+    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+  };
+
+  return legacyBlock;
+};
+
+/**
  * Collapse hierarchical flat-with-references format back to legacy nested format
  * @param blocks - array of flat blocks with parent/content references
  * @returns collapsed array with nested structures
@@ -654,12 +839,13 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
   }
 
-  // If no flat-model list or toggle blocks, just strip hierarchy fields and return
+  // If no flat-model list, toggle, or callout blocks, just strip hierarchy fields and return
   const hasFlatListBlocks = blocks.some(isFlatModelListBlock);
   const hasFlatToggleBlocks = blocks.some(isFlatModelToggleBlock);
   const hasFlatToggleableHeaders = blocks.some(b => isToggleableHeaderBlock(b) && !b.parent);
+  const hasFlatCalloutBlocks = blocks.some(isFlatModelCalloutBlock);
 
-  if (!hasFlatListBlocks && !hasFlatToggleBlocks && !hasFlatToggleableHeaders) {
+  if (!hasFlatListBlocks && !hasFlatToggleBlocks && !hasFlatToggleableHeaders && !hasFlatCalloutBlocks) {
     return blocks.map(stripHierarchyFields);
   }
 
@@ -680,7 +866,9 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     const isRootToggleItem = isFlatToggleBlock && !block.parent;
     const isToggleableHeader = isToggleableHeaderBlock(block);
     const isRootToggleableHeader = isToggleableHeader && !block.parent;
-    const isNonListItem = !isFlatListBlock && !isFlatToggleBlock && !isToggleableHeader;
+    const isFlatCallout = isFlatModelCalloutBlock(block);
+    const isRootCallout = isFlatCallout && !block.parent;
+    const isNonListItem = !isFlatListBlock && !isFlatToggleBlock && !isToggleableHeader && !isFlatCallout;
 
     if (isRootListItem) {
       const listBlock = processRootListItem(block, blockMap, processedIds);
@@ -698,6 +886,12 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
       const legacyBlock = processRootToggleableHeader(block, blockMap, processedIds);
 
       result.push(legacyBlock);
+    }
+
+    if (isRootCallout) {
+      const calloutBlock = processRootCalloutItem(block, blockMap, processedIds);
+
+      result.push(calloutBlock);
     }
 
     if (isNonListItem) {

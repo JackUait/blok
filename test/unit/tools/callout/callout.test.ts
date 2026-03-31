@@ -403,6 +403,116 @@ describe('CalloutTool', () => {
       expect(saved.textColor).toBe('red');
       expect(saved.backgroundColor).toBe('blue');
     });
+
+    it('maps variant "general" to backgroundColor null', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'general',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBeNull();
+    });
+
+    it('maps variant "important" to backgroundColor "purple"', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'important',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBe('purple');
+    });
+
+    it('maps variant "warning" to backgroundColor "orange"', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'warning',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBe('orange');
+    });
+
+    it('maps variant "additional" to backgroundColor "yellow"', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'additional',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBe('yellow');
+    });
+
+    it('maps variant "recommendation" to backgroundColor "green"', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'recommendation',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBe('green');
+    });
+
+    it('maps variant "caution" to backgroundColor "red"', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'caution',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBe('red');
+    });
+
+    it('maps unknown variant to backgroundColor null', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'unknown_variant',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBeNull();
+    });
+
+    it('uses legacy path when both variant and backgroundColor are present', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        variant: 'warning',
+        backgroundColor: 'blue',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.backgroundColor).toBe('orange');
+    });
+
+    it('maps isEmojiVisible true with empty string emoji to default emoji', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout/index');
+      const options = createOptions({
+        isEmojiVisible: true,
+        emoji: '',
+      } as unknown as Partial<CalloutData>);
+
+      const tool = new CalloutTool(options);
+      const saved = tool.save();
+
+      expect(saved.emoji).toBe('💡');
+    });
   });
 
   describe('static getters', () => {

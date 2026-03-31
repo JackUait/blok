@@ -694,6 +694,13 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Invalidates the cached popover size so the next access to `size` re-measures.
+   */
+  public invalidateSizeCache(): void {
+    this._size = undefined;
+  }
+
+  /**
    * Returns list of elements available for keyboard navigation.
    */
   protected get flippableElements(): HTMLElement[] {

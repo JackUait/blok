@@ -172,13 +172,14 @@ import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverItemDefault, PopoverItemSeparator } from '../../../src/components/utils/popover/components/popover-item';
 import { Flipper } from '../../../src/components/flipper';
 
-type PopoverDesktopInternal = Omit<PopoverDesktop, '_size'> & {
+type PopoverDesktopInternal = PopoverDesktop & {
   flippableElements: HTMLElement[];
   size: { height: number; width: number };
   setTriggerItemPosition: (nestedPopoverEl: HTMLElement, item: PopoverItemDefault) => void;
   showNestedPopoverForItem: (item: PopoverItemDefault) => PopoverDesktop;
   destroyNestedPopoverIfExists: () => void;
   handleHover: (event: Event) => void;
+  handleMouseLeave: (event: Event) => void;
   readonly itemsDefault: PopoverItemDefault[];
   readonly items: Array<PopoverItemDefault | PopoverItemSeparator>;
   nodes: {
@@ -189,7 +190,6 @@ type PopoverDesktopInternal = Omit<PopoverDesktop, '_size'> & {
   };
   nestedPopover: PopoverDesktop | null | undefined;
   nestedPopoverTriggerItem: PopoverItemDefault | null;
-  _size: { height: number; width: number } | undefined;
 };
 
 const createRect = (overrides: Partial<DOMRect>): DOMRect => ({
@@ -1006,7 +1006,7 @@ describe('PopoverDesktop', () => {
       });
 
       // Invalidate cache and re-measure
-      instance._size = undefined;
+      popover.invalidateSizeCache();
       void instance.size;
 
       // The clone's container should include the opened-state padding (p-1.5)
@@ -1276,13 +1276,13 @@ describe('PopoverDesktop', () => {
 
       expect(initialSize).toBeDefined();
 
-      // Manually set cache to a known value to detect invalidation
-      instance._size = { height: 999, width: 999 };
-
       // Trigger a search which should hide some items and invalidate cache
       popover.filterItems('alpha');
 
-      expect(instance._size).toBeUndefined();
+      // Access size again — should return a new object, proving the cache was invalidated
+      const sizeAfterFilter = instance.size;
+
+      expect(sizeAfterFilter).not.toBe(initialSize);
     });
   });
 
@@ -1334,7 +1334,7 @@ describe('PopoverDesktop', () => {
         bubbles: false,
       });
 
-      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+      instance.handleMouseLeave(mouseLeaveEvent);
 
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
@@ -1385,7 +1385,7 @@ describe('PopoverDesktop', () => {
         bubbles: false,
       });
 
-      instance.nodes.popoverContainer.dispatchEvent(mouseLeaveEvent);
+      instance.handleMouseLeave(mouseLeaveEvent);
 
       // Nested popover should still be open
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);

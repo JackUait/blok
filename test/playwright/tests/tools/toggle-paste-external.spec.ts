@@ -130,7 +130,7 @@ test.describe('Toggle: paste external content into child block', () => {
 
     await expect(childrenContainer).toBeAttached();
 
-    const childInput = childrenContainer.locator('[contenteditable]').first();
+    const childInput = childrenContainer.locator('[contenteditable]').filter({ hasText: 'Child paragraph' });
 
     await childInput.click();
 
@@ -171,7 +171,7 @@ test.describe('Toggle: paste external content into child block', () => {
 
     await expect(childrenContainer).toBeAttached();
 
-    const childInput = childrenContainer.locator('[contenteditable]').first();
+    const childInput = childrenContainer.locator('[contenteditable]').filter({ hasText: 'Child paragraph' });
 
     await childInput.click();
 

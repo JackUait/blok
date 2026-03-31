@@ -86,7 +86,6 @@ describe('BlockManager.transactForTool', () => {
 
 describe('BlockManager.setPointerDragActive', () => {
   type BlockManagerPrivate = {
-    _isPointerDragActive: boolean;
     yjsSync: { isSyncingFromYjs: boolean };
     syncBlockDataToYjs: (block: unknown) => Promise<void>;
     blockDidMutated: (mutationType: string, block: unknown, detail: Record<string, unknown>) => unknown;
@@ -110,21 +109,35 @@ describe('BlockManager.setPointerDragActive', () => {
     vi.restoreAllMocks();
   });
 
-  it('sets internal flag to true when called with true', () => {
+  it('suppresses Yjs sync when activated', () => {
     const { blockManager } = createBlockManager();
+    const priv = getPrivate(blockManager);
+
+    priv.yjsSync = { isSyncingFromYjs: false };
+    const syncSpy = vi.fn().mockResolvedValue(undefined);
+
+    priv.syncBlockDataToYjs = syncSpy;
 
     blockManager.setPointerDragActive(true);
+    priv.blockDidMutated(BlockChangedMutationType, createBlockStub(), {});
 
-    expect(getPrivate(blockManager)._isPointerDragActive).toBe(true);
+    expect(syncSpy).not.toHaveBeenCalled();
   });
 
-  it('sets internal flag to false when called with false', () => {
+  it('resumes Yjs sync when deactivated after being active', () => {
     const { blockManager } = createBlockManager();
+    const priv = getPrivate(blockManager);
+
+    priv.yjsSync = { isSyncingFromYjs: false };
+    const syncSpy = vi.fn().mockResolvedValue(undefined);
+
+    priv.syncBlockDataToYjs = syncSpy;
 
     blockManager.setPointerDragActive(true);
     blockManager.setPointerDragActive(false);
+    priv.blockDidMutated(BlockChangedMutationType, createBlockStub(), {});
 
-    expect(getPrivate(blockManager)._isPointerDragActive).toBe(false);
+    expect(syncSpy).toHaveBeenCalledOnce();
   });
 
   it('suppresses syncBlockDataToYjs for BlockChanged when drag is active', () => {

@@ -80,8 +80,8 @@ test.describe('Toggle - Backspace key behavior', () => {
       });
 
       // Click empty first child and press Backspace — should remove child-1
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.first().click();
+      const child1Block = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-id="child-1"]');
+      await child1Block.click();
       await page.keyboard.press('Backspace');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());
@@ -111,8 +111,8 @@ test.describe('Toggle - Backspace key behavior', () => {
         ],
       });
 
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.first().click();
+      const child1Block = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-id="child-1"]');
+      await child1Block.click();
       await page.keyboard.press('Backspace');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());
@@ -143,8 +143,8 @@ test.describe('Toggle - Backspace key behavior', () => {
       });
 
       // Click empty child-2 and press Backspace
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.nth(1).click();
+      const child2Block = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-id="child-2"]');
+      await child2Block.click();
       await page.keyboard.press('Backspace');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());
@@ -209,8 +209,8 @@ test.describe('Toggle - Backspace key behavior', () => {
       });
 
       // Click child-2, go to start, press Backspace
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.nth(1).click();
+      const child2Block = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-id="child-2"]');
+      await child2Block.click();
       await page.keyboard.press('Home');
       await page.keyboard.press('Backspace');
 
@@ -248,8 +248,8 @@ test.describe('Toggle - Backspace key behavior', () => {
         ],
       });
 
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.first().click();
+      const child1Block = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-id="child-1"]');
+      await child1Block.click();
       await page.keyboard.press('Backspace');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());
@@ -278,8 +278,8 @@ test.describe('Toggle - Backspace key behavior', () => {
         ],
       });
 
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.first().click();
+      const child1Block = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-id="child-1"]');
+      await child1Block.click();
       await page.keyboard.press('Backspace');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());

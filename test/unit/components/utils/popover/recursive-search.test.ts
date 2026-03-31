@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { simulateInput } from '../../../../helpers/simulate';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
 import { PopoverDesktop } from '../../../../../src/components/utils/popover/popover-desktop';
 import type { PopoverItemDefaultBaseParams } from '../../../../../types/utils/popover/popover-item';
@@ -448,11 +449,11 @@ describe('click handling for promoted items', () => {
     popover.filterItems('heading');
 
     const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
-    const promotedItem = Array.from(itemsContainer?.querySelectorAll('[data-blok-popover-item]') ?? [])
+    const promotedItem = Array.from(itemsContainer?.querySelectorAll<HTMLElement>('[data-blok-popover-item]') ?? [])
       .find(el => el.querySelector('[data-blok-popover-item-title]')?.textContent === 'Heading');
 
     expect(promotedItem).not.toBeUndefined();
-    promotedItem?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    promotedItem?.click();
 
     expect(activated).toBe(true);
   });
@@ -485,7 +486,7 @@ describe('SearchInput path (searchable popover)', () => {
     expect(searchInput).not.toBeNull();
 
     searchInput.value = 'heading';
-    searchInput.dispatchEvent(new Event('input'));
+    simulateInput(searchInput);
 
     const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
     const separator = itemsContainer?.querySelector('[data-blok-promoted-group-label]');
@@ -517,7 +518,7 @@ describe('SearchInput path (searchable popover)', () => {
 
     const searchInput = popover.getElement().querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
     searchInput.value = 'heading';
-    searchInput.dispatchEvent(new Event('input'));
+    simulateInput(searchInput);
 
     const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
     const visibleItems = Array.from(itemsContainer?.querySelectorAll('[data-blok-popover-item]:not([data-blok-hidden])') ?? []);
@@ -557,10 +558,10 @@ describe('SearchInput path (searchable popover)', () => {
     const searchInput = popover.getElement().querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
 
     searchInput.value = 'heading';
-    searchInput.dispatchEvent(new Event('input'));
+    simulateInput(searchInput);
 
     searchInput.value = '';
-    searchInput.dispatchEvent(new Event('input'));
+    simulateInput(searchInput);
 
     const itemsContainer = popover.getElement().querySelector('[data-blok-popover-items]');
     expect(itemsContainer?.querySelector('[data-blok-promoted-group-label]')).toBeNull();

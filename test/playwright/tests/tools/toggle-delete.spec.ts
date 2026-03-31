@@ -192,8 +192,8 @@ test.describe('Toggle - Delete key behavior', () => {
       });
 
       // Click on the empty first child and press Delete — should do nothing (no previous sibling)
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.first().click();
+      const emptyFirstChild = page.locator('[data-blok-id="child-1"][data-blok-component="paragraph"]');
+      await emptyFirstChild.click();
       await page.keyboard.press('Delete');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());
@@ -228,8 +228,8 @@ test.describe('Toggle - Delete key behavior', () => {
       });
 
       // Click on the empty middle child (child-2) and press Delete
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.nth(1).click();
+      const emptyMiddleChild = page.locator('[data-blok-id="child-2"][data-blok-component="paragraph"]');
+      await emptyMiddleChild.click();
       await page.keyboard.press('Delete');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());
@@ -263,7 +263,7 @@ test.describe('Toggle - Delete key behavior', () => {
       });
 
       // Click on the child paragraph and press Delete at end
-      const childParagraph = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]').first();
+      const childParagraph = page.locator('[data-blok-id="child-1"][data-blok-component="paragraph"]');
       await childParagraph.click();
       await page.keyboard.press('End');
       await page.keyboard.press('Delete');
@@ -296,8 +296,8 @@ test.describe('Toggle - Delete key behavior', () => {
       });
 
       // Click on the empty first child and press Delete — should do nothing (no previous sibling)
-      const children = page.locator(TOGGLE_CHILDREN_SELECTOR).locator('[data-blok-component="paragraph"]');
-      await children.first().click();
+      const emptyFirstChild = page.locator('[data-blok-id="child-1"][data-blok-component="paragraph"]');
+      await emptyFirstChild.click();
       await page.keyboard.press('Delete');
 
       const saved = await page.evaluate(async () => window.blokInstance?.save());

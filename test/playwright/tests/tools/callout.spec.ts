@@ -56,8 +56,8 @@ test.beforeEach(async ({ page }) => {
 
 test('creates callout via slash menu and shows default emoji', async ({ page }) => {
   await createBlok(page);
-  const firstBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable]`).first();
-  await firstBlock.click();
+  const defaultParagraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`);
+  await defaultParagraph.click();
   await page.keyboard.type('/callout', { delay: 50 });
   const calloutItem = page.locator('[data-blok-item-name="callout"]');
   await expect(calloutItem).toBeVisible();
@@ -71,7 +71,7 @@ test('renders callout with auto-created first child paragraph', async ({ page })
   await expect(page.locator(CALLOUT_BLOCK_SELECTOR)).toBeVisible();
   // The callout should contain a child paragraph block inside the children container
   const childBlock = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"]`);
-  await expect(childBlock.first()).toBeVisible();
+  await expect(childBlock).toBeVisible();
 });
 
 test('opens emoji picker on emoji button click', async ({ page }) => {
@@ -84,9 +84,9 @@ test('selects emoji from picker and updates button', async ({ page }) => {
   await createBlok(page, createCalloutData());
   await page.getByTestId('callout-emoji-btn').click();
   await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
-  const firstEmoji = page.locator('[data-emoji-native]').first();
-  const emojiChar = await firstEmoji.getAttribute('data-emoji-native');
-  await firstEmoji.click();
+  const targetEmoji = page.locator('[data-emoji-native="👉"]');
+  const emojiChar = await targetEmoji.getAttribute('data-emoji-native');
+  await targetEmoji.click();
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText(emojiChar ?? '');
 });
 
@@ -109,7 +109,7 @@ test('closes emoji picker on Escape', async ({ page }) => {
 test('applies color from block settings menu', async ({ page }) => {
   await createBlok(page, createCalloutData());
   // Click the child paragraph to focus the callout, then hover to reveal toolbar
-  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`).first();
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable]`);
   await childEditable.click();
   const wrapper = page.locator(CALLOUT_BLOCK_SELECTOR);
   await wrapper.hover();
@@ -123,7 +123,7 @@ test('applies color from block settings menu', async ({ page }) => {
 
 test('child blocks support inline tool formatting', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`).first();
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable]`);
   await childEditable.click();
   await page.keyboard.type('hello');
   await page.keyboard.press(`${MODIFIER_KEY}+A`);
@@ -134,7 +134,7 @@ test('child blocks support inline tool formatting', async ({ page }) => {
 
 test('Enter in child block creates another child block', async ({ page }) => {
   await createBlok(page, createCalloutData());
-  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`).first();
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable]`);
   await childEditable.click();
   await page.keyboard.type('first line');
   await page.keyboard.press('Enter');

@@ -176,6 +176,8 @@ describe('PlusButtonHandler.handleClick — plus button opens toolbox without sl
 
     expect(insertMock).not.toHaveBeenCalled();
     expect(callbacks.openToolboxWithoutSlash).toHaveBeenCalledTimes(1);
+    // Block content stays empty — no "/" injected into the reused header
+    expect(emptyHeader.pluginsContent.textContent).toBe('');
   });
 
   it('reuses empty currentBlock nested inside hoveredBlock (e.g. table cell paragraph)', () => {
@@ -205,6 +207,8 @@ describe('PlusButtonHandler.handleClick — plus button opens toolbox without sl
 
     expect(insertMock).not.toHaveBeenCalled();
     expect(callbacks.openToolboxWithoutSlash).toHaveBeenCalledTimes(1);
+    // Nested paragraph must remain inside its container in the DOM
+    expect(cellContainer.contains(paragraphHolder)).toBe(true);
   });
 
   it('does not move a reused nested block out of its container', () => {
@@ -286,6 +290,8 @@ describe('PlusButtonHandler.handleClick — plus button opens toolbox without sl
     // A new block must be inserted — the distant empty block must NOT be reused
     expect(insertMock).toHaveBeenCalledTimes(1);
     expect(callbacks.openToolboxWithoutSlash).toHaveBeenCalledTimes(1);
+    // Original block content must be untouched
+    expect(nonEmptyParagraph.pluginsContent.textContent).toBe('Hello');
   });
 
   it('closes toolbox if already open instead of reopening', () => {

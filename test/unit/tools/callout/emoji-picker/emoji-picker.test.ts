@@ -1,6 +1,7 @@
 // test/unit/tools/callout/emoji-picker/emoji-picker.test.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { simulateInput, simulateKeydown, simulateMousedown } from '../../../../helpers/simulate';
 import type { ProcessedEmoji } from '../../../../../src/tools/callout/emoji-picker/emoji-data';
 
 const mockOnHover = vi.fn();
@@ -110,6 +111,8 @@ describe('EmojiPicker', () => {
     removeBtn.click();
 
     expect(onRemove).toHaveBeenCalled();
+    // Verify observable outcome: picker closes after remove
+    expect(picker.isOpen()).toBe(false);
   });
 
   it('filters emojis when typing in the filter input', async () => {
@@ -120,7 +123,7 @@ describe('EmojiPicker', () => {
 
     const input = container.querySelector('input[type="text"]') as HTMLInputElement;
     input.value = 'light';
-    input.dispatchEvent(new Event('input'));
+    simulateInput(input);
 
     const buttons = container.querySelectorAll('[data-emoji-native]');
     // Only 💡 (Light Bulb) should match 'light'
@@ -137,7 +140,7 @@ describe('EmojiPicker', () => {
 
     // 'thumbs' matches 👍 (people category) — mock searchEmojis returns name-based matches
     input.value = 'thumbs';
-    input.dispatchEvent(new Event('input'));
+    simulateInput(input);
 
     // Sections should still be present in search results
     const sections = container.querySelectorAll('[data-emoji-section]');
@@ -162,7 +165,7 @@ describe('EmojiPicker', () => {
 
     // 'light' matches only 💡 (objects category, also in curated callout)
     input.value = 'light';
-    input.dispatchEvent(new Event('input'));
+    simulateInput(input);
 
     const sectionsAfter = container.querySelectorAll('[data-emoji-section]');
     // Only sections containing matches should remain — fewer than before
@@ -177,7 +180,7 @@ describe('EmojiPicker', () => {
     await picker.open(container);
 
     expect(picker.isOpen()).toBe(true);
-    picker.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    simulateKeydown(picker.getElement(), 'Escape');
     expect(picker.isOpen()).toBe(false);
   });
 
@@ -274,7 +277,7 @@ describe('EmojiPicker', () => {
 
       expect(popover.hidden).toBe(false);
 
-      picker.getElement().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      simulateKeydown(picker.getElement(), 'Escape');
 
       expect(popover.hidden).toBe(true);
       expect(picker.isOpen()).toBe(true);
@@ -572,7 +575,7 @@ describe('EmojiPicker', () => {
       const backdrop = document.querySelector('[data-blok-emoji-picker-backdrop]') as HTMLElement;
 
       // Clicking directly on backdrop closes
-      backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      simulateMousedown(backdrop);
       expect(picker.isOpen()).toBe(false);
 
       document.body.removeChild(anchor);

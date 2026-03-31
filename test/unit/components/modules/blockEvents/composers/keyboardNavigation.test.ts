@@ -1007,6 +1007,10 @@ describe('KeyboardNavigation', () => {
       expect(move).not.toHaveBeenCalled();
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
 
+      // Observable state: block remains nested inside toggle parent
+      expect(childBlock.parentId).toBe(toggleParentId);
+      expect(toggleParent.contentIds).toContain(childBlockId);
+
       isCaretAtStartOfInputSpy.mockRestore();
     });
 

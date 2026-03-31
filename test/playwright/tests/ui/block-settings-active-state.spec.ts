@@ -60,7 +60,7 @@ const createBlok = async (page: Page): Promise<void> => {
 };
 
 const openBlockSettings = async (page: Page): Promise<void> => {
-  const block = page.locator(BLOCK_SELECTOR).first();
+  const block = page.locator(BLOCK_SELECTOR).filter({ hasText: 'Hello world' });
 
   await block.click();
 

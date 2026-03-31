@@ -28,6 +28,21 @@ import {
 } from './constants';
 
 /**
+ * Resolve emoji from legacy callout data fields
+ */
+function resolveLegacyEmoji(data: Record<string, unknown>): string {
+  if (data.isEmojiVisible === false) {
+    return '';
+  }
+
+  if (typeof data.emoji === 'string' && data.emoji.length > 0) {
+    return data.emoji;
+  }
+
+  return DEFAULT_EMOJI;
+}
+
+/**
  * Map legacy callout variant to backgroundColor preset name.
  * Used when receiving data from older format that has variant instead of backgroundColor.
  */
@@ -81,15 +96,7 @@ export class CalloutTool implements BlockTool {
     const backgroundColor = variant in VARIANT_TO_BG_PRESET ? VARIANT_TO_BG_PRESET[variant] : null;
 
     // Map isEmojiVisible + emoji to emoji string
-    let emoji: string;
-
-    if (data.isEmojiVisible === false) {
-      emoji = '';
-    } else if (typeof data.emoji === 'string' && data.emoji.length > 0) {
-      emoji = data.emoji;
-    } else {
-      emoji = DEFAULT_EMOJI;
-    }
+    const emoji = resolveLegacyEmoji(data);
 
     return {
       emoji,

@@ -11,8 +11,11 @@ import {
 const HOLDER_ID = "blok";
 const BLOCK_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="block-wrapper"]`;
 const SETTINGS_BUTTON_SELECTOR = `${createSelector(DATA_ATTR.interface)} [data-blok-testid="settings-toggler"]`;
-const getBlockTunesPopover = (page: Page): ReturnType<Page["getByTestId"]> =>
-  page.getByTestId("block-tunes-popover").getByTestId("popover-container");
+const getBlockTunesPopover = (page: Page): ReturnType<Page["locator"]> =>
+  page
+    .getByTestId("block-tunes-popover")
+    .getByTestId("popover-container")
+    .filter({ has: page.getByRole("searchbox") });
 
 declare global {
   interface Window {

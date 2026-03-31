@@ -26,5 +26,5 @@ export const DEFAULT_EMOJI = '💡';
 
 // CSS — Tailwind classes
 export const WRAPPER_STYLES = 'rounded-xl px-4 py-[5px] my-1 flex items-start gap-2';
-export const EMOJI_BUTTON_STYLES = 'text-[1.25rem] cursor-pointer bg-transparent border-0 px-0 py-[7px] flex-shrink-0 select-none';
+export const EMOJI_BUTTON_STYLES = 'text-[1.5rem] cursor-pointer bg-transparent border-0 px-0 py-[7px] flex-shrink-0 select-none';
 export const CHILDREN_STYLES = 'flex-1 min-w-0';

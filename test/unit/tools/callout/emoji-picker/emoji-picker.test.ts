@@ -681,7 +681,8 @@ describe('EmojiPicker', () => {
       const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
 
       expect(bulbBtn).toBeDefined();
-      expect(bulbBtn!.title).toBe('ampoule');
+      // Name is shown via JS tooltip (onHover), not browser title attribute
+      expect(mockOnHover).toHaveBeenCalledWith(bulbBtn, 'ampoule', { placement: 'bottom' });
     });
 
     it('falls back to English name in lowercase when translated name is not available', async () => {
@@ -702,7 +703,7 @@ describe('EmojiPicker', () => {
       const thumbsBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '👍');
 
       expect(thumbsBtn).toBeDefined();
-      expect(thumbsBtn!.title).toBe('thumbs up');
+      expect(mockOnHover).toHaveBeenCalledWith(thumbsBtn, 'thumbs up', { placement: 'bottom' });
     });
 
     it('displays English emoji names in lowercase', async () => {
@@ -717,7 +718,7 @@ describe('EmojiPicker', () => {
       const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
 
       expect(bulbBtn).toBeDefined();
-      expect(bulbBtn!.title).toBe('light bulb');
+      expect(mockOnHover).toHaveBeenCalledWith(bulbBtn, 'light bulb', { placement: 'bottom' });
       expect(mockLoadEmojiLocale).not.toHaveBeenCalled();
     });
 
@@ -736,7 +737,7 @@ describe('EmojiPicker', () => {
       const bulbBtn = allBtns.find(btn => btn.getAttribute('data-emoji-native') === '💡');
 
       expect(bulbBtn).toBeDefined();
-      expect(bulbBtn!.title).toBe('ampoule électrique');
+      expect(mockOnHover).toHaveBeenCalledWith(bulbBtn, 'ampoule électrique', { placement: 'bottom' });
     });
   });
 });

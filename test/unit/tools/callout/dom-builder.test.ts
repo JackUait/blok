@@ -61,6 +61,13 @@ describe('buildCalloutDOM', () => {
     expect(emojiButton.getAttribute('aria-label')).toBe('💡');
   });
 
+  it('emoji button renders emoji at 24px (1.5rem)', async () => {
+    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
+    const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
+
+    expect(emojiButton.className).toContain('text-[1.5rem]');
+  });
+
   it('emoji button aligns to start of first line', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
     const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });

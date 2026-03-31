@@ -246,7 +246,6 @@ export class EmojiPicker {
     randomBtn.type = 'button';
     randomBtn.setAttribute('data-emoji-picker-random', '');
     randomBtn.setAttribute('aria-label', this.i18n.t(PICK_RANDOM_KEY));
-    randomBtn.title = this.i18n.t(PICK_RANDOM_KEY);
     randomBtn.className = [
       'flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center rounded-lg',
       'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600',
@@ -262,7 +261,6 @@ export class EmojiPicker {
     removeBtn.type = 'button';
     removeBtn.setAttribute('data-emoji-picker-remove', '');
     removeBtn.setAttribute('aria-label', this.i18n.t(REMOVE_EMOJI_KEY));
-    removeBtn.title = this.i18n.t(REMOVE_EMOJI_KEY);
     removeBtn.className = [
       'flex-shrink-0 w-[34px] h-[34px] flex items-center justify-center rounded-lg',
       'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600',
@@ -653,7 +651,6 @@ export class EmojiPicker {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = this.getSkinnedNative(emoji);
-      btn.title = this.getDisplayName(emoji);
       btn.setAttribute('data-emoji-native', emoji.native);
       btn.className = [
         'aspect-square flex items-center justify-center',

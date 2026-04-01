@@ -66,6 +66,7 @@ export class DatabaseCardPeek {
     panel.style.borderLeft = '1px solid var(--blok-popover-border, #e8e8eb)';
     panel.style.backgroundColor = 'var(--blok-popover-bg, #fff)';
     panel.style.boxShadow = '-4px 0 12px rgba(0, 0, 0, 0.08)';
+    panel.style.transform = 'translateX(100%)';
 
     const closeBtn = document.createElement('button');
 
@@ -118,6 +119,10 @@ export class DatabaseCardPeek {
     this.wrapper.style.position = 'relative';
     this.wrapper.appendChild(panel);
     this.panel = panel;
+
+    requestAnimationFrame(() => {
+      panel.style.transform = 'translateX(0)';
+    });
 
     this.initNestedEditor(editorHolder, card);
 

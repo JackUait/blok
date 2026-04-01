@@ -32,8 +32,8 @@ export class DatabaseView {
     wrapper.style.display = 'flex';
     wrapper.style.overflowX = 'auto';
     wrapper.style.alignItems = 'flex-start';
-    wrapper.style.gap = '8px';
-    wrapper.style.padding = '2px';
+    wrapper.style.gap = '10px';
+    wrapper.style.padding = '6px 4px';
 
     for (const col of columns) {
       const columnEl = this.createColumnElement(col, getCards(col.id));
@@ -46,7 +46,7 @@ export class DatabaseView {
 
       addColumnBtn.setAttribute('data-blok-database-add-column', '');
       addColumnBtn.setAttribute('aria-label', this.i18n.t('tools.database.addColumn'));
-      addColumnBtn.textContent = this.i18n.t('tools.database.addColumn');
+      addColumnBtn.textContent = '+ ' + this.i18n.t('tools.database.addColumn');
       wrapper.appendChild(addColumnBtn);
     }
 
@@ -106,7 +106,7 @@ export class DatabaseView {
     columnEl.setAttribute('aria-label', col.title);
     columnEl.style.display = 'flex';
     columnEl.style.flexDirection = 'column';
-    columnEl.style.minWidth = '220px';
+    columnEl.style.minWidth = '260px';
     columnEl.style.flexShrink = '0';
 
     const header = document.createElement('div');
@@ -120,6 +120,7 @@ export class DatabaseView {
 
     if (col.color !== undefined) {
       header.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;
+      columnEl.style.borderTop = `3px solid var(--blok-color-${col.color}-text)`;
     }
 
     const titleEl = document.createElement('div');
@@ -129,6 +130,12 @@ export class DatabaseView {
     titleEl.textContent = col.title;
     header.appendChild(titleEl);
 
+    const countEl = document.createElement('span');
+
+    countEl.setAttribute('data-blok-database-column-count', '');
+    countEl.textContent = String(cards.length);
+    header.appendChild(countEl);
+
     columnEl.appendChild(header);
 
     const cardsContainer = document.createElement('div');
@@ -137,13 +144,22 @@ export class DatabaseView {
     cardsContainer.setAttribute('role', 'list');
     cardsContainer.style.display = 'flex';
     cardsContainer.style.flexDirection = 'column';
-    cardsContainer.style.gap = '4px';
+    cardsContainer.style.gap = '6px';
+    cardsContainer.style.paddingTop = '6px';
     cardsContainer.style.minHeight = '40px';
 
     for (const card of cards) {
       const cardEl = this.createCardElement(card);
 
       cardsContainer.appendChild(cardEl);
+    }
+
+    if (cards.length === 0 && !this.readOnly) {
+      const placeholder = document.createElement('div');
+
+      placeholder.setAttribute('data-blok-database-empty-placeholder', '');
+      placeholder.textContent = this.i18n.t('tools.database.emptyColumn');
+      cardsContainer.appendChild(placeholder);
     }
 
     columnEl.appendChild(cardsContainer);
@@ -154,7 +170,7 @@ export class DatabaseView {
       addCardBtn.setAttribute('data-blok-database-add-card', '');
       addCardBtn.setAttribute('data-column-id', col.id);
       addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
-      addCardBtn.textContent = this.i18n.t('tools.database.addCard');
+      addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.addCard');
       columnEl.appendChild(addCardBtn);
     }
 
@@ -170,7 +186,7 @@ export class DatabaseView {
     cardEl.setAttribute('data-blok-database-card', '');
     cardEl.setAttribute('data-card-id', card.id);
     cardEl.setAttribute('role', 'listitem');
-    cardEl.style.padding = '8px 10px';
+    cardEl.style.padding = '10px 12px';
     cardEl.style.borderRadius = '4px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';

@@ -712,10 +712,10 @@
 
   /* Database / Kanban */
   --blok-database-card-bg: #fff;
-  --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --blok-database-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --blok-database-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.1);
   --blok-database-card-border: rgba(0, 0, 0, 0.06);
-  --blok-database-column-bg: rgba(0, 0, 0, 0.024);
+  --blok-database-column-bg: rgba(0, 0, 0, 0.04);
   --blok-database-add-text: rgba(55, 53, 47, 0.5);
   --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
   --blok-database-delete-text: rgba(55, 53, 47, 0.35);
@@ -817,10 +817,10 @@
 
     /* Database / Kanban */
     --blok-database-card-bg: #2d2d2c;
-    --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --blok-database-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     --blok-database-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.35);
     --blok-database-card-border: rgba(255, 255, 255, 0.06);
-    --blok-database-column-bg: rgba(255, 255, 255, 0.03);
+    --blok-database-column-bg: rgba(255, 255, 255, 0.05);
     --blok-database-add-text: rgba(255, 255, 255, 0.4);
     --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
     --blok-database-delete-text: rgba(255, 255, 255, 0.3);
@@ -1588,4 +1588,39 @@
  */
 [data-blok-database-peek-title]::placeholder {
   color: var(--blok-database-add-text);
+}
+
+/**
+ * Add card — dashed bottom hint for interactivity.
+ */
+[data-blok-database-add-card] {
+  border-bottom: 1px dashed var(--blok-database-card-border);
+}
+
+/**
+ * Card count badge — muted counter after column title.
+ */
+[data-blok-database-column-count] {
+  color: var(--blok-database-add-text);
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+/**
+ * Empty column placeholder — centered muted text.
+ */
+[data-blok-database-empty-placeholder] {
+  color: var(--blok-database-add-text);
+  font-size: 13px;
+  text-align: center;
+  padding: 12px 0;
+}
+
+/**
+ * Peek panel — slide-in transition.
+ */
+[data-blok-database-peek] {
+  transition: transform 200ms ease;
 }

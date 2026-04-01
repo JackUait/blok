@@ -178,6 +178,103 @@ describe('DatabaseView', () => {
 
       expect(deleteBtns).toHaveLength(0);
     });
+
+    it('renders card count badge in each column header', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [
+        makeCard({ id: 'card-1', columnId: 'col-1', position: 'a0' }),
+        makeCard({ id: 'card-2', columnId: 'col-1', position: 'a1', title: 'Write tests' }),
+      ];
+      const board = view.createBoard(columns, () => cards);
+
+      const countEl = board.querySelector('[data-blok-database-column-count]');
+
+      expect(countEl).not.toBeNull();
+      expect(countEl?.textContent).toBe('2');
+    });
+
+    it('renders card count badge as 0 for empty columns', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const countEl = board.querySelector('[data-blok-database-column-count]');
+
+      expect(countEl).not.toBeNull();
+      expect(countEl?.textContent).toBe('0');
+    });
+
+    it('prefixes add-card button text with +', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const addCardBtn = board.querySelector('[data-blok-database-add-card]');
+
+      expect(addCardBtn?.textContent).toMatch(/^\+ /);
+    });
+
+    it('prefixes add-column button text with +', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      const addColBtn = board.querySelector('[data-blok-database-add-column]');
+
+      expect(addColBtn?.textContent).toMatch(/^\+ /);
+    });
+
+    it('applies color as top border on column element when color is defined', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', color: 'blue' })];
+      const board = view.createBoard(columns, () => []);
+
+      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
+
+      expect(column.style.borderTop).toBe('3px solid var(--blok-color-blue-text)');
+    });
+
+    it('does not apply top border on column when color is undefined', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
+
+      expect(column.style.borderTop).toBe('');
+    });
+
+    it('renders empty placeholder when column has no cards and not read-only', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const placeholder = board.querySelector('[data-blok-database-empty-placeholder]');
+
+      expect(placeholder).not.toBeNull();
+      expect(placeholder?.textContent).toBe('tools.database.emptyColumn');
+    });
+
+    it('does not render empty placeholder when column has cards', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const placeholder = board.querySelector('[data-blok-database-empty-placeholder]');
+
+      expect(placeholder).toBeNull();
+    });
+
+    it('does not render empty placeholder in read-only mode', () => {
+      const view = new DatabaseView({ readOnly: true, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const placeholder = board.querySelector('[data-blok-database-empty-placeholder]');
+
+      expect(placeholder).toBeNull();
+    });
   });
 
   describe('accessibility', () => {
@@ -383,6 +480,61 @@ describe('DatabaseView', () => {
       const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
 
       expect(header.style.gap).toBeTruthy();
+    });
+
+    it('board wrapper has updated padding of 6px 4px', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      expect(board.style.padding).toBe('6px 4px');
+    });
+
+    it('board wrapper has updated gap of 10px', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      expect(board.style.gap).toBe('10px');
+    });
+
+    it('cards container has updated gap of 6px', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
+
+      expect(container.style.gap).toBe('6px');
+    });
+
+    it('cards container has padding-top of 6px', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
+
+      expect(container.style.paddingTop).toBe('6px');
+    });
+
+    it('column element has min-width of 260px', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
+
+      expect(column.style.minWidth).toBe('260px');
+    });
+
+    it('card element has updated padding of 10px 12px', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
+
+      expect(card.style.padding).toBe('10px 12px');
     });
   });
 

@@ -113,6 +113,7 @@
   "tools.database.deleteCard": "Delete card",
   "tools.database.cardTitlePlaceholder": "Untitled",
   "tools.database.columnTitlePlaceholder": "Column",
+  "tools.database.emptyColumn": "No cards",
   "tools.callout.color": "Color",
   "tools.callout.colorDefault": "Default",
   "tools.callout.colorGray": "Gray",

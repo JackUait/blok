@@ -220,6 +220,18 @@ describe('DatabaseCardPeek', () => {
       expect(closeBtn.textContent).toBe('\u00d7');
     });
 
+    it('sets initial transform to translateX(100%) for slide-in animation', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const panel = options.wrapper.querySelector('[data-blok-database-peek]') as HTMLElement;
+
+      expect(panel.style.transform).toBe('translateX(100%)');
+    });
+
     it('editor holder has padding', () => {
       const options = createOptions();
       const peek = new DatabaseCardPeek(options);

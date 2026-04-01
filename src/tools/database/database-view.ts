@@ -30,15 +30,22 @@ export class DatabaseView {
     wrapper.setAttribute('role', 'region');
     wrapper.setAttribute('aria-label', 'Kanban board');
     wrapper.style.display = 'flex';
-    wrapper.style.overflowX = 'auto';
-    wrapper.style.alignItems = 'flex-start';
-    wrapper.style.gap = '12px';
-    wrapper.style.padding = '6px 4px';
+
+    const boardArea = document.createElement('div');
+
+    boardArea.setAttribute('data-blok-database-board', '');
+    boardArea.style.display = 'flex';
+    boardArea.style.overflowX = 'auto';
+    boardArea.style.alignItems = 'flex-start';
+    boardArea.style.gap = '12px';
+    boardArea.style.padding = '6px 4px';
+    boardArea.style.flex = '1';
+    boardArea.style.minWidth = '0';
 
     for (const col of columns) {
       const columnEl = this.createColumnElement(col, getCards(col.id));
 
-      wrapper.appendChild(columnEl);
+      boardArea.appendChild(columnEl);
     }
 
     if (!this.readOnly) {
@@ -47,8 +54,10 @@ export class DatabaseView {
       addColumnBtn.setAttribute('data-blok-database-add-column', '');
       addColumnBtn.setAttribute('aria-label', this.i18n.t('tools.database.addColumn'));
       addColumnBtn.textContent = '+ ' + this.i18n.t('tools.database.addColumn');
-      wrapper.appendChild(addColumnBtn);
+      boardArea.appendChild(addColumnBtn);
     }
+
+    wrapper.appendChild(boardArea);
 
     return wrapper;
   }
@@ -82,12 +91,14 @@ export class DatabaseView {
    */
   appendColumn(wrapper: HTMLElement, col: KanbanColumnData): void {
     const columnEl = this.createColumnElement(col, []);
-    const addColumnBtn = wrapper.querySelector('[data-blok-database-add-column]');
+    const boardArea = wrapper.querySelector('[data-blok-database-board]') as HTMLElement | null;
+    const container = boardArea ?? wrapper;
+    const addColumnBtn = container.querySelector('[data-blok-database-add-column]');
 
     if (addColumnBtn) {
-      wrapper.insertBefore(columnEl, addColumnBtn);
+      container.insertBefore(columnEl, addColumnBtn);
     } else {
-      wrapper.appendChild(columnEl);
+      container.appendChild(columnEl);
     }
   }
 

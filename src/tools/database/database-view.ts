@@ -27,6 +27,8 @@ export class DatabaseView {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-tool', 'database');
+    wrapper.setAttribute('role', 'region');
+    wrapper.setAttribute('aria-label', 'Kanban board');
     wrapper.style.display = 'flex';
     wrapper.style.overflowX = 'auto';
 
@@ -40,6 +42,7 @@ export class DatabaseView {
       const addColumnBtn = document.createElement('button');
 
       addColumnBtn.setAttribute('data-blok-database-add-column', '');
+      addColumnBtn.setAttribute('aria-label', this.i18n.t('tools.database.addColumn'));
       addColumnBtn.textContent = this.i18n.t('tools.database.addColumn');
       wrapper.appendChild(addColumnBtn);
     }
@@ -96,6 +99,8 @@ export class DatabaseView {
 
     columnEl.setAttribute('data-blok-database-column', '');
     columnEl.setAttribute('data-column-id', col.id);
+    columnEl.setAttribute('role', 'group');
+    columnEl.setAttribute('aria-label', col.title);
 
     const header = document.createElement('div');
 
@@ -116,6 +121,7 @@ export class DatabaseView {
     const cardsContainer = document.createElement('div');
 
     cardsContainer.setAttribute('data-blok-database-cards', '');
+    cardsContainer.setAttribute('role', 'list');
     cardsContainer.style.minHeight = '40px';
 
     for (const card of cards) {
@@ -131,6 +137,7 @@ export class DatabaseView {
 
       addCardBtn.setAttribute('data-blok-database-add-card', '');
       addCardBtn.setAttribute('data-column-id', col.id);
+      addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
       addCardBtn.textContent = this.i18n.t('tools.database.addCard');
       columnEl.appendChild(addCardBtn);
     }
@@ -146,6 +153,7 @@ export class DatabaseView {
 
     cardEl.setAttribute('data-blok-database-card', '');
     cardEl.setAttribute('data-card-id', card.id);
+    cardEl.setAttribute('role', 'listitem');
 
     const titleEl = document.createElement('div');
 
@@ -158,6 +166,7 @@ export class DatabaseView {
 
       deleteBtn.setAttribute('data-blok-database-delete-card', '');
       deleteBtn.setAttribute('data-card-id', card.id);
+      deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteCard'));
       deleteBtn.textContent = '\u00d7';
       cardEl.appendChild(deleteBtn);
     }

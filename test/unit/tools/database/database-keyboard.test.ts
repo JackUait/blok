@@ -4,7 +4,7 @@ import type { DatabaseKeyboardOptions } from '../../../../src/tools/database/dat
 
 const createOptions = (overrides: Partial<DatabaseKeyboardOptions> = {}): DatabaseKeyboardOptions => ({
   wrapper: document.createElement('div'),
-  onEscape: vi.fn(),
+  onEscape: vi.fn(() => true),
   ...overrides,
 });
 
@@ -43,5 +43,35 @@ describe('DatabaseKeyboard', () => {
     options.wrapper.dispatchEvent(escapeEvent);
 
     expect(onEscape).not.toHaveBeenCalled();
+  });
+
+  it('stops propagation of Escape event when onEscape returns true', () => {
+    const onEscape = vi.fn(() => true);
+    const options = createOptions({ onEscape });
+    const keyboard = new DatabaseKeyboard(options);
+
+    keyboard.attach();
+
+    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    const stopPropagationSpy = vi.spyOn(escapeEvent, 'stopPropagation');
+
+    options.wrapper.dispatchEvent(escapeEvent);
+
+    expect(stopPropagationSpy).toHaveBeenCalledOnce();
+  });
+
+  it('does not stop propagation when onEscape returns false', () => {
+    const onEscape = vi.fn(() => false);
+    const options = createOptions({ onEscape });
+    const keyboard = new DatabaseKeyboard(options);
+
+    keyboard.attach();
+
+    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    const stopPropagationSpy = vi.spyOn(escapeEvent, 'stopPropagation');
+
+    options.wrapper.dispatchEvent(escapeEvent);
+
+    expect(stopPropagationSpy).not.toHaveBeenCalled();
   });
 });

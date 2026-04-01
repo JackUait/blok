@@ -24,7 +24,6 @@ const makeHeaderEl = (title = 'My Column'): HTMLElement => {
 describe('DatabaseColumnControls', () => {
   let i18n: I18n;
   let onRename: ReturnType<typeof vi.fn<(columnId: string, title: string) => void>>;
-  let onRecolor: ReturnType<typeof vi.fn<(columnId: string, color: string) => void>>;
   let onDelete: ReturnType<typeof vi.fn<(columnId: string) => void>>;
   let controls: DatabaseColumnControls;
 
@@ -32,9 +31,8 @@ describe('DatabaseColumnControls', () => {
     vi.clearAllMocks();
     i18n = createMockI18n();
     onRename = vi.fn<(columnId: string, title: string) => void>();
-    onRecolor = vi.fn<(columnId: string, color: string) => void>();
     onDelete = vi.fn<(columnId: string) => void>();
-    controls = new DatabaseColumnControls({ i18n, onRename, onRecolor, onDelete });
+    controls = new DatabaseColumnControls({ i18n, onRename, onDelete });
   });
 
   afterEach(() => {
@@ -71,6 +69,32 @@ describe('DatabaseColumnControls', () => {
       deleteBtn?.click();
 
       expect(onDelete).toHaveBeenCalledWith('col-2');
+    });
+
+    describe('accessibility', () => {
+      it('delete button has aria-label with translated text', () => {
+        const headerEl = makeHeaderEl('My Column');
+
+        controls.makeEditable(headerEl, 'col-1');
+
+        const deleteBtn = headerEl.querySelector<HTMLButtonElement>('[data-blok-database-delete-column]');
+
+        expect(deleteBtn).not.toBeNull();
+        expect(deleteBtn?.getAttribute('aria-label')).toBe('tools.database.deleteColumn');
+        expect(i18n.t).toHaveBeenCalledWith('tools.database.deleteColumn');
+      });
+
+      it('rename input has aria-label with translated text', () => {
+        const headerEl = makeHeaderEl('My Column');
+
+        controls.makeEditable(headerEl, 'col-1');
+
+        const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]');
+
+        expect(input).not.toBeNull();
+        expect(input?.getAttribute('aria-label')).toBe('tools.database.renameColumn');
+        expect(i18n.t).toHaveBeenCalledWith('tools.database.renameColumn');
+      });
     });
   });
 });

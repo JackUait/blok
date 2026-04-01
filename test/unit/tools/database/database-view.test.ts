@@ -180,6 +180,99 @@ describe('DatabaseView', () => {
     });
   });
 
+  describe('accessibility', () => {
+    it('board element has role="region" and aria-label="Kanban board"', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      expect(board.getAttribute('role')).toBe('region');
+      expect(board.getAttribute('aria-label')).toBe('Kanban board');
+    });
+
+    it('each column element has role="group"', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [
+        makeColumn({ id: 'col-1', position: 'a0' }),
+        makeColumn({ id: 'col-2', title: 'In Progress', position: 'a1' }),
+      ];
+      const board = view.createBoard(columns, () => []);
+
+      const columnEls = board.querySelectorAll('[data-blok-database-column]');
+
+      expect(columnEls[0].getAttribute('role')).toBe('group');
+      expect(columnEls[1].getAttribute('role')).toBe('group');
+    });
+
+    it('each column has aria-label set to the column title', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [
+        makeColumn({ id: 'col-1', title: 'To Do', position: 'a0' }),
+        makeColumn({ id: 'col-2', title: 'In Progress', position: 'a1' }),
+      ];
+      const board = view.createBoard(columns, () => []);
+
+      const columnEls = board.querySelectorAll('[data-blok-database-column]');
+
+      expect(columnEls[0].getAttribute('aria-label')).toBe('To Do');
+      expect(columnEls[1].getAttribute('aria-label')).toBe('In Progress');
+    });
+
+    it('cards container has role="list"', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const cardsContainer = board.querySelector('[data-blok-database-cards]');
+
+      expect(cardsContainer?.getAttribute('role')).toBe('list');
+    });
+
+    it('each card element has role="listitem"', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [
+        makeCard({ id: 'card-1', columnId: 'col-1', position: 'a0' }),
+        makeCard({ id: 'card-2', columnId: 'col-1', position: 'a1', title: 'Write tests' }),
+      ];
+      const board = view.createBoard(columns, () => cards);
+
+      const cardEls = board.querySelectorAll('[data-blok-database-card]');
+
+      expect(cardEls[0].getAttribute('role')).toBe('listitem');
+      expect(cardEls[1].getAttribute('role')).toBe('listitem');
+    });
+
+    it('delete card button has a descriptive aria-label', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const deleteBtn = board.querySelector('[data-blok-database-delete-card]');
+
+      expect(deleteBtn?.getAttribute('aria-label')).toBe('tools.database.deleteCard');
+    });
+
+    it('add-card button has an aria-label', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const addCardBtn = board.querySelector('[data-blok-database-add-card]');
+
+      expect(addCardBtn?.getAttribute('aria-label')).toBe('tools.database.addCard');
+    });
+
+    it('add-column button has an aria-label', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      const addColBtn = board.querySelector('[data-blok-database-add-column]');
+
+      expect(addColBtn?.getAttribute('aria-label')).toBe('tools.database.addColumn');
+    });
+  });
+
   describe('DOM update helpers', () => {
     it('appendCard adds a card element to a cards container', () => {
       const view = new DatabaseView({ readOnly: false, i18n });

@@ -71,6 +71,36 @@ describe('DatabaseColumnDrag', () => {
     expect(document.querySelector('[data-blok-database-column-ghost]')).toBeNull();
   });
 
+  it('cleans up previous tracking session when beginTracking is called again', () => {
+    drag.beginTracking('col-0', 50, 50);
+
+    // Move past threshold to create ghost for first session
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 50 }));
+
+    expect(document.querySelector('[data-blok-database-column-ghost]')).not.toBeNull();
+
+    // Start a second tracking session without explicit cleanup
+    drag.beginTracking('col-1', 250, 50);
+
+    // The ghost from the first session should be removed
+    expect(document.querySelector('[data-blok-database-column-ghost]')).toBeNull();
+
+    // Move past threshold to start drag for the second session
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 270, clientY: 50 }));
+
+    // Verify second session is active — ghost exists
+    expect(document.querySelector('[data-blok-database-column-ghost]')).not.toBeNull();
+
+    // Drop the second column
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 270, clientY: 50 }));
+
+    // onDrop should be called with col-1, not col-0
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onDrop).toHaveBeenCalledWith(
+      expect.objectContaining({ columnId: 'col-1' })
+    );
+  });
+
   it('cleans up ghost on pointerup — no [data-blok-database-column-ghost] in DOM', () => {
     drag.beginTracking('col-0', 50, 50);
 
@@ -82,5 +112,48 @@ describe('DatabaseColumnDrag', () => {
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 70, clientY: 50 }));
 
     expect(document.querySelector('[data-blok-database-column-ghost]')).toBeNull();
+  });
+
+  it('calls onDrop with correct data when moving column left to right', () => {
+    // Columns: col-0 [0-200], col-1 [200-400], col-2 [400-600]
+    // Drag col-0 starting at x=50, move past col-1's midpoint (300)
+    drag.beginTracking('col-0', 50, 50);
+
+    // Move past drag threshold
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 50 }));
+
+    // Drop at x=350 — past col-1 midpoint (300), before col-2 midpoint (500)
+    // col-0 is excluded from position calc; remaining: col-1 [200-400], col-2 [400-600]
+    // x=350 < col-2 midpoint (500), so beforeColumn=col-2, afterColumn=col-1
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 350, clientY: 50 }));
+
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onDrop).toHaveBeenCalledWith({
+      columnId: 'col-0',
+      beforeColumnId: 'col-2',
+      afterColumnId: 'col-1',
+    });
+  });
+
+  it('calls onDrop with correct data when moving column to end', () => {
+    // Columns: col-0 [0-200], col-1 [200-400], col-2 [400-600]
+    // Drag col-0 past all columns — drop at x=650 (beyond col-2)
+    drag.beginTracking('col-0', 50, 50);
+
+    // Move past drag threshold
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 50 }));
+
+    // Drop at x=650 — past all column midpoints
+    // col-0 excluded; remaining: col-1 [200-400], col-2 [400-600]
+    // x=650 > col-2 midpoint (500), so we fall through the loop
+    // beforeColumn=null, afterColumn=col-2
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 650, clientY: 50 }));
+
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onDrop).toHaveBeenCalledWith({
+      columnId: 'col-0',
+      beforeColumnId: null,
+      afterColumnId: 'col-2',
+    });
   });
 });

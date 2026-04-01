@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { KanbanData, DatabaseConfig } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
+import { DatabaseCardPeek } from '../../../../src/tools/database/database-card-peek';
+import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 
 const createMockAPI = (): API => ({
   styles: {
@@ -368,6 +370,65 @@ describe('DatabaseTool', () => {
       tool.render();
 
       expect(() => tool.destroy()).not.toThrow();
+    });
+  });
+
+  describe('rerenderBoard destroys cardPeek subsystem', () => {
+    it('destroys cardPeek when rerender is triggered by card drop', () => {
+      const initialData: KanbanData = {
+        columns: [
+          { id: 'col-1', title: 'Todo', position: 'a0' },
+          { id: 'col-2', title: 'Done', position: 'a1' },
+        ],
+        cardMap: {
+          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
+        },
+      };
+
+      // Spy on DatabaseCardPeek.prototype.destroy to detect if it's called during rerender
+      const peekDestroySpy = vi.spyOn(DatabaseCardPeek.prototype, 'destroy');
+
+      const tool = new DatabaseTool(createDatabaseOptions(initialData));
+
+      tool.render();
+
+      // The tool is rendered and subsystems are initialised.
+      // We need to get at the cardDrag's onDrop to trigger a rerender.
+      // Access the private cardDrag field to capture onDrop.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cardDrag = (tool as any).cardDrag as DatabaseCardDrag;
+
+      expect(cardDrag).not.toBeNull();
+
+      // Access the private onDrop callback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onDrop = (cardDrag as any).onDrop as (result: CardDragResult) => void;
+
+      // Reset spy call count — destroy may have been called during setup
+      peekDestroySpy.mockClear();
+
+      // Trigger a card drop which calls handleCardDrop -> rerenderBoard
+      onDrop({
+        cardId: 'card-1',
+        toColumnId: 'col-2',
+        beforeCardId: null,
+        afterCardId: null,
+      });
+
+      // cardPeek.destroy() should have been called during rerenderBoard
+      expect(peekDestroySpy).toHaveBeenCalled();
+
+      tool.destroy();
+      peekDestroySpy.mockRestore();
+    });
+  });
+
+  describe('handleColumnRecolor is not defined as a method', () => {
+    it('does not have handleColumnRecolor method', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((tool as any).handleColumnRecolor).toBeUndefined();
     });
   });
 });

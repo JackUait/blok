@@ -42,6 +42,7 @@ export class DatabaseColumnDrag {
   }
 
   public beginTracking(columnId: string, startX: number, startY: number): void {
+    this.cleanup();
     this.columnId = columnId;
     this.startX = startX;
     this.startY = startY;

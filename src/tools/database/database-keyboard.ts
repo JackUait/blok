@@ -1,11 +1,11 @@
 export interface DatabaseKeyboardOptions {
   wrapper: HTMLElement;
-  onEscape: () => void;
+  onEscape: () => boolean;
 }
 
 export class DatabaseKeyboard {
   private wrapper: HTMLElement;
-  private onEscape: () => void;
+  private onEscape: () => boolean;
   private boundKeydown: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(options: DatabaseKeyboardOptions) {
@@ -16,7 +16,11 @@ export class DatabaseKeyboard {
   attach(): void {
     this.boundKeydown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
-        this.onEscape();
+        const handled = this.onEscape();
+
+        if (handled) {
+          e.stopPropagation();
+        }
       }
     };
     this.wrapper.addEventListener('keydown', this.boundKeydown);

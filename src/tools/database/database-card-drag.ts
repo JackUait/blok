@@ -47,6 +47,7 @@ export class DatabaseCardDrag {
    * Start tracking pointer after a pointerdown on a card.
    */
   public beginTracking(cardId: string, startX: number, startY: number): void {
+    this.cleanup();
     this.cardId = cardId;
     this.startX = startX;
     this.startY = startY;
@@ -220,7 +221,8 @@ export class DatabaseCardDrag {
   }
 
   private getDropPosition(column: HTMLElement, clientY: number): { beforeEl: Element | null } {
-    const cards = Array.from(column.querySelectorAll<HTMLElement>('[data-blok-database-card]'));
+    const cards = Array.from(column.querySelectorAll<HTMLElement>('[data-blok-database-card]'))
+      .filter((card) => card.getAttribute('data-card-id') !== this.cardId);
 
     for (const card of cards) {
       const rect = card.getBoundingClientRect();
@@ -255,7 +257,8 @@ export class DatabaseCardDrag {
 
     const toColumnId = targetColumn.getAttribute('data-column-id') ?? '';
     const position = this.getDropPosition(targetColumn, e.clientY);
-    const cards = Array.from(targetColumn.querySelectorAll<HTMLElement>('[data-blok-database-card]'));
+    const cards = Array.from(targetColumn.querySelectorAll<HTMLElement>('[data-blok-database-card]'))
+      .filter((card) => card.getAttribute('data-card-id') !== this.cardId);
 
     const beforeCardId: string | null = position.beforeEl
       ? position.beforeEl.getAttribute('data-card-id')

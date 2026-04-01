@@ -53,6 +53,8 @@ export class DatabaseCardPeek {
     const panel = document.createElement('div');
 
     panel.setAttribute('data-blok-database-peek', '');
+    panel.setAttribute('role', 'complementary');
+    panel.setAttribute('aria-label', 'Card details');
     panel.style.position = 'absolute';
     panel.style.right = '0';
     panel.style.top = '0';
@@ -65,11 +67,11 @@ export class DatabaseCardPeek {
     const closeBtn = document.createElement('button');
 
     closeBtn.setAttribute('data-blok-database-peek-close', '');
+    closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.style.position = 'absolute';
     closeBtn.style.top = '0';
     closeBtn.style.right = '0';
     closeBtn.addEventListener('click', () => {
-      this.onClose();
       this.close();
     });
     panel.appendChild(closeBtn);
@@ -77,6 +79,7 @@ export class DatabaseCardPeek {
     const titleInput = document.createElement('input');
 
     titleInput.setAttribute('data-blok-database-peek-title', '');
+    titleInput.setAttribute('aria-label', 'Card title');
     titleInput.value = card.title;
     titleInput.readOnly = this.readOnly;
     titleInput.addEventListener('input', () => {
@@ -114,7 +117,6 @@ export class DatabaseCardPeek {
         return;
       }
 
-      this.onClose();
       this.close();
     };
     document.addEventListener('keydown', this.escapeHandler);
@@ -123,6 +125,8 @@ export class DatabaseCardPeek {
   }
 
   close(): void {
+    const wasOpen = this.panel !== null;
+
     if (this.escapeHandler) {
       document.removeEventListener('keydown', this.escapeHandler);
       this.escapeHandler = null;
@@ -153,6 +157,10 @@ export class DatabaseCardPeek {
     }
 
     this.currentCardId = null;
+
+    if (wasOpen) {
+      this.onClose();
+    }
   }
 
   destroy(): void {

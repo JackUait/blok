@@ -104,4 +104,74 @@ describe('DatabaseCardPeek', () => {
     expect(titleInput).not.toBeNull();
     expect(titleInput.readOnly).toBe(true);
   });
+
+  describe('accessibility', () => {
+    it('panel has role="complementary" and aria-label', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const panel = options.wrapper.querySelector('[data-blok-database-peek]') as HTMLElement;
+
+      expect(panel.getAttribute('role')).toBe('complementary');
+      expect(panel.getAttribute('aria-label')).toBeTruthy();
+    });
+
+    it('close button has aria-label="Close"', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const closeBtn = options.wrapper.querySelector('[data-blok-database-peek-close]') as HTMLButtonElement;
+
+      expect(closeBtn.getAttribute('aria-label')).toBe('Close');
+    });
+
+    it('title input has aria-label', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-peek-title]') as HTMLInputElement;
+
+      expect(titleInput.getAttribute('aria-label')).toBeTruthy();
+    });
+  });
+
+  describe('close notification consistency', () => {
+    it('calls onClose callback when close() is called directly', () => {
+      const onClose = vi.fn();
+      const options = createOptions({ onClose });
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+      onClose.mockClear();
+
+      peek.close();
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('calls onClose callback when open() is called while already open', () => {
+      const onClose = vi.fn();
+      const options = createOptions({ onClose });
+      const peek = new DatabaseCardPeek(options);
+      const card1 = makeCard({ id: 'card-1' });
+      const card2 = makeCard({ id: 'card-2' });
+
+      peek.open(card1);
+      onClose.mockClear();
+
+      peek.open(card2);
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
 });

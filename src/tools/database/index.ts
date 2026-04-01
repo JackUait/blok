@@ -232,7 +232,6 @@ export class DatabaseTool implements BlockTool {
     this.columnControls = new DatabaseColumnControls({
       i18n: this.api.i18n,
       onRename: (columnId, title) => this.handleColumnRename(columnId, title),
-      onRecolor: (columnId, color) => this.handleColumnRecolor(columnId, color),
       onDelete: (columnId) => this.handleColumnDelete(columnId),
     });
 
@@ -271,7 +270,11 @@ export class DatabaseTool implements BlockTool {
       onEscape: () => {
         if (this.cardPeek?.isOpen) {
           this.cardPeek.close();
+
+          return true;
         }
+
+        return false;
       },
     });
     this.keyboard.attach();
@@ -354,11 +357,6 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncUpdateColumn({ columnId, changes: { title } });
   }
 
-  private handleColumnRecolor(columnId: string, color: string): void {
-    this.model.updateColumn(columnId, { color });
-    void this.sync.syncUpdateColumn({ columnId, changes: { color } });
-  }
-
   private handleColumnDelete(columnId: string): void {
     if (this.model.getColumnCount() <= 1) {
       return;
@@ -400,6 +398,7 @@ export class DatabaseTool implements BlockTool {
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
+    this.cardPeek?.destroy();
     this.keyboard?.destroy();
 
     const orderedColumns = this.model.getOrderedColumns();

@@ -13,6 +13,14 @@ import {
 import { migrateMarkColors } from '../utils/color-migration';
 
 /**
+ * Map of legacy EditorJS tool names to their Blok equivalents.
+ * Used during rendering to transparently migrate old article data.
+ */
+const TOOL_ALIASES: Readonly<Record<string, string>> = {
+  delimiter: 'divider',
+};
+
+/**
  * Module that responsible for rendering Blocks on blok initialization
  */
 export class Renderer extends Module {
@@ -107,6 +115,15 @@ export class Renderer extends Module {
             if (Tools.available.has(originalTool)) {
               return {
                 tool: originalTool,
+                data: blockToolData,
+              };
+            }
+
+            const aliasTarget = TOOL_ALIASES[originalTool];
+
+            if (aliasTarget !== undefined && Tools.available.has(aliasTarget)) {
+              return {
+                tool: aliasTarget,
                 data: blockToolData,
               };
             }

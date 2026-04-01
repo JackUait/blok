@@ -10,6 +10,7 @@ This guide covers the breaking changes when migrating from EditorJS to Blok.
 - [Bundled Tools](#bundled-tools)
   - [Tool Configuration](#tool-configuration)
   - [Lifecycle Hooks](#lifecycle-hooks)
+  - [Delimiter → Divider](#delimiter--divider)
 - [Configuration Defaults](#configuration-defaults)
 - [New API Methods](#new-api-methods)
 - [DOM Selectors](#dom-selectors)
@@ -267,6 +268,33 @@ const editor = new Blok({
 | `placeholder` | `string` | `''` | Placeholder text for empty paragraph |
 | `preserveBlank` | `boolean` | `false` | Keep empty paragraphs when saving |
 
+### Delimiter → Divider
+
+Editor.js's `@editorjs/delimiter` is replaced by Blok's built-in `divider` tool:
+
+```diff
+- import Delimiter from '@editorjs/delimiter';
+
+const editor = new Blok({
+  tools: {
+-   delimiter: Delimiter,
++   divider: Blok.Divider,
+  },
+});
+```
+
+**Saved data migration:** The block type name changed from `"delimiter"` to `"divider"`. The data format is identical (empty `{}`):
+
+```diff
+  {
+-   "type": "delimiter",
++   "type": "divider",
+    "data": {}
+  }
+```
+
+> **Note:** Blok automatically recognizes `"delimiter"` blocks and renders them as dividers, so existing articles work without data migration. However, renaming the type in your database is recommended for consistency.
+
 ---
 
 ## Configuration Defaults
@@ -398,6 +426,7 @@ Update your test selectors to use Blok's `data-blok-testid` attributes:
 - [ ] Update imports from `@editorjs/*` to `@jackuait/blok`
 - [ ] Change holder from `editorjs` to `blok` (or specify explicitly)
 - [ ] Use bundled tools: `Blok.Header`, `Blok.Paragraph`
+- [ ] Replace `@editorjs/delimiter` with built-in `Blok.Divider`
 - [ ] Update `EditorConfig` type to `BlokConfig`
 - [ ] Replace `data-id` with `data-blok-id` in queries
 - [ ] Replace `data-item-name` with `data-blok-item-name`

@@ -962,6 +962,54 @@ function splitBlokImports(content) {
   return { result, changed };
 }
 
+// Block type mappings for saved article data (JSON)
+const BLOCK_TYPE_TRANSFORMS = {
+  delimiter: 'divider',
+};
+
+/**
+ * Apply block type transforms to JSON article data.
+ * Renames legacy EditorJS block types to their Blok equivalents.
+ * @param {string} jsonString - JSON string containing article data
+ * @returns {string} Transformed JSON string
+ */
+function applyBlockTypeTransforms(jsonString) {
+  try {
+    const data = JSON.parse(jsonString);
+    const transformBlocks = (obj) => {
+      if (Array.isArray(obj)) {
+        return obj.map(transformBlocks);
+      }
+      if (obj !== null && typeof obj === 'object') {
+        const result = {};
+
+        for (const [key, value] of Object.entries(obj)) {
+          if (key === 'type' && typeof value === 'string' && BLOCK_TYPE_TRANSFORMS[value]) {
+            result[key] = BLOCK_TYPE_TRANSFORMS[value];
+          } else {
+            result[key] = transformBlocks(value);
+          }
+        }
+
+        return result;
+      }
+
+      return obj;
+    };
+
+    return JSON.stringify(transformBlocks(data), null, 2);
+  } catch {
+    // If not valid JSON, try regex-based replacement as fallback
+    let result = jsonString;
+
+    for (const [from, to] of Object.entries(BLOCK_TYPE_TRANSFORMS)) {
+      result = result.replace(new RegExp(`"type":\\s*"${from}"`, 'g'), `"type": "${to}"`);
+    }
+
+    return result;
+  }
+}
+
 // Text transformations for "EditorJS" string references
 const TEXT_TRANSFORMS = [
   // Replace exact "EditorJS" text (preserves case-sensitive matching)
@@ -1610,4 +1658,6 @@ module.exports = {
   TOOL_CONFIG_TRANSFORMS,
   INTERNAL_TOOL_REMOVAL_TRANSFORMS,
   TEXT_TRANSFORMS,
+  BLOCK_TYPE_TRANSFORMS,
+  applyBlockTypeTransforms,
 };

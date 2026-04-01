@@ -23,6 +23,8 @@ const {
   SELECTOR_TRANSFORMS,
   HOLDER_TRANSFORMS,
   TOOL_CONFIG_TRANSFORMS,
+  BLOCK_TYPE_TRANSFORMS,
+  applyBlockTypeTransforms,
 } = require('./migrate-editorjs-to-blok');
 
 // Test helper
@@ -1206,6 +1208,43 @@ const editor = new Blok({
   assertEqual(changed, true, 'Should split imports');
   assertEqual(splitResult.includes("import { Blok } from '@jackuait/blok';"), true, 'Should have core import');
   assertEqual(splitResult.includes("import { Header, Paragraph, Bold, Italic } from '@jackuait/blok/tools';"), true, 'Should have tools import');
+});
+
+// ============================================================================
+// Block Type Transforms (Saved Data Migration)
+// ============================================================================
+
+console.log('\n📄 Block Type Transforms (Saved Data)\n');
+
+test('renames delimiter block type to divider in JSON data', () => {
+  const input = JSON.stringify({
+    blocks: [
+      { type: 'delimiter', data: {} },
+      { type: 'paragraph', data: { text: 'hello' } },
+    ]
+  }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  const parsed = JSON.parse(result);
+  assertEqual(parsed.blocks[0].type, 'divider');
+  assertEqual(parsed.blocks[1].type, 'paragraph'); // unchanged
+});
+
+test('handles delimiter in compact JSON', () => {
+  const input = '{"type":"delimiter","data":{}}';
+  const result = applyBlockTypeTransforms(input);
+  assertEqual(result.includes('"type":"divider"') || result.includes('"type": "divider"'), true, 'Should contain divider type');
+  assertEqual(result.includes('delimiter'), false, 'Should not contain delimiter');
+});
+
+test('does not modify non-matching block types', () => {
+  const input = JSON.stringify({ blocks: [{ type: 'paragraph', data: { text: 'test' } }] }, null, 2);
+  const result = applyBlockTypeTransforms(input);
+  assertEqual(result, input);
+});
+
+test('exports BLOCK_TYPE_TRANSFORMS constant', () => {
+  assertEqual(typeof BLOCK_TYPE_TRANSFORMS, 'object');
+  assertEqual(BLOCK_TYPE_TRANSFORMS.delimiter, 'divider');
 });
 
 // ============================================================================

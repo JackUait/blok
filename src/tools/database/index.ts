@@ -210,7 +210,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * Initializes all subsystems: card drag, column drag, column controls, card peek, keyboard.
+   * Initializes all subsystems: card drag, column drag, column controls, card drawer, keyboard.
    */
   private initSubsystems(): void {
     if (this.element === null) {

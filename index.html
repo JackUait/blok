@@ -268,7 +268,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Bold, Italic, Link, Marker, Underline, Strikethrough } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, Bold, Italic, Link, Marker, Underline, Strikethrough } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -286,6 +286,7 @@
         table: true,
         toggle: true,
         callout: true,
+        database: true,
       },
     };
 
@@ -823,6 +824,7 @@
       if (state.tools.table) tools.table = Table;
       if (state.tools.toggle) tools.toggle = { class: Toggle, inlineToolbar: true };
       if (state.tools.callout) tools.callout = { class: Callout, inlineToolbar: true };
+      if (state.tools.database) tools.database = Database;
       return {
         readOnly: state.readOnly,
         holder: 'blok',
@@ -991,6 +993,7 @@
       { key: 'table', label: 'Table', icon: Icons.IconTable },
       { key: 'toggle', label: 'Toggle', icon: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 2.5L8.5 6L4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
       { key: 'callout', label: 'Callout', icon: Icons.IconCallout },
+      { key: 'database', label: 'Database', icon: Icons.IconDatabase },
     ];
 
     const toolTogglesContainer = document.getElementById('tool-toggles');

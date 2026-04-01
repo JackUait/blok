@@ -15,9 +15,9 @@ import { twMerge } from '../../components/utils/tw';
  */
 export class DividerTool implements BlockTool {
   /**
-   * Rendered HR element
+   * Rendered wrapper element
    */
-  private element: HTMLHRElement | null = null;
+  private element: HTMLElement | null = null;
 
   /**
    * @param _options - block tool constructor options (unused for divider)
@@ -25,15 +25,22 @@ export class DividerTool implements BlockTool {
   constructor(_options: BlockToolConstructorOptions<DividerData>) {}
 
   /**
-   * Render a semantic <hr> element
+   * Render a wrapper with a semantic <hr> element inside.
+   * Wrapper uses padding for spacing and minimal line-height so the
+   * toolbar positioning algorithm centers correctly on the divider line.
    */
-  public render(): HTMLHRElement {
+  public render(): HTMLElement {
+    const wrapper = document.createElement('div');
+
+    wrapper.className = twMerge('py-3', 'leading-[1px]');
+
     const hr = document.createElement('hr');
 
-    hr.className = twMerge('border-t', 'border-border-primary', 'my-2', 'border-b-0', 'border-l-0', 'border-r-0');
-    this.element = hr;
+    hr.className = twMerge('border-t', 'border-border-primary', 'border-b-0', 'border-l-0', 'border-r-0');
+    wrapper.appendChild(hr);
+    this.element = wrapper;
 
-    return hr;
+    return wrapper;
   }
 
   /**

@@ -36,12 +36,13 @@ describe('DividerTool', () => {
   });
 
   describe('render()', () => {
-    it('returns an HTMLHRElement', async () => {
+    it('returns a wrapper div containing an hr element', async () => {
       const { DividerTool } = await import('../../../../src/tools/divider');
       const tool = new DividerTool(createOptions());
       const el = tool.render();
 
-      expect(el).toBeInstanceOf(HTMLHRElement);
+      expect(el).toBeInstanceOf(HTMLDivElement);
+      expect(el.querySelector('hr')).toBeInstanceOf(HTMLHRElement);
     });
 
     it('has no contentEditable elements', async () => {
@@ -53,13 +54,30 @@ describe('DividerTool', () => {
       expect(editables).toHaveLength(0);
     });
 
-    it('applies Tailwind border classes', async () => {
+    it('applies vertical padding on wrapper for spacing', async () => {
       const { DividerTool } = await import('../../../../src/tools/divider');
       const tool = new DividerTool(createOptions());
       const el = tool.render();
 
-      expect(el.className).toContain('border-t');
-      expect(el.className).toContain('my-2');
+      expect(el.className).toContain('py-3');
+    });
+
+    it('sets minimal line-height on wrapper for toolbar centering', async () => {
+      const { DividerTool } = await import('../../../../src/tools/divider');
+      const tool = new DividerTool(createOptions());
+      const el = tool.render();
+
+      expect(el.className).toContain('leading-[1px]');
+    });
+
+    it('applies border classes on the hr element', async () => {
+      const { DividerTool } = await import('../../../../src/tools/divider');
+      const tool = new DividerTool(createOptions());
+      const el = tool.render();
+      const hr = el.querySelector('hr')!;
+
+      expect(hr.className).toContain('border-t');
+      expect(hr.className).toContain('border-border-primary');
     });
   });
 
@@ -133,12 +151,13 @@ describe('DividerTool', () => {
   });
 
   describe('read-only mode', () => {
-    it('renders the same element in read-only mode', async () => {
+    it('renders the same wrapper with hr in read-only mode', async () => {
       const { DividerTool } = await import('../../../../src/tools/divider');
       const tool = new DividerTool(createOptions({}, { readOnly: true }));
       const el = tool.render();
 
-      expect(el).toBeInstanceOf(HTMLHRElement);
+      expect(el).toBeInstanceOf(HTMLDivElement);
+      expect(el.querySelector('hr')).toBeInstanceOf(HTMLHRElement);
     });
   });
 });

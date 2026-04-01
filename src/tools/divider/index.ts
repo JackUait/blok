@@ -57,6 +57,7 @@ export class DividerTool implements BlockTool {
     return {
       icon: IconDivider,
       titleKey: 'divider',
+      shortcut: '---',
       searchTerms: ['hr', 'line', 'separator', 'rule', '---'],
     };
   }

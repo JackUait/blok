@@ -441,6 +441,13 @@ export const IconPaintRoller = `<svg xmlns="http://www.w3.org/2000/svg" width="2
   <rect x="8" y="14" width="3" height="3.5" rx="0.75" stroke="currentColor" stroke-width="1.25"/>
 </svg>`;
 
+// Divider icon
+export const IconDivider = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 10h12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Emoji Picker Category Icons
 
 // Star icon (Callout category)

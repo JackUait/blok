@@ -118,6 +118,18 @@ describe('DividerTool', () => {
 
       expect(!Array.isArray(toolbox) && toolbox.searchTerms).toContain('---');
     });
+
+    it('has searchTermKeys for translated aliases', async () => {
+      const { DividerTool } = await import('../../../../src/tools/divider');
+      const toolbox = DividerTool.toolbox;
+
+      expect(!Array.isArray(toolbox) && toolbox.searchTermKeys).toEqual([
+        'divider',
+        'separator',
+        'delimiter',
+        'splitter',
+      ]);
+    });
   });
 
   describe('static isReadOnlySupported', () => {

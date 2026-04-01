@@ -2,6 +2,13 @@ import { generateKeyBetween, generateNKeysBetween } from 'fractional-indexing';
 import { nanoid } from 'nanoid';
 import type { KanbanData, KanbanColumnData, KanbanCardData } from './types';
 
+function comparePositions(a: string, b: string): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+
+  return 0;
+}
+
 /**
  * Pure data model for the kanban board.
  * Manages columns, cards, and their fractional-index ordering.
@@ -54,14 +61,14 @@ export class DatabaseModel {
   getOrderedCards(columnId: string): KanbanCardData[] {
     return Object.values(this.cardMap)
       .filter(card => card.columnId === columnId)
-      .sort((a, b) => (a.position < b.position ? -1 : a.position > b.position ? 1 : 0));
+      .sort((a, b) => comparePositions(a.position, b.position));
   }
 
   /**
    * Returns all columns sorted by position (lexicographic string comparison).
    */
   getOrderedColumns(): KanbanColumnData[] {
-    return [...this.columns].sort((a, b) => (a.position < b.position ? -1 : a.position > b.position ? 1 : 0));
+    return [...this.columns].sort((a, b) => comparePositions(a.position, b.position));
   }
 
   /**
@@ -119,7 +126,7 @@ export class DatabaseModel {
    * Deletes a card from the model.
    */
   deleteCard(cardId: string): void {
-    delete this.cardMap[cardId];
+    Reflect.deleteProperty(this.cardMap, cardId);
   }
 
   /**
@@ -180,7 +187,7 @@ export class DatabaseModel {
     for (const [id, card] of Object.entries(this.cardMap)) {
       if (card.columnId === columnId) {
         deletedCardIds.push(id);
-        delete this.cardMap[id];
+        Reflect.deleteProperty(this.cardMap, id);
       }
     }
 

@@ -1,4 +1,4 @@
-import type { OutputData } from '../../../types';
+import type { BlockToolData, OutputData } from '../../../types';
 
 export interface KanbanCardData {
   id: string;
@@ -15,7 +15,7 @@ export interface KanbanColumnData {
   position: string;
 }
 
-export interface KanbanData {
+export interface KanbanData extends BlockToolData {
   columns: KanbanColumnData[];
   cardMap: Record<string, KanbanCardData>;
 }

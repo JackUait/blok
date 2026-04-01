@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "स्ट्राइकथ्रू",
   "toolNames.callout": "कॉलआउट",
   "toolNames.divider": "विभाजक",
+  "toolNames.quote": "अवतरण",
   "searchTerms.divider": "विभाजक",
   "searchTerms.separator": "विभाजक रेषा",
   "searchTerms.delimiter": "सीमांकक",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "सावधानता",
   "searchTerms.tip": "सूचना",
   "searchTerms.alert": "सूचना संदेश",
+  "searchTerms.quote": "अवतरण",
+  "searchTerms.blockquote": "ब्लॉक अवतरण",
+  "searchTerms.citation": "संदर्भ",
   "tools.callout.placeholder": "कॉलआउट",
   "tools.callout.addEmoji": "इमोजी जोडा",
   "tools.callout.editIcon": "चिन्ह संपादित करा",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "निळा",
   "tools.callout.colorPurple": "जांभळा",
   "tools.callout.colorPink": "गुलाबी",
-  "tools.callout.colorRed": "लाल"
+  "tools.callout.colorRed": "लाल",
+  "tools.quote.placeholder": "अवतरण",
+  "tools.quote.defaultSize": "डीफॉल्ट",
+  "tools.quote.largeSize": "मोठा"
 }

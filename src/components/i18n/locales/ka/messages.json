@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "გადახაზვა",
   "toolNames.callout": "შენიშვნა",
   "toolNames.divider": "გამყოფი",
+  "toolNames.quote": "ციტატა",
   "searchTerms.divider": "გამყოფი",
   "searchTerms.separator": "გამოყოფა",
   "searchTerms.delimiter": "შემზღუდველი",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "გაფრთხილება",
   "searchTerms.tip": "რჩევა",
   "searchTerms.alert": "შეტყობინება",
+  "searchTerms.quote": "ციტატა",
+  "searchTerms.blockquote": "ბლოკ ციტატა",
+  "searchTerms.citation": "მითითება",
   "tools.callout.placeholder": "შენიშვნა",
   "tools.callout.addEmoji": "ემოჯის დამატება",
   "tools.callout.editIcon": "ხატულას რედაქტირება",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "ლურჯი",
   "tools.callout.colorPurple": "იისფერი",
   "tools.callout.colorPink": "ვარდისფერი",
-  "tools.callout.colorRed": "წითელი"
+  "tools.callout.colorRed": "წითელი",
+  "tools.quote.placeholder": "ციტატა",
+  "tools.quote.defaultSize": "ნაგულისხმევი",
+  "tools.quote.largeSize": "დიდი"
 }

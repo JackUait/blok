@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Tachado",
   "toolNames.callout": "Llamada",
   "toolNames.divider": "Divisor",
+  "toolNames.quote": "Cita",
   "searchTerms.divider": "divisor",
   "searchTerms.separator": "separador",
   "searchTerms.delimiter": "delimitador",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "advertencia",
   "searchTerms.tip": "consejo",
   "searchTerms.alert": "alerta",
+  "searchTerms.quote": "cita",
+  "searchTerms.blockquote": "bloque de cita",
+  "searchTerms.citation": "referencia",
   "tools.callout.placeholder": "Llamada",
   "tools.callout.addEmoji": "Añadir emoji",
   "tools.callout.editIcon": "Editar icono",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Azul",
   "tools.callout.colorPurple": "Morado",
   "tools.callout.colorPink": "Rosa",
-  "tools.callout.colorRed": "Rojo"
+  "tools.callout.colorRed": "Rojo",
+  "tools.quote.placeholder": "Cita",
+  "tools.quote.defaultSize": "Predeterminado",
+  "tools.quote.largeSize": "Grande"
 }

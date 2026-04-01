@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "وچ لڪير",
   "toolNames.callout": "نوٽ",
   "toolNames.divider": "ورهائيندڙ",
+  "toolNames.quote": "اقتباس",
   "searchTerms.divider": "ورهائيندڙ",
   "searchTerms.separator": "الڳ ڪندڙ",
   "searchTerms.delimiter": "حد بندي",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "خبردار",
   "searchTerms.tip": "صلاح",
   "searchTerms.alert": "الرٽ",
+  "searchTerms.quote": "اقتباس",
+  "searchTerms.blockquote": "بلاڪ اقتباس",
+  "searchTerms.citation": "حوالو",
   "tools.callout.placeholder": "نوٽ",
   "tools.callout.addEmoji": "ايموجي شامل ڪريو",
   "tools.callout.editIcon": "آئیکن تبديل ڪريو",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "آسماني",
   "tools.callout.colorPurple": "جامني",
   "tools.callout.colorPink": "گلابي",
-  "tools.callout.colorRed": "ڳاڙهو"
+  "tools.callout.colorRed": "ڳاڙهو",
+  "tools.quote.placeholder": "اقتباس",
+  "tools.quote.defaultSize": "ڊفالٽ",
+  "tools.quote.largeSize": "وڏو"
 }

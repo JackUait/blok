@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Διαγράμμιση",
   "toolNames.callout": "Επεξήγηση",
   "toolNames.divider": "Διαχωριστικό",
+  "toolNames.quote": "Παράθεση",
   "searchTerms.divider": "διαχωριστής",
   "searchTerms.separator": "διαχωριστικό",
   "searchTerms.delimiter": "οριοθέτης",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "προειδοποίηση",
   "searchTerms.tip": "συμβουλή",
   "searchTerms.alert": "ειδοποίηση",
+  "searchTerms.quote": "παράθεση",
+  "searchTerms.blockquote": "εσοχή παράθεσης",
+  "searchTerms.citation": "αναφορά",
   "tools.callout.placeholder": "Επεξήγηση",
   "tools.callout.addEmoji": "Προσθήκη emoji",
   "tools.callout.editIcon": "Επεξεργασία εικονιδίου",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Μπλε",
   "tools.callout.colorPurple": "Μωβ",
   "tools.callout.colorPink": "Ροζ",
-  "tools.callout.colorRed": "Κόκκινο"
+  "tools.callout.colorRed": "Κόκκινο",
+  "tools.quote.placeholder": "Παράθεση",
+  "tools.quote.defaultSize": "Προεπιλογή",
+  "tools.quote.largeSize": "Μεγάλο"
 }

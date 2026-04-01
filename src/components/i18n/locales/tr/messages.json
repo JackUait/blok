@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Üstü çizili",
   "toolNames.callout": "Bilgi kutusu",
   "toolNames.divider": "Ayırıcı",
+  "toolNames.quote": "Alıntı",
   "searchTerms.divider": "ayırıcı",
   "searchTerms.separator": "ayraç",
   "searchTerms.delimiter": "sınırlayıcı",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "uyarı",
   "searchTerms.tip": "ipucu",
   "searchTerms.alert": "bildirim",
+  "searchTerms.quote": "alıntı",
+  "searchTerms.blockquote": "blok alıntı",
+  "searchTerms.citation": "kaynak",
   "tools.callout.placeholder": "Bilgi kutusu",
   "tools.callout.addEmoji": "Emoji ekle",
   "tools.callout.editIcon": "Simgeyi düzenle",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Mavi",
   "tools.callout.colorPurple": "Mor",
   "tools.callout.colorPink": "Pembe",
-  "tools.callout.colorRed": "Kırmızı"
+  "tools.callout.colorRed": "Kırmızı",
+  "tools.quote.placeholder": "Alıntı",
+  "tools.quote.defaultSize": "Varsayılan",
+  "tools.quote.largeSize": "Büyük"
 }

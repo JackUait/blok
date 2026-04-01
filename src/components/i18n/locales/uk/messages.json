@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Закреслений",
   "toolNames.callout": "Виноска",
   "toolNames.divider": "Роздільник",
+  "toolNames.quote": "Цитата",
   "searchTerms.divider": "роздільник",
   "searchTerms.separator": "сепаратор",
   "searchTerms.delimiter": "обмежувач",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "попередження",
   "searchTerms.tip": "порада",
   "searchTerms.alert": "сповіщення",
+  "searchTerms.quote": "цитата",
+  "searchTerms.blockquote": "блок цитати",
+  "searchTerms.citation": "посилання",
   "tools.callout.placeholder": "Виноска",
   "tools.callout.addEmoji": "Додати емодзі",
   "tools.callout.editIcon": "Редагувати іконку",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Синій",
   "tools.callout.colorPurple": "Фіолетовий",
   "tools.callout.colorPink": "Рожевий",
-  "tools.callout.colorRed": "Червоний"
+  "tools.callout.colorRed": "Червоний",
+  "tools.quote.placeholder": "Цитата",
+  "tools.quote.defaultSize": "за замовчуванням",
+  "tools.quote.largeSize": "Великий"
 }

@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Strikethrough",
   "toolNames.callout": "Callout",
   "toolNames.divider": "Divider",
+  "toolNames.quote": "Quote",
   "searchTerms.divider": "divider",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "delimiter",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "warning",
   "searchTerms.tip": "tip",
   "searchTerms.alert": "alert",
+  "searchTerms.quote": "quote",
+  "searchTerms.blockquote": "blockquote",
+  "searchTerms.citation": "citation",
   "tools.callout.placeholder": "Callout",
   "tools.callout.addEmoji": "Add emoji",
   "tools.callout.editIcon": "Edit icon",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Blue",
   "tools.callout.colorPurple": "Purple",
   "tools.callout.colorPink": "Pink",
-  "tools.callout.colorRed": "Red"
+  "tools.callout.colorRed": "Red",
+  "tools.quote.placeholder": "Quote",
+  "tools.quote.defaultSize": "Default",
+  "tools.quote.largeSize": "Large"
 }

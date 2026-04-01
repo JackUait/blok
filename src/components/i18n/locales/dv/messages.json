@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "ސްޓްރައިކްތުރޫ",
   "toolNames.callout": "ނޯޓް",
   "toolNames.divider": "ބެހޭ",
+  "toolNames.quote": "ނަޤުލު",
   "searchTerms.divider": "ބައިކުރާ ރޮނގު",
   "searchTerms.separator": "ވަކިކުރާ ރޮނގު",
   "searchTerms.delimiter": "އިމެއް ކަނޑައެޅުން",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "އިންޒާރު",
   "searchTerms.tip": "އިރުޝާދު",
   "searchTerms.alert": "ސަމާލުވުން",
+  "searchTerms.quote": "ނަޤުލު",
+  "searchTerms.blockquote": "ބްލޮކް ނަޤުލު",
+  "searchTerms.citation": "ޙަވާލާ",
   "tools.callout.placeholder": "ނޯޓް",
   "tools.callout.addEmoji": "އިމޯޖީ އިތުރުކުރޭ",
   "tools.callout.editIcon": "އައިކަން ބަދަލުކުރޭ",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "ނޫ",
   "tools.callout.colorPurple": "ދަނބުކުލަ",
   "tools.callout.colorPink": "ފިޔާތޮށިކުލަ",
-  "tools.callout.colorRed": "ރަތް"
+  "tools.callout.colorRed": "ރަތް",
+  "tools.quote.placeholder": "ނަޤުލު",
+  "tools.quote.defaultSize": "ޑީފޯލްޓް",
+  "tools.quote.largeSize": "ބޮޑު"
 }

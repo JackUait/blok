@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Coret",
   "toolNames.callout": "Info",
   "toolNames.divider": "Pemisah",
+  "toolNames.quote": "Kutipan",
   "searchTerms.divider": "pembagi",
   "searchTerms.separator": "pemisah",
   "searchTerms.delimiter": "pembatas",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "peringatan",
   "searchTerms.tip": "kiat",
   "searchTerms.alert": "pemberitahuan",
+  "searchTerms.quote": "kutipan",
+  "searchTerms.blockquote": "blok kutipan",
+  "searchTerms.citation": "sitasi",
   "tools.callout.placeholder": "Info",
   "tools.callout.addEmoji": "Tambah emoji",
   "tools.callout.editIcon": "Edit ikon",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Biru",
   "tools.callout.colorPurple": "Ungu",
   "tools.callout.colorPink": "Merah muda",
-  "tools.callout.colorRed": "Merah"
+  "tools.callout.colorRed": "Merah",
+  "tools.quote.placeholder": "Kutipan",
+  "tools.quote.defaultSize": "Bawaan",
+  "tools.quote.largeSize": "Besar"
 }

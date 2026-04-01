@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "স্ট্রাইকথ্রু",
   "toolNames.callout": "কলআউট",
   "toolNames.divider": "বিভাজক",
+  "toolNames.quote": "উদ্ধৃতি",
   "searchTerms.divider": "বিভাজক",
   "searchTerms.separator": "বিভাজক রেখা",
   "searchTerms.delimiter": "সীমানাচিহ্ন",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "সতর্কতা",
   "searchTerms.tip": "পরামর্শ",
   "searchTerms.alert": "সতর্কবার্তা",
+  "searchTerms.quote": "উদ্ধৃতি",
+  "searchTerms.blockquote": "ব্লক উদ্ধৃতি",
+  "searchTerms.citation": "তথ্যসূত্র",
   "tools.callout.placeholder": "কলআউট",
   "tools.callout.addEmoji": "ইমোজি যোগ করুন",
   "tools.callout.editIcon": "আইকন সম্পাদনা করুন",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "নীল",
   "tools.callout.colorPurple": "বেগুনি",
   "tools.callout.colorPink": "গোলাপি",
-  "tools.callout.colorRed": "লাল"
+  "tools.callout.colorRed": "লাল",
+  "tools.quote.placeholder": "উদ্ধৃতি",
+  "tools.quote.defaultSize": "ডিফল্ট",
+  "tools.quote.largeSize": "বড়"
 }

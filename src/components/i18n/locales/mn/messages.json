@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Дундуур зураас",
   "toolNames.callout": "Тодорхойлол",
   "toolNames.divider": "Хуваагч",
+  "toolNames.quote": "Ишлэл",
   "searchTerms.divider": "хуваагч",
   "searchTerms.separator": "тусгаарлагч",
   "searchTerms.delimiter": "хязгаарлагч",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "анхааруулга",
   "searchTerms.tip": "зөвлөгөө",
   "searchTerms.alert": "сэрэмжлүүлэг",
+  "searchTerms.quote": "ишлэл",
+  "searchTerms.blockquote": "блок ишлэл",
+  "searchTerms.citation": "эшлэл",
   "tools.callout.placeholder": "Тодорхойлол",
   "tools.callout.addEmoji": "Эможи нэмэх",
   "tools.callout.editIcon": "Дүрсийг засах",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Цэнхэр",
   "tools.callout.colorPurple": "Нил ягаан",
   "tools.callout.colorPink": "Ягаан",
-  "tools.callout.colorRed": "Улаан"
+  "tools.callout.colorRed": "Улаан",
+  "tools.quote.placeholder": "Ишлэл",
+  "tools.quote.defaultSize": "Өгөгдмөл",
+  "tools.quote.largeSize": "Том"
 }

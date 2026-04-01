@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Precrtano",
   "toolNames.callout": "Isticanje",
   "toolNames.divider": "Razdjelnik",
+  "toolNames.quote": "Citat",
   "searchTerms.divider": "razdjelnik",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "graničnik",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "upozorenje",
   "searchTerms.tip": "savjet",
   "searchTerms.alert": "obavijest",
+  "searchTerms.quote": "citat",
+  "searchTerms.blockquote": "blok citat",
+  "searchTerms.citation": "navod",
   "tools.callout.placeholder": "Isticanje",
   "tools.callout.addEmoji": "Dodaj emoji",
   "tools.callout.editIcon": "Uredi ikonu",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Plavo",
   "tools.callout.colorPurple": "Ljubičasto",
   "tools.callout.colorPink": "Ružičasto",
-  "tools.callout.colorRed": "Crveno"
+  "tools.callout.colorRed": "Crveno",
+  "tools.quote.placeholder": "Citat",
+  "tools.quote.defaultSize": "Zadano",
+  "tools.quote.largeSize": "Veliko"
 }

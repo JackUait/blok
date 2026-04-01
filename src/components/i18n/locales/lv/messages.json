@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Pārsvītrojums",
   "toolNames.callout": "Izcēlums",
   "toolNames.divider": "Atdalītājs",
+  "toolNames.quote": "Citāts",
   "searchTerms.divider": "atdalītājs",
   "searchTerms.separator": "separators",
   "searchTerms.delimiter": "norobežotājs",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "brīdinājums",
   "searchTerms.tip": "padoms",
   "searchTerms.alert": "paziņojums",
+  "searchTerms.quote": "citāts",
+  "searchTerms.blockquote": "bloka citāts",
+  "searchTerms.citation": "atsauce",
   "tools.callout.placeholder": "Izcēlums",
   "tools.callout.addEmoji": "Pievienot emocijzīmi",
   "tools.callout.editIcon": "Rediģēt ikonu",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Zils",
   "tools.callout.colorPurple": "Violets",
   "tools.callout.colorPink": "Rozā",
-  "tools.callout.colorRed": "Sarkans"
+  "tools.callout.colorRed": "Sarkans",
+  "tools.quote.placeholder": "Citāts",
+  "tools.quote.defaultSize": "Noklusējuma",
+  "tools.quote.largeSize": "Liels"
 }

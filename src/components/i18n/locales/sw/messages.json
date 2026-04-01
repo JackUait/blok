@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Mstari katikati",
   "toolNames.callout": "Angazio",
   "toolNames.divider": "Kigawanyo",
+  "toolNames.quote": "Nukuu",
   "searchTerms.divider": "kigawanyo",
   "searchTerms.separator": "kitenganisho",
   "searchTerms.delimiter": "kipimo",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "onyo",
   "searchTerms.tip": "kidokezo",
   "searchTerms.alert": "tahadhari",
+  "searchTerms.quote": "nukuu",
+  "searchTerms.blockquote": "kizuizi cha nukuu",
+  "searchTerms.citation": "rejea",
   "tools.callout.placeholder": "Angazio",
   "tools.callout.addEmoji": "Ongeza emoji",
   "tools.callout.editIcon": "Hariri ikoni",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Bluu",
   "tools.callout.colorPurple": "Zambarau",
   "tools.callout.colorPink": "Waridi",
-  "tools.callout.colorRed": "Nyekundu"
+  "tools.callout.colorRed": "Nyekundu",
+  "tools.quote.placeholder": "Nukuu",
+  "tools.quote.defaultSize": "Chaguo-msingi",
+  "tools.quote.largeSize": "Kubwa"
 }

@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "ဖျက်မျဉ်း",
   "toolNames.callout": "မှတ်သားချက်",
   "toolNames.divider": "ပိုင်းခြားမျဉ်း",
+  "toolNames.quote": "ကိုးကားချက်",
   "searchTerms.divider": "ပိုင်းခြားမျဉ်း",
   "searchTerms.separator": "ခြားနားချက်",
   "searchTerms.delimiter": "အနားသတ်",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "သတိပေးချက်",
   "searchTerms.tip": "အကြံပြု",
   "searchTerms.alert": "သတိပေး",
+  "searchTerms.quote": "ကိုးကားချက်",
+  "searchTerms.blockquote": "ဘလော့ကိုးကားချက်",
+  "searchTerms.citation": "ကိုးညွှန်း",
   "tools.callout.placeholder": "မှတ်သားချက်",
   "tools.callout.addEmoji": "အီမိုဂျီထည့်",
   "tools.callout.editIcon": "အိုင်ကွန် တည်းဖြတ်",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "အပြာရောင်",
   "tools.callout.colorPurple": "ခရမ်းရောင်",
   "tools.callout.colorPink": "နုဖြူရောင်",
-  "tools.callout.colorRed": "အနီရောင်"
+  "tools.callout.colorRed": "အနီရောင်",
+  "tools.quote.placeholder": "ကိုးကားချက်",
+  "tools.quote.defaultSize": "မူလ",
+  "tools.quote.largeSize": "အကြီး"
 }

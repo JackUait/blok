@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Gennemstregning",
   "toolNames.callout": "Fremhævning",
   "toolNames.divider": "Adskiller",
+  "toolNames.quote": "Citat",
   "searchTerms.divider": "skillelinje",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "skilletegn",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "advarsel",
   "searchTerms.tip": "tip",
   "searchTerms.alert": "besked",
+  "searchTerms.quote": "citat",
+  "searchTerms.blockquote": "blokcitat",
+  "searchTerms.citation": "henvisning",
   "tools.callout.placeholder": "Fremhævning",
   "tools.callout.addEmoji": "Tilføj emoji",
   "tools.callout.editIcon": "Rediger ikon",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Blå",
   "tools.callout.colorPurple": "Lilla",
   "tools.callout.colorPink": "Pink",
-  "tools.callout.colorRed": "Rød"
+  "tools.callout.colorRed": "Rød",
+  "tools.quote.placeholder": "Citat",
+  "tools.quote.defaultSize": "Standard",
+  "tools.quote.largeSize": "Stor"
 }

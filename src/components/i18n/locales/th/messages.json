@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "ขีดทับ",
   "toolNames.callout": "กล่องเน้น",
   "toolNames.divider": "เส้นคั่น",
+  "toolNames.quote": "อ้างอิง",
   "searchTerms.divider": "ตัวแบ่ง",
   "searchTerms.separator": "ตัวคั่น",
   "searchTerms.delimiter": "ตัวแบ่งเขต",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "คำเตือน",
   "searchTerms.tip": "เคล็ดลับ",
   "searchTerms.alert": "การแจ้งเตือน",
+  "searchTerms.quote": "อ้างอิง",
+  "searchTerms.blockquote": "บล็อกอ้างอิง",
+  "searchTerms.citation": "การอ้างอิง",
   "tools.callout.placeholder": "กล่องเน้น",
   "tools.callout.addEmoji": "เพิ่มอีโมจิ",
   "tools.callout.editIcon": "แก้ไขไอคอน",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "สีน้ำเงิน",
   "tools.callout.colorPurple": "สีม่วง",
   "tools.callout.colorPink": "สีชมพู",
-  "tools.callout.colorRed": "สีแดง"
+  "tools.callout.colorRed": "สีแดง",
+  "tools.quote.placeholder": "อ้างอิง",
+  "tools.quote.defaultSize": "ค่าเริ่มต้น",
+  "tools.quote.largeSize": "ใหญ่"
 }

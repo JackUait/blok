@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "គូសបន្ទាត់ចំកណ្ដាល",
   "toolNames.callout": "ប្រអប់រំលេច",
   "toolNames.divider": "បន្ទាត់បែងចែក",
+  "toolNames.quote": "សម្រង់",
   "searchTerms.divider": "បន្ទាត់ចែក",
   "searchTerms.separator": "សញ្ញាបំបែក",
   "searchTerms.delimiter": "សញ្ញាកំណត់ព្រំ",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ព្រមាន",
   "searchTerms.tip": "គន្លឹះ",
   "searchTerms.alert": "ជូនដំណឹង",
+  "searchTerms.quote": "សម្រង់",
+  "searchTerms.blockquote": "ប្លុកសម្រង់",
+  "searchTerms.citation": "ឯកសារយោង",
   "tools.callout.placeholder": "ប្រអប់រំលេច",
   "tools.callout.addEmoji": "បន្ថែមសញ្ញាអារម្មណ៍",
   "tools.callout.editIcon": "កែសម្រួលរូបតំណាង",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "ខៀវ",
   "tools.callout.colorPurple": "ស្វាយ",
   "tools.callout.colorPink": "ផ្កាឈូក",
-  "tools.callout.colorRed": "ក្រហម"
+  "tools.callout.colorRed": "ក្រហម",
+  "tools.quote.placeholder": "សម្រង់",
+  "tools.quote.defaultSize": "លំនាំដើម",
+  "tools.quote.largeSize": "ធំ"
 }

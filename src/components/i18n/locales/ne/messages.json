@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "स्ट्राइकथ्रु",
   "toolNames.callout": "कलआउट",
   "toolNames.divider": "विभाजक",
+  "toolNames.quote": "उद्धरण",
   "searchTerms.divider": "विभाजक",
   "searchTerms.separator": "विभाजक रेखा",
   "searchTerms.delimiter": "सीमांकक",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "चेतावनी",
   "searchTerms.tip": "सुझाव",
   "searchTerms.alert": "सतर्कता",
+  "searchTerms.quote": "उद्धरण",
+  "searchTerms.blockquote": "ब्लक उद्धरण",
+  "searchTerms.citation": "सन्दर्भ",
   "tools.callout.placeholder": "कलआउट",
   "tools.callout.addEmoji": "इमोजी थप्नुहोस्",
   "tools.callout.editIcon": "आइकन सम्पादन गर्नुहोस्",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "निलो",
   "tools.callout.colorPurple": "बैजनी",
   "tools.callout.colorPink": "गुलाबी",
-  "tools.callout.colorRed": "रातो"
+  "tools.callout.colorRed": "रातो",
+  "tools.quote.placeholder": "उद्धरण",
+  "tools.quote.defaultSize": "पूर्वनिर्धारित",
+  "tools.quote.largeSize": "ठूलो"
 }

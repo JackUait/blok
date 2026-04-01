@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Durchstreichen",
   "toolNames.callout": "Hervorhebung",
   "toolNames.divider": "Trennlinie",
+  "toolNames.quote": "Zitat",
   "searchTerms.divider": "Trennlinie",
   "searchTerms.separator": "Trenner",
   "searchTerms.delimiter": "Trennzeichen",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "Warnung",
   "searchTerms.tip": "Tipp",
   "searchTerms.alert": "Hinweis",
+  "searchTerms.quote": "Zitat",
+  "searchTerms.blockquote": "Blockzitat",
+  "searchTerms.citation": "Quellenangabe",
   "tools.callout.placeholder": "Hervorhebung",
   "tools.callout.addEmoji": "Emoji hinzufügen",
   "tools.callout.editIcon": "Symbol bearbeiten",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Blau",
   "tools.callout.colorPurple": "Lila",
   "tools.callout.colorPink": "Pink",
-  "tools.callout.colorRed": "Rot"
+  "tools.callout.colorRed": "Rot",
+  "tools.quote.placeholder": "Zitat",
+  "tools.quote.defaultSize": "Standard",
+  "tools.quote.largeSize": "Groß"
 }

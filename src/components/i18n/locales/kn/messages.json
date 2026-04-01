@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "ಸ್ಟ್ರೈಕ್‌ಥ್ರೂ",
   "toolNames.callout": "ಕಾಲ್‌ಔಟ್",
   "toolNames.divider": "ವಿಭಜಕ",
+  "toolNames.quote": "ಉಲ್ಲೇಖ",
   "searchTerms.divider": "ವಿಭಜಕ",
   "searchTerms.separator": "ವಿಭಾಜಕ",
   "searchTerms.delimiter": "ಮಿತಿಗೊಳಿಸುವಿಕೆ",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ಎಚ್ಚರಿಕೆ",
   "searchTerms.tip": "ಸಲಹೆ",
   "searchTerms.alert": "ಎಚ್ಚರಿಕೆ ಸಂದೇಶ",
+  "searchTerms.quote": "ಉಲ್ಲೇಖ",
+  "searchTerms.blockquote": "ಬ್ಲಾಕ್ ಉಲ್ಲೇಖ",
+  "searchTerms.citation": "ಉಲ್ಲೇಖನ",
   "tools.callout.placeholder": "ಕಾಲ್‌ಔಟ್",
   "tools.callout.addEmoji": "ಇಮೋಜಿ ಸೇರಿಸಿ",
   "tools.callout.editIcon": "ಐಕಾನ್ ಸಂಪಾದಿಸಿ",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "ನೀಲಿ",
   "tools.callout.colorPurple": "ನೇರಳೆ",
   "tools.callout.colorPink": "ಗುಲಾಬಿ",
-  "tools.callout.colorRed": "ಕೆಂಪು"
+  "tools.callout.colorRed": "ಕೆಂಪು",
+  "tools.quote.placeholder": "ಉಲ್ಲೇಖ",
+  "tools.quote.defaultSize": "ಡೀಫಾಲ್ಟ್",
+  "tools.quote.largeSize": "ದೊಡ್ಡ"
 }

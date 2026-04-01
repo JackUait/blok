@@ -73,6 +73,7 @@ const TOOL_GROUPS: Record<string, string[]> = {
   toggleList: ['toggle', 'collapse', 'expand', 'accordion'],
   table: ['table', 'grid', 'spreadsheet'],
   callout: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],
+  quote: ['quote', 'blockquote', 'citation'],
 };
 
 // ---------------------------------------------------------------------------

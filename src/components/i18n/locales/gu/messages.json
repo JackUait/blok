@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "સ્ટ્રાઇકથ્રૂ",
   "toolNames.callout": "કૉલઆઉટ",
   "toolNames.divider": "વિભાજક",
+  "toolNames.quote": "અવતરણ",
   "searchTerms.divider": "વિભાજક",
   "searchTerms.separator": "અલગ કરનાર",
   "searchTerms.delimiter": "સીમાંકક",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ચેતવણી",
   "searchTerms.tip": "સૂચન",
   "searchTerms.alert": "ચેતવણી સંદેશ",
+  "searchTerms.quote": "અવતરણ",
+  "searchTerms.blockquote": "બ્લોક અવતરણ",
+  "searchTerms.citation": "સંદર્ભ",
   "tools.callout.placeholder": "કૉલઆઉટ",
   "tools.callout.addEmoji": "ઇમોજી ઉમેરો",
   "tools.callout.editIcon": "આઇકન સંપાદિત કરો",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "વાદળી",
   "tools.callout.colorPurple": "જાંબલી",
   "tools.callout.colorPink": "ગુલાબી",
-  "tools.callout.colorRed": "લાલ"
+  "tools.callout.colorRed": "લાલ",
+  "tools.quote.placeholder": "અવતરણ",
+  "tools.quote.defaultSize": "ડિફૉલ્ટ",
+  "tools.quote.largeSize": "મોટું"
 }

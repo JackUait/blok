@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Зачертан",
   "toolNames.callout": "Бележка",
   "toolNames.divider": "Разделител",
+  "toolNames.quote": "Цитат",
   "searchTerms.divider": "разделител",
   "searchTerms.separator": "сепаратор",
   "searchTerms.delimiter": "ограничител",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "предупреждение",
   "searchTerms.tip": "съвет",
   "searchTerms.alert": "сигнал",
+  "searchTerms.quote": "цитат",
+  "searchTerms.blockquote": "блок цитат",
+  "searchTerms.citation": "позоваване",
   "tools.callout.placeholder": "Бележка",
   "tools.callout.addEmoji": "Добави емоджи",
   "tools.callout.editIcon": "Редактирай иконата",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Синьо",
   "tools.callout.colorPurple": "Лилаво",
   "tools.callout.colorPink": "Розово",
-  "tools.callout.colorRed": "Червено"
+  "tools.callout.colorRed": "Червено",
+  "tools.quote.placeholder": "Цитат",
+  "tools.quote.defaultSize": "по подразбиране",
+  "tools.quote.largeSize": "Голям"
 }

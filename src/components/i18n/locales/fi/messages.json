@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Yliviivaus",
   "toolNames.callout": "Huomioruutu",
   "toolNames.divider": "Erotin",
+  "toolNames.quote": "Lainaus",
   "searchTerms.divider": "jakolinja",
   "searchTerms.separator": "erotin",
   "searchTerms.delimiter": "erotusmerkki",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "varoitus",
   "searchTerms.tip": "vinkki",
   "searchTerms.alert": "ilmoitus",
+  "searchTerms.quote": "lainaus",
+  "searchTerms.blockquote": "lohkolainaus",
+  "searchTerms.citation": "viittaus",
   "tools.callout.placeholder": "Huomioruutu",
   "tools.callout.addEmoji": "Lisää emoji",
   "tools.callout.editIcon": "Muokkaa kuvaketta",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Sininen",
   "tools.callout.colorPurple": "Violetti",
   "tools.callout.colorPink": "Pinkki",
-  "tools.callout.colorRed": "Punainen"
+  "tools.callout.colorRed": "Punainen",
+  "tools.quote.placeholder": "Lainaus",
+  "tools.quote.defaultSize": "Oletus",
+  "tools.quote.largeSize": "Suuri"
 }

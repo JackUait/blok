@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "취소선",
   "toolNames.callout": "콜아웃",
   "toolNames.divider": "구분선",
+  "toolNames.quote": "인용",
   "searchTerms.divider": "구분선",
   "searchTerms.separator": "구분자",
   "searchTerms.delimiter": "구분 기호",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "경고",
   "searchTerms.tip": "팁",
   "searchTerms.alert": "알림",
+  "searchTerms.quote": "인용",
+  "searchTerms.blockquote": "블록 인용",
+  "searchTerms.citation": "출처",
   "tools.callout.placeholder": "콜아웃",
   "tools.callout.addEmoji": "이모지 추가",
   "tools.callout.editIcon": "아이콘 편집",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "파랑",
   "tools.callout.colorPurple": "보라",
   "tools.callout.colorPink": "분홍",
-  "tools.callout.colorRed": "빨강"
+  "tools.callout.colorRed": "빨강",
+  "tools.quote.placeholder": "인용",
+  "tools.quote.defaultSize": "기본값",
+  "tools.quote.largeSize": "크게"
 }

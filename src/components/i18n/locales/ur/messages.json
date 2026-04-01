@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "کٹا ہوا",
   "toolNames.callout": "نوٹ",
   "toolNames.divider": "تقسیم کار",
+  "toolNames.quote": "اقتباس",
   "searchTerms.divider": "تقسیم کار",
   "searchTerms.separator": "جداکار",
   "searchTerms.delimiter": "حد بندی",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "انتباہ",
   "searchTerms.tip": "مشورہ",
   "searchTerms.alert": "الرٹ",
+  "searchTerms.quote": "اقتباس",
+  "searchTerms.blockquote": "بلاک اقتباس",
+  "searchTerms.citation": "حوالہ",
   "tools.callout.placeholder": "نوٹ",
   "tools.callout.addEmoji": "ایموجی شامل کریں",
   "tools.callout.editIcon": "آئیکن ترمیم کریں",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "نیلا",
   "tools.callout.colorPurple": "بنفشی",
   "tools.callout.colorPink": "گلابی",
-  "tools.callout.colorRed": "سرخ"
+  "tools.callout.colorRed": "سرخ",
+  "tools.quote.placeholder": "اقتباس",
+  "tools.quote.defaultSize": "طے شدہ",
+  "tools.quote.largeSize": "بڑا"
 }

@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Barrato",
   "toolNames.callout": "Richiamo",
   "toolNames.divider": "Separatore",
+  "toolNames.quote": "Citazione",
   "searchTerms.divider": "divisore",
   "searchTerms.separator": "separatore",
   "searchTerms.delimiter": "delimitatore",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "avviso",
   "searchTerms.tip": "suggerimento",
   "searchTerms.alert": "allerta",
+  "searchTerms.quote": "citazione",
+  "searchTerms.blockquote": "blocco citazione",
+  "searchTerms.citation": "riferimento",
   "tools.callout.placeholder": "Richiamo",
   "tools.callout.addEmoji": "Aggiungi emoji",
   "tools.callout.editIcon": "Modifica icona",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Blu",
   "tools.callout.colorPurple": "Viola",
   "tools.callout.colorPink": "Rosa",
-  "tools.callout.colorRed": "Rosso"
+  "tools.callout.colorRed": "Rosso",
+  "tools.quote.placeholder": "Citazione",
+  "tools.quote.defaultSize": "Predefinito",
+  "tools.quote.largeSize": "Grande"
 }

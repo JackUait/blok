@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "קו חוצה",
   "toolNames.callout": "תיבת הדגשה",
   "toolNames.divider": "מפריד",
+  "toolNames.quote": "ציטוט",
   "searchTerms.divider": "מפריד",
   "searchTerms.separator": "קו הפרדה",
   "searchTerms.delimiter": "תוחם",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "אזהרה",
   "searchTerms.tip": "טיפ",
   "searchTerms.alert": "התראה",
+  "searchTerms.quote": "ציטוט",
+  "searchTerms.blockquote": "בלוק ציטוט",
+  "searchTerms.citation": "הפניה",
   "tools.callout.placeholder": "תיבת הדגשה",
   "tools.callout.addEmoji": "הוסף אמוג׳י",
   "tools.callout.editIcon": "ערוך סמל",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "כחול",
   "tools.callout.colorPurple": "סגול",
   "tools.callout.colorPink": "ורוד",
-  "tools.callout.colorRed": "אדום"
+  "tools.callout.colorRed": "אדום",
+  "tools.quote.placeholder": "ציטוט",
+  "tools.quote.defaultSize": "ברירת מחדל",
+  "tools.quote.largeSize": "גדול"
 }

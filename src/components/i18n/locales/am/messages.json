@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "መሰረዝ መስመር",
   "toolNames.callout": "ማስታወሻ",
   "toolNames.divider": "ግድብ",
+  "toolNames.quote": "ጥቅስ",
   "searchTerms.divider": "ከፋፋይ",
   "searchTerms.separator": "መለያ",
   "searchTerms.delimiter": "ገዳቢ",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ማስጠንቀቂያ",
   "searchTerms.tip": "ምክር",
   "searchTerms.alert": "ማንቂያ",
+  "searchTerms.quote": "ጥቅስ",
+  "searchTerms.blockquote": "የጥቅስ ብሎክ",
+  "searchTerms.citation": "ምጣኔ",
   "tools.callout.placeholder": "ማስታወሻ",
   "tools.callout.addEmoji": "ኢሞጂ ጨምር",
   "tools.callout.editIcon": "አዶ አርትዕ",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "ሰማያዊ",
   "tools.callout.colorPurple": "ወይን ጠጅ",
   "tools.callout.colorPink": "ሮዝ",
-  "tools.callout.colorRed": "ቀይ"
+  "tools.callout.colorRed": "ቀይ",
+  "tools.quote.placeholder": "ጥቅስ",
+  "tools.quote.defaultSize": "ነባሪ",
+  "tools.quote.largeSize": "ትልቅ"
 }

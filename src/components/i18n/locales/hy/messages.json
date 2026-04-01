@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Գծանշում",
   "toolNames.callout": "Ծանուցում",
   "toolNames.divider": "Բաժանարար",
+  "toolNames.quote": "Մեջբերում",
   "searchTerms.divider": "բաժանարար",
   "searchTerms.separator": "տարանջատիչ",
   "searchTerms.delimiter": "սահմանագիծ",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "նախազգուշացում",
   "searchTerms.tip": "հուշում",
   "searchTerms.alert": "ազդարարում",
+  "searchTerms.quote": "մեջբերում",
+  "searchTerms.blockquote": "բլոկ մեջբերում",
+  "searchTerms.citation": "հղում",
   "tools.callout.placeholder": "Ծանուցում",
   "tools.callout.addEmoji": "Ավելացնել էմոջի",
   "tools.callout.editIcon": "Խմբագրել պատկերակը",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Կապույտ",
   "tools.callout.colorPurple": "Մանուշակագույն",
   "tools.callout.colorPink": "Վարդագույն",
-  "tools.callout.colorRed": "Կարմիր"
+  "tools.callout.colorRed": "Կարմիր",
+  "tools.quote.placeholder": "Մեջբերում",
+  "tools.quote.defaultSize": "Կանխադրված",
+  "tools.quote.largeSize": "Մեծ"
 }

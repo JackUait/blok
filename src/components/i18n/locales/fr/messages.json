@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Barré",
   "toolNames.callout": "Mise en avant",
   "toolNames.divider": "Séparateur",
+  "toolNames.quote": "Citation",
   "searchTerms.divider": "diviseur",
   "searchTerms.separator": "séparateur",
   "searchTerms.delimiter": "délimiteur",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "avertissement",
   "searchTerms.tip": "astuce",
   "searchTerms.alert": "alerte",
+  "searchTerms.quote": "citation",
+  "searchTerms.blockquote": "bloc de citation",
+  "searchTerms.citation": "référence",
   "tools.callout.placeholder": "Mise en avant",
   "tools.callout.addEmoji": "Ajouter un emoji",
   "tools.callout.editIcon": "Modifier l'icône",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Bleu",
   "tools.callout.colorPurple": "Violet",
   "tools.callout.colorPink": "Rose",
-  "tools.callout.colorRed": "Rouge"
+  "tools.callout.colorRed": "Rouge",
+  "tools.quote.placeholder": "Citation",
+  "tools.quote.defaultSize": "Par défaut",
+  "tools.quote.largeSize": "Grand"
 }

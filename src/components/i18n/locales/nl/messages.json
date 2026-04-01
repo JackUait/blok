@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Doorhalen",
   "toolNames.callout": "Toelichting",
   "toolNames.divider": "Scheidingslijn",
+  "toolNames.quote": "Citaat",
   "searchTerms.divider": "scheidslijn",
   "searchTerms.separator": "scheiding",
   "searchTerms.delimiter": "scheidingsteken",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "waarschuwing",
   "searchTerms.tip": "tip",
   "searchTerms.alert": "melding",
+  "searchTerms.quote": "citaat",
+  "searchTerms.blockquote": "blokcitaat",
+  "searchTerms.citation": "verwijzing",
   "tools.callout.placeholder": "Toelichting",
   "tools.callout.addEmoji": "Emoji toevoegen",
   "tools.callout.editIcon": "Pictogram bewerken",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Blauw",
   "tools.callout.colorPurple": "Paars",
   "tools.callout.colorPink": "Roze",
-  "tools.callout.colorRed": "Rood"
+  "tools.callout.colorRed": "Rood",
+  "tools.quote.placeholder": "Citaat",
+  "tools.quote.defaultSize": "Standaard",
+  "tools.quote.largeSize": "Groot"
 }

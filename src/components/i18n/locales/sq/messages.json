@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Vizë përmes",
   "toolNames.callout": "Theksim",
   "toolNames.divider": "Ndarës",
+  "toolNames.quote": "Citim",
   "searchTerms.divider": "ndarës",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "kufizues",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "paralajmërim",
   "searchTerms.tip": "këshillë",
   "searchTerms.alert": "njoftim",
+  "searchTerms.quote": "citim",
+  "searchTerms.blockquote": "bllok citimi",
+  "searchTerms.citation": "referencë",
   "tools.callout.placeholder": "Theksim",
   "tools.callout.addEmoji": "Shto emoji",
   "tools.callout.editIcon": "Ndrysho ikonën",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Kaltër",
   "tools.callout.colorPurple": "Vjollcë",
   "tools.callout.colorPink": "Rozë",
-  "tools.callout.colorRed": "Kuq"
+  "tools.callout.colorRed": "Kuq",
+  "tools.quote.placeholder": "Citim",
+  "tools.quote.defaultSize": "Parazgjedhur",
+  "tools.quote.largeSize": "I madh"
 }

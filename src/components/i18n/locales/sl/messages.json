@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Prečrtano",
   "toolNames.callout": "Opomba",
   "toolNames.divider": "Ločilnik",
+  "toolNames.quote": "Citat",
   "searchTerms.divider": "ločilnik",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "omejevalnik",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "opozorilo",
   "searchTerms.tip": "namig",
   "searchTerms.alert": "obvestilo",
+  "searchTerms.quote": "citat",
+  "searchTerms.blockquote": "blok citat",
+  "searchTerms.citation": "navedba",
   "tools.callout.placeholder": "Opomba",
   "tools.callout.addEmoji": "Dodaj emoji",
   "tools.callout.editIcon": "Uredi ikono",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Modra",
   "tools.callout.colorPurple": "Vijolična",
   "tools.callout.colorPink": "Roza",
-  "tools.callout.colorRed": "Rdeča"
+  "tools.callout.colorRed": "Rdeča",
+  "tools.quote.placeholder": "Citat",
+  "tools.quote.defaultSize": "Privzeto",
+  "tools.quote.largeSize": "Veliko"
 }

@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "நடுக்கோடு",
   "toolNames.callout": "குறிப்புப்பெட்டி",
   "toolNames.divider": "பிரிப்பான்",
+  "toolNames.quote": "மேற்கோள்",
   "searchTerms.divider": "பிரிப்பான்",
   "searchTerms.separator": "பிரிப்பி",
   "searchTerms.delimiter": "வரம்புக்குறி",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "எச்சரிக்கை",
   "searchTerms.tip": "சிட்டிகை",
   "searchTerms.alert": "விழிப்பூட்டல்",
+  "searchTerms.quote": "மேற்கோள்",
+  "searchTerms.blockquote": "தொகுதி மேற்கோள்",
+  "searchTerms.citation": "மேற்கோள் குறிப்பு",
   "tools.callout.placeholder": "குறிப்புப்பெட்டி",
   "tools.callout.addEmoji": "இமோஜி சேர்",
   "tools.callout.editIcon": "ஐகானைத் திருத்து",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "நீலம்",
   "tools.callout.colorPurple": "ஊதா",
   "tools.callout.colorPink": "இளஞ்சிவப்பு",
-  "tools.callout.colorRed": "சிவப்பு"
+  "tools.callout.colorRed": "சிவப்பு",
+  "tools.quote.placeholder": "மேற்கோள்",
+  "tools.quote.defaultSize": "இயல்பு",
+  "tools.quote.largeSize": "பெரிய"
 }

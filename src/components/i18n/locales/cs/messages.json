@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Přeškrtnuté",
   "toolNames.callout": "Popisek",
   "toolNames.divider": "Oddělovač",
+  "toolNames.quote": "Citace",
   "searchTerms.divider": "oddělovač",
   "searchTerms.separator": "separátor",
   "searchTerms.delimiter": "ohraničovač",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "varování",
   "searchTerms.tip": "tip",
   "searchTerms.alert": "upozornění",
+  "searchTerms.quote": "citace",
+  "searchTerms.blockquote": "blokový citát",
+  "searchTerms.citation": "odkaz",
   "tools.callout.placeholder": "Popisek",
   "tools.callout.addEmoji": "Přidat emoji",
   "tools.callout.editIcon": "Upravit ikonu",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Modrá",
   "tools.callout.colorPurple": "Fialová",
   "tools.callout.colorPink": "Růžová",
-  "tools.callout.colorRed": "Červená"
+  "tools.callout.colorRed": "Červená",
+  "tools.quote.placeholder": "Citace",
+  "tools.quote.defaultSize": "Výchozí",
+  "tools.quote.largeSize": "Velký"
 }

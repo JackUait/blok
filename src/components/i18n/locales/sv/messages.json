@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Genomstrykning",
   "toolNames.callout": "Notering",
   "toolNames.divider": "Avdelare",
+  "toolNames.quote": "Citat",
   "searchTerms.divider": "skiljelinje",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "avgränsare",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "varning",
   "searchTerms.tip": "tips",
   "searchTerms.alert": "avisering",
+  "searchTerms.quote": "citat",
+  "searchTerms.blockquote": "blockcitat",
+  "searchTerms.citation": "hänvisning",
   "tools.callout.placeholder": "Notering",
   "tools.callout.addEmoji": "Lägg till emoji",
   "tools.callout.editIcon": "Redigera ikon",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Blå",
   "tools.callout.colorPurple": "Lila",
   "tools.callout.colorPink": "Rosa",
-  "tools.callout.colorRed": "Röd"
+  "tools.callout.colorRed": "Röd",
+  "tools.quote.placeholder": "Citat",
+  "tools.quote.defaultSize": "Standard",
+  "tools.quote.largeSize": "Stor"
 }

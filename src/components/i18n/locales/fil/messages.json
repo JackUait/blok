@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Guhit sa Gitna",
   "toolNames.callout": "Callout",
   "toolNames.divider": "Panghati",
+  "toolNames.quote": "Panipi",
   "searchTerms.divider": "panghati",
   "searchTerms.separator": "panseparador",
   "searchTerms.delimiter": "panghiwalay",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "babala",
   "searchTerms.tip": "tip",
   "searchTerms.alert": "alerto",
+  "searchTerms.quote": "panipi",
+  "searchTerms.blockquote": "bloke ng panipi",
+  "searchTerms.citation": "banggit",
   "tools.callout.placeholder": "Callout",
   "tools.callout.addEmoji": "Magdagdag ng emoji",
   "tools.callout.editIcon": "I-edit ang icon",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Asul",
   "tools.callout.colorPurple": "Lila",
   "tools.callout.colorPink": "Rosas",
-  "tools.callout.colorRed": "Pula"
+  "tools.callout.colorRed": "Pula",
+  "tools.quote.placeholder": "Panipi",
+  "tools.quote.defaultSize": "Default",
+  "tools.quote.largeSize": "Malaki"
 }

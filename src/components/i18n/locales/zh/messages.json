@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "删除线",
   "toolNames.callout": "标注",
   "toolNames.divider": "分隔线",
+  "toolNames.quote": "引用",
   "searchTerms.divider": "分割线",
   "searchTerms.separator": "分隔符",
   "searchTerms.delimiter": "定界符",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "警告",
   "searchTerms.tip": "提示",
   "searchTerms.alert": "提醒",
+  "searchTerms.quote": "引用",
+  "searchTerms.blockquote": "块引用",
+  "searchTerms.citation": "出处",
   "tools.callout.placeholder": "标注",
   "tools.callout.addEmoji": "添加表情",
   "tools.callout.editIcon": "编辑图标",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "蓝色",
   "tools.callout.colorPurple": "紫色",
   "tools.callout.colorPink": "粉色",
-  "tools.callout.colorRed": "红色"
+  "tools.callout.colorRed": "红色",
+  "tools.quote.placeholder": "引用",
+  "tools.quote.defaultSize": "默认",
+  "tools.quote.largeSize": "大"
 }

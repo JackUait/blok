@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Прецртано",
   "toolNames.callout": "Истакнато",
   "toolNames.divider": "Разделник",
+  "toolNames.quote": "Цитат",
   "searchTerms.divider": "разделувач",
   "searchTerms.separator": "сепаратор",
   "searchTerms.delimiter": "ограничувач",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "предупредување",
   "searchTerms.tip": "совет",
   "searchTerms.alert": "известување",
+  "searchTerms.quote": "цитат",
+  "searchTerms.blockquote": "блок цитат",
+  "searchTerms.citation": "наведување",
   "tools.callout.placeholder": "Истакнато",
   "tools.callout.addEmoji": "Додај емоџи",
   "tools.callout.editIcon": "Уреди икона",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Сино",
   "tools.callout.colorPurple": "Виолетово",
   "tools.callout.colorPink": "Розово",
-  "tools.callout.colorRed": "Црвено"
+  "tools.callout.colorRed": "Црвено",
+  "tools.quote.placeholder": "Цитат",
+  "tools.quote.defaultSize": "Стандардно",
+  "tools.quote.largeSize": "Голем"
 }

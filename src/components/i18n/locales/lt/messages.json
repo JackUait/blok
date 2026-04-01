@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Perbrauktas",
   "toolNames.callout": "Pastaba",
   "toolNames.divider": "Skirtukas",
+  "toolNames.quote": "Citata",
   "searchTerms.divider": "skirtukas",
   "searchTerms.separator": "skyriklis",
   "searchTerms.delimiter": "skyrybos ženklas",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "įspėjimas",
   "searchTerms.tip": "patarimas",
   "searchTerms.alert": "pranešimas",
+  "searchTerms.quote": "citata",
+  "searchTerms.blockquote": "bloko citata",
+  "searchTerms.citation": "nuoroda",
   "tools.callout.placeholder": "Pastaba",
   "tools.callout.addEmoji": "Pridėti jaustuką",
   "tools.callout.editIcon": "Redaguoti piktogramą",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Mėlyna",
   "tools.callout.colorPurple": "Violetinė",
   "tools.callout.colorPink": "Rožinė",
-  "tools.callout.colorRed": "Raudona"
+  "tools.callout.colorRed": "Raudona",
+  "tools.quote.placeholder": "Citata",
+  "tools.quote.defaultSize": "Numatytoji",
+  "tools.quote.largeSize": "Didelis"
 }

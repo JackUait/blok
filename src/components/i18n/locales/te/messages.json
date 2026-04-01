@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "స్ట్రైక్‌త్రూ",
   "toolNames.callout": "కాలౌట్",
   "toolNames.divider": "విభజకం",
+  "toolNames.quote": "ఉల్లేఖనం",
   "searchTerms.divider": "విభజకం",
   "searchTerms.separator": "వేరుచేయు",
   "searchTerms.delimiter": "వరంబుగుర్తు",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "హెచ్చరిక",
   "searchTerms.tip": "సూచన",
   "searchTerms.alert": "హెచ్చరిక సందేశం",
+  "searchTerms.quote": "ఉల్లేఖనం",
+  "searchTerms.blockquote": "బ్లాక్ ఉల్లేఖనం",
+  "searchTerms.citation": "ఉటంకింపు",
   "tools.callout.placeholder": "కాలౌట్",
   "tools.callout.addEmoji": "ఇమోజీ జోడించండి",
   "tools.callout.editIcon": "చిహ్నాన్ని సవరించండి",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "నీలం",
   "tools.callout.colorPurple": "వైలెట్",
   "tools.callout.colorPink": "పింక్",
-  "tools.callout.colorRed": "ఎరుపు"
+  "tools.callout.colorRed": "ఎరుపు",
+  "tools.quote.placeholder": "ఉల్లేఖనం",
+  "tools.quote.defaultSize": "అప్రమేయం",
+  "tools.quote.largeSize": "పెద్ద"
 }

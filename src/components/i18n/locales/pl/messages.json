@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Przekreślenie",
   "toolNames.callout": "Objaśnienie",
   "toolNames.divider": "Separator",
+  "toolNames.quote": "Cytat",
   "searchTerms.divider": "dzielnik",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "ogranicznik",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ostrzeżenie",
   "searchTerms.tip": "wskazówka",
   "searchTerms.alert": "powiadomienie",
+  "searchTerms.quote": "cytat",
+  "searchTerms.blockquote": "blok cytatu",
+  "searchTerms.citation": "odniesienie",
   "tools.callout.placeholder": "Objaśnienie",
   "tools.callout.addEmoji": "Dodaj emoji",
   "tools.callout.editIcon": "Edytuj ikonę",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Niebieski",
   "tools.callout.colorPurple": "Fioletowy",
   "tools.callout.colorPink": "Różowy",
-  "tools.callout.colorRed": "Czerwony"
+  "tools.callout.colorRed": "Czerwony",
+  "tools.quote.placeholder": "Cytat",
+  "tools.quote.defaultSize": "Domyślny",
+  "tools.quote.largeSize": "Duży"
 }

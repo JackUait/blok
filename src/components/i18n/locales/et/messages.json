@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Läbikriipsutus",
   "toolNames.callout": "Vihjekast",
   "toolNames.divider": "Eraldaja",
+  "toolNames.quote": "Tsitaat",
   "searchTerms.divider": "eraldaja",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "eraldusmärk",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "hoiatus",
   "searchTerms.tip": "vihje",
   "searchTerms.alert": "teade",
+  "searchTerms.quote": "tsitaat",
+  "searchTerms.blockquote": "plokk-tsitaat",
+  "searchTerms.citation": "viide",
   "tools.callout.placeholder": "Vihjekast",
   "tools.callout.addEmoji": "Lisa emoji",
   "tools.callout.editIcon": "Muuda ikooni",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Sinine",
   "tools.callout.colorPurple": "Lilla",
   "tools.callout.colorPink": "Roosa",
-  "tools.callout.colorRed": "Punane"
+  "tools.callout.colorRed": "Punane",
+  "tools.quote.placeholder": "Tsitaat",
+  "tools.quote.defaultSize": "vaikimisi",
+  "tools.quote.largeSize": "Suur"
 }

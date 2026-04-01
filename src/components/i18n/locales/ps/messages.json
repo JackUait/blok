@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "پرېکړلیک",
   "toolNames.callout": "یادونه",
   "toolNames.divider": "بېلونکی",
+  "toolNames.quote": "اقتباس",
   "searchTerms.divider": "ویشونکی",
   "searchTerms.separator": "جلاکونکی",
   "searchTerms.delimiter": "حدبندونکی",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "خبرداری",
   "searchTerms.tip": "لارښوونه",
   "searchTerms.alert": "خبرتیا",
+  "searchTerms.quote": "اقتباس",
+  "searchTerms.blockquote": "بلاک اقتباس",
+  "searchTerms.citation": "حواله",
   "tools.callout.placeholder": "یادونه",
   "tools.callout.addEmoji": "ایموجي اضافه کړئ",
   "tools.callout.editIcon": "آیکون سمون",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "آسماني",
   "tools.callout.colorPurple": "بنفشه",
   "tools.callout.colorPink": "ګلابي",
-  "tools.callout.colorRed": "سور"
+  "tools.callout.colorRed": "سور",
+  "tools.quote.placeholder": "اقتباس",
+  "tools.quote.defaultSize": "اصلي",
+  "tools.quote.largeSize": "لوی"
 }

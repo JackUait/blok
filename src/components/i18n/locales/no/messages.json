@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Gjennomstreking",
   "toolNames.callout": "Merknad",
   "toolNames.divider": "Skillelinje",
+  "toolNames.quote": "Sitat",
   "searchTerms.divider": "skillelinje",
   "searchTerms.separator": "separator",
   "searchTerms.delimiter": "skilletegn",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "advarsel",
   "searchTerms.tip": "tips",
   "searchTerms.alert": "varsel",
+  "searchTerms.quote": "sitat",
+  "searchTerms.blockquote": "blokksitat",
+  "searchTerms.citation": "henvisning",
   "tools.callout.placeholder": "Merknad",
   "tools.callout.addEmoji": "Legg til emoji",
   "tools.callout.editIcon": "Rediger ikon",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Blå",
   "tools.callout.colorPurple": "Lilla",
   "tools.callout.colorPink": "Rosa",
-  "tools.callout.colorRed": "Rød"
+  "tools.callout.colorRed": "Rød",
+  "tools.quote.placeholder": "Sitat",
+  "tools.quote.defaultSize": "Standard",
+  "tools.quote.largeSize": "Stor"
 }

@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "يتوسطه خط",
   "toolNames.callout": "تنبيه",
   "toolNames.divider": "فاصل",
+  "toolNames.quote": "اقتباس",
   "searchTerms.divider": "فاصل",
   "searchTerms.separator": "فاصل أقسام",
   "searchTerms.delimiter": "محدد",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "تحذير",
   "searchTerms.tip": "نصيحة",
   "searchTerms.alert": "إشعار",
+  "searchTerms.quote": "اقتباس",
+  "searchTerms.blockquote": "كتلة اقتباس",
+  "searchTerms.citation": "استشهاد",
   "tools.callout.placeholder": "تنبيه",
   "tools.callout.addEmoji": "إضافة إيموجي",
   "tools.callout.editIcon": "تعديل الأيقونة",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "أزرق",
   "tools.callout.colorPurple": "بنفسجي",
   "tools.callout.colorPink": "وردي",
-  "tools.callout.colorRed": "أحمر"
+  "tools.callout.colorRed": "أحمر",
+  "tools.quote.placeholder": "اقتباس",
+  "tools.quote.defaultSize": "افتراضي",
+  "tools.quote.largeSize": "كبير"
 }

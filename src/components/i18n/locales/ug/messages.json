@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "ئۆچۈرۈش سىزىقى",
   "toolNames.callout": "ئەسكەرتىش",
   "toolNames.divider": "بۆلگۈچ",
+  "toolNames.quote": "نەقىل",
   "searchTerms.divider": "بۆلگۈچ",
   "searchTerms.separator": "ئايرىغۇچ",
   "searchTerms.delimiter": "چەكلىگۈچ",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ئاگاھلاندۇرۇش",
   "searchTerms.tip": "كۆرسەتمە",
   "searchTerms.alert": "ئۇقتۇرۇش",
+  "searchTerms.quote": "نەقىل",
+  "searchTerms.blockquote": "بۆلەك نەقىل",
+  "searchTerms.citation": "مەنبە",
   "tools.callout.placeholder": "ئەسكەرتىش",
   "tools.callout.addEmoji": "ئېموجى قوشۇش",
   "tools.callout.editIcon": "سىنبەلگە تەھرىرلەش",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "كۆك",
   "tools.callout.colorPurple": "بىنەپشە",
   "tools.callout.colorPink": "ئوچ قىزىل",
-  "tools.callout.colorRed": "قىزىل"
+  "tools.callout.colorRed": "قىزىل",
+  "tools.quote.placeholder": "نەقىل",
+  "tools.quote.defaultSize": "سۈكۈتتىكى",
+  "tools.quote.largeSize": "چوڭ"
 }

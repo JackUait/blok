@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "خط‌خورده",
   "toolNames.callout": "یادداشت",
   "toolNames.divider": "جداکننده",
+  "toolNames.quote": "نقل‌قول",
   "searchTerms.divider": "خط جداکننده",
   "searchTerms.separator": "جداکننده",
   "searchTerms.delimiter": "حدبند",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "هشدار",
   "searchTerms.tip": "نکته",
   "searchTerms.alert": "اعلان",
+  "searchTerms.quote": "نقل‌قول",
+  "searchTerms.blockquote": "بلوک نقل‌قول",
+  "searchTerms.citation": "استناد",
   "tools.callout.placeholder": "یادداشت",
   "tools.callout.addEmoji": "افزودن ایموجی",
   "tools.callout.editIcon": "ویرایش نماد",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "آبی",
   "tools.callout.colorPurple": "بنفش",
   "tools.callout.colorPink": "صورتی",
-  "tools.callout.colorRed": "قرمز"
+  "tools.callout.colorRed": "قرمز",
+  "tools.quote.placeholder": "نقل‌قول",
+  "tools.quote.defaultSize": "پیش‌فرض",
+  "tools.quote.largeSize": "بزرگ"
 }

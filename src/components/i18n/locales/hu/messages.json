@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "Áthúzás",
   "toolNames.callout": "Kiemelés",
   "toolNames.divider": "Elválasztó",
+  "toolNames.quote": "Idézet",
   "searchTerms.divider": "elválasztó",
   "searchTerms.separator": "szeparátor",
   "searchTerms.delimiter": "határolójel",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "figyelmeztetés",
   "searchTerms.tip": "tipp",
   "searchTerms.alert": "értesítés",
+  "searchTerms.quote": "idézet",
+  "searchTerms.blockquote": "blokkidézet",
+  "searchTerms.citation": "hivatkozás",
   "tools.callout.placeholder": "Kiemelés",
   "tools.callout.addEmoji": "Emoji hozzáadása",
   "tools.callout.editIcon": "Ikon szerkesztése",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "Kék",
   "tools.callout.colorPurple": "Lila",
   "tools.callout.colorPink": "Rózsaszín",
-  "tools.callout.colorRed": "Piros"
+  "tools.callout.colorRed": "Piros",
+  "tools.quote.placeholder": "Idézet",
+  "tools.quote.defaultSize": "Alapértelmezett",
+  "tools.quote.largeSize": "Nagy"
 }

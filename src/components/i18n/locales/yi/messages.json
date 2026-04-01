@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "דורכשטרייכן",
   "toolNames.callout": "באַמערקונג",
   "toolNames.divider": "טיילער",
+  "toolNames.quote": "ציטאַט",
   "searchTerms.divider": "טיילער",
   "searchTerms.separator": "אָפּטיילער",
   "searchTerms.delimiter": "באגרענעצער",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "וואָרענונג",
   "searchTerms.tip": "עצה",
   "searchTerms.alert": "אָנזאָג",
+  "searchTerms.quote": "ציטאַט",
+  "searchTerms.blockquote": "בלאָק ציטאַט",
+  "searchTerms.citation": "דערמאָנונג",
   "tools.callout.placeholder": "באַמערקונג",
   "tools.callout.addEmoji": "צולייגן עמאָדזשי",
   "tools.callout.editIcon": "רעדאַקטירן בילדל",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "בלוי",
   "tools.callout.colorPurple": "לילאַ",
   "tools.callout.colorPink": "ראָזעוו",
-  "tools.callout.colorRed": "רויט"
+  "tools.callout.colorRed": "רויט",
+  "tools.quote.placeholder": "ציטאַט",
+  "tools.quote.defaultSize": "שטאַנדאַרד",
+  "tools.quote.largeSize": "גרויס"
 }

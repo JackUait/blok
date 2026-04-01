@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "ຂີດທັບ",
   "toolNames.callout": "ກ່ອງເນັ້ນ",
   "toolNames.divider": "ເສັ້ນແບ່ງ",
+  "toolNames.quote": "ອ້າງອິງ",
   "searchTerms.divider": "ເສັ້ນແບ່ງ",
   "searchTerms.separator": "ຕົວແຍກ",
   "searchTerms.delimiter": "ຕົວຈຳກັດ",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ຄຳເຕືອນ",
   "searchTerms.tip": "ຄຳແນະນຳ",
   "searchTerms.alert": "ແຈ້ງເຕືອນ",
+  "searchTerms.quote": "ອ້າງອິງ",
+  "searchTerms.blockquote": "ບລ໋ອກອ້າງອິງ",
+  "searchTerms.citation": "ເອກະສານອ້າງອິງ",
   "tools.callout.placeholder": "ກ່ອງເນັ້ນ",
   "tools.callout.addEmoji": "ເພີ່ມອີໂມຈິ",
   "tools.callout.editIcon": "ແກ້ໄຂໄອຄອນ",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "ສີຟ້າ",
   "tools.callout.colorPurple": "ສີມ່ວງ",
   "tools.callout.colorPink": "ສີບົວ",
-  "tools.callout.colorRed": "ສີແດງ"
+  "tools.callout.colorRed": "ສີແດງ",
+  "tools.quote.placeholder": "ອ້າງອິງ",
+  "tools.quote.defaultSize": "ຄ່າເລີ່ມຕົ້ນ",
+  "tools.quote.largeSize": "ໃຫຍ່"
 }

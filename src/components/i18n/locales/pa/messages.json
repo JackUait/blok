@@ -88,6 +88,7 @@
   "toolNames.strikethrough": "ਸਟ੍ਰਾਈਕਥਰੂ",
   "toolNames.callout": "ਕਾਲਆਊਟ",
   "toolNames.divider": "ਵੰਡਣਹਾਰਾ",
+  "toolNames.quote": "ਹਵਾਲਾ",
   "searchTerms.divider": "ਵੰਡਣ ਵਾਲਾ",
   "searchTerms.separator": "ਵੱਖ ਕਰਨ ਵਾਲਾ",
   "searchTerms.delimiter": "ਸੀਮਾਂਕਕ",
@@ -120,6 +121,9 @@
   "searchTerms.warning": "ਚੇਤਾਵਨੀ",
   "searchTerms.tip": "ਸੁਝਾਅ",
   "searchTerms.alert": "ਸੁਚੇਤਨਾ",
+  "searchTerms.quote": "ਹਵਾਲਾ",
+  "searchTerms.blockquote": "ਬਲਾਕ ਹਵਾਲਾ",
+  "searchTerms.citation": "ਸੰਦਰਭ",
   "tools.callout.placeholder": "ਕਾਲਆਊਟ",
   "tools.callout.addEmoji": "ਇਮੋਜੀ ਜੋੜੋ",
   "tools.callout.editIcon": "ਆਈਕਨ ਸੰਪਾਦਿਤ ਕਰੋ",
@@ -148,5 +152,8 @@
   "tools.callout.colorBlue": "ਨੀਲਾ",
   "tools.callout.colorPurple": "ਜਾਮਨੀ",
   "tools.callout.colorPink": "ਗੁਲਾਬੀ",
-  "tools.callout.colorRed": "ਲਾਲ"
+  "tools.callout.colorRed": "ਲਾਲ",
+  "tools.quote.placeholder": "ਹਵਾਲਾ",
+  "tools.quote.defaultSize": "ਮੂਲ",
+  "tools.quote.largeSize": "ਵੱਡਾ"
 }

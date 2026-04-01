@@ -360,6 +360,7 @@ export class CalloutTool implements BlockTool {
       titleKey: 'callout',
       name: TOOL_NAME,
       searchTerms: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],
+      searchTermKeys: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],
     };
   }
 

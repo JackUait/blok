@@ -374,6 +374,7 @@ export class ToggleItem implements BlockTool {
       titleKey: 'toggleList',
       name: TOOL_NAME,
       searchTerms: ['toggle', 'collapse', 'expand', 'accordion'],
+      searchTermKeys: ['toggle', 'collapse', 'expand', 'accordion'],
       shortcut: '>',
     };
   }

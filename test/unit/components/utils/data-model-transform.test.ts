@@ -106,6 +106,219 @@ describe('data-model-transform', () => {
     });
   });
 
+  describe('analyzeDataFormat - hybrid format (hierarchical + legacy)', () => {
+    it('detects legacy format when hierarchical table coexists with legacy callout', () => {
+      const blocks: OutputBlockData[] = [
+        // Table already migrated to hierarchical
+        {
+          id: 't1',
+          type: 'table',
+          data: { content: [[{ blocks: ['p1'] }]], stretched: false },
+          content: ['p1'],
+        },
+        // Callout still in legacy format
+        {
+          id: 'c1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                { id: 'cp1', type: 'paragraph', data: { text: 'callout child' } },
+              ],
+            },
+            variant: 'additional',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+        // Table child with parent ref
+        { id: 'p1', type: 'paragraph', data: { text: 'table cell' }, parent: 't1' },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('legacy');
+      expect(result.hasHierarchy).toBe(true);
+    });
+
+    it('detects legacy format when hierarchical refs coexist with legacy toggleList', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'table',
+          data: { content: [[{ blocks: ['p1'] }]], stretched: false },
+          content: ['p1'],
+        },
+        {
+          id: 'tg1',
+          type: 'toggleList',
+          data: {
+            title: 'Toggle heading',
+            body: {
+              blocks: [
+                { id: 'tc1', type: 'paragraph', data: { text: 'toggle child' } },
+              ],
+            },
+          },
+        },
+        { id: 'p1', type: 'paragraph', data: { text: 'table cell' }, parent: 't1' },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('legacy');
+      expect(result.hasHierarchy).toBe(true);
+    });
+
+    it('returns hierarchical when no legacy blocks remain alongside hierarchical refs', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'table',
+          data: { content: [[{ blocks: ['p1'] }]], stretched: false },
+          content: ['p1'],
+        },
+        { id: 'c1', type: 'callout', data: { emoji: '💡', textColor: null, backgroundColor: 'blue' }, content: ['p2'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'table cell' }, parent: 't1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'callout child' }, parent: 'c1' },
+      ];
+
+      const result = analyzeDataFormat(blocks);
+
+      expect(result.format).toBe('hierarchical');
+      expect(result.hasHierarchy).toBe(true);
+    });
+  });
+
+  describe('expandToHierarchical - hybrid format', () => {
+    it('expands legacy callout while preserving already-hierarchical table blocks', () => {
+      const blocks: OutputBlockData[] = [
+        // Already-hierarchical table
+        {
+          id: 't1',
+          type: 'table',
+          data: { content: [[{ blocks: ['tp1'] }]], stretched: false },
+          content: ['tp1'],
+        },
+        // Legacy callout needing expansion
+        {
+          id: 'c1',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                { id: 'cp1', type: 'paragraph', data: { text: 'callout child text' } },
+              ],
+            },
+            variant: 'additional',
+            emoji: '💡',
+            isEmojiVisible: true,
+          },
+        },
+        // Regular paragraph
+        { id: 'para1', type: 'paragraph', data: { text: 'standalone paragraph' } },
+        // Table child
+        { id: 'tp1', type: 'paragraph', data: { text: 'table cell' }, parent: 't1' },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      // Table block preserved unchanged
+      const table = result.find(b => b.id === 't1');
+
+      expect(table).toBeDefined();
+      expect(table!.content).toEqual(['tp1']);
+
+      // Callout expanded to new format
+      const callout = result.find(b => b.id === 'c1');
+
+      expect(callout).toBeDefined();
+      expect(callout!.data).toEqual({
+        emoji: '💡',
+        textColor: null,
+        backgroundColor: 'yellow',
+      });
+      expect(callout!.content).toEqual(['cp1']);
+
+      // Callout child extracted as flat block with parent ref
+      const calloutChild = result.find(b => b.id === 'cp1');
+
+      expect(calloutChild).toBeDefined();
+      expect(calloutChild!.parent).toBe('c1');
+      expect(calloutChild!.data.text).toBe('callout child text');
+
+      // Table child preserved unchanged
+      const tableChild = result.find(b => b.id === 'tp1');
+
+      expect(tableChild).toBeDefined();
+      expect(tableChild!.parent).toBe('t1');
+
+      // Standalone paragraph preserved
+      const para = result.find(b => b.id === 'para1');
+
+      expect(para).toBeDefined();
+      expect(para!.data.text).toBe('standalone paragraph');
+    });
+
+    it('expands multiple legacy callouts in hybrid data', () => {
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'table',
+          data: { content: [[{ blocks: ['tp1'] }]], stretched: false },
+          content: ['tp1'],
+        },
+        {
+          id: 'c1',
+          type: 'callout',
+          data: {
+            body: { blocks: [{ id: 'cp1', type: 'paragraph', data: { text: 'first callout child' } }] },
+            variant: 'note',
+            emoji: '💡',
+            isEmojiVisible: false,
+          },
+        },
+        {
+          id: 'c2',
+          type: 'callout',
+          data: {
+            body: {
+              blocks: [
+                { id: 'cp2', type: 'paragraph', data: { text: 'second callout child 1' } },
+                { id: 'cp3', type: 'paragraph', data: { text: 'second callout child 2' } },
+              ],
+            },
+            variant: 'recommendation',
+            emoji: '🔥',
+            isEmojiVisible: true,
+          },
+        },
+        { id: 'tp1', type: 'paragraph', data: { text: 'table cell' }, parent: 't1' },
+      ];
+
+      const result = expandToHierarchical(blocks);
+
+      // First callout: emoji hidden, note variant
+      const c1 = result.find(b => b.id === 'c1');
+
+      expect(c1!.data.emoji).toBe('');
+      expect(c1!.data.backgroundColor).toBe('blue');
+      expect(c1!.content).toEqual(['cp1']);
+
+      // Second callout: emoji visible, recommendation variant, 2 children
+      const c2 = result.find(b => b.id === 'c2');
+
+      expect(c2!.data.emoji).toBe('🔥');
+      expect(c2!.data.backgroundColor).toBe('green');
+      expect(c2!.content).toEqual(['cp2', 'cp3']);
+
+      // All children extracted
+      expect(result.find(b => b.id === 'cp1')!.parent).toBe('c1');
+      expect(result.find(b => b.id === 'cp2')!.parent).toBe('c2');
+      expect(result.find(b => b.id === 'cp3')!.parent).toBe('c2');
+    });
+  });
+
   describe('expandToHierarchical - legacy toggleList', () => {
     it('expands toggleList block into toggle parent + child blocks', () => {
       const blocks: OutputBlockData[] = [

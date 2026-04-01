@@ -8,6 +8,7 @@ import { ParagraphConstructable, ParagraphData, ParagraphConfig } from './tools/
 import { ListConstructable, ListData, ListConfig, ListStyle } from './tools/list';
 import { TableConstructable, TableData, TableConfig, CellContent } from './tools/table';
 import { ToggleConstructable, ToggleData, ToggleConfig } from './tools/toggle';
+import { DividerConstructable, DividerData } from './tools/divider';
 import { InlineToolConstructable } from './tools/inline-tool';
 import { BlockTuneConstructable } from './block-tunes';
 import { ToolSettings } from './tools';
@@ -18,6 +19,7 @@ export const Header: HeaderConstructable;
 export const List: ListConstructable;
 export const Table: TableConstructable;
 export const Toggle: ToggleConstructable;
+export const Divider: DividerConstructable;
 
 // Re-export data and config types for convenience
 export { HeaderData, HeaderConfig } from './tools/header';
@@ -25,6 +27,7 @@ export { ParagraphData, ParagraphConfig } from './tools/paragraph';
 export { ListData, ListConfig, ListStyle } from './tools/list';
 export { TableData, TableConfig, CellContent } from './tools/table';
 export { ToggleData, ToggleConfig } from './tools/toggle';
+export { DividerData } from './tools/divider';
 
 // Inline tools
 export const Bold: InlineToolConstructable;
@@ -42,10 +45,13 @@ export const Delete: BlockTuneConstructable;
  * Default block tools configuration
  */
 export const defaultBlockTools: {
-  readonly paragraph: { readonly inlineToolbar: true; readonly config: { readonly preserveBlank: true } };
-  readonly header: { readonly inlineToolbar: true };
-  readonly list: { readonly inlineToolbar: true };
+  readonly paragraph: { readonly preserveBlank: true };
+  readonly header: {};
+  readonly list: {};
   readonly table: {};
+  readonly toggle: {};
+  readonly callout: {};
+  readonly divider: {};
 };
 
 /**

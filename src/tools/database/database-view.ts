@@ -32,7 +32,7 @@ export class DatabaseView {
     wrapper.style.display = 'flex';
     wrapper.style.overflowX = 'auto';
     wrapper.style.alignItems = 'flex-start';
-    wrapper.style.gap = '10px';
+    wrapper.style.gap = '12px';
     wrapper.style.padding = '6px 4px';
 
     for (const col of columns) {
@@ -163,7 +163,7 @@ export class DatabaseView {
     cardsContainer.setAttribute('role', 'list');
     cardsContainer.style.display = 'flex';
     cardsContainer.style.flexDirection = 'column';
-    cardsContainer.style.gap = '6px';
+    cardsContainer.style.gap = '8px';
     cardsContainer.style.paddingTop = '6px';
     cardsContainer.style.minHeight = '40px';
 
@@ -198,7 +198,7 @@ export class DatabaseView {
     cardEl.setAttribute('data-card-id', card.id);
     cardEl.setAttribute('role', 'listitem');
     cardEl.style.padding = '10px 12px';
-    cardEl.style.borderRadius = '6px';
+    cardEl.style.borderRadius = '8px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
 

@@ -478,21 +478,21 @@ describe('DatabaseView', () => {
       expect(board.style.padding).toBe('6px 4px');
     });
 
-    it('board wrapper has updated gap of 10px', () => {
+    it('board wrapper has updated gap of 12px', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const board = view.createBoard([], () => []);
 
-      expect(board.style.gap).toBe('10px');
+      expect(board.style.gap).toBe('12px');
     });
 
-    it('cards container has updated gap of 6px', () => {
+    it('cards container has updated gap of 8px', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const columns = [makeColumn({ id: 'col-1' })];
       const board = view.createBoard(columns, () => []);
 
       const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
 
-      expect(container.style.gap).toBe('6px');
+      expect(container.style.gap).toBe('8px');
     });
 
     it('cards container has padding-top of 6px', () => {
@@ -524,6 +524,17 @@ describe('DatabaseView', () => {
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
       expect(card.style.padding).toBe('10px 12px');
+    });
+
+    it('card element has border-radius of 8px', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
+
+      expect(card.style.borderRadius).toBe('8px');
     });
   });
 

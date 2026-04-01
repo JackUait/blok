@@ -1,0 +1,197 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { DatabaseView } from '../../../../src/tools/database/database-view';
+import type { KanbanColumnData, KanbanCardData } from '../../../../src/tools/database/types';
+import type { I18n } from '../../../../types';
+
+const makeColumn = (overrides: Partial<KanbanColumnData> = {}): KanbanColumnData => ({
+  id: 'col-1', title: 'To Do', position: 'a0', ...overrides,
+});
+const makeCard = (overrides: Partial<KanbanCardData> = {}): KanbanCardData => ({
+  id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Fix bug', ...overrides,
+});
+
+const createMockI18n = (): I18n => ({
+  t: vi.fn((key: string) => key),
+  has: vi.fn(() => true),
+  getEnglishTranslation: vi.fn(() => ''),
+  getLocale: vi.fn(() => 'en'),
+});
+
+describe('DatabaseView', () => {
+  let i18n: I18n;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    i18n = createMockI18n();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('createBoard', () => {
+    it('renders wrapper with data-blok-tool="database" attribute', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      expect(board.getAttribute('data-blok-tool')).toBe('database');
+    });
+
+    it('renders one [data-blok-database-column] per column', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [
+        makeColumn({ id: 'col-1', position: 'a0' }),
+        makeColumn({ id: 'col-2', title: 'In Progress', position: 'a1' }),
+        makeColumn({ id: 'col-3', title: 'Done', position: 'a2' }),
+      ];
+      const board = view.createBoard(columns, () => []);
+
+      const columnEls = board.querySelectorAll('[data-blok-database-column]');
+
+      expect(columnEls).toHaveLength(3);
+    });
+
+    it('renders [data-blok-database-card] elements inside columns', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [
+        makeCard({ id: 'card-1', columnId: 'col-1', position: 'a0' }),
+        makeCard({ id: 'card-2', columnId: 'col-1', position: 'a1', title: 'Write tests' }),
+      ];
+      const board = view.createBoard(columns, () => cards);
+
+      const cardEls = board.querySelectorAll('[data-blok-database-card]');
+
+      expect(cardEls).toHaveLength(2);
+    });
+
+    it('renders [data-blok-database-add-card] button in each column when NOT read-only', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [
+        makeColumn({ id: 'col-1', position: 'a0' }),
+        makeColumn({ id: 'col-2', title: 'Done', position: 'a1' }),
+      ];
+      const board = view.createBoard(columns, () => []);
+
+      const addCardBtns = board.querySelectorAll('[data-blok-database-add-card]');
+
+      expect(addCardBtns).toHaveLength(2);
+    });
+
+    it('hides add-card button in read-only mode', () => {
+      const view = new DatabaseView({ readOnly: true, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const addCardBtns = board.querySelectorAll('[data-blok-database-add-card]');
+
+      expect(addCardBtns).toHaveLength(0);
+    });
+
+    it('renders [data-blok-database-add-column] button when NOT read-only', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      const addColBtn = board.querySelector('[data-blok-database-add-column]');
+
+      expect(addColBtn).not.toBeNull();
+    });
+
+    it('hides add-column button in read-only mode', () => {
+      const view = new DatabaseView({ readOnly: true, i18n });
+      const board = view.createBoard([], () => []);
+
+      const addColBtn = board.querySelector('[data-blok-database-add-column]');
+
+      expect(addColBtn).toBeNull();
+    });
+
+    it('sets data-column-id on each column element', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [
+        makeColumn({ id: 'col-alpha', position: 'a0' }),
+        makeColumn({ id: 'col-beta', position: 'a1' }),
+      ];
+      const board = view.createBoard(columns, () => []);
+
+      const columnEls = board.querySelectorAll('[data-blok-database-column]');
+
+      expect(columnEls[0].getAttribute('data-column-id')).toBe('col-alpha');
+      expect(columnEls[1].getAttribute('data-column-id')).toBe('col-beta');
+    });
+
+    it('sets data-card-id on each card element', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [
+        makeCard({ id: 'card-x', columnId: 'col-1', position: 'a0' }),
+        makeCard({ id: 'card-y', columnId: 'col-1', position: 'a1' }),
+      ];
+      const board = view.createBoard(columns, () => cards);
+
+      const cardEls = board.querySelectorAll('[data-blok-database-card]');
+
+      expect(cardEls[0].getAttribute('data-card-id')).toBe('card-x');
+      expect(cardEls[1].getAttribute('data-card-id')).toBe('card-y');
+    });
+  });
+
+  describe('DOM update helpers', () => {
+    it('appendCard adds a card element to a cards container', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const container = document.createElement('div');
+      const card = makeCard({ id: 'card-new', title: 'New card' });
+
+      view.appendCard(container, card);
+
+      const cardEl = container.querySelector('[data-blok-database-card]');
+
+      expect(cardEl).not.toBeNull();
+      expect(cardEl?.getAttribute('data-card-id')).toBe('card-new');
+    });
+
+    it('removeCard removes a card element by data-card-id', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-rm', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      expect(board.querySelector('[data-card-id="card-rm"]')).not.toBeNull();
+
+      view.removeCard(board, 'card-rm');
+
+      expect(board.querySelector('[data-card-id="card-rm"]')).toBeNull();
+    });
+
+    it('appendColumn inserts a column before the add-column button', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+      const newCol = makeColumn({ id: 'col-new', title: 'New Column' });
+
+      view.appendColumn(board, newCol);
+
+      const columnEls = board.querySelectorAll('[data-blok-database-column]');
+
+      expect(columnEls).toHaveLength(1);
+      expect(columnEls[0].getAttribute('data-column-id')).toBe('col-new');
+
+      // Column should be before the add-column button
+      const addColBtn = board.querySelector('[data-blok-database-add-column]');
+
+      expect(addColBtn).not.toBeNull();
+      expect(columnEls[0].compareDocumentPosition(addColBtn!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('removeColumn removes a column element by data-column-id', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-del', position: 'a0' })];
+      const board = view.createBoard(columns, () => []);
+
+      expect(board.querySelector('[data-column-id="col-del"]')).not.toBeNull();
+
+      view.removeColumn(board, 'col-del');
+
+      expect(board.querySelector('[data-column-id="col-del"]')).toBeNull();
+    });
+  });
+});

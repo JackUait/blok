@@ -10,12 +10,7 @@ import type { ColumnDragResult } from './database-column-drag';
 import { DatabaseColumnControls } from './database-column-controls';
 import { DatabaseCardPeek } from './database-card-peek';
 import { DatabaseKeyboard } from './database-keyboard';
-
-/**
- * Placeholder icons until Task 12 adds the real ones.
- */
-const IconDatabase = '';
-const IconBoard = '';
+import { IconDatabase, IconBoard } from '../../components/icons';
 
 /**
  * DatabaseTool — a Kanban board block tool for Blok.

@@ -26,6 +26,7 @@ export { ListItem as List } from './list';
 export { Table } from './table';
 export { ToggleItem as Toggle } from './toggle';
 export { CalloutTool as Callout } from './callout';
+export { DatabaseTool as Database } from './database';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
@@ -45,6 +46,7 @@ export const defaultBlockTools = {
   table: {},
   toggle: {},
   callout: {},
+  database: {},
 } as const;
 
 export const defaultInlineTools = {

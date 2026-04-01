@@ -54,6 +54,13 @@ export interface ToolboxConfigEntry {
   searchTerms?: string[];
 
   /**
+   * Translation keys for localized search aliases (e.g., ['divider', 'separator']).
+   * Each key is resolved via `searchTerms.{key}` in the i18n system.
+   * The translated strings are added to searchTerms at runtime for multilingual search.
+   */
+  searchTermKeys?: string[];
+
+  /**
    * Shortcut hint to display in the toolbox (e.g., '#', '##', '-', '1.', '[]').
    * This is displayed as a secondary label next to the tool title.
    * Unlike tool-level shortcuts, these are per-entry hints for tools with multiple variants.

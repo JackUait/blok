@@ -1626,6 +1626,77 @@ describe('Toolbox', () => {
     });
   });
 
+  describe('searchTermKeys resolution', () => {
+    it('should resolve searchTermKeys via i18n and merge into searchTerms', () => {
+      const i18n = {
+        t: vi.fn((key: string) => {
+          const translations: Record<string, string> = {
+            'toolNames.divider': 'Séparateur',
+            'searchTerms.divider': 'diviseur',
+            'searchTerms.separator': 'séparateur',
+            'searchTerms.delimiter': 'délimiteur',
+            'searchTerms.splitter': 'sépareur',
+          };
+
+          return translations[key] ?? key;
+        }),
+        has: vi.fn((key: string) => key.startsWith('toolNames.') || key.startsWith('searchTerms.')),
+      };
+
+      const dividerTool = {
+        name: 'divider',
+        toolbox: {
+          icon: '<svg>divider</svg>',
+          titleKey: 'divider',
+          searchTerms: ['hr', 'line'],
+          searchTermKeys: ['divider', 'separator', 'delimiter', 'splitter'],
+        },
+        shortcut: undefined,
+        searchTerms: undefined,
+      } as unknown as BlockToolAdapter;
+
+      const tools = createToolsCollection([['divider', dividerTool]]);
+
+      const api = {
+        ...mocks.api,
+        i18n: {
+          t: vi.fn(),
+          has: vi.fn(),
+          getEnglishTranslation: vi.fn((key: string) => {
+            const en: Record<string, string> = {
+              'toolNames.divider': 'Divider',
+              'searchTerms.divider': 'divider',
+              'searchTerms.separator': 'separator',
+              'searchTerms.delimiter': 'delimiter',
+              'searchTerms.splitter': 'splitter',
+            };
+
+            return en[key] ?? '';
+          }),
+          getLocale: vi.fn(() => 'fr'),
+        },
+      } as unknown as API;
+
+      new Toolbox({
+        api,
+        tools,
+        i18nLabels,
+        i18n,
+      });
+
+      const items = lastPopoverItems.value as Array<{ searchTerms?: string[] }>;
+
+      expect(items).toHaveLength(1);
+      // Should contain original searchTerms + resolved translations
+      expect(items[0].searchTerms).toContain('hr');
+      expect(items[0].searchTerms).toContain('line');
+      expect(items[0].searchTerms).toContain('diviseur');
+      expect(items[0].searchTerms).toContain('séparateur');
+      expect(items[0].searchTerms).toContain('délimiteur');
+      expect(items[0].searchTerms).toContain('sépareur');
+    });
+  });
+
   describe('setCalloutBackground', () => {
     it('sets --blok-search-input-bg on popover element when color is provided', () => {
       const popoverEl = document.createElement('div');

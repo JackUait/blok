@@ -352,6 +352,56 @@ describe('Renderer module', () => {
     expect(tools.unavailable.has('missing')).toBe(true);
   });
 
+  it('resolves tool aliases to available tools instead of stubbing', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    // Register 'divider' as available (the target alias)
+    tools.available.set('divider', {});
+
+    // Do NOT register 'delimiter' — it's the legacy name
+
+    const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+    const blockData: OutputBlockData = {
+      id: 'delimiter-block',
+      type: 'delimiter',
+      data: {},
+    };
+
+    await renderer.render([blockData]);
+
+    // Should NOT log a warning about missing tool
+    expect(logLabeledSpy).not.toHaveBeenCalled();
+
+    // Should compose with the alias target 'divider', not 'delimiter' or stub
+    expect(blockManager.composeBlock).toHaveBeenCalledTimes(1);
+    const [composeArgs] = blockManager.composeBlock.mock.calls[0];
+    expect(composeArgs.tool).toBe('divider');
+    expect(composeArgs.data).toEqual({});
+    expect(composeArgs.id).toBe('delimiter-block');
+  });
+
+  it('falls back to stub when alias target tool is not registered', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    // Do NOT register 'divider' — the alias target isn't available either
+    const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+    const blockData: OutputBlockData = {
+      id: 'delimiter-orphan',
+      type: 'delimiter',
+      data: {},
+    };
+
+    await renderer.render([blockData]);
+
+    // Should fall through to stub behavior
+    expect(logLabeledSpy).toHaveBeenCalledTimes(1);
+    expect(blockManager.composeBlock).toHaveBeenCalledTimes(1);
+    const [composeArgs] = blockManager.composeBlock.mock.calls[0];
+    expect(composeArgs.tool).toBe(tools.stubTool);
+  });
+
   it('falls back to the tool name when toolbox metadata is missing', () => {
     const { renderer } = createRenderer();
 

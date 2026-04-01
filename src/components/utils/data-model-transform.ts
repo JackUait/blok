@@ -260,10 +260,6 @@ const hasHierarchicalRefs = (block: OutputBlockData): boolean => {
 export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis => {
   const foundHierarchicalRefs = blocks.some(hasHierarchicalRefs);
 
-  if (foundHierarchicalRefs) {
-    return { format: 'hierarchical', hasHierarchy: true };
-  }
-
   // Check if any block uses legacy list format (items[] array)
   const foundLegacyList = blocks.some(isLegacyListBlock);
 
@@ -273,9 +269,15 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
   // Check if any block uses legacy callout format (has body field)
   const foundLegacyCallout = blocks.some(isLegacyCalloutBlock);
 
-  if (foundLegacyList || foundLegacyToggle || foundLegacyCallout) {
+  const hasLegacyBlocks = foundLegacyList || foundLegacyToggle || foundLegacyCallout;
+
+  if (foundHierarchicalRefs && !hasLegacyBlocks) {
+    return { format: 'hierarchical', hasHierarchy: true };
+  }
+
+  if (hasLegacyBlocks) {
     // Check if there's actual nesting for the hasHierarchy flag
-    const hasNesting = blocks.some(hasNestedItems) || blocks.some(block =>
+    const hasNesting = foundHierarchicalRefs || blocks.some(hasNestedItems) || blocks.some(block =>
       isLegacyToggleListBlock(block) && block.data.body?.blocks !== undefined && block.data.body.blocks.length > 0
     ) || blocks.some(block =>
       isLegacyCalloutBlock(block) && block.data.body?.blocks !== undefined && block.data.body.blocks.length > 0

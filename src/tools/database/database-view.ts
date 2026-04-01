@@ -91,8 +91,8 @@ export class DatabaseView {
    */
   appendColumn(wrapper: HTMLElement, col: KanbanColumnData): void {
     const columnEl = this.createColumnElement(col, []);
-    const boardArea = wrapper.querySelector('[data-blok-database-board]') as HTMLElement | null;
-    const container = boardArea ?? wrapper;
+    const boardArea = wrapper.querySelector('[data-blok-database-board]');
+    const container = (boardArea as HTMLElement | null) ?? wrapper;
     const addColumnBtn = container.querySelector('[data-blok-database-add-column]');
 
     if (addColumnBtn) {

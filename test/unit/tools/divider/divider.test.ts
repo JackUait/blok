@@ -87,16 +87,18 @@ describe('DividerTool', () => {
   describe('static toolbox', () => {
     it('has icon and titleKey', async () => {
       const { DividerTool } = await import('../../../../src/tools/divider');
+      const toolbox = DividerTool.toolbox;
 
-      expect(DividerTool.toolbox).toBeDefined();
-      expect(DividerTool.toolbox!.icon).toBeTruthy();
-      expect(DividerTool.toolbox!.titleKey).toBe('divider');
+      expect(toolbox).toBeDefined();
+      expect(!Array.isArray(toolbox) && toolbox.icon).toBeTruthy();
+      expect(!Array.isArray(toolbox) && toolbox.titleKey).toBe('divider');
     });
 
     it('has search terms including ---', async () => {
       const { DividerTool } = await import('../../../../src/tools/divider');
+      const toolbox = DividerTool.toolbox;
 
-      expect(DividerTool.toolbox!.searchTerms).toContain('---');
+      expect(!Array.isArray(toolbox) && toolbox.searchTerms).toContain('---');
     });
   });
 

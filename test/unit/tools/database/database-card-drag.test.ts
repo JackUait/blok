@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
-
-const DRAG_THRESHOLD = 10;
+import type { CardDragResult } from '../../../../src/tools/database/database-card-drag';
 
 /**
  * Creates a wrapper with columns and cards for testing.
@@ -72,12 +71,12 @@ const createWrapper = (columnCount: number, cardsPerColumn: number): HTMLDivElem
 
 describe('DatabaseCardDrag', () => {
   let wrapper: HTMLDivElement;
-  let onDrop: ReturnType<typeof vi.fn>;
+  let onDrop: ReturnType<typeof vi.fn<(result: CardDragResult) => void>>;
   let drag: DatabaseCardDrag;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    onDrop = vi.fn();
+    onDrop = vi.fn<(result: CardDragResult) => void>();
     wrapper = createWrapper(2, 2);
     drag = new DatabaseCardDrag({ wrapper, onDrop });
   });

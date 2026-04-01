@@ -23,17 +23,17 @@ const makeHeaderEl = (title = 'My Column'): HTMLElement => {
 
 describe('DatabaseColumnControls', () => {
   let i18n: I18n;
-  let onRename: ReturnType<typeof vi.fn>;
-  let onRecolor: ReturnType<typeof vi.fn>;
-  let onDelete: ReturnType<typeof vi.fn>;
+  let onRename: ReturnType<typeof vi.fn<(columnId: string, title: string) => void>>;
+  let onRecolor: ReturnType<typeof vi.fn<(columnId: string, color: string) => void>>;
+  let onDelete: ReturnType<typeof vi.fn<(columnId: string) => void>>;
   let controls: DatabaseColumnControls;
 
   beforeEach(() => {
     vi.clearAllMocks();
     i18n = createMockI18n();
-    onRename = vi.fn();
-    onRecolor = vi.fn();
-    onDelete = vi.fn();
+    onRename = vi.fn<(columnId: string, title: string) => void>();
+    onRecolor = vi.fn<(columnId: string, color: string) => void>();
+    onDelete = vi.fn<(columnId: string) => void>();
     controls = new DatabaseColumnControls({ i18n, onRename, onRecolor, onDelete });
   });
 

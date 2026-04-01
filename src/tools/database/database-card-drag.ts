@@ -192,7 +192,6 @@ export class DatabaseCardDrag {
       style.height = '2px';
       style.left = '0';
       style.right = '0';
-      style.backgroundColor = '#3b82f6';
       style.pointerEvents = 'none';
       style.zIndex = '5';
     }

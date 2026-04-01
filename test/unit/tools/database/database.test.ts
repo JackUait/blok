@@ -249,7 +249,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('column delete cascades adapter calls for cards', () => {
-    it('calls syncDeleteCard for each card in the column before syncDeleteColumn', async () => {
+    it('calls adapter.deleteCard for each card then adapter.deleteColumn when column is deleted', async () => {
       const deleteCardCalls: string[] = [];
       const deleteColumnCalls: string[] = [];
 
@@ -284,21 +284,26 @@ describe('DatabaseTool', () => {
       const tool = new DatabaseTool(options);
       const element = tool.render();
 
-      // Simulate column delete by finding the column header and using column controls
-      // Since handleColumnDelete is private, we need to trigger it indirectly.
-      // The column controls' onDelete callback is wired to handleColumnDelete.
-      // However, the column controls popover is complex. Instead, let's verify
-      // by checking the adapter calls indirectly via the model + sync behavior.
+      // Find the delete-column button for col-1 (injected by DatabaseColumnControls.makeEditable)
+      const deleteBtn = element.querySelector('[data-blok-database-delete-column][data-column-id="col-1"]') as HTMLButtonElement;
 
-      // A simpler approach: we can check the model state after delete
-      // The cascade is an internal implementation detail tested through the adapter mock.
-      // We already verified the adapter gets called by providing a mock adapter.
+      expect(deleteBtn).not.toBeNull();
 
-      // Let's wait for any pending async calls
+      deleteBtn.click();
+
+      // Adapter calls are async — wait for them to flush
       await vi.waitFor(() => {
-        // The adapter should not have been called yet (no delete triggered)
-        expect(deleteCardCalls).toHaveLength(0);
+        expect(deleteCardCalls).toHaveLength(2);
       });
+
+      expect(deleteCardCalls).toContain('card-1');
+      expect(deleteCardCalls).toContain('card-2');
+      expect(deleteColumnCalls).toEqual(['col-1']);
+
+      // Column should be removed from DOM
+      const remainingColumns = element.querySelectorAll('[data-blok-database-column]');
+
+      expect(remainingColumns).toHaveLength(1);
 
       tool.destroy();
     });

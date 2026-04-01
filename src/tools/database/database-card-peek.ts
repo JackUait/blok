@@ -1,6 +1,12 @@
 import type { OutputData } from '../../../types';
 import type { KanbanCardData } from './types';
 
+interface BlokInstance {
+  save(): Promise<OutputData>;
+  destroy(): void;
+  isReady: Promise<void>;
+}
+
 export interface CardPeekOptions {
   wrapper: HTMLElement;
   readOnly: boolean;
@@ -22,7 +28,7 @@ export class DatabaseCardPeek {
 
   private panel: HTMLDivElement | null = null;
   private currentCardId: string | null = null;
-  private blokInstance: { save: () => Promise<OutputData>; destroy: () => void } | null = null;
+  private blokInstance: BlokInstance | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(options: CardPeekOptions) {
@@ -156,22 +162,24 @@ export class DatabaseCardPeek {
   private initNestedEditor(editorHolder: HTMLElement, card: KanbanCardData): void {
     import('../../blok').then(({ Blok }) => {
       const cardId = card.id;
-      const instance = new Blok({
+      const blok = new Blok({
         holder: editorHolder,
         data: card.description,
         readOnly: this.readOnly,
         onChange: async () => {
           try {
-            const data = await (instance as unknown as { save: () => Promise<OutputData> }).save();
+            const data = await this.blokInstance?.save();
 
-            this.onDescriptionChange(cardId, data);
+            if (data !== undefined) {
+              this.onDescriptionChange(cardId, data);
+            }
           } catch {
             // save may fail if editor is being destroyed
           }
         },
       });
 
-      this.blokInstance = instance as unknown as { save: () => Promise<OutputData>; destroy: () => void };
+      this.blokInstance = blok as unknown as BlokInstance;
     }).catch(() => {
       // Blok import may fail in unit tests (jsdom), panel still works for title
     });

@@ -1,4 +1,4 @@
-import { generateKeyBetween, generateNKeysBetween } from 'fractional-indexing';
+import { generateKeyBetween } from 'fractional-indexing';
 import { nanoid } from 'nanoid';
 import type { KanbanData, KanbanColumnData, KanbanCardData } from './types';
 
@@ -213,13 +213,6 @@ export class DatabaseModel {
    */
   static positionBetween(before: string | null, after: string | null): string {
     return generateKeyBetween(before, after);
-  }
-
-  /**
-   * Generates n fractional-index keys between two bounds.
-   */
-  static positionsBetween(before: string | null, after: string | null, n: number): string[] {
-    return generateNKeysBetween(before, after, n);
   }
 
   /**

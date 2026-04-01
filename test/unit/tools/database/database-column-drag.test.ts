@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
-
-const DRAG_THRESHOLD = 10;
+import type { ColumnDragResult } from '../../../../src/tools/database/database-column-drag';
 
 /**
  * Creates a wrapper with columns for testing column drag.
@@ -45,12 +44,12 @@ const createWrapper = (columnCount: number): HTMLDivElement => {
 
 describe('DatabaseColumnDrag', () => {
   let wrapper: HTMLDivElement;
-  let onDrop: ReturnType<typeof vi.fn>;
+  let onDrop: ReturnType<typeof vi.fn<(result: ColumnDragResult) => void>>;
   let drag: DatabaseColumnDrag;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    onDrop = vi.fn();
+    onDrop = vi.fn<(result: ColumnDragResult) => void>();
     wrapper = createWrapper(3);
     drag = new DatabaseColumnDrag({ wrapper, onDrop });
   });

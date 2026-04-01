@@ -1338,4 +1338,209 @@ describe('MarkdownShortcuts', () => {
       holder.remove();
     });
   });
+
+  describe('divider shortcut', () => {
+    it('converts --- to divider when typing the third hyphen', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '---';
+      }
+      const newDividerBlock = createBlock({ id: 'divider-block' });
+      const replace = vi.fn(() => newDividerBlock);
+      const stopCapturing = vi.fn();
+      const getBlockIndex = vi.fn(() => 0);
+      const insertDefaultBlockAtIndex = vi.fn(() => mockBlock);
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+          getBlockIndex,
+          insertDefaultBlockAtIndex,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['header', { settings: { levels: [1, 2, 3, 4, 5, 6] } }],
+            ['toggle', { settings: {} }],
+            ['divider', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent({ data: '-' });
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(mockBlock, 'divider', {});
+      expect(stopCapturing).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not convert -- (only two hyphens)', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '--';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['header', { settings: { levels: [1, 2, 3, 4, 5, 6] } }],
+            ['toggle', { settings: {} }],
+            ['divider', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent({ data: '-' });
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('does not convert when divider tool is not registered', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '---';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent({ data: '-' });
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('does not convert when block is not the default tool', () => {
+      const mockBlock = createBlock({
+        tool: {
+          isDefault: false,
+          isLineBreaksEnabled: false,
+          name: 'header',
+        } as unknown as Block['tool'],
+      });
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '---';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['header', { settings: { levels: [1, 2, 3, 4, 5, 6] } }],
+            ['toggle', { settings: {} }],
+            ['divider', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent({ data: '-' });
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('does not convert --- with trailing text', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '---hello';
+      }
+      const replace = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['header', { settings: { levels: [1, 2, 3, 4, 5, 6] } }],
+            ['toggle', { settings: {} }],
+            ['divider', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent({ data: '-' });
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('creates a new empty paragraph after the divider', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '---';
+      }
+      const paragraphBlock = createBlock({ id: 'paragraph-block' });
+      const newDividerBlock = createBlock({ id: 'divider-block' });
+      const newBlockIndex = 2;
+      const replace = vi.fn(() => newDividerBlock);
+      const stopCapturing = vi.fn();
+      const getBlockIndex = vi.fn(() => newBlockIndex);
+      const insertDefaultBlockAtIndex = vi.fn(() => paragraphBlock);
+      const setToBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+          getBlockIndex,
+          insertDefaultBlockAtIndex,
+        } as unknown as BlokModules['BlockManager'],
+        Tools: {
+          blockTools: new Map([
+            ['list', { settings: {} }],
+            ['header', { settings: { levels: [1, 2, 3, 4, 5, 6] } }],
+            ['toggle', { settings: {} }],
+            ['divider', { settings: {} }],
+          ]),
+        } as unknown as BlokModules['Tools'],
+        YjsManager: {
+          stopCapturing,
+        } as unknown as BlokModules['YjsManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent({ data: '-' });
+
+      markdownShortcuts.handleInput(event);
+
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(newBlockIndex + 1);
+      expect(setToBlock).toHaveBeenCalledWith(paragraphBlock, 'start');
+    });
+  });
 });

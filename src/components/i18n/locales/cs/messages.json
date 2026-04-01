@@ -87,6 +87,7 @@
   "toolNames.underline": "Podtržené",
   "toolNames.strikethrough": "Přeškrtnuté",
   "toolNames.callout": "Popisek",
+  "toolNames.divider": "Oddělovač",
   "tools.callout.placeholder": "Popisek",
   "tools.callout.addEmoji": "Přidat emoji",
   "tools.callout.editIcon": "Upravit ikonu",

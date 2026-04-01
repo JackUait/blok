@@ -87,6 +87,7 @@
   "toolNames.underline": "Υπογράμμιση",
   "toolNames.strikethrough": "Διαγράμμιση",
   "toolNames.callout": "Επεξήγηση",
+  "toolNames.divider": "Διαχωριστικό",
   "tools.callout.placeholder": "Επεξήγηση",
   "tools.callout.addEmoji": "Προσθήκη emoji",
   "tools.callout.editIcon": "Επεξεργασία εικονιδίου",

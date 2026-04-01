@@ -87,6 +87,7 @@
   "toolNames.underline": "Allajoonimine",
   "toolNames.strikethrough": "Läbikriipsutus",
   "toolNames.callout": "Vihjekast",
+  "toolNames.divider": "Eraldaja",
   "tools.callout.placeholder": "Vihjekast",
   "tools.callout.addEmoji": "Lisa emoji",
   "tools.callout.editIcon": "Muuda ikooni",

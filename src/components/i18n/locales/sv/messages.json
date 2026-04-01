@@ -87,6 +87,7 @@
   "toolNames.underline": "Understrykning",
   "toolNames.strikethrough": "Genomstrykning",
   "toolNames.callout": "Notering",
+  "toolNames.divider": "Avdelare",
   "tools.callout.placeholder": "Notering",
   "tools.callout.addEmoji": "Lägg till emoji",
   "tools.callout.editIcon": "Redigera ikon",

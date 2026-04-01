@@ -87,6 +87,7 @@
   "toolNames.underline": "Garis Bawah",
   "toolNames.strikethrough": "Coret",
   "toolNames.callout": "Info",
+  "toolNames.divider": "Pemisah",
   "tools.callout.placeholder": "Info",
   "tools.callout.addEmoji": "Tambah emoji",
   "tools.callout.editIcon": "Edit ikon",

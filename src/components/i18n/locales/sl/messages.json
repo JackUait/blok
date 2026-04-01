@@ -87,6 +87,7 @@
   "toolNames.underline": "Podčrtano",
   "toolNames.strikethrough": "Prečrtano",
   "toolNames.callout": "Opomba",
+  "toolNames.divider": "Ločilnik",
   "tools.callout.placeholder": "Opomba",
   "tools.callout.addEmoji": "Dodaj emoji",
   "tools.callout.editIcon": "Uredi ikono",

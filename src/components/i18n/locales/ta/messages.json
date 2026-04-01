@@ -87,6 +87,7 @@
   "toolNames.underline": "அடிக்கோடு",
   "toolNames.strikethrough": "நடுக்கோடு",
   "toolNames.callout": "குறிப்புப்பெட்டி",
+  "toolNames.divider": "பிரிப்பான்",
   "tools.callout.placeholder": "குறிப்புப்பெட்டி",
   "tools.callout.addEmoji": "இமோஜி சேர்",
   "tools.callout.editIcon": "ஐகானைத் திருத்து",

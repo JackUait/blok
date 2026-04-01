@@ -87,6 +87,7 @@
   "toolNames.underline": "Aláhúzás",
   "toolNames.strikethrough": "Áthúzás",
   "toolNames.callout": "Kiemelés",
+  "toolNames.divider": "Elválasztó",
   "tools.callout.placeholder": "Kiemelés",
   "tools.callout.addEmoji": "Emoji hozzáadása",
   "tools.callout.editIcon": "Ikon szerkesztése",

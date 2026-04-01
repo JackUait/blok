@@ -87,6 +87,7 @@
   "toolNames.underline": "Подчёркнутый",
   "toolNames.strikethrough": "Зачёркнутый",
   "toolNames.callout": "Выноска",
+  "toolNames.divider": "Разделитель",
   "tools.callout.placeholder": "Выноска",
   "tools.callout.addEmoji": "Добавить эмодзи",
   "tools.callout.editIcon": "Изменить иконку",

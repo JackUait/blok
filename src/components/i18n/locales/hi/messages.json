@@ -87,6 +87,7 @@
   "toolNames.underline": "अंडरलाइन",
   "toolNames.strikethrough": "स्ट्राइकथ्रू",
   "toolNames.callout": "कॉलआउट",
+  "toolNames.divider": "विभाजक",
   "tools.callout.placeholder": "कॉलआउट",
   "tools.callout.addEmoji": "इमोजी जोड़ें",
   "tools.callout.editIcon": "आइकन संपादित करें",

@@ -87,6 +87,7 @@
   "toolNames.underline": "Gạch chân",
   "toolNames.strikethrough": "Gạch ngang",
   "toolNames.callout": "Chú thích",
+  "toolNames.divider": "Đường phân cách",
   "tools.callout.placeholder": "Chú thích",
   "tools.callout.addEmoji": "Thêm biểu tượng",
   "tools.callout.editIcon": "Chỉnh sửa biểu tượng",

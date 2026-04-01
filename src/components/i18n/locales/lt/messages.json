@@ -87,6 +87,7 @@
   "toolNames.underline": "Pabrauktas",
   "toolNames.strikethrough": "Perbrauktas",
   "toolNames.callout": "Pastaba",
+  "toolNames.divider": "Skirtukas",
   "tools.callout.placeholder": "Pastaba",
   "tools.callout.addEmoji": "Pridėti jaustuką",
   "tools.callout.editIcon": "Redaguoti piktogramą",

@@ -87,6 +87,7 @@
   "toolNames.underline": "Altı çizili",
   "toolNames.strikethrough": "Üstü çizili",
   "toolNames.callout": "Bilgi kutusu",
+  "toolNames.divider": "Ayırıcı",
   "tools.callout.placeholder": "Bilgi kutusu",
   "tools.callout.addEmoji": "Emoji ekle",
   "tools.callout.editIcon": "Simgeyi düzenle",

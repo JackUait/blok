@@ -87,6 +87,7 @@
   "toolNames.underline": "Pasvītrojums",
   "toolNames.strikethrough": "Pārsvītrojums",
   "toolNames.callout": "Izcēlums",
+  "toolNames.divider": "Atdalītājs",
   "tools.callout.placeholder": "Izcēlums",
   "tools.callout.addEmoji": "Pievienot emocijzīmi",
   "tools.callout.editIcon": "Rediģēt ikonu",

@@ -87,6 +87,7 @@
   "toolNames.underline": "Unterstreichen",
   "toolNames.strikethrough": "Durchstreichen",
   "toolNames.callout": "Hervorhebung",
+  "toolNames.divider": "Trennlinie",
   "tools.callout.placeholder": "Hervorhebung",
   "tools.callout.addEmoji": "Emoji hinzufügen",
   "tools.callout.editIcon": "Symbol bearbeiten",

@@ -87,6 +87,7 @@
   "toolNames.underline": "下線",
   "toolNames.strikethrough": "取り消し線",
   "toolNames.callout": "コールアウト",
+  "toolNames.divider": "区切り線",
   "tools.callout.placeholder": "コールアウト",
   "tools.callout.addEmoji": "絵文字を追加",
   "tools.callout.editIcon": "アイコンを編集",

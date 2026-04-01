@@ -87,6 +87,7 @@
   "toolNames.underline": "Understreking",
   "toolNames.strikethrough": "Gjennomstreking",
   "toolNames.callout": "Merknad",
+  "toolNames.divider": "Skillelinje",
   "tools.callout.placeholder": "Merknad",
   "tools.callout.addEmoji": "Legg til emoji",
   "tools.callout.editIcon": "Rediger ikon",

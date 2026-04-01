@@ -87,6 +87,7 @@
   "toolNames.underline": "Nënvizim",
   "toolNames.strikethrough": "Vizë përmes",
   "toolNames.callout": "Theksim",
+  "toolNames.divider": "Ndarës",
   "tools.callout.placeholder": "Theksim",
   "tools.callout.addEmoji": "Shto emoji",
   "tools.callout.editIcon": "Ndrysho ikonën",

@@ -87,6 +87,7 @@
   "toolNames.underline": "ხაზგასმა",
   "toolNames.strikethrough": "გადახაზვა",
   "toolNames.callout": "შენიშვნა",
+  "toolNames.divider": "გამყოფი",
   "tools.callout.placeholder": "შენიშვნა",
   "tools.callout.addEmoji": "ემოჯის დამატება",
   "tools.callout.editIcon": "ხატულას რედაქტირება",

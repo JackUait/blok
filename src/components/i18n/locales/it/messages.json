@@ -87,6 +87,7 @@
   "toolNames.underline": "Sottolineato",
   "toolNames.strikethrough": "Barrato",
   "toolNames.callout": "Richiamo",
+  "toolNames.divider": "Separatore",
   "tools.callout.placeholder": "Richiamo",
   "tools.callout.addEmoji": "Aggiungi emoji",
   "tools.callout.editIcon": "Modifica icona",

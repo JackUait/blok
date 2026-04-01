@@ -87,6 +87,7 @@
   "toolNames.underline": "Sublinhado",
   "toolNames.strikethrough": "Tachado",
   "toolNames.callout": "Destaque",
+  "toolNames.divider": "Divisor",
   "tools.callout.placeholder": "Destaque",
   "tools.callout.addEmoji": "Adicionar emoji",
   "tools.callout.editIcon": "Editar ícone",

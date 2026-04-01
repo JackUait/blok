@@ -87,6 +87,7 @@
   "toolNames.underline": "Подчертан",
   "toolNames.strikethrough": "Зачертан",
   "toolNames.callout": "Бележка",
+  "toolNames.divider": "Разделител",
   "tools.callout.placeholder": "Бележка",
   "tools.callout.addEmoji": "Добави емоджи",
   "tools.callout.editIcon": "Редактирай иконата",

@@ -87,6 +87,7 @@
   "toolNames.underline": "Salungguhit",
   "toolNames.strikethrough": "Guhit sa Gitna",
   "toolNames.callout": "Callout",
+  "toolNames.divider": "Panghati",
   "tools.callout.placeholder": "Callout",
   "tools.callout.addEmoji": "Magdagdag ng emoji",
   "tools.callout.editIcon": "I-edit ang icon",

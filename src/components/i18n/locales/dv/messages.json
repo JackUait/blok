@@ -87,6 +87,7 @@
   "toolNames.underline": "އަންޑަރލައިން",
   "toolNames.strikethrough": "ސްޓްރައިކްތުރޫ",
   "toolNames.callout": "ނޯޓް",
+  "toolNames.divider": "ބެހޭ",
   "tools.callout.placeholder": "ނޯޓް",
   "tools.callout.addEmoji": "އިމޯޖީ އިތުރުކުރޭ",
   "tools.callout.editIcon": "އައިކަން ބަދަލުކުރޭ",

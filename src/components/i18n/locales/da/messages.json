@@ -87,6 +87,7 @@
   "toolNames.underline": "Understregning",
   "toolNames.strikethrough": "Gennemstregning",
   "toolNames.callout": "Fremhævning",
+  "toolNames.divider": "Adskiller",
   "tools.callout.placeholder": "Fremhævning",
   "tools.callout.addEmoji": "Tilføj emoji",
   "tools.callout.editIcon": "Rediger ikon",

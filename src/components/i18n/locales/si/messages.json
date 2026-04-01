@@ -87,6 +87,7 @@
   "toolNames.underline": "යටිරේඛනය",
   "toolNames.strikethrough": "ඉරිතැලීම",
   "toolNames.callout": "කෝලවුට්",
+  "toolNames.divider": "බෙදුම්කරු",
   "tools.callout.placeholder": "කෝලවුට්",
   "tools.callout.addEmoji": "ඉමෝජි එක් කරන්න",
   "tools.callout.editIcon": "නිරූපකය සංස්කරණය කරන්න",

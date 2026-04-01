@@ -87,6 +87,7 @@
   "toolNames.underline": "ຂີດກ້ອງ",
   "toolNames.strikethrough": "ຂີດທັບ",
   "toolNames.callout": "ກ່ອງເນັ້ນ",
+  "toolNames.divider": "ເສັ້ນແບ່ງ",
   "tools.callout.placeholder": "ກ່ອງເນັ້ນ",
   "tools.callout.addEmoji": "ເພີ່ມອີໂມຈິ",
   "tools.callout.editIcon": "ແກ້ໄຂໄອຄອນ",

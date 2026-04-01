@@ -87,6 +87,7 @@
   "toolNames.underline": "Доогуур зураас",
   "toolNames.strikethrough": "Дундуур зураас",
   "toolNames.callout": "Тодорхойлол",
+  "toolNames.divider": "Хуваагч",
   "tools.callout.placeholder": "Тодорхойлол",
   "tools.callout.addEmoji": "Эможи нэмэх",
   "tools.callout.editIcon": "Дүрсийг засах",

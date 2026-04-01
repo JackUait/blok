@@ -87,6 +87,7 @@
   "toolNames.underline": "Підкреслений",
   "toolNames.strikethrough": "Закреслений",
   "toolNames.callout": "Виноска",
+  "toolNames.divider": "Роздільник",
   "tools.callout.placeholder": "Виноска",
   "tools.callout.addEmoji": "Додати емодзі",
   "tools.callout.editIcon": "Редагувати іконку",

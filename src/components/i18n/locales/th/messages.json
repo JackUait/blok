@@ -87,6 +87,7 @@
   "toolNames.underline": "ขีดเส้นใต้",
   "toolNames.strikethrough": "ขีดทับ",
   "toolNames.callout": "กล่องเน้น",
+  "toolNames.divider": "เส้นคั่น",
   "tools.callout.placeholder": "กล่องเน้น",
   "tools.callout.addEmoji": "เพิ่มอีโมจิ",
   "tools.callout.editIcon": "แก้ไขไอคอน",

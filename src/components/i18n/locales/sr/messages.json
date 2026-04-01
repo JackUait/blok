@@ -87,6 +87,7 @@
   "toolNames.underline": "Подвучено",
   "toolNames.strikethrough": "Прецртано",
   "toolNames.callout": "Истакнуто",
+  "toolNames.divider": "Раздвајач",
   "tools.callout.placeholder": "Истакнуто",
   "tools.callout.addEmoji": "Додај емоџи",
   "tools.callout.editIcon": "Уреди икону",

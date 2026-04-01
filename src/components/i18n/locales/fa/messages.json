@@ -87,6 +87,7 @@
   "toolNames.underline": "زیرخط",
   "toolNames.strikethrough": "خط‌خورده",
   "toolNames.callout": "یادداشت",
+  "toolNames.divider": "جداکننده",
   "tools.callout.placeholder": "یادداشت",
   "tools.callout.addEmoji": "افزودن ایموجی",
   "tools.callout.editIcon": "ویرایش نماد",

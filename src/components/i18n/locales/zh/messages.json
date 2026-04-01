@@ -87,6 +87,7 @@
   "toolNames.underline": "下划线",
   "toolNames.strikethrough": "删除线",
   "toolNames.callout": "标注",
+  "toolNames.divider": "分隔线",
   "tools.callout.placeholder": "标注",
   "tools.callout.addEmoji": "添加表情",
   "tools.callout.editIcon": "编辑图标",

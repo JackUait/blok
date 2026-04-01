@@ -87,6 +87,7 @@
   "toolNames.underline": "ئاستى سىزىق",
   "toolNames.strikethrough": "ئۆچۈرۈش سىزىقى",
   "toolNames.callout": "ئەسكەرتىش",
+  "toolNames.divider": "بۆلگۈچ",
   "tools.callout.placeholder": "ئەسكەرتىش",
   "tools.callout.addEmoji": "ئېموجى قوشۇش",
   "tools.callout.editIcon": "سىنبەلگە تەھرىرلەش",

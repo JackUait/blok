@@ -87,6 +87,7 @@
   "toolNames.underline": "Souligné",
   "toolNames.strikethrough": "Barré",
   "toolNames.callout": "Mise en avant",
+  "toolNames.divider": "Séparateur",
   "tools.callout.placeholder": "Mise en avant",
   "tools.callout.addEmoji": "Ajouter un emoji",
   "tools.callout.editIcon": "Modifier l'icône",

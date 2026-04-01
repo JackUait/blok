@@ -87,6 +87,7 @@
   "toolNames.underline": "Alleviivaus",
   "toolNames.strikethrough": "Yliviivaus",
   "toolNames.callout": "Huomioruutu",
+  "toolNames.divider": "Erotin",
   "tools.callout.placeholder": "Huomioruutu",
   "tools.callout.addEmoji": "Lisää emoji",
   "tools.callout.editIcon": "Muokkaa kuvaketta",

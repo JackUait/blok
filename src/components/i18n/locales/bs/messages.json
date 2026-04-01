@@ -87,6 +87,7 @@
   "toolNames.underline": "Podcrtano",
   "toolNames.strikethrough": "Precrtano",
   "toolNames.callout": "Isticanje",
+  "toolNames.divider": "Razdjelnik",
   "tools.callout.placeholder": "Isticanje",
   "tools.callout.addEmoji": "Dodaj emoji",
   "tools.callout.editIcon": "Uredi ikonu",

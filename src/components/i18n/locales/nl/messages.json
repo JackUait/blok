@@ -87,6 +87,7 @@
   "toolNames.underline": "Onderstrepen",
   "toolNames.strikethrough": "Doorhalen",
   "toolNames.callout": "Toelichting",
+  "toolNames.divider": "Scheidingslijn",
   "tools.callout.placeholder": "Toelichting",
   "tools.callout.addEmoji": "Emoji toevoegen",
   "tools.callout.editIcon": "Pictogram bewerken",

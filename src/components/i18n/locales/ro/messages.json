@@ -87,6 +87,7 @@
   "toolNames.underline": "Subliniat",
   "toolNames.strikethrough": "Tăiat",
   "toolNames.callout": "Evidențiere",
+  "toolNames.divider": "Separator",
   "tools.callout.placeholder": "Evidențiere",
   "tools.callout.addEmoji": "Adaugă emoji",
   "tools.callout.editIcon": "Editează pictograma",

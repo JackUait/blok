@@ -721,7 +721,7 @@
   --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
   --blok-database-delete-text: rgba(55, 53, 47, 0.35);
   --blok-database-delete-hover-text: rgba(55, 53, 47, 0.65);
-  --blok-database-peek-border: #e8e8eb;
+  --blok-database-drawer-border: #e8e8eb;
 
   /* Toggle switch */
   --blok-toggle-off-bg: #d4d4d8;
@@ -827,7 +827,7 @@
     --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
     --blok-database-delete-text: rgba(255, 255, 255, 0.3);
     --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
-    --blok-database-peek-border: rgba(255, 255, 255, 0.1);
+    --blok-database-drawer-border: rgba(255, 255, 255, 0.1);
 
     /* Toggle switch */
     --blok-toggle-off-bg: #3f3f46;
@@ -933,7 +933,7 @@
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
   --blok-database-delete-text: rgba(255, 255, 255, 0.3);
   --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
-  --blok-database-peek-border: rgba(255, 255, 255, 0.1);
+  --blok-database-drawer-border: rgba(255, 255, 255, 0.1);
 
   /* Toggle switch */
   --blok-toggle-off-bg: #3f3f46;
@@ -1613,19 +1613,18 @@
 }
 
 /**
- * Peek panel overlay — divider style.
+ * Drawer — divider style.
  */
-[data-blok-database-peek] hr {
+[data-blok-database-drawer] hr {
   border: none;
-  border-top: 1px solid var(--blok-database-peek-border);
+  border-top: 1px solid var(--blok-database-drawer-border);
   margin: 0;
 }
 
 /**
- * Peek title input — appearance reset is in inline styles;
- * this rule handles the placeholder color.
+ * Drawer title input — placeholder color.
  */
-[data-blok-database-peek-title]::placeholder {
+[data-blok-database-drawer-title]::placeholder {
   color: var(--blok-database-add-text);
 }
 
@@ -1658,8 +1657,8 @@
 }
 
 /**
- * Peek panel — slide-in transition.
+ * Drawer — width transition for slide-in animation.
  */
-[data-blok-database-peek] {
-  transition: transform 200ms ease;
+[data-blok-database-drawer] {
+  transition: width 200ms ease;
 }

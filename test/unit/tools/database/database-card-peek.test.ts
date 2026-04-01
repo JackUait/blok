@@ -144,6 +144,95 @@ describe('DatabaseCardPeek', () => {
     });
   });
 
+  describe('styling', () => {
+    it('panel has a border-left for visual separation', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const panel = options.wrapper.querySelector('[data-blok-database-peek]') as HTMLElement;
+
+      expect(panel.style.borderLeft).toBeTruthy();
+    });
+
+    it('panel has a background color', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const panel = options.wrapper.querySelector('[data-blok-database-peek]') as HTMLElement;
+
+      expect(panel.style.backgroundColor).toBeTruthy();
+    });
+
+    it('panel has a box shadow', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const panel = options.wrapper.querySelector('[data-blok-database-peek]') as HTMLElement;
+
+      expect(panel.style.boxShadow).toBeTruthy();
+    });
+
+    it('title input has styling for font size and padding', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-peek-title]') as HTMLElement;
+
+      expect(titleInput.style.fontSize).toBeTruthy();
+      expect(titleInput.style.padding).toBeTruthy();
+    });
+
+    it('close button has no default border or background', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const closeBtn = options.wrapper.querySelector('[data-blok-database-peek-close]') as HTMLElement;
+
+      expect(closeBtn.style.background).toBe('none');
+      expect(closeBtn.style.borderStyle).toBe('none');
+      expect(closeBtn.style.cursor).toBe('pointer');
+    });
+
+    it('close button displays the x character', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const closeBtn = options.wrapper.querySelector('[data-blok-database-peek-close]') as HTMLElement;
+
+      expect(closeBtn.textContent).toBe('\u00d7');
+    });
+
+    it('editor holder has padding', () => {
+      const options = createOptions();
+      const peek = new DatabaseCardPeek(options);
+      const card = makeCard();
+
+      peek.open(card);
+
+      const editorHolder = options.wrapper.querySelector('[data-blok-database-peek-editor]') as HTMLElement;
+
+      expect(editorHolder.style.padding).toBeTruthy();
+    });
+  });
+
   describe('close notification consistency', () => {
     it('calls onClose callback when close() is called directly', () => {
       const onClose = vi.fn();

@@ -63,6 +63,9 @@ export class DatabaseCardPeek {
     panel.style.zIndex = '10';
     panel.style.display = 'flex';
     panel.style.flexDirection = 'column';
+    panel.style.borderLeft = '1px solid var(--blok-popover-border, #e8e8eb)';
+    panel.style.backgroundColor = 'var(--blok-popover-bg, #fff)';
+    panel.style.boxShadow = '-4px 0 12px rgba(0, 0, 0, 0.08)';
 
     const closeBtn = document.createElement('button');
 
@@ -71,6 +74,10 @@ export class DatabaseCardPeek {
     closeBtn.style.position = 'absolute';
     closeBtn.style.top = '0';
     closeBtn.style.right = '0';
+    closeBtn.style.background = 'none';
+    closeBtn.style.borderStyle = 'none';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.textContent = '\u00d7';
     closeBtn.addEventListener('click', () => {
       this.close();
     });
@@ -80,6 +87,13 @@ export class DatabaseCardPeek {
 
     titleInput.setAttribute('data-blok-database-peek-title', '');
     titleInput.setAttribute('aria-label', 'Card title');
+    titleInput.style.fontSize = '20px';
+    titleInput.style.padding = '16px 20px 8px';
+    titleInput.style.border = 'none';
+    titleInput.style.outline = 'none';
+    titleInput.style.width = '100%';
+    titleInput.style.fontWeight = '600';
+    titleInput.style.backgroundColor = 'transparent';
     titleInput.value = card.title;
     titleInput.readOnly = this.readOnly;
     titleInput.addEventListener('input', () => {
@@ -98,6 +112,7 @@ export class DatabaseCardPeek {
     editorHolder.setAttribute('data-blok-database-peek-editor', '');
     editorHolder.style.flex = '1';
     editorHolder.style.overflow = 'auto';
+    editorHolder.style.padding = '0 8px';
     panel.appendChild(editorHolder);
 
     this.wrapper.style.position = 'relative';

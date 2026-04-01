@@ -31,6 +31,9 @@ export class DatabaseView {
     wrapper.setAttribute('aria-label', 'Kanban board');
     wrapper.style.display = 'flex';
     wrapper.style.overflowX = 'auto';
+    wrapper.style.alignItems = 'flex-start';
+    wrapper.style.gap = '8px';
+    wrapper.style.padding = '2px';
 
     for (const col of columns) {
       const columnEl = this.createColumnElement(col, getCards(col.id));
@@ -101,10 +104,19 @@ export class DatabaseView {
     columnEl.setAttribute('data-column-id', col.id);
     columnEl.setAttribute('role', 'group');
     columnEl.setAttribute('aria-label', col.title);
+    columnEl.style.display = 'flex';
+    columnEl.style.flexDirection = 'column';
+    columnEl.style.minWidth = '220px';
+    columnEl.style.flexShrink = '0';
 
     const header = document.createElement('div');
 
     header.setAttribute('data-blok-database-column-header', '');
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.padding = '6px 8px';
+    header.style.borderRadius = '4px';
+    header.style.gap = '4px';
 
     if (col.color !== undefined) {
       header.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;
@@ -113,6 +125,7 @@ export class DatabaseView {
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-column-title', '');
+    titleEl.style.fontWeight = '600';
     titleEl.textContent = col.title;
     header.appendChild(titleEl);
 
@@ -122,6 +135,9 @@ export class DatabaseView {
 
     cardsContainer.setAttribute('data-blok-database-cards', '');
     cardsContainer.setAttribute('role', 'list');
+    cardsContainer.style.display = 'flex';
+    cardsContainer.style.flexDirection = 'column';
+    cardsContainer.style.gap = '4px';
     cardsContainer.style.minHeight = '40px';
 
     for (const card of cards) {
@@ -154,6 +170,10 @@ export class DatabaseView {
     cardEl.setAttribute('data-blok-database-card', '');
     cardEl.setAttribute('data-card-id', card.id);
     cardEl.setAttribute('role', 'listitem');
+    cardEl.style.padding = '8px 10px';
+    cardEl.style.borderRadius = '4px';
+    cardEl.style.cursor = 'pointer';
+    cardEl.style.position = 'relative';
 
     const titleEl = document.createElement('div');
 
@@ -167,6 +187,9 @@ export class DatabaseView {
       deleteBtn.setAttribute('data-blok-database-delete-card', '');
       deleteBtn.setAttribute('data-card-id', card.id);
       deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteCard'));
+      deleteBtn.style.position = 'absolute';
+      deleteBtn.style.top = '4px';
+      deleteBtn.style.right = '4px';
       deleteBtn.textContent = '\u00d7';
       cardEl.appendChild(deleteBtn);
     }

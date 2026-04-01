@@ -195,6 +195,7 @@ export class DatabaseCardDrag {
       style.right = '0';
       style.pointerEvents = 'none';
       style.zIndex = '5';
+      style.backgroundColor = 'var(--blok-active-icon)';
     }
 
     const position = this.getDropPosition(targetColumn, e.clientY);

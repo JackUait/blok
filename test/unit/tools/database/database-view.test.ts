@@ -273,6 +273,119 @@ describe('DatabaseView', () => {
     });
   });
 
+  describe('styling', () => {
+    it('board wrapper has flex-start alignment and gap between columns', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', position: 'a0' })];
+      const board = view.createBoard(columns, () => []);
+
+      expect(board.style.alignItems).toBe('flex-start');
+      expect(board.style.gap).toBeTruthy();
+    });
+
+    it('board wrapper has padding', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      expect(board.style.padding).toBeTruthy();
+    });
+
+    it('column element has flex column layout with minimum width', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', position: 'a0' })];
+      const board = view.createBoard(columns, () => []);
+
+      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
+
+      expect(column.style.display).toBe('flex');
+      expect(column.style.flexDirection).toBe('column');
+      expect(column.style.minWidth).toBeTruthy();
+      expect(column.style.flexShrink).toBe('0');
+    });
+
+    it('column header has flex layout with padding and border-radius', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', position: 'a0' })];
+      const board = view.createBoard(columns, () => []);
+
+      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+
+      expect(header.style.display).toBe('flex');
+      expect(header.style.alignItems).toBe('center');
+      expect(header.style.padding).toBeTruthy();
+      expect(header.style.borderRadius).toBeTruthy();
+    });
+
+    it('cards container has flex column layout with gap', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', position: 'a0' })];
+      const board = view.createBoard(columns, () => []);
+
+      const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
+
+      expect(container.style.display).toBe('flex');
+      expect(container.style.flexDirection).toBe('column');
+      expect(container.style.gap).toBeTruthy();
+    });
+
+    it('card element has padding, border-radius, and pointer cursor', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
+
+      expect(card.style.padding).toBeTruthy();
+      expect(card.style.borderRadius).toBeTruthy();
+      expect(card.style.cursor).toBe('pointer');
+    });
+
+    it('card element has position relative for delete button positioning', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
+
+      expect(card.style.position).toBe('relative');
+    });
+
+    it('delete card button is positioned absolutely in top-right corner', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const deleteBtn = board.querySelector('[data-blok-database-delete-card]') as HTMLElement;
+
+      expect(deleteBtn.style.position).toBe('absolute');
+      expect(deleteBtn.style.top).toBeTruthy();
+      expect(deleteBtn.style.right).toBeTruthy();
+    });
+
+    it('column title has font-weight semibold', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', position: 'a0' })];
+      const board = view.createBoard(columns, () => []);
+
+      const title = board.querySelector('[data-blok-database-column-title]') as HTMLElement;
+
+      expect(title.style.fontWeight).toBe('600');
+    });
+
+    it('column header has gap between title and delete button', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', position: 'a0' })];
+      const board = view.createBoard(columns, () => []);
+
+      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+
+      expect(header.style.gap).toBeTruthy();
+    });
+  });
+
   describe('DOM update helpers', () => {
     it('appendCard adds a card element to a cards container', () => {
       const view = new DatabaseView({ readOnly: false, i18n });

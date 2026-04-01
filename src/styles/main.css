@@ -710,6 +710,18 @@
   --blok-table-grip-outline: transparent;
   --blok-table-drag-source-bg: #f3f4f6;
 
+  /* Database / Kanban */
+  --blok-database-card-bg: #fff;
+  --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --blok-database-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --blok-database-card-border: rgba(0, 0, 0, 0.06);
+  --blok-database-column-bg: rgba(0, 0, 0, 0.024);
+  --blok-database-add-text: rgba(55, 53, 47, 0.5);
+  --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
+  --blok-database-delete-text: rgba(55, 53, 47, 0.35);
+  --blok-database-delete-hover-text: rgba(55, 53, 47, 0.65);
+  --blok-database-peek-border: #e8e8eb;
+
   /* Toggle switch */
   --blok-toggle-off-bg: #d4d4d8;
   --blok-toggle-on-bg: #2383e2;
@@ -803,6 +815,18 @@
     --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
     --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
 
+    /* Database / Kanban */
+    --blok-database-card-bg: #2d2d2c;
+    --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --blok-database-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.35);
+    --blok-database-card-border: rgba(255, 255, 255, 0.06);
+    --blok-database-column-bg: rgba(255, 255, 255, 0.03);
+    --blok-database-add-text: rgba(255, 255, 255, 0.4);
+    --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
+    --blok-database-delete-text: rgba(255, 255, 255, 0.3);
+    --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
+    --blok-database-peek-border: rgba(255, 255, 255, 0.1);
+
     /* Toggle switch */
     --blok-toggle-off-bg: #3f3f46;
     --blok-toggle-on-bg: #529cca;
@@ -895,6 +919,18 @@
   --blok-table-heading-bg: #272725;
   --blok-table-grip-outline: rgba(255, 255, 255, 0.12);
   --blok-table-drag-source-bg: rgba(255, 255, 255, 0.07);
+
+  /* Database / Kanban */
+  --blok-database-card-bg: #2d2d2c;
+  --blok-database-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --blok-database-card-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --blok-database-card-border: rgba(255, 255, 255, 0.06);
+  --blok-database-column-bg: rgba(255, 255, 255, 0.03);
+  --blok-database-add-text: rgba(255, 255, 255, 0.4);
+  --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
+  --blok-database-delete-text: rgba(255, 255, 255, 0.3);
+  --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
+  --blok-database-peek-border: rgba(255, 255, 255, 0.1);
 
   /* Toggle switch */
   --blok-toggle-off-bg: #3f3f46;
@@ -1412,4 +1448,144 @@
 }
 [data-emoji-picker-body]::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Database / Kanban board
+   ═══════════════════════════════════════════════════════ */
+
+/**
+ * Column background tint — a subtle fill so columns read as lanes.
+ */
+[data-blok-database-column] {
+  background-color: var(--blok-database-column-bg);
+  border-radius: 6px;
+}
+
+/**
+ * Cards — elevated surface with subtle border and shadow.
+ */
+[data-blok-database-card] {
+  background-color: var(--blok-database-card-bg);
+  box-shadow: var(--blok-database-card-shadow);
+  border: 1px solid var(--blok-database-card-border);
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+
+[data-blok-database-card]:hover {
+  box-shadow: var(--blok-database-card-shadow-hover);
+}
+
+/**
+ * Delete card button — hidden until card hover.
+ */
+[data-blok-database-delete-card] {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--blok-database-delete-text);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+[data-blok-database-card]:hover [data-blok-database-delete-card] {
+  opacity: 1;
+}
+
+[data-blok-database-delete-card]:hover {
+  color: var(--blok-database-delete-hover-text);
+}
+
+/**
+ * Add card / Add column buttons — muted text with hover fill.
+ */
+[data-blok-database-add-card],
+[data-blok-database-add-column] {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--blok-database-add-text);
+  font-size: 14px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  text-align: left;
+  width: 100%;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+[data-blok-database-add-card]:hover,
+[data-blok-database-add-column]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  color: var(--blok-text-primary, inherit);
+}
+
+[data-blok-database-add-column] {
+  width: auto;
+  white-space: nowrap;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+/**
+ * Column header delete button — hidden until column header hover.
+ */
+[data-blok-database-delete-column] {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--blok-database-delete-text);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+[data-blok-database-column-header]:hover [data-blok-database-delete-column] {
+  opacity: 1;
+}
+
+[data-blok-database-delete-column]:hover {
+  color: var(--blok-database-delete-hover-text);
+}
+
+/**
+ * Column title text — truncate long titles.
+ */
+[data-blok-database-column-title] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+/**
+ * Card title text — clamp to two lines.
+ */
+[data-blok-database-card-title] {
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+/**
+ * Peek panel overlay — divider style.
+ */
+[data-blok-database-peek] hr {
+  border: none;
+  border-top: 1px solid var(--blok-database-peek-border);
+  margin: 0;
+}
+
+/**
+ * Peek title input — appearance reset is in inline styles;
+ * this rule handles the placeholder color.
+ */
+[data-blok-database-peek-title]::placeholder {
+  color: var(--blok-database-add-text);
 }

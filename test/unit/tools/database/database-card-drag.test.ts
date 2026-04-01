@@ -236,6 +236,18 @@ describe('DatabaseCardDrag', () => {
     });
   });
 
+  it('creates a drop indicator with a visible background color', () => {
+    drag.beginTracking('card-0-0', 50, 30);
+
+    // Move past threshold to start drag and trigger indicator creation
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 80 }));
+
+    const indicator = document.querySelector('[data-blok-database-indicator]') as HTMLElement;
+
+    expect(indicator).not.toBeNull();
+    expect(indicator.style.backgroundColor).toBeTruthy();
+  });
+
   it('removes ghost element and does not call onDrop on Escape key', () => {
     drag.beginTracking('card-0-0', 50, 30);
 

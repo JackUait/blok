@@ -82,3 +82,14 @@ export const TOGGLE_HEADER_PATTERN = /^>(#{1,6})\s([\s\S]*)$/;
  * Captures remaining content after the shortcut in group 1.
  */
 export const TOGGLE_PATTERN = /^>\s([\s\S]*)$/;
+
+/**
+ * Tool name for divider blocks.
+ */
+export const DIVIDER_TOOL_NAME = 'divider';
+
+/**
+ * Regex pattern for detecting divider shortcuts.
+ * Matches exactly three hyphens with no other content.
+ */
+export const DIVIDER_PATTERN = /^-{3}$/;

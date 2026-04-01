@@ -1,5 +1,5 @@
 import type { Block } from '../../../block';
-import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME } from '../constants';
+import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN } from '../constants';
 
 import { BlockEventComposer } from './__base';
 
@@ -20,7 +20,18 @@ export class MarkdownShortcuts extends BlockEventComposer {
    * @returns true if a shortcut was triggered and handled
    */
   public handleInput(event: InputEvent): boolean {
-    if (event.inputType !== 'insertText' || event.data !== ' ') {
+    if (event.inputType !== 'insertText') {
+      return false;
+    }
+
+    /**
+     * Divider shortcut triggers on the third hyphen — no space needed.
+     */
+    if (event.data === '-') {
+      return this.handleDividerShortcut();
+    }
+
+    if (event.data !== ' ') {
       return false;
     }
 
@@ -333,6 +344,58 @@ export class MarkdownShortcuts extends BlockEventComposer {
     });
 
     this.setCaretAfterConversion(newBlock, caretOffset);
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
+   * Check if current block content is exactly "---" and convert to divider.
+   * Unlike other shortcuts, this triggers on the third hyphen keystroke — no space needed.
+   */
+  private handleDividerShortcut(): boolean {
+    const { BlockManager, Tools, Caret } = this.Blok;
+    const currentBlock = BlockManager.currentBlock;
+
+    if (!currentBlock) {
+      return false;
+    }
+
+    if (!currentBlock.tool.isDefault) {
+      return false;
+    }
+
+    const dividerTool = Tools.blockTools.get(DIVIDER_TOOL_NAME);
+
+    if (!dividerTool) {
+      return false;
+    }
+
+    const currentInput = currentBlock.currentInput;
+
+    if (!currentInput) {
+      return false;
+    }
+
+    const textContent = currentInput.textContent || '';
+
+    if (!DIVIDER_PATTERN.test(textContent)) {
+      return false;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    const newBlock = BlockManager.replace(currentBlock, DIVIDER_TOOL_NAME, {});
+
+    /**
+     * Insert an empty paragraph after the divider and set caret there,
+     * so the user can continue typing.
+     */
+    const newBlockIndex = BlockManager.getBlockIndex(newBlock);
+    const paragraphBlock = BlockManager.insertDefaultBlockAtIndex(newBlockIndex + 1);
+
+    Caret.setToBlock(paragraphBlock, Caret.positions.START);
 
     this.Blok.YjsManager.stopCapturing();
 

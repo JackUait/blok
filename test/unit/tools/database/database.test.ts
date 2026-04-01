@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { KanbanData, DatabaseConfig } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
-import { DatabaseCardPeek } from '../../../../src/tools/database/database-card-peek';
+import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 
 const createMockAPI = (): API => ({
@@ -373,8 +373,8 @@ describe('DatabaseTool', () => {
     });
   });
 
-  describe('rerenderBoard destroys cardPeek subsystem', () => {
-    it('destroys cardPeek when rerender is triggered by card drop', () => {
+  describe('rerenderBoard destroys cardDrawer subsystem', () => {
+    it('destroys cardDrawer when rerender is triggered by card drop', () => {
       const initialData: KanbanData = {
         columns: [
           { id: 'col-1', title: 'Todo', position: 'a0' },
@@ -385,8 +385,8 @@ describe('DatabaseTool', () => {
         },
       };
 
-      // Spy on DatabaseCardPeek.prototype.destroy to detect if it's called during rerender
-      const peekDestroySpy = vi.spyOn(DatabaseCardPeek.prototype, 'destroy');
+      // Spy on DatabaseCardDrawer.prototype.destroy to detect if it's called during rerender
+      const drawerDestroySpy = vi.spyOn(DatabaseCardDrawer.prototype, 'destroy');
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
 
@@ -405,7 +405,7 @@ describe('DatabaseTool', () => {
       const onDrop = (cardDrag as any).onDrop as (result: CardDragResult) => void;
 
       // Reset spy call count — destroy may have been called during setup
-      peekDestroySpy.mockClear();
+      drawerDestroySpy.mockClear();
 
       // Trigger a card drop which calls handleCardDrop -> rerenderBoard
       onDrop({
@@ -415,11 +415,11 @@ describe('DatabaseTool', () => {
         afterCardId: null,
       });
 
-      // cardPeek.destroy() should have been called during rerenderBoard
-      expect(peekDestroySpy).toHaveBeenCalled();
+      // cardDrawer.destroy() should have been called during rerenderBoard
+      expect(drawerDestroySpy).toHaveBeenCalled();
 
       tool.destroy();
-      peekDestroySpy.mockRestore();
+      drawerDestroySpy.mockRestore();
     });
   });
 

@@ -8,7 +8,7 @@ import type { CardDragResult } from './database-card-drag';
 import { DatabaseColumnDrag } from './database-column-drag';
 import type { ColumnDragResult } from './database-column-drag';
 import { DatabaseColumnControls } from './database-column-controls';
-import { DatabaseCardPeek } from './database-card-peek';
+import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { IconDatabase, IconBoard } from '../../components/icons';
 
@@ -30,7 +30,7 @@ export class DatabaseTool implements BlockTool {
   private cardDrag: DatabaseCardDrag | null = null;
   private columnDrag: DatabaseColumnDrag | null = null;
   private columnControls: DatabaseColumnControls | null = null;
-  private cardPeek: DatabaseCardPeek | null = null;
+  private cardDrawer: DatabaseCardDrawer | null = null;
   private keyboard: DatabaseKeyboard | null = null;
 
   constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<KanbanData, DatabaseConfig>) {
@@ -100,7 +100,7 @@ export class DatabaseTool implements BlockTool {
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
-    this.cardPeek?.destroy();
+    this.cardDrawer?.destroy();
     this.keyboard?.destroy();
     this.sync.flushPendingUpdates();
     this.sync.destroy();
@@ -251,7 +251,7 @@ export class DatabaseTool implements BlockTool {
       }
     }
 
-    this.cardPeek = new DatabaseCardPeek({
+    this.cardDrawer = new DatabaseCardDrawer({
       wrapper,
       readOnly: this.readOnly,
       onTitleChange: (cardId, title) => {
@@ -262,14 +262,14 @@ export class DatabaseTool implements BlockTool {
         this.model.updateCard(cardId, { description });
         this.sync.syncUpdateCard({ cardId, changes: { description } });
       },
-      onClose: () => { /* no-op; peek handles its own DOM cleanup */ },
+      onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
     });
 
     this.keyboard = new DatabaseKeyboard({
       wrapper,
       onEscape: () => {
-        if (this.cardPeek?.isOpen) {
-          this.cardPeek.close();
+        if (this.cardDrawer?.isOpen) {
+          this.cardDrawer.close();
 
           return true;
         }
@@ -384,7 +384,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    this.cardPeek?.open(card);
+    this.cardDrawer?.open(card);
   }
 
   /**
@@ -398,7 +398,7 @@ export class DatabaseTool implements BlockTool {
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
-    this.cardPeek?.destroy();
+    this.cardDrawer?.destroy();
     this.keyboard?.destroy();
 
     const orderedColumns = this.model.getOrderedColumns();

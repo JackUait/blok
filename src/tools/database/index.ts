@@ -53,16 +53,18 @@ export class DatabaseTool implements BlockTool {
   static get toolbox(): ToolboxConfig {
     return [
       {
-        name: 'database',
-        titleKey: 'database',
         icon: IconDatabase,
-        searchTerms: ['kanban', 'board', 'database', 'table'],
+        title: 'Database',
+        titleKey: 'database',
+        name: 'database',
+        searchTerms: ['database', 'kanban', 'board', 'cards', 'columns'],
       },
       {
-        name: 'board',
-        titleKey: 'board',
         icon: IconBoard,
-        searchTerms: ['kanban', 'board', 'columns'],
+        title: 'Board',
+        titleKey: 'board',
+        name: 'board',
+        searchTerms: ['board', 'kanban', 'cards', 'columns', 'database'],
       },
     ];
   }
@@ -136,6 +138,21 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      const deleteCardBtn = target.closest('[data-blok-database-delete-card]');
+
+      if (deleteCardBtn !== null) {
+        const cardId = deleteCardBtn.getAttribute('data-card-id');
+
+        if (cardId !== null && this.element !== null) {
+          event.stopPropagation();
+          this.model.deleteCard(cardId);
+          this.view.removeCard(this.element, cardId);
+          void this.sync.syncDeleteCard({ cardId });
+        }
+
+        return;
+      }
+
       const cardEl = target.closest('[data-blok-database-card]');
 
       if (cardEl !== null) {
@@ -181,7 +198,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const column = this.model.addColumn(this.api.i18n.t('tools.database.newColumn'));
+    const column = this.model.addColumn(this.api.i18n.t('tools.database.columnTitlePlaceholder'));
 
     this.view.appendColumn(this.element, column);
 
@@ -261,6 +278,22 @@ export class DatabaseTool implements BlockTool {
 
     wrapper.addEventListener('pointerdown', (e) => {
       const target = e.target as HTMLElement;
+
+      const columnHeader = target.closest('[data-blok-database-column-header]');
+
+      if (columnHeader !== null) {
+        const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');
+        const colId = columnEl?.getAttribute('data-column-id') ?? null;
+
+        if (colId !== null) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.columnDrag?.beginTracking(colId, e.clientX, e.clientY);
+        }
+
+        return;
+      }
+
       const cardEl = target.closest('[data-blok-database-card]');
 
       if (cardEl === null) {
@@ -335,8 +368,13 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    this.model.deleteColumn(columnId);
+    const deletedCardIds = this.model.deleteColumn(columnId);
+
     this.view.removeColumn(this.element, columnId);
+
+    for (const cardId of deletedCardIds) {
+      void this.sync.syncDeleteCard({ cardId });
+    }
 
     void this.sync.syncDeleteColumn({ columnId });
   }

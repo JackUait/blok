@@ -101,6 +101,10 @@ export class DatabaseView {
 
     header.setAttribute('data-blok-database-column-header', '');
 
+    if (col.color !== undefined) {
+      header.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;
+    }
+
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-column-title', '');
@@ -148,6 +152,15 @@ export class DatabaseView {
     titleEl.setAttribute('data-blok-database-card-title', '');
     titleEl.textContent = card.title;
     cardEl.appendChild(titleEl);
+
+    if (!this.readOnly) {
+      const deleteBtn = document.createElement('button');
+
+      deleteBtn.setAttribute('data-blok-database-delete-card', '');
+      deleteBtn.setAttribute('data-card-id', card.id);
+      deleteBtn.textContent = '\u00d7';
+      cardEl.appendChild(deleteBtn);
+    }
 
     return cardEl;
   }

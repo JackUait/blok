@@ -134,6 +134,50 @@ describe('DatabaseView', () => {
       expect(cardEls[0].getAttribute('data-card-id')).toBe('card-x');
       expect(cardEls[1].getAttribute('data-card-id')).toBe('card-y');
     });
+
+    it('applies column color as background on the column header when color is defined', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1', color: 'green' })];
+      const board = view.createBoard(columns, () => []);
+
+      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+
+      expect(header.style.backgroundColor).toBe('var(--blok-color-green-bg)');
+    });
+
+    it('does not apply column color when color is undefined', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const board = view.createBoard(columns, () => []);
+
+      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+
+      expect(header.style.backgroundColor).toBe('');
+    });
+
+    it('renders delete-card button on each card when NOT read-only', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
+
+      expect(deleteBtns).toHaveLength(1);
+      expect(deleteBtns[0].getAttribute('data-card-id')).toBe('card-1');
+      expect(deleteBtns[0].textContent).toBe('\u00d7');
+    });
+
+    it('does not render delete-card button in read-only mode', () => {
+      const view = new DatabaseView({ readOnly: true, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
+
+      expect(deleteBtns).toHaveLength(0);
+    });
   });
 
   describe('DOM update helpers', () => {

@@ -535,6 +535,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       const userSearchTerms = tool.searchTerms ?? [];
       const mergedSearchTerms = [...new Set([...librarySearchTerms, ...userSearchTerms])];
 
+      // Resolve translated search aliases from searchTermKeys
+      for (const key of toolboxItem.searchTermKeys ?? []) {
+        const fullKey = `searchTerms.${key}`;
+
+        if (this.i18n.has(fullKey)) {
+          mergedSearchTerms.push(this.i18n.t(fullKey));
+        }
+      }
+
       // Use entry-level shortcut if available, otherwise fall back to tool-level shortcut (for first entry only)
       const shortcut = toolboxItem.shortcut ?? (displaySecondaryLabel ? tool.shortcut : undefined);
 

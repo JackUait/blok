@@ -34,6 +34,10 @@ const createWrapper = (columnCount: number, cardsPerColumn: number): HTMLDivElem
       configurable: true,
     });
 
+    const cardsContainer = document.createElement('div');
+
+    cardsContainer.setAttribute('data-blok-database-cards', '');
+
     for (let k = 0; k < cardsPerColumn; k++) {
       const card = document.createElement('div');
 
@@ -58,9 +62,10 @@ const createWrapper = (columnCount: number, cardsPerColumn: number): HTMLDivElem
         configurable: true,
       });
 
-      column.appendChild(card);
+      cardsContainer.appendChild(card);
     }
 
+    column.appendChild(cardsContainer);
     wrapper.appendChild(column);
   }
 
@@ -236,16 +241,48 @@ describe('DatabaseCardDrag', () => {
     });
   });
 
-  it('creates a drop indicator with a visible background color', () => {
+  it('displaces cards below insertion point to create a gap', () => {
     drag.beginTracking('card-0-0', 50, 30);
 
-    // Move past threshold to start drag and trigger indicator creation
+    // Move past threshold — cursor at clientY=80 is above card-0-1 midpoint (90)
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 80 }));
 
-    const indicator = document.querySelector('[data-blok-database-indicator]') as HTMLElement;
+    const displacedCard = wrapper.querySelector('[data-card-id="card-0-1"]') as HTMLElement;
 
-    expect(indicator).not.toBeNull();
-    expect(indicator.style.backgroundColor).toBeTruthy();
+    expect(parseFloat(displacedCard.style.marginTop)).toBeGreaterThan(0);
+  });
+
+  it('clears card displacement after pointer up', () => {
+    drag.beginTracking('card-0-0', 50, 30);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 80 }));
+
+    const displacedCard = wrapper.querySelector('[data-card-id="card-0-1"]') as HTMLElement;
+
+    expect(parseFloat(displacedCard.style.marginTop)).toBeGreaterThan(0);
+
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 50, clientY: 80 }));
+
+    expect(displacedCard.style.marginTop).toBe('');
+  });
+
+  it('sets dragging attribute on wrapper during active drag', () => {
+    drag.beginTracking('card-0-0', 50, 30);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 30 }));
+
+    expect(wrapper.hasAttribute('data-blok-database-dragging')).toBe(true);
+
+    document.dispatchEvent(new PointerEvent('pointerup', { clientX: 70, clientY: 30 }));
+
+    expect(wrapper.hasAttribute('data-blok-database-dragging')).toBe(false);
+  });
+
+  it('applies elevated shadow to ghost element', () => {
+    drag.beginTracking('card-0-0', 50, 30);
+    document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 30 }));
+
+    const ghost = document.querySelector('[data-blok-database-ghost]') as HTMLElement;
+
+    expect(ghost.style.boxShadow).toBeTruthy();
   });
 
   it('removes ghost element and does not call onDrop on Escape key', () => {

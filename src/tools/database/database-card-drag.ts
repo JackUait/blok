@@ -25,8 +25,12 @@ export class DatabaseCardDrag {
   private startX = 0;
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
-  private indicator: HTMLElement | null = null;
   private sourceCard: HTMLElement | null = null;
+  private sourceCardHeight = 0;
+  private ghostOffsetX = 0;
+  private ghostOffsetY = 0;
+  private gapTarget: HTMLElement | null = null;
+  private gapContainer: HTMLElement | null = null;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -69,8 +73,8 @@ export class DatabaseCardDrag {
     this.ghostEl?.remove();
     this.ghostEl = null;
 
-    this.indicator?.remove();
-    this.indicator = null;
+    this.clearGap();
+    this.wrapper.removeAttribute('data-blok-database-dragging');
 
     if (this.sourceCard) {
       this.sourceCard.style.opacity = '';
@@ -79,6 +83,9 @@ export class DatabaseCardDrag {
 
     this.isDragging = false;
     this.cardId = '';
+    this.sourceCardHeight = 0;
+    this.ghostOffsetX = 0;
+    this.ghostOffsetY = 0;
   }
 
   public destroy(): void {
@@ -120,9 +127,15 @@ export class DatabaseCardDrag {
 
   private startActiveDrag(e: PointerEvent): void {
     if (this.sourceCard) {
+      const rect = this.sourceCard.getBoundingClientRect();
+
+      this.sourceCardHeight = rect.height;
+      this.ghostOffsetX = this.startX - rect.left;
+      this.ghostOffsetY = this.startY - rect.top;
       this.sourceCard.style.opacity = '0.4';
     }
 
+    this.wrapper.setAttribute('data-blok-database-dragging', '');
     this.createGhost(e);
   }
 
@@ -136,8 +149,13 @@ export class DatabaseCardDrag {
 
     style.position = 'fixed';
     style.pointerEvents = 'none';
-    style.opacity = '0.7';
+    style.opacity = '0.85';
     style.zIndex = '50';
+    style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)';
+    style.borderRadius = '8px';
+    style.overflow = 'hidden';
+    style.transform = 'rotate(2deg) scale(1.02)';
+    style.transformOrigin = 'center center';
 
     if (this.sourceCard) {
       const clone = this.sourceCard.cloneNode(true) as HTMLElement;
@@ -147,8 +165,8 @@ export class DatabaseCardDrag {
 
       const rect = this.sourceCard.getBoundingClientRect();
 
-      style.left = `${rect.left}px`;
-      style.top = `${rect.top}px`;
+      style.left = `${e.clientX - this.ghostOffsetX}px`;
+      style.top = `${e.clientY - this.ghostOffsetY}px`;
       style.width = `${rect.width}px`;
     } else {
       style.left = `${e.clientX}px`;
@@ -160,50 +178,62 @@ export class DatabaseCardDrag {
   }
 
   private updateGhostPosition(e: PointerEvent): void {
-    if (!this.ghostEl || !this.sourceCard) {
+    if (!this.ghostEl) {
       return;
     }
 
-    const rect = this.sourceCard.getBoundingClientRect();
-    const offsetX = this.startX - rect.left;
-    const offsetY = this.startY - rect.top;
-
-    this.ghostEl.style.left = `${e.clientX - offsetX}px`;
-    this.ghostEl.style.top = `${e.clientY - offsetY}px`;
+    this.ghostEl.style.left = `${e.clientX - this.ghostOffsetX}px`;
+    this.ghostEl.style.top = `${e.clientY - this.ghostOffsetY}px`;
   }
 
   private updateDropIndicator(e: PointerEvent): void {
     const targetColumn = this.findTargetColumn(e.clientX);
 
     if (!targetColumn) {
-      this.indicator?.remove();
-      this.indicator = null;
+      this.clearGap();
 
       return;
     }
 
-    if (!this.indicator) {
-      this.indicator = document.createElement('div');
-      this.indicator.setAttribute('data-blok-database-indicator', '');
-      this.indicator.setAttribute('contenteditable', 'false');
+    const position = this.getDropPosition(targetColumn, e.clientY);
+    const beforeEl = position.beforeEl as HTMLElement | null;
 
-      const style = this.indicator.style;
+    if (beforeEl) {
+      if (beforeEl === this.gapTarget) {
+        return;
+      }
 
-      style.position = 'absolute';
-      style.height = '2px';
-      style.left = '0';
-      style.right = '0';
-      style.pointerEvents = 'none';
-      style.zIndex = '5';
-      style.backgroundColor = 'var(--blok-active-icon)';
+      this.clearGap();
+      beforeEl.style.marginTop = `${this.sourceCardHeight}px`;
+      this.gapTarget = beforeEl;
+    } else {
+      const cardsContainer = targetColumn.querySelector(
+        '[data-blok-database-cards]'
+      ) as HTMLElement | null;
+
+      if (cardsContainer) {
+        if (cardsContainer === this.gapContainer) {
+          return;
+        }
+
+        this.clearGap();
+        cardsContainer.style.paddingBottom = `${this.sourceCardHeight}px`;
+        this.gapContainer = cardsContainer;
+      } else {
+        this.clearGap();
+      }
+    }
+  }
+
+  private clearGap(): void {
+    if (this.gapTarget) {
+      this.gapTarget.style.marginTop = '';
+      this.gapTarget = null;
     }
 
-    const position = this.getDropPosition(targetColumn, e.clientY);
-
-    if (position.beforeEl) {
-      targetColumn.insertBefore(this.indicator, position.beforeEl);
-    } else {
-      targetColumn.appendChild(this.indicator);
+    if (this.gapContainer) {
+      this.gapContainer.style.paddingBottom = '';
+      this.gapContainer = null;
     }
   }
 

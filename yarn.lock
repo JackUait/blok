@@ -1234,6 +1234,7 @@ __metadata:
     eslint-plugin-storybook: "npm:10.2.19"
     eslint-plugin-tailwindcss: "npm:4.0.0-beta.0"
     eslint-plugin-testing-library: "npm:^7.16.0"
+    fractional-indexing: "npm:^3.2.0"
     html-janitor: "npm:2.0.4"
     husky: "npm:9.1.7"
     i18next: "npm:25.8.18"
@@ -5614,6 +5615,13 @@ __metadata:
   dependencies:
     is-callable: "npm:^1.2.7"
   checksum: 10c0/0e0b50f6a843a282637d43674d1fb278dda1dd85f4f99b640024cfb10b85058aac0cc781bf689d5fe50b4b7f638e91e548560723a4e76e04fe96ae35ef039cee
+  languageName: node
+  linkType: hard
+
+"fractional-indexing@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "fractional-indexing@npm:3.2.0"
+  checksum: 10c0/d4d477c2ba369346ef0f03a4776bd78a3426e2778c23f8fd9dd3f51f9a851280bfc412c9bd970de55f1d21b831899f4c7f75f7fb72ae7f92b189eee962564005
   languageName: node
   linkType: hard
 

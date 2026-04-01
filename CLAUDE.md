@@ -11,7 +11,7 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 ```
 [ ] 1. Did I write tests FIRST, watch them FAIL, THEN write code? (IRON RULE)
         Bug fixes: also watch the fix PASS, then re-run the full suite.
-[ ] 2. `git pull --rebase` and `git push` succeeded
+[ ] 2. `git pull` and `git push` succeeded
 [ ] 3. `git status` shows "up to date with origin"
 ```
 

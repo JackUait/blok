@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Sümbolid",
   "tools.callout.emojiCategoryFlags": "Lipud",
   "tools.database.addCard": "Lisa kaart",
+  "tools.database.newPage": "Uus leht",
   "tools.database.addColumn": "Lisa veerg",
   "tools.database.cardTitlePlaceholder": "Pealkirjata",
   "tools.database.columnTitlePlaceholder": "Veerg",

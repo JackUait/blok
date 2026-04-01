@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "Rename column",
   "tools.database.deleteColumn": "Delete column",
   "tools.database.addCard": "Add card",
+  "tools.database.newPage": "New page",
   "tools.database.deleteCard": "Delete card",
   "tools.database.cardTitlePlaceholder": "Untitled",
   "tools.database.columnTitlePlaceholder": "Column",

@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Symbolit",
   "tools.callout.emojiCategoryFlags": "Liput",
   "tools.database.addCard": "Lisää kortti",
+  "tools.database.newPage": "Uusi sivu",
   "tools.database.addColumn": "Lisää sarake",
   "tools.database.cardTitlePlaceholder": "Nimetön",
   "tools.database.columnTitlePlaceholder": "Sarake",

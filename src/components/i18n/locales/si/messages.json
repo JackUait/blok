@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "තීරුව නැවත නම් කරන්න",
   "tools.database.deleteColumn": "තීරුව මකන්න",
   "tools.database.addCard": "කාඩ්පත එක් කරන්න",
+  "tools.database.newPage": "නව පිටුව",
   "tools.database.deleteCard": "කාඩ්පත මකන්න",
   "tools.database.cardTitlePlaceholder": "නම් නොකළ",
   "tools.database.columnTitlePlaceholder": "තීරුව",

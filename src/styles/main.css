@@ -1459,7 +1459,8 @@
  */
 [data-blok-database-column] {
   background-color: var(--blok-database-column-bg);
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 4px;
 }
 
 /**
@@ -1552,6 +1553,28 @@
 
 [data-blok-database-delete-column]:hover {
   color: var(--blok-database-delete-hover-text);
+}
+
+/**
+ * Column header pill — rounded badge containing dot + title.
+ */
+[data-blok-database-column-pill] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--blok-database-card-border);
+}
+
+/**
+ * Column status dot — small colored circle.
+ */
+[data-blok-database-column-dot] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /**

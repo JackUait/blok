@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Symbolen",
   "tools.callout.emojiCategoryFlags": "Vlaggen",
   "tools.database.addCard": "Kaart toevoegen",
+  "tools.database.newPage": "Nieuwe pagina",
   "tools.database.addColumn": "Kolom toevoegen",
   "tools.database.cardTitlePlaceholder": "Naamloos",
   "tools.database.columnTitlePlaceholder": "Kolom",

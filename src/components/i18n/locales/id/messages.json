@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Simbol",
   "tools.callout.emojiCategoryFlags": "Bendera",
   "tools.database.addCard": "Tambah kartu",
+  "tools.database.newPage": "Halaman baru",
   "tools.database.addColumn": "Tambah kolom",
   "tools.database.cardTitlePlaceholder": "Tanpa judul",
   "tools.database.columnTitlePlaceholder": "Kolom",

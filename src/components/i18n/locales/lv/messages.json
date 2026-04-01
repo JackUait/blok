@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Simboli",
   "tools.callout.emojiCategoryFlags": "Karogi",
   "tools.database.addCard": "Pievienot kartīti",
+  "tools.database.newPage": "Jauna lapa",
   "tools.database.addColumn": "Pievienot kolonnu",
   "tools.database.cardTitlePlaceholder": "Bez nosaukuma",
   "tools.database.columnTitlePlaceholder": "Kolonna",

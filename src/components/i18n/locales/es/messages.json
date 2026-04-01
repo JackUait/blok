@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Símbolos",
   "tools.callout.emojiCategoryFlags": "Banderas",
   "tools.database.addCard": "Agregar tarjeta",
+  "tools.database.newPage": "Nueva página",
   "tools.database.addColumn": "Agregar columna",
   "tools.database.cardTitlePlaceholder": "Sin título",
   "tools.database.columnTitlePlaceholder": "Columna",

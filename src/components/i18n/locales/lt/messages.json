@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Simboliai",
   "tools.callout.emojiCategoryFlags": "Vėliavos",
   "tools.database.addCard": "Pridėti kortelę",
+  "tools.database.newPage": "Naujas puslapis",
   "tools.database.addColumn": "Pridėti stulpelį",
   "tools.database.cardTitlePlaceholder": "Be pavadinimo",
   "tools.database.columnTitlePlaceholder": "Stulpelis",

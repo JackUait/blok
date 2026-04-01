@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "ປ່ຽນຊື່ຖັນ",
   "tools.database.deleteColumn": "ລຶບຖັນ",
   "tools.database.addCard": "ເພີ່ມບັດ",
+  "tools.database.newPage": "ໜ້າໃໝ່",
   "tools.database.deleteCard": "ລຶບບັດ",
   "tools.database.cardTitlePlaceholder": "ບໍ່ມີຊື່",
   "tools.database.columnTitlePlaceholder": "ຖັນ",

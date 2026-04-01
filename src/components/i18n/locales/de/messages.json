@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Symbole",
   "tools.callout.emojiCategoryFlags": "Flaggen",
   "tools.database.addCard": "Karte hinzufügen",
+  "tools.database.newPage": "Neue Seite",
   "tools.database.addColumn": "Spalte hinzufügen",
   "tools.database.cardTitlePlaceholder": "Ohne Titel",
   "tools.database.columnTitlePlaceholder": "Spalte",

@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "Sütunu yenidən adlandır",
   "tools.database.deleteColumn": "Sütunu sil",
   "tools.database.addCard": "Kart əlavə et",
+  "tools.database.newPage": "Yeni səhifə",
   "tools.database.deleteCard": "Kartı sil",
   "tools.database.cardTitlePlaceholder": "Adsız",
   "tools.database.columnTitlePlaceholder": "Sütun",

@@ -170,7 +170,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const card = this.model.addCard(columnId, '');
+    const card = this.model.addCard(columnId, this.api.i18n.t('tools.database.newPage'));
     const columnEl = this.element.querySelector(`[data-column-id="${columnId}"][data-blok-database-column]`);
 
     if (columnEl === null) {

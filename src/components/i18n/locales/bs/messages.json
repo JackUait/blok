@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "Preimenuj kolonu",
   "tools.database.deleteColumn": "Obriši kolonu",
   "tools.database.addCard": "Dodaj karticu",
+  "tools.database.newPage": "Nova stranica",
   "tools.database.deleteCard": "Obriši karticu",
   "tools.database.cardTitlePlaceholder": "Bez naslova",
   "tools.database.columnTitlePlaceholder": "Kolona",

@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Symboler",
   "tools.callout.emojiCategoryFlags": "Flag",
   "tools.database.addCard": "Tilføj kort",
+  "tools.database.newPage": "Ny side",
   "tools.database.addColumn": "Tilføj kolonne",
   "tools.database.cardTitlePlaceholder": "Uden titel",
   "tools.database.columnTitlePlaceholder": "Kolonne",

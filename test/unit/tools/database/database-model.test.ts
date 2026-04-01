@@ -39,10 +39,11 @@ describe('DatabaseModel', () => {
       const columns = model.getOrderedColumns();
 
       expect(columns).toHaveLength(3);
-      expect(columns[0].title).toBe('To Do');
-      expect(columns[1].title).toBe('In Progress');
+      expect(columns[0].title).toBe('Not started');
+      expect(columns[1].title).toBe('In progress');
       expect(columns[2].title).toBe('Done');
       expect(columns[0].color).toBe('gray');
+      expect(columns[1].color).toBe('blue');
       expect(columns[2].color).toBe('green');
     });
 

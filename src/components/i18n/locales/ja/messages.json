@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "記号",
   "tools.callout.emojiCategoryFlags": "旗",
   "tools.database.addCard": "カードを追加",
+  "tools.database.newPage": "新しいページ",
   "tools.database.addColumn": "列を追加",
   "tools.database.cardTitlePlaceholder": "無題",
   "tools.database.columnTitlePlaceholder": "列",

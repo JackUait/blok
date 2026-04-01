@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Biểu tượng",
   "tools.callout.emojiCategoryFlags": "Cờ",
   "tools.database.addCard": "Thêm thẻ",
+  "tools.database.newPage": "Trang mới",
   "tools.database.addColumn": "Thêm cột",
   "tools.database.cardTitlePlaceholder": "Chưa đặt tên",
   "tools.database.columnTitlePlaceholder": "Cột",

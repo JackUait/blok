@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Szimbólumok",
   "tools.callout.emojiCategoryFlags": "Zászlók",
   "tools.database.addCard": "Kártya hozzáadása",
+  "tools.database.newPage": "Új oldal",
   "tools.database.addColumn": "Oszlop hozzáadása",
   "tools.database.cardTitlePlaceholder": "Névtelen",
   "tools.database.columnTitlePlaceholder": "Oszlop",

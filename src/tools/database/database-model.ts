@@ -23,8 +23,8 @@ export class DatabaseModel {
       this.columns = data.columns.map(col => ({ ...col }));
     } else {
       this.columns = [
-        { id: nanoid(), title: 'To Do', color: 'gray', position: 'a0' },
-        { id: nanoid(), title: 'In Progress', position: 'a1' },
+        { id: nanoid(), title: 'Not started', color: 'gray', position: 'a0' },
+        { id: nanoid(), title: 'In progress', color: 'blue', position: 'a1' },
         { id: nanoid(), title: 'Done', color: 'green', position: 'a2' },
       ];
     }

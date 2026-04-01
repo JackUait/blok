@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "ਕਾਲਮ ਦਾ ਨਾਮ ਬਦਲੋ",
   "tools.database.deleteColumn": "ਕਾਲਮ ਮਿਟਾਓ",
   "tools.database.addCard": "ਕਾਰਡ ਜੋੜੋ",
+  "tools.database.newPage": "ਨਵਾਂ ਪੰਨਾ",
   "tools.database.deleteCard": "ਕਾਰਡ ਮਿਟਾਓ",
   "tools.database.cardTitlePlaceholder": "ਬੇਸਿਰਲੇਖ",
   "tools.database.columnTitlePlaceholder": "ਕਾਲਮ",

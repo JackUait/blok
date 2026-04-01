@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "ប្ដូរឈ្មោះជួរ",
   "tools.database.deleteColumn": "លុបជួរ",
   "tools.database.addCard": "បន្ថែមកាត",
+  "tools.database.newPage": "ទំព័រថ្មី",
   "tools.database.deleteCard": "លុបកាត",
   "tools.database.cardTitlePlaceholder": "គ្មានចំណងជើង",
   "tools.database.columnTitlePlaceholder": "ជួរ",

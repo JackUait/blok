@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Символи",
   "tools.callout.emojiCategoryFlags": "Знамена",
   "tools.database.addCard": "Добави карта",
+  "tools.database.newPage": "Нова страница",
   "tools.database.addColumn": "Добави колона",
   "tools.database.cardTitlePlaceholder": "Без заглавие",
   "tools.database.columnTitlePlaceholder": "Колона",

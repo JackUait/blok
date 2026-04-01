@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Symboles",
   "tools.callout.emojiCategoryFlags": "Drapeaux",
   "tools.database.addCard": "Ajouter une carte",
+  "tools.database.newPage": "Nouvelle page",
   "tools.database.addColumn": "Ajouter une colonne",
   "tools.database.cardTitlePlaceholder": "Sans titre",
   "tools.database.columnTitlePlaceholder": "Colonne",

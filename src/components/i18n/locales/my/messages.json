@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "ကော်လံအမည်ပြောင်းရန်",
   "tools.database.deleteColumn": "ကော်လံဖျက်ရန်",
   "tools.database.addCard": "ကတ်ထည့်ရန်",
+  "tools.database.newPage": "စာမျက်နှာအသစ်",
   "tools.database.deleteCard": "ကတ်ဖျက်ရန်",
   "tools.database.cardTitlePlaceholder": "ခေါင်းစဉ်မရှိ",
   "tools.database.columnTitlePlaceholder": "ကော်လံ",

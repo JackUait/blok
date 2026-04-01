@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Semboller",
   "tools.callout.emojiCategoryFlags": "Bayraklar",
   "tools.database.addCard": "Kart ekle",
+  "tools.database.newPage": "Yeni sayfa",
   "tools.database.addColumn": "Sütun ekle",
   "tools.database.cardTitlePlaceholder": "Başlıksız",
   "tools.database.columnTitlePlaceholder": "Sütun",

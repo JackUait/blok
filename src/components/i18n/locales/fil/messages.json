@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "Palitan ang pangalan ng column",
   "tools.database.deleteColumn": "Tanggalin ang column",
   "tools.database.addCard": "Magdagdag ng card",
+  "tools.database.newPage": "Bagong pahina",
   "tools.database.deleteCard": "Tanggalin ang card",
   "tools.database.cardTitlePlaceholder": "Walang pamagat",
   "tools.database.columnTitlePlaceholder": "Column",

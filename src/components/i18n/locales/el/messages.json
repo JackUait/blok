@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Σύμβολα",
   "tools.callout.emojiCategoryFlags": "Σημαίες",
   "tools.database.addCard": "Προσθήκη κάρτας",
+  "tools.database.newPage": "Νέα σελίδα",
   "tools.database.addColumn": "Προσθήκη στήλης",
   "tools.database.cardTitlePlaceholder": "Χωρίς τίτλο",
   "tools.database.columnTitlePlaceholder": "Στήλη",

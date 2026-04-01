@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Simboli",
   "tools.callout.emojiCategoryFlags": "Zastave",
   "tools.database.addCard": "Dodaj karticu",
+  "tools.database.newPage": "Nova stranica",
   "tools.database.addColumn": "Dodaj stupac",
   "tools.database.cardTitlePlaceholder": "Bez naslova",
   "tools.database.columnTitlePlaceholder": "Stupac",

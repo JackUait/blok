@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "నిలువు వరుస పేరు మార్చండి",
   "tools.database.deleteColumn": "నిలువు వరుస తొలగించండి",
   "tools.database.addCard": "కార్డ్ జోడించండి",
+  "tools.database.newPage": "కొత్త పేజీ",
   "tools.database.deleteCard": "కార్డ్ తొలగించండి",
   "tools.database.cardTitlePlaceholder": "శీర్షిక లేదు",
   "tools.database.columnTitlePlaceholder": "నిలువు వరుస",

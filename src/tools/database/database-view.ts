@@ -60,6 +60,7 @@ export class DatabaseView {
     const cardEl = this.createCardElement(card);
 
     cardsContainer.appendChild(cardEl);
+    this.updateColumnCount(cardsContainer);
   }
 
   /**
@@ -67,8 +68,13 @@ export class DatabaseView {
    */
   removeCard(wrapper: HTMLElement, cardId: string): void {
     const cardEl = wrapper.querySelector(`[data-card-id="${cardId}"]`);
+    const cardsContainer = cardEl?.closest('[data-blok-database-cards]') as HTMLElement | null;
 
     cardEl?.remove();
+
+    if (cardsContainer !== null) {
+      this.updateColumnCount(cardsContainer);
+    }
   }
 
   /**
@@ -107,7 +113,11 @@ export class DatabaseView {
     columnEl.style.display = 'flex';
     columnEl.style.flexDirection = 'column';
     columnEl.style.minWidth = '260px';
-    columnEl.style.flexShrink = '0';
+    columnEl.style.flex = '1 0 260px';
+
+    if (col.color !== undefined) {
+      columnEl.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;
+    }
 
     const header = document.createElement('div');
 
@@ -116,11 +126,18 @@ export class DatabaseView {
     header.style.alignItems = 'center';
     header.style.padding = '6px 8px';
     header.style.borderRadius = '4px';
-    header.style.gap = '4px';
+    header.style.gap = '6px';
+
+    const pill = document.createElement('div');
+
+    pill.setAttribute('data-blok-database-column-pill', '');
 
     if (col.color !== undefined) {
-      header.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;
-      columnEl.style.borderTop = `3px solid var(--blok-color-${col.color}-text)`;
+      const dot = document.createElement('span');
+
+      dot.setAttribute('data-blok-database-column-dot', '');
+      dot.style.backgroundColor = `var(--blok-color-${col.color}-text)`;
+      pill.appendChild(dot);
     }
 
     const titleEl = document.createElement('div');
@@ -128,7 +145,9 @@ export class DatabaseView {
     titleEl.setAttribute('data-blok-database-column-title', '');
     titleEl.style.fontWeight = '600';
     titleEl.textContent = col.title;
-    header.appendChild(titleEl);
+    pill.appendChild(titleEl);
+
+    header.appendChild(pill);
 
     const countEl = document.createElement('span');
 
@@ -154,14 +173,6 @@ export class DatabaseView {
       cardsContainer.appendChild(cardEl);
     }
 
-    if (cards.length === 0 && !this.readOnly) {
-      const placeholder = document.createElement('div');
-
-      placeholder.setAttribute('data-blok-database-empty-placeholder', '');
-      placeholder.textContent = this.i18n.t('tools.database.emptyColumn');
-      cardsContainer.appendChild(placeholder);
-    }
-
     columnEl.appendChild(cardsContainer);
 
     if (!this.readOnly) {
@@ -170,7 +181,7 @@ export class DatabaseView {
       addCardBtn.setAttribute('data-blok-database-add-card', '');
       addCardBtn.setAttribute('data-column-id', col.id);
       addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
-      addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.addCard');
+      addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
       columnEl.appendChild(addCardBtn);
     }
 
@@ -187,14 +198,14 @@ export class DatabaseView {
     cardEl.setAttribute('data-card-id', card.id);
     cardEl.setAttribute('role', 'listitem');
     cardEl.style.padding = '10px 12px';
-    cardEl.style.borderRadius = '4px';
+    cardEl.style.borderRadius = '6px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
 
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-card-title', '');
-    titleEl.textContent = card.title;
+    titleEl.textContent = card.title || this.i18n.t('tools.database.newPage');
     cardEl.appendChild(titleEl);
 
     if (!this.readOnly) {
@@ -211,5 +222,24 @@ export class DatabaseView {
     }
 
     return cardEl;
+  }
+
+  /**
+   * Updates the card count badge for the column containing the given cards container.
+   */
+  private updateColumnCount(cardsContainer: HTMLElement): void {
+    const columnEl = cardsContainer.closest('[data-blok-database-column]');
+
+    if (columnEl === null) {
+      return;
+    }
+
+    const countEl = columnEl.querySelector('[data-blok-database-column-count]');
+
+    if (countEl !== null) {
+      const cardCount = cardsContainer.querySelectorAll('[data-blok-database-card]').length;
+
+      countEl.textContent = String(cardCount);
+    }
   }
 }

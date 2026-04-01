@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "കോളം പുനർനാമകരണം ചെയ്യുക",
   "tools.database.deleteColumn": "കോളം ഇല്ലാതാക്കുക",
   "tools.database.addCard": "കാർഡ് ചേർക്കുക",
+  "tools.database.newPage": "പുതിയ പേജ്",
   "tools.database.deleteCard": "കാർഡ് ഇല്ലാതാക്കുക",
   "tools.database.cardTitlePlaceholder": "തലക്കെട്ടില്ല",
   "tools.database.columnTitlePlaceholder": "കോളം",

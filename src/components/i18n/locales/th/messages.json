@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "สัญลักษณ์",
   "tools.callout.emojiCategoryFlags": "ธง",
   "tools.database.addCard": "เพิ่มการ์ด",
+  "tools.database.newPage": "หน้าใหม่",
   "tools.database.addColumn": "เพิ่มคอลัมน์",
   "tools.database.cardTitlePlaceholder": "ไม่มีชื่อ",
   "tools.database.columnTitlePlaceholder": "คอลัมน์",

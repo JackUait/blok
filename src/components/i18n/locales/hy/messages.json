@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Նշաններ",
   "tools.callout.emojiCategoryFlags": "Դրոշներ",
   "tools.database.addCard": "Add card",
+  "tools.database.newPage": "Նոր էջ",
   "tools.database.addColumn": "Add column",
   "tools.database.cardTitlePlaceholder": "Untitled",
   "tools.database.columnTitlePlaceholder": "Column",

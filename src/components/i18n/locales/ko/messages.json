@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "기호",
   "tools.callout.emojiCategoryFlags": "깃발",
   "tools.database.addCard": "카드 추가",
+  "tools.database.newPage": "새 페이지",
   "tools.database.addColumn": "열 추가",
   "tools.database.cardTitlePlaceholder": "제목 없음",
   "tools.database.columnTitlePlaceholder": "열",

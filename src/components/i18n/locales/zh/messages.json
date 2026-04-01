@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "符号",
   "tools.callout.emojiCategoryFlags": "旗帜",
   "tools.database.addCard": "添加卡片",
+  "tools.database.newPage": "新页面",
   "tools.database.addColumn": "添加列",
   "tools.database.cardTitlePlaceholder": "无标题",
   "tools.database.columnTitlePlaceholder": "列",

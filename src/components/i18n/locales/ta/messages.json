@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "நெடுவரிசையை மறுபெயரிடு",
   "tools.database.deleteColumn": "நெடுவரிசையை நீக்கு",
   "tools.database.addCard": "அட்டை சேர்க்கவும்",
+  "tools.database.newPage": "புதிய பக்கம்",
   "tools.database.deleteCard": "அட்டையை நீக்கு",
   "tools.database.cardTitlePlaceholder": "தலைப்பிலி",
   "tools.database.columnTitlePlaceholder": "நெடுவரிசை",

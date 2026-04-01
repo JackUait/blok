@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "स्तंभाचे नाव बदला",
   "tools.database.deleteColumn": "स्तंभ हटवा",
   "tools.database.addCard": "कार्ड जोडा",
+  "tools.database.newPage": "नवीन पृष्ठ",
   "tools.database.deleteCard": "कार्ड हटवा",
   "tools.database.cardTitlePlaceholder": "शीर्षकविरहित",
   "tools.database.columnTitlePlaceholder": "स्तंभ",

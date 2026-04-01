@@ -107,6 +107,7 @@
   "tools.callout.emojiCategorySymbols": "Тэмдэг",
   "tools.callout.emojiCategoryFlags": "Туг",
   "tools.database.addCard": "Карт нэмэх",
+  "tools.database.newPage": "Шинэ хуудас",
   "tools.database.addColumn": "Багана нэмэх",
   "tools.database.cardTitlePlaceholder": "Гарчиггүй",
   "tools.database.columnTitlePlaceholder": "Багана",

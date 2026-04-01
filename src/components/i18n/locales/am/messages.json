@@ -110,6 +110,7 @@
   "tools.database.renameColumn": "አምድ ዳግም ሰይም",
   "tools.database.deleteColumn": "አምድ ሰርዝ",
   "tools.database.addCard": "ካርድ ጨምር",
+  "tools.database.newPage": "አዲስ ገጽ",
   "tools.database.deleteCard": "ካርድ ሰርዝ",
   "tools.database.cardTitlePlaceholder": "ርዕስ የለም",
   "tools.database.columnTitlePlaceholder": "አምድ",

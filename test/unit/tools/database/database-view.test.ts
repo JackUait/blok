@@ -135,14 +135,14 @@ describe('DatabaseView', () => {
       expect(cardEls[1].getAttribute('data-card-id')).toBe('card-y');
     });
 
-    it('applies column color as background on the column header when color is defined', () => {
+    it('applies column color as background on the column element when color is defined', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const columns = [makeColumn({ id: 'col-1', color: 'green' })];
       const board = view.createBoard(columns, () => []);
 
-      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
-      expect(header.style.backgroundColor).toBe('var(--blok-color-green-bg)');
+      expect(column.style.backgroundColor).toBe('var(--blok-color-green-bg)');
     });
 
     it('does not apply column color when color is undefined', () => {
@@ -150,9 +150,9 @@ describe('DatabaseView', () => {
       const columns = [makeColumn({ id: 'col-1' })];
       const board = view.createBoard(columns, () => []);
 
-      const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
+      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
-      expect(header.style.backgroundColor).toBe('');
+      expect(column.style.backgroundColor).toBe('');
     });
 
     it('renders delete-card button on each card when NOT read-only', () => {
@@ -224,50 +224,39 @@ describe('DatabaseView', () => {
       expect(addColBtn?.textContent).toMatch(/^\+ /);
     });
 
-    it('applies color as top border on column element when color is defined', () => {
+    it('renders colored dot in column header when color is defined', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const columns = [makeColumn({ id: 'col-1', color: 'blue' })];
       const board = view.createBoard(columns, () => []);
 
-      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
+      const dot = board.querySelector('[data-blok-database-column-dot]') as HTMLElement;
 
-      expect(column.style.borderTop).toBe('3px solid var(--blok-color-blue-text)');
+      expect(dot).not.toBeNull();
+      expect(dot.style.backgroundColor).toBe('var(--blok-color-blue-text)');
     });
 
-    it('does not apply top border on column when color is undefined', () => {
+    it('does not render dot when color is undefined', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const columns = [makeColumn({ id: 'col-1' })];
       const board = view.createBoard(columns, () => []);
 
-      const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
+      const dot = board.querySelector('[data-blok-database-column-dot]');
 
-      expect(column.style.borderTop).toBe('');
+      expect(dot).toBeNull();
     });
 
-    it('renders empty placeholder when column has no cards and not read-only', () => {
+    it('renders column header pill element', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const columns = [makeColumn({ id: 'col-1' })];
       const board = view.createBoard(columns, () => []);
 
-      const placeholder = board.querySelector('[data-blok-database-empty-placeholder]');
+      const pill = board.querySelector('[data-blok-database-column-pill]');
 
-      expect(placeholder).not.toBeNull();
-      expect(placeholder?.textContent).toBe('tools.database.emptyColumn');
+      expect(pill).not.toBeNull();
     });
 
-    it('does not render empty placeholder when column has cards', () => {
+    it('does not render empty placeholder', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
-      const columns = [makeColumn({ id: 'col-1' })];
-      const cards = [makeCard({ id: 'card-1', columnId: 'col-1' })];
-      const board = view.createBoard(columns, () => cards);
-
-      const placeholder = board.querySelector('[data-blok-database-empty-placeholder]');
-
-      expect(placeholder).toBeNull();
-    });
-
-    it('does not render empty placeholder in read-only mode', () => {
-      const view = new DatabaseView({ readOnly: true, i18n });
       const columns = [makeColumn({ id: 'col-1' })];
       const board = view.createBoard(columns, () => []);
 
@@ -397,7 +386,7 @@ describe('DatabaseView', () => {
       expect(column.style.display).toBe('flex');
       expect(column.style.flexDirection).toBe('column');
       expect(column.style.minWidth).toBeTruthy();
-      expect(column.style.flexShrink).toBe('0');
+      expect(column.style.flex).toBe('1 0 260px');
     });
 
     it('column header has flex layout with padding and border-radius', () => {

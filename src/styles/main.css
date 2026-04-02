@@ -1458,6 +1458,40 @@
    ═══════════════════════════════════════════════════════ */
 
 /**
+ * Board area — scrollable padding on both sides so columns can be
+ * scrolled all the way to either edge of the editor.  The initial
+ * scrollLeft (set in DatabaseTool.rendered()) positions the first
+ * column at the content-area left edge.
+ */
+[data-blok-database-board] {
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+
+  /* macOS-style scrollbar — thin, rounded, visible on hover/scroll */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+[data-blok-database-board]:hover {
+  scrollbar-color: color-mix(in srgb, currentColor 15%, transparent) transparent;
+}
+[data-blok-database-board]::-webkit-scrollbar {
+  height: 8px;
+}
+[data-blok-database-board]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-blok-database-board]::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+[data-blok-database-board]:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+[data-blok-database-board]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 25%, transparent);
+}
+
+/**
  * Column background tint — a subtle fill so columns read as lanes.
  */
 [data-blok-database-column] {

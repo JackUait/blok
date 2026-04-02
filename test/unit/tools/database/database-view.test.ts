@@ -391,7 +391,15 @@ describe('DatabaseView', () => {
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
-      expect(boardArea.style.padding).toBeTruthy();
+      expect(boardArea.style.paddingTop).toBeTruthy();
+    });
+
+    it('board area has data-blok-database-board attribute for CSS alignment', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+      const boardArea = board.querySelector('[data-blok-database-board]');
+
+      expect(boardArea).not.toBeNull();
     });
 
     it('column element has flex column layout with minimum width', () => {
@@ -404,7 +412,7 @@ describe('DatabaseView', () => {
       expect(column.style.display).toBe('flex');
       expect(column.style.flexDirection).toBe('column');
       expect(column.style.minWidth).toBeTruthy();
-      expect(column.style.flex).toBe('1 0 260px');
+      expect(column.style.flex).toBe('0 0 260px');
     });
 
     it('column header has flex layout with padding and border-radius', () => {
@@ -489,13 +497,14 @@ describe('DatabaseView', () => {
       expect(header.style.gap).toBeTruthy();
     });
 
-    it('board area has updated padding of 6px 4px', () => {
+    it('board area has vertical padding set inline', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const board = view.createBoard([], () => []);
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
-      expect(boardArea.style.padding).toBe('6px 4px');
+      expect(boardArea.style.paddingTop).toBe('6px');
+      expect(boardArea.style.paddingBottom).toBe('24px');
     });
 
     it('board area has updated gap of 12px', () => {

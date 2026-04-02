@@ -38,7 +38,8 @@ export class DatabaseView {
     boardArea.style.overflowX = 'auto';
     boardArea.style.alignItems = 'flex-start';
     boardArea.style.gap = '12px';
-    boardArea.style.padding = '6px 4px';
+    boardArea.style.paddingTop = '6px';
+    boardArea.style.paddingBottom = '24px';
     boardArea.style.flex = '1';
     boardArea.style.minWidth = '0';
 
@@ -124,7 +125,7 @@ export class DatabaseView {
     columnEl.style.display = 'flex';
     columnEl.style.flexDirection = 'column';
     columnEl.style.minWidth = '260px';
-    columnEl.style.flex = '1 0 260px';
+    columnEl.style.flex = '0 0 260px';
 
     if (col.color !== undefined) {
       columnEl.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;

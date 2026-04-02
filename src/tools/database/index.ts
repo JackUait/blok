@@ -1,4 +1,4 @@
-import type { API, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig } from '../../../types';
+import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig } from '../../../types';
 import type { KanbanData, DatabaseConfig } from './types';
 import { DatabaseModel } from './database-model';
 import { DatabaseView } from './database-view';
@@ -20,6 +20,7 @@ import { IconDatabase, IconBoard } from '../../components/icons';
  */
 export class DatabaseTool implements BlockTool {
   private readonly api: API;
+  private readonly block: BlockAPI;
   private readonly readOnly: boolean;
   private readonly config: DatabaseConfig;
   private readonly model: DatabaseModel;
@@ -33,8 +34,9 @@ export class DatabaseTool implements BlockTool {
   private cardDrawer: DatabaseCardDrawer | null = null;
   private keyboard: DatabaseKeyboard | null = null;
 
-  constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<KanbanData, DatabaseConfig>) {
+  constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<KanbanData, DatabaseConfig>) {
     this.api = api;
+    this.block = block;
     this.readOnly = readOnly;
     this.config = config ?? {};
     this.model = new DatabaseModel(data);
@@ -86,6 +88,10 @@ export class DatabaseTool implements BlockTool {
     }
 
     return this.element;
+  }
+
+  rendered(): void {
+    this.block.stretched = true;
   }
 
   save(_blockContent: HTMLElement): KanbanData {

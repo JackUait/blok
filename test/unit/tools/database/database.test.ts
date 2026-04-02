@@ -425,6 +425,23 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('rendered()', () => {
+    it('sets block stretched to true', () => {
+      const mockBlock = { id: 'test-block-id', stretched: false };
+      const options = createDatabaseOptions();
+
+      options.block = mockBlock as never;
+
+      const tool = new DatabaseTool(options);
+
+      tool.render();
+      tool.rendered();
+
+      expect(mockBlock.stretched).toBe(true);
+    });
+
+  });
+
   describe('handleColumnRecolor is not defined as a method', () => {
     it('does not have handleColumnRecolor method', () => {
       const tool = new DatabaseTool(createDatabaseOptions());

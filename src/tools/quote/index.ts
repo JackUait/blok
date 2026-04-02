@@ -31,8 +31,8 @@ const BASE_CLASSES = [
   'py-[0.2em]',
   'leading-[1.5]',
   'outline-hidden',
-  'mt-px',
-  'mb-px',
+  'mt-[0.3em]',
+  'mb-[0.3em]',
 ];
 
 const LARGE_CLASS = 'text-[1.2em]';

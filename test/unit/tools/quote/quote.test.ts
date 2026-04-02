@@ -102,6 +102,15 @@ describe('Quote Tool', () => {
       expect(el.className).toContain('pl-[0.9em]');
     });
 
+    it('has vertical margin of 0.3em for spacing between blocks', async () => {
+      const { Quote } = await import('../../../../src/tools/quote');
+      const tool = new Quote(createQuoteOptions());
+      const el = tool.render();
+
+      expect(el.className).toContain('mt-[0.3em]');
+      expect(el.className).toContain('mb-[0.3em]');
+    });
+
     it('does not apply large font size by default', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
       const tool = new Quote(createQuoteOptions({ size: 'default' }));

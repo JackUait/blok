@@ -567,6 +567,16 @@ describe('DatabaseView', () => {
 
       expect(card.style.borderRadius).toBe('8px');
     });
+
+    it('add-column button matches column width (260px) via flex', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const board = view.createBoard([], () => []);
+
+      const addColBtn = board.querySelector('[data-blok-database-add-column]') as HTMLElement;
+
+      expect(addColBtn.style.minWidth).toBe('260px');
+      expect(addColBtn.style.flex).toBe('0 0 260px');
+    });
   });
 
   describe('DOM update helpers', () => {

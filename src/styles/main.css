@@ -1635,10 +1635,11 @@
 }
 
 [data-blok-database-add-column] {
-  width: auto;
   white-space: nowrap;
   align-self: flex-start;
   flex-shrink: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
 }
 
 /**

@@ -55,6 +55,8 @@ export class DatabaseView {
       addColumnBtn.setAttribute('data-blok-database-add-column', '');
       addColumnBtn.setAttribute('aria-label', this.i18n.t('tools.database.addColumn'));
       addColumnBtn.textContent = '+ ' + this.i18n.t('tools.database.addColumn');
+      addColumnBtn.style.minWidth = '260px';
+      addColumnBtn.style.flex = '0 0 260px';
       boardArea.appendChild(addColumnBtn);
     }
 

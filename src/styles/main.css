@@ -1127,6 +1127,20 @@
 }
 
 /**
+ * Content alignment
+ * Applies horizontal alignment to block content based on the editor's contentAlign setting.
+ * Left alignment is the default (no margin needed).
+ */
+[data-blok-content-align="center"] [data-blok-element-content] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+[data-blok-content-align="right"] [data-blok-element-content] {
+  margin-left: auto;
+}
+
+/**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation
  */

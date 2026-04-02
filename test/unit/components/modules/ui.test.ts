@@ -1248,4 +1248,55 @@ describe("UI module", () => {
       expect(document.getElementById("blok-font-destroy-editor")).toBeNull();
     });
   });
+
+  describe("contentAlign data attribute", () => {
+    it("sets data-blok-content-align to 'left' by default when contentAlign is not specified", () => {
+      const { ui } = createUI({ attachNodes: false });
+
+      (ui as unknown as { make: () => void }).make();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+
+      expect(nodes.wrapper.getAttribute(DATA_ATTR.contentAlign)).toBe("left");
+    });
+
+    it("sets data-blok-content-align to 'center' when contentAlign is 'center'", () => {
+      const { ui } = createUI({
+        attachNodes: false,
+        configOverrides: { style: { contentAlign: "center" } },
+      });
+
+      (ui as unknown as { make: () => void }).make();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+
+      expect(nodes.wrapper.getAttribute(DATA_ATTR.contentAlign)).toBe("center");
+    });
+
+    it("sets data-blok-content-align to 'right' when contentAlign is 'right'", () => {
+      const { ui } = createUI({
+        attachNodes: false,
+        configOverrides: { style: { contentAlign: "right" } },
+      });
+
+      (ui as unknown as { make: () => void }).make();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+
+      expect(nodes.wrapper.getAttribute(DATA_ATTR.contentAlign)).toBe("right");
+    });
+
+    it("sets data-blok-content-align to 'left' when style is defined but contentAlign is omitted", () => {
+      const { ui } = createUI({
+        attachNodes: false,
+        configOverrides: { style: { nonce: "some-nonce" } },
+      });
+
+      (ui as unknown as { make: () => void }).make();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+
+      expect(nodes.wrapper.getAttribute(DATA_ATTR.contentAlign)).toBe("left");
+    });
+  });
 });

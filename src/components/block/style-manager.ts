@@ -11,7 +11,7 @@ export class StyleManager {
    */
   private static readonly styles = {
     wrapper: 'relative opacity-100 first:mt-0 last:pb-0 last:mb-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
-    content: 'relative mx-auto transition-colors duration-150 ease-out max-w-blok-content',
+    content: 'relative transition-colors duration-150 ease-out max-w-blok-content',
     contentSelected: 'bg-selection rounded-[4px] **:[[contenteditable]]:select-none [&_img]:opacity-55 **:data-[blok-tool=stub]:opacity-55',
     contentStretched: 'max-w-none',
   };

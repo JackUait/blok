@@ -11,6 +11,21 @@ export class ToolsAPI extends Module {
   public get methods(): ToolsAPIInterface {
     return {
       getBlockTools: () => Array.from(this.Blok.Tools.blockTools.values()),
+      getToolsConfig: () => {
+        const result: ReturnType<ToolsAPIInterface['getToolsConfig']> = {
+          tools: this.config.tools,
+        };
+
+        if (this.config.inlineToolbar !== undefined) {
+          result.inlineToolbar = this.config.inlineToolbar;
+        }
+
+        if (this.config.tunes !== undefined) {
+          result.tunes = this.config.tunes;
+        }
+
+        return result;
+      },
     };
   }
 }

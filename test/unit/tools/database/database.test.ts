@@ -24,6 +24,7 @@ const createMockAPI = (): API => ({
     getBlocksCount: vi.fn().mockReturnValue(1),
   },
   notifier: { show: vi.fn() },
+  tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
 } as unknown as API);
 
 const createDatabaseOptions = (
@@ -333,6 +334,7 @@ describe('DatabaseTool', () => {
           getBlocksCount: vi.fn().mockReturnValue(1),
         },
         notifier: { show: vi.fn() },
+        tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
       } as unknown as API;
 
       const initialData: KanbanData = {

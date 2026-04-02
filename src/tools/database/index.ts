@@ -254,6 +254,7 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawer = new DatabaseCardDrawer({
       wrapper,
       readOnly: this.readOnly,
+      toolsConfig: this.api.tools.getToolsConfig(),
       onTitleChange: (cardId, title) => {
         this.model.updateCard(cardId, { title });
         this.sync.syncUpdateCard({ cardId, changes: { title } });

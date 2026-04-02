@@ -15,11 +15,12 @@ type CreateToolsApiResult = {
 };
 
 const createToolsApi = (
-  blockToolsEntries: Array<[string, BlockToolAdapter]> = []
+  blockToolsEntries: Array<[string, BlockToolAdapter]> = [],
+  configOverrides: Partial<BlokConfig> = {}
 ): CreateToolsApiResult => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as BlokConfig,
+    config: { ...configOverrides } as BlokConfig,
     eventsDispatcher,
   };
 
@@ -54,5 +55,53 @@ describe('ToolsAPI', () => {
     const { toolsApi } = createToolsApi();
 
     expect(toolsApi.methods.getBlockTools()).toEqual([]);
+  });
+
+  describe('getToolsConfig', () => {
+    it('returns tools config from the editor configuration', () => {
+      const toolsConfig = {
+        paragraph: { class: class {} },
+        header: { class: class {} },
+      };
+      const { toolsApi } = createToolsApi([], { tools: toolsConfig });
+
+      expect(toolsApi.methods.getToolsConfig()).toEqual({
+        tools: toolsConfig,
+      });
+    });
+
+    it('returns inlineToolbar setting when present in config', () => {
+      const toolsConfig = { paragraph: { class: class {} } };
+      const { toolsApi } = createToolsApi([], {
+        tools: toolsConfig,
+        inlineToolbar: ['bold', 'italic'],
+      });
+
+      expect(toolsApi.methods.getToolsConfig()).toEqual({
+        tools: toolsConfig,
+        inlineToolbar: ['bold', 'italic'],
+      });
+    });
+
+    it('returns tunes setting when present in config', () => {
+      const toolsConfig = { paragraph: { class: class {} } };
+      const { toolsApi } = createToolsApi([], {
+        tools: toolsConfig,
+        tunes: ['delete'],
+      });
+
+      expect(toolsApi.methods.getToolsConfig()).toEqual({
+        tools: toolsConfig,
+        tunes: ['delete'],
+      });
+    });
+
+    it('returns empty tools object when no tools configured', () => {
+      const { toolsApi } = createToolsApi();
+
+      expect(toolsApi.methods.getToolsConfig()).toEqual({
+        tools: undefined,
+      });
+    });
   });
 });

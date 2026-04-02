@@ -1,4 +1,5 @@
 import type { OutputData } from '../../../types';
+import type { ToolsConfig } from '../../../types/api/tools';
 import type { KanbanCardData } from './types';
 
 interface BlokInstance {
@@ -10,6 +11,7 @@ interface BlokInstance {
 export interface CardDrawerOptions {
   wrapper: HTMLElement;
   readOnly: boolean;
+  toolsConfig?: ToolsConfig;
   onTitleChange: (cardId: string, title: string) => void;
   onDescriptionChange: (cardId: string, description: OutputData) => void;
   onClose: () => void;
@@ -23,6 +25,7 @@ export interface CardDrawerOptions {
 export class DatabaseCardDrawer {
   private readonly wrapper: HTMLElement;
   private readonly readOnly: boolean;
+  private readonly toolsConfig: ToolsConfig | undefined;
   private readonly onTitleChange: (cardId: string, title: string) => void;
   private readonly onDescriptionChange: (cardId: string, description: OutputData) => void;
   private readonly onClose: () => void;
@@ -36,6 +39,7 @@ export class DatabaseCardDrawer {
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
     this.readOnly = options.readOnly;
+    this.toolsConfig = options.toolsConfig;
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
@@ -238,6 +242,7 @@ export class DatabaseCardDrawer {
     import('../../blok').then(({ Blok }) => {
       const cardId = card.id;
       const blok = new Blok({
+        ...this.toolsConfig,
         holder: editorHolder,
         data: card.description,
         readOnly: this.readOnly,

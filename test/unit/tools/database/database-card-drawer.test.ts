@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
 import type { KanbanCardData } from '../../../../src/tools/database/types';
+import type { ToolsConfig } from '../../../../types/api/tools';
 
 const makeCard = (overrides: Partial<KanbanCardData> = {}): KanbanCardData => ({
   id: 'card-1',
@@ -374,6 +375,84 @@ describe('DatabaseCardDrawer', () => {
       drawer.close();
 
       expect(removeSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
+    });
+  });
+
+  describe('nested editor tools config', () => {
+    it('passes toolsConfig to the nested Blok instance', async () => {
+      const mockBlokConstructor = vi.fn().mockReturnValue({
+        isReady: Promise.resolve(),
+        save: vi.fn().mockResolvedValue({ blocks: [] }),
+        destroy: vi.fn(),
+      });
+
+      vi.resetModules();
+      vi.doMock('../../../../src/blok', () => ({
+        Blok: mockBlokConstructor,
+      }));
+
+      const { DatabaseCardDrawer: DrawerWithMock } = await import(
+        '../../../../src/tools/database/database-card-drawer'
+      );
+
+      const toolsConfig: ToolsConfig = {
+        tools: {
+          paragraph: { class: class {} as never },
+          header: { class: class {} as never },
+        },
+        inlineToolbar: ['bold', 'italic'],
+      };
+      const options = createOptions({ toolsConfig });
+      const drawer = new DrawerWithMock(options);
+      const card = makeCard();
+
+      drawer.open(card);
+
+      await vi.waitFor(() => {
+        expect(mockBlokConstructor).toHaveBeenCalledOnce();
+      });
+
+      const blokConfig = mockBlokConstructor.mock.calls[0][0];
+
+      expect(blokConfig.tools).toBe(toolsConfig.tools);
+      expect(blokConfig.inlineToolbar).toEqual(['bold', 'italic']);
+
+      drawer.destroy();
+      vi.doUnmock('../../../../src/blok');
+    });
+
+    it('creates nested Blok without tools when toolsConfig is not provided', async () => {
+      const mockBlokConstructor = vi.fn().mockReturnValue({
+        isReady: Promise.resolve(),
+        save: vi.fn().mockResolvedValue({ blocks: [] }),
+        destroy: vi.fn(),
+      });
+
+      vi.resetModules();
+      vi.doMock('../../../../src/blok', () => ({
+        Blok: mockBlokConstructor,
+      }));
+
+      const { DatabaseCardDrawer: DrawerWithMock } = await import(
+        '../../../../src/tools/database/database-card-drawer'
+      );
+
+      const options = createOptions();
+      const drawer = new DrawerWithMock(options);
+      const card = makeCard();
+
+      drawer.open(card);
+
+      await vi.waitFor(() => {
+        expect(mockBlokConstructor).toHaveBeenCalledOnce();
+      });
+
+      const blokConfig = mockBlokConstructor.mock.calls[0][0];
+
+      expect(blokConfig.tools).toBeUndefined();
+
+      drawer.destroy();
+      vi.doUnmock('../../../../src/blok');
     });
   });
 

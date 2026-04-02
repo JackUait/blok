@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Фиолетовый",
   "tools.callout.colorPink": "Розовый",
   "tools.callout.colorRed": "Красный",
+  "tools.quote.size": "Размер цитаты",
   "tools.quote.placeholder": "Цитата",
   "tools.quote.defaultSize": "по умолчанию",
   "tools.quote.largeSize": "Большой"

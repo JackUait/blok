@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "বেগুনি",
   "tools.callout.colorPink": "গোলাপি",
   "tools.callout.colorRed": "লাল",
+  "tools.quote.size": "উদ্ধৃতির আকার",
   "tools.quote.placeholder": "উদ্ধৃতি",
   "tools.quote.defaultSize": "ডিফল্ট",
   "tools.quote.largeSize": "বড়"

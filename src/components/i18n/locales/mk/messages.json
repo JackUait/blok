@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Виолетово",
   "tools.callout.colorPink": "Розово",
   "tools.callout.colorRed": "Црвено",
+  "tools.quote.size": "Големина на цитат",
   "tools.quote.placeholder": "Цитат",
   "tools.quote.defaultSize": "Стандардно",
   "tools.quote.largeSize": "Голем"

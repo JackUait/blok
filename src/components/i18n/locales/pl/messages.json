@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Fioletowy",
   "tools.callout.colorPink": "Różowy",
   "tools.callout.colorRed": "Czerwony",
+  "tools.quote.size": "Rozmiar cytatu",
   "tools.quote.placeholder": "Cytat",
   "tools.quote.defaultSize": "Domyślny",
   "tools.quote.largeSize": "Duży"

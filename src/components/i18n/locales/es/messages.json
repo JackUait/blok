@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Morado",
   "tools.callout.colorPink": "Rosa",
   "tools.callout.colorRed": "Rojo",
+  "tools.quote.size": "Tamaño de cita",
   "tools.quote.placeholder": "Cita",
   "tools.quote.defaultSize": "Predeterminado",
   "tools.quote.largeSize": "Grande"

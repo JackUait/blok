@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Paars",
   "tools.callout.colorPink": "Roze",
   "tools.callout.colorRed": "Rood",
+  "tools.quote.size": "Citaatgrootte",
   "tools.quote.placeholder": "Citaat",
   "tools.quote.defaultSize": "Standaard",
   "tools.quote.largeSize": "Groot"

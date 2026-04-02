@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "بنفسجي",
   "tools.callout.colorPink": "وردي",
   "tools.callout.colorRed": "أحمر",
+  "tools.quote.size": "حجم الاقتباس",
   "tools.quote.placeholder": "اقتباس",
   "tools.quote.defaultSize": "افتراضي",
   "tools.quote.largeSize": "كبير"

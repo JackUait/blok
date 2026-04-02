@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "იისფერი",
   "tools.callout.colorPink": "ვარდისფერი",
   "tools.callout.colorRed": "წითელი",
+  "tools.quote.size": "ციტატის ზომა",
   "tools.quote.placeholder": "ციტატა",
   "tools.quote.defaultSize": "ნაგულისხმევი",
   "tools.quote.largeSize": "დიდი"

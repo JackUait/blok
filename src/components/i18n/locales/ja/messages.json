@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "パープル",
   "tools.callout.colorPink": "ピンク",
   "tools.callout.colorRed": "レッド",
+  "tools.quote.size": "引用サイズ",
   "tools.quote.placeholder": "引用",
   "tools.quote.defaultSize": "デフォルト",
   "tools.quote.largeSize": "大"

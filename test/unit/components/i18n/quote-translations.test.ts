@@ -3,6 +3,7 @@
  *
  * The Quote tool uses these keys:
  *   - toolNames.quote           (toolbox title)
+ *   - tools.quote.size          (size submenu label)
  *   - tools.quote.placeholder   (empty block placeholder)
  *   - tools.quote.defaultSize   (size setting)
  *   - tools.quote.largeSize     (size setting)
@@ -18,6 +19,7 @@ const LOCALES_DIR = resolve(__dirname, '../../../../src/components/i18n/locales'
 
 const QUOTE_KEYS = [
   'toolNames.quote',
+  'tools.quote.size',
   'tools.quote.placeholder',
   'tools.quote.defaultSize',
   'tools.quote.largeSize',

@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "보라",
   "tools.callout.colorPink": "분홍",
   "tools.callout.colorRed": "빨강",
+  "tools.quote.size": "인용 크기",
   "tools.quote.placeholder": "인용",
   "tools.quote.defaultSize": "기본값",
   "tools.quote.largeSize": "크게"

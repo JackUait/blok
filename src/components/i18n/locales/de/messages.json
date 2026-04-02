@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Lila",
   "tools.callout.colorPink": "Pink",
   "tools.callout.colorRed": "Rot",
+  "tools.quote.size": "Zitatgröße",
   "tools.quote.placeholder": "Zitat",
   "tools.quote.defaultSize": "Standard",
   "tools.quote.largeSize": "Groß"

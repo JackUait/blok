@@ -130,17 +130,26 @@ export class Quote implements BlockTool {
     return [
       {
         icon: IconQuote,
-        title: this.api.i18n.t('tools.quote.defaultSize'),
-        onActivate: (): void => this.setSize('default'),
-        closeOnActivate: true,
-        isActive: this._data.size === 'default',
-      },
-      {
-        icon: IconQuote,
-        title: this.api.i18n.t('tools.quote.largeSize'),
-        onActivate: (): void => this.setSize('large'),
-        closeOnActivate: true,
-        isActive: this._data.size === 'large',
+        title: this.api.i18n.t('tools.quote.size'),
+        name: 'quote-size',
+        children: {
+          items: [
+            {
+              icon: IconQuote,
+              title: this.api.i18n.t('tools.quote.defaultSize'),
+              onActivate: (): void => this.setSize('default'),
+              closeOnActivate: true,
+              isActive: this._data.size === 'default',
+            },
+            {
+              icon: IconQuote,
+              title: this.api.i18n.t('tools.quote.largeSize'),
+              onActivate: (): void => this.setSize('large'),
+              closeOnActivate: true,
+              isActive: this._data.size === 'large',
+            },
+          ],
+        },
       },
     ];
   }

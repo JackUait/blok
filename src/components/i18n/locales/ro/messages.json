@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Violet",
   "tools.callout.colorPink": "Roz",
   "tools.callout.colorRed": "Roșu",
+  "tools.quote.size": "Dimensiune citat",
   "tools.quote.placeholder": "Citat",
   "tools.quote.defaultSize": "Implicit",
   "tools.quote.largeSize": "Mare"

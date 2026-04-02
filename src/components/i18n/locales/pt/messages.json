@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Roxo",
   "tools.callout.colorPink": "Rosa",
   "tools.callout.colorRed": "Vermelho",
+  "tools.quote.size": "Tamanho da citação",
   "tools.quote.placeholder": "Citação",
   "tools.quote.defaultSize": "Padrão",
   "tools.quote.largeSize": "Grande"

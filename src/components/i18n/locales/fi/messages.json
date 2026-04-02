@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Violetti",
   "tools.callout.colorPink": "Pinkki",
   "tools.callout.colorRed": "Punainen",
+  "tools.quote.size": "Lainauksen koko",
   "tools.quote.placeholder": "Lainaus",
   "tools.quote.defaultSize": "Oletus",
   "tools.quote.largeSize": "Suuri"

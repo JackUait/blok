@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "สีม่วง",
   "tools.callout.colorPink": "สีชมพู",
   "tools.callout.colorRed": "สีแดง",
+  "tools.quote.size": "ขนาดคำพูด",
   "tools.quote.placeholder": "อ้างอิง",
   "tools.quote.defaultSize": "ค่าเริ่มต้น",
   "tools.quote.largeSize": "ใหญ่"

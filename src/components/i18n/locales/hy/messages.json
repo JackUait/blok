@@ -153,6 +153,7 @@
   "tools.callout.colorPurple": "Մանուշակագույն",
   "tools.callout.colorPink": "Վարդագույն",
   "tools.callout.colorRed": "Կարմիր",
+  "tools.quote.size": "Մեջբերման չափը",
   "tools.quote.placeholder": "Մեջբերում",
   "tools.quote.defaultSize": "Կանխադրված",
   "tools.quote.largeSize": "Մեծ"

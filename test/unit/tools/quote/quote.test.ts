@@ -220,15 +220,28 @@ describe('Quote Tool', () => {
   });
 
   describe('renderSettings()', () => {
-    it('returns an array of two size options', async () => {
+    it('returns a single parent item with children containing size options', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
       const tool = new Quote(createQuoteOptions());
 
       tool.render();
-      const settings = tool.renderSettings();
+      const settings = tool.renderSettings() as Array<{ children: { items: unknown[] } }>;
 
       expect(Array.isArray(settings)).toBe(true);
-      expect((settings as unknown[]).length).toBe(2);
+      expect(settings.length).toBe(1);
+      expect(settings[0].children).toBeDefined();
+      expect(settings[0].children.items.length).toBe(2);
+    });
+
+    it('parent item has quote size title and icon', async () => {
+      const { Quote } = await import('../../../../src/tools/quote');
+      const tool = new Quote(createQuoteOptions());
+
+      tool.render();
+      const settings = tool.renderSettings() as Array<{ title: string; icon: string }>;
+
+      expect(settings[0].title).toBe('tools.quote.size');
+      expect(settings[0].icon).toBeTruthy();
     });
 
     it('marks default size as active when size is default', async () => {
@@ -236,11 +249,11 @@ describe('Quote Tool', () => {
       const tool = new Quote(createQuoteOptions({ size: 'default' }));
 
       tool.render();
-      const settings = tool.renderSettings() as Array<{ isActive: boolean }>;
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ isActive: boolean }> } }>;
+      const children = settings[0].children.items;
 
-      // First item is "Default", second is "Large"
-      expect(settings[0].isActive).toBe(true);
-      expect(settings[1].isActive).toBe(false);
+      expect(children[0].isActive).toBe(true);
+      expect(children[1].isActive).toBe(false);
     });
 
     it('marks large size as active when size is large', async () => {
@@ -248,10 +261,11 @@ describe('Quote Tool', () => {
       const tool = new Quote(createQuoteOptions({ size: 'large' }));
 
       tool.render();
-      const settings = tool.renderSettings() as Array<{ isActive: boolean }>;
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ isActive: boolean }> } }>;
+      const children = settings[0].children.items;
 
-      expect(settings[0].isActive).toBe(false);
-      expect(settings[1].isActive).toBe(true);
+      expect(children[0].isActive).toBe(false);
+      expect(children[1].isActive).toBe(true);
     });
 
     it('toggles to large size when large option is activated', async () => {
@@ -259,9 +273,9 @@ describe('Quote Tool', () => {
       const tool = new Quote(createQuoteOptions({ size: 'default' }));
       const el = tool.render();
 
-      const settings = tool.renderSettings() as Array<{ onActivate: () => void }>;
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void }> } }>;
 
-      settings[1].onActivate(); // Activate "Large"
+      settings[0].children.items[1].onActivate(); // Activate "Large"
 
       expect(el.className).toContain('text-[1.2em]');
       expect(tool.save(el).size).toBe('large');
@@ -272,9 +286,9 @@ describe('Quote Tool', () => {
       const tool = new Quote(createQuoteOptions({ size: 'large' }));
       const el = tool.render();
 
-      const settings = tool.renderSettings() as Array<{ onActivate: () => void }>;
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void }> } }>;
 
-      settings[0].onActivate(); // Activate "Default"
+      settings[0].children.items[0].onActivate(); // Activate "Default"
 
       expect(el.className).not.toContain('text-[1.2em]');
       expect(tool.save(el).size).toBe('default');

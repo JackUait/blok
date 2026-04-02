@@ -104,7 +104,7 @@ describe('StyleManager', () => {
       styleManager.updateContentState(false, false);
 
       const classes = styleManager.getContentClasses(false, false);
-      expect(classes).not.toContain('mx-auto');
+      expect(classes).toContain('mx-auto');
       expect(classes).toContain('max-w-blok-content');
       expect(contentElement.className).toBe(classes);
     });
@@ -139,7 +139,7 @@ describe('StyleManager', () => {
     it('returns base classes when neither selected nor stretched', () => {
       const classes = styleManager.getContentClasses(false, false);
 
-      expect(classes).not.toContain('mx-auto');
+      expect(classes).toContain('mx-auto');
       expect(classes).toContain('max-w-blok-content');
       expect(classes).not.toContain('bg-selection');
       expect(classes).not.toContain('max-w-none');
@@ -169,8 +169,8 @@ describe('StyleManager', () => {
       expect(StyleManager.wrapperStyles).toContain('last:mb-0');
     });
 
-    it('provides contentStyles without mx-auto (alignment handled via CSS data attribute)', () => {
-      expect(StyleManager.contentStyles).not.toContain('mx-auto');
+    it('provides contentStyles with mx-auto for default centering', () => {
+      expect(StyleManager.contentStyles).toContain('mx-auto');
       expect(StyleManager.contentStyles).toContain('max-w-blok-content');
     });
   });

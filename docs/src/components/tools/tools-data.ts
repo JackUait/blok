@@ -396,6 +396,72 @@ const editor = new Blok({
 });`,
   },
 
+  {
+    id: 'divider',
+    exportName: 'Divider',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Divider',
+    description:
+      'A horizontal line separator. Renders a semantic `<hr>` element. Has no editable content or settings. Can be inserted via the toolbox or by typing `---` in an empty paragraph.',
+    importExample: `import { Divider } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface DividerData {
+  // Empty — dividers have no configurable properties.
+}`,
+    saveDataExample: `{
+  "id": "div001",
+  "type": "divider",
+  "data": {}
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Divider } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    divider: {
+      class: Divider,
+    },
+  },
+});`,
+  },
+
+  {
+    id: 'quote',
+    exportName: 'Quote',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Quote',
+    description:
+      'A blockquote with a left border accent. Supports two sizes (default and large) switchable via the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block.',
+    importExample: `import { Quote } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface QuoteData {
+  text: string;                  // Quote HTML content
+  size: 'default' | 'large';    // Text size variant
+}`,
+    saveDataExample: `{
+  "id": "qot001",
+  "type": "quote",
+  "data": {
+    "text": "The only way to do great work is to love what you do.",
+    "size": "default"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Quote } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    quote: {
+      class: Quote,
+    },
+  },
+});`,
+  },
+
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {
     id: 'bold',

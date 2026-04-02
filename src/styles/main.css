@@ -1527,6 +1527,10 @@
   background-color: var(--blok-database-card-bg-hover);
 }
 
+[data-blok-database-card-active] {
+  background-color: var(--blok-database-card-bg-hover);
+}
+
 /**
  * During drag — smooth card displacement transitions.
  */

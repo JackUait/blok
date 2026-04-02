@@ -52,7 +52,13 @@ export class DatabaseCardDrawer {
 
   open(card: KanbanCardData, column?: KanbanColumnData): void {
     if (this.drawer) {
-      this.close();
+      if (card.id === this.currentCardId) {
+        return;
+      }
+
+      this.loadCard(card, column);
+
+      return;
     }
 
     // Remove any drawer still animating out from a previous close
@@ -61,6 +67,7 @@ export class DatabaseCardDrawer {
     exiting?.remove();
 
     this.currentCardId = card.id;
+    this.updateActiveCard(card.id);
 
     const drawer = document.createElement('div');
 
@@ -167,9 +174,56 @@ export class DatabaseCardDrawer {
     titleInput.focus();
   }
 
+  /**
+   * Swaps content in the already-open drawer to show a different card
+   * without closing/reopening the drawer panel.
+   */
+  private loadCard(card: KanbanCardData, column?: KanbanColumnData): void {
+    if (this.drawer === null) {
+      return;
+    }
+
+    this.cleanupEditor();
+
+    this.currentCardId = card.id;
+    this.updateActiveCard(card.id);
+
+    // Update title
+    const titleInput = this.drawer.querySelector<HTMLInputElement>('[data-blok-database-drawer-title]');
+
+    if (titleInput !== null) {
+      titleInput.value = card.title;
+    }
+
+    // Replace properties section
+    this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
+
+    if (column !== undefined) {
+      const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
+      const divider = content?.querySelector('hr') ?? null;
+
+      if (content !== null) {
+        const propsSection = document.createElement('div');
+
+        propsSection.setAttribute('data-blok-database-drawer-props', '');
+        propsSection.appendChild(this.createPropertyRow(column));
+        content.insertBefore(propsSection, divider);
+      }
+    }
+
+    // Reinitialize editor
+    const editorHolder = this.drawer.querySelector<HTMLElement>('[data-blok-database-drawer-editor]');
+
+    if (editorHolder !== null) {
+      editorHolder.innerHTML = '';
+      this.initNestedEditor(editorHolder, card);
+    }
+  }
+
   close(): void {
     const wasOpen = this.drawer !== null;
 
+    this.updateActiveCard(null);
     this.cleanupListeners();
     this.cleanupEditor();
 
@@ -246,6 +300,18 @@ export class DatabaseCardDrawer {
     row.appendChild(pill);
 
     return row;
+  }
+
+  private updateActiveCard(cardId: string | null): void {
+    const prev = this.wrapper.querySelector('[data-blok-database-card-active]');
+
+    prev?.removeAttribute('data-blok-database-card-active');
+
+    if (cardId !== null) {
+      const cardEl = this.wrapper.querySelector(`[data-blok-database-card][data-card-id="${cardId}"]`);
+
+      cardEl?.setAttribute('data-blok-database-card-active', '');
+    }
   }
 
   private cleanupListeners(): void {

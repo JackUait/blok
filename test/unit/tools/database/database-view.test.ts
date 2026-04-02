@@ -615,6 +615,45 @@ describe('DatabaseView', () => {
       expect(columnEls[0].compareDocumentPosition(addColBtn!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
+    it('updateCardTitle updates the title text of a card by data-card-id', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1', title: 'Original' })];
+      const board = view.createBoard(columns, () => cards);
+
+      view.updateCardTitle(board, 'card-1', 'Updated title');
+
+      const titleEl = board.querySelector('[data-card-id="card-1"] [data-blok-database-card-title]');
+
+      expect(titleEl?.textContent).toBe('Updated title');
+    });
+
+    it('updateCardTitle falls back to i18n placeholder when title is empty', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1', title: 'Has title' })];
+      const board = view.createBoard(columns, () => cards);
+
+      view.updateCardTitle(board, 'card-1', '');
+
+      const titleEl = board.querySelector('[data-card-id="card-1"] [data-blok-database-card-title]');
+
+      expect(titleEl?.textContent).toBe('tools.database.newPage');
+    });
+
+    it('updateCardTitle does nothing when card id is not found', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1', title: 'Original' })];
+      const board = view.createBoard(columns, () => cards);
+
+      view.updateCardTitle(board, 'nonexistent', 'New');
+
+      const titleEl = board.querySelector('[data-card-id="card-1"] [data-blok-database-card-title]');
+
+      expect(titleEl?.textContent).toBe('Original');
+    });
+
     it('removeColumn removes a column element by data-column-id', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const columns = [makeColumn({ id: 'col-del', position: 'a0' })];

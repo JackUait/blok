@@ -263,6 +263,9 @@ export class DatabaseTool implements BlockTool {
       toolsConfig: this.api.tools.getToolsConfig(),
       onTitleChange: (cardId, title) => {
         this.model.updateCard(cardId, { title });
+        if (this.element !== null) {
+          this.view.updateCardTitle(this.element, cardId, title);
+        }
         this.sync.syncUpdateCard({ cardId, changes: { title } });
       },
       onDescriptionChange: (cardId, description: OutputData) => {

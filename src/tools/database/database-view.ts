@@ -104,6 +104,18 @@ export class DatabaseView {
   }
 
   /**
+   * Updates the visible title of a card element found by its data-card-id.
+   */
+  updateCardTitle(wrapper: HTMLElement, cardId: string, title: string): void {
+    const cardEl = wrapper.querySelector(`[data-card-id="${cardId}"]`);
+    const titleEl = cardEl?.querySelector('[data-blok-database-card-title]');
+
+    if (titleEl !== null && titleEl !== undefined) {
+      titleEl.textContent = title || this.i18n.t('tools.database.newPage');
+    }
+  }
+
+  /**
    * Removes a column element from the wrapper by its data-column-id.
    */
   removeColumn(wrapper: HTMLElement, columnId: string): void {

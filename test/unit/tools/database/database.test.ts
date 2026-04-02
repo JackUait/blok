@@ -442,6 +442,43 @@ describe('DatabaseTool', () => {
 
   });
 
+  describe('drawer title edits update board card', () => {
+    it('editing the title in the drawer updates the card title on the board', () => {
+      const initialData: KanbanData = {
+        columns: [
+          { id: 'col-1', title: 'Todo', position: 'a0', color: 'blue' },
+        ],
+        cardMap: {
+          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Original title' },
+        },
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions(initialData));
+      const element = tool.render();
+
+      // Click the card to open the drawer
+      const cardEl = element.querySelector('[data-card-id="card-1"]') as HTMLElement;
+
+      cardEl.click();
+
+      // The drawer should be open with a title input
+      const drawerTitle = element.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
+
+      expect(drawerTitle).not.toBeNull();
+
+      // Edit the title in the drawer
+      drawerTitle.value = 'Updated title';
+      drawerTitle.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // The card on the board should reflect the new title
+      const boardCardTitle = element.querySelector('[data-card-id="card-1"] [data-blok-database-card-title]');
+
+      expect(boardCardTitle?.textContent).toBe('Updated title');
+
+      tool.destroy();
+    });
+  });
+
   describe('handleColumnRecolor is not defined as a method', () => {
     it('does not have handleColumnRecolor method', () => {
       const tool = new DatabaseTool(createDatabaseOptions());

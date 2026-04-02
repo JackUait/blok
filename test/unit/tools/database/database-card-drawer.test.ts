@@ -292,7 +292,7 @@ describe('DatabaseCardDrawer', () => {
       expect(onClose).toHaveBeenCalledOnce();
     });
 
-    it('calls onClose callback when open() is called while already open', () => {
+    it('does NOT call onClose when switching to a different card while open', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
@@ -304,7 +304,202 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(card2);
 
-      expect(onClose).toHaveBeenCalledOnce();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('card switching (drawer already open)', () => {
+    it('reuses the same drawer DOM element instead of recreating it', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1', title: 'First' });
+      const card2 = makeCard({ id: 'card-2', title: 'Second' });
+
+      drawer.open(card1);
+
+      const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]');
+
+      drawer.open(card2);
+
+      const drawerElAfter = options.wrapper.querySelector('[data-blok-database-drawer]');
+
+      expect(drawerElAfter).toBe(drawerEl);
+    });
+
+    it('updates the title input to the new card title', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1', title: 'First card' });
+      const card2 = makeCard({ id: 'card-2', title: 'Second card' });
+
+      drawer.open(card1);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
+
+      expect(titleInput.value).toBe('First card');
+
+      drawer.open(card2);
+
+      expect(titleInput.value).toBe('Second card');
+    });
+
+    it('updates the status pill to the new column', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1', columnId: 'col-1' });
+      const card2 = makeCard({ id: 'card-2', columnId: 'col-2' });
+      const column1 = makeColumn({ id: 'col-1', title: 'To Do', color: 'red' });
+      const column2 = makeColumn({ id: 'col-2', title: 'Done', color: 'green' });
+
+      drawer.open(card1, column1);
+
+      const pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+
+      expect(pill!.textContent).toBe('To Do');
+
+      drawer.open(card2, column2);
+
+      const pillAfter = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+
+      expect(pillAfter!.textContent).toBe('Done');
+    });
+
+    it('stays open throughout the switch', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1' });
+      const card2 = makeCard({ id: 'card-2' });
+
+      drawer.open(card1);
+
+      expect(drawer.isOpen).toBe(true);
+
+      drawer.open(card2);
+
+      expect(drawer.isOpen).toBe(true);
+    });
+
+    it('fires onTitleChange with the new card id after switching', () => {
+      const onTitleChange = vi.fn();
+      const options = createOptions({ onTitleChange });
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1', title: 'First' });
+      const card2 = makeCard({ id: 'card-2', title: 'Second' });
+
+      drawer.open(card1);
+      drawer.open(card2);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
+
+      titleInput.value = 'Edited';
+      titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(onTitleChange).toHaveBeenCalledWith('card-2', 'Edited');
+    });
+
+    it('only has one drawer element in the DOM after switching', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1' });
+      const card2 = makeCard({ id: 'card-2' });
+
+      drawer.open(card1);
+      drawer.open(card2);
+
+      const drawers = options.wrapper.querySelectorAll('[data-blok-database-drawer]');
+
+      expect(drawers).toHaveLength(1);
+    });
+
+    it('does nothing when the same card is clicked again', () => {
+      const onTitleChange = vi.fn();
+      const options = createOptions({ onTitleChange });
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard({ id: 'card-1', title: 'Original' });
+
+      drawer.open(card);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
+
+      titleInput.value = 'Edited locally';
+
+      drawer.open(makeCard({ id: 'card-1', title: 'Original' }));
+
+      // Title should still show the locally-edited value, not be reset
+      expect(titleInput.value).toBe('Edited locally');
+    });
+  });
+
+  describe('active card state', () => {
+    const createWrapperWithCards = (...cardIds: string[]): HTMLElement => {
+      const wrapper = document.createElement('div');
+
+      for (const id of cardIds) {
+        const cardEl = document.createElement('div');
+
+        cardEl.setAttribute('data-blok-database-card', '');
+        cardEl.setAttribute('data-card-id', id);
+        wrapper.appendChild(cardEl);
+      }
+
+      return wrapper;
+    };
+
+    it('sets data-blok-database-card-active on the opened card element', () => {
+      const wrapper = createWrapperWithCards('card-1', 'card-2');
+      const options = createOptions({ wrapper });
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard({ id: 'card-1' });
+
+      drawer.open(card);
+
+      const cardEl = wrapper.querySelector('[data-card-id="card-1"]') as HTMLElement;
+
+      expect(cardEl.hasAttribute('data-blok-database-card-active')).toBe(true);
+    });
+
+    it('does not set active on other cards', () => {
+      const wrapper = createWrapperWithCards('card-1', 'card-2');
+      const options = createOptions({ wrapper });
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard({ id: 'card-1' });
+
+      drawer.open(card);
+
+      const otherCard = wrapper.querySelector('[data-card-id="card-2"]') as HTMLElement;
+
+      expect(otherCard.hasAttribute('data-blok-database-card-active')).toBe(false);
+    });
+
+    it('moves active state to the new card when switching', () => {
+      const wrapper = createWrapperWithCards('card-1', 'card-2');
+      const options = createOptions({ wrapper });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(makeCard({ id: 'card-1' }));
+      drawer.open(makeCard({ id: 'card-2' }));
+
+      const card1 = wrapper.querySelector('[data-card-id="card-1"]') as HTMLElement;
+      const card2 = wrapper.querySelector('[data-card-id="card-2"]') as HTMLElement;
+
+      expect(card1.hasAttribute('data-blok-database-card-active')).toBe(false);
+      expect(card2.hasAttribute('data-blok-database-card-active')).toBe(true);
+    });
+
+    it('removes active state when drawer is closed', () => {
+      const wrapper = createWrapperWithCards('card-1');
+      const options = createOptions({ wrapper });
+      const drawer = new DatabaseCardDrawer(options);
+
+      drawer.open(makeCard({ id: 'card-1' }));
+
+      const cardEl = wrapper.querySelector('[data-card-id="card-1"]') as HTMLElement;
+
+      expect(cardEl.hasAttribute('data-blok-database-card-active')).toBe(true);
+
+      drawer.close();
+
+      expect(cardEl.hasAttribute('data-blok-database-card-active')).toBe(false);
     });
   });
 

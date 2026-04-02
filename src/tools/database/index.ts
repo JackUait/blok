@@ -385,7 +385,9 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    this.cardDrawer?.open(card);
+    const column = this.model.getColumn(card.columnId);
+
+    this.cardDrawer?.open(card, column);
   }
 
   /**

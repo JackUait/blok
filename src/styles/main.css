@@ -1613,19 +1613,164 @@
 }
 
 /**
- * Drawer — divider style.
+ * Drawer — base layout (fixed right panel) with slide-in animation.
+ */
+[data-blok-database-drawer] {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 0;
+  z-index: 1000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--blok-popover-border, #e8e8eb);
+  background-color: var(--blok-popover-bg, #fff);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
+  transition: width 200ms ease;
+}
+
+/**
+ * Drawer toolbar — thin top bar with close button.
+ */
+[data-blok-database-drawer-toolbar] {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--blok-database-drawer-border);
+}
+
+/**
+ * Drawer close button — double-chevron icon.
+ */
+[data-blok-database-drawer-close] {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--blok-database-add-text);
+  gap: -4px;
+}
+
+[data-blok-database-drawer-close]:hover {
+  background-color: var(--blok-database-drawer-border);
+}
+
+[data-blok-database-drawer-close] svg {
+  width: 14px;
+  height: 14px;
+  margin-left: -6px;
+}
+
+[data-blok-database-drawer-close] svg:first-child {
+  margin-left: 0;
+}
+
+/**
+ * Drawer scrollable content area.
+ */
+[data-blok-database-drawer-content] {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 60px 20px;
+}
+
+/**
+ * Drawer title input — large, Notion-style.
+ */
+[data-blok-database-drawer-title] {
+  display: block;
+  width: 100%;
+  font-size: 32px;
+  font-weight: 700;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+[data-blok-database-drawer-title]::placeholder {
+  color: var(--blok-database-add-text);
+}
+
+/**
+ * Drawer properties section.
+ */
+[data-blok-database-drawer-props] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+/**
+ * Drawer property row — label + value pair.
+ */
+[data-blok-database-drawer-prop-row] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 14px;
+}
+
+/**
+ * Drawer property label — muted left column.
+ */
+[data-blok-database-drawer-prop-label] {
+  color: var(--blok-database-add-text);
+  min-width: 100px;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+/**
+ * Drawer status pill badge — colored chip.
+ */
+[data-blok-database-drawer-status-pill] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/**
+ * Drawer status dot — small circle inside pill.
+ */
+[data-blok-database-drawer-status-dot] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/**
+ * Drawer divider.
  */
 [data-blok-database-drawer] hr {
   border: none;
   border-top: 1px solid var(--blok-database-drawer-border);
-  margin: 0;
+  margin: 0 0 4px;
 }
 
 /**
- * Drawer title input — placeholder color.
+ * Drawer editor holder.
  */
-[data-blok-database-drawer-title]::placeholder {
-  color: var(--blok-database-add-text);
+[data-blok-database-drawer-editor] {
+  flex: 1;
+  min-height: 200px;
 }
 
 /**
@@ -1657,8 +1802,9 @@
 }
 
 /**
- * Drawer — width transition for slide-in animation.
+ * Drawer — ensure editor tools toolbar doesn't overflow.
  */
-[data-blok-database-drawer] {
-  transition: width 200ms ease;
+[data-blok-database-drawer-editor] .ce-toolbar {
+  left: 0;
+  right: 0;
 }

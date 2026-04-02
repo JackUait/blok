@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
-import type { KanbanCardData } from '../../../../src/tools/database/types';
+import type { KanbanCardData, KanbanColumnData } from '../../../../src/tools/database/types';
 import type { ToolsConfig } from '../../../../types/api/tools';
 
 const makeCard = (overrides: Partial<KanbanCardData> = {}): KanbanCardData => ({
@@ -9,6 +9,14 @@ const makeCard = (overrides: Partial<KanbanCardData> = {}): KanbanCardData => ({
   columnId: 'col-1',
   position: 'a0',
   title: 'Test card',
+  ...overrides,
+});
+
+const makeColumn = (overrides: Partial<KanbanColumnData> = {}): KanbanColumnData => ({
+  id: 'col-1',
+  title: 'In progress',
+  color: 'blue',
+  position: 'a1',
   ...overrides,
 });
 
@@ -112,7 +120,7 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('layout', () => {
-    it('drawer uses position fixed for full-page display', () => {
+    it('drawer has data attribute for CSS styling', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
@@ -121,45 +129,20 @@ describe('DatabaseCardDrawer', () => {
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      expect(el.style.position).toBe('fixed');
+      expect(el).not.toBeNull();
+      expect(el.hasAttribute('data-blok-database-drawer')).toBe(true);
     });
 
-    it('drawer covers full viewport height on the right', () => {
+    it('drawer contains a toolbar, content area, and editor holder', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
 
       drawer.open(card);
 
-      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
-
-      expect(el.style.top).toBe('0px');
-      expect(el.style.right).toBe('0px');
-      expect(el.style.height).toBe('100%');
-    });
-
-    it('drawer has z-index for layering above content', () => {
-      const options = createOptions();
-      const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
-
-      drawer.open(card);
-
-      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
-
-      expect(el.style.zIndex).toBeTruthy();
-    });
-
-    it('drawer has initial width of 0 for animation', () => {
-      const options = createOptions();
-      const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
-
-      drawer.open(card);
-
-      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
-
-      expect(el.style.width).toBe('0px');
+      expect(options.wrapper.querySelector('[data-blok-database-drawer-toolbar]')).not.toBeNull();
+      expect(options.wrapper.querySelector('[data-blok-database-drawer-content]')).not.toBeNull();
+      expect(options.wrapper.querySelector('[data-blok-database-drawer-editor]')).not.toBeNull();
     });
 
     it('drawer opens to 45% width after animation frame', () => {
@@ -225,44 +208,7 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('styling', () => {
-    it('drawer has a border-left for visual separation', () => {
-      const options = createOptions();
-      const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
-
-      drawer.open(card);
-
-      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
-
-      expect(el.style.borderLeft).toBeTruthy();
-    });
-
-    it('drawer has a background color', () => {
-      const options = createOptions();
-      const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
-
-      drawer.open(card);
-
-      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
-
-      expect(el.style.backgroundColor).toBeTruthy();
-    });
-
-    it('title input has styling for font size and padding', () => {
-      const options = createOptions();
-      const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
-
-      drawer.open(card);
-
-      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLElement;
-
-      expect(titleInput.style.fontSize).toBeTruthy();
-      expect(titleInput.style.padding).toBeTruthy();
-    });
-
-    it('close button has no default border or background', () => {
+    it('close button contains chevron SVG icons', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
@@ -271,33 +217,63 @@ describe('DatabaseCardDrawer', () => {
 
       const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLElement;
 
-      expect(closeBtn.style.background).toBe('none');
-      expect(closeBtn.style.borderStyle).toBe('none');
-      expect(closeBtn.style.cursor).toBe('pointer');
+      expect(closeBtn.querySelectorAll('svg').length).toBe(2);
     });
 
-    it('close button displays the x character', () => {
+    it('title input has "Untitled" placeholder', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
 
       drawer.open(card);
 
-      const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLElement;
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
-      expect(closeBtn.textContent).toBe('\u00d7');
+      expect(titleInput.placeholder).toBe('Untitled');
+    });
+  });
+
+  describe('properties section', () => {
+    it('shows status property with column title when column is provided', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+      const column = makeColumn({ title: 'In progress', color: 'blue' });
+
+      drawer.open(card, column);
+
+      const propLabel = options.wrapper.querySelector('[data-blok-database-drawer-prop-label]');
+      const statusPill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+
+      expect(propLabel).not.toBeNull();
+      expect(propLabel!.textContent).toBe('Status');
+      expect(statusPill).not.toBeNull();
+      expect(statusPill!.textContent).toBe('In progress');
     });
 
-    it('editor holder has padding', () => {
+    it('status pill has colored dot when column has color', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+      const column = makeColumn({ color: 'green' });
+
+      drawer.open(card, column);
+
+      const dot = options.wrapper.querySelector('[data-blok-database-drawer-status-dot]');
+
+      expect(dot).not.toBeNull();
+    });
+
+    it('does not show properties section when no column is provided', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
 
       drawer.open(card);
 
-      const editorHolder = options.wrapper.querySelector('[data-blok-database-drawer-editor]') as HTMLElement;
+      const propsSection = options.wrapper.querySelector('[data-blok-database-drawer-props]');
 
-      expect(editorHolder.style.padding).toBeTruthy();
+      expect(propsSection).toBeNull();
     });
   });
 

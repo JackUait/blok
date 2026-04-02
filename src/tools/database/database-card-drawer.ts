@@ -1,6 +1,7 @@
 import type { OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
-import type { KanbanCardData } from './types';
+import type { KanbanCardData, KanbanColumnData } from './types';
+import { IconChevronRight } from '../../components/icons';
 
 interface BlokInstance {
   save(): Promise<OutputData>;
@@ -20,7 +21,7 @@ export interface CardDrawerOptions {
 /**
  * Side drawer that opens when a kanban card is clicked.
  * Sits beside the board as a flex sibling, taking layout space.
- * Contains a title input and a nested Blok editor for the card description.
+ * Contains a title input, status property, and a nested Blok editor for the card description.
  */
 export class DatabaseCardDrawer {
   private readonly wrapper: HTMLElement;
@@ -49,7 +50,7 @@ export class DatabaseCardDrawer {
     return this.drawer !== null;
   }
 
-  open(card: KanbanCardData): void {
+  open(card: KanbanCardData, column?: KanbanColumnData): void {
     if (this.drawer) {
       this.close();
     }
@@ -66,46 +67,35 @@ export class DatabaseCardDrawer {
     drawer.setAttribute('data-blok-database-drawer', '');
     drawer.setAttribute('role', 'complementary');
     drawer.setAttribute('aria-label', 'Card details');
-    drawer.style.position = 'fixed';
-    drawer.style.top = '0px';
-    drawer.style.right = '0px';
-    drawer.style.height = '100%';
-    drawer.style.width = '0px';
-    drawer.style.zIndex = '1000';
-    drawer.style.overflow = 'hidden';
-    drawer.style.display = 'flex';
-    drawer.style.flexDirection = 'column';
-    drawer.style.borderLeft = '1px solid var(--blok-popover-border, #e8e8eb)';
-    drawer.style.backgroundColor = 'var(--blok-popover-bg, #fff)';
-    drawer.style.boxShadow = '-4px 0 12px rgba(0, 0, 0, 0.08)';
+
+    // --- Top toolbar ---
+    const toolbar = document.createElement('div');
+
+    toolbar.setAttribute('data-blok-database-drawer-toolbar', '');
 
     const closeBtn = document.createElement('button');
 
     closeBtn.setAttribute('data-blok-database-drawer-close', '');
     closeBtn.setAttribute('aria-label', 'Close');
-    closeBtn.style.position = 'absolute';
-    closeBtn.style.top = '0';
-    closeBtn.style.right = '0';
-    closeBtn.style.background = 'none';
-    closeBtn.style.borderStyle = 'none';
-    closeBtn.style.cursor = 'pointer';
-    closeBtn.textContent = '\u00d7';
+    closeBtn.innerHTML = IconChevronRight + IconChevronRight;
     closeBtn.addEventListener('click', () => {
       this.close();
     });
-    drawer.appendChild(closeBtn);
+    toolbar.appendChild(closeBtn);
 
+    drawer.appendChild(toolbar);
+
+    // --- Scrollable content ---
+    const content = document.createElement('div');
+
+    content.setAttribute('data-blok-database-drawer-content', '');
+
+    // --- Title input ---
     const titleInput = document.createElement('input');
 
     titleInput.setAttribute('data-blok-database-drawer-title', '');
     titleInput.setAttribute('aria-label', 'Card title');
-    titleInput.style.fontSize = '20px';
-    titleInput.style.padding = '16px 20px 8px';
-    titleInput.style.border = 'none';
-    titleInput.style.outline = 'none';
-    titleInput.style.width = '100%';
-    titleInput.style.fontWeight = '600';
-    titleInput.style.backgroundColor = 'transparent';
+    titleInput.placeholder = 'Untitled';
     titleInput.value = card.title;
     titleInput.readOnly = this.readOnly;
     titleInput.addEventListener('input', () => {
@@ -113,20 +103,32 @@ export class DatabaseCardDrawer {
         this.onTitleChange(this.currentCardId, titleInput.value);
       }
     });
-    drawer.appendChild(titleInput);
+    content.appendChild(titleInput);
 
+    // --- Properties section ---
+    if (column !== undefined) {
+      const propsSection = document.createElement('div');
+
+      propsSection.setAttribute('data-blok-database-drawer-props', '');
+
+      const statusRow = this.createPropertyRow(column);
+
+      propsSection.appendChild(statusRow);
+      content.appendChild(propsSection);
+    }
+
+    // --- Divider ---
     const divider = document.createElement('hr');
 
-    drawer.appendChild(divider);
+    content.appendChild(divider);
 
+    // --- Editor holder ---
     const editorHolder = document.createElement('div');
 
     editorHolder.setAttribute('data-blok-database-drawer-editor', '');
-    editorHolder.style.flex = '1';
-    editorHolder.style.overflow = 'auto';
-    editorHolder.style.padding = '0 8px';
-    drawer.appendChild(editorHolder);
+    content.appendChild(editorHolder);
 
+    drawer.appendChild(content);
     this.wrapper.appendChild(drawer);
     this.drawer = drawer;
 
@@ -203,6 +205,47 @@ export class DatabaseCardDrawer {
     exiting?.remove();
 
     this.currentCardId = null;
+  }
+
+  /**
+   * Creates a status property row with icon, label, and column pill badge.
+   */
+  private createPropertyRow(column: KanbanColumnData): HTMLDivElement {
+    const row = document.createElement('div');
+
+    row.setAttribute('data-blok-database-drawer-prop-row', '');
+
+    const label = document.createElement('span');
+
+    label.setAttribute('data-blok-database-drawer-prop-label', '');
+    label.textContent = 'Status';
+    row.appendChild(label);
+
+    const pill = document.createElement('span');
+
+    pill.setAttribute('data-blok-database-drawer-status-pill', '');
+
+    if (column.color !== undefined) {
+      pill.style.backgroundColor = `var(--blok-color-${column.color}-bg)`;
+      pill.style.color = `var(--blok-color-${column.color}-text)`;
+    }
+
+    if (column.color !== undefined) {
+      const dot = document.createElement('span');
+
+      dot.setAttribute('data-blok-database-drawer-status-dot', '');
+      dot.style.backgroundColor = `var(--blok-color-${column.color}-text)`;
+      pill.appendChild(dot);
+    }
+
+    const pillText = document.createElement('span');
+
+    pillText.textContent = column.title;
+    pill.appendChild(pillText);
+
+    row.appendChild(pill);
+
+    return row;
   }
 
   private cleanupListeners(): void {

@@ -4,6 +4,7 @@ import type { KanbanData, DatabaseConfig } from '../../../../src/tools/database/
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
+import type { ColumnDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
 
 const createMockAPI = (): API => ({
   styles: {
@@ -476,6 +477,124 @@ describe('DatabaseTool', () => {
       expect(boardCardTitle?.textContent).toBe('Updated title');
 
       tool.destroy();
+    });
+  });
+
+  describe('rerenderBoard preserves scroll position', () => {
+    /**
+     * jsdom has no layout engine, so scrollLeft is always 0 and sets are no-ops.
+     * We patch Element.prototype.scrollLeft for these tests to make it behave
+     * like a real browser (readable/writable per-element).
+     */
+    let scrollLeftStore: WeakMap<Element, number>;
+    let origScrollLeftDesc: PropertyDescriptor;
+
+    beforeEach(() => {
+      scrollLeftStore = new WeakMap();
+      origScrollLeftDesc = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft')!;
+
+      Object.defineProperty(Element.prototype, 'scrollLeft', {
+        get(this: Element) { return scrollLeftStore.get(this) ?? 0; },
+        set(this: Element, v: number) { scrollLeftStore.set(this, v); },
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(Element.prototype, 'scrollLeft', origScrollLeftDesc);
+    });
+
+    it('preserves board horizontal scroll position after card drop', () => {
+      const initialData: KanbanData = {
+        columns: [
+          { id: 'col-1', title: 'Todo', position: 'a0' },
+          { id: 'col-2', title: 'Done', position: 'a1' },
+        ],
+        cardMap: {
+          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
+        },
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions(initialData));
+      const element = tool.render();
+
+      // Mount to DOM so replaceChild works
+      const container = document.createElement('div');
+
+      container.appendChild(element);
+      document.body.appendChild(container);
+
+      // Set horizontal scroll on the board area
+      const boardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
+
+      boardArea.scrollLeft = 200;
+      expect(boardArea.scrollLeft).toBe(200);
+
+      // Trigger card drop (which calls rerenderBoard)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cardDrag = (tool as any).cardDrag as DatabaseCardDrag;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onDrop = (cardDrag as any).onDrop as (result: CardDragResult) => void;
+
+      onDrop({
+        cardId: 'card-1',
+        toColumnId: 'col-2',
+        beforeCardId: null,
+        afterCardId: null,
+      });
+
+      // After rerender, the new board area should have the scroll position restored
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newElement = (tool as any).element as HTMLElement;
+      const newBoardArea = newElement.querySelector('[data-blok-database-board]') as HTMLElement;
+
+      expect(newBoardArea.scrollLeft).toBe(200);
+
+      tool.destroy();
+      document.body.removeChild(container);
+    });
+
+    it('preserves board horizontal scroll position after column drop', () => {
+      const initialData: KanbanData = {
+        columns: [
+          { id: 'col-1', title: 'Todo', position: 'a0' },
+          { id: 'col-2', title: 'Done', position: 'a1' },
+        ],
+        cardMap: {},
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions(initialData));
+      const element = tool.render();
+
+      const container = document.createElement('div');
+
+      container.appendChild(element);
+      document.body.appendChild(container);
+
+      const boardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
+
+      boardArea.scrollLeft = 150;
+
+      // Trigger column drop via private columnDrag.onDrop
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const columnDrag = (tool as any).columnDrag as DatabaseColumnDrag;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onDrop = (columnDrag as any).onDrop as (result: ColumnDragResult) => void;
+
+      onDrop({
+        columnId: 'col-1',
+        beforeColumnId: null,
+        afterColumnId: 'col-2',
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newElement = (tool as any).element as HTMLElement;
+      const newBoardArea = newElement.querySelector('[data-blok-database-board]') as HTMLElement;
+
+      expect(newBoardArea.scrollLeft).toBe(150);
+
+      tool.destroy();
+      document.body.removeChild(container);
     });
   });
 

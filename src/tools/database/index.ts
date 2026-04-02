@@ -407,6 +407,9 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
+    const oldBoardArea = this.element.querySelector('[data-blok-database-board]');
+    const savedScrollLeft = oldBoardArea?.scrollLeft ?? 0;
+
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
@@ -425,6 +428,13 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.element = newBoard;
+
+    const newBoardArea = newBoard.querySelector('[data-blok-database-board]');
+
+    if (newBoardArea !== null) {
+      newBoardArea.scrollLeft = savedScrollLeft;
+    }
+
     this.attachBoardListeners();
     this.initSubsystems();
   }

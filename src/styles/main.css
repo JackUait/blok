@@ -721,6 +721,14 @@
   --blok-database-delete-text: rgba(55, 53, 47, 0.35);
   --blok-database-delete-hover-text: rgba(55, 53, 47, 0.65);
   --blok-database-drawer-border: #e8e8eb;
+  --blok-database-tab-bg: transparent;
+  --blok-database-tab-bg-active: rgba(0, 0, 0, 0.06);
+  --blok-database-tab-bg-hover: rgba(0, 0, 0, 0.04);
+  --blok-database-tab-text: rgba(55, 53, 47, 0.5);
+  --blok-database-tab-text-active: #37352f;
+  --blok-database-popover-bg: #fff;
+  --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --blok-database-popover-hover: rgba(0, 0, 0, 0.04);
 
   /* Toggle switch */
   --blok-toggle-off-bg: #d4d4d8;
@@ -827,6 +835,14 @@
     --blok-database-delete-text: rgba(255, 255, 255, 0.3);
     --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
     --blok-database-drawer-border: rgba(255, 255, 255, 0.1);
+    --blok-database-tab-bg: transparent;
+    --blok-database-tab-bg-active: rgba(255, 255, 255, 0.08);
+    --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.04);
+    --blok-database-tab-text: rgba(255, 255, 255, 0.45);
+    --blok-database-tab-text-active: rgba(255, 255, 255, 0.9);
+    --blok-database-popover-bg: #2d2d2c;
+    --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    --blok-database-popover-hover: rgba(255, 255, 255, 0.06);
 
     /* Toggle switch */
     --blok-toggle-off-bg: #3f3f46;
@@ -933,6 +949,14 @@
   --blok-database-delete-text: rgba(255, 255, 255, 0.3);
   --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
   --blok-database-drawer-border: rgba(255, 255, 255, 0.1);
+  --blok-database-tab-bg: transparent;
+  --blok-database-tab-bg-active: rgba(255, 255, 255, 0.08);
+  --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.04);
+  --blok-database-tab-text: rgba(255, 255, 255, 0.45);
+  --blok-database-tab-text-active: rgba(255, 255, 255, 0.9);
+  --blok-database-popover-bg: #2d2d2c;
+  --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --blok-database-popover-hover: rgba(255, 255, 255, 0.06);
 
   /* Toggle switch */
   --blok-toggle-off-bg: #3f3f46;
@@ -1543,6 +1567,21 @@
 }
 
 /**
+ * During column reorder — smooth gap displacement and grab cursor.
+ */
+[data-blok-database-column-reordering] {
+  cursor: grabbing;
+}
+
+[data-blok-database-column-reordering] [data-blok-database-column] {
+  transition: margin-left 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+[data-blok-database-column-reordering] [data-blok-database-board] {
+  transition: padding-right 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/**
  * Delete card button — hidden until card hover.
  */
 [data-blok-database-delete-card] {
@@ -1862,4 +1901,193 @@
 [data-blok-database-drawer-editor] .ce-toolbar {
   left: 0;
   right: 0;
+}
+
+/* Database Tab Bar */
+[data-blok-database-tab-bar] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 0 8px;
+}
+
+[data-blok-database-tab] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--blok-database-tab-text);
+  user-select: none;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab] svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+[data-blok-database-tab]:hover {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
+[data-blok-database-tab][data-active] {
+  background-color: var(--blok-database-tab-bg-active);
+  color: var(--blok-database-tab-text-active);
+  font-weight: 500;
+}
+
+[data-blok-database-add-view] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--blok-database-tab-text);
+  font-size: 18px;
+  margin-left: 2px;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-add-view]:hover {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
+[data-blok-database-tab-more] {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--blok-database-tab-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-more]:hover {
+  background-color: var(--blok-database-tab-bg-hover);
+}
+
+/* View Popover */
+[data-blok-database-view-popover],
+[data-blok-database-tab-context],
+[data-blok-database-tab-overflow-dropdown] {
+  background: var(--blok-database-popover-bg);
+  border-radius: 10px;
+  box-shadow: var(--blok-database-popover-shadow);
+  padding: 6px;
+}
+
+[data-blok-database-view-popover-heading] {
+  padding: 8px 8px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--blok-database-tab-text);
+}
+
+[data-blok-database-view-popover-grid] {
+  padding: 0 0 4px;
+}
+
+[data-blok-database-view-option] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-view-option]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+/* Context popover actions */
+[data-blok-database-tab-action] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-action]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-tab-action="delete"] {
+  color: #eb5757;
+}
+
+/* Overflow dropdown items */
+[data-blok-database-tab-overflow-item] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-overflow-item]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-tab-overflow-item][data-active] {
+  background-color: var(--blok-database-tab-bg-active);
+  font-weight: 500;
+}
+
+[data-blok-database-tab-overflow-new] {
+  padding: 7px 10px;
+  font-size: 14px;
+  color: var(--blok-database-tab-text);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-overflow-new]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+/* Tab rename input */
+[data-blok-database-tab-rename-input] {
+  border: 1px solid var(--blok-database-drawer-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--blok-database-popover-bg);
+  color: var(--blok-database-tab-text-active);
+  outline: none;
+  width: 80px;
+}
+
+/* Tab ghost during drag */
+[data-blok-database-tab-ghost] {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  background: var(--blok-database-tab-bg-active);
+}
+
+/* Board container for slide transitions */
+[data-blok-database-board-container] {
+  position: relative;
+  overflow: hidden;
 }

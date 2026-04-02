@@ -1825,6 +1825,7 @@
 [data-blok-database-drawer-editor] {
   flex: 1;
   min-height: 200px;
+  margin-left: -53px;
 }
 
 /**

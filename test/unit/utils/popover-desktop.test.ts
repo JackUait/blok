@@ -1286,6 +1286,83 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('position recalculation after filter', () => {
+    it('recalculates position when filterItems changes popover height', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      // Place trigger near bottom of viewport so popover initially flips to open on top
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 500, bottom: 540, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({
+        trigger,
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+          { title: 'Gamma', name: 'gamma', onActivate: vi.fn() },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // Large initial size forces flip to open on top
+      const sizeSpy = vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300, width: 200 });
+
+      const originalInnerHeight = window.innerHeight;
+
+      Object.defineProperty(window, 'innerHeight', {
+        configurable: true,
+        value: 600,
+        writable: true,
+      });
+
+      try {
+        popover.show();
+
+        // Popover opens on top because 300px doesn't fit below trigger at y=540 in 600px viewport
+        expect(popover.getElement()).toHaveAttribute(DATA_ATTR.popoverOpenTop);
+        const initialTop = popover.getElement().style.top;
+
+        // After filtering, popover height shrinks — now fits below
+        sizeSpy.mockReturnValue({ height: 50, width: 200 });
+
+        popover.filterItems('Alpha');
+
+        // Position should be recalculated — 50px popover now fits below trigger
+        expect(popover.getElement()).not.toHaveAttribute(DATA_ATTR.popoverOpenTop);
+        expect(popover.getElement().style.top).not.toBe(initialTop);
+      } finally {
+        Object.defineProperty(window, 'innerHeight', {
+          configurable: true,
+          value: originalInnerHeight,
+          writable: true,
+        });
+        trigger.remove();
+      }
+    });
+
+    it('does not apply pixel positioning to non-trigger popovers after filterItems', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+        ],
+      });
+
+      popover.show();
+
+      // Non-trigger popovers use CSS variable positioning, not style.top/style.left pixels
+      const topBefore = popover.getElement().style.top;
+
+      popover.filterItems('Alpha');
+
+      // style.top must remain unchanged — pixel overrides would break CSS variable layout
+      expect(popover.getElement().style.top).toBe(topBefore);
+    });
+  });
+
   describe('handleMouseLeave', () => {
     it('destroys nested popover and resets hover state when mouse leaves popover container', () => {
       const popover = createPopover({

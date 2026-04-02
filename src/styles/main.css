@@ -1657,13 +1657,6 @@
 }
 
 /**
- * Board area — smooth compression when drawer opens.
- */
-[data-blok-database-board] {
-  transition: flex 200ms ease;
-}
-
-/**
  * Drawer — width transition for slide-in animation.
  */
 [data-blok-database-drawer] {

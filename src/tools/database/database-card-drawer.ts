@@ -31,6 +31,7 @@ export class DatabaseCardDrawer {
   private currentCardId: string | null = null;
   private blokInstance: BlokInstance | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
+  private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
 
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
@@ -49,6 +50,11 @@ export class DatabaseCardDrawer {
       this.close();
     }
 
+    // Remove any drawer still animating out from a previous close
+    const exiting = this.wrapper.querySelector('[data-blok-database-drawer]');
+
+    exiting?.remove();
+
     this.currentCardId = card.id;
 
     const drawer = document.createElement('div');
@@ -56,8 +62,12 @@ export class DatabaseCardDrawer {
     drawer.setAttribute('data-blok-database-drawer', '');
     drawer.setAttribute('role', 'complementary');
     drawer.setAttribute('aria-label', 'Card details');
-    drawer.style.flexShrink = '0';
+    drawer.style.position = 'fixed';
+    drawer.style.top = '0px';
+    drawer.style.right = '0px';
+    drawer.style.height = '100%';
     drawer.style.width = '0px';
+    drawer.style.zIndex = '1000';
     drawer.style.overflow = 'hidden';
     drawer.style.display = 'flex';
     drawer.style.flexDirection = 'column';
@@ -137,17 +147,73 @@ export class DatabaseCardDrawer {
     };
     document.addEventListener('keydown', this.escapeHandler);
 
+    this.outsideClickHandler = (e: MouseEvent): void => {
+      const target = e.target as Node | null;
+
+      if (target && drawer.contains(target)) {
+        return;
+      }
+
+      this.close();
+    };
+    document.addEventListener('mousedown', this.outsideClickHandler);
+
     titleInput.focus();
   }
 
   close(): void {
     const wasOpen = this.drawer !== null;
 
+    this.cleanupListeners();
+    this.cleanupEditor();
+
+    if (this.drawer) {
+      const drawer = this.drawer;
+
+      this.drawer = null;
+      drawer.style.width = '0px';
+      drawer.addEventListener('transitionend', () => {
+        drawer.remove();
+      }, { once: true });
+    }
+
+    this.currentCardId = null;
+
+    if (wasOpen) {
+      this.onClose();
+    }
+  }
+
+  destroy(): void {
+    this.cleanupListeners();
+    this.cleanupEditor();
+
+    if (this.drawer) {
+      this.drawer.remove();
+      this.drawer = null;
+    }
+
+    // Remove any drawer still animating out
+    const exiting = this.wrapper.querySelector('[data-blok-database-drawer]');
+
+    exiting?.remove();
+
+    this.currentCardId = null;
+  }
+
+  private cleanupListeners(): void {
     if (this.escapeHandler) {
       document.removeEventListener('keydown', this.escapeHandler);
       this.escapeHandler = null;
     }
 
+    if (this.outsideClickHandler) {
+      document.removeEventListener('mousedown', this.outsideClickHandler);
+      this.outsideClickHandler = null;
+    }
+  }
+
+  private cleanupEditor(): void {
     if (this.blokInstance) {
       try {
         const instance = this.blokInstance;
@@ -166,21 +232,6 @@ export class DatabaseCardDrawer {
       }
       this.blokInstance = null;
     }
-
-    if (this.drawer) {
-      this.drawer.remove();
-      this.drawer = null;
-    }
-
-    this.currentCardId = null;
-
-    if (wasOpen) {
-      this.onClose();
-    }
-  }
-
-  destroy(): void {
-    this.close();
   }
 
   private initNestedEditor(editorHolder: HTMLElement, card: KanbanCardData): void {

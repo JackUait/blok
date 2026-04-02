@@ -42,7 +42,7 @@ describe('DatabaseCardDrawer', () => {
     expect(drawer.isOpen).toBe(true);
   });
 
-  it('removes drawer element when closed', () => {
+  it('removes drawer element when closed after transition completes', () => {
     const options = createOptions();
     const drawer = new DatabaseCardDrawer(options);
     const card = makeCard();
@@ -53,8 +53,13 @@ describe('DatabaseCardDrawer', () => {
 
     drawer.close();
 
-    expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
     expect(drawer.isOpen).toBe(false);
+
+    const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+    el.dispatchEvent(new Event('transitionend'));
+
+    expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
   });
 
   it('calls onTitleChange(cardId, newTitle) when title input fires input event', () => {
@@ -106,7 +111,7 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('layout', () => {
-    it('drawer is NOT absolutely positioned', () => {
+    it('drawer uses position fixed for full-page display', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
@@ -115,10 +120,10 @@ describe('DatabaseCardDrawer', () => {
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      expect(el.style.position).not.toBe('absolute');
+      expect(el.style.position).toBe('fixed');
     });
 
-    it('drawer has flex-shrink 0 to maintain width', () => {
+    it('drawer covers full viewport height on the right', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
@@ -127,7 +132,21 @@ describe('DatabaseCardDrawer', () => {
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
-      expect(el.style.flexShrink).toBe('0');
+      expect(el.style.top).toBe('0px');
+      expect(el.style.right).toBe('0px');
+      expect(el.style.height).toBe('100%');
+    });
+
+    it('drawer has z-index for layering above content', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+
+      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+      expect(el.style.zIndex).toBeTruthy();
     });
 
     it('drawer has initial width of 0 for animation', () => {
@@ -287,6 +306,137 @@ describe('DatabaseCardDrawer', () => {
       drawer.open(card2);
 
       expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('click outside to close', () => {
+    it('closes drawer when mousedown fires outside the drawer', () => {
+      const onClose = vi.fn();
+      const options = createOptions({ onClose });
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      onClose.mockClear();
+
+      document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(false);
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('does NOT close when mousedown fires inside the drawer', () => {
+      const onClose = vi.fn();
+      const options = createOptions({ onClose });
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      onClose.mockClear();
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLElement;
+
+      titleInput.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+      expect(drawer.isOpen).toBe(true);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('removes mousedown listener after close', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+      const removeSpy = vi.spyOn(document, 'removeEventListener');
+
+      drawer.open(card);
+      drawer.close();
+
+      expect(removeSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
+    });
+  });
+
+  describe('close animation', () => {
+    it('sets drawer width to 0 on close for exit animation', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      drawer.close();
+
+      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+      expect(el).not.toBeNull();
+      expect(el.style.width).toBe('0px');
+    });
+
+    it('keeps drawer in DOM until transitionend fires', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      drawer.close();
+
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+    });
+
+    it('removes drawer from DOM after transitionend fires', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      drawer.close();
+
+      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+      el.dispatchEvent(new Event('transitionend'));
+
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+    });
+
+    it('isOpen returns false immediately before animation ends', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      drawer.close();
+
+      expect(drawer.isOpen).toBe(false);
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+    });
+
+    it('destroy removes drawer immediately without exit animation', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      drawer.destroy();
+
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
+    });
+
+    it('removes animating-out drawer when opening a new card', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1' });
+      const card2 = makeCard({ id: 'card-2' });
+
+      drawer.open(card1);
+      drawer.close();
+
+      // Old drawer is still animating out
+      expect(options.wrapper.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+
+      drawer.open(card2);
+
+      // Only one drawer should exist (the new one)
+      const drawers = options.wrapper.querySelectorAll('[data-blok-database-drawer]');
+
+      expect(drawers).toHaveLength(1);
     });
   });
 });

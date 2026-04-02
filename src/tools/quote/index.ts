@@ -210,7 +210,9 @@ export class Quote implements BlockTool {
         b: true,
         i: true,
         a: true,
-        mark: true,
+        mark: {
+          style: true,
+        },
       },
     };
   }

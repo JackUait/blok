@@ -369,5 +369,13 @@ describe('Quote Tool', () => {
       expect(sanitize).toHaveProperty('text');
       expect((sanitize as Record<string, Record<string, unknown>>).text.br).toBe(true);
     });
+
+    it('sanitize config preserves style attribute on mark elements', async () => {
+      const { Quote } = await import('../../../../src/tools/quote');
+      const sanitize = Quote.sanitize;
+      const markRule = (sanitize as Record<string, Record<string, unknown>>).text.mark;
+
+      expect(markRule).toEqual(expect.objectContaining({ style: true }));
+    });
   });
 });

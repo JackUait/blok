@@ -52,7 +52,7 @@ describe('resolvePosition', () => {
       expect(result.top).toBe(248);
     });
 
-    it('picks top when more space above in neither-fits scenario', () => {
+    it('stays below when neither direction fits even if more space above', () => {
       const result = resolvePosition({
         anchor: rect({ top: 350, bottom: 390, left: 50, right: 200 }),
         popoverSize: { width: 200, height: 400 },
@@ -63,12 +63,12 @@ describe('resolvePosition', () => {
       });
 
       // spaceBelow = 102, spaceAbove = 342
-      // raw top = 350 - 8 - 400 = -58, clamped to boundaryTop (0) + scrollOffset.y (0) = 0
-      expect(result.openTop).toBe(true);
-      expect(result.top).toBe(0);
+      // Neither fits → stay below to remain adjacent to anchor
+      expect(result.openTop).toBe(false);
+      expect(result.top).toBe(398); // 390 + 8
     });
 
-    it('clamps popover to not overflow above viewport when opening top', () => {
+    it('stays below when neither direction fits in small viewport', () => {
       const result = resolvePosition({
         anchor: rect({ top: 150, bottom: 190, left: 50, right: 200 }),
         popoverSize: { width: 200, height: 500 },
@@ -79,13 +79,12 @@ describe('resolvePosition', () => {
       });
 
       // spaceBelow = 300 - 190 - 8 = 102, spaceAbove = 150 - 8 = 142
-      // openTop = true (more space above, neither fits)
-      // raw top = 150 - 8 - 500 = -358, clamped to 0
-      expect(result.openTop).toBe(true);
-      expect(result.top).toBe(0);
+      // Neither fits → stay below to remain adjacent to anchor
+      expect(result.openTop).toBe(false);
+      expect(result.top).toBe(198); // 190 + 8
     });
 
-    it('clamps vertical position with scroll offset when opening top', () => {
+    it('stays below with scroll offset when neither direction fits', () => {
       const result = resolvePosition({
         anchor: rect({ top: 150, bottom: 190, left: 50, right: 200 }),
         popoverSize: { width: 200, height: 500 },
@@ -95,11 +94,10 @@ describe('resolvePosition', () => {
         offset: 8,
       });
 
-      // spaceBelow = 300 - 190 - 8 = 102, spaceAbove = 150 - 8 = 142
-      // openTop = true
-      // raw top = 150 - 8 - 500 + 200 = -158, clamped to 0 + 200 = 200
-      expect(result.openTop).toBe(true);
-      expect(result.top).toBe(200);
+      // spaceBelow = 102, spaceAbove = 142
+      // Neither fits → stay below
+      expect(result.openTop).toBe(false);
+      expect(result.top).toBe(398); // 190 + 8 + 200
     });
 
     it('accounts for scroll offset in vertical positioning', () => {
@@ -249,6 +247,26 @@ describe('resolvePosition', () => {
       });
 
       expect(result.top).toBe(148); // 140 + 8 (default)
+    });
+
+    it('stays below anchor when neither direction fits to keep popover adjacent to trigger', () => {
+      // Regression: drawer scenario where the trigger is near the bottom of the viewport.
+      // When neither direction fits, the popover should stay below (preferred direction)
+      // instead of flipping above and getting clamped to the boundary top — which
+      // would detach the popover from the trigger.
+      const result = resolvePosition({
+        anchor: rect({ top: 384, bottom: 408, left: 762, right: 786 }),
+        popoverSize: { width: 291, height: 400 },
+        scopeBounds: rect({ top: 0, bottom: 720, left: 0, right: 1280 }),
+        viewportSize: { width: 1280, height: 720 },
+        scrollOffset: { x: 0, y: 3165 },
+        offset: 8,
+      });
+
+      // spaceBelow = 720 - 408 - 8 = 304, spaceAbove = 384 - 8 = 376
+      // Neither fits 400px → stay below to keep popover adjacent to trigger
+      expect(result.openTop).toBe(false);
+      expect(result.top).toBe(3581); // 408 + 8 + 3165 = viewport 416
     });
   });
 });

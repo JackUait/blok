@@ -32,7 +32,9 @@ export interface ResolvedPosition {
 
 /**
  * Determines whether the popover should flip to the alternate side.
- * Returns true when the popover doesn't fit on the preferred side and the alternate side has more (or equal) space.
+ * Returns true only when the popover fits on the alternate side but not the preferred side.
+ * When neither side fits, stays on the preferred side so the popover remains adjacent
+ * to the anchor instead of getting clamped to a distant boundary edge.
  */
 function shouldFlip(popoverDimension: number, spaceOnPreferred: number, spaceOnAlternate: number): boolean {
   if (popoverDimension <= spaceOnPreferred) {
@@ -43,7 +45,7 @@ function shouldFlip(popoverDimension: number, spaceOnPreferred: number, spaceOnA
     return true;
   }
 
-  return spaceOnAlternate > spaceOnPreferred;
+  return false;
 }
 
 /**

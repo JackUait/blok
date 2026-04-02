@@ -176,4 +176,114 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
   });
+
+  describe('right-click context popover', () => {
+    it('opens a context popover on tab right-click', () => {
+      const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const popover = document.querySelector('[data-blok-database-tab-context]');
+      expect(popover).not.toBeNull();
+      el.remove();
+    });
+
+    it('shows Rename, Duplicate, and Delete options when multiple views exist', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
+      const bar = createTabBar(views, 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      expect(document.querySelector('[data-blok-database-tab-action="rename"]')).not.toBeNull();
+      expect(document.querySelector('[data-blok-database-tab-action="duplicate"]')).not.toBeNull();
+      expect(document.querySelector('[data-blok-database-tab-action="delete"]')).not.toBeNull();
+      el.remove();
+    });
+
+    it('hides Delete option when only one view exists', () => {
+      const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const deleteItem = document.querySelector('[data-blok-database-tab-action="delete"]') as HTMLElement | null;
+      const isHidden = deleteItem === null || deleteItem.style.display === 'none';
+      expect(isHidden).toBe(true);
+      el.remove();
+    });
+
+    it('calls onDuplicate when Duplicate is clicked', () => {
+      const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const dup = document.querySelector('[data-blok-database-tab-action="duplicate"]') as HTMLElement;
+      dup.click();
+      expect(onDuplicate).toHaveBeenCalledWith('v1');
+      el.remove();
+    });
+
+    it('calls onDelete when Delete is clicked', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
+      const bar = createTabBar(views, 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const del = document.querySelector('[data-blok-database-tab-action="delete"]') as HTMLElement;
+      del.click();
+      expect(onDelete).toHaveBeenCalledWith('v1');
+      el.remove();
+    });
+  });
+
+  describe('rename flow', () => {
+    it('replaces tab name with input when Rename is clicked', () => {
+      const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
+      rename.click();
+      const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.value).toBe('Board');
+      el.remove();
+    });
+
+    it('calls onRename with new name on blur', () => {
+      const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
+      rename.click();
+      const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
+      input.value = 'Sprint';
+      input.dispatchEvent(new Event('blur'));
+      expect(onRename).toHaveBeenCalledWith('v1', 'Sprint');
+      el.remove();
+    });
+
+    it('restores original name on Escape', () => {
+      const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
+      rename.click();
+      const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
+      input.value = 'Sprint';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(onRename).not.toHaveBeenCalled();
+      expect(tab.querySelector('[data-blok-database-tab-name]')?.textContent).toBe('Board');
+      el.remove();
+    });
+  });
 });

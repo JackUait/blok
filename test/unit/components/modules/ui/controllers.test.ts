@@ -14,7 +14,16 @@ const createBlokStub = (): BlokModules => {
   const toolbarSettingsToggler = document.createElement('button');
   const toolbarPlusButton = document.createElement('button');
 
+  const editorWrapper = document.createElement('div');
+
   return {
+    UI: {
+      nodes: {
+        wrapper: editorWrapper,
+      },
+      someToolbarOpened: false,
+      someFlipperButtonFocused: false,
+    },
     BlockManager: {
       isBlokEmpty: false,
       currentBlock: null,
@@ -96,6 +105,7 @@ describe('KeyboardController', () => {
     controller: KeyboardController;
     blok: BlokModules;
     redactor: HTMLElement;
+    wrapper: HTMLElement;
     eventsDispatcher: ModuleConfig['eventsDispatcher'];
   } => {
     const redactor = document.createElement('div');
@@ -113,6 +123,12 @@ describe('KeyboardController', () => {
       Object.assign(blok, options.blokOverrides);
     }
 
+    // Set up the editor wrapper with the test id used for instance detection
+    const wrapper = (blok as unknown as { UI: { nodes: { wrapper: HTMLElement } } }).UI.nodes.wrapper;
+
+    wrapper.setAttribute('data-blok-testid', 'blok-editor');
+    document.body.appendChild(wrapper);
+
     const controller = new KeyboardController({
       config: {
         holder: document.createElement('div'),
@@ -129,7 +145,7 @@ describe('KeyboardController', () => {
     // Register for cleanup
     controllers.push(controller);
 
-    return { controller, blok, redactor, eventsDispatcher };
+    return { controller, blok, redactor, wrapper, eventsDispatcher };
   }
 
   beforeEach(() => {
@@ -553,6 +569,115 @@ describe('KeyboardController', () => {
       expect(blok.YjsManager.markCaretBeforeChange).toHaveBeenCalled();
       // Event is not prevented in the capture phase
       expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe('nested editor instance guard', () => {
+    it('skips handleKeydown when event target is inside a different editor instance', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      // Create a second (inner) editor wrapper inside the DOM but NOT inside the outer wrapper
+      const innerEditorWrapper = document.createElement('div');
+
+      innerEditorWrapper.setAttribute('data-blok-testid', 'blok-editor');
+      document.body.appendChild(innerEditorWrapper);
+
+      const innerContentEditable = document.createElement('div');
+
+      innerContentEditable.setAttribute('contenteditable', 'true');
+      innerEditorWrapper.appendChild(innerContentEditable);
+
+      // Dispatch Cmd+Z from inside the inner editor
+      const event = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: innerContentEditable });
+      document.dispatchEvent(event);
+
+      // The outer editor should NOT process this event
+      expect(blok.YjsManager.undo).not.toHaveBeenCalled();
+    });
+
+    it('processes handleKeydown when event target is inside this editor instance', () => {
+      const { controller, blok, wrapper } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      // Create a contenteditable inside the outer editor wrapper
+      const contentEditable = document.createElement('div');
+
+      contentEditable.setAttribute('contenteditable', 'true');
+      wrapper.appendChild(contentEditable);
+
+      // Dispatch Cmd+Z from inside this editor
+      const event = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: contentEditable });
+
+      const preventDefaultSpy = vi.fn().mockImplementation(() => {
+        Object.defineProperty(event, 'defaultPrevented', { value: true, configurable: true });
+      });
+
+      Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy });
+      const stopPropagationSpy = vi.fn();
+
+      Object.defineProperty(event, 'stopPropagation', { value: stopPropagationSpy });
+      document.dispatchEvent(event);
+
+      // The outer editor SHOULD process this event
+      expect(blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('processes handleKeydown when event target has no editor ancestor', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      // Dispatch Cmd+Z with target as document.body (no editor ancestor)
+      const event = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: document.body });
+
+      const preventDefaultSpy = vi.fn().mockImplementation(() => {
+        Object.defineProperty(event, 'defaultPrevented', { value: true, configurable: true });
+      });
+
+      Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy });
+      const stopPropagationSpy = vi.fn();
+
+      Object.defineProperty(event, 'stopPropagation', { value: stopPropagationSpy });
+      document.dispatchEvent(event);
+
+      // Should process normally when there is no editor ancestor
+      expect(blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('skips redactor keydown caret capture when event target is inside a different editor', () => {
+      const { controller, blok, redactor } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      // Create a nested editor wrapper inside the redactor element
+      const innerEditorWrapper = document.createElement('div');
+
+      innerEditorWrapper.setAttribute('data-blok-testid', 'blok-editor');
+      redactor.appendChild(innerEditorWrapper);
+
+      const innerContentEditable = document.createElement('div');
+
+      innerContentEditable.setAttribute('contenteditable', 'true');
+      innerEditorWrapper.appendChild(innerContentEditable);
+
+      // Dispatch Enter keydown from the inner editor's contenteditable on the redactor
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+
+      innerContentEditable.dispatchEvent(event);
+
+      // The outer editor's caret capture should NOT fire for the inner editor's events
+      expect(blok.YjsManager.markCaretBeforeChange).not.toHaveBeenCalled();
     });
   });
 });

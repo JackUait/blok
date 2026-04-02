@@ -78,6 +78,17 @@ export class KeyboardController extends Controller {
         return;
       }
 
+      // Skip events from nested editors
+      const target = event.target;
+
+      if (target instanceof Element) {
+        const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
+
+        if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
+          return;
+        }
+      }
+
       if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
         this.Blok.YjsManager.markCaretBeforeChange();
       }
@@ -89,6 +100,16 @@ export class KeyboardController extends Controller {
    * @param event - keyboard event
    */
   private handleKeydown(event: KeyboardEvent): void {
+    const target = event.target;
+
+    if (target instanceof Element) {
+      const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
+
+      if (closestEditor !== null && closestEditor !== this.Blok.UI.nodes.wrapper) {
+        return;
+      }
+    }
+
     const key = event.key ?? '';
 
     switch (key) {

@@ -205,6 +205,38 @@ describe('KeyboardNavigation', () => {
       expect(navigateNext).not.toHaveBeenCalled();
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
+
+    it('always prevents default Tab behavior even when navigation fails', () => {
+      const navigateNext = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigateNext,
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(navigateNext).toHaveBeenCalledWith(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('always prevents default Shift+Tab behavior even when navigation fails', () => {
+      const navigatePrevious = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigatePrevious,
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
+
+      keyboardNavigation.handleTab(event);
+
+      expect(navigatePrevious).toHaveBeenCalledWith(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('handleEnter', () => {

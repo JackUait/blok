@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
-import type { KanbanData, DatabaseConfig } from '../../../../src/tools/database/types';
+import type { DatabaseData, DatabaseConfig, DatabaseViewData } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
@@ -28,12 +28,23 @@ const createMockAPI = (): API => ({
   tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
 } as unknown as API);
 
+const makeDefaultView = (): DatabaseViewData => ({
+  id: 'default-view',
+  name: 'Board',
+  type: 'board',
+  position: 'a0',
+  data: { columns: [], cardMap: {} },
+});
+
 const createDatabaseOptions = (
-  data: Partial<KanbanData> = {},
+  data: Partial<DatabaseData> = {},
   config: DatabaseConfig = {},
   overrides: { readOnly?: boolean } = {},
-): BlockToolConstructorOptions<KanbanData, DatabaseConfig> => ({
-  data: { columns: [], cardMap: {}, ...data } as KanbanData,
+): BlockToolConstructorOptions<DatabaseData, DatabaseConfig> => ({
+  data: {
+    views: data.views ?? [makeDefaultView()],
+    activeViewId: data.activeViewId ?? 'default-view',
+  } as DatabaseData,
   config,
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,
@@ -110,44 +121,69 @@ describe('DatabaseTool', () => {
   });
 
   describe('save()', () => {
-    it('returns KanbanData with columns and cardMap properties', () => {
+    it('returns DatabaseData with views and activeViewId', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
 
       tool.render();
 
       const saved = tool.save(document.createElement('div'));
 
-      expect(saved).toHaveProperty('columns');
-      expect(saved).toHaveProperty('cardMap');
-      expect(Array.isArray(saved.columns)).toBe(true);
-      expect(typeof saved.cardMap).toBe('object');
+      expect(saved).toHaveProperty('views');
+      expect(saved).toHaveProperty('activeViewId');
+      expect(Array.isArray(saved.views)).toBe(true);
+      expect(saved.views.length).toBeGreaterThan(0);
+      // Each view has KanbanData
+      expect(saved.views[0]).toHaveProperty('data');
+      expect(saved.views[0].data).toHaveProperty('columns');
+      expect(saved.views[0].data).toHaveProperty('cardMap');
     });
   });
 
   describe('validate()', () => {
-    it('returns true when columns is non-empty', () => {
+    it('returns true when all views have non-empty columns', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
 
-      expect(tool.validate({ columns: [{ id: '1', title: 'A', position: 'a0' }], cardMap: {} })).toBe(true);
+      expect(tool.validate({
+        views: [{ ...makeDefaultView(), data: { columns: [{ id: '1', title: 'A', position: 'a0' }], cardMap: {} } }],
+        activeViewId: 'default-view',
+      } as DatabaseData)).toBe(true);
     });
 
-    it('returns false when columns is empty', () => {
+    it('returns false when views array is empty', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
 
-      expect(tool.validate({ columns: [], cardMap: {} })).toBe(false);
+      expect(tool.validate({ views: [], activeViewId: '' } as DatabaseData)).toBe(false);
+    });
+
+    it('returns false when any view has empty columns', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      expect(tool.validate({
+        views: [{ ...makeDefaultView(), data: { columns: [], cardMap: {} } }],
+        activeViewId: 'default-view',
+      } as DatabaseData)).toBe(false);
     });
   });
 
   describe('render -> save roundtrip', () => {
     it('preserves data through cycle', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-          { id: 'col-2', title: 'Done', position: 'a1' },
-        ],
-        cardMap: {
-          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
-        },
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [
+              { id: 'col-1', title: 'Todo', position: 'a0' },
+              { id: 'col-2', title: 'Done', position: 'a1' },
+            ],
+            cardMap: {
+              'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
+            },
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
@@ -156,21 +192,29 @@ describe('DatabaseTool', () => {
 
       const saved = tool.save(document.createElement('div'));
 
-      expect(saved.columns).toHaveLength(2);
-      expect(saved.columns[0].title).toBe('Todo');
-      expect(saved.columns[1].title).toBe('Done');
-      expect(Object.keys(saved.cardMap)).toHaveLength(1);
-      expect(saved.cardMap['card-1'].title).toBe('Task 1');
+      expect(saved.views).toHaveLength(1);
+      expect(saved.views[0].data.columns).toHaveLength(2);
+      expect(saved.views[0].data.columns[0].title).toBe('Todo');
+      expect(saved.views[0].data.columns[1].title).toBe('Done');
+      expect(Object.keys(saved.views[0].data.cardMap)).toHaveLength(1);
+      expect(saved.views[0].data.cardMap['card-1'].title).toBe('Task 1');
     });
   });
 
   describe('add card via click', () => {
     it('clicking add-card button adds card to model and DOM', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-        ],
-        cardMap: {},
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }],
+            cardMap: {},
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
@@ -190,17 +234,24 @@ describe('DatabaseTool', () => {
       // Card should appear in model via save()
       const saved = tool.save(document.createElement('div'));
 
-      expect(Object.keys(saved.cardMap)).toHaveLength(1);
+      expect(Object.keys(saved.views[0].data.cardMap)).toHaveLength(1);
     });
   });
 
   describe('add column via click', () => {
     it('clicking add-column button adds column to model and DOM', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-        ],
-        cardMap: {},
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }],
+            cardMap: {},
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
@@ -218,19 +269,26 @@ describe('DatabaseTool', () => {
 
       const saved = tool.save(document.createElement('div'));
 
-      expect(saved.columns).toHaveLength(2);
+      expect(saved.views[0].data.columns).toHaveLength(2);
     });
   });
 
   describe('delete card via click', () => {
     it('clicking delete-card button removes card from DOM and model', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-        ],
-        cardMap: {
-          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
-        },
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }],
+            cardMap: {
+              'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
+            },
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
@@ -248,7 +306,7 @@ describe('DatabaseTool', () => {
 
       const saved = tool.save(document.createElement('div'));
 
-      expect(Object.keys(saved.cardMap)).toHaveLength(0);
+      expect(Object.keys(saved.views[0].data.cardMap)).toHaveLength(0);
     });
   });
 
@@ -273,15 +331,24 @@ describe('DatabaseTool', () => {
         }),
       };
 
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-          { id: 'col-2', title: 'Done', position: 'a1' },
-        ],
-        cardMap: {
-          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
-          'card-2': { id: 'card-2', columnId: 'col-1', position: 'a1', title: 'Task 2' },
-        },
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [
+              { id: 'col-1', title: 'Todo', position: 'a0' },
+              { id: 'col-2', title: 'Done', position: 'a1' },
+            ],
+            cardMap: {
+              'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
+              'card-2': { id: 'card-2', columnId: 'col-1', position: 'a1', title: 'Task 2' },
+            },
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const options = createDatabaseOptions(initialData, { adapter: mockAdapter });
@@ -338,15 +405,22 @@ describe('DatabaseTool', () => {
         tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
       } as unknown as API;
 
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-        ],
-        cardMap: {},
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }],
+            cardMap: {},
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
-      const options: BlockToolConstructorOptions<KanbanData, DatabaseConfig> = {
-        data: initialData,
+      const options: BlockToolConstructorOptions<DatabaseData, DatabaseConfig> = {
+        data: initialData as DatabaseData,
         config: {},
         api: mockApi,
         readOnly: false,
@@ -378,14 +452,23 @@ describe('DatabaseTool', () => {
 
   describe('rerenderBoard destroys cardDrawer subsystem', () => {
     it('destroys cardDrawer when rerender is triggered by card drop', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-          { id: 'col-2', title: 'Done', position: 'a1' },
-        ],
-        cardMap: {
-          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
-        },
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [
+              { id: 'col-1', title: 'Todo', position: 'a0' },
+              { id: 'col-2', title: 'Done', position: 'a1' },
+            ],
+            cardMap: {
+              'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
+            },
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       // Spy on DatabaseCardDrawer.prototype.destroy to detect if it's called during rerender
@@ -445,13 +528,20 @@ describe('DatabaseTool', () => {
 
   describe('drawer title edits update board card', () => {
     it('editing the title in the drawer updates the card title on the board', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0', color: 'blue' },
-        ],
-        cardMap: {
-          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Original title' },
-        },
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0', color: 'blue' }],
+            cardMap: {
+              'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Original title' },
+            },
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
@@ -505,14 +595,23 @@ describe('DatabaseTool', () => {
     });
 
     it('preserves board horizontal scroll position after card drop', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-          { id: 'col-2', title: 'Done', position: 'a1' },
-        ],
-        cardMap: {
-          'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
-        },
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [
+              { id: 'col-1', title: 'Todo', position: 'a0' },
+              { id: 'col-2', title: 'Done', position: 'a1' },
+            ],
+            cardMap: {
+              'card-1': { id: 'card-1', columnId: 'col-1', position: 'a0', title: 'Task 1' },
+            },
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
@@ -544,9 +643,7 @@ describe('DatabaseTool', () => {
       });
 
       // After rerender, the new board area should have the scroll position restored
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newElement = (tool as any).element as HTMLElement;
-      const newBoardArea = newElement.querySelector('[data-blok-database-board]') as HTMLElement;
+      const newBoardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
 
       expect(newBoardArea.scrollLeft).toBe(200);
 
@@ -555,12 +652,21 @@ describe('DatabaseTool', () => {
     });
 
     it('preserves board horizontal scroll position after column drop', () => {
-      const initialData: KanbanData = {
-        columns: [
-          { id: 'col-1', title: 'Todo', position: 'a0' },
-          { id: 'col-2', title: 'Done', position: 'a1' },
-        ],
-        cardMap: {},
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [
+              { id: 'col-1', title: 'Todo', position: 'a0' },
+              { id: 'col-2', title: 'Done', position: 'a1' },
+            ],
+            cardMap: {},
+          },
+        }],
+        activeViewId: 'test-view',
       };
 
       const tool = new DatabaseTool(createDatabaseOptions(initialData));
@@ -587,9 +693,7 @@ describe('DatabaseTool', () => {
         afterColumnId: 'col-2',
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newElement = (tool as any).element as HTMLElement;
-      const newBoardArea = newElement.querySelector('[data-blok-database-board]') as HTMLElement;
+      const newBoardArea = element.querySelector('[data-blok-database-board]') as HTMLElement;
 
       expect(newBoardArea.scrollLeft).toBe(150);
 
@@ -604,6 +708,89 @@ describe('DatabaseTool', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((tool as any).handleColumnRecolor).toBeUndefined();
+    });
+  });
+
+  describe('multi-view orchestration', () => {
+    it('renders a tab bar above the board', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+
+      expect(element.querySelector('[data-blok-database-tab-bar]')).not.toBeNull();
+    });
+
+    it('renders one tab for the default view', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+
+      expect(element.querySelectorAll('[data-blok-database-tab]')).toHaveLength(1);
+    });
+
+    it('renders the board area below the tab bar', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+
+      expect(element.querySelector('[data-blok-database-board]')).not.toBeNull();
+    });
+
+    it('saves data in DatabaseData format with views array', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const saved = tool.save(element);
+
+      expect(saved.views).toBeDefined();
+      expect(Array.isArray(saved.views)).toBe(true);
+      expect(saved.views.length).toBeGreaterThan(0);
+      expect(saved.activeViewId).toBeDefined();
+    });
+
+    it('validates correctly', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      expect(tool.validate({ views: [], activeViewId: '' } as DatabaseData)).toBe(false);
+      expect(tool.validate({
+        views: [{ ...makeDefaultView(), data: { columns: [{ id: 'c', title: 'Col', position: 'a0' }], cardMap: {} } }],
+        activeViewId: 'default-view',
+      } as DatabaseData)).toBe(true);
+    });
+
+    it('switches board content when a different tab is clicked', () => {
+      const view1: DatabaseViewData = {
+        id: 'v1',
+        name: 'Board 1',
+        type: 'board',
+        position: 'a0',
+        data: { columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }], cardMap: {} },
+      };
+      const view2: DatabaseViewData = {
+        id: 'v2',
+        name: 'Board 2',
+        type: 'board',
+        position: 'a1',
+        data: { columns: [{ id: 'col-2', title: 'Done', position: 'a0' }], cardMap: {} },
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions({ views: [view1, view2], activeViewId: 'v1' }));
+      const element = tool.render();
+
+      // After initSubsystems, column titles become inputs (makeEditable replaces the div with an input)
+      expect((element.querySelector('[data-blok-database-column-title-input]') as HTMLInputElement)?.value).toBe('Todo');
+
+      const tab2 = element.querySelector('[data-view-id="v2"]') as HTMLElement;
+
+      tab2.click();
+
+      // After click, new board should appear (may be in transition). Check that the new column title input exists.
+      const titleInputs = Array.from(element.querySelectorAll<HTMLInputElement>('[data-blok-database-column-title-input]'));
+
+      expect(titleInputs.some((el) => el.value === 'Done')).toBe(true);
+    });
+
+    it('does not render a tab bar in read-only mode', () => {
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { readOnly: true }));
+      const element = tool.render();
+
+      expect(element.querySelector('[data-blok-database-tab-bar]')).toBeNull();
     });
   });
 });

@@ -1,5 +1,5 @@
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig } from '../../../types';
-import type { KanbanData, DatabaseConfig } from './types';
+import type { DatabaseData, DatabaseViewData, KanbanData, DatabaseConfig } from './types';
 import { DatabaseModel } from './database-model';
 import { DatabaseView } from './database-view';
 import { DatabaseBackendSync } from './database-backend-sync';
@@ -10,46 +10,67 @@ import type { ColumnDragResult } from './database-column-drag';
 import { DatabaseColumnControls } from './database-column-controls';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
+import { DatabaseTabBar } from './database-tab-bar';
 import { IconDatabase, IconBoard } from '../../components/icons';
+import { nanoid } from 'nanoid';
+import { generateKeyBetween } from 'fractional-indexing';
 
 /**
- * DatabaseTool — a Kanban board block tool for Blok.
+ * DatabaseTool — a multi-view Kanban board block tool for Blok.
  *
- * Orchestrates DatabaseModel (data), DatabaseView (DOM), and DatabaseBackendSync (adapter).
- * Uses event delegation on the wrapper element for all interactive elements.
+ * Orchestrates multiple DatabaseModel instances (one per view), DatabaseView (DOM),
+ * DatabaseBackendSync (adapter), and a DatabaseTabBar for view switching.
  */
 export class DatabaseTool implements BlockTool {
   private readonly api: API;
   private readonly block: BlockAPI;
   private readonly readOnly: boolean;
   private readonly config: DatabaseConfig;
-  private readonly model: DatabaseModel;
-  private readonly view: DatabaseView;
-  private readonly sync: DatabaseBackendSync;
+
+  private views: DatabaseViewData[];
+  private activeViewId: string;
+  private viewModels: Map<string, DatabaseModel> = new Map();
+  private model!: DatabaseModel;
+  private view!: DatabaseView;
+  private sync!: DatabaseBackendSync;
 
   private element: HTMLDivElement | null = null;
+  private boardContainer: HTMLDivElement | null = null;
+  private tabBar: DatabaseTabBar | null = null;
+
   private cardDrag: DatabaseCardDrag | null = null;
   private columnDrag: DatabaseColumnDrag | null = null;
   private columnControls: DatabaseColumnControls | null = null;
   private cardDrawer: DatabaseCardDrawer | null = null;
   private keyboard: DatabaseKeyboard | null = null;
 
-  constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<KanbanData, DatabaseConfig>) {
+  constructor({ data, config, api, block, readOnly }: BlockToolConstructorOptions<DatabaseData, DatabaseConfig>) {
     this.api = api;
     this.block = block;
     this.readOnly = readOnly;
     this.config = config ?? {};
-    this.model = new DatabaseModel(data);
-    this.view = new DatabaseView({ readOnly, i18n: api.i18n });
-    this.sync = new DatabaseBackendSync(
-      this.config.adapter,
-      (error) => {
-        this.api.notifier.show({
-          message: String(error),
-          style: 'error',
-        });
-      },
-    );
+
+    // Normalise incoming data — support both DatabaseData (new) and legacy KanbanData (old)
+    const incoming = data as DatabaseData | KanbanData | undefined;
+
+    if (incoming !== undefined && 'views' in incoming && Array.isArray((incoming as DatabaseData).views) && (incoming as DatabaseData).views.length > 0) {
+      const dbData = incoming as DatabaseData;
+      this.views = dbData.views;
+      this.activeViewId = dbData.activeViewId;
+    } else {
+      // Legacy path: treat the whole data object as KanbanData for a default view
+      const legacyData = (incoming ?? { columns: [], cardMap: {} }) as KanbanData;
+      const defaultView = this.createDefaultView(legacyData);
+      this.views = [defaultView];
+      this.activeViewId = defaultView.id;
+    }
+
+    // Create a DatabaseModel for every view up front
+    for (const v of this.views) {
+      this.viewModels.set(v.id, new DatabaseModel(v.data));
+    }
+
+    this.activateView(this.activeViewId);
   }
 
   static get toolbox(): ToolboxConfig {
@@ -76,30 +97,59 @@ export class DatabaseTool implements BlockTool {
   }
 
   render(): HTMLDivElement {
-    const orderedColumns = this.model.getOrderedColumns();
-    const getCards = (columnId: string): ReturnType<DatabaseModel['getOrderedCards']> =>
-      this.model.getOrderedCards(columnId);
-
-    this.element = this.view.createBoard(orderedColumns, getCards);
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('data-blok-tool', 'database');
+    wrapper.setAttribute('data-blok-database-wrapper', '');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    this.element = wrapper;
 
     if (!this.readOnly) {
-      this.attachBoardListeners();
-      this.initSubsystems();
+      this.tabBar = this.createTabBar();
+      wrapper.appendChild(this.tabBar.render());
     }
 
-    return this.element;
+    const boardContainer = document.createElement('div');
+    boardContainer.setAttribute('data-blok-database-board-container', '');
+    boardContainer.style.overflow = 'hidden';
+    boardContainer.style.position = 'relative';
+    this.boardContainer = boardContainer;
+    wrapper.appendChild(boardContainer);
+
+    const boardEl = this.renderActiveBoard();
+    boardContainer.appendChild(boardEl);
+
+    if (!this.readOnly) {
+      this.attachBoardListeners(boardEl);
+      this.initSubsystems(boardEl);
+    }
+
+    return wrapper;
   }
 
   rendered(): void {
     this.block.stretched = true;
   }
 
-  save(_blockContent: HTMLElement): KanbanData {
-    return this.model.snapshot();
+  save(_blockContent: HTMLElement): DatabaseData {
+    return {
+      views: this.views.map((v) => ({
+        id: v.id,
+        name: v.name,
+        type: v.type,
+        position: v.position,
+        data: this.viewModels.get(v.id)?.snapshot() ?? v.data,
+      })),
+      activeViewId: this.activeViewId,
+    };
   }
 
-  validate(savedData: KanbanData): boolean {
-    return savedData.columns.length > 0;
+  validate(savedData: DatabaseData): boolean {
+    return (
+      savedData.views !== undefined &&
+      savedData.views.length > 0 &&
+      savedData.views.every((v) => v.data.columns.length > 0)
+    );
   }
 
   destroy(): void {
@@ -108,20 +158,259 @@ export class DatabaseTool implements BlockTool {
     this.columnControls?.destroy();
     this.cardDrawer?.destroy();
     this.keyboard?.destroy();
+    this.tabBar?.destroy();
     this.sync.flushPendingUpdates();
     this.sync.destroy();
     this.element = null;
+    this.boardContainer = null;
+    this.tabBar = null;
   }
 
-  /**
-   * Attaches a single click listener on the wrapper for event delegation.
-   */
-  private attachBoardListeners(): void {
-    if (this.element === null) {
+  // ---------------------------------------------------------------------------
+  // View management
+  // ---------------------------------------------------------------------------
+
+  private activateView(viewId: string): void {
+    const view = this.views.find((v) => v.id === viewId);
+
+    if (view === undefined) {
       return;
     }
 
-    this.element.addEventListener('click', (event) => {
+    this.activeViewId = viewId;
+    const model = this.viewModels.get(viewId);
+    if (model === undefined) {
+      return;
+    }
+    this.model = model;
+    this.view = new DatabaseView({ readOnly: this.readOnly, i18n: this.api.i18n });
+    this.sync = new DatabaseBackendSync(
+      this.config.adapter,
+      (error) => {
+        this.api.notifier.show({
+          message: String(error),
+          style: 'error',
+        });
+      },
+    );
+  }
+
+  private switchView(viewId: string): void {
+    if (viewId === this.activeViewId || this.boardContainer === null) {
+      return;
+    }
+
+    const oldViewData = this.views.find((v) => v.id === this.activeViewId);
+    const newViewData = this.views.find((v) => v.id === viewId);
+
+    if (newViewData === undefined) {
+      return;
+    }
+
+    // Destroy subsystems for old view (but NOT cardDrawer — it belongs to the outer wrapper)
+    this.cardDrag?.destroy();
+    this.columnDrag?.destroy();
+    this.columnControls?.destroy();
+    this.keyboard?.destroy();
+    this.cardDrag = null;
+    this.columnDrag = null;
+    this.columnControls = null;
+    this.keyboard = null;
+
+    // Flush & destroy old sync
+    this.sync.flushPendingUpdates();
+    this.sync.destroy();
+
+    // Determine slide direction
+    const slideLeft = oldViewData !== undefined && newViewData.position > oldViewData.position;
+
+    // Get the old board wrapper (the direct child of boardContainer)
+    const oldBoardWrapper = this.boardContainer.firstElementChild as HTMLElement | null;
+
+    // Activate new view state
+    this.activateView(viewId);
+
+    // Build new board wrapper
+    const newBoardWrapper = this.renderActiveBoard();
+    newBoardWrapper.style.transform = slideLeft ? 'translateX(100%)' : 'translateX(-100%)';
+    newBoardWrapper.style.transition = 'transform 0.2s ease';
+    this.boardContainer.appendChild(newBoardWrapper);
+
+    // Animate old board wrapper out
+    if (oldBoardWrapper !== null) {
+      oldBoardWrapper.style.transition = 'transform 0.2s ease';
+      oldBoardWrapper.style.transform = slideLeft ? 'translateX(-100%)' : 'translateX(100%)';
+    }
+
+    // Slide new board in
+    requestAnimationFrame(() => {
+      newBoardWrapper.style.transform = 'translateX(0)';
+    });
+
+    // After transition: clean up old board and clear styles
+    const cleanup = (): void => {
+      oldBoardWrapper?.remove();
+      newBoardWrapper.style.transition = '';
+      newBoardWrapper.style.transform = '';
+    };
+
+    newBoardWrapper.addEventListener('transitionend', cleanup, { once: true });
+
+    // Attach subsystems for new view
+    if (!this.readOnly) {
+      this.attachBoardListeners(newBoardWrapper);
+      this.initSubsystems(newBoardWrapper);
+    }
+
+    // Rebuild tab bar to reflect active state
+    this.rebuildTabBar();
+  }
+
+  addView(type: 'board'): void {
+    const sorted = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const lastView = sorted[sorted.length - 1];
+    const lastPosition = lastView !== undefined ? lastView.position : null;
+
+    const position = generateKeyBetween(lastPosition, null);
+    const id = nanoid();
+    const newView: DatabaseViewData = {
+      id,
+      name: 'Board',
+      type,
+      position,
+      data: { columns: [], cardMap: {} },
+    };
+
+    this.views.push(newView);
+    this.viewModels.set(id, new DatabaseModel(newView.data));
+
+    this.switchView(id);
+  }
+
+  renameView(viewId: string, name: string): void {
+    const view = this.views.find((v) => v.id === viewId);
+
+    if (view !== undefined) {
+      view.name = name;
+    }
+  }
+
+  duplicateView(viewId: string): void {
+    const sourceView = this.views.find((v) => v.id === viewId);
+
+    if (sourceView === undefined) {
+      return;
+    }
+
+    const sourceIndex = this.views.indexOf(sourceView);
+    const nextView = this.views[sourceIndex + 1];
+    const afterPosition = sourceView.position;
+    const beforePosition = nextView?.position ?? null;
+    const position = generateKeyBetween(afterPosition, beforePosition);
+
+    const snapshot = this.viewModels.get(viewId)?.snapshot() ?? sourceView.data;
+    const newId = nanoid();
+    const newView: DatabaseViewData = {
+      id: newId,
+      name: `${sourceView.name} (copy)`,
+      type: sourceView.type,
+      position,
+      data: JSON.parse(JSON.stringify(snapshot)) as KanbanData,
+    };
+
+    this.views.splice(sourceIndex + 1, 0, newView);
+    this.viewModels.set(newId, new DatabaseModel(newView.data));
+
+    this.switchView(newId);
+  }
+
+  deleteView(viewId: string): void {
+    if (this.views.length <= 1) {
+      return;
+    }
+
+    const index = this.views.findIndex((v) => v.id === viewId);
+
+    if (index === -1) {
+      return;
+    }
+
+    const wasActive = viewId === this.activeViewId;
+
+    this.views.splice(index, 1);
+    this.viewModels.delete(viewId);
+
+    if (wasActive) {
+      const neighborIndex = Math.min(index, this.views.length - 1);
+      this.switchView(this.views[neighborIndex].id);
+    } else {
+      this.rebuildTabBar();
+    }
+  }
+
+  reorderView(viewId: string, newPosition: string): void {
+    const view = this.views.find((v) => v.id === viewId);
+
+    if (view !== undefined) {
+      view.position = newPosition;
+    }
+
+    this.rebuildTabBar();
+  }
+
+  private rebuildTabBar(): void {
+    if (this.element === null || this.tabBar === null) {
+      return;
+    }
+
+    const oldBarEl = this.element.querySelector('[data-blok-database-tab-bar]');
+
+    this.tabBar.destroy();
+    this.tabBar = this.createTabBar();
+    const newBarEl = this.tabBar.render();
+
+    if (oldBarEl !== null) {
+      oldBarEl.replaceWith(newBarEl);
+    } else {
+      // Tab bar should be first child (before boardContainer)
+      this.element.insertBefore(newBarEl, this.boardContainer);
+    }
+  }
+
+  private createTabBar(): DatabaseTabBar {
+    return new DatabaseTabBar({
+      views: [...this.views],
+      activeViewId: this.activeViewId,
+      onTabClick: (viewId) => this.switchView(viewId),
+      onAddView: (type) => this.addView(type),
+      onRename: (viewId, name) => this.renameView(viewId, name),
+      onDuplicate: (viewId) => this.duplicateView(viewId),
+      onDelete: (viewId) => this.deleteView(viewId),
+      onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Board rendering helpers
+  // ---------------------------------------------------------------------------
+
+  private renderActiveBoard(): HTMLDivElement {
+    const orderedColumns = this.model.getOrderedColumns();
+    const getCards = (columnId: string): ReturnType<DatabaseModel['getOrderedCards']> =>
+      this.model.getOrderedCards(columnId);
+
+    return this.view.createBoard(orderedColumns, getCards);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Event listeners & subsystems
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Attaches a single click listener on the board element for event delegation.
+   */
+  private attachBoardListeners(boardEl: HTMLDivElement): void {
+    boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
 
       const addCardBtn = target.closest('[data-blok-database-add-card]');
@@ -130,7 +419,7 @@ export class DatabaseTool implements BlockTool {
         const columnId = addCardBtn.getAttribute('data-column-id');
 
         if (columnId !== null) {
-          this.handleAddCard(columnId);
+          this.handleAddCard(columnId, boardEl);
         }
 
         return;
@@ -139,7 +428,7 @@ export class DatabaseTool implements BlockTool {
       const addColumnBtn = target.closest('[data-blok-database-add-column]');
 
       if (addColumnBtn !== null) {
-        this.handleAddColumn();
+        this.handleAddColumn(boardEl);
 
         return;
       }
@@ -149,10 +438,10 @@ export class DatabaseTool implements BlockTool {
       if (deleteCardBtn !== null) {
         const cardId = deleteCardBtn.getAttribute('data-card-id');
 
-        if (cardId !== null && this.element !== null) {
+        if (cardId !== null) {
           event.stopPropagation();
           this.model.deleteCard(cardId);
-          this.view.removeCard(this.element, cardId);
+          this.view.removeCard(boardEl, cardId);
           void this.sync.syncDeleteCard({ cardId });
         }
 
@@ -171,13 +460,9 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  private handleAddCard(columnId: string): void {
-    if (this.element === null) {
-      return;
-    }
-
+  private handleAddCard(columnId: string, boardEl: HTMLDivElement): void {
     const card = this.model.addCard(columnId, this.api.i18n.t('tools.database.newPage'));
-    const columnEl = this.element.querySelector(`[data-column-id="${columnId}"][data-blok-database-column]`);
+    const columnEl = boardEl.querySelector(`[data-column-id="${columnId}"][data-blok-database-column]`);
 
     if (columnEl === null) {
       return;
@@ -199,14 +484,10 @@ export class DatabaseTool implements BlockTool {
     });
   }
 
-  private handleAddColumn(): void {
-    if (this.element === null) {
-      return;
-    }
-
+  private handleAddColumn(boardEl: HTMLDivElement): void {
     const column = this.model.addColumn(this.api.i18n.t('tools.database.columnTitlePlaceholder'));
 
-    this.view.appendColumn(this.element, column);
+    this.view.appendColumn(boardEl, column);
 
     void this.sync.syncCreateColumn({
       id: column.id,
@@ -217,31 +498,31 @@ export class DatabaseTool implements BlockTool {
 
   /**
    * Initializes all subsystems: card drag, column drag, column controls, card drawer, keyboard.
+   * boardEl is the current board element for drag/column operations.
+   * cardDrawer is attached to this.element (outer wrapper) so it persists across view switches.
    */
-  private initSubsystems(): void {
+  private initSubsystems(boardEl: HTMLDivElement): void {
     if (this.element === null) {
       return;
     }
 
-    const wrapper = this.element;
-
     this.cardDrag = new DatabaseCardDrag({
-      wrapper,
+      wrapper: boardEl,
       onDrop: (result) => this.handleCardDrop(result),
     });
 
     this.columnDrag = new DatabaseColumnDrag({
-      wrapper,
+      wrapper: boardEl,
       onDrop: (result) => this.handleColumnDrop(result),
     });
 
     this.columnControls = new DatabaseColumnControls({
       i18n: this.api.i18n,
       onRename: (columnId, title) => this.handleColumnRename(columnId, title),
-      onDelete: (columnId) => this.handleColumnDelete(columnId),
+      onDelete: (columnId) => this.handleColumnDelete(columnId, boardEl),
     });
 
-    const headers = Array.from(wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column-header]'));
+    const headers = Array.from(boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column-header]'));
 
     for (const header of headers) {
       const columnEl = header.closest<HTMLElement>('[data-blok-database-column]');
@@ -257,26 +538,32 @@ export class DatabaseTool implements BlockTool {
       }
     }
 
-    this.cardDrawer = new DatabaseCardDrawer({
-      wrapper,
-      readOnly: this.readOnly,
-      toolsConfig: this.api.tools.getToolsConfig(),
-      onTitleChange: (cardId, title) => {
-        this.model.updateCard(cardId, { title });
-        if (this.element !== null) {
-          this.view.updateCardTitle(this.element, cardId, title);
-        }
-        this.sync.syncUpdateCard({ cardId, changes: { title } });
-      },
-      onDescriptionChange: (cardId, description: OutputData) => {
-        this.model.updateCard(cardId, { description });
-        this.sync.syncUpdateCard({ cardId, changes: { description } });
-      },
-      onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
-    });
+    // cardDrawer is attached to outer wrapper so it stays across view switches
+    if (this.cardDrawer === null) {
+      this.cardDrawer = new DatabaseCardDrawer({
+        wrapper: this.element,
+        readOnly: this.readOnly,
+        toolsConfig: this.api.tools.getToolsConfig(),
+        onTitleChange: (cardId, title) => {
+          this.model.updateCard(cardId, { title });
+          const currentBoard = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
+
+          if (currentBoard !== null && currentBoard !== undefined) {
+            this.view.updateCardTitle(currentBoard, cardId, title);
+          }
+
+          this.sync.syncUpdateCard({ cardId, changes: { title } });
+        },
+        onDescriptionChange: (cardId, description: OutputData) => {
+          this.model.updateCard(cardId, { description });
+          this.sync.syncUpdateCard({ cardId, changes: { description } });
+        },
+        onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
+      });
+    }
 
     this.keyboard = new DatabaseKeyboard({
-      wrapper,
+      wrapper: boardEl,
       onEscape: () => {
         if (this.cardDrawer?.isOpen) {
           this.cardDrawer.close();
@@ -289,7 +576,7 @@ export class DatabaseTool implements BlockTool {
     });
     this.keyboard.attach();
 
-    wrapper.addEventListener('pointerdown', (e) => {
+    boardEl.addEventListener('pointerdown', (e) => {
       const target = e.target as HTMLElement;
 
       const columnHeader = target.closest('[data-blok-database-column-header]');
@@ -366,35 +653,31 @@ export class DatabaseTool implements BlockTool {
    * Moves a column element to a new position in the DOM without full re-render.
    */
   private moveColumnInDom(columnId: string, beforeColumnId: string | null): void {
-    if (this.element === null) {
+    const boardEl = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
+
+    if (boardEl === null || boardEl === undefined) {
       return;
     }
 
-    const boardArea = this.element.querySelector('[data-blok-database-board]');
-
-    if (boardArea === null) {
-      return;
-    }
-
-    const columnEl = boardArea.querySelector<HTMLElement>(`[data-column-id="${columnId}"]`);
+    const columnEl = boardEl.querySelector<HTMLElement>(`[data-column-id="${columnId}"]`);
 
     if (columnEl === null) {
       return;
     }
 
     if (beforeColumnId !== null) {
-      const beforeEl = boardArea.querySelector(`[data-column-id="${beforeColumnId}"]`);
+      const beforeEl = boardEl.querySelector(`[data-column-id="${beforeColumnId}"]`);
 
       if (beforeEl !== null) {
-        boardArea.insertBefore(columnEl, beforeEl);
+        boardEl.insertBefore(columnEl, beforeEl);
       }
     } else {
-      const addColumnBtn = boardArea.querySelector('[data-blok-database-add-column]');
+      const addColumnBtn = boardEl.querySelector('[data-blok-database-add-column]');
 
       if (addColumnBtn !== null) {
-        boardArea.insertBefore(columnEl, addColumnBtn);
+        boardEl.insertBefore(columnEl, addColumnBtn);
       } else {
-        boardArea.appendChild(columnEl);
+        boardEl.appendChild(columnEl);
       }
     }
   }
@@ -404,18 +687,14 @@ export class DatabaseTool implements BlockTool {
     void this.sync.syncUpdateColumn({ columnId, changes: { title } });
   }
 
-  private handleColumnDelete(columnId: string): void {
+  private handleColumnDelete(columnId: string, boardEl: HTMLDivElement): void {
     if (this.model.getColumnCount() <= 1) {
-      return;
-    }
-
-    if (this.element === null) {
       return;
     }
 
     const deletedCardIds = this.model.deleteColumn(columnId);
 
-    this.view.removeColumn(this.element, columnId);
+    this.view.removeColumn(boardEl, columnId);
 
     for (const cardId of deletedCardIds) {
       void this.sync.syncDeleteCard({ cardId });
@@ -437,42 +716,64 @@ export class DatabaseTool implements BlockTool {
   }
 
   /**
-   * Full re-render: tears down subsystems, rebuilds DOM, re-inits.
+   * Full re-render of the active board: tears down subsystems, rebuilds DOM, re-inits.
+   *
+   * Board DOM structure:
+   *   boardContainer
+   *     └── boardWrapper  (div returned by createBoard / renderActiveBoard)
+   *           └── boardArea  ([data-blok-database-board] — scrollable area with columns)
    */
   private rerenderBoard(): void {
-    if (this.element === null) {
+    if (this.boardContainer === null) {
       return;
     }
 
-    const oldBoardArea = this.element.querySelector('[data-blok-database-board]');
+    // The old board wrapper is the first/only direct child of boardContainer
+    const oldBoardWrapper = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]')
+      ?.closest<HTMLElement>('[data-blok-tool]') ?? this.boardContainer.firstElementChild as HTMLElement | null;
+
+    const oldBoardArea = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]');
     const savedScrollLeft = oldBoardArea?.scrollLeft ?? 0;
 
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
     this.cardDrawer?.destroy();
+    this.cardDrawer = null;
     this.keyboard?.destroy();
 
-    const orderedColumns = this.model.getOrderedColumns();
-    const getCards = (columnId: string): ReturnType<DatabaseModel['getOrderedCards']> =>
-      this.model.getOrderedCards(columnId);
+    const newBoardWrapper = this.renderActiveBoard();
 
-    const newBoard = this.view.createBoard(orderedColumns, getCards);
-    const parent = this.element.parentNode;
-
-    if (parent !== null) {
-      parent.replaceChild(newBoard, this.element);
+    if (oldBoardWrapper !== null && oldBoardWrapper !== undefined) {
+      oldBoardWrapper.replaceWith(newBoardWrapper);
+    } else {
+      this.boardContainer.appendChild(newBoardWrapper);
     }
 
-    this.element = newBoard;
-
-    const newBoardArea = newBoard.querySelector('[data-blok-database-board]');
+    // Restore horizontal scroll on the new board area
+    const newBoardArea = newBoardWrapper.querySelector<HTMLElement>('[data-blok-database-board]');
 
     if (newBoardArea !== null) {
       newBoardArea.scrollLeft = savedScrollLeft;
     }
 
-    this.attachBoardListeners();
-    this.initSubsystems();
+    this.attachBoardListeners(newBoardWrapper);
+    this.initSubsystems(newBoardWrapper);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Default view factory
+  // ---------------------------------------------------------------------------
+
+  private createDefaultView(data?: KanbanData): DatabaseViewData {
+    const defaultData: KanbanData = data ?? { columns: [], cardMap: {} };
+
+    return {
+      id: nanoid(),
+      name: 'Board',
+      type: 'board',
+      position: 'a0',
+      data: defaultData,
+    };
   }
 }

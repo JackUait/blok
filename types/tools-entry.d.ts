@@ -9,6 +9,8 @@ import { ListConstructable, ListData, ListConfig, ListStyle } from './tools/list
 import { TableConstructable, TableData, TableConfig, CellContent } from './tools/table';
 import { ToggleConstructable, ToggleData, ToggleConfig } from './tools/toggle';
 import { DividerConstructable, DividerData } from './tools/divider';
+import { CalloutConstructable, CalloutData, CalloutConfig } from './tools/callout';
+import { QuoteConstructable, QuoteData } from './tools/quote';
 import { InlineToolConstructable } from './tools/inline-tool';
 import { BlockTuneConstructable } from './block-tunes';
 import { ToolSettings } from './tools';
@@ -20,6 +22,8 @@ export const List: ListConstructable;
 export const Table: TableConstructable;
 export const Toggle: ToggleConstructable;
 export const Divider: DividerConstructable;
+export const Callout: CalloutConstructable;
+export const Quote: QuoteConstructable;
 
 // Re-export data and config types for convenience
 export { HeaderData, HeaderConfig } from './tools/header';
@@ -28,6 +32,8 @@ export { ListData, ListConfig, ListStyle } from './tools/list';
 export { TableData, TableConfig, CellContent } from './tools/table';
 export { ToggleData, ToggleConfig } from './tools/toggle';
 export { DividerData } from './tools/divider';
+export { CalloutData, CalloutConfig } from './tools/callout';
+export { QuoteData } from './tools/quote';
 
 // Inline tools
 export const Bold: InlineToolConstructable;
@@ -52,6 +58,7 @@ export const defaultBlockTools: {
   readonly toggle: {};
   readonly callout: {};
   readonly divider: {};
+  readonly quote: {};
 };
 
 /**

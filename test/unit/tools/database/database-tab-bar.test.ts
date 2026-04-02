@@ -209,7 +209,7 @@ describe('DatabaseTabBar', () => {
       document.body.appendChild(el);
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-      const deleteItem = document.querySelector('[data-blok-database-tab-action="delete"]') as HTMLElement | null;
+      const deleteItem = document.querySelector<HTMLElement>('[data-blok-database-tab-action="delete"]');
       const isHidden = deleteItem === null || deleteItem.style.display === 'none';
       expect(isHidden).toBe(true);
       el.remove();

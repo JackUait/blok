@@ -57,6 +57,7 @@ export class DatabaseViewPopover {
       if (!option.enabled) {
         item.style.opacity = '0.35';
         item.style.pointerEvents = 'none';
+        item.style.cursor = 'not-allowed';
       }
 
       const iconEl = document.createElement('div');

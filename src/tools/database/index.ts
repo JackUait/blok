@@ -312,7 +312,7 @@ export class DatabaseTool implements BlockTool {
     const newId = nanoid();
     const newView: DatabaseViewData = {
       id: newId,
-      name: `${sourceView.name} (copy)`,
+      name: sourceView.name,
       type: sourceView.type,
       position,
       data: JSON.parse(JSON.stringify(snapshot)) as KanbanData,

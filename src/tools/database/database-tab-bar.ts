@@ -121,6 +121,37 @@ export class DatabaseTabBar {
       document.addEventListener('keydown', this.boundDragKeyDown);
     });
 
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => {
+        if (this.element === null) {
+          return;
+        }
+
+        const tabs = Array.from(this.element.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
+
+        for (const tab of tabs) {
+          tab.style.display = '';
+        }
+        this.moreBtnEl?.remove();
+        this.moreBtnEl = null;
+
+        const barWidth = this.element.clientWidth;
+        const addBtnWidth = 40;
+        const visibleCount = tabs.findIndex((_tab, i) => {
+          const consumed = addBtnWidth + tabs.slice(0, i + 1).reduce((w, t) => w + t.offsetWidth + 2, 0);
+
+          return consumed > barWidth;
+        });
+        const resolved = visibleCount === -1 ? tabs.length : visibleCount;
+
+        if (resolved < tabs.length) {
+          this.handleOverflow(resolved);
+        }
+      });
+
+      ro.observe(bar);
+    }
+
     return bar;
   }
 
@@ -274,9 +305,10 @@ export class DatabaseTabBar {
     if (hiddenCount <= 0) return;
 
     // Hide overflow tabs
-    const tabs = this.element.querySelectorAll<HTMLElement>('[data-blok-database-tab]');
-    for (let i = visibleCount; i < tabs.length; i++) {
-      tabs[i].style.display = 'none';
+    const tabs = Array.from(this.element.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
+
+    for (const tab of tabs.slice(visibleCount)) {
+      tab.style.display = 'none';
     }
 
     // Add "N more..." button before the + button

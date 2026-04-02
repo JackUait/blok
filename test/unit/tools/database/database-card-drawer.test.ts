@@ -227,9 +227,102 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(card);
 
-      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
       expect(titleInput.placeholder).toBe('Untitled');
+    });
+  });
+
+  describe('multi-line title', () => {
+    it('renders the title as a textarea element so long titles can wrap', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard({ title: 'A very long card title that should be able to wrap across multiple lines in the drawer' });
+
+      drawer.open(card);
+
+      const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]');
+
+      expect(titleEl).not.toBeNull();
+      expect(titleEl!.tagName).toBe('TEXTAREA');
+    });
+
+    it('has rows="1" so the textarea starts compact', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+
+      const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+
+      expect(titleEl.rows).toBe(1);
+    });
+
+    it('auto-resizes height on input to fit content', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+
+      const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+
+      // Simulate scrollHeight being larger than default
+      Object.defineProperty(titleEl, 'scrollHeight', { value: 96, configurable: true });
+
+      titleEl.value = 'A very long title that wraps to multiple lines in the drawer panel';
+      titleEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(titleEl.style.height).toBe('96px');
+    });
+
+    it('does not collapse to zero height on initial open', () => {
+      const rafCallbacks: FrameRequestCallback[] = [];
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        rafCallbacks.push(cb);
+
+        return 0;
+      });
+
+      const options = createOptions();
+
+      document.body.appendChild(options.wrapper);
+
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard({ title: 'Some title' });
+
+      drawer.open(card);
+
+      // Trigger rAF to set width, then fire transitionend to trigger auto-resize
+      rafCallbacks.forEach((cb) => cb(0));
+
+      const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+      drawerEl.dispatchEvent(new Event('transitionend'));
+
+      const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+
+      expect(titleEl.style.height).not.toBe('0px');
+
+      drawer.destroy();
+      document.body.removeChild(options.wrapper);
+    });
+
+    it('does not allow newlines — Enter key is suppressed', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+
+      const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true, bubbles: true });
+      const prevented = !titleEl.dispatchEvent(event);
+
+      expect(prevented).toBe(true);
     });
   });
 

@@ -98,16 +98,23 @@ export class DatabaseCardDrawer {
     content.setAttribute('data-blok-database-drawer-content', '');
 
     // --- Title input ---
-    const titleInput = document.createElement('input');
+    const titleInput = document.createElement('textarea');
 
     titleInput.setAttribute('data-blok-database-drawer-title', '');
     titleInput.setAttribute('aria-label', 'Card title');
     titleInput.placeholder = 'Untitled';
     titleInput.value = card.title;
+    titleInput.rows = 1;
     titleInput.readOnly = this.readOnly;
     titleInput.addEventListener('input', () => {
       if (this.currentCardId !== null) {
         this.onTitleChange(this.currentCardId, titleInput.value);
+      }
+      this.autoResizeTitle(titleInput);
+    });
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
       }
     });
     content.appendChild(titleInput);
@@ -141,6 +148,9 @@ export class DatabaseCardDrawer {
 
     requestAnimationFrame(() => {
       drawer.style.width = '45%';
+      drawer.addEventListener('transitionend', () => {
+        this.autoResizeTitle(titleInput);
+      }, { once: true });
     });
 
     this.initNestedEditor(editorHolder, card);
@@ -189,10 +199,11 @@ export class DatabaseCardDrawer {
     this.updateActiveCard(card.id);
 
     // Update title
-    const titleInput = this.drawer.querySelector<HTMLInputElement>('[data-blok-database-drawer-title]');
+    const titleInput = this.drawer.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
 
     if (titleInput !== null) {
       titleInput.value = card.title;
+      this.autoResizeTitle(titleInput);
     }
 
     // Replace properties section
@@ -344,6 +355,14 @@ export class DatabaseCardDrawer {
         // Blok may already be destroyed
       }
       this.blokInstance = null;
+    }
+  }
+
+  private autoResizeTitle(textarea: HTMLTextAreaElement): void {
+    textarea.style.height = 'auto';
+
+    if (textarea.scrollHeight > 0) {
+      textarea.style.height = `${textarea.scrollHeight}px`;
     }
   }
 

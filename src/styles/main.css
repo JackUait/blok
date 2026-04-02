@@ -1732,7 +1732,7 @@
 }
 
 /**
- * Drawer title input — large, Notion-style.
+ * Drawer title — large, Notion-style textarea that auto-resizes.
  */
 [data-blok-database-drawer-title] {
   display: block;
@@ -1746,6 +1746,9 @@
   padding: 0;
   margin-bottom: 12px;
   line-height: 1.2;
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
 }
 
 [data-blok-database-drawer-title]::placeholder {

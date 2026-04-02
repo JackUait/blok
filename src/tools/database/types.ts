@@ -20,6 +20,19 @@ export interface KanbanData extends BlockToolData {
   cardMap: Record<string, KanbanCardData>;
 }
 
+export interface DatabaseViewData {
+  id: string;
+  name: string;
+  type: 'board';
+  position: string;
+  data: KanbanData;
+}
+
+export interface DatabaseData extends BlockToolData {
+  views: DatabaseViewData[];
+  activeViewId: string;
+}
+
 export interface KanbanAdapter {
   loadBoard(): Promise<{ columns: KanbanColumnData[]; cards: KanbanCardData[] }>;
   moveCard(params: { cardId: string; toColumnId: string; position: string; fromColumnId: string }): Promise<KanbanCardData>;

@@ -207,21 +207,23 @@ export class DatabaseCardDrag {
       beforeEl.style.marginTop = `${this.sourceCardHeight}px`;
       this.gapTarget = beforeEl;
     } else {
-      const cardsContainer = targetColumn.querySelector(
+      const cardsContainer = targetColumn.querySelector<HTMLElement>(
         '[data-blok-database-cards]'
-      ) as HTMLElement | null;
+      );
 
-      if (cardsContainer) {
-        if (cardsContainer === this.gapContainer) {
-          return;
-        }
+      if (!cardsContainer) {
+        this.clearGap();
 
-        this.clearGap();
-        cardsContainer.style.paddingBottom = `${this.sourceCardHeight}px`;
-        this.gapContainer = cardsContainer;
-      } else {
-        this.clearGap();
+        return;
       }
+
+      if (cardsContainer === this.gapContainer) {
+        return;
+      }
+
+      this.clearGap();
+      cardsContainer.style.paddingBottom = `${this.sourceCardHeight}px`;
+      this.gapContainer = cardsContainer;
     }
   }
 

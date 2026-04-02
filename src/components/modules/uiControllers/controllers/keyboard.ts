@@ -78,9 +78,13 @@ export class KeyboardController extends Controller {
         return;
       }
 
-      // Skip events from nested editors
       const target = event.target;
 
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Skip events from nested editors
       if (target instanceof Element) {
         const closestEditor = target.closest('[data-blok-testid="blok-editor"]');
 
@@ -101,6 +105,10 @@ export class KeyboardController extends Controller {
    */
   private handleKeydown(event: KeyboardEvent): void {
     const target = event.target;
+
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+      return;
+    }
 
     if (target instanceof Element) {
       const closestEditor = target.closest('[data-blok-testid="blok-editor"]');

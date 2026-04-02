@@ -187,6 +187,15 @@ export class DatabaseCardDrawer {
         return;
       }
 
+      /**
+       * The tab bar lives outside the drawer DOM tree, so clicking a
+       * tab to switch views would be treated as an outside click and
+       * close the drawer before switchView() runs.
+       */
+      if (target instanceof Element && target.closest('[data-blok-database-tab-bar]') !== null) {
+        return;
+      }
+
       this.close();
     };
     document.addEventListener('mousedown', this.outsideClickHandler);
@@ -369,10 +378,12 @@ export class DatabaseCardDrawer {
   }
 
   private autoResizeTitle(textarea: HTMLTextAreaElement): void {
-    textarea.style.height = 'auto';
+    const { style } = textarea;
+
+    style.height = 'auto';
 
     if (textarea.scrollHeight > 0) {
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      style.height = `${textarea.scrollHeight}px`;
     }
   }
 

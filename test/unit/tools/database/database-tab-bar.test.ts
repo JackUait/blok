@@ -415,6 +415,40 @@ describe('DatabaseTabBar', () => {
     });
   });
 
+  describe('popover positioning', () => {
+    it('uses position: fixed on context popover so it aligns with viewport coords from getBoundingClientRect', () => {
+      const bar = createTabBar([makeView({ id: 'v1' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const popover = document.querySelector('[data-blok-database-tab-context]') as HTMLElement;
+      expect(popover.style.position).toBe('fixed');
+      el.remove();
+    });
+
+    it('uses position: fixed on overflow dropdown so it aligns with viewport coords from getBoundingClientRect', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+      moreBtn.click();
+
+      const dropdown = document.querySelector('[data-blok-database-tab-overflow-dropdown]') as HTMLElement;
+      expect(dropdown.style.position).toBe('fixed');
+
+      bar.destroy();
+      el.remove();
+    });
+  });
+
   describe('rename flow', () => {
     it('replaces tab name with input when Rename is clicked', () => {
       const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
@@ -442,6 +476,42 @@ describe('DatabaseTabBar', () => {
       input.value = 'Sprint';
       input.dispatchEvent(new Event('blur'));
       expect(onRename).toHaveBeenCalledWith('v1', 'Sprint');
+      el.remove();
+    });
+
+    it('stops propagation of keydown events so the editor keyboard controller does not process them', () => {
+      const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
+      rename.click();
+      const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
+
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+      const stopSpy = vi.spyOn(enterEvent, 'stopPropagation');
+      input.dispatchEvent(enterEvent);
+      expect(stopSpy).toHaveBeenCalled();
+
+      el.remove();
+    });
+
+    it('stops propagation of all keydown events, not just Enter and Escape', () => {
+      const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
+      rename.click();
+      const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
+
+      const letterEvent = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+      const stopSpy = vi.spyOn(letterEvent, 'stopPropagation');
+      input.dispatchEvent(letterEvent);
+      expect(stopSpy).toHaveBeenCalled();
+
       el.remove();
     });
 

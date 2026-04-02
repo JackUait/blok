@@ -181,7 +181,7 @@ export class DatabaseTabBar {
 
     const popover = document.createElement('div');
     popover.setAttribute('data-blok-database-tab-context', '');
-    popover.style.position = 'absolute';
+    popover.style.position = 'fixed';
     popover.style.zIndex = '1000';
 
     const rect = tab.getBoundingClientRect();
@@ -270,6 +270,7 @@ export class DatabaseTabBar {
 
     input.addEventListener('blur', commit);
     input.addEventListener('keydown', (e: KeyboardEvent) => {
+      e.stopPropagation();
       if (e.key === 'Enter') {
         input.blur();
       } else if (e.key === 'Escape') {
@@ -334,7 +335,7 @@ export class DatabaseTabBar {
 
     const dropdown = document.createElement('div');
     dropdown.setAttribute('data-blok-database-tab-overflow-dropdown', '');
-    dropdown.style.position = 'absolute';
+    dropdown.style.position = 'fixed';
     dropdown.style.zIndex = '1000';
 
     const rect = anchor.getBoundingClientRect();

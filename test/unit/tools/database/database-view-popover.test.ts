@@ -72,6 +72,12 @@ describe('DatabaseViewPopover', () => {
       tableItem.click();
       expect(onSelect).not.toHaveBeenCalled();
     });
+
+    it('uses fixed positioning for correct scroll behavior', () => {
+      popover.open(anchor);
+      const el = document.querySelector('[data-blok-database-view-popover]') as HTMLElement;
+      expect(el.style.position).toBe('fixed');
+    });
   });
 
   describe('close()', () => {

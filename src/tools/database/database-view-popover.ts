@@ -32,7 +32,7 @@ export class DatabaseViewPopover {
 
     const popover = document.createElement('div');
     popover.setAttribute('data-blok-database-view-popover', '');
-    popover.style.position = 'absolute';
+    popover.style.position = 'fixed';
     popover.style.zIndex = '1000';
 
     const rect = anchor.getBoundingClientRect();

@@ -659,6 +659,36 @@ describe('DatabaseCardDrawer', () => {
       }
     });
 
+    it('does NOT close when mousedown fires inside a tab bar element', () => {
+      const onClose = vi.fn();
+      const options = createOptions({ onClose });
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      onClose.mockClear();
+
+      // Simulate a tab bar that sits outside the drawer DOM
+      const tabBar = document.createElement('div');
+
+      tabBar.setAttribute('data-blok-database-tab-bar', '');
+
+      const tab = document.createElement('button');
+
+      tabBar.appendChild(tab);
+      document.body.appendChild(tabBar);
+
+      try {
+        tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+        expect(drawer.isOpen).toBe(true);
+        expect(onClose).not.toHaveBeenCalled();
+      } finally {
+        drawer.destroy();
+        document.body.removeChild(tabBar);
+      }
+    });
+
     it('removes mousedown listener after close', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);

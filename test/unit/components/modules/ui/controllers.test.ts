@@ -680,4 +680,55 @@ describe('KeyboardController', () => {
       expect(blok.YjsManager.markCaretBeforeChange).not.toHaveBeenCalled();
     });
   });
+
+  describe('native input element guard', () => {
+    it('skips handleKeydown when event target is an input element', () => {
+      const { controller, blok, wrapper } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const input = document.createElement('input');
+
+      wrapper.appendChild(input);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+
+      input.dispatchEvent(event);
+
+      expect(blok.BlockManager.insert).not.toHaveBeenCalled();
+      expect(blok.BlockSelection.clearSelection).not.toHaveBeenCalled();
+    });
+
+    it('skips handleKeydown when event target is a textarea element', () => {
+      const { controller, blok, wrapper } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const textarea = document.createElement('textarea');
+
+      wrapper.appendChild(textarea);
+
+      const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true });
+
+      textarea.dispatchEvent(event);
+
+      expect(blok.BlockManager.deleteSelectedBlocksAndInsertReplacement).not.toHaveBeenCalled();
+    });
+
+    it('skips redactor keydown caret capture when event target is an input element', () => {
+      const { controller, blok, redactor } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const input = document.createElement('input');
+
+      redactor.appendChild(input);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+
+      input.dispatchEvent(event);
+
+      expect(blok.YjsManager.markCaretBeforeChange).not.toHaveBeenCalled();
+    });
+  });
 });

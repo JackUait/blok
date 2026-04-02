@@ -566,3 +566,21 @@ export const IconBoard = `
   <rect x="14" y="6" width="1.5" height="2" rx="0.5" fill="currentColor"/>
 </svg>
 `;
+
+export const IconGallery = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="11" y="4" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="3" y="11" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="11" y="11" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+export const IconList = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="4.5" cy="6.5" r="1" fill="currentColor"/>
+  <circle cx="4.5" cy="10" r="1" fill="currentColor"/>
+  <circle cx="4.5" cy="13.5" r="1" fill="currentColor"/>
+  <path d="M7.5 6.5h9M7.5 10h9M7.5 13.5h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;

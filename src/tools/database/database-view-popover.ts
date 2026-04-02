@@ -31,6 +31,7 @@ export class DatabaseViewPopover {
     this.close();
 
     const popover = document.createElement('div');
+    popover.setAttribute('data-blok-popover', '');
     popover.setAttribute('data-blok-database-view-popover', '');
     popover.style.position = 'fixed';
     popover.style.zIndex = '1000';
@@ -61,6 +62,7 @@ export class DatabaseViewPopover {
       }
 
       const iconEl = document.createElement('div');
+      iconEl.setAttribute('data-blok-database-view-option-icon', '');
       iconEl.innerHTML = option.icon;
       item.appendChild(iconEl);
 

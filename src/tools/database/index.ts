@@ -221,40 +221,13 @@ export class DatabaseTool implements BlockTool {
     this.sync.flushPendingUpdates();
     this.sync.destroy();
 
-    // Determine slide direction
-    const slideLeft = oldViewData !== undefined && newViewData.position > oldViewData.position;
-
-    // Get the old board wrapper (the direct child of boardContainer)
-    const oldBoardWrapper = this.boardContainer.firstElementChild as HTMLElement | null;
-
     // Activate new view state
     this.activateView(viewId);
 
-    // Build new board wrapper
+    // Replace old board with new one
+    this.boardContainer.innerHTML = '';
     const newBoardWrapper = this.renderActiveBoard();
-    newBoardWrapper.style.transform = slideLeft ? 'translateX(100%)' : 'translateX(-100%)';
-    newBoardWrapper.style.transition = 'transform 0.2s ease';
     this.boardContainer.appendChild(newBoardWrapper);
-
-    // Animate old board wrapper out
-    if (oldBoardWrapper !== null) {
-      oldBoardWrapper.style.transition = 'transform 0.2s ease';
-      oldBoardWrapper.style.transform = slideLeft ? 'translateX(-100%)' : 'translateX(100%)';
-    }
-
-    // Slide new board in
-    requestAnimationFrame(() => {
-      newBoardWrapper.style.transform = 'translateX(0)';
-    });
-
-    // After transition: clean up old board and clear styles
-    const cleanup = (): void => {
-      oldBoardWrapper?.remove();
-      newBoardWrapper.style.transition = '';
-      newBoardWrapper.style.transform = '';
-    };
-
-    newBoardWrapper.addEventListener('transitionend', cleanup, { once: true });
 
     // Attach subsystems for new view
     if (!this.readOnly) {

@@ -370,6 +370,13 @@ export const IconCopy = `
 </svg>
 `;
 
+// Pencil/Rename icon
+export const IconPencil = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12.5 5.5l2 2M4.5 13.5l8-8 2 2-8 8H4.5v-2z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Trash/Delete icon
 export const IconTrash = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

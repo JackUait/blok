@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard } from '../../components/icons';
+import { IconBoard, IconPencil, IconCopy, IconTrash } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import type { DatabaseViewData } from './types';
 
@@ -180,6 +180,7 @@ export class DatabaseTabBar {
     this.closeContextPopover();
 
     const popover = document.createElement('div');
+    popover.setAttribute('data-blok-popover', '');
     popover.setAttribute('data-blok-database-tab-context', '');
     popover.style.position = 'fixed';
     popover.style.zIndex = '1000';
@@ -190,7 +191,13 @@ export class DatabaseTabBar {
 
     const renameItem = document.createElement('div');
     renameItem.setAttribute('data-blok-database-tab-action', 'rename');
-    renameItem.textContent = 'Rename';
+    const renameIcon = document.createElement('span');
+    renameIcon.setAttribute('data-blok-database-tab-action-icon', '');
+    renameIcon.innerHTML = IconPencil;
+    renameItem.appendChild(renameIcon);
+    const renameLabel = document.createElement('span');
+    renameLabel.textContent = 'Rename';
+    renameItem.appendChild(renameLabel);
     renameItem.addEventListener('click', () => {
       this.closeContextPopover();
       this.startInlineRename(tab, viewId);
@@ -199,16 +206,35 @@ export class DatabaseTabBar {
 
     const duplicateItem = document.createElement('div');
     duplicateItem.setAttribute('data-blok-database-tab-action', 'duplicate');
-    duplicateItem.textContent = 'Duplicate';
+    const duplicateIcon = document.createElement('span');
+    duplicateIcon.setAttribute('data-blok-database-tab-action-icon', '');
+    duplicateIcon.innerHTML = IconCopy;
+    duplicateItem.appendChild(duplicateIcon);
+    const duplicateLabel = document.createElement('span');
+    duplicateLabel.textContent = 'Duplicate';
+    duplicateItem.appendChild(duplicateLabel);
     duplicateItem.addEventListener('click', () => {
       this.closeContextPopover();
       this.options.onDuplicate(viewId);
     });
     popover.appendChild(duplicateItem);
 
+    const separator = document.createElement('div');
+    separator.setAttribute('data-blok-database-tab-context-separator', '');
+    if (this.options.views.length === 1) {
+      separator.style.display = 'none';
+    }
+    popover.appendChild(separator);
+
     const deleteItem = document.createElement('div');
     deleteItem.setAttribute('data-blok-database-tab-action', 'delete');
-    deleteItem.textContent = 'Delete';
+    const deleteIcon = document.createElement('span');
+    deleteIcon.setAttribute('data-blok-database-tab-action-icon', '');
+    deleteIcon.innerHTML = IconTrash;
+    deleteItem.appendChild(deleteIcon);
+    const deleteLabel = document.createElement('span');
+    deleteLabel.textContent = 'Delete';
+    deleteItem.appendChild(deleteLabel);
     if (this.options.views.length === 1) {
       deleteItem.style.display = 'none';
     }
@@ -334,6 +360,7 @@ export class DatabaseTabBar {
     this.closeOverflowDropdown();
 
     const dropdown = document.createElement('div');
+    dropdown.setAttribute('data-blok-popover', '');
     dropdown.setAttribute('data-blok-database-tab-overflow-dropdown', '');
     dropdown.style.position = 'fixed';
     dropdown.style.zIndex = '1000';

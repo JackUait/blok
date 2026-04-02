@@ -1993,6 +1993,10 @@
   padding: 6px;
 }
 
+[data-blok-database-view-popover] {
+  min-width: 220px;
+}
+
 [data-blok-database-view-popover-heading] {
   padding: 8px 8px 6px;
   font-size: 12px;
@@ -2009,10 +2013,11 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 12px 8px;
+  padding: 14px 8px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
+  color: var(--blok-database-tab-text-active);
   transition: background-color 120ms ease;
 }
 
@@ -2020,7 +2025,27 @@
   background-color: var(--blok-database-popover-hover);
 }
 
+[data-blok-database-view-option-icon] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--blok-database-popover-hover);
+  color: var(--blok-database-tab-text);
+}
+
+[data-blok-database-view-option-icon] svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Context popover actions */
+[data-blok-database-tab-context] {
+  min-width: 180px;
+}
+
 [data-blok-database-tab-action] {
   display: flex;
   align-items: center;
@@ -2036,8 +2061,29 @@
   background-color: var(--blok-database-popover-hover);
 }
 
+[data-blok-database-tab-action-icon] {
+  display: flex;
+  align-items: center;
+  color: var(--blok-database-tab-text);
+}
+
+[data-blok-database-tab-action-icon] svg {
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-database-tab-action="delete"] {
   color: #eb5757;
+}
+
+[data-blok-database-tab-action="delete"] [data-blok-database-tab-action-icon] {
+  color: #eb5757;
+}
+
+[data-blok-database-tab-context-separator] {
+  height: 1px;
+  margin: 4px 10px;
+  background-color: var(--blok-database-drawer-border);
 }
 
 /* Overflow dropdown items */
@@ -2072,6 +2118,12 @@
 
 [data-blok-database-tab-overflow-new]:hover {
   background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-tab-overflow-separator] {
+  height: 1px;
+  margin: 4px 10px;
+  background-color: var(--blok-database-drawer-border);
 }
 
 /* Tab rename input */

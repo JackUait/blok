@@ -151,6 +151,7 @@ export class DatabaseView {
     header.style.padding = '6px 8px';
     header.style.borderRadius = '4px';
     header.style.gap = '6px';
+    header.style.cursor = 'grab';
 
     const pill = document.createElement('div');
 

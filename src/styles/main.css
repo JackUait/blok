@@ -1538,6 +1538,13 @@
 }
 
 /**
+ * Column header — grab cursor to indicate draggable area.
+ */
+[data-blok-database-column-header] {
+  cursor: grab;
+}
+
+/**
  * Cards — elevated surface with subtle border and shadow.
  */
 [data-blok-database-card] {

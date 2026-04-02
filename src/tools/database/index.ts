@@ -357,9 +357,46 @@ export class DatabaseTool implements BlockTool {
     );
 
     this.model.moveColumn(columnId, position);
-    this.rerenderBoard();
+    this.moveColumnInDom(columnId, beforeColumnId);
 
     void this.sync.syncMoveColumn({ columnId, position });
+  }
+
+  /**
+   * Moves a column element to a new position in the DOM without full re-render.
+   */
+  private moveColumnInDom(columnId: string, beforeColumnId: string | null): void {
+    if (this.element === null) {
+      return;
+    }
+
+    const boardArea = this.element.querySelector('[data-blok-database-board]');
+
+    if (boardArea === null) {
+      return;
+    }
+
+    const columnEl = boardArea.querySelector<HTMLElement>(`[data-column-id="${columnId}"]`);
+
+    if (columnEl === null) {
+      return;
+    }
+
+    if (beforeColumnId !== null) {
+      const beforeEl = boardArea.querySelector(`[data-column-id="${beforeColumnId}"]`);
+
+      if (beforeEl !== null) {
+        boardArea.insertBefore(columnEl, beforeEl);
+      }
+    } else {
+      const addColumnBtn = boardArea.querySelector('[data-blok-database-add-column]');
+
+      if (addColumnBtn !== null) {
+        boardArea.insertBefore(columnEl, addColumnBtn);
+      } else {
+        boardArea.appendChild(columnEl);
+      }
+    }
   }
 
   private handleColumnRename(columnId: string, title: string): void {

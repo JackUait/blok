@@ -25,6 +25,10 @@ export class DatabaseColumnDrag {
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
   private sourceColumn: HTMLElement | null = null;
+  private sourceColumnWidth = 0;
+  private ghostOffsetX = 0;
+  private gapTarget: HTMLElement | null = null;
+  private gapContainer: HTMLElement | null = null;
 
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
@@ -64,6 +68,9 @@ export class DatabaseColumnDrag {
     this.ghostEl?.remove();
     this.ghostEl = null;
 
+    this.clearGap();
+    this.wrapper.removeAttribute('data-blok-database-column-reordering');
+
     if (this.sourceColumn) {
       this.sourceColumn.style.opacity = '';
       this.sourceColumn = null;
@@ -71,6 +78,8 @@ export class DatabaseColumnDrag {
 
     this.isDragging = false;
     this.columnId = '';
+    this.sourceColumnWidth = 0;
+    this.ghostOffsetX = 0;
   }
 
   public destroy(): void {
@@ -87,6 +96,7 @@ export class DatabaseColumnDrag {
 
     if (this.isDragging) {
       this.updateGhostPosition(e);
+      this.updateDropIndicator(e.clientX);
     }
   }
 
@@ -110,9 +120,14 @@ export class DatabaseColumnDrag {
 
   private startActiveDrag(e: PointerEvent): void {
     if (this.sourceColumn) {
+      const rect = this.sourceColumn.getBoundingClientRect();
+
+      this.sourceColumnWidth = rect.width;
+      this.ghostOffsetX = this.startX - rect.left;
       this.sourceColumn.style.opacity = '0.4';
     }
 
+    this.wrapper.setAttribute('data-blok-database-column-reordering', '');
     this.createGhost(e);
   }
 
@@ -126,8 +141,13 @@ export class DatabaseColumnDrag {
 
     style.position = 'fixed';
     style.pointerEvents = 'none';
-    style.opacity = '0.7';
+    style.opacity = '0.85';
     style.zIndex = '50';
+    style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)';
+    style.borderRadius = '10px';
+    style.overflow = 'hidden';
+    style.transform = 'rotate(1deg) scale(1.02)';
+    style.transformOrigin = 'center center';
 
     if (this.sourceColumn) {
       const clone = this.sourceColumn.cloneNode(true) as HTMLElement;
@@ -137,7 +157,7 @@ export class DatabaseColumnDrag {
 
       const rect = this.sourceColumn.getBoundingClientRect();
 
-      style.left = `${rect.left}px`;
+      style.left = `${e.clientX - this.ghostOffsetX}px`;
       style.top = `${rect.top}px`;
       style.width = `${rect.width}px`;
     } else {
@@ -150,14 +170,55 @@ export class DatabaseColumnDrag {
   }
 
   private updateGhostPosition(e: PointerEvent): void {
-    if (!this.ghostEl || !this.sourceColumn) {
+    if (!this.ghostEl) {
       return;
     }
 
-    const rect = this.sourceColumn.getBoundingClientRect();
-    const offsetX = this.startX - rect.left;
+    this.ghostEl.style.left = `${e.clientX - this.ghostOffsetX}px`;
+  }
 
-    this.ghostEl.style.left = `${e.clientX - offsetX}px`;
+  /**
+   * Opens a gap at the drop position by applying margin-left to the target column,
+   * matching the card drag pattern of gap-based drop indicators.
+   */
+  private updateDropIndicator(clientX: number): void {
+    const position = this.getDropPosition(clientX);
+
+    if (position.beforeColumn) {
+      if (position.beforeColumn === this.gapTarget) {
+        return;
+      }
+
+      this.clearGap();
+      position.beforeColumn.style.marginLeft = `${this.sourceColumnWidth}px`;
+      this.gapTarget = position.beforeColumn;
+    } else {
+      this.applyEndGap();
+    }
+  }
+
+  private applyEndGap(): void {
+    const boardArea = this.wrapper.querySelector<HTMLElement>('[data-blok-database-board]');
+
+    if (!boardArea || boardArea === this.gapContainer) {
+      return;
+    }
+
+    this.clearGap();
+    boardArea.style.paddingRight = `${this.sourceColumnWidth}px`;
+    this.gapContainer = boardArea;
+  }
+
+  private clearGap(): void {
+    if (this.gapTarget) {
+      this.gapTarget.style.marginLeft = '';
+      this.gapTarget = null;
+    }
+
+    if (this.gapContainer) {
+      this.gapContainer.style.paddingRight = '';
+      this.gapContainer = null;
+    }
   }
 
   private getDropPosition(clientX: number): { beforeColumn: HTMLElement | null; afterColumn: HTMLElement | null } {

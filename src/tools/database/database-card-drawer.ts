@@ -177,6 +177,16 @@ export class DatabaseCardDrawer {
         return;
       }
 
+      /**
+       * Toolbox and other popovers are portaled to document.body,
+       * so they sit outside the drawer DOM tree. Without this check,
+       * clicking a popover item would be treated as an "outside click"
+       * and close the drawer.
+       */
+      if (target instanceof Element && target.closest('[data-blok-popover-opened]') !== null) {
+        return;
+      }
+
       this.close();
     };
     document.addEventListener('mousedown', this.outsideClickHandler);

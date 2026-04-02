@@ -629,6 +629,36 @@ describe('DatabaseCardDrawer', () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
+    it('does NOT close when mousedown fires inside a popover portaled to document.body', () => {
+      const onClose = vi.fn();
+      const options = createOptions({ onClose });
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+      onClose.mockClear();
+
+      // Simulate a popover that is portaled to document.body (outside the drawer DOM)
+      const popover = document.createElement('div');
+
+      popover.setAttribute('data-blok-popover-opened', 'true');
+
+      const popoverItem = document.createElement('button');
+
+      popover.appendChild(popoverItem);
+      document.body.appendChild(popover);
+
+      try {
+        popoverItem.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+        expect(drawer.isOpen).toBe(true);
+        expect(onClose).not.toHaveBeenCalled();
+      } finally {
+        drawer.destroy();
+        document.body.removeChild(popover);
+      }
+    });
+
     it('removes mousedown listener after close', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);

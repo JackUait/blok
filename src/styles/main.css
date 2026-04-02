@@ -1916,6 +1916,7 @@
   align-items: center;
   gap: 2px;
   padding: 4px 0 8px;
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
 }
 
 [data-blok-database-tab] {

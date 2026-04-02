@@ -169,7 +169,7 @@ describe('StyleManager', () => {
       expect(StyleManager.wrapperStyles).toContain('last:mb-0');
     });
 
-    it('provides contentStyles', () => {
+    it('provides contentStyles with mx-auto for default centering', () => {
       expect(StyleManager.contentStyles).toContain('mx-auto');
       expect(StyleManager.contentStyles).toContain('max-w-blok-content');
     });

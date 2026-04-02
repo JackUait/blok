@@ -268,7 +268,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, Divider, Bold, Italic, Link, Marker, Underline, Strikethrough } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, Divider, Quote, Bold, Italic, Link, Marker, Underline, Strikethrough } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -288,6 +288,7 @@
         callout: true,
         database: true,
         divider: true,
+        quote: true,
       },
     };
 
@@ -691,6 +692,38 @@
       },
       {
         type: "header",
+        id: "quote-section-header",
+        data: {
+          text: "Quote Blocks",
+          level: 2
+        }
+      },
+      {
+        id: "quote-default",
+        type: "quote",
+        data: {
+          text: "The only way to do great work is to love what you do.",
+          size: "default"
+        }
+      },
+      {
+        id: "quote-large",
+        type: "quote",
+        data: {
+          text: "In the middle of difficulty lies opportunity.",
+          size: "large"
+        }
+      },
+      {
+        id: "quote-formatted",
+        type: "quote",
+        data: {
+          text: "You can use <b>bold</b>, <i>italic</i>, and other <mark style=\"background-color: var(--blok-color-yellow-bg)\">inline formatting</mark> inside quotes.",
+          size: "default"
+        }
+      },
+      {
+        type: "header",
         id: "callout-section-header",
         data: {
           text: "Callout Blocks",
@@ -865,11 +898,13 @@
       if (state.tools.callout) tools.callout = { class: Callout, inlineToolbar: true };
       if (state.tools.database) tools.database = Database;
       if (state.tools.divider) tools.divider = Divider;
+      if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       return {
         readOnly: state.readOnly,
         holder: 'blok',
         tools,
         autofocus: state.autofocus,
+        style: { contentAlign: 'center' },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
           console.log('something changed', event);
@@ -1035,6 +1070,7 @@
       { key: 'callout', label: 'Callout', icon: Icons.IconCallout },
       { key: 'database', label: 'Database', icon: Icons.IconDatabase },
       { key: 'divider', label: 'Divider', icon: Icons.IconDivider },
+      { key: 'quote', label: 'Quote', icon: Icons.IconQuote },
     ];
 
     const toolTogglesContainer = document.getElementById('tool-toggles');
@@ -1075,7 +1111,7 @@
       'UI & Navigation': ['IconCross', 'IconMenu', 'IconPlus', 'IconChevronLeft', 'IconChevronRight', 'IconSearch'],
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconMarker', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconDivider'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconDivider', 'IconQuote'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight'],
       'Utility': ['IconCopy', 'IconTrash', 'IconWarning', 'IconPaintRoller'],

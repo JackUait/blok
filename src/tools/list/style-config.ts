@@ -42,6 +42,7 @@ export const getToolboxConfig = (): ToolboxConfig => [
     data: { style: 'unordered' },
     name: 'bulleted-list',
     searchTerms: ['ul', 'bullet', 'unordered', 'list'],
+    searchTermKeys: ['bullet', 'unordered', 'list'],
     shortcut: '-',
   },
   {
@@ -51,6 +52,7 @@ export const getToolboxConfig = (): ToolboxConfig => [
     data: { style: 'ordered' },
     name: 'numbered-list',
     searchTerms: ['ol', 'ordered', 'number', 'list'],
+    searchTermKeys: ['ordered', 'number', 'list'],
     shortcut: '1.',
   },
   {
@@ -60,6 +62,7 @@ export const getToolboxConfig = (): ToolboxConfig => [
     data: { style: 'checklist' },
     name: 'check-list',
     searchTerms: ['checkbox', 'task', 'todo', 'check', 'list'],
+    searchTermKeys: ['checkbox', 'task', 'todo', 'check', 'list'],
     shortcut: '[]',
   },
 ];

@@ -1078,6 +1078,17 @@ export class PopoverDesktop extends PopoverAbstract {
 
     this.toggleNothingFoundMessage(isNothingFound);
 
+    // Recalculate position since popover height may have changed (trigger-based popovers only;
+    // non-trigger popovers use CSS variable positioning that doesn't need pixel recalculation)
+    if (this.trigger && this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
+      const { top, left, openTop, openLeft } = this.calculatePosition();
+
+      this.nodes.popover.style.top = `${top}px`;
+      this.nodes.popover.style.left = `${left}px`;
+      this.setOpenTop(openTop);
+      this.setOpenLeft(openLeft);
+    }
+
     // Build flippable elements list: top-level matches + promoted items
     const topLevelFlippable = isEmptyQuery
       ? this.flippableElements

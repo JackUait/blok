@@ -160,6 +160,13 @@ export interface BlokConfig {
      * @example 'Inter, sans-serif'
      */
     fontFamily?: string;
+
+    /**
+     * Global content alignment within the editor.
+     * Controls whether block content is left-aligned, centered, or right-aligned.
+     * @default 'left'
+     */
+    contentAlign?: 'left' | 'center' | 'right';
   }
 
   /**

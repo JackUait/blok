@@ -26,5 +26,6 @@ export const DEFAULT_EMOJI = '💡';
 
 // CSS — Tailwind classes
 export const WRAPPER_STYLES = 'rounded-xl px-4 py-[5px] my-1 flex items-start gap-2';
-export const EMOJI_BUTTON_STYLES = 'text-[1.5rem] leading-[1] cursor-pointer bg-transparent border-0 px-0 py-[7px] flex-shrink-0 select-none';
+// h-[38px] = py-[7px]×2 + 1.5rem×1 = 14+24; explicit height prevents platform-specific emoji font metrics from inflating the button
+export const EMOJI_BUTTON_STYLES = 'text-[1.5rem] leading-[1] cursor-pointer bg-transparent border-0 px-0 py-[7px] h-[38px] flex-shrink-0 select-none';
 export const CHILDREN_STYLES = 'flex-1 min-w-0';

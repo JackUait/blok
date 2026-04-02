@@ -63,6 +63,32 @@ const SKIN_TONE_HANDS: readonly string[] = [
   '✋', '✋🏻', '✋🏼', '✋🏽', '✋🏾', '✋🏿',
 ];
 
+const SKIN_TONE_STORAGE_KEY = 'blok-emoji-skin-tone';
+
+function loadSkinTone(): number {
+  try {
+    const raw = localStorage.getItem(SKIN_TONE_STORAGE_KEY);
+
+    if (raw === null) {
+      return 0;
+    }
+
+    const n = parseInt(raw, 10);
+
+    return n >= 0 && n <= 5 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveSkinTone(index: number): void {
+  try {
+    localStorage.setItem(SKIN_TONE_STORAGE_KEY, String(index));
+  } catch {
+    // Silently ignore — storage quota or access denied
+  }
+}
+
 /** Dice SVG for the random button. */
 const ICON_DICE = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><circle cx="4.5" cy="4.5" r=".9" fill="currentColor"/><circle cx="7" cy="7" r=".9" fill="currentColor"/><circle cx="9.5" cy="9.5" r=".9" fill="currentColor"/></svg>';
 
@@ -137,6 +163,17 @@ export class EmojiPicker {
     this._open = true;
     this._filterInput.value = '';
     this._element.setAttribute('data-theme', this.resolveTheme());
+
+    const storedTone = loadSkinTone();
+
+    if (storedTone !== this._skinTone) {
+      this._skinTone = storedTone;
+      this._skinToneToggle.textContent = SKIN_TONE_HANDS[storedTone];
+
+      for (const [i, btn] of this._skinToneButtons.entries()) {
+        this.applySkinToneActiveStyle(btn, i === storedTone);
+      }
+    }
 
     if (this._allEmojis.length === 0) {
       this._allEmojis = await loadEmojiData();
@@ -399,6 +436,7 @@ export class EmojiPicker {
 
   private setSkinTone(index: number): void {
     this._skinTone = index;
+    saveSkinTone(index);
 
     // Update the hand toggle to reflect current skin tone
     this._skinToneToggle.textContent = SKIN_TONE_HANDS[index];

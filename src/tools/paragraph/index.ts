@@ -415,6 +415,7 @@ export class Paragraph implements BlockTool {
       title: 'Text',
       titleKey: 'text',
       searchTerms: ['p', 'paragraph', 'plain'],
+      searchTermKeys: ['paragraph', 'plain'],
     };
   }
 }

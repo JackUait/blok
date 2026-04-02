@@ -59,6 +59,8 @@ export const DATA_ATTR = {
   // Editor Modes
   // ============================================
 
+  /** Content alignment mode (left, center, right) */
+  contentAlign: 'data-blok-content-align',
   /** Narrow mode state */
   narrow: 'data-blok-narrow',
   /** Right-to-left mode */

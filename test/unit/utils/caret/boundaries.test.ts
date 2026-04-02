@@ -223,6 +223,76 @@ describe('caret/boundaries', () => {
 
       expect(result).toBe(true);
     });
+
+    it('should return true for right direction when only a trailing <br> remains', () => {
+      const contenteditable = document.createElement('div');
+
+      contenteditable.contentEditable = 'true';
+      const textNode = document.createTextNode('Hello');
+      const br = document.createElement('br');
+
+      contenteditable.appendChild(textNode);
+      contenteditable.appendChild(br);
+      getContainer().appendChild(contenteditable);
+
+      const result = checkContenteditableSliceForEmptiness(contenteditable, textNode, textNode.length, 'right');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return true for right direction when multiple trailing <br> tags remain', () => {
+      const contenteditable = document.createElement('div');
+
+      contenteditable.contentEditable = 'true';
+      const textNode = document.createTextNode('Hello');
+      const br1 = document.createElement('br');
+      const br2 = document.createElement('br');
+
+      contenteditable.appendChild(textNode);
+      contenteditable.appendChild(br1);
+      contenteditable.appendChild(br2);
+      getContainer().appendChild(contenteditable);
+
+      const result = checkContenteditableSliceForEmptiness(contenteditable, textNode, textNode.length, 'right');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false for right direction when <br> is followed by text', () => {
+      const contenteditable = document.createElement('div');
+
+      contenteditable.contentEditable = 'true';
+      const textNode1 = document.createTextNode('Hello');
+      const br = document.createElement('br');
+      const textNode2 = document.createTextNode('World');
+
+      contenteditable.appendChild(textNode1);
+      contenteditable.appendChild(br);
+      contenteditable.appendChild(textNode2);
+      getContainer().appendChild(contenteditable);
+
+      const result = checkContenteditableSliceForEmptiness(contenteditable, textNode1, textNode1.length, 'right');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false for left direction when <br> is present', () => {
+      const contenteditable = document.createElement('div');
+
+      contenteditable.contentEditable = 'true';
+      const textNode1 = document.createTextNode('Hello');
+      const br = document.createElement('br');
+      const textNode2 = document.createTextNode('World');
+
+      contenteditable.appendChild(textNode1);
+      contenteditable.appendChild(br);
+      contenteditable.appendChild(textNode2);
+      getContainer().appendChild(contenteditable);
+
+      const result = checkContenteditableSliceForEmptiness(contenteditable, textNode2, 0, 'left');
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('isCaretAtStartOfInput', () => {
@@ -533,6 +603,69 @@ describe('caret/boundaries', () => {
       const result = isCaretAtEndOfInput(input);
 
       expect(result).toBe(true);
+    });
+
+    it('should return true when caret is before a trailing <br> (browser artifact)', () => {
+      const input = document.createElement('div');
+
+      input.contentEditable = 'true';
+      const textNode = document.createTextNode('Hello');
+      const br = document.createElement('br');
+
+      input.appendChild(textNode);
+      input.appendChild(br);
+      getContainer().appendChild(input);
+      input.focus();
+
+      setupSelection(textNode, textNode.length);
+
+      const result = isCaretAtEndOfInput(input);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return true when caret is at end of last line in multi-line content with trailing <br>', () => {
+      const input = document.createElement('div');
+
+      input.contentEditable = 'true';
+      const textNode1 = document.createTextNode('First line');
+      const br1 = document.createElement('br');
+      const textNode2 = document.createTextNode('Second line');
+      const br2 = document.createElement('br');
+
+      input.appendChild(textNode1);
+      input.appendChild(br1);
+      input.appendChild(textNode2);
+      input.appendChild(br2);
+      getContainer().appendChild(input);
+      input.focus();
+
+      setupSelection(textNode2, textNode2.length);
+
+      const result = isCaretAtEndOfInput(input);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when caret is at end of first line in multi-line content', () => {
+      const input = document.createElement('div');
+
+      input.contentEditable = 'true';
+      const textNode1 = document.createTextNode('First line');
+      const br = document.createElement('br');
+      const textNode2 = document.createTextNode('Second line');
+
+      input.appendChild(textNode1);
+      input.appendChild(br);
+      input.appendChild(textNode2);
+      getContainer().appendChild(input);
+      input.focus();
+
+      setupSelection(textNode1, textNode1.length);
+
+      const result = isCaretAtEndOfInput(input);
+
+      expect(result).toBe(false);
     });
   });
 });

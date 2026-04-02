@@ -56,13 +56,24 @@ export const checkContenteditableSliceForEmptiness = (
   /**
    * Check if we have any tags in the slice
    * We should not ignore them to allow navigation inside (e.g. empty bold tag)
+   *
+   * When checking the right side, trailing <br> tags are browser artifacts
+   * in contenteditable elements (sentinels for cursor positioning after Shift+Enter).
+   * If the only significant tags are <br> and there's no text content,
+   * the slice is effectively empty — skip the early return.
    */
-  const hasSignificantTags = tempDiv.querySelectorAll(
+  const significantTags = tempDiv.querySelectorAll(
     'img, br, hr, input, area, base, col, embed, link, meta, param, source, track, wbr'
-  ).length > 0;
+  );
 
-  if (hasSignificantTags) {
-    return false;
+  if (significantTags.length > 0) {
+    const isOnlyTrailingBrs = direction === 'right'
+      && tempDiv.querySelectorAll('img, hr, input, area, base, col, embed, link, meta, param, source, track, wbr').length === 0
+      && textContent.trim() === '';
+
+    if (!isOnlyTrailingBrs) {
+      return false;
+    }
   }
 
   /**

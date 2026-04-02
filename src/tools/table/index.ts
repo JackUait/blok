@@ -220,6 +220,7 @@ export class Table implements BlockTool {
       title: 'Table',
       titleKey: 'tools.table.title',
       searchTerms: ['table', 'grid', 'spreadsheet'],
+      searchTermKeys: ['table', 'grid', 'spreadsheet'],
     };
   }
 

@@ -1096,6 +1096,7 @@ export class Header implements BlockTool {
       name: `header-${level.number}`,
       data: { level: level.number },
       searchTerms: [`h${level.number}`, 'title', 'header', 'heading'],
+      searchTermKeys: ['title', 'header', 'heading'],
       shortcut: '#'.repeat(level.number),
     }));
 
@@ -1114,6 +1115,7 @@ export class Header implements BlockTool {
         name: `toggle-header-${level.number}`,
         data: { level: level.number, isToggleable: true },
         searchTerms: ['toggle', 'heading', `h${level.number}`, 'collapsible'],
+        searchTermKeys: ['toggle', 'heading', 'collapsible'],
         shortcut: '>' + '#'.repeat(level.number),
       }));
 

@@ -263,6 +263,105 @@ describe('EmojiPicker', () => {
       expect(toggle.classList.contains('bg-neutral-100')).toBe(false);
     });
 
+    describe('localStorage persistence', () => {
+      afterEach(() => {
+        localStorage.removeItem('blok-emoji-skin-tone');
+      });
+
+      it('saves selected skin tone to localStorage', async () => {
+        const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+        const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+        container.appendChild(picker.getElement());
+        await picker.open(container);
+
+        const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+        toggle.click();
+
+        const popover = picker.getElement().querySelector('[data-emoji-picker-skin-tone]') as HTMLElement;
+        const options = popover.querySelectorAll('button');
+
+        // Select skin tone index 3 (medium)
+        options[3].click();
+
+        expect(localStorage.getItem('blok-emoji-skin-tone')).toBe('3');
+      });
+
+      it('restores skin tone from localStorage when picker opens', async () => {
+        localStorage.setItem('blok-emoji-skin-tone', '2');
+
+        const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+        const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+        container.appendChild(picker.getElement());
+        await picker.open(container);
+
+        // Toggle should show medium-light hand
+        const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+        expect(toggle.textContent).toBe('✋🏼');
+
+        // Thumbs up should have medium-light skin tone applied
+        const emojiButtons = Array.from(picker.getElement().querySelectorAll('[data-emoji-native]'));
+        const thumbsUp = emojiButtons.find(btn => btn.getAttribute('data-emoji-native') === '👍') as HTMLButtonElement;
+
+        expect(thumbsUp.textContent).toBe('👍🏼');
+      });
+
+      it('defaults to neutral (0) when localStorage has no saved value', async () => {
+        const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+        const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+        container.appendChild(picker.getElement());
+        await picker.open(container);
+
+        const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+        expect(toggle.textContent).toBe('✋');
+      });
+
+      it('defaults to neutral (0) when localStorage contains an invalid value', async () => {
+        localStorage.setItem('blok-emoji-skin-tone', 'banana');
+
+        const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+        const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+        container.appendChild(picker.getElement());
+        await picker.open(container);
+
+        const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+        expect(toggle.textContent).toBe('✋');
+      });
+
+      it('handles localStorage being unavailable without crashing', async () => {
+        const originalGetItem = Storage.prototype.getItem;
+        const originalSetItem = Storage.prototype.setItem;
+
+        Storage.prototype.getItem = () => { throw new DOMException('blocked'); };
+        Storage.prototype.setItem = () => { throw new DOMException('blocked'); };
+
+        try {
+          const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+          const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+          container.appendChild(picker.getElement());
+          await picker.open(container);
+
+          // Should default to neutral without throwing
+          const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+
+          expect(toggle.textContent).toBe('✋');
+
+          // Selecting a skin tone should not throw either
+          toggle.click();
+          const popover = picker.getElement().querySelector('[data-emoji-picker-skin-tone]') as HTMLElement;
+          const options = popover.querySelectorAll('button');
+
+          expect(() => options[2].click()).not.toThrow();
+        } finally {
+          Storage.prototype.getItem = originalGetItem;
+          Storage.prototype.setItem = originalSetItem;
+        }
+      });
+    });
+
     it('closes popover on Escape without closing the picker', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });

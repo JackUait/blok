@@ -1875,10 +1875,12 @@
 }
 
 /**
- * Add card — top margin for visual separation from cards.
+ * Add card — match card height and visual rhythm.
  */
 [data-blok-database-add-card] {
-  margin-top: 2px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
 }
 
 /**

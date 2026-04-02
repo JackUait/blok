@@ -30,6 +30,10 @@ export class DatabaseTabBar {
   private contextPopoverEl: HTMLElement | null = null;
   private boundOutsideContextClick: ((e: MouseEvent) => void) | null = null;
 
+  private overflowDropdownEl: HTMLElement | null = null;
+  private boundOverflowClose: ((e: MouseEvent) => void) | null = null;
+  private moreBtnEl: HTMLElement | null = null;
+
   private isDragging = false;
   private dragViewId = '';
   private dragStartX = 0;
@@ -259,6 +263,121 @@ export class DatabaseTabBar {
     this.viewPopover.open(anchor);
   }
 
+  handleOverflow(visibleCount: number): void {
+    if (this.element === null) return;
+
+    // Remove existing more button
+    this.moreBtnEl?.remove();
+
+    const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const hiddenCount = orderedViews.length - visibleCount;
+    if (hiddenCount <= 0) return;
+
+    // Hide overflow tabs
+    const tabs = this.element.querySelectorAll<HTMLElement>('[data-blok-database-tab]');
+    for (let i = visibleCount; i < tabs.length; i++) {
+      tabs[i].style.display = 'none';
+    }
+
+    // Add "N more..." button before the + button
+    const moreBtn = document.createElement('div');
+    moreBtn.setAttribute('data-blok-database-tab-more', '');
+    moreBtn.textContent = `${hiddenCount} more...`;
+    moreBtn.style.cursor = 'pointer';
+    moreBtn.addEventListener('click', () => {
+      this.openOverflowDropdown(moreBtn);
+    });
+
+    const addBtn = this.element.querySelector('[data-blok-database-add-view]');
+    if (addBtn !== null) {
+      this.element.insertBefore(moreBtn, addBtn);
+    } else {
+      this.element.appendChild(moreBtn);
+    }
+    this.moreBtnEl = moreBtn;
+  }
+
+  private openOverflowDropdown(anchor: HTMLElement): void {
+    this.closeOverflowDropdown();
+
+    const dropdown = document.createElement('div');
+    dropdown.setAttribute('data-blok-database-tab-overflow-dropdown', '');
+    dropdown.style.position = 'absolute';
+    dropdown.style.zIndex = '1000';
+
+    const rect = anchor.getBoundingClientRect();
+    dropdown.style.top = `${rect.bottom + 4}px`;
+    dropdown.style.left = `${rect.left}px`;
+
+    const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
+
+    for (const view of orderedViews) {
+      const item = document.createElement('div');
+      item.setAttribute('data-blok-database-tab-overflow-item', '');
+      item.setAttribute('data-view-id', view.id);
+
+      if (view.id === this.options.activeViewId) {
+        item.setAttribute('data-active', '');
+      }
+
+      const iconSpan = document.createElement('span');
+      iconSpan.innerHTML = VIEW_ICONS[view.type] ?? '';
+      item.appendChild(iconSpan);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = view.name;
+      item.appendChild(nameSpan);
+
+      item.addEventListener('click', () => {
+        if (view.id !== this.options.activeViewId) {
+          this.options.onTabClick(view.id);
+        }
+        this.closeOverflowDropdown();
+      });
+
+      dropdown.appendChild(item);
+    }
+
+    const separator = document.createElement('div');
+    separator.setAttribute('data-blok-database-tab-overflow-separator', '');
+    dropdown.appendChild(separator);
+
+    const addBtn = this.element?.querySelector<HTMLElement>('[data-blok-database-add-view]');
+    const newViewBtn = document.createElement('div');
+    newViewBtn.setAttribute('data-blok-database-tab-overflow-new', '');
+    newViewBtn.textContent = '+ New view';
+    newViewBtn.addEventListener('click', () => {
+      this.closeOverflowDropdown();
+      if (addBtn !== null && addBtn !== undefined) {
+        this.openViewPopover(addBtn);
+      }
+    });
+    dropdown.appendChild(newViewBtn);
+
+    document.body.appendChild(dropdown);
+    this.overflowDropdownEl = dropdown;
+
+    this.boundOverflowClose = (e: MouseEvent): void => {
+      const target = e.target as HTMLElement;
+      if (!dropdown.contains(target) && !anchor.contains(target)) {
+        this.closeOverflowDropdown();
+      }
+    };
+
+    document.addEventListener('mousedown', this.boundOverflowClose);
+  }
+
+  private closeOverflowDropdown(): void {
+    if (this.overflowDropdownEl !== null) {
+      this.overflowDropdownEl.remove();
+      this.overflowDropdownEl = null;
+    }
+    if (this.boundOverflowClose !== null) {
+      document.removeEventListener('mousedown', this.boundOverflowClose);
+      this.boundOverflowClose = null;
+    }
+  }
+
   private handleDragMove(e: PointerEvent): void {
     const dx = Math.abs(e.clientX - this.dragStartX);
     if (!this.isDragging && dx < DRAG_THRESHOLD) return;
@@ -341,6 +460,7 @@ export class DatabaseTabBar {
   destroy(): void {
     this.cleanupDrag();
     this.closeContextPopover();
+    this.closeOverflowDropdown();
     if (this.viewPopover !== null) {
       this.viewPopover.destroy();
       this.viewPopover = null;

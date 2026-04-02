@@ -34,6 +34,7 @@ describe('DatabaseTabBar', () => {
     // Clean up any popovers left in the DOM
     document.querySelectorAll('[data-blok-database-view-popover]').forEach((el) => el.remove());
     document.querySelectorAll('[data-blok-database-tab-context]').forEach((el) => el.remove());
+    document.querySelectorAll('[data-blok-database-tab-overflow-dropdown]').forEach((el) => el.remove());
   });
 
   const createTabBar = (views: DatabaseViewData[], activeViewId: string): DatabaseTabBar => {
@@ -296,6 +297,119 @@ describe('DatabaseTabBar', () => {
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       expect(onReorder).not.toHaveBeenCalled();
+      bar.destroy();
+      el.remove();
+    });
+  });
+
+  describe('tab overflow', () => {
+    it('shows "N more..." button when tabs overflow', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      document.body.appendChild(el);
+
+      // Simulate overflow by calling the overflow handler directly
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+      expect(moreBtn).not.toBeNull();
+      expect(moreBtn.textContent).toContain('3 more');
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('opens dropdown listing all views when "N more..." is clicked', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+      moreBtn.click();
+
+      const dropdown = document.querySelector('[data-blok-database-tab-overflow-dropdown]');
+      expect(dropdown).not.toBeNull();
+
+      const items = dropdown!.querySelectorAll('[data-blok-database-tab-overflow-item]');
+      expect(items).toHaveLength(6);
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('highlights active view in overflow dropdown', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+      moreBtn.click();
+
+      const activeItem = document.querySelector('[data-blok-database-tab-overflow-item][data-active]') as HTMLElement;
+      expect(activeItem).not.toBeNull();
+      expect(activeItem.getAttribute('data-view-id')).toBe('v0');
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('calls onTabClick when overflow dropdown item is clicked', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+      moreBtn.click();
+
+      const items = document.querySelectorAll('[data-blok-database-tab-overflow-item]');
+      const item3 = items[3] as HTMLElement;
+      item3.click();
+
+      expect(onTabClick).toHaveBeenCalledWith('v3');
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('includes "+ New view" action at bottom of overflow dropdown', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const el = bar.render();
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+      moreBtn.click();
+
+      const newViewBtn = document.querySelector('[data-blok-database-tab-overflow-new]');
+      expect(newViewBtn).not.toBeNull();
+
       bar.destroy();
       el.remove();
     });

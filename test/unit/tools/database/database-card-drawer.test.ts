@@ -160,6 +160,28 @@ describe('DatabaseCardDrawer', () => {
 
       expect(el.style.width).toBe('0px');
     });
+
+    it('drawer opens to 45% width after animation frame', () => {
+      const rafCallbacks: FrameRequestCallback[] = [];
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        rafCallbacks.push(cb);
+
+        return 0;
+      });
+
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard();
+
+      drawer.open(card);
+
+      rafCallbacks.forEach((cb) => cb(0));
+
+      const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+      expect(el.style.width).toBe('45%');
+    });
   });
 
   describe('accessibility', () => {

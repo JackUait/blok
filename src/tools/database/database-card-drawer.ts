@@ -127,7 +127,7 @@ export class DatabaseCardDrawer {
     this.drawer = drawer;
 
     requestAnimationFrame(() => {
-      drawer.style.width = '400px';
+      drawer.style.width = '45%';
     });
 
     this.initNestedEditor(editorHolder, card);

@@ -108,7 +108,9 @@ export class ThemeManager extends Module {
     }
 
     if (this.mode === 'auto') {
-      this.removeAttribute();
+      if (state.activeInstances <= 1) {
+        this.removeAttribute();
+      }
     } else {
       document.documentElement.setAttribute(ATTR, this.mode);
     }

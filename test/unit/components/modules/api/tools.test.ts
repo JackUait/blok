@@ -103,5 +103,18 @@ describe('ToolsAPI', () => {
         tools: undefined,
       });
     });
+
+    it('returns theme setting when present in config', () => {
+      const toolsConfig = { paragraph: { class: class {} } };
+      const { toolsApi } = createToolsApi([], {
+        tools: toolsConfig,
+        theme: 'dark',
+      });
+
+      expect(toolsApi.methods.getToolsConfig()).toEqual({
+        tools: toolsConfig,
+        theme: 'dark',
+      });
+    });
   });
 });

@@ -122,6 +122,19 @@ describe('ThemeManager', () => {
       manager.prepare();
       expect(onThemeChange).not.toHaveBeenCalled();
     });
+
+    it('should NOT remove attribute when another instance is already active', () => {
+      const { manager: first } = createThemeManager({ theme: 'dark' });
+      first.prepare();
+      expect(document.documentElement.getAttribute('data-blok-theme')).toBe('dark');
+
+      const { manager: second } = createThemeManager({});
+      second.prepare();
+      expect(document.documentElement.getAttribute('data-blok-theme')).toBe('dark');
+
+      first.destroy();
+      second.destroy();
+    });
   });
 
   describe('getMode()', () => {
@@ -195,6 +208,20 @@ describe('ThemeManager', () => {
       manager.prepare();
       manager.setMode('auto');
       expect(onThemeChange).not.toHaveBeenCalled();
+    });
+
+    it('should NOT remove attribute when switching to auto while another instance is active', () => {
+      const { manager: first } = createThemeManager({ theme: 'dark' });
+      first.prepare();
+
+      const { manager: second } = createThemeManager({ theme: 'light' });
+      second.prepare();
+
+      second.setMode('auto');
+      expect(document.documentElement.getAttribute('data-blok-theme')).toBe('light');
+
+      first.destroy();
+      second.destroy();
     });
 
     it('should add matchMedia listener when switching to auto', () => {

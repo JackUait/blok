@@ -24,6 +24,10 @@ export class ToolsAPI extends Module {
           result.tunes = this.config.tunes;
         }
 
+        if (this.config.theme !== undefined) {
+          result.theme = this.config.theme;
+        }
+
         return result;
       },
     };

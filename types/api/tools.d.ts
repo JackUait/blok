@@ -1,5 +1,6 @@
 import { BlockToolAdapter } from '../tools/adapters/block-tool-adapter';
 import { ToolConstructable, ToolSettings } from '../tools';
+import { ThemeMode } from './theme';
 
 /**
  * Tools-related configuration that can be passed to a nested Blok instance.
@@ -8,6 +9,7 @@ export interface ToolsConfig {
   tools: { [toolName: string]: ToolConstructable | ToolSettings } | undefined;
   inlineToolbar?: string[] | boolean;
   tunes?: string[];
+  theme?: ThemeMode;
 }
 
 /**

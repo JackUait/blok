@@ -1,6 +1,9 @@
+import { generateKeyBetween } from 'fractional-indexing';
 import { IconBoard } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import type { DatabaseViewData } from './types';
+
+const DRAG_THRESHOLD = 10;
 
 const VIEW_ICONS: Record<string, string> = {
   board: IconBoard,
@@ -19,19 +22,41 @@ export interface TabBarOptions {
 
 export class DatabaseTabBar {
   private readonly options: TabBarOptions;
+  private readonly views: DatabaseViewData[];
+  private readonly onReorder: (viewId: string, newPosition: string) => void;
+  private element: HTMLElement | null = null;
   private barEl: HTMLElement | null = null;
   private viewPopover: DatabaseViewPopover | null = null;
   private contextPopoverEl: HTMLElement | null = null;
   private boundOutsideContextClick: ((e: MouseEvent) => void) | null = null;
 
+  private isDragging = false;
+  private dragViewId = '';
+  private dragStartX = 0;
+  private ghostEl: HTMLElement | null = null;
+  private readonly boundDragMove: (e: PointerEvent) => void;
+  private readonly boundDragUp: (e: PointerEvent) => void;
+  private readonly boundDragCancel: () => void;
+  private readonly boundDragKeyDown: (e: KeyboardEvent) => void;
+
   constructor(options: TabBarOptions) {
     this.options = options;
+    this.views = options.views;
+    this.onReorder = options.onReorder;
+
+    this.boundDragMove = this.handleDragMove.bind(this);
+    this.boundDragUp = this.handleDragUp.bind(this);
+    this.boundDragCancel = this.cleanupDrag.bind(this);
+    this.boundDragKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') { this.cleanupDrag(); }
+    };
   }
 
   render(): HTMLElement {
     const bar = document.createElement('div');
     bar.setAttribute('data-blok-database-tab-bar', '');
     this.barEl = bar;
+    this.element = bar;
 
     const sorted = [...this.options.views].sort((a, b) => (a.position < b.position ? -1 : 1));
 
@@ -75,6 +100,21 @@ export class DatabaseTabBar {
         return;
       }
       this.openContextPopover(tab, viewId);
+    });
+
+    bar.addEventListener('pointerdown', (e) => {
+      const target = e.target as HTMLElement;
+      const tab = target.closest<HTMLElement>('[data-blok-database-tab]');
+      if (tab === null) return;
+      const viewId = tab.getAttribute('data-view-id');
+      if (viewId === null) return;
+      this.dragViewId = viewId;
+      this.dragStartX = e.clientX;
+      this.isDragging = false;
+      document.addEventListener('pointermove', this.boundDragMove);
+      document.addEventListener('pointerup', this.boundDragUp);
+      document.addEventListener('pointercancel', this.boundDragCancel);
+      document.addEventListener('keydown', this.boundDragKeyDown);
     });
 
     return bar;
@@ -219,7 +259,87 @@ export class DatabaseTabBar {
     this.viewPopover.open(anchor);
   }
 
+  private handleDragMove(e: PointerEvent): void {
+    const dx = Math.abs(e.clientX - this.dragStartX);
+    if (!this.isDragging && dx < DRAG_THRESHOLD) return;
+    if (!this.isDragging) {
+      this.isDragging = true;
+      const sourceTab = this.element?.querySelector(`[data-view-id="${this.dragViewId}"]`) as HTMLElement | null;
+      if (sourceTab !== null) {
+        this.ghostEl = sourceTab.cloneNode(true) as HTMLElement;
+        this.ghostEl.setAttribute('data-blok-database-tab-ghost', '');
+        this.ghostEl.style.position = 'fixed';
+        this.ghostEl.style.pointerEvents = 'none';
+        this.ghostEl.style.zIndex = '50';
+        this.ghostEl.style.opacity = '0.7';
+        const rect = sourceTab.getBoundingClientRect();
+        this.ghostEl.style.top = `${rect.top}px`;
+        this.ghostEl.style.width = `${rect.width}px`;
+        document.body.appendChild(this.ghostEl);
+        sourceTab.style.opacity = '0.4';
+      }
+    }
+    if (this.ghostEl !== null) {
+      this.ghostEl.style.left = `${e.clientX - 50}px`;
+    }
+  }
+
+  private handleDragUp(e: PointerEvent): void {
+    if (!this.isDragging) {
+      this.removeDragListeners();
+      return;
+    }
+    const tabs = Array.from(
+      this.element?.querySelectorAll<HTMLElement>('[data-blok-database-tab]') ?? []
+    ).filter((t) => t.getAttribute('data-view-id') !== this.dragViewId);
+
+    const dropIndex = tabs.findIndex((t) => {
+      const rect = t.getBoundingClientRect();
+      return e.clientX < (rect.left + rect.right) / 2;
+    });
+
+    const beforeViewId = dropIndex >= 0 ? tabs[dropIndex].getAttribute('data-view-id') : null;
+    const afterViewId = ((): string | null => {
+      if (dropIndex > 0) return tabs[dropIndex - 1].getAttribute('data-view-id');
+      if (dropIndex === -1 && tabs.length > 0) return tabs[tabs.length - 1].getAttribute('data-view-id');
+      return null;
+    })();
+
+    const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const beforeView = beforeViewId !== null ? orderedViews.find((v) => v.id === beforeViewId) : null;
+    const afterView = afterViewId !== null ? orderedViews.find((v) => v.id === afterViewId) : null;
+
+    const newPosition = generateKeyBetween(
+      afterView?.position ?? null,
+      beforeView?.position ?? null
+    );
+
+    this.cleanupDrag();
+    this.onReorder(this.dragViewId, newPosition);
+  }
+
+  private cleanupDrag(): void {
+    if (this.ghostEl !== null) {
+      this.ghostEl.remove();
+      this.ghostEl = null;
+    }
+    const sourceTab = this.element?.querySelector(`[data-view-id="${this.dragViewId}"]`) as HTMLElement | null;
+    if (sourceTab !== null) {
+      sourceTab.style.opacity = '';
+    }
+    this.isDragging = false;
+    this.removeDragListeners();
+  }
+
+  private removeDragListeners(): void {
+    document.removeEventListener('pointermove', this.boundDragMove);
+    document.removeEventListener('pointerup', this.boundDragUp);
+    document.removeEventListener('pointercancel', this.boundDragCancel);
+    document.removeEventListener('keydown', this.boundDragKeyDown);
+  }
+
   destroy(): void {
+    this.cleanupDrag();
     this.closeContextPopover();
     if (this.viewPopover !== null) {
       this.viewPopover.destroy();

@@ -240,6 +240,67 @@ describe('DatabaseTabBar', () => {
     });
   });
 
+  describe('tab drag reordering', () => {
+    const createBarWithLayout = (views: DatabaseViewData[], activeViewId: string): { bar: DatabaseTabBar; el: HTMLElement } => {
+      const bar = createTabBar(views, activeViewId);
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tabs = Array.from(el.querySelectorAll<HTMLElement>('[data-blok-database-tab]'));
+      tabs.forEach((tab, index) => {
+        const tabLeft = index * 100;
+        const tabRight = tabLeft + 100;
+        Object.defineProperty(tab, 'getBoundingClientRect', {
+          value: () => ({
+            left: tabLeft, right: tabRight, top: 0, bottom: 30,
+            width: 100, height: 30, x: tabLeft, y: 0, toJSON: () => ({}),
+          }),
+          configurable: true,
+        });
+      });
+      return { bar, el };
+    };
+
+    it('does not start drag below threshold', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 55, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 55, clientY: 15 }));
+      expect(onReorder).not.toHaveBeenCalled();
+      bar.destroy();
+      el.remove();
+    });
+
+    it('calls onReorder after drag past threshold', () => {
+      const views = [
+        makeView({ id: 'v1', position: 'a0' }),
+        makeView({ id: 'v2', position: 'a1' }),
+        makeView({ id: 'v3', position: 'a2' }),
+      ];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      document.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 15 }));
+      expect(onReorder).toHaveBeenCalledTimes(1);
+      bar.destroy();
+      el.remove();
+    });
+
+    it('cancels drag on Escape key', () => {
+      const views = [makeView({ id: 'v1', position: 'a0' }), makeView({ id: 'v2', position: 'a1' })];
+      const { bar, el } = createBarWithLayout(views, 'v1');
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(onReorder).not.toHaveBeenCalled();
+      bar.destroy();
+      el.remove();
+    });
+  });
+
   describe('rename flow', () => {
     it('replaces tab name with input when Rename is clicked', () => {
       const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');

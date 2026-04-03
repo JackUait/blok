@@ -545,6 +545,74 @@ describe('DatabaseCardDrawer', () => {
 
       expect(pill!.textContent).toBe('Done');
     });
+
+    it('renders url property value as plain text', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-url', name: 'Website', type: 'url', position: 'a1' }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-url': 'https://example.com' } });
+
+      drawer.open(row);
+
+      const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
+
+      expect(propValue).not.toBeNull();
+      expect(propValue!.textContent).toBe('https://example.com');
+    });
+
+    it('renders date property value as plain text', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-date', name: 'Due Date', type: 'date', position: 'a1' }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-date': '2026-04-03' } });
+
+      drawer.open(row);
+
+      const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
+
+      expect(propValue).not.toBeNull();
+      expect(propValue!.textContent).toBe('2026-04-03');
+    });
+
+    it('renders multiSelect property as multiple colored pills', () => {
+      const opt1 = makeOption({ id: 'opt-a', label: 'Alpha', color: 'red' });
+      const opt2 = makeOption({ id: 'opt-b', label: 'Beta', color: 'blue' });
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: { options: [opt1, opt2] } }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-tags': ['opt-a', 'opt-b'] } });
+
+      drawer.open(row);
+
+      const pills = options.wrapper.querySelectorAll('[data-blok-database-drawer-status-pill]');
+
+      expect(pills).toHaveLength(2);
+      expect(pills[0].textContent).toBe('Alpha');
+      expect(pills[1].textContent).toBe('Beta');
+    });
+
+    it('renders nothing in the value area when multiSelect value is null', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-tags', name: 'Tags', type: 'multiSelect', position: 'a1', config: { options: [makeOption()] } }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-tags': null } });
+
+      drawer.open(row);
+
+      const pills = options.wrapper.querySelectorAll('[data-blok-database-drawer-status-pill]');
+      const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
+
+      expect(pills).toHaveLength(0);
+      expect(propValue!.textContent).toBe('');
+    });
   });
 
   describe('close notification consistency', () => {
@@ -956,6 +1024,13 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('nested editor tools config', () => {
+    beforeEach(async () => {
+      // Ensure any pending dynamic imports from prior tests resolve before
+      // we set up our own module mock, preventing stale calls from polluting
+      // the mock call list.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
     it('passes toolsConfig to the nested Blok instance', async () => {
       const mockBlokConstructor = vi.fn().mockReturnValue({
         isReady: Promise.resolve(),
@@ -985,11 +1060,19 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
+      // Wait for a call that has the expected toolsConfig.tools reference
       await vi.waitFor(() => {
-        expect(mockBlokConstructor).toHaveBeenCalledOnce();
+        const callWithTools = mockBlokConstructor.mock.calls.find(
+          ([cfg]) => cfg.tools === toolsConfig.tools,
+        );
+
+        expect(callWithTools).toBeDefined();
       });
 
-      const blokConfig = mockBlokConstructor.mock.calls[0][0];
+      const callWithTools = mockBlokConstructor.mock.calls.find(
+        ([cfg]) => cfg.tools === toolsConfig.tools,
+      );
+      const blokConfig = callWithTools![0];
 
       expect(blokConfig.tools).toBe(toolsConfig.tools);
       expect(blokConfig.inlineToolbar).toEqual(['bold', 'italic']);
@@ -1020,11 +1103,21 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
+      // Wait for a call originating from this drawer's editor holder
       await vi.waitFor(() => {
-        expect(mockBlokConstructor).toHaveBeenCalledOnce();
+        const editorHolder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+        const matchingCall = mockBlokConstructor.mock.calls.find(
+          ([cfg]) => cfg.holder === editorHolder,
+        );
+
+        expect(matchingCall).toBeDefined();
       });
 
-      const blokConfig = mockBlokConstructor.mock.calls[0][0];
+      const editorHolder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
+      const matchingCall = mockBlokConstructor.mock.calls.find(
+        ([cfg]) => cfg.holder === editorHolder,
+      );
+      const blokConfig = matchingCall![0];
 
       expect(blokConfig.tools).toBeUndefined();
 

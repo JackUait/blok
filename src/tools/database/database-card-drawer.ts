@@ -1,6 +1,6 @@
 import type { I18n, OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
-import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectPropertyConfig } from './types';
+import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
 import { IconChevronRight } from '../../components/icons';
 
 interface BlokInstance {
@@ -140,17 +140,7 @@ export class DatabaseCardDrawer {
     const renderableSchema = this.getRenderableSchema();
 
     if (renderableSchema.length > 0) {
-      const propsSection = document.createElement('div');
-
-      propsSection.setAttribute('data-blok-database-drawer-props', '');
-
-      for (const def of renderableSchema) {
-        const propRow = this.createPropertyRow(def, row.properties[def.id] ?? null, row.id);
-
-        propsSection.appendChild(propRow);
-      }
-
-      content.appendChild(propsSection);
+      content.appendChild(this.buildPropsSection(renderableSchema, row));
     }
 
     // --- Divider ---
@@ -267,15 +257,7 @@ export class DatabaseCardDrawer {
       const divider = content?.querySelector('hr') ?? null;
 
       if (content !== null) {
-        const propsSection = document.createElement('div');
-
-        propsSection.setAttribute('data-blok-database-drawer-props', '');
-
-        for (const def of renderableSchema) {
-          propsSection.appendChild(this.createPropertyRow(def, row.properties[def.id] ?? null, row.id));
-        }
-
-        content.insertBefore(propsSection, divider);
+        content.insertBefore(this.buildPropsSection(renderableSchema, row), divider);
       }
     }
 
@@ -327,6 +309,22 @@ export class DatabaseCardDrawer {
     exiting?.remove();
 
     this.currentRowId = null;
+  }
+
+  /**
+   * Builds a `[data-blok-database-drawer-props]` section element with one row per
+   * renderable schema property.
+   */
+  private buildPropsSection(renderableSchema: PropertyDefinition[], row: DatabaseRow): HTMLDivElement {
+    const propsSection = document.createElement('div');
+
+    propsSection.setAttribute('data-blok-database-drawer-props', '');
+
+    for (const def of renderableSchema) {
+      propsSection.appendChild(this.createPropertyRow(def, row.properties[def.id] ?? null, row.id));
+    }
+
+    return propsSection;
   }
 
   /**
@@ -402,13 +400,10 @@ export class DatabaseCardDrawer {
       const config = def.config;
       const selectedIds = Array.isArray(value) ? value : [];
 
-      for (const optionId of selectedIds) {
-        const option = config?.options.find((o) => o.id === optionId);
-
-        if (option !== undefined) {
-          valueEl.appendChild(this.createSelectPill(option));
-        }
-      }
+      selectedIds
+        .map((id) => config?.options.find((o) => o.id === id))
+        .filter((opt): opt is NonNullable<typeof opt> => opt !== undefined)
+        .forEach((opt) => valueEl.appendChild(this.createSelectPill(opt)));
     } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
       valueEl.textContent = String(value);
     }

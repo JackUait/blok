@@ -146,7 +146,7 @@
   "tools.database.addCard": "افزودن کارت",
   "tools.database.newPage": "صفحه جدید",
   "tools.database.addColumn": "افزودن ستون",
-  "tools.database.cardTitlePlaceholder": "بدون عنوان",
+  "tools.database.cardTitlePlaceholder": "صفحه خالی",
   "tools.database.columnTitlePlaceholder": "ستون",
   "tools.database.deleteCard": "حذف کارت",
   "tools.database.deleteColumn": "حذف ستون",

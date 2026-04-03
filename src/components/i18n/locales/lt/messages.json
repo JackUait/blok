@@ -146,7 +146,7 @@
   "tools.database.addCard": "Pridėti kortelę",
   "tools.database.newPage": "Naujas puslapis",
   "tools.database.addColumn": "Pridėti stulpelį",
-  "tools.database.cardTitlePlaceholder": "Be pavadinimo",
+  "tools.database.cardTitlePlaceholder": "Tuščias puslapis",
   "tools.database.columnTitlePlaceholder": "Stulpelis",
   "tools.database.deleteCard": "Ištrinti kortelę",
   "tools.database.deleteColumn": "Ištrinti stulpelį",

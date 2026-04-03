@@ -146,7 +146,7 @@
   "tools.database.addCard": "添加卡片",
   "tools.database.newPage": "新页面",
   "tools.database.addColumn": "添加列",
-  "tools.database.cardTitlePlaceholder": "无标题",
+  "tools.database.cardTitlePlaceholder": "空白页面",
   "tools.database.columnTitlePlaceholder": "列",
   "tools.database.deleteCard": "删除卡片",
   "tools.database.deleteColumn": "删除列",

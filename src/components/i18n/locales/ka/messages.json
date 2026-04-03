@@ -146,7 +146,7 @@
   "tools.database.addCard": "ბარათის დამატება",
   "tools.database.newPage": "ახალი გვერდი",
   "tools.database.addColumn": "სვეტის დამატება",
-  "tools.database.cardTitlePlaceholder": "უსათაურო",
+  "tools.database.cardTitlePlaceholder": "ცარიელი გვერდი",
   "tools.database.columnTitlePlaceholder": "სვეტი",
   "tools.database.deleteCard": "ბარათის წაშლა",
   "tools.database.deleteColumn": "სვეტის წაშლა",

@@ -1,4 +1,4 @@
-import type { OutputData } from '../../../types';
+import type { I18n, OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
 import type { KanbanCardData, KanbanColumnData } from './types';
 import { IconChevronRight } from '../../components/icons';
@@ -12,6 +12,7 @@ interface BlokInstance {
 export interface CardDrawerOptions {
   wrapper: HTMLElement;
   readOnly: boolean;
+  i18n?: I18n;
   toolsConfig?: ToolsConfig;
   onTitleChange: (cardId: string, title: string) => void;
   onDescriptionChange: (cardId: string, description: OutputData) => void;
@@ -26,6 +27,7 @@ export interface CardDrawerOptions {
 export class DatabaseCardDrawer {
   private readonly wrapper: HTMLElement;
   private readonly readOnly: boolean;
+  private readonly i18n: I18n | undefined;
   private readonly toolsConfig: ToolsConfig | undefined;
   private readonly onTitleChange: (cardId: string, title: string) => void;
   private readonly onDescriptionChange: (cardId: string, description: OutputData) => void;
@@ -40,6 +42,7 @@ export class DatabaseCardDrawer {
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
     this.readOnly = options.readOnly;
+    this.i18n = options.i18n;
     this.toolsConfig = options.toolsConfig;
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
@@ -102,7 +105,7 @@ export class DatabaseCardDrawer {
 
     titleInput.setAttribute('data-blok-database-drawer-title', '');
     titleInput.setAttribute('aria-label', 'Card title');
-    titleInput.placeholder = 'Untitled';
+    titleInput.placeholder = this.i18n?.t('tools.database.cardTitlePlaceholder') ?? 'Empty page';
     titleInput.value = card.title;
     titleInput.rows = 1;
     titleInput.readOnly = this.readOnly;
@@ -150,6 +153,10 @@ export class DatabaseCardDrawer {
       drawer.style.width = '45%';
       drawer.addEventListener('transitionend', () => {
         this.autoResizeTitle(titleInput);
+
+        if (!card.title) {
+          titleInput.focus();
+        }
       }, { once: true });
     });
 
@@ -223,6 +230,10 @@ export class DatabaseCardDrawer {
     if (titleInput !== null) {
       titleInput.value = card.title;
       this.autoResizeTitle(titleInput);
+
+      if (!card.title) {
+        titleInput.focus();
+      }
     }
 
     // Replace properties section

@@ -146,7 +146,7 @@
   "tools.database.addCard": "Додати картку",
   "tools.database.newPage": "Нова сторінка",
   "tools.database.addColumn": "Додати стовпець",
-  "tools.database.cardTitlePlaceholder": "Без назви",
+  "tools.database.cardTitlePlaceholder": "Порожня сторінка",
   "tools.database.columnTitlePlaceholder": "Стовпець",
   "tools.database.deleteCard": "Видалити картку",
   "tools.database.deleteColumn": "Видалити стовпець",

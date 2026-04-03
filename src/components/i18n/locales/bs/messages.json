@@ -149,7 +149,7 @@
   "tools.database.addCard": "Dodaj karticu",
   "tools.database.newPage": "Nova stranica",
   "tools.database.deleteCard": "Obriši karticu",
-  "tools.database.cardTitlePlaceholder": "Bez naslova",
+  "tools.database.cardTitlePlaceholder": "Prazna stranica",
   "tools.database.columnTitlePlaceholder": "Kolona",
   "tools.database.emptyColumn": "Nema kartica",
   "tools.callout.color": "Boja",

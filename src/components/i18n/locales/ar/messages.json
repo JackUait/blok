@@ -146,7 +146,7 @@
   "tools.database.addCard": "إضافة بطاقة",
   "tools.database.newPage": "صفحة جديدة",
   "tools.database.addColumn": "إضافة عمود",
-  "tools.database.cardTitlePlaceholder": "بدون عنوان",
+  "tools.database.cardTitlePlaceholder": "صفحة فارغة",
   "tools.database.columnTitlePlaceholder": "عمود",
   "tools.database.deleteCard": "حذف البطاقة",
   "tools.database.deleteColumn": "حذف العمود",

@@ -146,7 +146,7 @@
   "tools.database.addCard": "Lisää kortti",
   "tools.database.newPage": "Uusi sivu",
   "tools.database.addColumn": "Lisää sarake",
-  "tools.database.cardTitlePlaceholder": "Nimetön",
+  "tools.database.cardTitlePlaceholder": "Tyhjä sivu",
   "tools.database.columnTitlePlaceholder": "Sarake",
   "tools.database.deleteCard": "Poista kortti",
   "tools.database.deleteColumn": "Poista sarake",

@@ -149,7 +149,7 @@
   "tools.database.addCard": "அட்டை சேர்க்கவும்",
   "tools.database.newPage": "புதிய பக்கம்",
   "tools.database.deleteCard": "அட்டையை நீக்கு",
-  "tools.database.cardTitlePlaceholder": "தலைப்பிலி",
+  "tools.database.cardTitlePlaceholder": "வெற்று பக்கம்",
   "tools.database.columnTitlePlaceholder": "நெடுவரிசை",
   "tools.database.emptyColumn": "அட்டைகள் இல்லை",
   "tools.callout.color": "நிறம்",

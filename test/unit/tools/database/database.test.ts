@@ -236,6 +236,34 @@ describe('DatabaseTool', () => {
 
       expect(Object.keys(saved.views[0].data.cardMap)).toHaveLength(1);
     });
+
+    it('new card has empty title so placeholder shows', () => {
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }],
+            cardMap: {},
+          },
+        }],
+        activeViewId: 'test-view',
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions(initialData));
+      const element = tool.render();
+
+      const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
+
+      addCardBtn.click();
+
+      const saved = tool.save(element);
+      const card = Object.values(saved.views[0].data.cardMap)[0];
+
+      expect(card.title).toBe('');
+    });
   });
 
   describe('add column via click', () => {
@@ -270,6 +298,66 @@ describe('DatabaseTool', () => {
       const saved = tool.save(document.createElement('div'));
 
       expect(saved.views[0].data.columns).toHaveLength(2);
+    });
+
+    it('new column gets one default card with empty title', () => {
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }],
+            cardMap: {},
+          },
+        }],
+        activeViewId: 'test-view',
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions(initialData));
+      const element = tool.render();
+
+      const addColBtn = element.querySelector('[data-blok-database-add-column]') as HTMLButtonElement;
+
+      addColBtn.click();
+
+      const saved = tool.save(document.createElement('div'));
+      const newColumn = saved.views[0].data.columns[1];
+      const cardsInNewColumn = Object.values(saved.views[0].data.cardMap)
+        .filter(card => card.columnId === newColumn.id);
+
+      expect(cardsInNewColumn).toHaveLength(1);
+      expect(cardsInNewColumn[0].title).toBe('');
+    });
+
+    it('new column renders default card in DOM', () => {
+      const initialData: Partial<DatabaseData> = {
+        views: [{
+          id: 'test-view',
+          name: 'Board',
+          type: 'board',
+          position: 'a0',
+          data: {
+            columns: [{ id: 'col-1', title: 'Todo', position: 'a0' }],
+            cardMap: {},
+          },
+        }],
+        activeViewId: 'test-view',
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions(initialData));
+      const element = tool.render();
+
+      const addColBtn = element.querySelector('[data-blok-database-add-column]') as HTMLButtonElement;
+
+      addColBtn.click();
+
+      const columns = element.querySelectorAll('[data-blok-database-column]');
+      const newColumn = columns[1];
+      const cards = newColumn.querySelectorAll('[data-blok-database-card]');
+
+      expect(cards).toHaveLength(1);
     });
   });
 

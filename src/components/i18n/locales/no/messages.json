@@ -146,7 +146,7 @@
   "tools.database.addCard": "Legg til kort",
   "tools.database.newPage": "Ny side",
   "tools.database.addColumn": "Legg til kolonne",
-  "tools.database.cardTitlePlaceholder": "Uten tittel",
+  "tools.database.cardTitlePlaceholder": "Tom side",
   "tools.database.columnTitlePlaceholder": "Kolonne",
   "tools.database.deleteCard": "Slett kort",
   "tools.database.deleteColumn": "Slett kolonne",

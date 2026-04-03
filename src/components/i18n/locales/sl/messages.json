@@ -146,7 +146,7 @@
   "tools.database.addCard": "Dodaj kartico",
   "tools.database.newPage": "Nova stran",
   "tools.database.addColumn": "Dodaj stolpec",
-  "tools.database.cardTitlePlaceholder": "Brez naslova",
+  "tools.database.cardTitlePlaceholder": "Prazna stran",
   "tools.database.columnTitlePlaceholder": "Stolpec",
   "tools.database.deleteCard": "Izbriši kartico",
   "tools.database.deleteColumn": "Izbriši stolpec",

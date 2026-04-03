@@ -146,7 +146,7 @@
   "tools.database.addCard": "Додај картичка",
   "tools.database.newPage": "Нова страница",
   "tools.database.addColumn": "Додај колона",
-  "tools.database.cardTitlePlaceholder": "Без наслов",
+  "tools.database.cardTitlePlaceholder": "Празна страница",
   "tools.database.columnTitlePlaceholder": "Колона",
   "tools.database.deleteCard": "Избриши картичка",
   "tools.database.deleteColumn": "Избриши колона",

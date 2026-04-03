@@ -146,7 +146,7 @@
   "tools.database.addCard": "Kart ekle",
   "tools.database.newPage": "Yeni sayfa",
   "tools.database.addColumn": "Sütun ekle",
-  "tools.database.cardTitlePlaceholder": "Başlıksız",
+  "tools.database.cardTitlePlaceholder": "Boş sayfa",
   "tools.database.columnTitlePlaceholder": "Sütun",
   "tools.database.deleteCard": "Kartı sil",
   "tools.database.deleteColumn": "Sütunu sil",

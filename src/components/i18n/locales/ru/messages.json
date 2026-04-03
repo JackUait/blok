@@ -146,7 +146,7 @@
   "tools.database.addCard": "Добавить карточку",
   "tools.database.newPage": "Новая страница",
   "tools.database.addColumn": "Добавить столбец",
-  "tools.database.cardTitlePlaceholder": "Без названия",
+  "tools.database.cardTitlePlaceholder": "Пустая страница",
   "tools.database.columnTitlePlaceholder": "Столбец",
   "tools.database.deleteCard": "Удалить карточку",
   "tools.database.deleteColumn": "Удалить столбец",

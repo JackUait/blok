@@ -146,7 +146,7 @@
   "tools.database.addCard": "Agregar tarjeta",
   "tools.database.newPage": "Nueva página",
   "tools.database.addColumn": "Agregar columna",
-  "tools.database.cardTitlePlaceholder": "Sin título",
+  "tools.database.cardTitlePlaceholder": "Página vacía",
   "tools.database.columnTitlePlaceholder": "Columna",
   "tools.database.deleteCard": "Eliminar tarjeta",
   "tools.database.deleteColumn": "Eliminar columna",

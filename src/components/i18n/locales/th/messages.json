@@ -146,7 +146,7 @@
   "tools.database.addCard": "เพิ่มการ์ด",
   "tools.database.newPage": "หน้าใหม่",
   "tools.database.addColumn": "เพิ่มคอลัมน์",
-  "tools.database.cardTitlePlaceholder": "ไม่มีชื่อ",
+  "tools.database.cardTitlePlaceholder": "หน้าเปล่า",
   "tools.database.columnTitlePlaceholder": "คอลัมน์",
   "tools.database.deleteCard": "ลบการ์ด",
   "tools.database.deleteColumn": "ลบคอลัมน์",

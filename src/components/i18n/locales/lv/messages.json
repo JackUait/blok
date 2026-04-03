@@ -146,7 +146,7 @@
   "tools.database.addCard": "Pievienot kartīti",
   "tools.database.newPage": "Jauna lapa",
   "tools.database.addColumn": "Pievienot kolonnu",
-  "tools.database.cardTitlePlaceholder": "Bez nosaukuma",
+  "tools.database.cardTitlePlaceholder": "Tukša lapa",
   "tools.database.columnTitlePlaceholder": "Kolonna",
   "tools.database.deleteCard": "Dzēst kartīti",
   "tools.database.deleteColumn": "Dzēst kolonnu",

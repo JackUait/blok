@@ -434,7 +434,7 @@ export class DatabaseTool implements BlockTool {
   }
 
   private handleAddCard(columnId: string, boardEl: HTMLDivElement): void {
-    const card = this.model.addCard(columnId, this.api.i18n.t('tools.database.newPage'));
+    const card = this.model.addCard(columnId, '');
     const columnEl = boardEl.querySelector(`[data-column-id="${columnId}"][data-blok-database-column]`);
 
     if (columnEl === null) {
@@ -466,6 +466,21 @@ export class DatabaseTool implements BlockTool {
       id: column.id,
       title: column.title,
       position: column.position,
+    });
+
+    const card = this.model.addCard(column.id, '');
+    const columnEl = boardEl.querySelector(`[data-column-id="${column.id}"][data-blok-database-column]`);
+    const cardsContainer = columnEl?.querySelector('[data-blok-database-cards]');
+
+    if (cardsContainer !== null && cardsContainer !== undefined) {
+      this.view.appendCard(cardsContainer as HTMLElement, card);
+    }
+
+    void this.sync.syncCreateCard({
+      id: card.id,
+      columnId: card.columnId,
+      position: card.position,
+      title: card.title,
     });
   }
 
@@ -516,6 +531,7 @@ export class DatabaseTool implements BlockTool {
       this.cardDrawer = new DatabaseCardDrawer({
         wrapper: this.element,
         readOnly: this.readOnly,
+        i18n: this.api.i18n,
         toolsConfig: this.api.tools.getToolsConfig(),
         onTitleChange: (cardId, title) => {
           this.model.updateCard(cardId, { title });

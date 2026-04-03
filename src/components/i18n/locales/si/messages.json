@@ -149,7 +149,7 @@
   "tools.database.addCard": "කාඩ්පත එක් කරන්න",
   "tools.database.newPage": "නව පිටුව",
   "tools.database.deleteCard": "කාඩ්පත මකන්න",
-  "tools.database.cardTitlePlaceholder": "නම් නොකළ",
+  "tools.database.cardTitlePlaceholder": "හිස් පිටුව",
   "tools.database.columnTitlePlaceholder": "තීරුව",
   "tools.database.emptyColumn": "කාඩ්පත් නැත",
   "tools.callout.color": "වර්ණය",

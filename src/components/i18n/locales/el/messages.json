@@ -146,7 +146,7 @@
   "tools.database.addCard": "Προσθήκη κάρτας",
   "tools.database.newPage": "Νέα σελίδα",
   "tools.database.addColumn": "Προσθήκη στήλης",
-  "tools.database.cardTitlePlaceholder": "Χωρίς τίτλο",
+  "tools.database.cardTitlePlaceholder": "Κενή σελίδα",
   "tools.database.columnTitlePlaceholder": "Στήλη",
   "tools.database.deleteCard": "Διαγραφή κάρτας",
   "tools.database.deleteColumn": "Διαγραφή στήλης",

@@ -146,7 +146,7 @@
   "tools.database.addCard": "Pridať kartu",
   "tools.database.newPage": "Nová stránka",
   "tools.database.addColumn": "Pridať stĺpec",
-  "tools.database.cardTitlePlaceholder": "Bez názvu",
+  "tools.database.cardTitlePlaceholder": "Prázdna stránka",
   "tools.database.columnTitlePlaceholder": "Stĺpec",
   "tools.database.deleteCard": "Odstrániť kartu",
   "tools.database.deleteColumn": "Odstrániť stĺpec",

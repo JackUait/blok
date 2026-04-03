@@ -146,7 +146,7 @@
   "tools.database.addCard": "הוסף כרטיס",
   "tools.database.newPage": "דף חדש",
   "tools.database.addColumn": "הוסף עמודה",
-  "tools.database.cardTitlePlaceholder": "ללא כותרת",
+  "tools.database.cardTitlePlaceholder": "דף ריק",
   "tools.database.columnTitlePlaceholder": "עמודה",
   "tools.database.deleteCard": "מחק כרטיס",
   "tools.database.deleteColumn": "מחק עמודה",

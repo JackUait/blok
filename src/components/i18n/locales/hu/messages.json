@@ -146,7 +146,7 @@
   "tools.database.addCard": "Kártya hozzáadása",
   "tools.database.newPage": "Új oldal",
   "tools.database.addColumn": "Oszlop hozzáadása",
-  "tools.database.cardTitlePlaceholder": "Névtelen",
+  "tools.database.cardTitlePlaceholder": "Üres oldal",
   "tools.database.columnTitlePlaceholder": "Oszlop",
   "tools.database.deleteCard": "Kártya törlése",
   "tools.database.deleteColumn": "Oszlop törlése",

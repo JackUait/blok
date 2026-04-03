@@ -146,7 +146,7 @@
   "tools.database.addCard": "カードを追加",
   "tools.database.newPage": "新しいページ",
   "tools.database.addColumn": "列を追加",
-  "tools.database.cardTitlePlaceholder": "無題",
+  "tools.database.cardTitlePlaceholder": "空のページ",
   "tools.database.columnTitlePlaceholder": "列",
   "tools.database.deleteCard": "カードを削除",
   "tools.database.deleteColumn": "列を削除",

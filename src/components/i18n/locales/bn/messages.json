@@ -149,7 +149,7 @@
   "tools.database.addCard": "কার্ড যোগ করুন",
   "tools.database.newPage": "নতুন পৃষ্ঠা",
   "tools.database.deleteCard": "কার্ড মুছুন",
-  "tools.database.cardTitlePlaceholder": "শিরোনামহীন",
+  "tools.database.cardTitlePlaceholder": "খালি পাতা",
   "tools.database.columnTitlePlaceholder": "কলাম",
   "tools.database.emptyColumn": "কোনো কার্ড নেই",
   "tools.callout.color": "রঙ",

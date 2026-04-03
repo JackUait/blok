@@ -146,7 +146,7 @@
   "tools.database.addCard": "Карт нэмэх",
   "tools.database.newPage": "Шинэ хуудас",
   "tools.database.addColumn": "Багана нэмэх",
-  "tools.database.cardTitlePlaceholder": "Гарчиггүй",
+  "tools.database.cardTitlePlaceholder": "Хоосон хуудас",
   "tools.database.columnTitlePlaceholder": "Багана",
   "tools.database.deleteCard": "Карт устгах",
   "tools.database.deleteColumn": "Багана устгах",

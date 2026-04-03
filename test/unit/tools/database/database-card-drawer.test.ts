@@ -220,8 +220,18 @@ describe('DatabaseCardDrawer', () => {
       expect(closeBtn.querySelectorAll('svg').length).toBe(2);
     });
 
-    it('title input has "Untitled" placeholder', () => {
-      const options = createOptions();
+    it('title input has "Empty page" placeholder from i18n', () => {
+      const mockI18n = {
+        t: vi.fn((key: string) => {
+          if (key === 'tools.database.cardTitlePlaceholder') return 'Empty page';
+
+          return key;
+        }),
+        has: vi.fn(() => true),
+        getEnglishTranslation: vi.fn(() => ''),
+        getLocale: vi.fn(() => 'en'),
+      };
+      const options = createOptions({ i18n: mockI18n });
       const drawer = new DatabaseCardDrawer(options);
       const card = makeCard();
 
@@ -229,7 +239,7 @@ describe('DatabaseCardDrawer', () => {
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
-      expect(titleInput.placeholder).toBe('Untitled');
+      expect(titleInput.placeholder).toBe('Empty page');
     });
   });
 
@@ -520,6 +530,79 @@ describe('DatabaseCardDrawer', () => {
 
       // Title should still show the locally-edited value, not be reset
       expect(titleInput.value).toBe('Edited locally');
+    });
+  });
+
+  describe('auto-focus on empty title', () => {
+    it('calls focus() on title input after open animation when card title is empty', () => {
+      const rafCallbacks: FrameRequestCallback[] = [];
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        rafCallbacks.push(cb);
+
+        return 0;
+      });
+
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard({ id: 'card-1', title: '' });
+
+      drawer.open(card);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+      const focusSpy = vi.spyOn(titleInput, 'focus');
+
+      // Trigger rAF to set width, then fire transitionend to trigger focus
+      rafCallbacks.forEach((cb) => cb(0));
+
+      const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+      drawerEl.dispatchEvent(new Event('transitionend'));
+
+      expect(focusSpy).toHaveBeenCalled();
+    });
+
+    it('does not call focus() on title input when card has a title', () => {
+      const rafCallbacks: FrameRequestCallback[] = [];
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+        rafCallbacks.push(cb);
+
+        return 0;
+      });
+
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card = makeCard({ id: 'card-1', title: 'Has title' });
+
+      drawer.open(card);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+      const focusSpy = vi.spyOn(titleInput, 'focus');
+
+      rafCallbacks.forEach((cb) => cb(0));
+
+      const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
+
+      drawerEl.dispatchEvent(new Event('transitionend'));
+
+      expect(focusSpy).not.toHaveBeenCalled();
+    });
+
+    it('calls focus() on title input when switching to a card with empty title', () => {
+      const options = createOptions();
+      const drawer = new DatabaseCardDrawer(options);
+      const card1 = makeCard({ id: 'card-1', title: 'Has title' });
+      const card2 = makeCard({ id: 'card-2', title: '' });
+
+      drawer.open(card1);
+
+      const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
+      const focusSpy = vi.spyOn(titleInput, 'focus');
+
+      drawer.open(card2);
+
+      expect(focusSpy).toHaveBeenCalled();
     });
   });
 

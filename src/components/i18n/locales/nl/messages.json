@@ -146,7 +146,7 @@
   "tools.database.addCard": "Kaart toevoegen",
   "tools.database.newPage": "Nieuwe pagina",
   "tools.database.addColumn": "Kolom toevoegen",
-  "tools.database.cardTitlePlaceholder": "Naamloos",
+  "tools.database.cardTitlePlaceholder": "Lege pagina",
   "tools.database.columnTitlePlaceholder": "Kolom",
   "tools.database.deleteCard": "Kaart verwijderen",
   "tools.database.deleteColumn": "Kolom verwijderen",

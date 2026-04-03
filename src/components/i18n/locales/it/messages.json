@@ -146,7 +146,7 @@
   "tools.database.addCard": "Aggiungi scheda",
   "tools.database.newPage": "Nuova pagina",
   "tools.database.addColumn": "Aggiungi colonna",
-  "tools.database.cardTitlePlaceholder": "Senza titolo",
+  "tools.database.cardTitlePlaceholder": "Pagina vuota",
   "tools.database.columnTitlePlaceholder": "Colonna",
   "tools.database.deleteCard": "Elimina scheda",
   "tools.database.deleteColumn": "Elimina colonna",

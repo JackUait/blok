@@ -146,7 +146,7 @@
   "tools.database.addCard": "Thêm thẻ",
   "tools.database.newPage": "Trang mới",
   "tools.database.addColumn": "Thêm cột",
-  "tools.database.cardTitlePlaceholder": "Chưa đặt tên",
+  "tools.database.cardTitlePlaceholder": "Trang trống",
   "tools.database.columnTitlePlaceholder": "Cột",
   "tools.database.deleteCard": "Xóa thẻ",
   "tools.database.deleteColumn": "Xóa cột",

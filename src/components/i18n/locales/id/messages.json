@@ -146,7 +146,7 @@
   "tools.database.addCard": "Tambah kartu",
   "tools.database.newPage": "Halaman baru",
   "tools.database.addColumn": "Tambah kolom",
-  "tools.database.cardTitlePlaceholder": "Tanpa judul",
+  "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.columnTitlePlaceholder": "Kolom",
   "tools.database.deleteCard": "Hapus kartu",
   "tools.database.deleteColumn": "Hapus kolom",

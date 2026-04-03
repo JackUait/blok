@@ -146,7 +146,7 @@
   "tools.database.addCard": "ڪارڊ شامل ڪريو",
   "tools.database.newPage": "نئون صفحو",
   "tools.database.addColumn": "ڪالم شامل ڪريو",
-  "tools.database.cardTitlePlaceholder": "بنا عنوان",
+  "tools.database.cardTitlePlaceholder": "خالي صفحو",
   "tools.database.columnTitlePlaceholder": "ڪالم",
   "tools.database.deleteCard": "ڪارڊ ختم ڪريو",
   "tools.database.deleteColumn": "ڪالم ختم ڪريو",

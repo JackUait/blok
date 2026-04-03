@@ -146,7 +146,7 @@
   "tools.database.addCard": "Add card",
   "tools.database.newPage": "Նոր էջ",
   "tools.database.addColumn": "Add column",
-  "tools.database.cardTitlePlaceholder": "Untitled",
+  "tools.database.cardTitlePlaceholder": "Դատարկ էջ",
   "tools.database.columnTitlePlaceholder": "Column",
   "tools.database.deleteCard": "Delete card",
   "tools.database.deleteColumn": "Delete column",

@@ -146,7 +146,7 @@
   "tools.database.addCard": "Lägg till kort",
   "tools.database.newPage": "Ny sida",
   "tools.database.addColumn": "Lägg till kolumn",
-  "tools.database.cardTitlePlaceholder": "Utan titel",
+  "tools.database.cardTitlePlaceholder": "Tom sida",
   "tools.database.columnTitlePlaceholder": "Kolumn",
   "tools.database.deleteCard": "Ta bort kort",
   "tools.database.deleteColumn": "Ta bort kolumn",

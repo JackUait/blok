@@ -638,7 +638,7 @@ describe('DatabaseView', () => {
       expect(titleEl?.textContent).toBe('Updated title');
     });
 
-    it('updateCardTitle falls back to i18n placeholder when title is empty', () => {
+    it('updateCardTitle falls back to cardTitlePlaceholder i18n key when title is empty', () => {
       const view = new DatabaseView({ readOnly: false, i18n });
       const columns = [makeColumn({ id: 'col-1' })];
       const cards = [makeCard({ id: 'card-1', columnId: 'col-1', title: 'Has title' })];
@@ -648,7 +648,18 @@ describe('DatabaseView', () => {
 
       const titleEl = board.querySelector('[data-card-id="card-1"] [data-blok-database-card-title]');
 
-      expect(titleEl?.textContent).toBe('tools.database.newPage');
+      expect(titleEl?.textContent).toBe('tools.database.cardTitlePlaceholder');
+    });
+
+    it('createBoard renders card with empty title using cardTitlePlaceholder i18n key', () => {
+      const view = new DatabaseView({ readOnly: false, i18n });
+      const columns = [makeColumn({ id: 'col-1' })];
+      const cards = [makeCard({ id: 'card-1', columnId: 'col-1', title: '' })];
+      const board = view.createBoard(columns, () => cards);
+
+      const titleEl = board.querySelector('[data-card-id="card-1"] [data-blok-database-card-title]');
+
+      expect(titleEl?.textContent).toBe('tools.database.cardTitlePlaceholder');
     });
 
     it('updateCardTitle does nothing when card id is not found', () => {

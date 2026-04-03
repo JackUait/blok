@@ -113,7 +113,7 @@ export class DatabaseView {
     const titleEl = cardEl?.querySelector('[data-blok-database-card-title]');
 
     if (titleEl !== null && titleEl !== undefined) {
-      titleEl.textContent = title || this.i18n.t('tools.database.newPage');
+      titleEl.textContent = title || this.i18n.t('tools.database.cardTitlePlaceholder');
     }
   }
 
@@ -232,7 +232,7 @@ export class DatabaseView {
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-card-title', '');
-    titleEl.textContent = card.title || this.i18n.t('tools.database.newPage');
+    titleEl.textContent = card.title || this.i18n.t('tools.database.cardTitlePlaceholder');
     cardEl.appendChild(titleEl);
 
     if (!this.readOnly) {

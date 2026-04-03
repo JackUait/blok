@@ -146,7 +146,7 @@
   "tools.database.addCard": "کارڈ شامل کریں",
   "tools.database.newPage": "نیا صفحہ",
   "tools.database.addColumn": "کالم شامل کریں",
-  "tools.database.cardTitlePlaceholder": "بے عنوان",
+  "tools.database.cardTitlePlaceholder": "خالی صفحہ",
   "tools.database.columnTitlePlaceholder": "کالم",
   "tools.database.deleteCard": "کارڈ حذف کریں",
   "tools.database.deleteColumn": "کالم حذف کریں",

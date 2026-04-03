@@ -149,7 +149,7 @@
   "tools.database.addCard": "कार्ड जोडा",
   "tools.database.newPage": "नवीन पृष्ठ",
   "tools.database.deleteCard": "कार्ड हटवा",
-  "tools.database.cardTitlePlaceholder": "शीर्षकविरहित",
+  "tools.database.cardTitlePlaceholder": "रिक्त पृष्ठ",
   "tools.database.columnTitlePlaceholder": "स्तंभ",
   "tools.database.emptyColumn": "कार्ड नाहीत",
   "tools.callout.color": "रंग",

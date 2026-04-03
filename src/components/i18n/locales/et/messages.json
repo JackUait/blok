@@ -146,7 +146,7 @@
   "tools.database.addCard": "Lisa kaart",
   "tools.database.newPage": "Uus leht",
   "tools.database.addColumn": "Lisa veerg",
-  "tools.database.cardTitlePlaceholder": "Pealkirjata",
+  "tools.database.cardTitlePlaceholder": "Tühi leht",
   "tools.database.columnTitlePlaceholder": "Veerg",
   "tools.database.deleteCard": "Kustuta kaart",
   "tools.database.deleteColumn": "Kustuta veerg",

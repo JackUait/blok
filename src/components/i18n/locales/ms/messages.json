@@ -146,7 +146,7 @@
   "tools.database.addCard": "Tambah kad",
   "tools.database.newPage": "Halaman baharu",
   "tools.database.addColumn": "Tambah lajur",
-  "tools.database.cardTitlePlaceholder": "Tanpa tajuk",
+  "tools.database.cardTitlePlaceholder": "Halaman kosong",
   "tools.database.columnTitlePlaceholder": "Lajur",
   "tools.database.deleteCard": "Padam kad",
   "tools.database.deleteColumn": "Padam lajur",

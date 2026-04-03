@@ -149,7 +149,7 @@
   "tools.database.addCard": "ካርድ ጨምር",
   "tools.database.newPage": "አዲስ ገጽ",
   "tools.database.deleteCard": "ካርድ ሰርዝ",
-  "tools.database.cardTitlePlaceholder": "ርዕስ የለም",
+  "tools.database.cardTitlePlaceholder": "ባዶ ገጽ",
   "tools.database.columnTitlePlaceholder": "አምድ",
   "tools.database.emptyColumn": "ካርዶች የሉም",
   "tools.callout.color": "ቀለም",

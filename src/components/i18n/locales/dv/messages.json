@@ -146,7 +146,7 @@
   "tools.database.addCard": "ކާޑެއް އިތުރުކުރޭ",
   "tools.database.newPage": "އައު ޞަފްޙާ",
   "tools.database.addColumn": "ކޮލަމެއް އިތުރުކުރޭ",
-  "tools.database.cardTitlePlaceholder": "ސުރުޚީ ނެތް",
+  "tools.database.cardTitlePlaceholder": "ހުސް ޞަފްޙާ",
   "tools.database.columnTitlePlaceholder": "ކޮލަމު",
   "tools.database.deleteCard": "ކާޑު ފޮހެލާ",
   "tools.database.deleteColumn": "ކޮލަމު ފޮހެލާ",

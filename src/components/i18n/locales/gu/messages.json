@@ -149,7 +149,7 @@
   "tools.database.addCard": "કાર્ડ ઉમેરો",
   "tools.database.newPage": "નવું પૃષ્ઠ",
   "tools.database.deleteCard": "કાર્ડ કાઢી નાખો",
-  "tools.database.cardTitlePlaceholder": "શીર્ષકવિહીન",
+  "tools.database.cardTitlePlaceholder": "ખાલી પાનું",
   "tools.database.columnTitlePlaceholder": "કૉલમ",
   "tools.database.emptyColumn": "કોઈ કાર્ડ નથી",
   "tools.callout.color": "રંગ",

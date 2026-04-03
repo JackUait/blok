@@ -146,7 +146,7 @@
   "tools.database.addCard": "Karte hinzufügen",
   "tools.database.newPage": "Neue Seite",
   "tools.database.addColumn": "Spalte hinzufügen",
-  "tools.database.cardTitlePlaceholder": "Ohne Titel",
+  "tools.database.cardTitlePlaceholder": "Leere Seite",
   "tools.database.columnTitlePlaceholder": "Spalte",
   "tools.database.deleteCard": "Karte löschen",
   "tools.database.deleteColumn": "Spalte löschen",

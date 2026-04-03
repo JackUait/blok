@@ -146,7 +146,7 @@
   "tools.database.addCard": "Ajouter une carte",
   "tools.database.newPage": "Nouvelle page",
   "tools.database.addColumn": "Ajouter une colonne",
-  "tools.database.cardTitlePlaceholder": "Sans titre",
+  "tools.database.cardTitlePlaceholder": "Page vide",
   "tools.database.columnTitlePlaceholder": "Colonne",
   "tools.database.deleteCard": "Supprimer la carte",
   "tools.database.deleteColumn": "Supprimer la colonne",

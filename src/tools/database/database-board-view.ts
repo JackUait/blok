@@ -227,7 +227,7 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
 
       if (option.color !== undefined) {
-        addCardBtn.style.borderColor = `var(--blok-color-${option.color}-text)`;
+        addCardBtn.style.borderColor = `color-mix(in srgb, var(--blok-color-${option.color}-text) 30%, transparent)`;
       }
 
       columnEl.appendChild(addCardBtn);

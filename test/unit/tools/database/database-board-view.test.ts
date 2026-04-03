@@ -575,7 +575,7 @@ describe('DatabaseBoardView', () => {
 
       const addCardBtn = board.querySelector('[data-blok-database-add-card]') as HTMLElement;
 
-      expect(addCardBtn.style.borderColor).toBe('var(--blok-color-blue-text)');
+      expect(addCardBtn.style.borderColor).toBe('color-mix(in srgb, var(--blok-color-blue-text) 30%, transparent)');
     });
 
     it('add-card button has no inline border color when column has no color', () => {

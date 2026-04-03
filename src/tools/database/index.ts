@@ -266,6 +266,7 @@ export class DatabaseTool implements BlockTool {
 
   reorderView(viewId: string, newPosition: string): void {
     this.model.updateView(viewId, { position: newPosition });
+    void this.sync.syncUpdateView({ viewId, changes: { position: newPosition } });
     this.rebuildTabBar();
   }
 

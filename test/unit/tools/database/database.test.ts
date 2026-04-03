@@ -768,4 +768,50 @@ describe('DatabaseTool', () => {
       expect(element.querySelector('[data-blok-database-tab-bar]')).toBeNull();
     });
   });
+
+  describe('reorderView syncs to backend', () => {
+    it('calls adapter.updateView with viewId and position change', () => {
+      const updateViewCalls: Array<{ viewId: string; changes: Record<string, unknown> }> = [];
+
+      const mockAdapter = {
+        loadDatabase: vi.fn(),
+        createRow: vi.fn(),
+        updateRow: vi.fn(),
+        moveRow: vi.fn(),
+        deleteRow: vi.fn(),
+        createProperty: vi.fn(),
+        updateProperty: vi.fn(),
+        deleteProperty: vi.fn(),
+        createView: vi.fn(),
+        updateView: vi.fn(async (params: { viewId: string; changes: Record<string, unknown> }) => {
+          updateViewCalls.push(params);
+
+          return {} as never;
+        }),
+        deleteView: vi.fn(),
+      };
+
+      const options = createDatabaseOptions(
+        {
+          views: [
+            { id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] },
+            { id: 'view-2', name: 'Board 2', type: 'board', position: 'a1', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] },
+          ],
+          activeViewId: 'view-1',
+        },
+        { adapter: mockAdapter },
+      );
+      const tool = new DatabaseTool(options);
+
+      tool.render();
+
+      (tool as unknown as { reorderView(viewId: string, newPosition: string): void }).reorderView('view-2', 'Zz');
+
+      expect(updateViewCalls).toHaveLength(1);
+      expect(updateViewCalls[0].viewId).toBe('view-2');
+      expect(updateViewCalls[0].changes).toEqual({ position: 'Zz' });
+
+      tool.destroy();
+    });
+  });
 });

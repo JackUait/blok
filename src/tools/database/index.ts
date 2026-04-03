@@ -1,24 +1,23 @@
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig } from '../../../types';
-import type { DatabaseData, DatabaseViewData, KanbanData, DatabaseConfig } from './types';
+import type { DatabaseData, DatabaseConfig, DatabaseRow, ViewType, SelectOption } from './types';
 import { DatabaseModel } from './database-model';
 import { DatabaseView } from './database-view';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
 import type { CardDragResult } from './database-card-drag';
 import { DatabaseColumnDrag } from './database-column-drag';
-import type { ColumnDragResult } from './database-column-drag';
+import type { GroupDragResult } from './database-column-drag';
 import { DatabaseColumnControls } from './database-column-controls';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
 import { IconDatabase, IconBoard } from '../../components/icons';
 import { nanoid } from 'nanoid';
-import { generateKeyBetween } from 'fractional-indexing';
 
 /**
  * DatabaseTool — a multi-view Kanban board block tool for Blok.
  *
- * Orchestrates multiple DatabaseModel instances (one per view), DatabaseView (DOM),
+ * Orchestrates a single DatabaseModel (schema + rows + view configs), DatabaseView (DOM),
  * DatabaseBackendSync (adapter), and a DatabaseTabBar for view switching.
  */
 export class DatabaseTool implements BlockTool {
@@ -27,10 +26,8 @@ export class DatabaseTool implements BlockTool {
   private readonly readOnly: boolean;
   private readonly config: DatabaseConfig;
 
-  private views: DatabaseViewData[];
   private activeViewId: string;
-  private viewModels: Map<string, DatabaseModel> = new Map();
-  private model!: DatabaseModel;
+  private model: DatabaseModel;
   private view!: DatabaseView;
   private sync!: DatabaseBackendSync;
 
@@ -50,25 +47,9 @@ export class DatabaseTool implements BlockTool {
     this.readOnly = readOnly;
     this.config = config ?? {};
 
-    // Normalise incoming data — support both DatabaseData (new) and legacy KanbanData (old)
-    const incoming = data as DatabaseData | KanbanData | undefined;
-
-    if (incoming !== undefined && 'views' in incoming && Array.isArray((incoming as DatabaseData).views) && (incoming as DatabaseData).views.length > 0) {
-      const dbData = incoming as DatabaseData;
-      this.views = dbData.views;
-      this.activeViewId = dbData.activeViewId;
-    } else {
-      // Legacy path: treat the whole data object as KanbanData for a default view
-      const legacyData = (incoming ?? { columns: [], cardMap: {} }) as KanbanData;
-      const defaultView = this.createDefaultView(legacyData);
-      this.views = [defaultView];
-      this.activeViewId = defaultView.id;
-    }
-
-    // Create a DatabaseModel for every view up front
-    for (const v of this.views) {
-      this.viewModels.set(v.id, new DatabaseModel(v.data));
-    }
+    this.model = new DatabaseModel(data as DatabaseData | undefined);
+    const views = this.model.getViews();
+    this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
     this.activateView(this.activeViewId);
   }
@@ -133,23 +114,17 @@ export class DatabaseTool implements BlockTool {
 
   save(_blockContent: HTMLElement): DatabaseData {
     return {
-      views: this.views.map((v) => ({
-        id: v.id,
-        name: v.name,
-        type: v.type,
-        position: v.position,
-        data: this.viewModels.get(v.id)?.snapshot() ?? v.data,
-      })),
+      ...this.model.snapshot(),
       activeViewId: this.activeViewId,
     };
   }
 
   validate(savedData: DatabaseData): boolean {
-    return (
-      savedData.views !== undefined &&
-      savedData.views.length > 0 &&
-      savedData.views.every((v) => v.data.columns.length > 0)
-    );
+    const hasTitleProp = savedData.schema?.some((p) => p.type === 'title') ?? false;
+    const hasViews = savedData.views !== undefined && savedData.views.length > 0;
+    const boardViewsValid = savedData.views?.filter((v) => v.type === 'board')
+      .every((v) => v.groupBy !== undefined) ?? true;
+    return hasTitleProp && hasViews && boardViewsValid;
   }
 
   destroy(): void {
@@ -171,18 +146,13 @@ export class DatabaseTool implements BlockTool {
   // ---------------------------------------------------------------------------
 
   private activateView(viewId: string): void {
-    const view = this.views.find((v) => v.id === viewId);
+    const viewConfig = this.model.getView(viewId);
 
-    if (view === undefined) {
+    if (viewConfig === undefined) {
       return;
     }
 
     this.activeViewId = viewId;
-    const model = this.viewModels.get(viewId);
-    if (model === undefined) {
-      return;
-    }
-    this.model = model;
     this.view = new DatabaseView({ readOnly: this.readOnly, i18n: this.api.i18n });
     this.sync = new DatabaseBackendSync(
       this.config.adapter,
@@ -200,14 +170,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const oldViewData = this.views.find((v) => v.id === this.activeViewId);
-    const newViewData = this.views.find((v) => v.id === viewId);
-
-    if (newViewData === undefined) {
-      return;
-    }
-
-    // Destroy subsystems for old view (but NOT cardDrawer — it belongs to the outer wrapper)
+    // Destroy per-view subsystems (not cardDrawer)
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
@@ -217,92 +180,62 @@ export class DatabaseTool implements BlockTool {
     this.columnControls = null;
     this.keyboard = null;
 
-    // Flush & destroy old sync
     this.sync.flushPendingUpdates();
     this.sync.destroy();
 
-    // Activate new view state
     this.activateView(viewId);
 
-    // Replace old board with new one
     this.boardContainer.innerHTML = '';
     const newBoardWrapper = this.renderActiveBoard();
     this.boardContainer.appendChild(newBoardWrapper);
 
-    // Attach subsystems for new view
     if (!this.readOnly) {
       this.attachBoardListeners(newBoardWrapper);
       this.initSubsystems(newBoardWrapper);
     }
 
-    // Rebuild tab bar to reflect active state
     this.rebuildTabBar();
   }
 
-  addView(type: 'board'): void {
-    const sorted = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
-    const lastView = sorted[sorted.length - 1];
-    const lastPosition = lastView !== undefined ? lastView.position : null;
-
-    const position = generateKeyBetween(lastPosition, null);
-    const id = nanoid();
-    const newView: DatabaseViewData = {
-      id,
-      name: 'Board',
-      type,
-      position,
-      data: { columns: [], cardMap: {} },
-    };
-
-    this.views.push(newView);
-    this.viewModels.set(id, new DatabaseModel(newView.data));
-
-    this.switchView(id);
+  addView(type: ViewType): void {
+    const statusProp = this.model.getSchema().find((p) => p.type === 'select');
+    const newView = this.model.addView('Board', type, {
+      groupBy: type === 'board' ? statusProp?.id : undefined,
+    });
+    void this.sync.syncCreateView({ id: newView.id, name: newView.name, type: newView.type, position: newView.position, groupBy: newView.groupBy });
+    this.switchView(newView.id);
   }
 
   renameView(viewId: string, name: string): void {
-    const view = this.views.find((v) => v.id === viewId);
-
-    if (view !== undefined) {
-      view.name = name;
-    }
+    this.model.updateView(viewId, { name });
+    void this.sync.syncUpdateView({ viewId, changes: { name } });
   }
 
   duplicateView(viewId: string): void {
-    const sourceView = this.views.find((v) => v.id === viewId);
+    const sourceView = this.model.getView(viewId);
 
     if (sourceView === undefined) {
       return;
     }
 
-    const sourceIndex = this.views.indexOf(sourceView);
-    const nextView = this.views[sourceIndex + 1];
-    const afterPosition = sourceView.position;
-    const beforePosition = nextView?.position ?? null;
-    const position = generateKeyBetween(afterPosition, beforePosition);
-
-    const snapshot = this.viewModels.get(viewId)?.snapshot() ?? sourceView.data;
-    const newId = nanoid();
-    const newView: DatabaseViewData = {
-      id: newId,
-      name: sourceView.name,
-      type: sourceView.type,
-      position,
-      data: JSON.parse(JSON.stringify(snapshot)) as KanbanData,
-    };
-
-    this.views.splice(sourceIndex + 1, 0, newView);
-    this.viewModels.set(newId, new DatabaseModel(newView.data));
-
-    this.switchView(newId);
+    const newView = this.model.addView(sourceView.name, sourceView.type, {
+      groupBy: sourceView.groupBy,
+      sorts: [...sourceView.sorts],
+      filters: [...sourceView.filters],
+      visibleProperties: [...sourceView.visibleProperties],
+    });
+    void this.sync.syncCreateView({ id: newView.id, name: newView.name, type: newView.type, position: newView.position, groupBy: newView.groupBy });
+    this.switchView(newView.id);
   }
 
   deleteView(viewId: string): void {
-    if (this.views.length <= 1) {
+    const views = this.model.getViews();
+
+    if (views.length <= 1) {
       return;
     }
 
-    const index = this.views.findIndex((v) => v.id === viewId);
+    const index = views.findIndex((v) => v.id === viewId);
 
     if (index === -1) {
       return;
@@ -310,24 +243,20 @@ export class DatabaseTool implements BlockTool {
 
     const wasActive = viewId === this.activeViewId;
 
-    this.views.splice(index, 1);
-    this.viewModels.delete(viewId);
+    this.model.deleteView(viewId);
+    void this.sync.syncDeleteView({ viewId });
 
     if (wasActive) {
-      const neighborIndex = Math.min(index, this.views.length - 1);
-      this.switchView(this.views[neighborIndex].id);
+      const remaining = this.model.getViews();
+      const neighborIndex = Math.min(index, remaining.length - 1);
+      this.switchView(remaining[neighborIndex].id);
     } else {
       this.rebuildTabBar();
     }
   }
 
   reorderView(viewId: string, newPosition: string): void {
-    const view = this.views.find((v) => v.id === viewId);
-
-    if (view !== undefined) {
-      view.position = newPosition;
-    }
-
+    this.model.updateView(viewId, { position: newPosition });
     this.rebuildTabBar();
   }
 
@@ -352,7 +281,7 @@ export class DatabaseTool implements BlockTool {
 
   private createTabBar(): DatabaseTabBar {
     return new DatabaseTabBar({
-      views: [...this.views],
+      views: this.model.getViews(),
       activeViewId: this.activeViewId,
       onTabClick: (viewId) => this.switchView(viewId),
       onAddView: (type) => this.addView(type),
@@ -368,11 +297,18 @@ export class DatabaseTool implements BlockTool {
   // ---------------------------------------------------------------------------
 
   private renderActiveBoard(): HTMLDivElement {
-    const orderedColumns = this.model.getOrderedColumns();
-    const getCards = (columnId: string): ReturnType<DatabaseModel['getOrderedCards']> =>
-      this.model.getOrderedCards(columnId);
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
+    const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+    const titlePropId = titleProp?.id ?? '';
 
-    return this.view.createBoard(orderedColumns, getCards);
+    if (groupByPropId === undefined) {
+      return this.view.createBoard([], () => [], titlePropId);
+    }
+
+    const options = this.model.getSelectOptions(groupByPropId);
+    const groups = this.model.getRowsGroupedBy(groupByPropId);
+    return this.view.createBoard(options, (optionId) => groups.get(optionId) ?? [], titlePropId);
   }
 
   // ---------------------------------------------------------------------------
@@ -389,10 +325,10 @@ export class DatabaseTool implements BlockTool {
       const addCardBtn = target.closest('[data-blok-database-add-card]');
 
       if (addCardBtn !== null) {
-        const columnId = addCardBtn.getAttribute('data-column-id');
+        const optionId = addCardBtn.getAttribute('data-option-id');
 
-        if (columnId !== null) {
-          this.handleAddCard(columnId, boardEl);
+        if (optionId !== null) {
+          this.handleAddRow(optionId, boardEl);
         }
 
         return;
@@ -409,13 +345,13 @@ export class DatabaseTool implements BlockTool {
       const deleteCardBtn = target.closest('[data-blok-database-delete-card]');
 
       if (deleteCardBtn !== null) {
-        const cardId = deleteCardBtn.getAttribute('data-card-id');
+        const rowId = deleteCardBtn.getAttribute('data-row-id');
 
-        if (cardId !== null) {
+        if (rowId !== null) {
           event.stopPropagation();
-          this.model.deleteCard(cardId);
-          this.view.removeCard(boardEl, cardId);
-          void this.sync.syncDeleteCard({ cardId });
+          this.model.deleteRow(rowId);
+          this.view.removeCard(boardEl, rowId);
+          void this.sync.syncDeleteRow({ rowId });
         }
 
         return;
@@ -424,18 +360,31 @@ export class DatabaseTool implements BlockTool {
       const cardEl = target.closest('[data-blok-database-card]');
 
       if (cardEl !== null) {
-        const cardId = cardEl.getAttribute('data-card-id');
+        const rowId = cardEl.getAttribute('data-row-id');
 
-        if (cardId !== null) {
-          this.handleCardClick(cardId);
+        if (rowId !== null) {
+          this.handleRowClick(rowId);
         }
       }
     });
   }
 
-  private handleAddCard(columnId: string, boardEl: HTMLDivElement): void {
-    const card = this.model.addCard(columnId, '');
-    const columnEl = boardEl.querySelector(`[data-column-id="${columnId}"][data-blok-database-column]`);
+  private handleAddRow(optionId: string, boardEl: HTMLDivElement): void {
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
+
+    if (groupByPropId === undefined) {
+      return;
+    }
+
+    const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+    const titlePropId = titleProp?.id ?? '';
+    const row = this.model.addRow({
+      [titlePropId]: '',
+      [groupByPropId]: optionId,
+    });
+
+    const columnEl = boardEl.querySelector(`[data-option-id="${optionId}"][data-blok-database-column]`);
 
     if (columnEl === null) {
       return;
@@ -447,41 +396,43 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    this.view.appendCard(cardsContainer as HTMLElement, card);
+    this.view.appendCard(cardsContainer as HTMLElement, row, titlePropId);
 
-    void this.sync.syncCreateCard({
-      id: card.id,
-      columnId: card.columnId,
-      position: card.position,
-      title: card.title,
+    void this.sync.syncCreateRow({
+      id: row.id,
+      properties: row.properties,
+      position: row.position,
     });
   }
 
   private handleAddColumn(boardEl: HTMLDivElement): void {
-    const column = this.model.addColumn(this.api.i18n.t('tools.database.columnTitlePlaceholder'));
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
 
-    this.view.appendColumn(boardEl, column);
-
-    void this.sync.syncCreateColumn({
-      id: column.id,
-      title: column.title,
-      position: column.position,
-    });
-
-    const card = this.model.addCard(column.id, '');
-    const columnEl = boardEl.querySelector(`[data-column-id="${column.id}"][data-blok-database-column]`);
-    const cardsContainer = columnEl?.querySelector('[data-blok-database-cards]');
-
-    if (cardsContainer !== null && cardsContainer !== undefined) {
-      this.view.appendCard(cardsContainer as HTMLElement, card);
+    if (groupByPropId === undefined) {
+      return;
     }
 
-    void this.sync.syncCreateCard({
-      id: card.id,
-      columnId: card.columnId,
-      position: card.position,
-      title: card.title,
+    const prop = this.model.getProperty(groupByPropId);
+
+    if (prop?.config === undefined) {
+      return;
+    }
+
+    const existingOptions = prop.config.options;
+    const lastPos = existingOptions.length > 0 ? existingOptions[existingOptions.length - 1].position : null;
+    const newOption: SelectOption = {
+      id: nanoid(),
+      label: this.api.i18n.t('tools.database.columnTitlePlaceholder'),
+      position: DatabaseModel.positionBetween(lastPos, null),
+    };
+
+    this.model.updateProperty(groupByPropId, {
+      config: { options: [...existingOptions, newOption] },
     });
+
+    this.view.appendColumn(boardEl, newOption);
+    void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: [...existingOptions, newOption] } } });
   }
 
   /**
@@ -496,18 +447,23 @@ export class DatabaseTool implements BlockTool {
 
     this.cardDrag = new DatabaseCardDrag({
       wrapper: boardEl,
-      onDrop: (result) => this.handleCardDrop(result),
+      onDrop: (result) => this.handleRowDrop(result),
     });
 
     this.columnDrag = new DatabaseColumnDrag({
       wrapper: boardEl,
-      onDrop: (result) => this.handleColumnDrop(result),
+      onDrop: (result) => this.handleGroupDrop(result),
     });
+
+    const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+    const titlePropId = titleProp?.id ?? '';
+    const descriptionProp = this.model.getSchema().find((p) => p.type === 'richText');
+    const descriptionPropId = descriptionProp?.id;
 
     this.columnControls = new DatabaseColumnControls({
       i18n: this.api.i18n,
-      onRename: (columnId, title) => this.handleColumnRename(columnId, title),
-      onDelete: (columnId) => this.handleColumnDelete(columnId, boardEl),
+      onRename: (optionId, label) => this.handleOptionRename(optionId, label),
+      onDelete: (optionId) => this.handleOptionDelete(optionId, boardEl),
     });
 
     const headers = Array.from(boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column-header]'));
@@ -519,10 +475,10 @@ export class DatabaseTool implements BlockTool {
         continue;
       }
 
-      const colId = columnEl.getAttribute('data-column-id');
+      const optId = columnEl.getAttribute('data-option-id');
 
-      if (colId !== null) {
-        this.columnControls.makeEditable(header, colId);
+      if (optId !== null) {
+        this.columnControls.makeEditable(header, optId);
       }
     }
 
@@ -533,19 +489,23 @@ export class DatabaseTool implements BlockTool {
         readOnly: this.readOnly,
         i18n: this.api.i18n,
         toolsConfig: this.api.tools.getToolsConfig(),
-        onTitleChange: (cardId, title) => {
-          this.model.updateCard(cardId, { title });
+        titlePropertyId: titlePropId,
+        descriptionPropertyId: descriptionPropId,
+        onTitleChange: (rowId, title) => {
+          this.model.updateRow(rowId, { [titlePropId]: title });
           const currentBoard = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
 
           if (currentBoard !== null && currentBoard !== undefined) {
-            this.view.updateCardTitle(currentBoard, cardId, title);
+            this.view.updateCardTitle(currentBoard, rowId, title);
           }
 
-          this.sync.syncUpdateCard({ cardId, changes: { title } });
+          this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
         },
-        onDescriptionChange: (cardId, description: OutputData) => {
-          this.model.updateCard(cardId, { description });
-          this.sync.syncUpdateCard({ cardId, changes: { description } });
+        onDescriptionChange: (rowId, description: OutputData) => {
+          if (descriptionPropId !== undefined) {
+            this.model.updateRow(rowId, { [descriptionPropId]: description });
+            this.sync.syncUpdateRow({ rowId, properties: { [descriptionPropId]: description } });
+          }
         },
         onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
       });
@@ -572,12 +532,12 @@ export class DatabaseTool implements BlockTool {
 
       if (columnHeader !== null) {
         const columnEl = columnHeader.closest<HTMLElement>('[data-blok-database-column]');
-        const colId = columnEl?.getAttribute('data-column-id') ?? null;
+        const optId = columnEl?.getAttribute('data-option-id') ?? null;
 
-        if (colId !== null) {
+        if (optId !== null) {
           e.preventDefault();
           e.stopPropagation();
-          this.columnDrag?.beginTracking(colId, e.clientX, e.clientY);
+          this.columnDrag?.beginTracking(optId, e.clientX, e.clientY);
         }
 
         return;
@@ -589,73 +549,90 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
-      const cardId = cardEl.getAttribute('data-card-id');
+      const rowId = cardEl.getAttribute('data-row-id');
 
-      if (cardId === null) {
+      if (rowId === null) {
         return;
       }
 
       e.preventDefault();
       e.stopPropagation();
-      this.cardDrag?.beginTracking(cardId, e.clientX, e.clientY);
+      this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY);
     });
   }
 
-  private handleCardDrop(result: CardDragResult): void {
-    const { cardId, toColumnId, beforeCardId, afterCardId } = result;
+  private handleRowDrop(result: CardDragResult): void {
+    const { rowId, toOptionId, beforeRowId, afterRowId } = result;
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
 
-    const beforeCard = beforeCardId !== null ? this.model.getCard(beforeCardId) : undefined;
-    const afterCard = afterCardId !== null ? this.model.getCard(afterCardId) : undefined;
+    if (groupByPropId === undefined) {
+      return;
+    }
 
-    const position = DatabaseModel.positionBetween(
-      afterCard?.position ?? null,
-      beforeCard?.position ?? null
-    );
+    const beforeRow = beforeRowId !== null ? this.model.getRow(beforeRowId) : undefined;
+    const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
+    const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
 
-    const currentCard = this.model.getCard(cardId);
-    const fromColumnId = currentCard?.columnId ?? toColumnId;
-
-    this.model.moveCard(cardId, toColumnId, position);
+    this.model.updateRow(rowId, { [groupByPropId]: toOptionId });
+    this.model.moveRow(rowId, position);
     this.rerenderBoard();
 
-    void this.sync.syncMoveCard({ cardId, toColumnId, position, fromColumnId });
+    this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
+    void this.sync.syncMoveRow({ rowId, position });
   }
 
-  private handleColumnDrop(result: ColumnDragResult): void {
-    const { columnId, beforeColumnId, afterColumnId } = result;
+  private handleGroupDrop(result: GroupDragResult): void {
+    const { optionId, beforeOptionId, afterOptionId } = result;
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
 
-    const beforeColumn = beforeColumnId !== null ? this.model.getColumn(beforeColumnId) : undefined;
-    const afterColumn = afterColumnId !== null ? this.model.getColumn(afterColumnId) : undefined;
+    if (groupByPropId === undefined) {
+      return;
+    }
 
-    const position = DatabaseModel.positionBetween(
-      afterColumn?.position ?? null,
-      beforeColumn?.position ?? null
-    );
+    const prop = this.model.getProperty(groupByPropId);
 
-    this.model.moveColumn(columnId, position);
-    this.moveColumnInDom(columnId, beforeColumnId);
+    if (prop?.config === undefined) {
+      return;
+    }
 
-    void this.sync.syncMoveColumn({ columnId, position });
+    const options = [...prop.config.options];
+    const draggedIdx = options.findIndex((o) => o.id === optionId);
+
+    if (draggedIdx === -1) {
+      return;
+    }
+
+    const beforeOpt = beforeOptionId !== null ? options.find((o) => o.id === beforeOptionId) : undefined;
+    const afterOpt = afterOptionId !== null ? options.find((o) => o.id === afterOptionId) : undefined;
+    const newPosition = DatabaseModel.positionBetween(afterOpt?.position ?? null, beforeOpt?.position ?? null);
+
+    options[draggedIdx] = { ...options[draggedIdx], position: newPosition };
+    this.model.updateProperty(groupByPropId, { config: { options } });
+
+    this.moveColumnInDom(optionId, beforeOptionId);
+    void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options } } });
   }
 
   /**
    * Moves a column element to a new position in the DOM without full re-render.
    */
-  private moveColumnInDom(columnId: string, beforeColumnId: string | null): void {
+  private moveColumnInDom(optionId: string, beforeOptionId: string | null): void {
     const boardEl = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
 
     if (boardEl === null || boardEl === undefined) {
       return;
     }
 
-    const columnEl = boardEl.querySelector<HTMLElement>(`[data-column-id="${columnId}"]`);
+    const columnEl = boardEl.querySelector<HTMLElement>(`[data-option-id="${optionId}"]`);
 
     if (columnEl === null) {
       return;
     }
 
-    if (beforeColumnId !== null) {
-      const beforeEl = boardEl.querySelector(`[data-column-id="${beforeColumnId}"]`);
+    if (beforeOptionId !== null) {
+      const beforeEl = boardEl.querySelector(`[data-option-id="${beforeOptionId}"]`);
 
       if (beforeEl !== null) {
         boardEl.insertBefore(columnEl, beforeEl);
@@ -671,37 +648,85 @@ export class DatabaseTool implements BlockTool {
     }
   }
 
-  private handleColumnRename(columnId: string, title: string): void {
-    this.model.updateColumn(columnId, { title });
-    void this.sync.syncUpdateColumn({ columnId, changes: { title } });
-  }
+  private handleOptionRename(optionId: string, label: string): void {
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
 
-  private handleColumnDelete(columnId: string, boardEl: HTMLDivElement): void {
-    if (this.model.getColumnCount() <= 1) {
+    if (groupByPropId === undefined) {
       return;
     }
 
-    const deletedCardIds = this.model.deleteColumn(columnId);
+    const prop = this.model.getProperty(groupByPropId);
 
-    this.view.removeColumn(boardEl, columnId);
-
-    for (const cardId of deletedCardIds) {
-      void this.sync.syncDeleteCard({ cardId });
-    }
-
-    void this.sync.syncDeleteColumn({ columnId });
-  }
-
-  private handleCardClick(cardId: string): void {
-    const card = this.model.getCard(cardId);
-
-    if (card === undefined) {
+    if (prop?.config === undefined) {
       return;
     }
 
-    const column = this.model.getColumn(card.columnId);
+    const options = prop.config.options.map((o) => o.id === optionId ? { ...o, label } : o);
+    this.model.updateProperty(groupByPropId, { config: { options } });
+    void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options } } });
+  }
 
-    this.cardDrawer?.open(card, column);
+  private handleOptionDelete(optionId: string, boardEl: HTMLDivElement): void {
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
+
+    if (groupByPropId === undefined) {
+      return;
+    }
+
+    const prop = this.model.getProperty(groupByPropId);
+
+    if (prop?.config === undefined) {
+      return;
+    }
+
+    if (prop.config.options.length <= 1) {
+      return;
+    }
+
+    // Delete rows in this group
+    const groups = this.model.getRowsGroupedBy(groupByPropId);
+    const rowsInGroup = groups.get(optionId) ?? [];
+
+    for (const row of rowsInGroup) {
+      this.model.deleteRow(row.id);
+      void this.sync.syncDeleteRow({ rowId: row.id });
+    }
+
+    // Remove the option
+    const filteredOptions = prop.config.options.filter((o) => o.id !== optionId);
+    this.model.updateProperty(groupByPropId, { config: { options: filteredOptions } });
+    this.view.removeColumn(boardEl, optionId);
+    void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: filteredOptions } } });
+  }
+
+  private handleRowClick(rowId: string): void {
+    const row = this.model.getRow(rowId);
+
+    if (row === undefined) {
+      return;
+    }
+
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
+    const option = this.resolveRowOption(row, groupByPropId);
+
+    this.cardDrawer?.open(row, option);
+  }
+
+  private resolveRowOption(row: DatabaseRow, groupByPropId: string | undefined): SelectOption | undefined {
+    if (groupByPropId === undefined) {
+      return undefined;
+    }
+
+    const optionId = row.properties[groupByPropId];
+
+    if (typeof optionId === 'string') {
+      return this.model.getSelectOptions(groupByPropId).find((o) => o.id === optionId);
+    }
+
+    return undefined;
   }
 
   /**
@@ -709,8 +734,8 @@ export class DatabaseTool implements BlockTool {
    *
    * Board DOM structure:
    *   boardContainer
-   *     └── boardWrapper  (div returned by createBoard / renderActiveBoard)
-   *           └── boardArea  ([data-blok-database-board] — scrollable area with columns)
+   *     boardWrapper  (div returned by createBoard / renderActiveBoard)
+   *           boardArea  ([data-blok-database-board] — scrollable area with columns)
    */
   private rerenderBoard(): void {
     if (this.boardContainer === null) {
@@ -748,21 +773,5 @@ export class DatabaseTool implements BlockTool {
 
     this.attachBoardListeners(newBoardWrapper);
     this.initSubsystems(newBoardWrapper);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Default view factory
-  // ---------------------------------------------------------------------------
-
-  private createDefaultView(data?: KanbanData): DatabaseViewData {
-    const defaultData: KanbanData = data ?? { columns: [], cardMap: {} };
-
-    return {
-      id: nanoid(),
-      name: 'Board',
-      type: 'board',
-      position: 'a0',
-      data: defaultData,
-    };
   }
 }

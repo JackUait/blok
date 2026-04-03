@@ -42,14 +42,11 @@ describe('DatabaseViewPopover', () => {
       expect(boardItem.style.cursor).not.toBe('not-allowed');
     });
 
-    it('renders Table and Gallery options as disabled', () => {
+    it('renders only Board and List options', () => {
       popover.open(anchor);
-      for (const type of ['table', 'gallery']) {
-        const item = document.querySelector(`[data-blok-database-view-option="${type}"]`) as HTMLElement;
-        expect(item).not.toBeNull();
-        expect(item.style.opacity).toBe('0.35');
-        expect(item.style.pointerEvents).toBe('none');
-      }
+      const options = document.querySelectorAll('[data-blok-database-view-option]');
+      const types = Array.from(options).map((el) => el.getAttribute('data-blok-database-view-option'));
+      expect(types).toEqual(['board', 'list']);
     });
 
     it('renders List option as enabled', () => {
@@ -80,13 +77,6 @@ describe('DatabaseViewPopover', () => {
       boardItem.click();
       const el = document.querySelector('[data-blok-database-view-popover]');
       expect(el).toBeNull();
-    });
-
-    it('does not call onSelect when disabled option is clicked', () => {
-      popover.open(anchor);
-      const tableItem = document.querySelector('[data-blok-database-view-option="table"]') as HTMLElement;
-      tableItem.click();
-      expect(onSelect).not.toHaveBeenCalled();
     });
 
     it('uses fixed positioning for correct scroll behavior', () => {

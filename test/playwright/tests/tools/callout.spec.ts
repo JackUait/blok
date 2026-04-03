@@ -84,7 +84,7 @@ test('selects emoji from picker and updates button', async ({ page }) => {
   await createBlok(page, createCalloutData());
   await page.getByTestId('callout-emoji-btn').click();
   await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
-  const targetEmoji = page.locator('[data-emoji-native="👉"]').first();
+  const targetEmoji = page.locator('[data-emoji-native="👉"]');
   const emojiChar = await targetEmoji.getAttribute('data-emoji-native');
   await targetEmoji.click();
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText(emojiChar ?? '');

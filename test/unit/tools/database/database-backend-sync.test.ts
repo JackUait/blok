@@ -180,6 +180,8 @@ describe('DatabaseBackendSync', () => {
       expect(adapter.updateRow).not.toHaveBeenCalled();
       sync.flushPendingUpdates();
       expect(adapter.updateRow).toHaveBeenCalledTimes(2);
+      expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'r1', properties: { title: 'A' } });
+      expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'r2', properties: { title: 'B' } });
     });
 
     it('destroy clears pending timers without sending', () => {

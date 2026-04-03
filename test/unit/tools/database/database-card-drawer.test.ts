@@ -93,6 +93,7 @@ describe('DatabaseCardDrawer', () => {
     expect(titleInput).not.toBeNull();
 
     titleInput.value = 'Updated title';
+    // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
     titleInput.dispatchEvent(new Event('input', { bubbles: true }));
 
     expect(onTitleChange).toHaveBeenCalledWith('row-42', 'Updated title');
@@ -291,6 +292,7 @@ describe('DatabaseCardDrawer', () => {
       Object.defineProperty(titleEl, 'scrollHeight', { value: 96, configurable: true });
 
       titleEl.value = 'A very long title that wraps to multiple lines in the drawer panel';
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       titleEl.dispatchEvent(new Event('input', { bubbles: true }));
 
       expect(titleEl.style.height).toBe('96px');
@@ -751,6 +753,7 @@ describe('DatabaseCardDrawer', () => {
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
       titleInput.value = 'Edited';
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       titleInput.dispatchEvent(new Event('input', { bubbles: true }));
 
       expect(onTitleChange).toHaveBeenCalledWith('row-2', 'Edited');
@@ -816,6 +819,7 @@ describe('DatabaseCardDrawer', () => {
       drawerEl.dispatchEvent(new Event('transitionend'));
 
       expect(focusSpy).toHaveBeenCalled();
+      expect(titleInput).not.toBeNull();
     });
 
     it('does not call focus() on title input when card has a title', () => {
@@ -859,6 +863,7 @@ describe('DatabaseCardDrawer', () => {
       drawer.open(row2);
 
       expect(focusSpy).toHaveBeenCalled();
+      expect(titleInput.value).toBe('');
     });
   });
 
@@ -945,6 +950,7 @@ describe('DatabaseCardDrawer', () => {
       drawer.open(row);
       onClose.mockClear();
 
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
       expect(drawer.isOpen).toBe(false);
@@ -962,6 +968,7 @@ describe('DatabaseCardDrawer', () => {
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLElement;
 
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       titleInput.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
       expect(drawer.isOpen).toBe(true);
@@ -988,6 +995,7 @@ describe('DatabaseCardDrawer', () => {
       document.body.appendChild(popover);
 
       try {
+        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
         popoverItem.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
         expect(drawer.isOpen).toBe(true);
@@ -1018,6 +1026,7 @@ describe('DatabaseCardDrawer', () => {
       document.body.appendChild(tabBar);
 
       try {
+        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
         tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
         expect(drawer.isOpen).toBe(true);
@@ -1051,6 +1060,7 @@ describe('DatabaseCardDrawer', () => {
       document.body.appendChild(propertyTypePopover);
 
       try {
+        // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
         typeOption.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
 
         expect(drawer.isOpen).toBe(true);

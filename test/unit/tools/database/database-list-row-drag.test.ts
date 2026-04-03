@@ -141,6 +141,7 @@ describe('DatabaseListRowDrag', () => {
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 20 }));
     expect(document.querySelector('[data-blok-database-ghost]')).not.toBeNull();
 
+    // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
     expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();

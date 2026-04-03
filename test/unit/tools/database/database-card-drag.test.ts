@@ -278,6 +278,7 @@ describe('DatabaseCardDrag', () => {
 
     expect(document.querySelector('[data-blok-database-ghost]')).not.toBeNull();
 
+    // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
     expect(document.querySelector('[data-blok-database-ghost]')).toBeNull();

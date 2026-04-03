@@ -76,6 +76,7 @@ const LOGIC_TESTS = [
   // Tool configuration tests (standard DOM operations)
   '**/tools/block-tool.spec.ts',
   '**/tools/block-tune.spec.ts',
+  '**/tools/callout.spec.ts',
   '**/tools/header.spec.ts',
   '**/tools/inline-tool.spec.ts',
   '**/tools/list.spec.ts',
@@ -136,6 +137,14 @@ export default defineConfig({
       testMatch: [...LOGIC_TESTS],
     },
   ],
+  webServer: {
+    command: 'npx serve . -l 4444 --no-clipboard',
+    port: 4444,
+    // Don't reuse existing server - it might be a Vite dev server which has
+    // module resolution issues under concurrent test load
+    reuseExistingServer: false,
+    timeout: 120000, // Give the server more time to start up
+  },
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 3 : AMOUNT_OF_LOCAL_WORKERS,
 });

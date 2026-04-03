@@ -115,6 +115,7 @@ describe('DatabaseViewPopover', () => {
   describe('outside click', () => {
     it('closes popover when clicking outside', () => {
       popover.open(anchor);
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       const el = document.querySelector('[data-blok-database-view-popover]');
       expect(el).toBeNull();

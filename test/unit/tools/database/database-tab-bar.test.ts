@@ -287,6 +287,7 @@ describe('DatabaseTabBar', () => {
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
       document.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 15 }));
       expect(onReorder).toHaveBeenCalledTimes(1);
+      expect(onReorder).toHaveBeenCalledWith('v1', expect.any(String));
       bar.destroy();
       el.remove();
     });
@@ -297,6 +298,7 @@ describe('DatabaseTabBar', () => {
       const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
       tab.dispatchEvent(new PointerEvent('pointerdown', { clientX: 50, clientY: 15, bubbles: true }));
       document.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 15 }));
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       expect(onReorder).not.toHaveBeenCalled();
       bar.destroy();
@@ -491,10 +493,19 @@ describe('DatabaseTabBar', () => {
       rename.click();
       const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
 
-      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
-      const stopSpy = vi.spyOn(enterEvent, 'stopPropagation');
-      input.dispatchEvent(enterEvent);
-      expect(stopSpy).toHaveBeenCalled();
+      const propagatedEvents: string[] = [];
+      const outerHandler = (e: Event) => propagatedEvents.push((e as KeyboardEvent).key);
+      document.addEventListener('keydown', outerHandler);
+
+      try {
+        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+        const stopSpy = vi.spyOn(enterEvent, 'stopPropagation');
+        input.dispatchEvent(enterEvent);
+        expect(stopSpy).toHaveBeenCalled();
+        expect(propagatedEvents).not.toContain('Enter');
+      } finally {
+        document.removeEventListener('keydown', outerHandler);
+      }
 
       el.remove();
     });
@@ -509,10 +520,19 @@ describe('DatabaseTabBar', () => {
       rename.click();
       const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
 
-      const letterEvent = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
-      const stopSpy = vi.spyOn(letterEvent, 'stopPropagation');
-      input.dispatchEvent(letterEvent);
-      expect(stopSpy).toHaveBeenCalled();
+      const propagatedEvents: string[] = [];
+      const outerHandler = (e: Event) => propagatedEvents.push((e as KeyboardEvent).key);
+      document.addEventListener('keydown', outerHandler);
+
+      try {
+        const letterEvent = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+        const stopSpy = vi.spyOn(letterEvent, 'stopPropagation');
+        input.dispatchEvent(letterEvent);
+        expect(stopSpy).toHaveBeenCalled();
+        expect(propagatedEvents).not.toContain('a');
+      } finally {
+        document.removeEventListener('keydown', outerHandler);
+      }
 
       el.remove();
     });
@@ -527,6 +547,7 @@ describe('DatabaseTabBar', () => {
       rename.click();
       const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
       input.value = 'Sprint';
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(onRename).not.toHaveBeenCalled();
       expect(tab.querySelector('[data-blok-database-tab-name]')?.textContent).toBe('Board');

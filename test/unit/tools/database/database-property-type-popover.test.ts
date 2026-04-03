@@ -170,6 +170,7 @@ describe('DatabasePropertyTypePopover', () => {
   describe('outside click', () => {
     it('closes popover when clicking outside', () => {
       popover.open(anchor);
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       const el = document.querySelector('[data-blok-database-property-type-popover]');
       expect(el).toBeNull();
@@ -178,6 +179,7 @@ describe('DatabasePropertyTypePopover', () => {
     it('does not close popover when clicking inside the popover', () => {
       popover.open(anchor);
       const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
+      // eslint-disable-next-line internal-unit-test/no-direct-event-dispatch
       el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       const stillOpen = document.querySelector('[data-blok-database-property-type-popover]');
       expect(stillOpen).not.toBeNull();

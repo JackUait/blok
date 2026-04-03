@@ -55,8 +55,8 @@ export default defineConfig(({ mode }) => {
                     return false;
                   }
 
-                  // Allow MIT, Apache-2.0, and ISC licenses.
-                  return ['MIT', 'Apache-2.0', 'ISC'].includes(dependency.license);
+                  // Allow MIT, Apache-2.0, ISC, and CC0-1.0 licenses.
+                  return ['MIT', 'Apache-2.0', 'ISC', 'CC0-1.0'].includes(dependency.license);
                 },
                 failOnUnlicensed: true,
                 failOnViolation: true,

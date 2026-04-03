@@ -591,3 +591,15 @@ export const IconList = `
   <path d="M7.5 6.5h9M7.5 10h9M7.5 13.5h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
+
+// Calendar icon (date property type)
+export const IconCalendar = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4.5" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M3 8.5h14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M7 3v3M13 3v3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="7" cy="12" r="1" fill="currentColor"/>
+  <circle cx="10" cy="12" r="1" fill="currentColor"/>
+  <circle cx="13" cy="12" r="1" fill="currentColor"/>
+</svg>
+`;

@@ -124,7 +124,9 @@ describe('DatabasePropertyTypePopover', () => {
         const item = document.querySelector(`[data-blok-database-property-type-option="${type}"]`);
         const label = item!.querySelector('span');
         expect(label).not.toBeNull();
-        expect(label!.textContent!.trim().length).toBeGreaterThan(0);
+        if (label !== null) {
+          expect((label.textContent ?? '').trim().length).toBeGreaterThan(0);
+        }
       }
     });
 

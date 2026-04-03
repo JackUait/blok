@@ -3,7 +3,7 @@ import {
   IconHash,
   IconList,
   IconListBulleted,
-  IconTable,
+  IconCalendar,
   IconListChecklist,
   IconGlobe,
 } from '../../components/icons';
@@ -20,7 +20,7 @@ const PROPERTY_TYPES: PropertyTypeOption[] = [
   { type: 'number', icon: IconHash, label: 'Number' },
   { type: 'select', icon: IconList, label: 'Select' },
   { type: 'multiSelect', icon: IconListBulleted, label: 'Multi-select' },
-  { type: 'date', icon: IconTable, label: 'Date' },
+  { type: 'date', icon: IconCalendar, label: 'Date' },
   { type: 'checkbox', icon: IconListChecklist, label: 'Checkbox' },
   { type: 'url', icon: IconGlobe, label: 'URL' },
 ];

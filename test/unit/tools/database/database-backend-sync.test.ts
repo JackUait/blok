@@ -1,118 +1,151 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { KanbanAdapter, KanbanCardData, KanbanColumnData } from '../../../../src/tools/database/types';
 import { DatabaseBackendSync } from '../../../../src/tools/database/database-backend-sync';
+import type { DatabaseAdapter } from '../../../../src/tools/database/types';
 
-const createMockAdapter = (): KanbanAdapter => ({
-  loadBoard: vi.fn().mockResolvedValue({ columns: [], cards: [] }),
-  moveCard: vi.fn().mockResolvedValue({} as KanbanCardData),
-  createCard: vi.fn().mockResolvedValue({} as KanbanCardData),
-  updateCard: vi.fn().mockResolvedValue({} as KanbanCardData),
-  deleteCard: vi.fn().mockResolvedValue(undefined),
-  createColumn: vi.fn().mockResolvedValue({} as KanbanColumnData),
-  updateColumn: vi.fn().mockResolvedValue({} as KanbanColumnData),
-  moveColumn: vi.fn().mockResolvedValue({} as KanbanColumnData),
-  deleteColumn: vi.fn().mockResolvedValue(undefined),
+const createMockAdapter = (): DatabaseAdapter => ({
+  loadDatabase: vi.fn().mockResolvedValue({ schema: [], rows: [], views: [] }),
+  createRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
+  updateRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
+  moveRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
+  deleteRow: vi.fn().mockResolvedValue(undefined),
+  createProperty: vi.fn().mockResolvedValue({ id: 'p1', name: 'P', type: 'text', position: 'a0' }),
+  updateProperty: vi.fn().mockResolvedValue({ id: 'p1', name: 'P', type: 'text', position: 'a0' }),
+  deleteProperty: vi.fn().mockResolvedValue(undefined),
+  createView: vi.fn().mockResolvedValue({ id: 'v1', name: 'V', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [] }),
+  updateView: vi.fn().mockResolvedValue({ id: 'v1', name: 'V', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [] }),
+  deleteView: vi.fn().mockResolvedValue(undefined),
 });
 
 describe('DatabaseBackendSync', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-  });
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
   describe('no adapter', () => {
-    it('does not throw when calling sync methods without adapter', async () => {
+    it('all sync methods are silent no-ops', async () => {
       const sync = new DatabaseBackendSync();
-
-      await expect(
-        sync.syncMoveCard({ cardId: 'c1', toColumnId: 'col-2', position: 'a0', fromColumnId: 'col-1' })
-      ).resolves.toBeUndefined();
-
-      await expect(
-        sync.syncCreateCard({ id: 'c1', columnId: 'col-1', position: 'a0', title: 'Test' })
-      ).resolves.toBeUndefined();
-
-      await expect(
-        sync.syncDeleteCard({ cardId: 'c1' })
-      ).resolves.toBeUndefined();
-
-      sync.syncUpdateCard({ cardId: 'c1', changes: { title: 'Updated' } });
-
-      sync.destroy();
+      await expect(sync.syncCreateRow({ id: 'r1', properties: {}, position: 'a0' })).resolves.toBeUndefined();
+      await expect(sync.syncMoveRow({ rowId: 'r1', position: 'a1' })).resolves.toBeUndefined();
+      await expect(sync.syncDeleteRow({ rowId: 'r1' })).resolves.toBeUndefined();
+      await expect(sync.syncCreateProperty({ id: 'p1', name: 'P', type: 'text', position: 'a0' })).resolves.toBeUndefined();
+      await expect(sync.syncUpdateProperty({ propertyId: 'p1', changes: { name: 'Q' } })).resolves.toBeUndefined();
+      await expect(sync.syncDeleteProperty({ propertyId: 'p1' })).resolves.toBeUndefined();
+      await expect(sync.syncCreateView({ id: 'v1', name: 'V', type: 'board', position: 'a0' })).resolves.toBeUndefined();
+      await expect(sync.syncUpdateView({ viewId: 'v1', changes: { name: 'W' } })).resolves.toBeUndefined();
+      await expect(sync.syncDeleteView({ viewId: 'v1' })).resolves.toBeUndefined();
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'Test' } });
     });
   });
 
-  describe('with adapter', () => {
-    it('calls adapter.moveCard() immediately on syncMoveCard', async () => {
+  describe('row operations', () => {
+    it('syncCreateRow calls adapter.createRow', async () => {
       const adapter = createMockAdapter();
       const sync = new DatabaseBackendSync(adapter);
-
-      const params = { cardId: 'c1', toColumnId: 'col-2', position: 'a0', fromColumnId: 'col-1' };
-
-      await sync.syncMoveCard(params);
-
-      expect(adapter.moveCard).toHaveBeenCalledOnce();
-      expect(adapter.moveCard).toHaveBeenCalledWith(params);
-
-      sync.destroy();
+      await sync.syncCreateRow({ id: 'r1', properties: { title: 'Hi' }, position: 'a0' });
+      expect(adapter.createRow).toHaveBeenCalledWith({ id: 'r1', properties: { title: 'Hi' }, position: 'a0' });
     });
 
-    it('calls adapter.createCard() immediately on syncCreateCard', async () => {
+    it('syncMoveRow calls adapter.moveRow', async () => {
       const adapter = createMockAdapter();
       const sync = new DatabaseBackendSync(adapter);
+      await sync.syncMoveRow({ rowId: 'r1', position: 'a5' });
+      expect(adapter.moveRow).toHaveBeenCalledWith({ rowId: 'r1', position: 'a5' });
+    });
 
-      const params = { id: 'c1', columnId: 'col-1', position: 'a0', title: 'New Card' };
+    it('syncDeleteRow calls adapter.deleteRow', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      await sync.syncDeleteRow({ rowId: 'r1' });
+      expect(adapter.deleteRow).toHaveBeenCalledWith({ rowId: 'r1' });
+    });
 
-      await sync.syncCreateCard(params);
-
-      expect(adapter.createCard).toHaveBeenCalledOnce();
-      expect(adapter.createCard).toHaveBeenCalledWith(params);
-
-      sync.destroy();
+    it('syncUpdateRow debounces at 500ms', () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'First' } });
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'Second' } });
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(500);
+      expect(adapter.updateRow).toHaveBeenCalledTimes(1);
+      expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'r1', properties: { title: 'Second' } });
     });
   });
 
-  describe('debounce', () => {
-    it('syncUpdateCard() debounces at 500ms — coalesces multiple calls', async () => {
+  describe('property operations', () => {
+    it('syncCreateProperty calls adapter.createProperty', async () => {
       const adapter = createMockAdapter();
       const sync = new DatabaseBackendSync(adapter);
+      await sync.syncCreateProperty({ id: 'p1', name: 'Priority', type: 'select', position: 'a0' });
+      expect(adapter.createProperty).toHaveBeenCalledWith({ id: 'p1', name: 'Priority', type: 'select', position: 'a0' });
+    });
 
-      sync.syncUpdateCard({ cardId: 'c1', changes: { title: 'First' } });
-      sync.syncUpdateCard({ cardId: 'c1', changes: { title: 'Second' } });
-      sync.syncUpdateCard({ cardId: 'c1', changes: { title: 'Third' } });
+    it('syncUpdateProperty calls adapter.updateProperty', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      await sync.syncUpdateProperty({ propertyId: 'p1', changes: { name: 'Phase' } });
+      expect(adapter.updateProperty).toHaveBeenCalledWith({ propertyId: 'p1', changes: { name: 'Phase' } });
+    });
 
-      expect(adapter.updateCard).not.toHaveBeenCalled();
+    it('syncDeleteProperty calls adapter.deleteProperty', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      await sync.syncDeleteProperty({ propertyId: 'p1' });
+      expect(adapter.deleteProperty).toHaveBeenCalledWith({ propertyId: 'p1' });
+    });
+  });
 
-      await vi.advanceTimersByTimeAsync(500);
+  describe('view operations', () => {
+    it('syncCreateView calls adapter.createView', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      await sync.syncCreateView({ id: 'v1', name: 'Table', type: 'table', position: 'a0' });
+      expect(adapter.createView).toHaveBeenCalledWith({ id: 'v1', name: 'Table', type: 'table', position: 'a0' });
+    });
 
-      expect(adapter.updateCard).toHaveBeenCalledOnce();
-      expect(adapter.updateCard).toHaveBeenCalledWith({ cardId: 'c1', changes: { title: 'Third' } });
+    it('syncUpdateView calls adapter.updateView', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      await sync.syncUpdateView({ viewId: 'v1', changes: { name: 'Renamed' } });
+      expect(adapter.updateView).toHaveBeenCalledWith({ viewId: 'v1', changes: { name: 'Renamed' } });
+    });
 
-      sync.destroy();
+    it('syncDeleteView calls adapter.deleteView', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      await sync.syncDeleteView({ viewId: 'v1' });
+      expect(adapter.deleteView).toHaveBeenCalledWith({ viewId: 'v1' });
     });
   });
 
   describe('error handling', () => {
-    it('calls onError callback when adapter throws', async () => {
+    it('calls onError when adapter throws', async () => {
       const adapter = createMockAdapter();
-      const error = new Error('Network failure');
-
-      vi.mocked(adapter.moveCard).mockRejectedValueOnce(error);
-
+      const error = new Error('Network fail');
+      (adapter.createRow as ReturnType<typeof vi.fn>).mockRejectedValue(error);
       const onError = vi.fn();
       const sync = new DatabaseBackendSync(adapter, onError);
-
-      await sync.syncMoveCard({ cardId: 'c1', toColumnId: 'col-2', position: 'a0', fromColumnId: 'col-1' });
-
-      expect(onError).toHaveBeenCalledOnce();
+      await sync.syncCreateRow({ id: 'r1', properties: {}, position: 'a0' });
       expect(onError).toHaveBeenCalledWith(error);
+    });
+  });
 
+  describe('flush and destroy', () => {
+    it('flushPendingUpdates sends all debounced updates immediately', () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'A' } });
+      sync.syncUpdateRow({ rowId: 'r2', properties: { title: 'B' } });
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+      sync.flushPendingUpdates();
+      expect(adapter.updateRow).toHaveBeenCalledTimes(2);
+    });
+
+    it('destroy clears pending timers without sending', () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'A' } });
       sync.destroy();
+      vi.advanceTimersByTime(1000);
+      expect(adapter.updateRow).not.toHaveBeenCalled();
     });
   });
 });

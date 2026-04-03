@@ -1,19 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
-import type { DatabaseViewData } from '../../../../src/tools/database/types';
+import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 
-const makeView = (overrides: Partial<DatabaseViewData> = {}): DatabaseViewData => ({
+const makeView = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
   id: `view-${Math.random().toString(36).slice(2, 6)}`,
   name: 'Board',
   type: 'board',
   position: 'a0',
-  data: { columns: [], cardMap: {} },
+  sorts: [],
+  filters: [],
+  visibleProperties: [],
   ...overrides,
 });
 
 describe('DatabaseTabBar', () => {
   let onTabClick: ReturnType<typeof vi.fn<(viewId: string) => void>>;
-  let onAddView: ReturnType<typeof vi.fn<(type: 'board') => void>>;
+  let onAddView: ReturnType<typeof vi.fn<(type: ViewType) => void>>;
   let onRename: ReturnType<typeof vi.fn<(viewId: string, newName: string) => void>>;
   let onDuplicate: ReturnType<typeof vi.fn<(viewId: string) => void>>;
   let onDelete: ReturnType<typeof vi.fn<(viewId: string) => void>>;
@@ -22,7 +24,7 @@ describe('DatabaseTabBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     onTabClick = vi.fn<(viewId: string) => void>();
-    onAddView = vi.fn<(type: 'board') => void>();
+    onAddView = vi.fn<(type: ViewType) => void>();
     onRename = vi.fn<(viewId: string, newName: string) => void>();
     onDuplicate = vi.fn<(viewId: string) => void>();
     onDelete = vi.fn<(viewId: string) => void>();
@@ -37,7 +39,7 @@ describe('DatabaseTabBar', () => {
     document.querySelectorAll('[data-blok-database-tab-overflow-dropdown]').forEach((el) => el.remove());
   });
 
-  const createTabBar = (views: DatabaseViewData[], activeViewId: string): DatabaseTabBar => {
+  const createTabBar = (views: DatabaseViewConfig[], activeViewId: string): DatabaseTabBar => {
     return new DatabaseTabBar({
       views,
       activeViewId,
@@ -242,7 +244,7 @@ describe('DatabaseTabBar', () => {
   });
 
   describe('tab drag reordering', () => {
-    const createBarWithLayout = (views: DatabaseViewData[], activeViewId: string): { bar: DatabaseTabBar; el: HTMLElement } => {
+    const createBarWithLayout = (views: DatabaseViewConfig[], activeViewId: string): { bar: DatabaseTabBar; el: HTMLElement } => {
       const bar = createTabBar(views, activeViewId);
       const el = bar.render();
       document.body.appendChild(el);

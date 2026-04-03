@@ -2,8 +2,8 @@ import type { I18n } from '../../../types';
 
 export interface ColumnControlsOptions {
   i18n: I18n;
-  onRename: (columnId: string, title: string) => void;
-  onDelete: (columnId: string) => void;
+  onRename: (optionId: string, label: string) => void;
+  onDelete: (optionId: string) => void;
 }
 
 export class DatabaseColumnControls {
@@ -15,7 +15,7 @@ export class DatabaseColumnControls {
     this.i18n = options.i18n;
   }
 
-  makeEditable(headerEl: HTMLElement, columnId: string): void {
+  makeEditable(headerEl: HTMLElement, optionId: string): void {
     const titleEl = headerEl.querySelector('[data-blok-database-column-title]');
 
     if (titleEl) {
@@ -26,7 +26,7 @@ export class DatabaseColumnControls {
       input.setAttribute('data-blok-database-column-title-input', '');
       input.setAttribute('aria-label', this.i18n.t('tools.database.renameColumn'));
       input.addEventListener('change', () => {
-        this.options.onRename(columnId, input.value);
+        this.options.onRename(optionId, input.value);
       });
       titleEl.replaceWith(input);
     }
@@ -35,9 +35,9 @@ export class DatabaseColumnControls {
 
     deleteBtn.setAttribute('data-blok-database-delete-column', '');
     deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteColumn'));
-    deleteBtn.setAttribute('data-column-id', columnId);
+    deleteBtn.setAttribute('data-option-id', optionId);
     deleteBtn.addEventListener('click', () => {
-      this.options.onDelete(columnId);
+      this.options.onDelete(optionId);
     });
     headerEl.appendChild(deleteBtn);
   }

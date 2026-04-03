@@ -1,6 +1,6 @@
 import type { I18n, OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
-import type { KanbanCardData, KanbanColumnData } from './types';
+import type { DatabaseRow, SelectOption, PropertyValue } from './types';
 import { IconChevronRight } from '../../components/icons';
 
 interface BlokInstance {
@@ -14,8 +14,10 @@ export interface CardDrawerOptions {
   readOnly: boolean;
   i18n?: I18n;
   toolsConfig?: ToolsConfig;
-  onTitleChange: (cardId: string, title: string) => void;
-  onDescriptionChange: (cardId: string, description: OutputData) => void;
+  titlePropertyId: string;
+  descriptionPropertyId?: string;
+  onTitleChange: (rowId: string, title: string) => void;
+  onDescriptionChange: (rowId: string, description: OutputData) => void;
   onClose: () => void;
 }
 
@@ -29,12 +31,14 @@ export class DatabaseCardDrawer {
   private readonly readOnly: boolean;
   private readonly i18n: I18n | undefined;
   private readonly toolsConfig: ToolsConfig | undefined;
-  private readonly onTitleChange: (cardId: string, title: string) => void;
-  private readonly onDescriptionChange: (cardId: string, description: OutputData) => void;
+  private readonly titlePropertyId: string;
+  private readonly descriptionPropertyId: string | undefined;
+  private readonly onTitleChange: (rowId: string, title: string) => void;
+  private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
   private readonly onClose: () => void;
 
   private drawer: HTMLDivElement | null = null;
-  private currentCardId: string | null = null;
+  private currentRowId: string | null = null;
   private blokInstance: BlokInstance | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
@@ -44,6 +48,8 @@ export class DatabaseCardDrawer {
     this.readOnly = options.readOnly;
     this.i18n = options.i18n;
     this.toolsConfig = options.toolsConfig;
+    this.titlePropertyId = options.titlePropertyId;
+    this.descriptionPropertyId = options.descriptionPropertyId;
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
@@ -53,13 +59,13 @@ export class DatabaseCardDrawer {
     return this.drawer !== null;
   }
 
-  open(card: KanbanCardData, column?: KanbanColumnData): void {
+  open(row: DatabaseRow, option?: SelectOption): void {
     if (this.drawer) {
-      if (card.id === this.currentCardId) {
+      if (row.id === this.currentRowId) {
         return;
       }
 
-      this.loadCard(card, column);
+      this.loadCard(row, option);
 
       return;
     }
@@ -69,8 +75,10 @@ export class DatabaseCardDrawer {
 
     exiting?.remove();
 
-    this.currentCardId = card.id;
-    this.updateActiveCard(card.id);
+    this.currentRowId = row.id;
+    this.updateActiveCard(row.id);
+
+    const title = (row.properties[this.titlePropertyId] as string) ?? '';
 
     const drawer = document.createElement('div');
 
@@ -106,12 +114,12 @@ export class DatabaseCardDrawer {
     titleInput.setAttribute('data-blok-database-drawer-title', '');
     titleInput.setAttribute('aria-label', 'Card title');
     titleInput.placeholder = this.i18n?.t('tools.database.cardTitlePlaceholder') ?? 'Empty page';
-    titleInput.value = card.title;
+    titleInput.value = title;
     titleInput.rows = 1;
     titleInput.readOnly = this.readOnly;
     titleInput.addEventListener('input', () => {
-      if (this.currentCardId !== null) {
-        this.onTitleChange(this.currentCardId, titleInput.value);
+      if (this.currentRowId !== null) {
+        this.onTitleChange(this.currentRowId, titleInput.value);
       }
       this.autoResizeTitle(titleInput);
     });
@@ -123,12 +131,12 @@ export class DatabaseCardDrawer {
     content.appendChild(titleInput);
 
     // --- Properties section ---
-    if (column !== undefined) {
+    if (option !== undefined) {
       const propsSection = document.createElement('div');
 
       propsSection.setAttribute('data-blok-database-drawer-props', '');
 
-      const statusRow = this.createPropertyRow(column);
+      const statusRow = this.createPropertyRow(option);
 
       propsSection.appendChild(statusRow);
       content.appendChild(propsSection);
@@ -154,13 +162,13 @@ export class DatabaseCardDrawer {
       drawer.addEventListener('transitionend', () => {
         this.autoResizeTitle(titleInput);
 
-        if (!card.title) {
+        if (!title) {
           titleInput.focus();
         }
       }, { once: true });
     });
 
-    this.initNestedEditor(editorHolder, card);
+    this.initNestedEditor(editorHolder, row);
 
     this.escapeHandler = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') {
@@ -214,24 +222,26 @@ export class DatabaseCardDrawer {
    * Swaps content in the already-open drawer to show a different card
    * without closing/reopening the drawer panel.
    */
-  private loadCard(card: KanbanCardData, column?: KanbanColumnData): void {
+  private loadCard(row: DatabaseRow, option?: SelectOption): void {
     if (this.drawer === null) {
       return;
     }
 
     this.cleanupEditor();
 
-    this.currentCardId = card.id;
-    this.updateActiveCard(card.id);
+    this.currentRowId = row.id;
+    this.updateActiveCard(row.id);
+
+    const title = (row.properties[this.titlePropertyId] as string) ?? '';
 
     // Update title
     const titleInput = this.drawer.querySelector<HTMLTextAreaElement>('[data-blok-database-drawer-title]');
 
     if (titleInput !== null) {
-      titleInput.value = card.title;
+      titleInput.value = title;
       this.autoResizeTitle(titleInput);
 
-      if (!card.title) {
+      if (!title) {
         titleInput.focus();
       }
     }
@@ -239,7 +249,7 @@ export class DatabaseCardDrawer {
     // Replace properties section
     this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
 
-    if (column !== undefined) {
+    if (option !== undefined) {
       const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
       const divider = content?.querySelector('hr') ?? null;
 
@@ -247,7 +257,7 @@ export class DatabaseCardDrawer {
         const propsSection = document.createElement('div');
 
         propsSection.setAttribute('data-blok-database-drawer-props', '');
-        propsSection.appendChild(this.createPropertyRow(column));
+        propsSection.appendChild(this.createPropertyRow(option));
         content.insertBefore(propsSection, divider);
       }
     }
@@ -257,7 +267,7 @@ export class DatabaseCardDrawer {
 
     if (editorHolder !== null) {
       editorHolder.innerHTML = '';
-      this.initNestedEditor(editorHolder, card);
+      this.initNestedEditor(editorHolder, row);
     }
   }
 
@@ -278,7 +288,7 @@ export class DatabaseCardDrawer {
       }, { once: true });
     }
 
-    this.currentCardId = null;
+    this.currentRowId = null;
 
     if (wasOpen) {
       this.onClose();
@@ -299,13 +309,13 @@ export class DatabaseCardDrawer {
 
     exiting?.remove();
 
-    this.currentCardId = null;
+    this.currentRowId = null;
   }
 
   /**
-   * Creates a status property row with icon, label, and column pill badge.
+   * Creates a status property row with icon, label, and option pill badge.
    */
-  private createPropertyRow(column: KanbanColumnData): HTMLDivElement {
+  private createPropertyRow(option: SelectOption): HTMLDivElement {
     const row = document.createElement('div');
 
     row.setAttribute('data-blok-database-drawer-prop-row', '');
@@ -320,22 +330,22 @@ export class DatabaseCardDrawer {
 
     pill.setAttribute('data-blok-database-drawer-status-pill', '');
 
-    if (column.color !== undefined) {
-      pill.style.backgroundColor = `var(--blok-color-${column.color}-bg)`;
-      pill.style.color = `var(--blok-color-${column.color}-text)`;
+    if (option.color !== undefined) {
+      pill.style.backgroundColor = `var(--blok-color-${option.color}-bg)`;
+      pill.style.color = `var(--blok-color-${option.color}-text)`;
     }
 
-    if (column.color !== undefined) {
+    if (option.color !== undefined) {
       const dot = document.createElement('span');
 
       dot.setAttribute('data-blok-database-drawer-status-dot', '');
-      dot.style.backgroundColor = `var(--blok-color-${column.color}-text)`;
+      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
       pill.appendChild(dot);
     }
 
     const pillText = document.createElement('span');
 
-    pillText.textContent = column.title;
+    pillText.textContent = option.label;
     pill.appendChild(pillText);
 
     row.appendChild(pill);
@@ -343,13 +353,13 @@ export class DatabaseCardDrawer {
     return row;
   }
 
-  private updateActiveCard(cardId: string | null): void {
+  private updateActiveCard(rowId: string | null): void {
     const prev = this.wrapper.querySelector('[data-blok-database-card-active]');
 
     prev?.removeAttribute('data-blok-database-card-active');
 
-    if (cardId !== null) {
-      const cardEl = this.wrapper.querySelector(`[data-blok-database-card][data-card-id="${cardId}"]`);
+    if (rowId !== null) {
+      const cardEl = this.wrapper.querySelector(`[data-blok-database-card][data-row-id="${rowId}"]`);
 
       cardEl?.setAttribute('data-blok-database-card-active', '');
     }
@@ -371,11 +381,11 @@ export class DatabaseCardDrawer {
     if (this.blokInstance) {
       try {
         const instance = this.blokInstance;
-        const cardId = this.currentCardId;
+        const rowId = this.currentRowId;
 
         instance.save().then((data) => {
-          if (cardId !== null) {
-            this.onDescriptionChange(cardId, data);
+          if (rowId !== null) {
+            this.onDescriptionChange(rowId, data);
           }
           instance.destroy();
         }).catch(() => {
@@ -398,20 +408,23 @@ export class DatabaseCardDrawer {
     }
   }
 
-  private initNestedEditor(editorHolder: HTMLElement, card: KanbanCardData): void {
+  private initNestedEditor(editorHolder: HTMLElement, row: DatabaseRow): void {
     import('../../blok').then(({ Blok }) => {
-      const cardId = card.id;
+      const rowId = row.id;
+      const description = this.descriptionPropertyId !== undefined
+        ? row.properties[this.descriptionPropertyId] as PropertyValue
+        : undefined;
       const blok = new Blok({
         ...this.toolsConfig,
         holder: editorHolder,
-        data: card.description,
+        data: description as OutputData | undefined,
         readOnly: this.readOnly,
         onChange: async () => {
           try {
             const data = await this.blokInstance?.save();
 
             if (data !== undefined) {
-              this.onDescriptionChange(cardId, data);
+              this.onDescriptionChange(rowId, data);
             }
           } catch {
             // save may fail if editor is being destroyed

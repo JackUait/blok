@@ -1,20 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
-import type { KanbanCardData, KanbanColumnData } from '../../../../src/tools/database/types';
+import type { DatabaseRow, SelectOption } from '../../../../src/tools/database/types';
 import type { ToolsConfig } from '../../../../types/api/tools';
 
-const makeCard = (overrides: Partial<KanbanCardData> = {}): KanbanCardData => ({
-  id: 'card-1',
-  columnId: 'col-1',
+const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
+  id: 'row-1',
   position: 'a0',
-  title: 'Test card',
+  properties: { 'prop-title': 'Test card' },
   ...overrides,
 });
 
-const makeColumn = (overrides: Partial<KanbanColumnData> = {}): KanbanColumnData => ({
-  id: 'col-1',
-  title: 'In progress',
+const makeOption = (overrides: Partial<SelectOption> = {}): SelectOption => ({
+  id: 'opt-1',
+  label: 'In progress',
   color: 'blue',
   position: 'a1',
   ...overrides,
@@ -23,6 +22,7 @@ const makeColumn = (overrides: Partial<KanbanColumnData> = {}): KanbanColumnData
 const createOptions = (overrides: Partial<CardDrawerOptions> = {}): CardDrawerOptions => ({
   wrapper: document.createElement('div'),
   readOnly: false,
+  titlePropertyId: 'prop-title',
   onTitleChange: vi.fn(),
   onDescriptionChange: vi.fn(),
   onClose: vi.fn(),
@@ -41,9 +41,9 @@ describe('DatabaseCardDrawer', () => {
   it('creates a drawer element ([data-blok-database-drawer]) when opened', () => {
     const options = createOptions();
     const drawer = new DatabaseCardDrawer(options);
-    const card = makeCard();
+    const row = makeRow();
 
-    drawer.open(card);
+    drawer.open(row);
 
     const el = options.wrapper.querySelector('[data-blok-database-drawer]');
 
@@ -54,9 +54,9 @@ describe('DatabaseCardDrawer', () => {
   it('removes drawer element when closed after transition completes', () => {
     const options = createOptions();
     const drawer = new DatabaseCardDrawer(options);
-    const card = makeCard();
+    const row = makeRow();
 
-    drawer.open(card);
+    drawer.open(row);
 
     expect(options.wrapper.querySelector('[data-blok-database-drawer]')).not.toBeNull();
 
@@ -71,13 +71,13 @@ describe('DatabaseCardDrawer', () => {
     expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
   });
 
-  it('calls onTitleChange(cardId, newTitle) when title input fires input event', () => {
+  it('calls onTitleChange(rowId, newTitle) when title input fires input event', () => {
     const onTitleChange = vi.fn();
     const options = createOptions({ onTitleChange });
     const drawer = new DatabaseCardDrawer(options);
-    const card = makeCard({ id: 'card-42', title: 'Original title' });
+    const row = makeRow({ id: 'row-42', properties: { 'prop-title': 'Original title' } });
 
-    drawer.open(card);
+    drawer.open(row);
 
     const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
@@ -86,16 +86,16 @@ describe('DatabaseCardDrawer', () => {
     titleInput.value = 'Updated title';
     titleInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-    expect(onTitleChange).toHaveBeenCalledWith('card-42', 'Updated title');
+    expect(onTitleChange).toHaveBeenCalledWith('row-42', 'Updated title');
   });
 
   it('calls onClose when close button ([data-blok-database-drawer-close]) is clicked', () => {
     const onClose = vi.fn();
     const options = createOptions({ onClose });
     const drawer = new DatabaseCardDrawer(options);
-    const card = makeCard();
+    const row = makeRow();
 
-    drawer.open(card);
+    drawer.open(row);
 
     const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLButtonElement;
 
@@ -109,9 +109,9 @@ describe('DatabaseCardDrawer', () => {
   it('disables title input (readOnly = true) in read-only mode', () => {
     const options = createOptions({ readOnly: true });
     const drawer = new DatabaseCardDrawer(options);
-    const card = makeCard();
+    const row = makeRow();
 
-    drawer.open(card);
+    drawer.open(row);
 
     const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
@@ -123,9 +123,9 @@ describe('DatabaseCardDrawer', () => {
     it('drawer has data attribute for CSS styling', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
@@ -136,9 +136,9 @@ describe('DatabaseCardDrawer', () => {
     it('drawer contains a toolbar, content area, and editor holder', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       expect(options.wrapper.querySelector('[data-blok-database-drawer-toolbar]')).not.toBeNull();
       expect(options.wrapper.querySelector('[data-blok-database-drawer-content]')).not.toBeNull();
@@ -156,9 +156,9 @@ describe('DatabaseCardDrawer', () => {
 
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       rafCallbacks.forEach((cb) => cb(0));
 
@@ -172,9 +172,9 @@ describe('DatabaseCardDrawer', () => {
     it('drawer has role="complementary" and aria-label', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
 
@@ -185,9 +185,9 @@ describe('DatabaseCardDrawer', () => {
     it('close button has aria-label="Close"', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLButtonElement;
 
@@ -197,9 +197,9 @@ describe('DatabaseCardDrawer', () => {
     it('title input has aria-label', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
@@ -211,9 +211,9 @@ describe('DatabaseCardDrawer', () => {
     it('close button contains chevron SVG icons', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLElement;
 
@@ -233,9 +233,9 @@ describe('DatabaseCardDrawer', () => {
       };
       const options = createOptions({ i18n: mockI18n });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
@@ -247,9 +247,9 @@ describe('DatabaseCardDrawer', () => {
     it('renders the title as a textarea element so long titles can wrap', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard({ title: 'A very long card title that should be able to wrap across multiple lines in the drawer' });
+      const row = makeRow({ properties: { 'prop-title': 'A very long card title that should be able to wrap across multiple lines in the drawer' } });
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]');
 
@@ -260,9 +260,9 @@ describe('DatabaseCardDrawer', () => {
     it('has rows="1" so the textarea starts compact', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
@@ -272,9 +272,9 @@ describe('DatabaseCardDrawer', () => {
     it('auto-resizes height on input to fit content', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
@@ -301,9 +301,9 @@ describe('DatabaseCardDrawer', () => {
       document.body.appendChild(options.wrapper);
 
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard({ title: 'Some title' });
+      const row = makeRow({ properties: { 'prop-title': 'Some title' } });
 
-      drawer.open(card);
+      drawer.open(row);
 
       // Trigger rAF to set width, then fire transitionend to trigger auto-resize
       rafCallbacks.forEach((cb) => cb(0));
@@ -323,9 +323,9 @@ describe('DatabaseCardDrawer', () => {
     it('does not allow newlines — Enter key is suppressed', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleEl = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
 
@@ -337,13 +337,13 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('properties section', () => {
-    it('shows status property with column title when column is provided', () => {
+    it('shows status property with option label when option is provided', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
-      const column = makeColumn({ title: 'In progress', color: 'blue' });
+      const row = makeRow();
+      const option = makeOption({ label: 'In progress', color: 'blue' });
 
-      drawer.open(card, column);
+      drawer.open(row, option);
 
       const propLabel = options.wrapper.querySelector('[data-blok-database-drawer-prop-label]');
       const statusPill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
@@ -354,25 +354,25 @@ describe('DatabaseCardDrawer', () => {
       expect(statusPill!.textContent).toBe('In progress');
     });
 
-    it('status pill has colored dot when column has color', () => {
+    it('status pill has colored dot when option has color', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
-      const column = makeColumn({ color: 'green' });
+      const row = makeRow();
+      const option = makeOption({ color: 'green' });
 
-      drawer.open(card, column);
+      drawer.open(row, option);
 
       const dot = options.wrapper.querySelector('[data-blok-database-drawer-status-dot]');
 
       expect(dot).not.toBeNull();
     });
 
-    it('does not show properties section when no column is provided', () => {
+    it('does not show properties section when no option is provided', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       const propsSection = options.wrapper.querySelector('[data-blok-database-drawer-props]');
 
@@ -385,9 +385,9 @@ describe('DatabaseCardDrawer', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       onClose.mockClear();
 
       drawer.close();
@@ -399,13 +399,13 @@ describe('DatabaseCardDrawer', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1' });
-      const card2 = makeCard({ id: 'card-2' });
+      const row1 = makeRow({ id: 'row-1' });
+      const row2 = makeRow({ id: 'row-2' });
 
-      drawer.open(card1);
+      drawer.open(row1);
       onClose.mockClear();
 
-      drawer.open(card2);
+      drawer.open(row2);
 
       expect(onClose).not.toHaveBeenCalled();
     });
@@ -415,14 +415,14 @@ describe('DatabaseCardDrawer', () => {
     it('reuses the same drawer DOM element instead of recreating it', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1', title: 'First' });
-      const card2 = makeCard({ id: 'card-2', title: 'Second' });
+      const row1 = makeRow({ id: 'row-1', properties: { 'prop-title': 'First' } });
+      const row2 = makeRow({ id: 'row-2', properties: { 'prop-title': 'Second' } });
 
-      drawer.open(card1);
+      drawer.open(row1);
 
       const drawerEl = options.wrapper.querySelector('[data-blok-database-drawer]');
 
-      drawer.open(card2);
+      drawer.open(row2);
 
       const drawerElAfter = options.wrapper.querySelector('[data-blok-database-drawer]');
 
@@ -432,35 +432,35 @@ describe('DatabaseCardDrawer', () => {
     it('updates the title input to the new card title', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1', title: 'First card' });
-      const card2 = makeCard({ id: 'card-2', title: 'Second card' });
+      const row1 = makeRow({ id: 'row-1', properties: { 'prop-title': 'First card' } });
+      const row2 = makeRow({ id: 'row-2', properties: { 'prop-title': 'Second card' } });
 
-      drawer.open(card1);
+      drawer.open(row1);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
       expect(titleInput.value).toBe('First card');
 
-      drawer.open(card2);
+      drawer.open(row2);
 
       expect(titleInput.value).toBe('Second card');
     });
 
-    it('updates the status pill to the new column', () => {
+    it('updates the status pill to the new option', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1', columnId: 'col-1' });
-      const card2 = makeCard({ id: 'card-2', columnId: 'col-2' });
-      const column1 = makeColumn({ id: 'col-1', title: 'To Do', color: 'red' });
-      const column2 = makeColumn({ id: 'col-2', title: 'Done', color: 'green' });
+      const row1 = makeRow({ id: 'row-1' });
+      const row2 = makeRow({ id: 'row-2' });
+      const option1 = makeOption({ id: 'opt-1', label: 'To Do', color: 'red' });
+      const option2 = makeOption({ id: 'opt-2', label: 'Done', color: 'green' });
 
-      drawer.open(card1, column1);
+      drawer.open(row1, option1);
 
       const pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
 
       expect(pill!.textContent).toBe('To Do');
 
-      drawer.open(card2, column2);
+      drawer.open(row2, option2);
 
       const pillAfter = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
 
@@ -470,44 +470,44 @@ describe('DatabaseCardDrawer', () => {
     it('stays open throughout the switch', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1' });
-      const card2 = makeCard({ id: 'card-2' });
+      const row1 = makeRow({ id: 'row-1' });
+      const row2 = makeRow({ id: 'row-2' });
 
-      drawer.open(card1);
+      drawer.open(row1);
 
       expect(drawer.isOpen).toBe(true);
 
-      drawer.open(card2);
+      drawer.open(row2);
 
       expect(drawer.isOpen).toBe(true);
     });
 
-    it('fires onTitleChange with the new card id after switching', () => {
+    it('fires onTitleChange with the new row id after switching', () => {
       const onTitleChange = vi.fn();
       const options = createOptions({ onTitleChange });
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1', title: 'First' });
-      const card2 = makeCard({ id: 'card-2', title: 'Second' });
+      const row1 = makeRow({ id: 'row-1', properties: { 'prop-title': 'First' } });
+      const row2 = makeRow({ id: 'row-2', properties: { 'prop-title': 'Second' } });
 
-      drawer.open(card1);
-      drawer.open(card2);
+      drawer.open(row1);
+      drawer.open(row2);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
       titleInput.value = 'Edited';
       titleInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-      expect(onTitleChange).toHaveBeenCalledWith('card-2', 'Edited');
+      expect(onTitleChange).toHaveBeenCalledWith('row-2', 'Edited');
     });
 
     it('only has one drawer element in the DOM after switching', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1' });
-      const card2 = makeCard({ id: 'card-2' });
+      const row1 = makeRow({ id: 'row-1' });
+      const row2 = makeRow({ id: 'row-2' });
 
-      drawer.open(card1);
-      drawer.open(card2);
+      drawer.open(row1);
+      drawer.open(row2);
 
       const drawers = options.wrapper.querySelectorAll('[data-blok-database-drawer]');
 
@@ -518,15 +518,15 @@ describe('DatabaseCardDrawer', () => {
       const onTitleChange = vi.fn();
       const options = createOptions({ onTitleChange });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard({ id: 'card-1', title: 'Original' });
+      const row = makeRow({ id: 'row-1', properties: { 'prop-title': 'Original' } });
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLInputElement;
 
       titleInput.value = 'Edited locally';
 
-      drawer.open(makeCard({ id: 'card-1', title: 'Original' }));
+      drawer.open(makeRow({ id: 'row-1', properties: { 'prop-title': 'Original' } }));
 
       // Title should still show the locally-edited value, not be reset
       expect(titleInput.value).toBe('Edited locally');
@@ -545,9 +545,9 @@ describe('DatabaseCardDrawer', () => {
 
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard({ id: 'card-1', title: '' });
+      const row = makeRow({ id: 'row-1', properties: { 'prop-title': '' } });
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
       const focusSpy = vi.spyOn(titleInput, 'focus');
@@ -573,9 +573,9 @@ describe('DatabaseCardDrawer', () => {
 
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard({ id: 'card-1', title: 'Has title' });
+      const row = makeRow({ id: 'row-1', properties: { 'prop-title': 'Has title' } });
 
-      drawer.open(card);
+      drawer.open(row);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
       const focusSpy = vi.spyOn(titleInput, 'focus');
@@ -592,29 +592,29 @@ describe('DatabaseCardDrawer', () => {
     it('calls focus() on title input when switching to a card with empty title', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1', title: 'Has title' });
-      const card2 = makeCard({ id: 'card-2', title: '' });
+      const row1 = makeRow({ id: 'row-1', properties: { 'prop-title': 'Has title' } });
+      const row2 = makeRow({ id: 'row-2', properties: { 'prop-title': '' } });
 
-      drawer.open(card1);
+      drawer.open(row1);
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLTextAreaElement;
       const focusSpy = vi.spyOn(titleInput, 'focus');
 
-      drawer.open(card2);
+      drawer.open(row2);
 
       expect(focusSpy).toHaveBeenCalled();
     });
   });
 
   describe('active card state', () => {
-    const createWrapperWithCards = (...cardIds: string[]): HTMLElement => {
+    const createWrapperWithCards = (...rowIds: string[]): HTMLElement => {
       const wrapper = document.createElement('div');
 
-      for (const id of cardIds) {
+      for (const id of rowIds) {
         const cardEl = document.createElement('div');
 
         cardEl.setAttribute('data-blok-database-card', '');
-        cardEl.setAttribute('data-card-id', id);
+        cardEl.setAttribute('data-row-id', id);
         wrapper.appendChild(cardEl);
       }
 
@@ -622,54 +622,54 @@ describe('DatabaseCardDrawer', () => {
     };
 
     it('sets data-blok-database-card-active on the opened card element', () => {
-      const wrapper = createWrapperWithCards('card-1', 'card-2');
+      const wrapper = createWrapperWithCards('row-1', 'row-2');
       const options = createOptions({ wrapper });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard({ id: 'card-1' });
+      const row = makeRow({ id: 'row-1' });
 
-      drawer.open(card);
+      drawer.open(row);
 
-      const cardEl = wrapper.querySelector('[data-card-id="card-1"]') as HTMLElement;
+      const cardEl = wrapper.querySelector('[data-row-id="row-1"]') as HTMLElement;
 
       expect(cardEl.hasAttribute('data-blok-database-card-active')).toBe(true);
     });
 
     it('does not set active on other cards', () => {
-      const wrapper = createWrapperWithCards('card-1', 'card-2');
+      const wrapper = createWrapperWithCards('row-1', 'row-2');
       const options = createOptions({ wrapper });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard({ id: 'card-1' });
+      const row = makeRow({ id: 'row-1' });
 
-      drawer.open(card);
+      drawer.open(row);
 
-      const otherCard = wrapper.querySelector('[data-card-id="card-2"]') as HTMLElement;
+      const otherCard = wrapper.querySelector('[data-row-id="row-2"]') as HTMLElement;
 
       expect(otherCard.hasAttribute('data-blok-database-card-active')).toBe(false);
     });
 
     it('moves active state to the new card when switching', () => {
-      const wrapper = createWrapperWithCards('card-1', 'card-2');
+      const wrapper = createWrapperWithCards('row-1', 'row-2');
       const options = createOptions({ wrapper });
       const drawer = new DatabaseCardDrawer(options);
 
-      drawer.open(makeCard({ id: 'card-1' }));
-      drawer.open(makeCard({ id: 'card-2' }));
+      drawer.open(makeRow({ id: 'row-1' }));
+      drawer.open(makeRow({ id: 'row-2' }));
 
-      const card1 = wrapper.querySelector('[data-card-id="card-1"]') as HTMLElement;
-      const card2 = wrapper.querySelector('[data-card-id="card-2"]') as HTMLElement;
+      const card1 = wrapper.querySelector('[data-row-id="row-1"]') as HTMLElement;
+      const card2 = wrapper.querySelector('[data-row-id="row-2"]') as HTMLElement;
 
       expect(card1.hasAttribute('data-blok-database-card-active')).toBe(false);
       expect(card2.hasAttribute('data-blok-database-card-active')).toBe(true);
     });
 
     it('removes active state when drawer is closed', () => {
-      const wrapper = createWrapperWithCards('card-1');
+      const wrapper = createWrapperWithCards('row-1');
       const options = createOptions({ wrapper });
       const drawer = new DatabaseCardDrawer(options);
 
-      drawer.open(makeCard({ id: 'card-1' }));
+      drawer.open(makeRow({ id: 'row-1' }));
 
-      const cardEl = wrapper.querySelector('[data-card-id="card-1"]') as HTMLElement;
+      const cardEl = wrapper.querySelector('[data-row-id="row-1"]') as HTMLElement;
 
       expect(cardEl.hasAttribute('data-blok-database-card-active')).toBe(true);
 
@@ -684,9 +684,9 @@ describe('DatabaseCardDrawer', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       onClose.mockClear();
 
       document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
@@ -699,9 +699,9 @@ describe('DatabaseCardDrawer', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       onClose.mockClear();
 
       const titleInput = options.wrapper.querySelector('[data-blok-database-drawer-title]') as HTMLElement;
@@ -716,9 +716,9 @@ describe('DatabaseCardDrawer', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       onClose.mockClear();
 
       // Simulate a popover that is portaled to document.body (outside the drawer DOM)
@@ -746,9 +746,9 @@ describe('DatabaseCardDrawer', () => {
       const onClose = vi.fn();
       const options = createOptions({ onClose });
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       onClose.mockClear();
 
       // Simulate a tab bar that sits outside the drawer DOM
@@ -775,10 +775,10 @@ describe('DatabaseCardDrawer', () => {
     it('removes mousedown listener after close', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
       const removeSpy = vi.spyOn(document, 'removeEventListener');
 
-      drawer.open(card);
+      drawer.open(row);
       drawer.close();
 
       expect(removeSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
@@ -811,9 +811,9 @@ describe('DatabaseCardDrawer', () => {
       };
       const options = createOptions({ toolsConfig });
       const drawer = new DrawerWithMock(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       await vi.waitFor(() => {
         expect(mockBlokConstructor).toHaveBeenCalledOnce();
@@ -846,9 +846,9 @@ describe('DatabaseCardDrawer', () => {
 
       const options = createOptions();
       const drawer = new DrawerWithMock(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
 
       await vi.waitFor(() => {
         expect(mockBlokConstructor).toHaveBeenCalledOnce();
@@ -867,9 +867,9 @@ describe('DatabaseCardDrawer', () => {
     it('sets drawer width to 0 on close for exit animation', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       drawer.close();
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
@@ -881,9 +881,9 @@ describe('DatabaseCardDrawer', () => {
     it('keeps drawer in DOM until transitionend fires', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       drawer.close();
 
       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).not.toBeNull();
@@ -892,9 +892,9 @@ describe('DatabaseCardDrawer', () => {
     it('removes drawer from DOM after transitionend fires', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       drawer.close();
 
       const el = options.wrapper.querySelector('[data-blok-database-drawer]') as HTMLElement;
@@ -907,9 +907,9 @@ describe('DatabaseCardDrawer', () => {
     it('isOpen returns false immediately before animation ends', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       drawer.close();
 
       expect(drawer.isOpen).toBe(false);
@@ -919,9 +919,9 @@ describe('DatabaseCardDrawer', () => {
     it('destroy removes drawer immediately without exit animation', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card = makeCard();
+      const row = makeRow();
 
-      drawer.open(card);
+      drawer.open(row);
       drawer.destroy();
 
       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).toBeNull();
@@ -930,16 +930,16 @@ describe('DatabaseCardDrawer', () => {
     it('removes animating-out drawer when opening a new card', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);
-      const card1 = makeCard({ id: 'card-1' });
-      const card2 = makeCard({ id: 'card-2' });
+      const row1 = makeRow({ id: 'row-1' });
+      const row2 = makeRow({ id: 'row-2' });
 
-      drawer.open(card1);
+      drawer.open(row1);
       drawer.close();
 
       // Old drawer is still animating out
       expect(options.wrapper.querySelector('[data-blok-database-drawer]')).not.toBeNull();
 
-      drawer.open(card2);
+      drawer.open(row2);
 
       // Only one drawer should exist (the new one)
       const drawers = options.wrapper.querySelectorAll('[data-blok-database-drawer]');

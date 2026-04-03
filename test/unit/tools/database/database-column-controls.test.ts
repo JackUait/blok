@@ -23,15 +23,15 @@ const makeHeaderEl = (title = 'My Column'): HTMLElement => {
 
 describe('DatabaseColumnControls', () => {
   let i18n: I18n;
-  let onRename: ReturnType<typeof vi.fn<(columnId: string, title: string) => void>>;
-  let onDelete: ReturnType<typeof vi.fn<(columnId: string) => void>>;
+  let onRename: ReturnType<typeof vi.fn<(optionId: string, label: string) => void>>;
+  let onDelete: ReturnType<typeof vi.fn<(optionId: string) => void>>;
   let controls: DatabaseColumnControls;
 
   beforeEach(() => {
     vi.clearAllMocks();
     i18n = createMockI18n();
-    onRename = vi.fn<(columnId: string, title: string) => void>();
-    onDelete = vi.fn<(columnId: string) => void>();
+    onRename = vi.fn<(optionId: string, label: string) => void>();
+    onDelete = vi.fn<(optionId: string) => void>();
     controls = new DatabaseColumnControls({ i18n, onRename, onDelete });
   });
 
@@ -43,7 +43,7 @@ describe('DatabaseColumnControls', () => {
     it('calls onRename when title input fires change event', () => {
       const headerEl = makeHeaderEl('My Column');
 
-      controls.makeEditable(headerEl, 'col-1');
+      controls.makeEditable(headerEl, 'opt-1');
 
       const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]');
 
@@ -54,13 +54,13 @@ describe('DatabaseColumnControls', () => {
         simulateChange(input);
       }
 
-      expect(onRename).toHaveBeenCalledWith('col-1', 'Renamed Column');
+      expect(onRename).toHaveBeenCalledWith('opt-1', 'Renamed Column');
     });
 
-    it('calls onDelete with column ID when delete button is clicked', () => {
+    it('calls onDelete with option ID when delete button is clicked', () => {
       const headerEl = makeHeaderEl('My Column');
 
-      controls.makeEditable(headerEl, 'col-2');
+      controls.makeEditable(headerEl, 'opt-2');
 
       const deleteBtn = headerEl.querySelector<HTMLButtonElement>('[data-blok-database-delete-column]');
 
@@ -68,14 +68,14 @@ describe('DatabaseColumnControls', () => {
 
       deleteBtn?.click();
 
-      expect(onDelete).toHaveBeenCalledWith('col-2');
+      expect(onDelete).toHaveBeenCalledWith('opt-2');
     });
 
     describe('accessibility', () => {
       it('delete button has aria-label with translated text', () => {
         const headerEl = makeHeaderEl('My Column');
 
-        controls.makeEditable(headerEl, 'col-1');
+        controls.makeEditable(headerEl, 'opt-1');
 
         const deleteBtn = headerEl.querySelector<HTMLButtonElement>('[data-blok-database-delete-column]');
 
@@ -87,7 +87,7 @@ describe('DatabaseColumnControls', () => {
       it('rename input has aria-label with translated text', () => {
         const headerEl = makeHeaderEl('My Column');
 
-        controls.makeEditable(headerEl, 'col-1');
+        controls.makeEditable(headerEl, 'opt-1');
 
         const input = headerEl.querySelector<HTMLInputElement>('[data-blok-database-column-title-input]');
 

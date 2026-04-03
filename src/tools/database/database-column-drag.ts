@@ -1,14 +1,14 @@
 const DRAG_THRESHOLD = 10;
 
-export interface ColumnDragResult {
-  columnId: string;
-  beforeColumnId: string | null;
-  afterColumnId: string | null;
+export interface GroupDragResult {
+  optionId: string;
+  beforeOptionId: string | null;
+  afterOptionId: string | null;
 }
 
-export interface ColumnDragOptions {
+export interface GroupDragOptions {
   wrapper: HTMLElement;
-  onDrop: (result: ColumnDragResult) => void;
+  onDrop: (result: GroupDragResult) => void;
 }
 
 /**
@@ -17,10 +17,10 @@ export interface ColumnDragOptions {
  */
 export class DatabaseColumnDrag {
   private readonly wrapper: HTMLElement;
-  private readonly onDrop: (result: ColumnDragResult) => void;
+  private readonly onDrop: (result: GroupDragResult) => void;
 
   private isDragging = false;
-  private columnId = '';
+  private optionId = '';
   private startX = 0;
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
@@ -35,7 +35,7 @@ export class DatabaseColumnDrag {
   private readonly boundPointerCancel: () => void;
   private readonly boundKeyDown: (e: KeyboardEvent) => void;
 
-  constructor(options: ColumnDragOptions) {
+  constructor(options: GroupDragOptions) {
     this.wrapper = options.wrapper;
     this.onDrop = options.onDrop;
 
@@ -45,13 +45,13 @@ export class DatabaseColumnDrag {
     this.boundKeyDown = this.handleKeyDown.bind(this);
   }
 
-  public beginTracking(columnId: string, startX: number, startY: number): void {
+  public beginTracking(optionId: string, startX: number, startY: number): void {
     this.cleanup();
-    this.columnId = columnId;
+    this.optionId = optionId;
     this.startX = startX;
     this.startY = startY;
     this.isDragging = false;
-    this.sourceColumn = this.wrapper.querySelector(`[data-column-id="${columnId}"]`);
+    this.sourceColumn = this.wrapper.querySelector(`[data-option-id="${optionId}"]`);
 
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
@@ -77,7 +77,7 @@ export class DatabaseColumnDrag {
     }
 
     this.isDragging = false;
-    this.columnId = '';
+    this.optionId = '';
     this.sourceColumnWidth = 0;
     this.ghostOffsetX = 0;
   }
@@ -224,7 +224,7 @@ export class DatabaseColumnDrag {
   private getDropPosition(clientX: number): { beforeColumn: HTMLElement | null; afterColumn: HTMLElement | null } {
     const columns = Array.from(
       this.wrapper.querySelectorAll<HTMLElement>('[data-blok-database-column]')
-    ).filter((col) => col.getAttribute('data-column-id') !== this.columnId);
+    ).filter((col) => col.getAttribute('data-option-id') !== this.optionId);
 
     for (const col of columns) {
       const rect = col.getBoundingClientRect();
@@ -249,14 +249,14 @@ export class DatabaseColumnDrag {
   private commitDrop(e: PointerEvent): void {
     const position = this.getDropPosition(e.clientX);
 
-    const beforeColumnId = position.beforeColumn
-      ? position.beforeColumn.getAttribute('data-column-id')
+    const beforeOptionId = position.beforeColumn
+      ? position.beforeColumn.getAttribute('data-option-id')
       : null;
 
-    const afterColumnId = position.afterColumn
-      ? position.afterColumn.getAttribute('data-column-id')
+    const afterOptionId = position.afterColumn
+      ? position.afterColumn.getAttribute('data-option-id')
       : null;
 
-    this.onDrop({ columnId: this.columnId, beforeColumnId, afterColumnId });
+    this.onDrop({ optionId: this.optionId, beforeOptionId, afterOptionId });
   }
 }

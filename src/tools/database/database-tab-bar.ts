@@ -1,7 +1,7 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { IconBoard, IconPencil, IconCopy, IconTrash } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
-import type { DatabaseViewData } from './types';
+import type { DatabaseViewConfig, ViewType } from './types';
 
 const DRAG_THRESHOLD = 10;
 
@@ -10,10 +10,10 @@ const VIEW_ICONS: Record<string, string> = {
 };
 
 export interface TabBarOptions {
-  views: DatabaseViewData[];
+  views: DatabaseViewConfig[];
   activeViewId: string;
   onTabClick: (viewId: string) => void;
-  onAddView: (type: 'board') => void;
+  onAddView: (type: ViewType) => void;
   onRename: (viewId: string, newName: string) => void;
   onDuplicate: (viewId: string) => void;
   onDelete: (viewId: string) => void;
@@ -22,7 +22,7 @@ export interface TabBarOptions {
 
 export class DatabaseTabBar {
   private readonly options: TabBarOptions;
-  private readonly views: DatabaseViewData[];
+  private readonly views: DatabaseViewConfig[];
   private readonly onReorder: (viewId: string, newPosition: string) => void;
   private element: HTMLElement | null = null;
   private barEl: HTMLElement | null = null;
@@ -155,7 +155,7 @@ export class DatabaseTabBar {
     return bar;
   }
 
-  private createTab(view: DatabaseViewData): HTMLElement {
+  private createTab(view: DatabaseViewConfig): HTMLElement {
     const tab = document.createElement('div');
     tab.setAttribute('data-blok-database-tab', '');
     tab.setAttribute('data-view-id', view.id);
@@ -314,7 +314,7 @@ export class DatabaseTabBar {
       this.viewPopover.destroy();
     }
     this.viewPopover = new DatabaseViewPopover({
-      onSelect: (type: 'board') => {
+      onSelect: (type) => {
         this.options.onAddView(type);
       },
     });

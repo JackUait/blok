@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
-import type { ColumnDragResult } from '../../../../src/tools/database/database-column-drag';
+import type { GroupDragResult } from '../../../../src/tools/database/database-column-drag';
 
 /**
  * Creates a wrapper with columns for testing column drag.
- * Each column has data-blok-database-column and data-column-id.
+ * Each column has data-blok-database-column and data-option-id.
  * Columns are arranged horizontally.
  */
 const createWrapper = (columnCount: number): HTMLDivElement => {
@@ -14,7 +14,7 @@ const createWrapper = (columnCount: number): HTMLDivElement => {
     const column = document.createElement('div');
 
     column.setAttribute('data-blok-database-column', '');
-    column.setAttribute('data-column-id', `col-${c}`);
+    column.setAttribute('data-option-id', `opt-${c}`);
 
     const left = c * 200;
     const right = left + 200;
@@ -44,12 +44,12 @@ const createWrapper = (columnCount: number): HTMLDivElement => {
 
 describe('DatabaseColumnDrag', () => {
   let wrapper: HTMLDivElement;
-  let onDrop: ReturnType<typeof vi.fn<(result: ColumnDragResult) => void>>;
+  let onDrop: ReturnType<typeof vi.fn<(result: GroupDragResult) => void>>;
   let drag: DatabaseColumnDrag;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    onDrop = vi.fn<(result: ColumnDragResult) => void>();
+    onDrop = vi.fn<(result: GroupDragResult) => void>();
     wrapper = createWrapper(3);
     drag = new DatabaseColumnDrag({ wrapper, onDrop });
   });
@@ -61,7 +61,7 @@ describe('DatabaseColumnDrag', () => {
   });
 
   it('does not start drag below 10px horizontal threshold', () => {
-    drag.beginTracking('col-0', 50, 50);
+    drag.beginTracking('opt-0', 50, 50);
 
     // Move only 5px horizontally — below threshold
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 55, clientY: 50 }));
@@ -72,7 +72,7 @@ describe('DatabaseColumnDrag', () => {
   });
 
   it('cleans up previous tracking session when beginTracking is called again', () => {
-    drag.beginTracking('col-0', 50, 50);
+    drag.beginTracking('opt-0', 50, 50);
 
     // Move past threshold to create ghost for first session
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 50 }));
@@ -80,7 +80,7 @@ describe('DatabaseColumnDrag', () => {
     expect(document.querySelector('[data-blok-database-column-ghost]')).not.toBeNull();
 
     // Start a second tracking session without explicit cleanup
-    drag.beginTracking('col-1', 250, 50);
+    drag.beginTracking('opt-1', 250, 50);
 
     // The ghost from the first session should be removed
     expect(document.querySelector('[data-blok-database-column-ghost]')).toBeNull();
@@ -94,15 +94,15 @@ describe('DatabaseColumnDrag', () => {
     // Drop the second column
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 270, clientY: 50 }));
 
-    // onDrop should be called with col-1, not col-0
+    // onDrop should be called with opt-1, not opt-0
     expect(onDrop).toHaveBeenCalledTimes(1);
     expect(onDrop).toHaveBeenCalledWith(
-      expect.objectContaining({ columnId: 'col-1' })
+      expect.objectContaining({ optionId: 'opt-1' })
     );
   });
 
   it('cleans up ghost on pointerup — no [data-blok-database-column-ghost] in DOM', () => {
-    drag.beginTracking('col-0', 50, 50);
+    drag.beginTracking('opt-0', 50, 50);
 
     // Move 20px horizontally — past threshold
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 50 }));
@@ -115,45 +115,45 @@ describe('DatabaseColumnDrag', () => {
   });
 
   it('calls onDrop with correct data when moving column left to right', () => {
-    // Columns: col-0 [0-200], col-1 [200-400], col-2 [400-600]
-    // Drag col-0 starting at x=50, move past col-1's midpoint (300)
-    drag.beginTracking('col-0', 50, 50);
+    // Columns: opt-0 [0-200], opt-1 [200-400], opt-2 [400-600]
+    // Drag opt-0 starting at x=50, move past opt-1's midpoint (300)
+    drag.beginTracking('opt-0', 50, 50);
 
     // Move past drag threshold
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 50 }));
 
-    // Drop at x=350 — past col-1 midpoint (300), before col-2 midpoint (500)
-    // col-0 is excluded from position calc; remaining: col-1 [200-400], col-2 [400-600]
-    // x=350 < col-2 midpoint (500), so beforeColumn=col-2, afterColumn=col-1
+    // Drop at x=350 — past opt-1 midpoint (300), before opt-2 midpoint (500)
+    // opt-0 is excluded from position calc; remaining: opt-1 [200-400], opt-2 [400-600]
+    // x=350 < opt-2 midpoint (500), so beforeColumn=opt-2, afterColumn=opt-1
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 350, clientY: 50 }));
 
     expect(onDrop).toHaveBeenCalledTimes(1);
     expect(onDrop).toHaveBeenCalledWith({
-      columnId: 'col-0',
-      beforeColumnId: 'col-2',
-      afterColumnId: 'col-1',
+      optionId: 'opt-0',
+      beforeOptionId: 'opt-2',
+      afterOptionId: 'opt-1',
     });
   });
 
   it('calls onDrop with correct data when moving column to end', () => {
-    // Columns: col-0 [0-200], col-1 [200-400], col-2 [400-600]
-    // Drag col-0 past all columns — drop at x=650 (beyond col-2)
-    drag.beginTracking('col-0', 50, 50);
+    // Columns: opt-0 [0-200], opt-1 [200-400], opt-2 [400-600]
+    // Drag opt-0 past all columns — drop at x=650 (beyond opt-2)
+    drag.beginTracking('opt-0', 50, 50);
 
     // Move past drag threshold
     document.dispatchEvent(new PointerEvent('pointermove', { clientX: 70, clientY: 50 }));
 
     // Drop at x=650 — past all column midpoints
-    // col-0 excluded; remaining: col-1 [200-400], col-2 [400-600]
-    // x=650 > col-2 midpoint (500), so we fall through the loop
-    // beforeColumn=null, afterColumn=col-2
+    // opt-0 excluded; remaining: opt-1 [200-400], opt-2 [400-600]
+    // x=650 > opt-2 midpoint (500), so we fall through the loop
+    // beforeColumn=null, afterColumn=opt-2
     document.dispatchEvent(new PointerEvent('pointerup', { clientX: 650, clientY: 50 }));
 
     expect(onDrop).toHaveBeenCalledTimes(1);
     expect(onDrop).toHaveBeenCalledWith({
-      columnId: 'col-0',
-      beforeColumnId: null,
-      afterColumnId: 'col-2',
+      optionId: 'opt-0',
+      beforeOptionId: null,
+      afterOptionId: 'opt-2',
     });
   });
 });

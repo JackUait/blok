@@ -1,10 +1,10 @@
 const DRAG_THRESHOLD = 10;
 
 export interface CardDragResult {
-  cardId: string;
-  toColumnId: string;
-  beforeCardId: string | null;
-  afterCardId: string | null;
+  rowId: string;
+  toOptionId: string;
+  beforeRowId: string | null;
+  afterRowId: string | null;
 }
 
 export interface CardDragOptions {
@@ -21,7 +21,7 @@ export class DatabaseCardDrag {
   private readonly onDrop: (result: CardDragResult) => void;
 
   private isDragging = false;
-  private cardId = '';
+  private rowId = '';
   private startX = 0;
   private startY = 0;
   private ghostEl: HTMLElement | null = null;
@@ -50,13 +50,13 @@ export class DatabaseCardDrag {
   /**
    * Start tracking pointer after a pointerdown on a card.
    */
-  public beginTracking(cardId: string, startX: number, startY: number): void {
+  public beginTracking(rowId: string, startX: number, startY: number): void {
     this.cleanup();
-    this.cardId = cardId;
+    this.rowId = rowId;
     this.startX = startX;
     this.startY = startY;
     this.isDragging = false;
-    this.sourceCard = this.wrapper.querySelector(`[data-card-id="${cardId}"]`);
+    this.sourceCard = this.wrapper.querySelector(`[data-row-id="${rowId}"]`);
 
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
@@ -82,7 +82,7 @@ export class DatabaseCardDrag {
     }
 
     this.isDragging = false;
-    this.cardId = '';
+    this.rowId = '';
     this.sourceCardHeight = 0;
     this.ghostOffsetX = 0;
     this.ghostOffsetY = 0;
@@ -255,7 +255,7 @@ export class DatabaseCardDrag {
 
   private getDropPosition(column: HTMLElement, clientY: number): { beforeEl: Element | null } {
     const cards = Array.from(column.querySelectorAll<HTMLElement>('[data-blok-database-card]'))
-      .filter((card) => card.getAttribute('data-card-id') !== this.cardId);
+      .filter((card) => card.getAttribute('data-row-id') !== this.rowId);
 
     for (const card of cards) {
       const rect = card.getBoundingClientRect();
@@ -269,16 +269,16 @@ export class DatabaseCardDrag {
     return { beforeEl: null };
   }
 
-  private resolveAfterCardId(
+  private resolveAfterRowId(
     beforeEl: Element | null,
     cards: HTMLElement[],
     beforeIndex: number
   ): string | null {
     if (beforeEl) {
-      return beforeIndex > 0 ? cards[beforeIndex - 1].getAttribute('data-card-id') : null;
+      return beforeIndex > 0 ? cards[beforeIndex - 1].getAttribute('data-row-id') : null;
     }
 
-    return cards.length > 0 ? cards[cards.length - 1].getAttribute('data-card-id') : null;
+    return cards.length > 0 ? cards[cards.length - 1].getAttribute('data-row-id') : null;
   }
 
   private commitDrop(e: PointerEvent): void {
@@ -288,19 +288,19 @@ export class DatabaseCardDrag {
       return;
     }
 
-    const toColumnId = targetColumn.getAttribute('data-column-id') ?? '';
+    const toOptionId = targetColumn.getAttribute('data-option-id') ?? '';
     const position = this.getDropPosition(targetColumn, e.clientY);
     const cards = Array.from(targetColumn.querySelectorAll<HTMLElement>('[data-blok-database-card]'))
-      .filter((card) => card.getAttribute('data-card-id') !== this.cardId);
+      .filter((card) => card.getAttribute('data-row-id') !== this.rowId);
 
-    const beforeCardId: string | null = position.beforeEl
-      ? position.beforeEl.getAttribute('data-card-id')
+    const beforeRowId: string | null = position.beforeEl
+      ? position.beforeEl.getAttribute('data-row-id')
       : null;
 
     const beforeIndex = position.beforeEl ? cards.indexOf(position.beforeEl as HTMLElement) : -1;
 
-    const afterCardId = this.resolveAfterCardId(position.beforeEl, cards, beforeIndex);
+    const afterRowId = this.resolveAfterRowId(position.beforeEl, cards, beforeIndex);
 
-    this.onDrop({ cardId: this.cardId, toColumnId, beforeCardId, afterCardId });
+    this.onDrop({ rowId: this.rowId, toOptionId, beforeRowId, afterRowId });
   }
 }

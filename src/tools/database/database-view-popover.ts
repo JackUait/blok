@@ -1,7 +1,8 @@
 import { IconBoard, IconTable, IconGallery, IconList } from '../../components/icons';
+import type { ViewType } from './types';
 
 interface ViewTypeOption {
-  type: string;
+  type: ViewType;
   icon: string;
   label: string;
   enabled: boolean;
@@ -15,11 +16,11 @@ const VIEW_TYPES: ViewTypeOption[] = [
 ];
 
 export interface ViewPopoverOptions {
-  onSelect: (type: 'board') => void;
+  onSelect: (type: ViewType) => void;
 }
 
 export class DatabaseViewPopover {
-  private readonly onSelect: (type: 'board') => void;
+  private readonly onSelect: (type: ViewType) => void;
   private popoverEl: HTMLElement | null = null;
   private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
 
@@ -72,7 +73,7 @@ export class DatabaseViewPopover {
 
       if (option.enabled) {
         item.addEventListener('click', () => {
-          this.onSelect(option.type as 'board');
+          this.onSelect(option.type);
           this.close();
         });
       }

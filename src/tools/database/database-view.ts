@@ -1,7 +1,7 @@
 import type { I18n } from '../../../types';
-import type { KanbanColumnData, KanbanCardData } from './types';
+import type { SelectOption, DatabaseRow } from './types';
 
-interface DatabaseViewConfig {
+interface DatabaseViewOptions {
   readOnly: boolean;
   i18n: I18n;
 }
@@ -15,15 +15,15 @@ export class DatabaseView {
   private readonly readOnly: boolean;
   private readonly i18n: I18n;
 
-  constructor({ readOnly, i18n }: DatabaseViewConfig) {
+  constructor({ readOnly, i18n }: DatabaseViewOptions) {
     this.readOnly = readOnly;
     this.i18n = i18n;
   }
 
   /**
-   * Creates the full board DOM from column and card data.
+   * Creates the full board DOM from option and row data.
    */
-  createBoard(columns: KanbanColumnData[], getCards: (columnId: string) => KanbanCardData[]): HTMLDivElement {
+  createBoard(options: SelectOption[], getRows: (optionId: string) => DatabaseRow[], titlePropertyId: string): HTMLDivElement {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-tool', 'database');
@@ -43,8 +43,8 @@ export class DatabaseView {
     boardArea.style.flex = '1';
     boardArea.style.minWidth = '0';
 
-    for (const col of columns) {
-      const columnEl = this.createColumnElement(col, getCards(col.id));
+    for (const option of options) {
+      const columnEl = this.createColumnElement(option, getRows(option.id), titlePropertyId);
 
       boardArea.appendChild(columnEl);
     }
@@ -68,18 +68,18 @@ export class DatabaseView {
   /**
    * Creates and appends a card element to a cards container.
    */
-  appendCard(cardsContainer: HTMLElement, card: KanbanCardData): void {
-    const cardEl = this.createCardElement(card);
+  appendCard(cardsContainer: HTMLElement, row: DatabaseRow, titlePropertyId: string): void {
+    const cardEl = this.createCardElement(row, titlePropertyId);
 
     cardsContainer.appendChild(cardEl);
     this.updateColumnCount(cardsContainer);
   }
 
   /**
-   * Removes a card element from the wrapper by its data-card-id.
+   * Removes a card element from the wrapper by its data-row-id.
    */
-  removeCard(wrapper: HTMLElement, cardId: string): void {
-    const cardEl = wrapper.querySelector(`[data-card-id="${cardId}"]`);
+  removeCard(wrapper: HTMLElement, rowId: string): void {
+    const cardEl = wrapper.querySelector(`[data-row-id="${rowId}"]`);
     const cardsContainer = cardEl?.closest('[data-blok-database-cards]') as HTMLElement | null;
 
     cardEl?.remove();
@@ -92,8 +92,8 @@ export class DatabaseView {
   /**
    * Creates and inserts a column element before the add-column button.
    */
-  appendColumn(wrapper: HTMLElement, col: KanbanColumnData): void {
-    const columnEl = this.createColumnElement(col, []);
+  appendColumn(wrapper: HTMLElement, option: SelectOption): void {
+    const columnEl = this.createColumnElement(option, [], '');
     const boardArea = wrapper.querySelector('[data-blok-database-board]');
     const container = (boardArea as HTMLElement | null) ?? wrapper;
     const addColumnBtn = container.querySelector('[data-blok-database-add-column]');
@@ -106,22 +106,28 @@ export class DatabaseView {
   }
 
   /**
-   * Updates the visible title of a card element found by its data-card-id.
+   * Updates the visible title of a card element found by its data-row-id.
    */
-  updateCardTitle(wrapper: HTMLElement, cardId: string, title: string): void {
-    const cardEl = wrapper.querySelector(`[data-card-id="${cardId}"]`);
+  updateCardTitle(wrapper: HTMLElement, rowId: string, title: string): void {
+    const cardEl = wrapper.querySelector(`[data-row-id="${rowId}"]`);
     const titleEl = cardEl?.querySelector('[data-blok-database-card-title]');
 
     if (titleEl !== null && titleEl !== undefined) {
-      titleEl.textContent = title || this.i18n.t('tools.database.cardTitlePlaceholder');
+      if (title) {
+        titleEl.textContent = title;
+        titleEl.removeAttribute('data-placeholder');
+      } else {
+        titleEl.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
+        titleEl.setAttribute('data-placeholder', '');
+      }
     }
   }
 
   /**
-   * Removes a column element from the wrapper by its data-column-id.
+   * Removes a column element from the wrapper by its data-option-id.
    */
-  removeColumn(wrapper: HTMLElement, columnId: string): void {
-    const columnEl = wrapper.querySelector(`[data-column-id="${columnId}"]`);
+  removeColumn(wrapper: HTMLElement, optionId: string): void {
+    const columnEl = wrapper.querySelector(`[data-option-id="${optionId}"]`);
 
     columnEl?.remove();
   }
@@ -129,20 +135,20 @@ export class DatabaseView {
   /**
    * Creates a single column element with header, cards container, and optional add-card button.
    */
-  private createColumnElement(col: KanbanColumnData, cards: KanbanCardData[]): HTMLDivElement {
+  private createColumnElement(option: SelectOption, rows: DatabaseRow[], titlePropertyId: string): HTMLDivElement {
     const columnEl = document.createElement('div');
 
     columnEl.setAttribute('data-blok-database-column', '');
-    columnEl.setAttribute('data-column-id', col.id);
+    columnEl.setAttribute('data-option-id', option.id);
     columnEl.setAttribute('role', 'group');
-    columnEl.setAttribute('aria-label', col.title);
+    columnEl.setAttribute('aria-label', option.label);
     columnEl.style.display = 'flex';
     columnEl.style.flexDirection = 'column';
     columnEl.style.minWidth = '260px';
     columnEl.style.flex = '0 0 260px';
 
-    if (col.color !== undefined) {
-      columnEl.style.backgroundColor = `var(--blok-color-${col.color}-bg)`;
+    if (option.color !== undefined) {
+      columnEl.style.backgroundColor = `var(--blok-color-${option.color}-bg)`;
     }
 
     const header = document.createElement('div');
@@ -159,11 +165,11 @@ export class DatabaseView {
 
     pill.setAttribute('data-blok-database-column-pill', '');
 
-    if (col.color !== undefined) {
+    if (option.color !== undefined) {
       const dot = document.createElement('span');
 
       dot.setAttribute('data-blok-database-column-dot', '');
-      dot.style.backgroundColor = `var(--blok-color-${col.color}-text)`;
+      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
       pill.appendChild(dot);
     }
 
@@ -171,7 +177,7 @@ export class DatabaseView {
 
     titleEl.setAttribute('data-blok-database-column-title', '');
     titleEl.style.fontWeight = '600';
-    titleEl.textContent = col.title;
+    titleEl.textContent = option.label;
     pill.appendChild(titleEl);
 
     header.appendChild(pill);
@@ -179,7 +185,7 @@ export class DatabaseView {
     const countEl = document.createElement('span');
 
     countEl.setAttribute('data-blok-database-column-count', '');
-    countEl.textContent = String(cards.length);
+    countEl.textContent = String(rows.length);
     header.appendChild(countEl);
 
     columnEl.appendChild(header);
@@ -194,8 +200,8 @@ export class DatabaseView {
     cardsContainer.style.paddingTop = '6px';
     cardsContainer.style.minHeight = '40px';
 
-    for (const card of cards) {
-      const cardEl = this.createCardElement(card);
+    for (const row of rows) {
+      const cardEl = this.createCardElement(row, titlePropertyId);
 
       cardsContainer.appendChild(cardEl);
     }
@@ -206,7 +212,7 @@ export class DatabaseView {
       const addCardBtn = document.createElement('button');
 
       addCardBtn.setAttribute('data-blok-database-add-card', '');
-      addCardBtn.setAttribute('data-column-id', col.id);
+      addCardBtn.setAttribute('data-option-id', option.id);
       addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
       addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
       columnEl.appendChild(addCardBtn);
@@ -218,11 +224,12 @@ export class DatabaseView {
   /**
    * Creates a single card element.
    */
-  private createCardElement(card: KanbanCardData): HTMLDivElement {
+  private createCardElement(row: DatabaseRow, titlePropertyId: string): HTMLDivElement {
     const cardEl = document.createElement('div');
+    const title = (row.properties[titlePropertyId] as string) ?? '';
 
     cardEl.setAttribute('data-blok-database-card', '');
-    cardEl.setAttribute('data-card-id', card.id);
+    cardEl.setAttribute('data-row-id', row.id);
     cardEl.setAttribute('role', 'listitem');
     cardEl.style.padding = '10px 12px';
     cardEl.style.borderRadius = '8px';
@@ -232,14 +239,21 @@ export class DatabaseView {
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-card-title', '');
-    titleEl.textContent = card.title || this.i18n.t('tools.database.cardTitlePlaceholder');
+
+    if (title) {
+      titleEl.textContent = title;
+    } else {
+      titleEl.textContent = this.i18n.t('tools.database.cardTitlePlaceholder');
+      titleEl.setAttribute('data-placeholder', '');
+    }
+
     cardEl.appendChild(titleEl);
 
     if (!this.readOnly) {
       const deleteBtn = document.createElement('button');
 
       deleteBtn.setAttribute('data-blok-database-delete-card', '');
-      deleteBtn.setAttribute('data-card-id', card.id);
+      deleteBtn.setAttribute('data-row-id', row.id);
       deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteCard'));
       deleteBtn.style.position = 'absolute';
       deleteBtn.style.top = '4px';

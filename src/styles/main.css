@@ -1558,6 +1558,7 @@
   background-color: var(--blok-database-card-bg);
   box-shadow: var(--blok-database-card-shadow);
   border: 1px solid var(--blok-database-card-border);
+  border-radius: 8px;
   transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease, outline-color 150ms ease;
 }
 
@@ -1940,14 +1941,18 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: grab;
   font-size: 14px;
   color: var(--blok-database-tab-text);
   user-select: none;
   white-space: nowrap;
   transition: background-color 120ms ease;
+}
+
+[data-blok-database-tab-bar][data-dragging] [data-blok-database-tab] {
+  cursor: grabbing;
 }
 
 [data-blok-database-tab] svg {
@@ -2334,7 +2339,7 @@
   padding: 6px 8px;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   color: var(--blok-database-add-text);

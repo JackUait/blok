@@ -1,5 +1,5 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { IconBoard, IconPencil, IconCopy, IconTrash } from '../../components/icons';
+import { IconBoard, IconList, IconPencil, IconCopy, IconTrash } from '../../components/icons';
 import { DatabaseViewPopover } from './database-view-popover';
 import type { DatabaseViewConfig, ViewType } from './types';
 
@@ -7,6 +7,7 @@ const DRAG_THRESHOLD = 10;
 
 const VIEW_ICONS: Record<string, string> = {
   board: IconBoard,
+  list: IconList,
 };
 
 export interface TabBarOptions {
@@ -443,6 +444,7 @@ export class DatabaseTabBar {
     if (!this.isDragging && dx < DRAG_THRESHOLD) return;
     if (!this.isDragging) {
       this.isDragging = true;
+      this.element?.setAttribute('data-dragging', '');
       const sourceTab = this.element?.querySelector(`[data-view-id="${this.dragViewId}"]`) as HTMLElement | null;
       if (sourceTab !== null) {
         this.ghostEl = sourceTab.cloneNode(true) as HTMLElement;
@@ -502,6 +504,7 @@ export class DatabaseTabBar {
       this.ghostEl.remove();
       this.ghostEl = null;
     }
+    this.element?.removeAttribute('data-dragging');
     const sourceTab = this.element?.querySelector(`[data-view-id="${this.dragViewId}"]`) as HTMLElement | null;
     if (sourceTab !== null) {
       sourceTab.style.opacity = '';

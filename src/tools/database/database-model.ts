@@ -1,238 +1,233 @@
 import { generateKeyBetween } from 'fractional-indexing';
 import { nanoid } from 'nanoid';
-import type { KanbanData, KanbanColumnData, KanbanCardData } from './types';
+import type {
+  DatabaseData,
+  DatabaseRow,
+  DatabaseViewConfig,
+  PropertyConfig,
+  PropertyDefinition,
+  PropertyType,
+  PropertyValue,
+  SelectOption,
+  ViewType,
+} from './types';
 
-function comparePositions(a: string, b: string): number {
-  if (a < b) return -1;
-  if (a > b) return 1;
-
-  return 0;
-}
-
-/**
- * Pure data model for the kanban board.
- * Manages columns, cards, and their fractional-index ordering.
- * No DOM, no side effects.
- */
 export class DatabaseModel {
-  private columns: KanbanColumnData[];
-  private cardMap: Record<string, KanbanCardData>;
+  private schema: PropertyDefinition[];
+  private rows: Record<string, DatabaseRow>;
+  private views: DatabaseViewConfig[];
 
-  constructor(data?: Partial<KanbanData>) {
-    if (data?.columns && data.columns.length > 0) {
-      this.columns = data.columns.map(col => ({ ...col }));
+  constructor(data?: Partial<DatabaseData>) {
+    if (data?.schema !== undefined && data.schema.length > 0) {
+      this.schema = data.schema.map((p) => ({ ...p }));
     } else {
-      this.columns = [
-        { id: nanoid(), title: 'Not started', color: 'gray', position: 'a0' },
-        { id: nanoid(), title: 'In progress', color: 'blue', position: 'a1' },
-        { id: nanoid(), title: 'Done', color: 'green', position: 'a2' },
-      ];
+      this.schema = DatabaseModel.createDefaultSchema();
     }
 
-    this.cardMap = {};
-
-    if (data?.cardMap) {
-      for (const [id, card] of Object.entries(data.cardMap)) {
-        this.cardMap[id] = { ...card };
+    this.rows = {};
+    if (data?.rows !== undefined) {
+      for (const [id, row] of Object.entries(data.rows)) {
+        this.rows[id] = { ...row, properties: { ...row.properties } };
       }
+    }
+
+    if (data?.views !== undefined && data.views.length > 0) {
+      this.views = data.views.map((v) => ({ ...v, sorts: [...v.sorts], filters: [...v.filters], visibleProperties: [...v.visibleProperties] }));
+    } else {
+      const statusProp = this.schema.find((p) => p.type === 'select');
+      this.views = [DatabaseModel.createDefaultView(statusProp?.id)];
     }
   }
 
-  /**
-   * Returns a deep copy of the current state. Mutations to the returned object do not affect the model.
-   */
-  snapshot(): KanbanData {
-    const columns = this.columns.map(col => ({ ...col }));
-    const cardMap: Record<string, KanbanCardData> = {};
+  // ─── Schema ───
 
-    for (const [id, card] of Object.entries(this.cardMap)) {
-      cardMap[id] = {
-        ...card,
-        description: card.description ? structuredClone(card.description) : undefined,
+  getSchema(): PropertyDefinition[] {
+    return [...this.schema];
+  }
+
+  getProperty(propertyId: string): PropertyDefinition | undefined {
+    return this.schema.find((p) => p.id === propertyId);
+  }
+
+  addProperty(name: string, type: PropertyType, config?: PropertyConfig): PropertyDefinition {
+    const lastPosition = this.schema.length > 0 ? this.schema[this.schema.length - 1].position : null;
+    const prop: PropertyDefinition = {
+      id: nanoid(),
+      name,
+      type,
+      position: generateKeyBetween(lastPosition, null),
+      ...(config !== undefined ? { config } : {}),
+    };
+    this.schema.push(prop);
+    return prop;
+  }
+
+  updateProperty(propertyId: string, changes: Partial<Pick<PropertyDefinition, 'name' | 'config'>>): void {
+    const prop = this.schema.find((p) => p.id === propertyId);
+    if (prop === undefined) return;
+    if (changes.name !== undefined) prop.name = changes.name;
+    if (changes.config !== undefined) prop.config = changes.config;
+  }
+
+  deleteProperty(propertyId: string): void {
+    this.schema = this.schema.filter((p) => p.id !== propertyId);
+    for (const row of Object.values(this.rows)) {
+      delete row.properties[propertyId];
+    }
+  }
+
+  // ─── Rows ───
+
+  getOrderedRows(): DatabaseRow[] {
+    return Object.values(this.rows).sort((a, b) => (a.position < b.position ? -1 : 1));
+  }
+
+  getRow(rowId: string): DatabaseRow | undefined {
+    return this.rows[rowId];
+  }
+
+  addRow(properties: Record<string, PropertyValue> = {}): DatabaseRow {
+    const orderedRows = this.getOrderedRows();
+    const lastPosition = orderedRows.length > 0 ? orderedRows[orderedRows.length - 1].position : null;
+    const row: DatabaseRow = {
+      id: nanoid(),
+      position: generateKeyBetween(lastPosition, null),
+      properties: { ...properties },
+    };
+    this.rows[row.id] = row;
+    return row;
+  }
+
+  updateRow(rowId: string, properties: Record<string, PropertyValue>): void {
+    const row = this.rows[rowId];
+    if (row === undefined) return;
+    Object.assign(row.properties, properties);
+  }
+
+  moveRow(rowId: string, position: string): void {
+    const row = this.rows[rowId];
+    if (row === undefined) return;
+    row.position = position;
+  }
+
+  deleteRow(rowId: string): void {
+    delete this.rows[rowId];
+  }
+
+  // ─── View-oriented queries ───
+
+  getRowsGroupedBy(propertyId: string): Map<string, DatabaseRow[]> {
+    const groups = new Map<string, DatabaseRow[]>();
+    const ordered = this.getOrderedRows();
+    for (const row of ordered) {
+      const rawValue = row.properties[propertyId];
+      let key: string;
+      if (rawValue === undefined || rawValue === null) {
+        key = '';
+      } else if (typeof rawValue === 'boolean') {
+        key = String(rawValue);
+      } else {
+        key = String(rawValue);
+      }
+      const existing = groups.get(key);
+      if (existing !== undefined) {
+        existing.push(row);
+      } else {
+        groups.set(key, [row]);
+      }
+    }
+    return groups;
+  }
+
+  getSelectOptions(propertyId: string): SelectOption[] {
+    const prop = this.getProperty(propertyId);
+    if (prop === undefined || (prop.type !== 'select' && prop.type !== 'multiSelect')) return [];
+    const options = prop.config?.options ?? [];
+    return [...options].sort((a, b) => (a.position < b.position ? -1 : 1));
+  }
+
+  // ─── Views ───
+
+  getViews(): DatabaseViewConfig[] {
+    return [...this.views];
+  }
+
+  getView(viewId: string): DatabaseViewConfig | undefined {
+    return this.views.find((v) => v.id === viewId);
+  }
+
+  addView(name: string, type: ViewType, config: Partial<Pick<DatabaseViewConfig, 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'>> = {}): DatabaseViewConfig {
+    const sorted = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const lastPosition = sorted.length > 0 ? sorted[sorted.length - 1].position : null;
+    const view: DatabaseViewConfig = {
+      id: nanoid(),
+      name,
+      type,
+      position: generateKeyBetween(lastPosition, null),
+      groupBy: config.groupBy,
+      sorts: config.sorts ?? [],
+      filters: config.filters ?? [],
+      visibleProperties: config.visibleProperties ?? [],
+    };
+    this.views.push(view);
+    return view;
+  }
+
+  updateView(viewId: string, changes: Partial<Pick<DatabaseViewConfig, 'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'>>): void {
+    const view = this.views.find((v) => v.id === viewId);
+    if (view === undefined) return;
+    Object.assign(view, changes);
+  }
+
+  deleteView(viewId: string): void {
+    this.views = this.views.filter((v) => v.id !== viewId);
+  }
+
+  // ─── Snapshot ───
+
+  snapshot(): DatabaseData {
+    const rowsCopy: Record<string, DatabaseRow> = {};
+    for (const [id, row] of Object.entries(this.rows)) {
+      rowsCopy[id] = {
+        id: row.id,
+        position: row.position,
+        properties: JSON.parse(JSON.stringify(row.properties)) as Record<string, PropertyValue>,
       };
     }
-
-    return { columns, cardMap };
-  }
-
-  /**
-   * Returns cards for a column sorted by position (lexicographic string comparison).
-   */
-  getOrderedCards(columnId: string): KanbanCardData[] {
-    return Object.values(this.cardMap)
-      .filter(card => card.columnId === columnId)
-      .sort((a, b) => comparePositions(a.position, b.position));
-  }
-
-  /**
-   * Returns all columns sorted by position (lexicographic string comparison).
-   */
-  getOrderedColumns(): KanbanColumnData[] {
-    return [...this.columns].sort((a, b) => comparePositions(a.position, b.position));
-  }
-
-  /**
-   * Adds a new card to a column, positioned after all existing cards.
-   */
-  addCard(columnId: string, title: string): KanbanCardData {
-    const existing = this.getOrderedCards(columnId);
-    const lastPos = existing.length > 0 ? existing[existing.length - 1].position : null;
-    const position = generateKeyBetween(lastPos, null);
-    const card: KanbanCardData = {
-      id: nanoid(),
-      columnId,
-      position,
-      title,
+    return {
+      schema: JSON.parse(JSON.stringify(this.schema)) as PropertyDefinition[],
+      rows: rowsCopy,
+      views: JSON.parse(JSON.stringify(this.views)) as DatabaseViewConfig[],
+      activeViewId: this.views.length > 0 ? this.views[0].id : '',
     };
-
-    this.cardMap[card.id] = card;
-
-    return card;
   }
 
-  /**
-   * Moves a card to a different column at the given position.
-   */
-  moveCard(cardId: string, toColumnId: string, position: string): void {
-    const card = this.cardMap[cardId];
+  // ─── Static helpers ───
 
-    if (!card) {
-      return;
-    }
-
-    card.columnId = toColumnId;
-    card.position = position;
+  static positionBetween(after: string | null, before: string | null): string {
+    return generateKeyBetween(after, before);
   }
 
-  /**
-   * Updates a card's title and/or description.
-   */
-  updateCard(cardId: string, changes: Partial<Pick<KanbanCardData, 'title' | 'description'>>): void {
-    const card = this.cardMap[cardId];
-
-    if (!card) {
-      return;
-    }
-
-    if (changes.title !== undefined) {
-      card.title = changes.title;
-    }
-    if (changes.description !== undefined) {
-      card.description = changes.description;
-    }
+  private static createDefaultSchema(): PropertyDefinition[] {
+    return [
+      { id: nanoid(), name: 'Title', type: 'title', position: 'a0' },
+      {
+        id: nanoid(), name: 'Status', type: 'select', position: 'a1',
+        config: {
+          options: [
+            { id: nanoid(), label: 'Not started', color: 'gray', position: 'a0' },
+            { id: nanoid(), label: 'In progress', color: 'blue', position: 'a1' },
+            { id: nanoid(), label: 'Done', color: 'green', position: 'a2' },
+          ],
+        },
+      },
+    ];
   }
 
-  /**
-   * Deletes a card from the model.
-   */
-  deleteCard(cardId: string): void {
-    Reflect.deleteProperty(this.cardMap, cardId);
-  }
-
-  /**
-   * Adds a new column, positioned after all existing columns.
-   */
-  addColumn(title: string): KanbanColumnData {
-    const ordered = this.getOrderedColumns();
-    const lastPos = ordered.length > 0 ? ordered[ordered.length - 1].position : null;
-    const position = generateKeyBetween(lastPos, null);
-    const column: KanbanColumnData = {
-      id: nanoid(),
-      title,
-      position,
+  private static createDefaultView(groupByPropertyId?: string): DatabaseViewConfig {
+    return {
+      id: nanoid(), name: 'Board', type: 'board', position: 'a0',
+      groupBy: groupByPropertyId, sorts: [], filters: [], visibleProperties: [],
     };
-
-    this.columns.push(column);
-
-    return column;
-  }
-
-  /**
-   * Updates a column's title and/or color.
-   */
-  updateColumn(columnId: string, changes: Partial<Pick<KanbanColumnData, 'title' | 'color'>>): void {
-    const column = this.columns.find(c => c.id === columnId);
-
-    if (!column) {
-      return;
-    }
-
-    if (changes.title !== undefined) {
-      column.title = changes.title;
-    }
-    if (changes.color !== undefined) {
-      column.color = changes.color;
-    }
-  }
-
-  /**
-   * Updates a column's position for reordering.
-   */
-  moveColumn(columnId: string, position: string): void {
-    const column = this.columns.find(c => c.id === columnId);
-
-    if (!column) {
-      return;
-    }
-
-    column.position = position;
-  }
-
-  /**
-   * Removes a column and all its cards. Returns the IDs of deleted cards.
-   */
-  deleteColumn(columnId: string): string[] {
-    const deletedCardIds: string[] = [];
-
-    for (const [id, card] of Object.entries(this.cardMap)) {
-      if (card.columnId === columnId) {
-        deletedCardIds.push(id);
-        Reflect.deleteProperty(this.cardMap, id);
-      }
-    }
-
-    this.columns = this.columns.filter(c => c.id !== columnId);
-
-    return deletedCardIds;
-  }
-
-  /**
-   * Replaces all model state from adapter data.
-   */
-  loadFromAdapter(columns: KanbanColumnData[], cards: KanbanCardData[]): void {
-    this.columns = columns.map(col => ({ ...col }));
-    this.cardMap = {};
-
-    for (const card of cards) {
-      this.cardMap[card.id] = { ...card };
-    }
-  }
-
-  /**
-   * Generates a fractional-index key between two bounds.
-   */
-  static positionBetween(before: string | null, after: string | null): string {
-    return generateKeyBetween(before, after);
-  }
-
-  /**
-   * Returns a card by ID, or undefined if not found.
-   */
-  getCard(cardId: string): KanbanCardData | undefined {
-    return this.cardMap[cardId];
-  }
-
-  /**
-   * Returns a column by ID, or undefined if not found.
-   */
-  getColumn(columnId: string): KanbanColumnData | undefined {
-    return this.columns.find(c => c.id === columnId);
-  }
-
-  /**
-   * Returns the number of columns.
-   */
-  getColumnCount(): number {
-    return this.columns.length;
   }
 }

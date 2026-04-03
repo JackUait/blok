@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseViewPopover } from '../../../../src/tools/database/database-view-popover';
+import type { ViewType } from '../../../../src/tools/database/types';
 
 describe('DatabaseViewPopover', () => {
-  let onSelect: ReturnType<typeof vi.fn<(type: 'board') => void>>;
+  let onSelect: ReturnType<typeof vi.fn<(type: ViewType) => void>>;
   let popover: DatabaseViewPopover;
   let anchor: HTMLElement;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    onSelect = vi.fn<(type: 'board') => void>();
+    onSelect = vi.fn<(type: ViewType) => void>();
     anchor = document.createElement('button');
     document.body.appendChild(anchor);
     popover = new DatabaseViewPopover({ onSelect });

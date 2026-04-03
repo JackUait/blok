@@ -857,23 +857,32 @@
         id: "database-board",
         type: "database",
         data: {
-          columns: [
-            { id: "db-col-backlog", title: "Backlog", color: "gray", position: "a0" },
-            { id: "db-col-progress", title: "In progress", color: "blue", position: "a1" },
-            { id: "db-col-review", title: "In review", color: "purple", position: "a2" },
-            { id: "db-col-done", title: "Done", color: "green", position: "a3" }
+          schema: [
+            { id: "prop-title", name: "Title", type: "title", position: "a0" },
+            { id: "prop-status", name: "Status", type: "select", position: "a1", config: {
+              options: [
+                { id: "opt-backlog", label: "Backlog", color: "gray", position: "a0" },
+                { id: "opt-progress", label: "In progress", color: "blue", position: "a1" },
+                { id: "opt-review", label: "In review", color: "purple", position: "a2" },
+                { id: "opt-done", label: "Done", color: "green", position: "a3" }
+              ]
+            }}
           ],
-          cardMap: {
-            "db-card-1": { id: "db-card-1", columnId: "db-col-backlog", position: "a0", title: "Write documentation" },
-            "db-card-2": { id: "db-card-2", columnId: "db-col-backlog", position: "a1", title: "Add dark mode support" },
-            "db-card-3": { id: "db-card-3", columnId: "db-col-progress", position: "a0", title: "Implement drag and drop" },
-            "db-card-4": { id: "db-card-4", columnId: "db-col-progress", position: "a1", title: "Design card detail panel" },
-            "db-card-5": { id: "db-card-5", columnId: "db-col-progress", position: "a2", title: "Set up CI pipeline" },
-            "db-card-6": { id: "db-card-6", columnId: "db-col-review", position: "a0", title: "Code review: auth module" },
-            "db-card-7": { id: "db-card-7", columnId: "db-col-done", position: "a0", title: "Project scaffolding" },
-            "db-card-8": { id: "db-card-8", columnId: "db-col-done", position: "a1", title: "Database schema design" },
-            "db-card-9": { id: "db-card-9", columnId: "db-col-done", position: "a2", title: "User authentication" }
-          }
+          rows: {
+            "row-1": { id: "row-1", position: "a0", properties: { "prop-title": "Write documentation", "prop-status": "opt-backlog" } },
+            "row-2": { id: "row-2", position: "a1", properties: { "prop-title": "Add dark mode support", "prop-status": "opt-backlog" } },
+            "row-3": { id: "row-3", position: "a2", properties: { "prop-title": "Implement drag and drop", "prop-status": "opt-progress" } },
+            "row-4": { id: "row-4", position: "a3", properties: { "prop-title": "Design card detail panel", "prop-status": "opt-progress" } },
+            "row-5": { id: "row-5", position: "a4", properties: { "prop-title": "Set up CI pipeline", "prop-status": "opt-progress" } },
+            "row-6": { id: "row-6", position: "a5", properties: { "prop-title": "Code review: auth module", "prop-status": "opt-review" } },
+            "row-7": { id: "row-7", position: "a6", properties: { "prop-title": "Project scaffolding", "prop-status": "opt-done" } },
+            "row-8": { id: "row-8", position: "a7", properties: { "prop-title": "Database schema design", "prop-status": "opt-done" } },
+            "row-9": { id: "row-9", position: "a8", properties: { "prop-title": "User authentication", "prop-status": "opt-done" } }
+          },
+          views: [
+            { id: "view-1", name: "Board", type: "board", position: "a0", groupBy: "prop-status", sorts: [], filters: [], visibleProperties: ["prop-title", "prop-status"] }
+          ],
+          activeViewId: "view-1"
         }
       },
     ];

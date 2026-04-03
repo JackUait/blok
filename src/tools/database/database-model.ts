@@ -72,7 +72,8 @@ export class DatabaseModel {
   deleteProperty(propertyId: string): void {
     this.schema = this.schema.filter((p) => p.id !== propertyId);
     for (const row of Object.values(this.rows)) {
-      delete row.properties[propertyId];
+      const { [propertyId]: _, ...rest } = row.properties;
+      row.properties = rest;
     }
   }
 
@@ -111,7 +112,8 @@ export class DatabaseModel {
   }
 
   deleteRow(rowId: string): void {
-    delete this.rows[rowId];
+    const { [rowId]: _, ...rest } = this.rows;
+    this.rows = rest;
   }
 
   // ─── View-oriented queries ───
@@ -121,14 +123,7 @@ export class DatabaseModel {
     const ordered = this.getOrderedRows();
     for (const row of ordered) {
       const rawValue = row.properties[propertyId];
-      let key: string;
-      if (rawValue === undefined || rawValue === null) {
-        key = '';
-      } else if (typeof rawValue === 'boolean') {
-        key = String(rawValue);
-      } else {
-        key = String(rawValue);
-      }
+      const key = this.toGroupKey(rawValue);
       const existing = groups.get(key);
       if (existing !== undefined) {
         existing.push(row);
@@ -203,6 +198,13 @@ export class DatabaseModel {
   }
 
   // ─── Static helpers ───
+
+  private toGroupKey(value: PropertyValue | undefined): string {
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'boolean' || typeof value === 'number') return String(value);
+    return '';
+  }
 
   static positionBetween(after: string | null, before: string | null): string {
     return generateKeyBetween(after, before);

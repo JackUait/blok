@@ -1,6 +1,6 @@
 import type { I18n, OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
-import type { DatabaseRow, SelectOption, PropertyValue } from './types';
+import type { DatabaseRow, SelectOption } from './types';
 import { IconChevronRight } from '../../components/icons';
 
 interface BlokInstance {
@@ -412,7 +412,7 @@ export class DatabaseCardDrawer {
     import('../../blok').then(({ Blok }) => {
       const rowId = row.id;
       const description = this.descriptionPropertyId !== undefined
-        ? row.properties[this.descriptionPropertyId] as PropertyValue
+        ? row.properties[this.descriptionPropertyId]
         : undefined;
       const blok = new Blok({
         ...this.toolsConfig,

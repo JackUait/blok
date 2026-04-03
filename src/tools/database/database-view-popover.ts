@@ -1,18 +1,15 @@
-import { IconBoard, IconTable, IconGallery, IconList } from '../../components/icons';
+import { IconBoard, IconList } from '../../components/icons';
 import type { ViewType } from './types';
 
 interface ViewTypeOption {
   type: ViewType;
   icon: string;
   label: string;
-  enabled: boolean;
 }
 
 const VIEW_TYPES: ViewTypeOption[] = [
-  { type: 'board', icon: IconBoard, label: 'Board', enabled: true },
-  { type: 'table', icon: IconTable, label: 'Table', enabled: false },
-  { type: 'gallery', icon: IconGallery, label: 'Gallery', enabled: false },
-  { type: 'list', icon: IconList, label: 'List', enabled: true },
+  { type: 'board', icon: IconBoard, label: 'Board' },
+  { type: 'list', icon: IconList, label: 'List' },
 ];
 
 export interface ViewPopoverOptions {
@@ -56,12 +53,6 @@ export class DatabaseViewPopover {
       const item = document.createElement('div');
       item.setAttribute('data-blok-database-view-option', option.type);
 
-      if (!option.enabled) {
-        item.style.opacity = '0.35';
-        item.style.pointerEvents = 'none';
-        item.style.cursor = 'not-allowed';
-      }
-
       const iconEl = document.createElement('div');
       iconEl.setAttribute('data-blok-database-view-option-icon', '');
       iconEl.innerHTML = option.icon;
@@ -71,12 +62,10 @@ export class DatabaseViewPopover {
       label.textContent = option.label;
       item.appendChild(label);
 
-      if (option.enabled) {
-        item.addEventListener('click', () => {
-          this.onSelect(option.type);
-          this.close();
-        });
-      }
+      item.addEventListener('click', () => {
+        this.onSelect(option.type);
+        this.close();
+      });
 
       grid.appendChild(item);
     }

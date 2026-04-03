@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
-import type { DatabaseRow, SelectOption } from '../../../../src/tools/database/types';
+import type { DatabaseRow, SelectOption, PropertyDefinition } from '../../../../src/tools/database/types';
 import type { ToolsConfig } from '../../../../types/api/tools';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
@@ -19,12 +19,22 @@ const makeOption = (overrides: Partial<SelectOption> = {}): SelectOption => ({
   ...overrides,
 });
 
+const makePropertyDef = (overrides: Partial<PropertyDefinition> = {}): PropertyDefinition => ({
+  id: 'prop-status',
+  name: 'Status',
+  type: 'select',
+  position: 'a1',
+  ...overrides,
+});
+
 const createOptions = (overrides: Partial<CardDrawerOptions> = {}): CardDrawerOptions => ({
   wrapper: document.createElement('div'),
   readOnly: false,
   titlePropertyId: 'prop-title',
+  schema: [],
   onTitleChange: vi.fn(),
   onDescriptionChange: vi.fn(),
+  onPropertyChange: vi.fn(),
   onClose: vi.fn(),
   ...overrides,
 });
@@ -337,13 +347,19 @@ describe('DatabaseCardDrawer', () => {
   });
 
   describe('properties section', () => {
-    it('shows status property with option label when option is provided', () => {
-      const options = createOptions();
+    it('shows status property with option label when schema has a select property', () => {
+      const selectOption = makeOption({ id: 'opt-in-progress', label: 'In progress', color: 'blue' });
+      const statusDef = makePropertyDef({
+        id: 'prop-status',
+        name: 'Status',
+        type: 'select',
+        config: { options: [selectOption] },
+      });
+      const options = createOptions({ schema: [statusDef] });
       const drawer = new DatabaseCardDrawer(options);
-      const row = makeRow();
-      const option = makeOption({ label: 'In progress', color: 'blue' });
+      const row = makeRow({ properties: { 'prop-title': 'Test card', 'prop-status': 'opt-in-progress' } });
 
-      drawer.open(row, option);
+      drawer.open(row);
 
       const propLabel = options.wrapper.querySelector('[data-blok-database-drawer-prop-label]');
       const statusPill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
@@ -355,20 +371,29 @@ describe('DatabaseCardDrawer', () => {
     });
 
     it('status pill has colored dot when option has color', () => {
-      const options = createOptions();
+      const selectOption = makeOption({ id: 'opt-1', label: 'Done', color: 'green' });
+      const statusDef = makePropertyDef({
+        id: 'prop-status',
+        name: 'Status',
+        type: 'select',
+        config: { options: [selectOption] },
+      });
+      const options = createOptions({ schema: [statusDef] });
       const drawer = new DatabaseCardDrawer(options);
-      const row = makeRow();
-      const option = makeOption({ color: 'green' });
+      const row = makeRow({ properties: { 'prop-title': 'Test card', 'prop-status': 'opt-1' } });
 
-      drawer.open(row, option);
+      drawer.open(row);
 
       const dot = options.wrapper.querySelector('[data-blok-database-drawer-status-dot]');
 
       expect(dot).not.toBeNull();
     });
 
-    it('does not show properties section when no option is provided', () => {
-      const options = createOptions();
+    it('shows empty properties section when schema has no renderable properties', () => {
+      // title and richText are excluded from the properties section
+      const titleDef = makePropertyDef({ id: 'prop-title', name: 'Title', type: 'title', position: 'a0' });
+      const richTextDef = makePropertyDef({ id: 'prop-desc', name: 'Description', type: 'richText', position: 'a1' });
+      const options = createOptions({ schema: [titleDef, richTextDef] });
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow();
 
@@ -377,6 +402,148 @@ describe('DatabaseCardDrawer', () => {
       const propsSection = options.wrapper.querySelector('[data-blok-database-drawer-props]');
 
       expect(propsSection).toBeNull();
+    });
+
+    it('shows all schema properties (excluding title and richText) in the properties section when opened', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-title', name: 'Title', type: 'title', position: 'a0' }),
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
+        makePropertyDef({ id: 'prop-notes', name: 'Notes', type: 'text', position: 'a2' }),
+        makePropertyDef({ id: 'prop-desc', name: 'Description', type: 'richText', position: 'a3' }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1', 'prop-notes': 'hello', 'prop-desc': null } });
+
+      drawer.open(row);
+
+      const propRows = options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-row]');
+
+      // title and richText excluded → only 'Status' and 'Notes'
+      expect(propRows).toHaveLength(2);
+    });
+
+    it('renders property name from schema def.name (not hardcoded "Status")', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-priority', name: 'Priority', type: 'select', position: 'a1', config: { options: [makeOption({ id: 'opt-high', label: 'High' })] } }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-priority': 'opt-high' } });
+
+      drawer.open(row);
+
+      const propLabel = options.wrapper.querySelector('[data-blok-database-drawer-prop-label]');
+
+      expect(propLabel).not.toBeNull();
+      expect(propLabel!.textContent).toBe('Priority');
+    });
+
+    it('renders select property as a colored pill with the option label', () => {
+      const selectOption = makeOption({ id: 'opt-done', label: 'Done', color: 'green' });
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [selectOption] } }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-done' } });
+
+      drawer.open(row);
+
+      const pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+
+      expect(pill).not.toBeNull();
+      expect(pill!.textContent).toBe('Done');
+      expect((pill as HTMLElement).style.backgroundColor).toBeTruthy();
+    });
+
+    it('renders text property value as plain text', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-notes', name: 'Notes', type: 'text', position: 'a1' }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-notes': 'some plain text' } });
+
+      drawer.open(row);
+
+      const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
+
+      expect(propValue).not.toBeNull();
+      expect(propValue!.textContent).toBe('some plain text');
+    });
+
+    it('renders number property value as a string', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-count', name: 'Count', type: 'number', position: 'a1' }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-count': 42 } });
+
+      drawer.open(row);
+
+      const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
+
+      expect(propValue).not.toBeNull();
+      expect(propValue!.textContent).toBe('42');
+    });
+
+    it('renders checkbox property value', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-done', name: 'Done', type: 'checkbox', position: 'a1' }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-done': true } });
+
+      drawer.open(row);
+
+      const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
+
+      expect(propValue).not.toBeNull();
+      expect(propValue!.textContent).toBe('true');
+    });
+
+    it('shows properties section even when no groupBy option exists (list view scenario)', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      // row has a status property value
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } });
+
+      // open WITHOUT any option argument (simulating list view — no groupBy)
+      drawer.open(row);
+
+      const propsSection = options.wrapper.querySelector('[data-blok-database-drawer-props]');
+
+      expect(propsSection).not.toBeNull();
+    });
+
+    it('updates properties section when switching cards', () => {
+      const selectOption1 = makeOption({ id: 'opt-todo', label: 'To Do', color: 'red' });
+      const selectOption2 = makeOption({ id: 'opt-done', label: 'Done', color: 'green' });
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [selectOption1, selectOption2] } }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row1 = makeRow({ id: 'row-1', properties: { 'prop-title': 'Card 1', 'prop-status': 'opt-todo' } });
+      const row2 = makeRow({ id: 'row-2', properties: { 'prop-title': 'Card 2', 'prop-status': 'opt-done' } });
+
+      drawer.open(row1);
+
+      let pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+
+      expect(pill!.textContent).toBe('To Do');
+
+      drawer.open(row2);
+
+      pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+
+      expect(pill!.textContent).toBe('Done');
     });
   });
 
@@ -447,20 +614,23 @@ describe('DatabaseCardDrawer', () => {
     });
 
     it('updates the status pill to the new option', () => {
-      const options = createOptions();
-      const drawer = new DatabaseCardDrawer(options);
-      const row1 = makeRow({ id: 'row-1' });
-      const row2 = makeRow({ id: 'row-2' });
       const option1 = makeOption({ id: 'opt-1', label: 'To Do', color: 'red' });
       const option2 = makeOption({ id: 'opt-2', label: 'Done', color: 'green' });
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [option1, option2] } }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row1 = makeRow({ id: 'row-1', properties: { 'prop-title': 'Card 1', 'prop-status': 'opt-1' } });
+      const row2 = makeRow({ id: 'row-2', properties: { 'prop-title': 'Card 2', 'prop-status': 'opt-2' } });
 
-      drawer.open(row1, option1);
+      drawer.open(row1);
 
       const pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
 
       expect(pill!.textContent).toBe('To Do');
 
-      drawer.open(row2, option2);
+      drawer.open(row2);
 
       const pillAfter = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
 

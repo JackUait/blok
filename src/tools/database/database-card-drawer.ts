@@ -1,6 +1,6 @@
 import type { I18n, OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
-import type { DatabaseRow, SelectOption } from './types';
+import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectPropertyConfig } from './types';
 import { IconChevronRight } from '../../components/icons';
 
 interface BlokInstance {
@@ -16,8 +16,10 @@ export interface CardDrawerOptions {
   toolsConfig?: ToolsConfig;
   titlePropertyId: string;
   descriptionPropertyId?: string;
+  schema: PropertyDefinition[];
   onTitleChange: (rowId: string, title: string) => void;
   onDescriptionChange: (rowId: string, description: OutputData) => void;
+  onPropertyChange: (rowId: string, propertyId: string, value: PropertyValue) => void;
   onClose: () => void;
 }
 
@@ -33,8 +35,10 @@ export class DatabaseCardDrawer {
   private readonly toolsConfig: ToolsConfig | undefined;
   private readonly titlePropertyId: string;
   private readonly descriptionPropertyId: string | undefined;
+  private readonly schema: PropertyDefinition[];
   private readonly onTitleChange: (rowId: string, title: string) => void;
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
+  private readonly onPropertyChange: (rowId: string, propertyId: string, value: PropertyValue) => void;
   private readonly onClose: () => void;
 
   private drawer: HTMLDivElement | null = null;
@@ -50,8 +54,10 @@ export class DatabaseCardDrawer {
     this.toolsConfig = options.toolsConfig;
     this.titlePropertyId = options.titlePropertyId;
     this.descriptionPropertyId = options.descriptionPropertyId;
+    this.schema = options.schema;
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
+    this.onPropertyChange = options.onPropertyChange;
     this.onClose = options.onClose;
   }
 
@@ -59,13 +65,13 @@ export class DatabaseCardDrawer {
     return this.drawer !== null;
   }
 
-  open(row: DatabaseRow, option?: SelectOption): void {
+  open(row: DatabaseRow): void {
     if (this.drawer) {
       if (row.id === this.currentRowId) {
         return;
       }
 
-      this.loadCard(row, option);
+      this.loadCard(row);
 
       return;
     }
@@ -131,14 +137,19 @@ export class DatabaseCardDrawer {
     content.appendChild(titleInput);
 
     // --- Properties section ---
-    if (option !== undefined) {
+    const renderableSchema = this.getRenderableSchema();
+
+    if (renderableSchema.length > 0) {
       const propsSection = document.createElement('div');
 
       propsSection.setAttribute('data-blok-database-drawer-props', '');
 
-      const statusRow = this.createPropertyRow(option);
+      for (const def of renderableSchema) {
+        const propRow = this.createPropertyRow(def, row.properties[def.id] ?? null, row.id);
 
-      propsSection.appendChild(statusRow);
+        propsSection.appendChild(propRow);
+      }
+
       content.appendChild(propsSection);
     }
 
@@ -222,7 +233,7 @@ export class DatabaseCardDrawer {
    * Swaps content in the already-open drawer to show a different card
    * without closing/reopening the drawer panel.
    */
-  private loadCard(row: DatabaseRow, option?: SelectOption): void {
+  private loadCard(row: DatabaseRow): void {
     if (this.drawer === null) {
       return;
     }
@@ -249,7 +260,9 @@ export class DatabaseCardDrawer {
     // Replace properties section
     this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
 
-    if (option !== undefined) {
+    const renderableSchema = this.getRenderableSchema();
+
+    if (renderableSchema.length > 0) {
       const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
       const divider = content?.querySelector('hr') ?? null;
 
@@ -257,7 +270,11 @@ export class DatabaseCardDrawer {
         const propsSection = document.createElement('div');
 
         propsSection.setAttribute('data-blok-database-drawer-props', '');
-        propsSection.appendChild(this.createPropertyRow(option));
+
+        for (const def of renderableSchema) {
+          propsSection.appendChild(this.createPropertyRow(def, row.properties[def.id] ?? null, row.id));
+        }
+
         content.insertBefore(propsSection, divider);
       }
     }
@@ -313,19 +330,24 @@ export class DatabaseCardDrawer {
   }
 
   /**
-   * Creates a status property row with icon, label, and option pill badge.
+   * Returns schema properties that should be shown in the properties section,
+   * sorted by position. Excludes 'title' and 'richText' (rendered separately).
    */
-  private createPropertyRow(option: SelectOption): HTMLDivElement {
-    const row = document.createElement('div');
+  private getRenderableSchema(): PropertyDefinition[] {
+    return [...this.schema]
+      .filter((def) => def.type !== 'title' && def.type !== 'richText')
+      .sort((a, b) => {
+        if (a.position < b.position) return -1;
+        if (a.position > b.position) return 1;
 
-    row.setAttribute('data-blok-database-drawer-prop-row', '');
+        return 0;
+      });
+  }
 
-    const label = document.createElement('span');
-
-    label.setAttribute('data-blok-database-drawer-prop-label', '');
-    label.textContent = 'Status';
-    row.appendChild(label);
-
+  /**
+   * Creates a pill badge element for a select option.
+   */
+  private createSelectPill(option: { label: string; color?: string }): HTMLSpanElement {
     const pill = document.createElement('span');
 
     pill.setAttribute('data-blok-database-drawer-status-pill', '');
@@ -333,9 +355,7 @@ export class DatabaseCardDrawer {
     if (option.color !== undefined) {
       pill.style.backgroundColor = `var(--blok-color-${option.color}-bg)`;
       pill.style.color = `var(--blok-color-${option.color}-text)`;
-    }
 
-    if (option.color !== undefined) {
       const dot = document.createElement('span');
 
       dot.setAttribute('data-blok-database-drawer-status-dot', '');
@@ -348,7 +368,52 @@ export class DatabaseCardDrawer {
     pillText.textContent = option.label;
     pill.appendChild(pillText);
 
-    row.appendChild(pill);
+    return pill;
+  }
+
+  /**
+   * Creates a property row that dispatches on the property type to render
+   * the appropriate value representation.
+   */
+  private createPropertyRow(def: PropertyDefinition, value: PropertyValue, _rowId: string): HTMLDivElement {
+    const row = document.createElement('div');
+
+    row.setAttribute('data-blok-database-drawer-prop-row', '');
+
+    const label = document.createElement('span');
+
+    label.setAttribute('data-blok-database-drawer-prop-label', '');
+    label.textContent = def.name;
+    row.appendChild(label);
+
+    const valueEl = document.createElement('span');
+
+    valueEl.setAttribute('data-blok-database-drawer-prop-value', '');
+
+    if (def.type === 'select') {
+      const config = def.config;
+      const optionId = typeof value === 'string' ? value : null;
+      const option = config?.options.find((o) => o.id === optionId);
+
+      if (option !== undefined) {
+        valueEl.appendChild(this.createSelectPill(option));
+      }
+    } else if (def.type === 'multiSelect') {
+      const config = def.config;
+      const selectedIds = Array.isArray(value) ? value : [];
+
+      for (const optionId of selectedIds) {
+        const option = config?.options.find((o) => o.id === optionId);
+
+        if (option !== undefined) {
+          valueEl.appendChild(this.createSelectPill(option));
+        }
+      }
+    } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      valueEl.textContent = String(value);
+    }
+
+    row.appendChild(valueEl);
 
     return row;
   }

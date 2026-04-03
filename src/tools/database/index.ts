@@ -621,6 +621,7 @@ export class DatabaseTool implements BlockTool {
         toolsConfig: this.api.tools.getToolsConfig(),
         titlePropertyId: titlePropId,
         descriptionPropertyId: descriptionPropId,
+        schema: this.model.getSchema(),
         onTitleChange: (rowId, title) => {
           this.model.updateRow(rowId, { [titlePropId]: title });
           const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
@@ -637,6 +638,10 @@ export class DatabaseTool implements BlockTool {
             this.model.updateRow(rowId, { [descriptionPropId]: description });
             this.sync.syncUpdateRow({ rowId, properties: { [descriptionPropId]: description } });
           }
+        },
+        onPropertyChange: (rowId, propertyId, value) => {
+          this.model.updateRow(rowId, { [propertyId]: value });
+          this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
         },
         onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
       });
@@ -882,28 +887,10 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const viewConfig = this.model.getView(this.activeViewId);
-    const groupByPropId = viewConfig?.groupBy;
-    const option = this.resolveRowOption(row, groupByPropId);
-
-    this.cardDrawer?.open(row, option);
+    this.cardDrawer?.open(row);
   }
 
-  private resolveRowOption(row: DatabaseRow, groupByPropId: string | undefined): SelectOption | undefined {
-    if (groupByPropId === undefined) {
-      return undefined;
-    }
-
-    const optionId = row.properties[groupByPropId];
-
-    if (typeof optionId === 'string') {
-      return this.model.getSelectOptions(groupByPropId).find((o) => o.id === optionId);
-    }
-
-    return undefined;
-  }
-
-  /**
+    /**
    * Full re-render of the active board: tears down subsystems, rebuilds DOM, re-inits.
    *
    * Board DOM structure:

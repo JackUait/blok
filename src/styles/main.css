@@ -715,6 +715,8 @@
   --blok-database-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --blok-database-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
   --blok-database-card-border: rgba(0, 0, 0, 0.06);
+  --blok-database-card-border-active: rgba(35, 131, 226, 0.57);
+  --blok-database-card-placeholder: rgba(55, 53, 47, 0.4);
   --blok-database-column-bg: rgba(0, 0, 0, 0.04);
   --blok-database-add-text: rgba(55, 53, 47, 0.5);
   --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
@@ -829,6 +831,8 @@
     --blok-database-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     --blok-database-card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.45);
     --blok-database-card-border: rgba(255, 255, 255, 0.06);
+    --blok-database-card-border-active: rgba(35, 131, 226, 0.7);
+    --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
     --blok-database-column-bg: rgba(255, 255, 255, 0.05);
     --blok-database-add-text: rgba(255, 255, 255, 0.4);
     --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
@@ -1551,7 +1555,7 @@
   background-color: var(--blok-database-card-bg);
   box-shadow: var(--blok-database-card-shadow);
   border: 1px solid var(--blok-database-card-border);
-  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease, outline-color 150ms ease;
 }
 
 [data-blok-database-card]:hover {
@@ -1560,6 +1564,8 @@
 
 [data-blok-database-card-active] {
   background-color: var(--blok-database-card-bg-hover);
+  outline: 2px solid var(--blok-database-card-border-active);
+  outline-offset: -1px;
 }
 
 /**
@@ -1708,6 +1714,11 @@
   font-weight: 500;
   line-height: 1.45;
   word-break: break-word;
+}
+
+[data-blok-database-card-title][data-placeholder] {
+  color: var(--blok-database-card-placeholder);
+  font-style: italic;
 }
 
 /**

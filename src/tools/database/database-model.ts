@@ -178,6 +178,17 @@ export class DatabaseModel {
     this.views = this.views.filter((v) => v.id !== viewId);
   }
 
+  // ─── Hydrate ───
+
+  hydrate(data: { schema: PropertyDefinition[]; rows: Record<string, DatabaseRow>; views: DatabaseViewConfig[] }): void {
+    this.schema = data.schema.map((p) => ({ ...p }));
+    this.rows = {};
+    for (const [id, row] of Object.entries(data.rows)) {
+      this.rows[id] = { ...row, properties: { ...row.properties } };
+    }
+    this.views = data.views.map((v) => ({ ...v, sorts: [...v.sorts], filters: [...v.filters], visibleProperties: [...v.visibleProperties] }));
+  }
+
   // ─── Snapshot ───
 
   snapshot(): DatabaseData {

@@ -334,6 +334,56 @@ describe('DatabaseModel', () => {
     });
   });
 
+  describe('hydrate', () => {
+    it('replaces schema, rows, and views with provided data', () => {
+      const model = new DatabaseModel();
+      const newSchema = [makeProperty({ id: 'p-new', name: 'New Prop' })];
+      const newRows = { 'r-new': makeRow({ id: 'r-new', properties: { 'p-new': 'val' } }) };
+      const newViews = [makeView({ id: 'v-new', name: 'New View' })];
+
+      model.hydrate({ schema: newSchema, rows: newRows, views: newViews });
+
+      expect(model.getSchema()).toHaveLength(1);
+      expect(model.getSchema()[0].id).toBe('p-new');
+      expect(model.getRow('r-new')).toBeDefined();
+      expect(model.getViews()).toHaveLength(1);
+      expect(model.getViews()[0].id).toBe('v-new');
+    });
+
+    it('creates defensive copies so mutations to source do not affect model', () => {
+      const model = new DatabaseModel();
+      const schema = [makeProperty({ id: 'p1' })];
+      const rows = { r1: makeRow({ id: 'r1' }) };
+      const views = [makeView({ id: 'v1' })];
+
+      model.hydrate({ schema, rows, views });
+
+      schema.push(makeProperty({ id: 'injected' }));
+      expect(model.getSchema()).toHaveLength(1);
+    });
+
+    it('creates defensive copies of row properties', () => {
+      const model = new DatabaseModel();
+      const row = makeRow({ id: 'r1', properties: { title: 'original' } });
+      const rows = { r1: row };
+
+      model.hydrate({ schema: [makeProperty({ id: 'p1' })], rows, views: [makeView({ id: 'v1' })] });
+
+      row.properties.title = 'mutated';
+      expect(model.getRow('r1')?.properties.title).toBe('original');
+    });
+
+    it('creates defensive copies of view arrays', () => {
+      const model = new DatabaseModel();
+      const view = makeView({ id: 'v1', sorts: [{ propertyId: 'p1', direction: 'asc' }] });
+
+      model.hydrate({ schema: [makeProperty({ id: 'p1' })], rows: {}, views: [view] });
+
+      view.sorts.push({ propertyId: 'p2', direction: 'desc' });
+      expect(model.getViews()[0].sorts).toHaveLength(1);
+    });
+  });
+
   describe('positionBetween', () => {
     it('generates a position between two values', () => {
       const pos = DatabaseModel.positionBetween('a0', 'a2');

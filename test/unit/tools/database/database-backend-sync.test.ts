@@ -3,7 +3,7 @@ import { DatabaseBackendSync } from '../../../../src/tools/database/database-bac
 import type { DatabaseAdapter } from '../../../../src/tools/database/types';
 
 const createMockAdapter = (): DatabaseAdapter => ({
-  loadDatabase: vi.fn().mockResolvedValue({ schema: [], rows: [], views: [] }),
+  loadDatabase: vi.fn().mockResolvedValue({ schema: [], rows: {}, views: [] }),
   createRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
   updateRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
   moveRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
@@ -33,6 +33,24 @@ describe('DatabaseBackendSync', () => {
       await expect(sync.syncUpdateView({ viewId: 'v1', changes: { name: 'W' } })).resolves.toBeUndefined();
       await expect(sync.syncDeleteView({ viewId: 'v1' })).resolves.toBeUndefined();
       sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'Test' } });
+    });
+  });
+
+  describe('load operation', () => {
+    it('syncLoadDatabase calls adapter.loadDatabase', async () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+      const result = await sync.syncLoadDatabase();
+
+      expect(adapter.loadDatabase).toHaveBeenCalled();
+      expect(result).toEqual({ schema: [], rows: {}, views: [] });
+    });
+
+    it('syncLoadDatabase returns undefined when no adapter', async () => {
+      const sync = new DatabaseBackendSync();
+      const result = await sync.syncLoadDatabase();
+
+      expect(result).toBeUndefined();
     });
   });
 

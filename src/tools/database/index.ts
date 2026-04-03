@@ -115,6 +115,26 @@ export class DatabaseTool implements BlockTool {
 
   rendered(): void {
     this.block.stretched = true;
+    if (this.config.adapter !== undefined) {
+      void this.loadFromBackend();
+    }
+  }
+
+  private async loadFromBackend(): Promise<void> {
+    const data = await this.sync.syncLoadDatabase();
+
+    if (data === undefined) {
+      return;
+    }
+
+    this.model.hydrate(data);
+    const views = this.model.getViews();
+
+    if (views.length > 0 && !views.some((v) => v.id === this.activeViewId)) {
+      this.activeViewId = views[0].id;
+    }
+
+    this.rerenderView();
   }
 
   save(_blockContent: HTMLElement): DatabaseData {

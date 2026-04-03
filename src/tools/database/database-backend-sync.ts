@@ -1,4 +1,4 @@
-import type { DatabaseAdapter } from './types';
+import type { DatabaseAdapter, PropertyDefinition, DatabaseRow, DatabaseViewConfig } from './types';
 
 const UPDATE_DEBOUNCE_MS = 500;
 
@@ -17,6 +17,12 @@ export class DatabaseBackendSync {
     if (this.adapter === undefined) return undefined;
     try { return await fn(this.adapter); }
     catch (error) { this.onError?.(error); return undefined; }
+  }
+
+  // ─── Load ───
+
+  async syncLoadDatabase(): Promise<{ schema: PropertyDefinition[]; rows: Record<string, DatabaseRow>; views: DatabaseViewConfig[] } | undefined> {
+    return this.safeCall((a) => a.loadDatabase());
   }
 
   // ─── Row operations ───

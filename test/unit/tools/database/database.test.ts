@@ -769,6 +769,62 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('loadDatabase integration', () => {
+    it('calls adapter.loadDatabase on rendered() and hydrates model', async () => {
+      const mockAdapter = {
+        loadDatabase: vi.fn().mockResolvedValue({
+          schema: [
+            { id: 'p-backend', name: 'Backend Title', type: 'title', position: 'a0' },
+          ],
+          rows: {
+            'r-backend': { id: 'r-backend', position: 'a0', properties: { 'p-backend': 'From Backend' } },
+          },
+          views: [{
+            id: 'v-backend', name: 'Backend Board', type: 'board', position: 'a0',
+            groupBy: undefined, sorts: [], filters: [], visibleProperties: [],
+          }],
+        }),
+        createRow: vi.fn(), updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
+        createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
+        createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn(),
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions({}, { adapter: mockAdapter }));
+      const element = tool.render();
+      const container = document.createElement('div');
+
+      container.appendChild(element);
+      document.body.appendChild(container);
+
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        const saved = tool.save(document.createElement('div'));
+
+        expect(saved.schema[0].id).toBe('p-backend');
+      });
+
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.schema[0].id).toBe('p-backend');
+      expect(saved.rows['r-backend']).toBeDefined();
+
+      tool.destroy();
+      document.body.removeChild(container);
+    });
+
+    it('does not call loadDatabase when no adapter is configured', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      tool.render();
+      tool.rendered();
+
+      const saved = tool.save(document.createElement('div'));
+
+      expect(saved.schema.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('reorderView syncs to backend', () => {
     it('calls adapter.updateView with viewId and position change', () => {
       const updateViewCalls: Array<{ viewId: string; changes: Record<string, unknown> }> = [];

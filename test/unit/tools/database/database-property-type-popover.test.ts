@@ -130,6 +130,13 @@ describe('DatabasePropertyTypePopover', () => {
       }
     });
 
+    it('sets data-blok-popover-opened on the popover element so the card drawer does not close on mousedown', () => {
+      popover.open(anchor);
+      const el = document.querySelector('[data-blok-database-property-type-popover]');
+      expect(el).not.toBeNull();
+      expect(el!.hasAttribute('data-blok-popover-opened')).toBe(true);
+    });
+
     it('closing and reopening replaces the old popover with a new one', () => {
       popover.open(anchor);
       popover.open(anchor);

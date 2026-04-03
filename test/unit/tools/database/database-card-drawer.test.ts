@@ -1028,6 +1028,39 @@ describe('DatabaseCardDrawer', () => {
       }
     });
 
+    it('does NOT close when mousedown fires inside DatabasePropertyTypePopover (data-blok-popover-opened)', () => {
+      const onClose = vi.fn();
+      const options = createOptions({ onClose });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow();
+
+      drawer.open(row);
+      onClose.mockClear();
+
+      // Simulate the property-type popover portaled to document.body with
+      // data-blok-popover-opened set (the attribute the drawer exempts)
+      const propertyTypePopover = document.createElement('div');
+
+      propertyTypePopover.setAttribute('data-blok-database-property-type-popover', '');
+      propertyTypePopover.setAttribute('data-blok-popover-opened', '');
+
+      const typeOption = document.createElement('div');
+
+      typeOption.setAttribute('data-blok-database-property-type-option', 'text');
+      propertyTypePopover.appendChild(typeOption);
+      document.body.appendChild(propertyTypePopover);
+
+      try {
+        typeOption.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+
+        expect(drawer.isOpen).toBe(true);
+        expect(onClose).not.toHaveBeenCalled();
+      } finally {
+        drawer.destroy();
+        document.body.removeChild(propertyTypePopover);
+      }
+    });
+
     it('removes mousedown listener after close', () => {
       const options = createOptions();
       const drawer = new DatabaseCardDrawer(options);

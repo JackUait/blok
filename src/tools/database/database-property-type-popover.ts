@@ -43,6 +43,7 @@ export class DatabasePropertyTypePopover {
 
     const popover = document.createElement('div');
     popover.setAttribute('data-blok-popover', '');
+    popover.setAttribute('data-blok-popover-opened', '');
     popover.setAttribute('data-blok-database-property-type-popover', '');
     popover.style.position = 'fixed';
     popover.style.zIndex = '1000';

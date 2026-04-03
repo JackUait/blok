@@ -1,15 +1,18 @@
-import { IconBoard, IconList } from '../../components/icons';
+import { IconBoard, IconGallery, IconList, IconTable } from '../../components/icons';
 import type { ViewType } from './types';
 
 interface ViewTypeOption {
   type: ViewType;
   icon: string;
   label: string;
+  disabled?: boolean;
 }
 
 const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'board', icon: IconBoard, label: 'Board' },
   { type: 'list', icon: IconList, label: 'List' },
+  { type: 'table', icon: IconTable, label: 'Table', disabled: true },
+  { type: 'gallery', icon: IconGallery, label: 'Gallery', disabled: true },
 ];
 
 export interface ViewPopoverOptions {
@@ -62,10 +65,15 @@ export class DatabaseViewPopover {
       label.textContent = option.label;
       item.appendChild(label);
 
-      item.addEventListener('click', () => {
-        this.onSelect(option.type);
-        this.close();
-      });
+      if (option.disabled === true) {
+        item.style.opacity = '0.35';
+        item.style.pointerEvents = 'none';
+      } else {
+        item.addEventListener('click', () => {
+          this.onSelect(option.type);
+          this.close();
+        });
+      }
 
       grid.appendChild(item);
     }

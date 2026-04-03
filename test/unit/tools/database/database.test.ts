@@ -870,4 +870,68 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
   });
+
+  describe('ID persistence to backend', () => {
+    it('passes client-generated row ID to adapter.createRow', () => {
+      const mockAdapter = {
+        loadDatabase: vi.fn().mockResolvedValue({ schema: [], rows: {}, views: [] }),
+        createRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
+        updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
+        createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),
+        createView: vi.fn().mockResolvedValue({ id: 'v1', name: 'V', type: 'board', position: 'a0', sorts: [], filters: [], visibleProperties: [] }),
+        updateView: vi.fn(), deleteView: vi.fn(),
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions({}, { adapter: mockAdapter }));
+      const element = tool.render();
+
+      // Add a row
+      const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
+
+      addCardBtn.click();
+
+      // Get the row ID from the saved data
+      const saved = tool.save(document.createElement('div'));
+      const rowId = Object.keys(saved.rows)[0];
+
+      // Verify the same ID was passed to the adapter
+      expect(mockAdapter.createRow).toHaveBeenCalledTimes(1);
+      const createCall = mockAdapter.createRow.mock.calls[0][0];
+
+      expect(createCall.id).toBe(rowId);
+
+      tool.destroy();
+    });
+
+    it('preserves loaded data IDs through save/load cycle', () => {
+      const customData: DatabaseData = {
+        schema: [
+          { id: 'stable-title', name: 'Title', type: 'title', position: 'a0' },
+          { id: 'stable-status', name: 'Status', type: 'select', position: 'a1', config: {
+            options: [
+              { id: 'stable-opt-1', label: 'Todo', color: 'gray', position: 'a0' },
+            ],
+          }},
+        ],
+        rows: {
+          'stable-row-1': { id: 'stable-row-1', position: 'a0', properties: { 'stable-title': 'Task' } },
+        },
+        views: [{ id: 'stable-view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'stable-status', sorts: [], filters: [], visibleProperties: [] }],
+        activeViewId: 'stable-view-1',
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions(customData));
+
+      tool.render();
+      const saved = tool.save(document.createElement('div'));
+
+      // All IDs must be exactly what was loaded
+      expect(saved.schema[0].id).toBe('stable-title');
+      expect(saved.schema[1].id).toBe('stable-status');
+      expect(saved.schema[1].config?.options[0].id).toBe('stable-opt-1');
+      expect(saved.rows['stable-row-1'].id).toBe('stable-row-1');
+      expect(saved.views[0].id).toBe('stable-view-1');
+      expect(saved.activeViewId).toBe('stable-view-1');
+    });
+  });
 });

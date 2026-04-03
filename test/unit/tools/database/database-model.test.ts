@@ -332,6 +332,35 @@ describe('DatabaseModel', () => {
       snap.schema.push({ id: 'injected', name: 'Injected', type: 'text', position: 'z0' });
       expect(model.getSchema().find(p => p.id === 'injected')).toBeUndefined();
     });
+
+    it('preserves all IDs from loaded data through snapshot', () => {
+      const schema = [
+        makeProperty({ id: 'custom-prop-1', name: 'Title', type: 'title' }),
+        makeProperty({ id: 'custom-prop-2', name: 'Status', type: 'select' }),
+      ];
+      const rows = {
+        'custom-row-1': makeRow({ id: 'custom-row-1', properties: { 'custom-prop-1': 'Hello' } }),
+        'custom-row-2': makeRow({ id: 'custom-row-2', properties: { 'custom-prop-1': 'World' } }),
+      };
+      const views = [
+        makeView({ id: 'custom-view-1', name: 'Board' }),
+      ];
+      const model = new DatabaseModel(makeData({ schema, rows, views }));
+      const snap = model.snapshot();
+
+      // Property IDs preserved
+      expect(snap.schema[0].id).toBe('custom-prop-1');
+      expect(snap.schema[1].id).toBe('custom-prop-2');
+
+      // Row IDs preserved (as keys AND as row.id)
+      expect(snap.rows['custom-row-1']).toBeDefined();
+      expect(snap.rows['custom-row-1'].id).toBe('custom-row-1');
+      expect(snap.rows['custom-row-2']).toBeDefined();
+      expect(snap.rows['custom-row-2'].id).toBe('custom-row-2');
+
+      // View IDs preserved
+      expect(snap.views[0].id).toBe('custom-view-1');
+    });
   });
 
   describe('hydrate', () => {
@@ -381,6 +410,19 @@ describe('DatabaseModel', () => {
 
       view.sorts.push({ propertyId: 'p2', direction: 'desc' });
       expect(model.getViews()[0].sorts).toHaveLength(1);
+    });
+
+    it('preserves IDs from hydrated data', () => {
+      const model = new DatabaseModel();
+      model.hydrate({
+        schema: [makeProperty({ id: 'backend-prop' })],
+        rows: { 'backend-row': makeRow({ id: 'backend-row' }) },
+        views: [makeView({ id: 'backend-view' })],
+      });
+      const snap = model.snapshot();
+      expect(snap.schema[0].id).toBe('backend-prop');
+      expect(snap.rows['backend-row'].id).toBe('backend-row');
+      expect(snap.views[0].id).toBe('backend-view');
     });
   });
 

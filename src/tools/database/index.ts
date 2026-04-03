@@ -639,10 +639,6 @@ export class DatabaseTool implements BlockTool {
             this.sync.syncUpdateRow({ rowId, properties: { [descriptionPropId]: description } });
           }
         },
-        onPropertyChange: (rowId, propertyId, value) => {
-          this.model.updateRow(rowId, { [propertyId]: value });
-          this.sync.syncUpdateRow({ rowId, properties: { [propertyId]: value } });
-        },
         onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
       });
     }
@@ -890,7 +886,7 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawer?.open(row);
   }
 
-    /**
+  /**
    * Full re-render of the active board: tears down subsystems, rebuilds DOM, re-inits.
    *
    * Board DOM structure:

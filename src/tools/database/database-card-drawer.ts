@@ -19,7 +19,6 @@ export interface CardDrawerOptions {
   schema: PropertyDefinition[];
   onTitleChange: (rowId: string, title: string) => void;
   onDescriptionChange: (rowId: string, description: OutputData) => void;
-  onPropertyChange: (rowId: string, propertyId: string, value: PropertyValue) => void;
   onClose: () => void;
 }
 
@@ -38,7 +37,6 @@ export class DatabaseCardDrawer {
   private readonly schema: PropertyDefinition[];
   private readonly onTitleChange: (rowId: string, title: string) => void;
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
-  private readonly onPropertyChange: (rowId: string, propertyId: string, value: PropertyValue) => void;
   private readonly onClose: () => void;
 
   private drawer: HTMLDivElement | null = null;
@@ -57,7 +55,6 @@ export class DatabaseCardDrawer {
     this.schema = options.schema;
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
-    this.onPropertyChange = options.onPropertyChange;
     this.onClose = options.onClose;
   }
 
@@ -321,7 +318,7 @@ export class DatabaseCardDrawer {
     propsSection.setAttribute('data-blok-database-drawer-props', '');
 
     for (const def of renderableSchema) {
-      propsSection.appendChild(this.createPropertyRow(def, row.properties[def.id] ?? null, row.id));
+      propsSection.appendChild(this.createPropertyRow(def, row.properties[def.id] ?? null));
     }
 
     return propsSection;
@@ -348,7 +345,7 @@ export class DatabaseCardDrawer {
   private createSelectPill(option: { label: string; color?: string }): HTMLSpanElement {
     const pill = document.createElement('span');
 
-    pill.setAttribute('data-blok-database-drawer-status-pill', '');
+    pill.setAttribute('data-blok-database-drawer-prop-pill', '');
 
     if (option.color !== undefined) {
       pill.style.backgroundColor = `var(--blok-color-${option.color}-bg)`;
@@ -356,7 +353,7 @@ export class DatabaseCardDrawer {
 
       const dot = document.createElement('span');
 
-      dot.setAttribute('data-blok-database-drawer-status-dot', '');
+      dot.setAttribute('data-blok-database-drawer-prop-dot', '');
       dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
       pill.appendChild(dot);
     }
@@ -373,7 +370,7 @@ export class DatabaseCardDrawer {
    * Creates a property row that dispatches on the property type to render
    * the appropriate value representation.
    */
-  private createPropertyRow(def: PropertyDefinition, value: PropertyValue, _rowId: string): HTMLDivElement {
+  private createPropertyRow(def: PropertyDefinition, value: PropertyValue): HTMLDivElement {
     const row = document.createElement('div');
 
     row.setAttribute('data-blok-database-drawer-prop-row', '');

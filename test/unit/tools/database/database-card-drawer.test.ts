@@ -34,7 +34,6 @@ const createOptions = (overrides: Partial<CardDrawerOptions> = {}): CardDrawerOp
   schema: [],
   onTitleChange: vi.fn(),
   onDescriptionChange: vi.fn(),
-  onPropertyChange: vi.fn(),
   onClose: vi.fn(),
   ...overrides,
 });
@@ -362,7 +361,7 @@ describe('DatabaseCardDrawer', () => {
       drawer.open(row);
 
       const propLabel = options.wrapper.querySelector('[data-blok-database-drawer-prop-label]');
-      const statusPill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+      const statusPill = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
 
       expect(propLabel).not.toBeNull();
       expect(propLabel!.textContent).toBe('Status');
@@ -384,7 +383,7 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      const dot = options.wrapper.querySelector('[data-blok-database-drawer-status-dot]');
+      const dot = options.wrapper.querySelector('[data-blok-database-drawer-prop-dot]');
 
       expect(dot).not.toBeNull();
     });
@@ -450,7 +449,7 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      const pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+      const pill = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
 
       expect(pill).not.toBeNull();
       expect(pill!.textContent).toBe('Done');
@@ -535,13 +534,13 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row1);
 
-      let pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+      let pill = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
 
       expect(pill!.textContent).toBe('To Do');
 
       drawer.open(row2);
 
-      pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+      pill = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
 
       expect(pill!.textContent).toBe('Done');
     });
@@ -590,7 +589,7 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      const pills = options.wrapper.querySelectorAll('[data-blok-database-drawer-status-pill]');
+      const pills = options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-pill]');
 
       expect(pills).toHaveLength(2);
       expect(pills[0].textContent).toBe('Alpha');
@@ -607,11 +606,30 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      const pills = options.wrapper.querySelectorAll('[data-blok-database-drawer-status-pill]');
+      const pills = options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-pill]');
       const propValue = options.wrapper.querySelector('[data-blok-database-drawer-prop-value]');
 
       expect(pills).toHaveLength(0);
       expect(propValue!.textContent).toBe('');
+    });
+
+    it('renders properties in position order', () => {
+      // 'b1' sorts after 'a1', so 'First' should appear before 'Second' in the DOM
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-second', name: 'Second', type: 'text', position: 'b1' }),
+        makePropertyDef({ id: 'prop-first', name: 'First', type: 'text', position: 'a1' }),
+      ];
+      const options = createOptions({ schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-first': 'val-a', 'prop-second': 'val-b' } });
+
+      drawer.open(row);
+
+      const labels = options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-label]');
+
+      expect(labels).toHaveLength(2);
+      expect(labels[0].textContent).toBe('First');
+      expect(labels[1].textContent).toBe('Second');
     });
   });
 
@@ -694,13 +712,13 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row1);
 
-      const pill = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+      const pill = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
 
       expect(pill!.textContent).toBe('To Do');
 
       drawer.open(row2);
 
-      const pillAfter = options.wrapper.querySelector('[data-blok-database-drawer-status-pill]');
+      const pillAfter = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
 
       expect(pillAfter!.textContent).toBe('Done');
     });

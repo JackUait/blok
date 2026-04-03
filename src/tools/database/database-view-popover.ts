@@ -12,7 +12,7 @@ const VIEW_TYPES: ViewTypeOption[] = [
   { type: 'board', icon: IconBoard, label: 'Board', enabled: true },
   { type: 'table', icon: IconTable, label: 'Table', enabled: false },
   { type: 'gallery', icon: IconGallery, label: 'Gallery', enabled: false },
-  { type: 'list', icon: IconList, label: 'List', enabled: false },
+  { type: 'list', icon: IconList, label: 'List', enabled: true },
 ];
 
 export interface ViewPopoverOptions {

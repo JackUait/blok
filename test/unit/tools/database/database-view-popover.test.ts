@@ -42,14 +42,29 @@ describe('DatabaseViewPopover', () => {
       expect(boardItem.style.cursor).not.toBe('not-allowed');
     });
 
-    it('renders Table, Gallery, List options as disabled', () => {
+    it('renders Table and Gallery options as disabled', () => {
       popover.open(anchor);
-      for (const type of ['table', 'gallery', 'list']) {
+      for (const type of ['table', 'gallery']) {
         const item = document.querySelector(`[data-blok-database-view-option="${type}"]`) as HTMLElement;
         expect(item).not.toBeNull();
         expect(item.style.opacity).toBe('0.35');
         expect(item.style.pointerEvents).toBe('none');
       }
+    });
+
+    it('renders List option as enabled', () => {
+      popover.open(anchor);
+      const listItem = document.querySelector('[data-blok-database-view-option="list"]') as HTMLElement;
+      expect(listItem).not.toBeNull();
+      expect(listItem.style.opacity).not.toBe('0.35');
+      expect(listItem.style.pointerEvents).not.toBe('none');
+    });
+
+    it('calls onSelect with "list" when List option is clicked', () => {
+      popover.open(anchor);
+      const listItem = document.querySelector('[data-blok-database-view-option="list"]') as HTMLElement;
+      listItem.click();
+      expect(onSelect).toHaveBeenCalledWith('list');
     });
 
     it('calls onSelect with "board" when Board option is clicked', () => {

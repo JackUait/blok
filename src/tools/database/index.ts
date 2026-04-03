@@ -1,7 +1,8 @@
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseRow, ViewType, SelectOption } from './types';
+import type { DatabaseData, DatabaseConfig, DatabaseRow, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { DatabaseModel } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
+import { DatabaseListView } from './database-list-view';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
@@ -9,6 +10,8 @@ import type { CardDragResult } from './database-card-drag';
 import { DatabaseColumnDrag } from './database-column-drag';
 import type { GroupDragResult } from './database-column-drag';
 import { DatabaseColumnControls } from './database-column-controls';
+import { DatabaseListRowDrag } from './database-list-row-drag';
+import type { ListRowDragResult } from './database-list-row-drag';
 import { DatabaseCardDrawer } from './database-card-drawer';
 import { DatabaseKeyboard } from './database-keyboard';
 import { DatabaseTabBar } from './database-tab-bar';
@@ -39,6 +42,7 @@ export class DatabaseTool implements BlockTool {
   private cardDrag: DatabaseCardDrag | null = null;
   private columnDrag: DatabaseColumnDrag | null = null;
   private columnControls: DatabaseColumnControls | null = null;
+  private listRowDrag: DatabaseListRowDrag | null = null;
   private cardDrawer: DatabaseCardDrawer | null = null;
   private keyboard: DatabaseKeyboard | null = null;
 
@@ -132,6 +136,8 @@ export class DatabaseTool implements BlockTool {
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
+    this.listRowDrag?.destroy();
+    this.listRowDrag = null;
     this.cardDrawer?.destroy();
     this.keyboard?.destroy();
     this.tabBar?.destroy();
@@ -174,10 +180,12 @@ export class DatabaseTool implements BlockTool {
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
+    this.listRowDrag?.destroy();
     this.keyboard?.destroy();
     this.cardDrag = null;
     this.columnDrag = null;
     this.columnControls = null;
+    this.listRowDrag = null;
     this.keyboard = null;
 
     this.sync.flushPendingUpdates();
@@ -199,7 +207,8 @@ export class DatabaseTool implements BlockTool {
 
   addView(type: ViewType): void {
     const statusProp = this.model.getSchema().find((p) => p.type === 'select');
-    const newView = this.model.addView('Board', type, {
+    const defaultName = type === 'list' ? 'List' : 'Board';
+    const newView = this.model.addView(defaultName, type, {
       groupBy: type === 'board' ? statusProp?.id : undefined,
     });
     void this.sync.syncCreateView({ id: newView.id, name: newView.name, type: newView.type, position: newView.position, groupBy: newView.groupBy });
@@ -302,6 +311,14 @@ export class DatabaseTool implements BlockTool {
     const titlePropId = titleProp?.id ?? '';
     const groupByPropId = viewConfig?.groupBy;
 
+    if (viewConfig?.type === 'list') {
+      return this.renderListView(titlePropId, groupByPropId, viewConfig);
+    }
+
+    return this.renderBoardView(titlePropId, groupByPropId);
+  }
+
+  private renderBoardView(titlePropId: string, groupByPropId: string | undefined): HTMLDivElement {
     const options = groupByPropId !== undefined ? this.model.getSelectOptions(groupByPropId) : [];
     const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
 
@@ -312,6 +329,37 @@ export class DatabaseTool implements BlockTool {
       getRows: (optionId) => groups.get(optionId) ?? [],
       titlePropertyId: titlePropId,
     });
+
+    return this.view.createView();
+  }
+
+  private renderListView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig): HTMLDivElement {
+    const schema = this.model.getSchema();
+
+    if (groupByPropId !== undefined) {
+      const options = this.model.getSelectOptions(groupByPropId);
+      const groups = this.model.getRowsGroupedBy(groupByPropId);
+
+      this.view = new DatabaseListView({
+        readOnly: this.readOnly,
+        i18n: this.api.i18n,
+        rows: [],
+        titlePropertyId: titlePropId,
+        schema,
+        visiblePropertyIds: viewConfig.visibleProperties,
+        options,
+        getRows: (optionId) => groups.get(optionId) ?? [],
+      });
+    } else {
+      this.view = new DatabaseListView({
+        readOnly: this.readOnly,
+        i18n: this.api.i18n,
+        rows: this.model.getOrderedRows(),
+        titlePropertyId: titlePropId,
+        schema,
+        visiblePropertyIds: viewConfig.visibleProperties,
+      });
+    }
 
     return this.view.createView();
   }
@@ -362,6 +410,44 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      // List: add row
+      const addRowBtn = target.closest('[data-blok-database-add-row]');
+
+      if (addRowBtn !== null) {
+        const optionId = addRowBtn.getAttribute('data-option-id');
+        this.handleAddListRow(optionId, boardEl);
+        return;
+      }
+
+      // List: delete row
+      const deleteRowBtn = target.closest('[data-blok-database-delete-row]');
+
+      if (deleteRowBtn !== null) {
+        const rowId = deleteRowBtn.getAttribute('data-row-id');
+
+        if (rowId !== null) {
+          event.stopPropagation();
+          this.model.deleteRow(rowId);
+          this.view.removeRow(boardEl, rowId);
+          void this.sync.syncDeleteRow({ rowId });
+        }
+
+        return;
+      }
+
+      // List: row click
+      const listRowEl = target.closest('[data-blok-database-list-row]');
+
+      if (listRowEl !== null) {
+        const rowId = listRowEl.getAttribute('data-row-id');
+
+        if (rowId !== null) {
+          this.handleRowClick(rowId);
+        }
+
+        return;
+      }
+
       const cardEl = target.closest('[data-blok-database-card]');
 
       if (cardEl !== null) {
@@ -371,6 +457,28 @@ export class DatabaseTool implements BlockTool {
           this.handleRowClick(rowId);
         }
       }
+    });
+  }
+
+  private handleAddListRow(optionId: string | null, viewEl: HTMLDivElement): void {
+    const titleProp = this.model.getSchema().find((p) => p.type === 'title');
+    const titlePropId = titleProp?.id ?? '';
+    const viewConfig = this.model.getView(this.activeViewId);
+    const groupByPropId = viewConfig?.groupBy;
+
+    const properties: Record<string, PropertyValue> = { [titlePropId]: '' };
+
+    if (groupByPropId !== undefined && optionId !== null) {
+      properties[groupByPropId] = optionId;
+    }
+
+    const row = this.model.addRow(properties);
+    this.view.appendRow(viewEl, row);
+
+    void this.sync.syncCreateRow({
+      id: row.id,
+      properties: row.properties,
+      position: row.position,
     });
   }
 
@@ -450,41 +558,37 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    this.cardDrag = new DatabaseCardDrag({
-      wrapper: boardEl,
-      onDrop: (result) => this.handleRowDrop(result),
-    });
-
-    this.columnDrag = new DatabaseColumnDrag({
-      wrapper: boardEl,
-      onDrop: (result) => this.handleGroupDrop(result),
-    });
+    const viewConfig = this.model.getView(this.activeViewId);
+    const isList = viewConfig?.type === 'list';
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
     const descriptionProp = this.model.getSchema().find((p) => p.type === 'richText');
     const descriptionPropId = descriptionProp?.id;
 
-    this.columnControls = new DatabaseColumnControls({
-      i18n: this.api.i18n,
-      onRename: (optionId, label) => this.handleOptionRename(optionId, label),
-      onDelete: (optionId) => this.handleOptionDelete(optionId, boardEl),
-    });
+    if (isList) {
+      this.listRowDrag = new DatabaseListRowDrag({
+        wrapper: boardEl,
+        onDrop: (result) => this.handleListRowDrop(result),
+      });
+    } else {
+      this.cardDrag = new DatabaseCardDrag({
+        wrapper: boardEl,
+        onDrop: (result) => this.handleRowDrop(result),
+      });
 
-    const headers = Array.from(boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column-header]'));
+      this.columnDrag = new DatabaseColumnDrag({
+        wrapper: boardEl,
+        onDrop: (result) => this.handleGroupDrop(result),
+      });
 
-    for (const header of headers) {
-      const columnEl = header.closest<HTMLElement>('[data-blok-database-column]');
+      this.columnControls = new DatabaseColumnControls({
+        i18n: this.api.i18n,
+        onRename: (optionId, label) => this.handleOptionRename(optionId, label),
+        onDelete: (optionId) => this.handleOptionDelete(optionId, boardEl),
+      });
 
-      if (columnEl === null) {
-        continue;
-      }
-
-      const optId = columnEl.getAttribute('data-option-id');
-
-      if (optId !== null) {
-        this.columnControls.makeEditable(header, optId);
-      }
+      this.makeColumnHeadersEditable(boardEl);
     }
 
     // cardDrawer is attached to outer wrapper so it stays across view switches
@@ -498,10 +602,11 @@ export class DatabaseTool implements BlockTool {
         descriptionPropertyId: descriptionPropId,
         onTitleChange: (rowId, title) => {
           this.model.updateRow(rowId, { [titlePropId]: title });
-          const currentBoard = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
+          const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
+            ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]');
 
-          if (currentBoard !== null && currentBoard !== undefined) {
-            this.view.updateRowTitle(currentBoard, rowId, title);
+          if (currentView !== null && currentView !== undefined) {
+            this.view.updateRowTitle(currentView, rowId, title);
           }
 
           this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
@@ -533,6 +638,7 @@ export class DatabaseTool implements BlockTool {
     boardEl.addEventListener('pointerdown', (e) => {
       const target = e.target as HTMLElement;
 
+      // Board: column header drag
       const columnHeader = target.closest('[data-blok-database-column-header]');
 
       if (columnHeader !== null) {
@@ -548,22 +654,64 @@ export class DatabaseTool implements BlockTool {
         return;
       }
 
+      // Board: card drag
       const cardEl = target.closest('[data-blok-database-card]');
 
-      if (cardEl === null) {
+      if (cardEl !== null) {
+        const rowId = cardEl.getAttribute('data-row-id');
+
+        if (rowId !== null) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY);
+        }
+
         return;
       }
 
-      const rowId = cardEl.getAttribute('data-row-id');
+      // List: row drag
+      const listRowEl = target.closest('[data-blok-database-list-row]');
 
-      if (rowId === null) {
-        return;
+      if (listRowEl !== null) {
+        const rowId = listRowEl.getAttribute('data-row-id');
+
+        if (rowId !== null) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.listRowDrag?.beginTracking(rowId, e.clientX, e.clientY);
+        }
       }
-
-      e.preventDefault();
-      e.stopPropagation();
-      this.cardDrag?.beginTracking(rowId, e.clientX, e.clientY);
     });
+  }
+
+  private makeColumnHeadersEditable(boardEl: HTMLDivElement): void {
+    if (this.columnControls === null) {
+      return;
+    }
+
+    const headers = Array.from(boardEl.querySelectorAll<HTMLElement>('[data-blok-database-column-header]'));
+
+    for (const header of headers) {
+      const columnEl = header.closest<HTMLElement>('[data-blok-database-column]');
+      const optId = columnEl?.getAttribute('data-option-id');
+
+      if (optId !== null && optId !== undefined) {
+        this.columnControls.makeEditable(header, optId);
+      }
+    }
+  }
+
+  private handleListRowDrop(result: ListRowDragResult): void {
+    const { rowId, beforeRowId, afterRowId } = result;
+
+    const beforeRow = beforeRowId !== null ? this.model.getRow(beforeRowId) : undefined;
+    const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
+    const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
+
+    this.model.moveRow(rowId, position);
+    this.rerenderView();
+
+    void this.sync.syncMoveRow({ rowId, position });
   }
 
   private handleRowDrop(result: CardDragResult): void {
@@ -749,7 +897,9 @@ export class DatabaseTool implements BlockTool {
 
     // The old board wrapper is the first/only direct child of boardContainer
     const oldBoardWrapper = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]')
-      ?.closest<HTMLElement>('[data-blok-tool]') ?? this.boardContainer.firstElementChild as HTMLElement | null;
+      ?.closest<HTMLElement>('[data-blok-tool]')
+      ?? this.boardContainer.querySelector<HTMLElement>('[data-blok-database-list]')
+      ?? this.boardContainer.firstElementChild as HTMLElement | null;
 
     const oldBoardArea = this.boardContainer.querySelector<HTMLElement>('[data-blok-database-board]');
     const savedScrollLeft = oldBoardArea?.scrollLeft ?? 0;
@@ -757,6 +907,8 @@ export class DatabaseTool implements BlockTool {
     this.cardDrag?.destroy();
     this.columnDrag?.destroy();
     this.columnControls?.destroy();
+    this.listRowDrag?.destroy();
+    this.listRowDrag = null;
     this.cardDrawer?.destroy();
     this.cardDrawer = null;
     this.keyboard?.destroy();

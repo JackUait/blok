@@ -592,6 +592,100 @@ describe('DatabaseTool', () => {
     });
   });
 
+  describe('list view', () => {
+    const makeListData = (overrides: Partial<DatabaseData> = {}): DatabaseData => ({
+      schema: [
+        { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+        { id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: {
+          options: [
+            { id: 'opt-todo', label: 'Todo', color: 'gray', position: 'a0' },
+            { id: 'opt-done', label: 'Done', color: 'green', position: 'a1' },
+          ],
+        }},
+      ],
+      rows: {
+        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1' } },
+        'row-2': { id: 'row-2', position: 'a1', properties: { 'prop-title': 'Task 2' } },
+      },
+      views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
+      activeViewId: 'view-list',
+      ...overrides,
+    });
+
+    it('renders a list view with [data-blok-database-list] when view type is list', () => {
+      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      const element = tool.render();
+      expect(element.querySelector('[data-blok-database-list]')).not.toBeNull();
+      expect(element.querySelector('[data-blok-database-board]')).toBeNull();
+    });
+
+    it('renders list rows for each data row', () => {
+      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      const element = tool.render();
+      expect(element.querySelectorAll('[data-blok-database-list-row]')).toHaveLength(2);
+    });
+
+    it('clicking add-row button adds a row to the list', () => {
+      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      const element = tool.render();
+      const addBtn = element.querySelector('[data-blok-database-add-row]') as HTMLButtonElement;
+      addBtn.click();
+      const saved = tool.save(document.createElement('div'));
+      expect(Object.keys(saved.rows)).toHaveLength(3);
+    });
+
+    it('clicking delete-row button removes a row', () => {
+      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      const element = tool.render();
+      const deleteBtn = element.querySelector('[data-blok-database-delete-row]') as HTMLButtonElement;
+      deleteBtn.click();
+      expect(element.querySelectorAll('[data-blok-database-list-row]')).toHaveLength(1);
+    });
+
+    it('clicking a list row opens the card drawer', () => {
+      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      const element = tool.render();
+      const row = element.querySelector('[data-blok-database-list-row]') as HTMLElement;
+      row.click();
+      expect(element.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+    });
+
+    it('validates list view without groupBy', () => {
+      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      expect(tool.validate(makeListData())).toBe(true);
+    });
+
+    it('switches from board to list view', () => {
+      const data: DatabaseData = {
+        ...makeDefaultData(),
+        views: [
+          { id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] },
+          { id: 'view-2', name: 'List', type: 'list', position: 'a1', sorts: [], filters: [], visibleProperties: [] },
+        ],
+        activeViewId: 'view-1',
+      };
+      const tool = new DatabaseTool(createDatabaseOptions(data));
+      const element = tool.render();
+      expect(element.querySelector('[data-blok-database-board]')).not.toBeNull();
+      const tab2 = element.querySelector('[data-view-id="view-2"]') as HTMLElement;
+      tab2.click();
+      expect(element.querySelector('[data-blok-database-list]')).not.toBeNull();
+      expect(element.querySelector('[data-blok-database-board]')).toBeNull();
+    });
+
+    it('renders grouped list when view has groupBy', () => {
+      const data = makeListData({
+        views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
+        rows: {
+          'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
+        },
+      });
+      const tool = new DatabaseTool(createDatabaseOptions(data));
+      const element = tool.render();
+      expect(element.querySelectorAll('[data-blok-database-list-group]')).toHaveLength(2);
+    });
+  });
+
   describe('multi-view orchestration', () => {
     it('renders a tab bar above the board', () => {
       const tool = new DatabaseTool(createDatabaseOptions());

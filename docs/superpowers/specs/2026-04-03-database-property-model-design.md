@@ -179,7 +179,7 @@ interface DatabaseAdapter {
   updateView(params: {
     viewId: string;
     changes: Partial<Pick<DatabaseViewConfig,
-      'name' | 'type' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'
+      'name' | 'type' | 'position' | 'groupBy' | 'sorts' | 'filters' | 'visibleProperties'
     >>;
   }): Promise<DatabaseViewConfig>;
 

@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types';
-import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
+import type { DatabaseRow, PropertyDefinition, PropertyValue, SelectOption } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 
 interface DatabaseListViewOptions {
@@ -9,6 +9,8 @@ interface DatabaseListViewOptions {
   titlePropertyId: string;
   schema: PropertyDefinition[];
   visiblePropertyIds: string[];
+  options?: SelectOption[];
+  getRows?: (optionId: string) => DatabaseRow[];
 }
 
 /**
@@ -23,41 +25,143 @@ export class DatabaseListView implements DatabaseViewRenderer {
   private readonly titlePropertyId: string;
   private readonly schema: PropertyDefinition[];
   private readonly visiblePropertyIds: string[];
+  private readonly groupOptions: SelectOption[] | undefined;
+  private readonly getGroupRows: ((optionId: string) => DatabaseRow[]) | undefined;
 
-  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds }: DatabaseListViewOptions) {
+  constructor({ readOnly, i18n, rows, titlePropertyId, schema, visiblePropertyIds, options, getRows }: DatabaseListViewOptions) {
     this.readOnly = readOnly;
     this.i18n = i18n;
     this.rows = rows;
     this.titlePropertyId = titlePropertyId;
     this.schema = schema;
     this.visiblePropertyIds = visiblePropertyIds;
+    this.groupOptions = options;
+    this.getGroupRows = getRows;
   }
 
   /**
    * Creates the full list DOM from row data.
+   * When options are provided, renders grouped sections; otherwise renders a flat list.
    */
   createView(): HTMLDivElement {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-database-list', '');
-    wrapper.setAttribute('role', 'list');
-    wrapper.setAttribute('aria-label', 'List view');
     wrapper.style.display = 'flex';
     wrapper.style.flexDirection = 'column';
 
-    for (const row of this.rows) {
-      const rowEl = this.createRowElement(row);
+    if (this.groupOptions !== undefined && this.groupOptions.length > 0 && this.getGroupRows !== undefined) {
+      for (const option of this.groupOptions) {
+        const rows = this.getGroupRows(option.id);
+        const groupEl = this.createGroupElement(option, rows);
 
-      wrapper.appendChild(rowEl);
-    }
+        wrapper.appendChild(groupEl);
+      }
+    } else {
+      wrapper.setAttribute('role', 'list');
+      wrapper.setAttribute('aria-label', 'List view');
 
-    if (!this.readOnly) {
-      const addRowBtn = this.createAddRowButton();
+      for (const row of this.rows) {
+        const rowEl = this.createRowElement(row);
 
-      wrapper.appendChild(addRowBtn);
+        wrapper.appendChild(rowEl);
+      }
+
+      if (!this.readOnly) {
+        const addRowBtn = this.createAddRowButton();
+
+        wrapper.appendChild(addRowBtn);
+      }
     }
 
     return wrapper;
+  }
+
+  /**
+   * Creates a collapsible group element for a select option.
+   */
+  private createGroupElement(option: SelectOption, rows: DatabaseRow[]): HTMLDivElement {
+    const groupEl = document.createElement('div');
+
+    groupEl.setAttribute('data-blok-database-list-group', '');
+    groupEl.setAttribute('data-option-id', option.id);
+
+    // Header
+    const header = document.createElement('div');
+
+    header.setAttribute('data-blok-database-list-group-header', '');
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.gap = '6px';
+    header.style.cursor = 'pointer';
+
+    const toggle = document.createElement('span');
+
+    toggle.setAttribute('data-blok-database-list-group-toggle', '');
+    toggle.textContent = '▼';
+
+    const dot = document.createElement('span');
+
+    dot.setAttribute('data-blok-database-list-group-dot', '');
+    dot.style.width = '8px';
+    dot.style.height = '8px';
+    dot.style.borderRadius = '50%';
+
+    if (option.color !== undefined) {
+      dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
+    }
+
+    const title = document.createElement('span');
+
+    title.setAttribute('data-blok-database-list-group-title', '');
+    title.style.fontWeight = '600';
+    title.textContent = option.label;
+
+    const count = document.createElement('span');
+
+    count.setAttribute('data-blok-database-list-group-count', '');
+    count.textContent = String(rows.length);
+
+    header.appendChild(toggle);
+    header.appendChild(dot);
+    header.appendChild(title);
+    header.appendChild(count);
+
+    // Rows container
+    const rowsContainer = document.createElement('div');
+
+    rowsContainer.setAttribute('data-blok-database-list-rows', '');
+    rowsContainer.setAttribute('role', 'list');
+
+    for (const row of rows) {
+      const rowEl = this.createRowElement(row);
+
+      rowsContainer.appendChild(rowEl);
+    }
+
+    // Add-row button
+    const addRowBtn = this.readOnly ? null : this.createAddRowButton(option.id);
+
+    // Collapse/expand toggle
+    header.addEventListener('click', () => {
+      const collapsed = rowsContainer.style.display === 'none';
+
+      rowsContainer.style.display = collapsed ? '' : 'none';
+      toggle.textContent = collapsed ? '▼' : '▶';
+
+      if (addRowBtn !== null) {
+        addRowBtn.style.display = collapsed ? '' : 'none';
+      }
+    });
+
+    groupEl.appendChild(header);
+    groupEl.appendChild(rowsContainer);
+
+    if (addRowBtn !== null) {
+      groupEl.appendChild(addRowBtn);
+    }
+
+    return groupEl;
   }
 
   /**
@@ -239,13 +343,18 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
   /**
    * Creates the "+ New" add-row button.
+   * When optionId is provided, sets data-option-id on the button.
    */
-  private createAddRowButton(): HTMLButtonElement {
+  private createAddRowButton(optionId?: string): HTMLButtonElement {
     const addRowBtn = document.createElement('button');
 
     addRowBtn.setAttribute('data-blok-database-add-row', '');
     addRowBtn.setAttribute('aria-label', this.i18n.t('tools.database.addRow'));
     addRowBtn.textContent = '+ ' + this.i18n.t('tools.database.newRow');
+
+    if (optionId !== undefined) {
+      addRowBtn.setAttribute('data-option-id', optionId);
+    }
 
     return addRowBtn;
   }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseListView } from '../../../../src/tools/database/database-list-view';
-import type { DatabaseRow, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { DatabaseRow, PropertyDefinition, SelectOption } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
@@ -402,6 +402,253 @@ describe('DatabaseListView', () => {
 
       // Should not throw
       expect(() => view.updateRowTitle(list, 'nonexistent', 'Title')).not.toThrow();
+    });
+  });
+
+  describe('grouped list rendering', () => {
+    const makeGroupedOptions = (): { options: SelectOption[]; getRows: (optionId: string) => DatabaseRow[] } => {
+      const todoRows = [
+        makeRow({ id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } }),
+      ];
+      const doneRows = [
+        makeRow({ id: 'row-2', position: 'a1', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-done' } }),
+        makeRow({ id: 'row-3', position: 'a2', properties: { 'prop-title': 'Task 3', 'prop-status': 'opt-done' } }),
+      ];
+      const options: SelectOption[] = [
+        { id: 'opt-todo', label: 'Todo', color: 'gray', position: 'a0' },
+        { id: 'opt-done', label: 'Done', color: 'green', position: 'a1' },
+      ];
+      const rowMap = new Map([['opt-todo', todoRows], ['opt-done', doneRows]]);
+
+      return { options, getRows: (optionId) => rowMap.get(optionId) ?? [] };
+    };
+
+    it('renders one [data-blok-database-list-group] per option', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const groups = list.querySelectorAll('[data-blok-database-list-group]');
+
+      expect(groups).toHaveLength(2);
+    });
+
+    it('sets data-option-id on each group', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const groups = list.querySelectorAll('[data-blok-database-list-group]');
+
+      expect(groups[0].getAttribute('data-option-id')).toBe('opt-todo');
+      expect(groups[1].getAttribute('data-option-id')).toBe('opt-done');
+    });
+
+    it('renders group header with toggle, dot, title, and count', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const firstGroup = list.querySelector('[data-blok-database-list-group]');
+      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]');
+
+      expect(header).not.toBeNull();
+      expect(header?.querySelector('[data-blok-database-list-group-toggle]')).not.toBeNull();
+      expect(header?.querySelector('[data-blok-database-list-group-dot]')).not.toBeNull();
+      expect(header?.querySelector('[data-blok-database-list-group-title]')).not.toBeNull();
+      expect(header?.querySelector('[data-blok-database-list-group-count]')).not.toBeNull();
+    });
+
+    it('renders correct row count per group', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const groups = list.querySelectorAll('[data-blok-database-list-group]');
+      const todoCount = groups[0].querySelector('[data-blok-database-list-group-count]');
+      const doneCount = groups[1].querySelector('[data-blok-database-list-group-count]');
+
+      expect(todoCount?.textContent).toBe('1');
+      expect(doneCount?.textContent).toBe('2');
+    });
+
+    it('renders rows inside [data-blok-database-list-rows] within each group', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const groups = list.querySelectorAll('[data-blok-database-list-group]');
+      const todoRows = groups[0].querySelectorAll('[data-blok-database-list-rows] [data-blok-database-list-row]');
+      const doneRows = groups[1].querySelectorAll('[data-blok-database-list-rows] [data-blok-database-list-row]');
+
+      expect(todoRows).toHaveLength(1);
+      expect(doneRows).toHaveLength(2);
+    });
+
+    it('renders add-row button per group with data-option-id', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const groups = list.querySelectorAll('[data-blok-database-list-group]');
+      const todoAddBtn = groups[0].querySelector('[data-blok-database-add-row]');
+      const doneAddBtn = groups[1].querySelector('[data-blok-database-add-row]');
+
+      expect(todoAddBtn).not.toBeNull();
+      expect(todoAddBtn?.getAttribute('data-option-id')).toBe('opt-todo');
+      expect(doneAddBtn).not.toBeNull();
+      expect(doneAddBtn?.getAttribute('data-option-id')).toBe('opt-done');
+    });
+
+    it('applies color dot with correct background color', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const groups = list.querySelectorAll('[data-blok-database-list-group]');
+      const todoDot = groups[0].querySelector('[data-blok-database-list-group-dot]') as HTMLElement;
+      const doneDot = groups[1].querySelector('[data-blok-database-list-group-dot]') as HTMLElement;
+
+      expect(todoDot.style.backgroundColor).toBe('var(--blok-color-gray-text)');
+      expect(doneDot.style.backgroundColor).toBe('var(--blok-color-green-text)');
+    });
+
+    it('grouped wrapper does NOT have role="list"', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      expect(list.getAttribute('role')).toBeNull();
+    });
+
+    it('rows container within each group has role="list"', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const rowsContainers = Array.from(list.querySelectorAll('[data-blok-database-list-rows]'));
+
+      for (const container of rowsContainers) {
+        expect(container.getAttribute('role')).toBe('list');
+      }
+    });
+
+    it('clicking toggle hides rows container (sets display: none)', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const firstGroup = list.querySelector('[data-blok-database-list-group]');
+      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]') as HTMLElement;
+      const rowsContainer = firstGroup?.querySelector('[data-blok-database-list-rows]') as HTMLElement;
+
+      header.click();
+
+      expect(rowsContainer.style.display).toBe('none');
+    });
+
+    it('clicking toggle again shows rows container (restores display: "")', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const firstGroup = list.querySelector('[data-blok-database-list-group]');
+      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]') as HTMLElement;
+      const rowsContainer = firstGroup?.querySelector('[data-blok-database-list-rows]') as HTMLElement;
+
+      header.click();
+      header.click();
+
+      expect(rowsContainer.style.display).toBe('');
+    });
+
+    it('toggle text switches between ▼ (expanded) and ▶ (collapsed)', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const firstGroup = list.querySelector('[data-blok-database-list-group]');
+      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]') as HTMLElement;
+      const toggle = firstGroup?.querySelector('[data-blok-database-list-group-toggle]') as HTMLElement;
+
+      expect(toggle.textContent).toBe('▼');
+
+      header.click();
+      expect(toggle.textContent).toBe('▶');
+
+      header.click();
+      expect(toggle.textContent).toBe('▼');
+    });
+
+    it('clicking toggle hides add-row button within the group', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const firstGroup = list.querySelector('[data-blok-database-list-group]');
+      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]') as HTMLElement;
+      const addRowBtn = firstGroup?.querySelector('[data-blok-database-add-row]') as HTMLElement;
+
+      header.click();
+
+      expect(addRowBtn.style.display).toBe('none');
+    });
+
+    it('clicking toggle again shows add-row button within the group', () => {
+      const { options, getRows } = makeGroupedOptions();
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows: [], titlePropertyId: 'prop-title', schema: makeSchema(), visiblePropertyIds: [],
+        options, getRows,
+      });
+      const list = view.createView();
+
+      const firstGroup = list.querySelector('[data-blok-database-list-group]');
+      const header = firstGroup?.querySelector('[data-blok-database-list-group-header]') as HTMLElement;
+      const addRowBtn = firstGroup?.querySelector('[data-blok-database-add-row]') as HTMLElement;
+
+      header.click();
+      header.click();
+
+      expect(addRowBtn.style.display).toBe('');
     });
   });
 });

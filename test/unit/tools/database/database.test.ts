@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fireEvent } from '@testing-library/dom';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
-import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
-import { DatabaseModel } from '../../../../src/tools/database/database-model';
+import type { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
+import type { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
 
@@ -407,12 +408,8 @@ describe('DatabaseTool', () => {
         'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
       };
 
-      // Spy on DatabaseCardDrawer.prototype.destroy to detect if it's called during rerender
-      const drawerDestroySpy = vi.spyOn(DatabaseCardDrawer.prototype, 'destroy');
-
       const tool = new DatabaseTool(createDatabaseOptions({ rows }));
-
-      tool.render();
+      const element = tool.render();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cardDrag = (tool as any).cardDrag as DatabaseCardDrag;
@@ -422,8 +419,15 @@ describe('DatabaseTool', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const onDrop = (cardDrag as any).onDrop as (result: CardDragResult) => void;
 
-      // Reset spy call count — destroy may have been called during setup
-      drawerDestroySpy.mockClear();
+      // Open the drawer on the card so we can observe its destruction
+      const cardEl = element.querySelector('[data-row-id="row-1"]') as HTMLElement;
+      cardEl.click();
+      expect(element.querySelector('[data-blok-database-drawer]')).not.toBeNull();
+
+      // Spy on the instance after creation (not on the prototype)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cardDrawer = (tool as any).cardDrawer as DatabaseCardDrawer;
+      const drawerDestroySpy = vi.spyOn(cardDrawer, 'destroy');
 
       // Trigger a card drop which calls handleRowDrop -> rerenderBoard
       onDrop({
@@ -435,9 +439,10 @@ describe('DatabaseTool', () => {
 
       // cardDrawer.destroy() should have been called during rerenderBoard
       expect(drawerDestroySpy).toHaveBeenCalled();
+      // After rerender, the old drawer element should be gone from the DOM
+      expect(element.querySelector('[data-blok-database-drawer]')).toBeNull();
 
       tool.destroy();
-      drawerDestroySpy.mockRestore();
     });
   });
 
@@ -478,7 +483,7 @@ describe('DatabaseTool', () => {
 
       // Edit the title in the drawer
       drawerTitle.value = 'Updated title';
-      drawerTitle.dispatchEvent(new Event('input', { bubbles: true }));
+      fireEvent.input(drawerTitle);
 
       // The card on the board should reflect the new title
       const boardCardTitle = element.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
@@ -874,15 +879,18 @@ describe('DatabaseTool', () => {
 
   describe('onAddProperty wiring in DatabaseTool', () => {
     it('model.addProperty is called with ("Property", type) when onAddProperty fires', () => {
-      const addPropertySpy = vi.spyOn(DatabaseModel.prototype, 'addProperty').mockReturnValue({
+      const tool = new DatabaseTool(createDatabaseOptions());
+      tool.render();
+
+      // Spy on the model instance (not the prototype)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = (tool as any).model as DatabaseModel;
+      const addPropertySpy = vi.spyOn(model, 'addProperty').mockReturnValue({
         id: 'new-prop-id',
         name: 'Property',
         type: 'text',
         position: 'b0',
       });
-
-      const tool = new DatabaseTool(createDatabaseOptions());
-      tool.render();
 
       // Access private cardDrawer to get the constructed options
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -949,13 +957,14 @@ describe('DatabaseTool', () => {
     });
 
     it('cardDrawer.refreshSchema is called with updated schema after onAddProperty fires', () => {
-      const refreshSchemaSpy = vi.spyOn(DatabaseCardDrawer.prototype, 'refreshSchema');
-
       const tool = new DatabaseTool(createDatabaseOptions());
       tool.render();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cardDrawer = (tool as any).cardDrawer as DatabaseCardDrawer;
+      // Spy on the instance (not the prototype)
+      const refreshSchemaSpy = vi.spyOn(cardDrawer, 'refreshSchema');
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string) => void) | undefined;
 

@@ -88,6 +88,22 @@ export {
 export * from './utils/popover';
 
 export { OutputData, OutputBlockData} from './data-formats/output-data';
+export {
+  PropertyType,
+  SelectOption,
+  SelectPropertyConfig,
+  PropertyConfig,
+  PropertyDefinition,
+  PropertyValue,
+  DatabaseRow,
+  ViewType,
+  SortConfig,
+  FilterConfig,
+  DatabaseViewConfig,
+  DatabaseData,
+  DatabaseAdapter,
+  DatabaseConfig,
+} from './tools/database';
 export { BlockId } from './data-formats/block-id';
 export {
   BlockAPI,

@@ -35,6 +35,8 @@ export class DatabaseBackendSync {
   }
 
   async syncMoveRow(params: Parameters<DatabaseAdapter['moveRow']>[0]): Promise<ReturnType<DatabaseAdapter['moveRow']> extends Promise<infer R> ? R | undefined : never> {
+    this.flushRow(params.rowId);
+
     return this.safeCall((a) => a.moveRow(params));
   }
 

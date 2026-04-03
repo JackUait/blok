@@ -51,6 +51,31 @@ describe('DatabaseBackendSync', () => {
       expect(adapter.moveRow).toHaveBeenCalledWith({ rowId: 'r1', position: 'a5' });
     });
 
+    it('syncMoveRow flushes pending updateRow for the same row before moving', async () => {
+      const adapter = createMockAdapter();
+      const callOrder: string[] = [];
+
+      (adapter.updateRow as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callOrder.push('updateRow');
+
+        return { id: 'r1', position: 'a0', properties: {} };
+      });
+      (adapter.moveRow as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callOrder.push('moveRow');
+
+        return { id: 'r1', position: 'a5', properties: {} };
+      });
+
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdateRow({ rowId: 'r1', properties: { status: 'done' } });
+      await sync.syncMoveRow({ rowId: 'r1', position: 'a5' });
+
+      expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'r1', properties: { status: 'done' } });
+      expect(adapter.moveRow).toHaveBeenCalledWith({ rowId: 'r1', position: 'a5' });
+      expect(callOrder).toEqual(['updateRow', 'moveRow']);
+    });
+
     it('syncDeleteRow calls adapter.deleteRow', async () => {
       const adapter = createMockAdapter();
       const sync = new DatabaseBackendSync(adapter);

@@ -2436,3 +2436,132 @@
   flex-direction: column;
   padding-left: 8px;
 }
+
+/* ─── "Add a property" button ────────────────────────────────────────────── */
+
+/**
+ * Ghost dashed button that reveals itself on hover.
+ * Full-width, sits below the last property row.
+ */
+[data-blok-database-drawer-add-prop] {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 8px;
+  margin-top: 4px;
+  background: none;
+  border: 1.5px dashed transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--blok-database-add-text);
+  text-align: left;
+  transition:
+    background-color 130ms ease,
+    border-color 130ms ease,
+    color 130ms ease;
+}
+
+[data-blok-database-drawer-add-prop]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  border-color: var(--blok-database-add-border);
+  color: var(--blok-database-tab-text-active);
+}
+
+[data-blok-database-drawer-add-prop]:active {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/* ─── Property type popover ──────────────────────────────────────────────── */
+
+/**
+ * Entrance keyframe — subtle pop-in from slightly above.
+ */
+@keyframes blok-prop-popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/**
+ * Popover container — vertical list, clean card.
+ */
+[data-blok-database-property-type-popover] {
+  min-width: 210px;
+  background: var(--blok-database-popover-bg);
+  border-radius: 10px;
+  box-shadow: var(--blok-database-popover-shadow);
+  padding: 6px;
+  animation: blok-prop-popover-in 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top left;
+}
+
+/**
+ * Section heading — "Property type" label above the list.
+ */
+[data-blok-database-property-type-heading] {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blok-database-add-text);
+  user-select: none;
+}
+
+/**
+ * Each property type item — icon chip + label row.
+ */
+[data-blok-database-property-type-option] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--blok-database-tab-text-active);
+  transition: background-color 100ms ease;
+  user-select: none;
+}
+
+[data-blok-database-property-type-option]:hover {
+  background-color: var(--blok-database-popover-hover);
+}
+
+[data-blok-database-property-type-option]:active {
+  background-color: var(--blok-item-hover-bg);
+}
+
+/**
+ * Icon chip — small tinted square to the left of the label.
+ */
+[data-blok-database-property-type-option-icon] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--blok-popover-icon-bg);
+  color: var(--blok-database-tab-text-active);
+  flex-shrink: 0;
+  transition: background-color 100ms ease;
+}
+
+[data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon] {
+  background: var(--blok-popover-icon-active-bg);
+  color: var(--blok-active-icon);
+}
+
+[data-blok-database-property-type-option-icon] svg {
+  width: 14px;
+  height: 14px;
+}

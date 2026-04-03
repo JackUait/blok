@@ -52,6 +52,11 @@ export class DatabasePropertyTypePopover {
     popover.style.top = `${rect.bottom + 4}px`;
     popover.style.left = `${rect.left}px`;
 
+    const heading = document.createElement('div');
+    heading.setAttribute('data-blok-database-property-type-heading', '');
+    heading.textContent = 'Property type';
+    popover.appendChild(heading);
+
     for (const option of PROPERTY_TYPES) {
       const item = document.createElement('div');
       item.setAttribute('data-blok-database-property-type-option', option.type);

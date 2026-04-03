@@ -388,7 +388,7 @@ describe('DatabaseCardDrawer', () => {
       expect(dot).not.toBeNull();
     });
 
-    it('shows empty properties section when schema has no renderable properties', () => {
+    it('shows no property rows when schema has no renderable properties', () => {
       // title and richText are excluded from the properties section
       const titleDef = makePropertyDef({ id: 'prop-title', name: 'Title', type: 'title', position: 'a0' });
       const richTextDef = makePropertyDef({ id: 'prop-desc', name: 'Description', type: 'richText', position: 'a1' });
@@ -398,9 +398,9 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      const propsSection = options.wrapper.querySelector('[data-blok-database-drawer-props]');
+      const propRows = options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-row]');
 
-      expect(propsSection).toBeNull();
+      expect(propRows).toHaveLength(0);
     });
 
     it('shows all schema properties (excluding title and richText) in the properties section when opened', () => {
@@ -1226,6 +1226,262 @@ describe('DatabaseCardDrawer', () => {
       const drawers = options.wrapper.querySelectorAll('[data-blok-database-drawer]');
 
       expect(drawers).toHaveLength(1);
+    });
+  });
+
+  describe('"Add a property" button', () => {
+    it('renders [data-blok-database-drawer-add-prop] button when not read-only', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
+      ];
+      const options = createOptions({ readOnly: false, schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]');
+
+      expect(addPropBtn).not.toBeNull();
+    });
+
+    it('button label is "+ Add a property"', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
+      ];
+      const options = createOptions({ readOnly: false, schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]');
+
+      expect(addPropBtn!.textContent).toBe('+ Add a property');
+    });
+
+    it('does NOT render [data-blok-database-drawer-add-prop] button in read-only mode', () => {
+      const schema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
+      ];
+      const options = createOptions({ readOnly: true, schema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]');
+
+      expect(addPropBtn).toBeNull();
+    });
+
+    it('renders button even when schema has no renderable properties (empty schema)', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]');
+
+      expect(addPropBtn).not.toBeNull();
+    });
+
+    it('clicking the button opens a DatabasePropertyTypePopover ([data-blok-database-property-type-popover] appears in document.body)', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]') as HTMLButtonElement;
+
+      addPropBtn.click();
+
+      const popover = document.body.querySelector('[data-blok-database-property-type-popover]');
+
+      expect(popover).not.toBeNull();
+
+      drawer.destroy();
+      popover?.remove();
+    });
+
+    it('selecting a type from the popover calls onAddProperty(type)', () => {
+      const onAddProperty = vi.fn();
+      const options = createOptions({ readOnly: false, schema: [], onAddProperty });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]') as HTMLButtonElement;
+
+      addPropBtn.click();
+
+      const textOption = document.body.querySelector('[data-blok-database-property-type-option="text"]') as HTMLElement;
+
+      expect(textOption).not.toBeNull();
+
+      textOption.click();
+
+      expect(onAddProperty).toHaveBeenCalledWith('text');
+
+      drawer.destroy();
+    });
+
+    it('selecting a type from the popover closes the popover', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]') as HTMLButtonElement;
+
+      addPropBtn.click();
+
+      const textOption = document.body.querySelector('[data-blok-database-property-type-option="text"]') as HTMLElement;
+
+      textOption.click();
+
+      const popoverAfter = document.body.querySelector('[data-blok-database-property-type-popover]');
+
+      expect(popoverAfter).toBeNull();
+
+      drawer.destroy();
+    });
+
+    it('does not throw when onAddProperty is not provided and user selects a type', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      // no onAddProperty callback
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]') as HTMLButtonElement;
+
+      addPropBtn.click();
+
+      const textOption = document.body.querySelector('[data-blok-database-property-type-option="text"]') as HTMLElement;
+
+      expect(() => textOption.click()).not.toThrow();
+
+      drawer.destroy();
+    });
+  });
+
+  describe('refreshSchema()', () => {
+    it('updates the displayed properties when drawer is open', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } });
+
+      drawer.open(row);
+
+      // initially no prop rows
+      expect(options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-row]')).toHaveLength(0);
+
+      const newSchema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption({ id: 'opt-1', label: 'In progress' })] } }),
+      ];
+
+      drawer.refreshSchema(newSchema);
+
+      const propRows = options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-row]');
+
+      expect(propRows).toHaveLength(1);
+    });
+
+    it('displays new property value from current row after refreshSchema()', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-status': 'opt-1' } });
+
+      drawer.open(row);
+
+      const newSchema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption({ id: 'opt-1', label: 'In progress' })] } }),
+      ];
+
+      drawer.refreshSchema(newSchema);
+
+      const pill = options.wrapper.querySelector('[data-blok-database-drawer-prop-pill]');
+
+      expect(pill).not.toBeNull();
+      expect(pill!.textContent).toBe('In progress');
+    });
+
+    it('does nothing (no crash) when drawer is closed', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      // drawer is never opened
+      const newSchema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
+      ];
+
+      expect(() => drawer.refreshSchema(newSchema)).not.toThrow();
+    });
+
+    it('replaces the [data-blok-database-drawer-props] section in-place', () => {
+      const initialSchema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-notes', name: 'Notes', type: 'text', position: 'a1' }),
+      ];
+      const options = createOptions({ readOnly: false, schema: initialSchema });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card', 'prop-notes': 'hello' } });
+
+      drawer.open(row);
+
+      expect(options.wrapper.querySelectorAll('[data-blok-database-drawer-props]')).toHaveLength(1);
+
+      const newSchema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-notes', name: 'Notes', type: 'text', position: 'a1' }),
+        makePropertyDef({ id: 'prop-count', name: 'Count', type: 'number', position: 'a2' }),
+      ];
+
+      drawer.refreshSchema(newSchema);
+
+      // still only one props section
+      expect(options.wrapper.querySelectorAll('[data-blok-database-drawer-props]')).toHaveLength(1);
+      // now two prop rows
+      expect(options.wrapper.querySelectorAll('[data-blok-database-drawer-prop-row]')).toHaveLength(2);
+    });
+
+    it('shows "Add a property" button in the refreshed props section when not read-only', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card' } });
+
+      drawer.open(row);
+
+      const newSchema: PropertyDefinition[] = [
+        makePropertyDef({ id: 'prop-status', name: 'Status', type: 'select', position: 'a1', config: { options: [makeOption()] } }),
+      ];
+
+      drawer.refreshSchema(newSchema);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]');
+
+      expect(addPropBtn).not.toBeNull();
+    });
+
+    it('destroy() cleans up the propertyTypePopover if it was opened', () => {
+      const options = createOptions({ readOnly: false, schema: [] });
+      const drawer = new DatabaseCardDrawer(options);
+      const row = makeRow({ properties: { 'prop-title': 'Card' } });
+
+      drawer.open(row);
+
+      const addPropBtn = options.wrapper.querySelector('[data-blok-database-drawer-add-prop]') as HTMLButtonElement;
+
+      addPropBtn.click();
+
+      expect(document.body.querySelector('[data-blok-database-property-type-popover]')).not.toBeNull();
+
+      drawer.destroy();
+
+      expect(document.body.querySelector('[data-blok-database-property-type-popover]')).toBeNull();
     });
   });
 });

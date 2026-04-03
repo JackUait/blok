@@ -1,7 +1,8 @@
 import type { I18n, OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
-import type { DatabaseRow, PropertyDefinition, PropertyValue } from './types';
+import type { DatabaseRow, PropertyDefinition, PropertyType, PropertyValue } from './types';
 import { IconChevronRight } from '../../components/icons';
+import { DatabasePropertyTypePopover } from './database-property-type-popover';
 
 interface BlokInstance {
   save(): Promise<OutputData>;
@@ -20,6 +21,7 @@ export interface CardDrawerOptions {
   onTitleChange: (rowId: string, title: string) => void;
   onDescriptionChange: (rowId: string, description: OutputData) => void;
   onClose: () => void;
+  onAddProperty?: (type: PropertyType) => void;
 }
 
 /**
@@ -34,16 +36,19 @@ export class DatabaseCardDrawer {
   private readonly toolsConfig: ToolsConfig | undefined;
   private readonly titlePropertyId: string;
   private readonly descriptionPropertyId: string | undefined;
-  private readonly schema: PropertyDefinition[];
+  private schema: PropertyDefinition[];
   private readonly onTitleChange: (rowId: string, title: string) => void;
   private readonly onDescriptionChange: (rowId: string, description: OutputData) => void;
   private readonly onClose: () => void;
+  private readonly onAddProperty: ((type: PropertyType) => void) | undefined;
 
   private drawer: HTMLDivElement | null = null;
   private currentRowId: string | null = null;
+  private currentRow: DatabaseRow | null = null;
   private blokInstance: BlokInstance | null = null;
   private escapeHandler: ((e: KeyboardEvent) => void) | null = null;
   private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
+  private propertyTypePopover: DatabasePropertyTypePopover | null = null;
 
   constructor(options: CardDrawerOptions) {
     this.wrapper = options.wrapper;
@@ -56,6 +61,7 @@ export class DatabaseCardDrawer {
     this.onTitleChange = options.onTitleChange;
     this.onDescriptionChange = options.onDescriptionChange;
     this.onClose = options.onClose;
+    this.onAddProperty = options.onAddProperty;
   }
 
   get isOpen(): boolean {
@@ -79,6 +85,7 @@ export class DatabaseCardDrawer {
     exiting?.remove();
 
     this.currentRowId = row.id;
+    this.currentRow = row;
     this.updateActiveCard(row.id);
 
     const title = (row.properties[this.titlePropertyId] as string) ?? '';
@@ -136,9 +143,7 @@ export class DatabaseCardDrawer {
     // --- Properties section ---
     const renderableSchema = this.getRenderableSchema();
 
-    if (renderableSchema.length > 0) {
-      content.appendChild(this.buildPropsSection(renderableSchema, row));
-    }
+    content.appendChild(this.buildPropsSection(renderableSchema, row));
 
     // --- Divider ---
     const divider = document.createElement('hr');
@@ -228,6 +233,7 @@ export class DatabaseCardDrawer {
     this.cleanupEditor();
 
     this.currentRowId = row.id;
+    this.currentRow = row;
     this.updateActiveCard(row.id);
 
     const title = (row.properties[this.titlePropertyId] as string) ?? '';
@@ -248,14 +254,11 @@ export class DatabaseCardDrawer {
     this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
 
     const renderableSchema = this.getRenderableSchema();
+    const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
+    const divider = content?.querySelector('hr') ?? null;
 
-    if (renderableSchema.length > 0) {
-      const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
-      const divider = content?.querySelector('hr') ?? null;
-
-      if (content !== null) {
-        content.insertBefore(this.buildPropsSection(renderableSchema, row), divider);
-      }
+    if (content !== null) {
+      content.insertBefore(this.buildPropsSection(renderableSchema, row), divider);
     }
 
     // Reinitialize editor
@@ -285,6 +288,7 @@ export class DatabaseCardDrawer {
     }
 
     this.currentRowId = null;
+    this.currentRow = null;
 
     if (wasOpen) {
       this.onClose();
@@ -294,6 +298,8 @@ export class DatabaseCardDrawer {
   destroy(): void {
     this.cleanupListeners();
     this.cleanupEditor();
+    this.propertyTypePopover?.destroy();
+    this.propertyTypePopover = null;
 
     if (this.drawer) {
       this.drawer.remove();
@@ -306,6 +312,29 @@ export class DatabaseCardDrawer {
     exiting?.remove();
 
     this.currentRowId = null;
+    this.currentRow = null;
+  }
+
+  /**
+   * Updates the schema and, if the drawer is currently open, rebuilds the
+   * properties section in-place using the current row's data.
+   */
+  refreshSchema(schema: PropertyDefinition[]): void {
+    this.schema = schema;
+
+    if (this.drawer === null || this.currentRow === null) {
+      return;
+    }
+
+    this.drawer.querySelector('[data-blok-database-drawer-props]')?.remove();
+
+    const renderableSchema = this.getRenderableSchema();
+    const content = this.drawer.querySelector('[data-blok-database-drawer-content]');
+    const divider = content?.querySelector('hr') ?? null;
+
+    if (content !== null) {
+      content.insertBefore(this.buildPropsSection(renderableSchema, this.currentRow), divider);
+    }
   }
 
   /**
@@ -319,6 +348,26 @@ export class DatabaseCardDrawer {
 
     for (const def of renderableSchema) {
       propsSection.appendChild(this.createPropertyRow(def, row.properties[def.id] ?? null));
+    }
+
+    if (!this.readOnly) {
+      const addBtn = document.createElement('button');
+
+      addBtn.setAttribute('data-blok-database-drawer-add-prop', '');
+      addBtn.textContent = '+ Add a property';
+      addBtn.addEventListener('click', () => {
+        if (this.propertyTypePopover === null) {
+          this.propertyTypePopover = new DatabasePropertyTypePopover({
+            onSelect: (type) => {
+              this.onAddProperty?.(type);
+              this.propertyTypePopover?.close();
+            },
+          });
+        }
+
+        this.propertyTypePopover.open(addBtn);
+      });
+      propsSection.appendChild(addBtn);
     }
 
     return propsSection;

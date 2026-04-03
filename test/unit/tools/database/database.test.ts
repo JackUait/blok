@@ -3,6 +3,7 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
+import { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
 
@@ -866,6 +867,107 @@ describe('DatabaseTool', () => {
       expect(updateViewCalls).toHaveLength(1);
       expect(updateViewCalls[0].viewId).toBe('view-2');
       expect(updateViewCalls[0].changes).toEqual({ position: 'Zz' });
+
+      tool.destroy();
+    });
+  });
+
+  describe('onAddProperty wiring in DatabaseTool', () => {
+    it('model.addProperty is called with ("Property", type) when onAddProperty fires', () => {
+      const addPropertySpy = vi.spyOn(DatabaseModel.prototype, 'addProperty').mockReturnValue({
+        id: 'new-prop-id',
+        name: 'Property',
+        type: 'text',
+        position: 'b0',
+      });
+
+      const tool = new DatabaseTool(createDatabaseOptions());
+      tool.render();
+
+      // Access private cardDrawer to get the constructed options
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cardDrawer = (tool as any).cardDrawer as DatabaseCardDrawer;
+
+      expect(cardDrawer).not.toBeNull();
+
+      // Access the onAddProperty callback stored in the drawer
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string) => void) | undefined;
+
+      // If this is undefined, the callback was NOT wired — test fails (TDD red phase)
+      expect(onAddProperty).toBeDefined();
+
+      // Invoke the callback
+      onAddProperty?.('text');
+
+      expect(addPropertySpy).toHaveBeenCalledWith('Property', 'text');
+
+      tool.destroy();
+    });
+
+    it('sync.syncCreateProperty is called with correct params when onAddProperty fires', () => {
+      const mockAdapter = {
+        loadDatabase: vi.fn(),
+        createRow: vi.fn(),
+        updateRow: vi.fn(),
+        moveRow: vi.fn(),
+        deleteRow: vi.fn(),
+        createProperty: vi.fn().mockResolvedValue(undefined),
+        updateProperty: vi.fn(),
+        deleteProperty: vi.fn(),
+        createView: vi.fn(),
+        updateView: vi.fn(),
+        deleteView: vi.fn(),
+      };
+
+      const tool = new DatabaseTool(createDatabaseOptions({}, { adapter: mockAdapter }));
+      tool.render();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cardDrawer = (tool as any).cardDrawer as DatabaseCardDrawer;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string) => void) | undefined;
+
+      expect(onAddProperty).toBeDefined();
+
+      onAddProperty?.('text');
+
+      expect(mockAdapter.createProperty).toHaveBeenCalledTimes(1);
+      const callArg = mockAdapter.createProperty.mock.calls[0][0] as {
+        id: string;
+        name: string;
+        type: string;
+        position: string;
+      };
+
+      expect(callArg.name).toBe('Property');
+      expect(callArg.type).toBe('text');
+      expect(callArg.id).toBeDefined();
+      expect(callArg.position).toBeDefined();
+
+      tool.destroy();
+    });
+
+    it('cardDrawer.refreshSchema is called with updated schema after onAddProperty fires', () => {
+      const refreshSchemaSpy = vi.spyOn(DatabaseCardDrawer.prototype, 'refreshSchema');
+
+      const tool = new DatabaseTool(createDatabaseOptions());
+      tool.render();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cardDrawer = (tool as any).cardDrawer as DatabaseCardDrawer;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onAddProperty = (cardDrawer as any).onAddProperty as ((type: string) => void) | undefined;
+
+      expect(onAddProperty).toBeDefined();
+
+      onAddProperty?.('text');
+
+      expect(refreshSchemaSpy).toHaveBeenCalledTimes(1);
+
+      const calledWithSchema = refreshSchemaSpy.mock.calls[0][0] as Array<{ type: string }>;
+
+      expect(calledWithSchema.some((p) => p.type === 'text')).toBe(true);
 
       tool.destroy();
     });

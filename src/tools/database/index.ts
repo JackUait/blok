@@ -640,6 +640,16 @@ export class DatabaseTool implements BlockTool {
           }
         },
         onClose: () => { /* no-op; drawer handles its own DOM cleanup */ },
+        onAddProperty: (type) => {
+          const prop = this.model.addProperty('Property', type);
+          void this.sync.syncCreateProperty({
+            id: prop.id,
+            name: prop.name,
+            type: prop.type,
+            position: prop.position,
+          });
+          this.cardDrawer?.refreshSchema(this.model.getSchema());
+        },
       });
     }
 

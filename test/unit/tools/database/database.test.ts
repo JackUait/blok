@@ -898,7 +898,7 @@ describe('DatabaseTool', () => {
       expect(onAddProperty).toBeDefined();
 
       // Invoke the callback
-      onAddProperty?.('text');
+      onAddProperty!('text');
 
       expect(addPropertySpy).toHaveBeenCalledWith('Property', 'text');
 
@@ -930,7 +930,7 @@ describe('DatabaseTool', () => {
 
       expect(onAddProperty).toBeDefined();
 
-      onAddProperty?.('text');
+      onAddProperty!('text');
 
       expect(mockAdapter.createProperty).toHaveBeenCalledTimes(1);
       const callArg = mockAdapter.createProperty.mock.calls[0][0] as {
@@ -961,7 +961,7 @@ describe('DatabaseTool', () => {
 
       expect(onAddProperty).toBeDefined();
 
-      onAddProperty?.('text');
+      onAddProperty!('text');
 
       expect(refreshSchemaSpy).toHaveBeenCalledTimes(1);
 

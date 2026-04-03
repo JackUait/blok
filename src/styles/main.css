@@ -719,6 +719,7 @@
   --blok-database-card-placeholder: rgba(55, 53, 47, 0.4);
   --blok-database-column-bg: rgba(0, 0, 0, 0.04);
   --blok-database-add-text: rgba(55, 53, 47, 0.5);
+  --blok-database-add-border: rgba(55, 53, 47, 0.25);
   --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
   --blok-database-delete-text: rgba(55, 53, 47, 0.35);
   --blok-database-delete-hover-text: rgba(55, 53, 47, 0.65);
@@ -835,6 +836,7 @@
     --blok-database-card-placeholder: rgba(255, 255, 255, 0.3);
     --blok-database-column-bg: rgba(255, 255, 255, 0.05);
     --blok-database-add-text: rgba(255, 255, 255, 0.4);
+    --blok-database-add-border: rgba(255, 255, 255, 0.2);
     --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
     --blok-database-delete-text: rgba(255, 255, 255, 0.3);
     --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
@@ -949,6 +951,7 @@
   --blok-database-card-border: rgba(255, 255, 255, 0.06);
   --blok-database-column-bg: rgba(255, 255, 255, 0.03);
   --blok-database-add-text: rgba(255, 255, 255, 0.4);
+  --blok-database-add-border: rgba(255, 255, 255, 0.2);
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
   --blok-database-delete-text: rgba(255, 255, 255, 0.3);
   --blok-database-delete-hover-text: rgba(255, 255, 255, 0.55);
@@ -1623,15 +1626,15 @@
 [data-blok-database-add-card],
 [data-blok-database-add-column] {
   background: none;
-  border: none;
+  border: 1px solid var(--blok-database-add-border);
   cursor: pointer;
   color: var(--blok-database-add-text);
   font-size: 14px;
   padding: 6px 8px;
-  border-radius: 4px;
+  border-radius: 8px;
   text-align: left;
   width: 100%;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 [data-blok-database-add-card]:hover,

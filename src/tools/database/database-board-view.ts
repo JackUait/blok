@@ -1,9 +1,13 @@
 import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow } from './types';
+import type { DatabaseViewRenderer } from './database-view-renderer';
 
-interface DatabaseViewOptions {
+interface DatabaseBoardViewOptions {
   readOnly: boolean;
   i18n: I18n;
+  options: SelectOption[];
+  getRows: (optionId: string) => DatabaseRow[];
+  titlePropertyId: string;
 }
 
 /**
@@ -11,19 +15,25 @@ interface DatabaseViewOptions {
  * Receives ordered data and creates plain DOM elements (NOT contenteditable).
  * All interactive elements use data-blok-database-* attributes for test selectors and event delegation.
  */
-export class DatabaseView {
+export class DatabaseBoardView implements DatabaseViewRenderer {
   private readonly readOnly: boolean;
   private readonly i18n: I18n;
+  private readonly options: SelectOption[];
+  private readonly getRows: (optionId: string) => DatabaseRow[];
+  private readonly titlePropertyId: string;
 
-  constructor({ readOnly, i18n }: DatabaseViewOptions) {
+  constructor({ readOnly, i18n, options, getRows, titlePropertyId }: DatabaseBoardViewOptions) {
     this.readOnly = readOnly;
     this.i18n = i18n;
+    this.options = options;
+    this.getRows = getRows;
+    this.titlePropertyId = titlePropertyId;
   }
 
   /**
    * Creates the full board DOM from option and row data.
    */
-  createBoard(options: SelectOption[], getRows: (optionId: string) => DatabaseRow[], titlePropertyId: string): HTMLDivElement {
+  createView(): HTMLDivElement {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-tool', 'database');
@@ -43,8 +53,8 @@ export class DatabaseView {
     boardArea.style.flex = '1';
     boardArea.style.minWidth = '0';
 
-    for (const option of options) {
-      const columnEl = this.createColumnElement(option, getRows(option.id), titlePropertyId);
+    for (const option of this.options) {
+      const columnEl = this.createColumnElement(option, this.getRows(option.id), this.titlePropertyId);
 
       boardArea.appendChild(columnEl);
     }
@@ -66,19 +76,19 @@ export class DatabaseView {
   }
 
   /**
-   * Creates and appends a card element to a cards container.
+   * Creates and appends a row element to a cards container.
    */
-  appendCard(cardsContainer: HTMLElement, row: DatabaseRow, titlePropertyId: string): void {
-    const cardEl = this.createCardElement(row, titlePropertyId);
+  appendRow(cardsContainer: HTMLElement, row: DatabaseRow): void {
+    const cardEl = this.createCardElement(row, this.titlePropertyId);
 
     cardsContainer.appendChild(cardEl);
     this.updateColumnCount(cardsContainer);
   }
 
   /**
-   * Removes a card element from the wrapper by its data-row-id.
+   * Removes a row element from the wrapper by its data-row-id.
    */
-  removeCard(wrapper: HTMLElement, rowId: string): void {
+  removeRow(wrapper: HTMLElement, rowId: string): void {
     const cardEl = wrapper.querySelector(`[data-row-id="${rowId}"]`);
     const cardsContainer = cardEl?.closest('[data-blok-database-cards]') as HTMLElement | null;
 
@@ -90,25 +100,9 @@ export class DatabaseView {
   }
 
   /**
-   * Creates and inserts a column element before the add-column button.
+   * Updates the visible title of a row element found by its data-row-id.
    */
-  appendColumn(wrapper: HTMLElement, option: SelectOption): void {
-    const columnEl = this.createColumnElement(option, [], '');
-    const boardArea = wrapper.querySelector('[data-blok-database-board]');
-    const container = (boardArea as HTMLElement | null) ?? wrapper;
-    const addColumnBtn = container.querySelector('[data-blok-database-add-column]');
-
-    if (addColumnBtn) {
-      container.insertBefore(columnEl, addColumnBtn);
-    } else {
-      container.appendChild(columnEl);
-    }
-  }
-
-  /**
-   * Updates the visible title of a card element found by its data-row-id.
-   */
-  updateCardTitle(wrapper: HTMLElement, rowId: string, title: string): void {
+  updateRowTitle(wrapper: HTMLElement, rowId: string, title: string): void {
     const cardEl = wrapper.querySelector(`[data-row-id="${rowId}"]`);
     const titleEl = cardEl?.querySelector('[data-blok-database-card-title]');
 
@@ -124,9 +118,25 @@ export class DatabaseView {
   }
 
   /**
-   * Removes a column element from the wrapper by its data-option-id.
+   * Creates and inserts a group (column) element before the add-column button.
    */
-  removeColumn(wrapper: HTMLElement, optionId: string): void {
+  appendGroup(wrapper: HTMLElement, option: SelectOption): void {
+    const columnEl = this.createColumnElement(option, [], '');
+    const boardArea = wrapper.querySelector('[data-blok-database-board]');
+    const container = (boardArea as HTMLElement | null) ?? wrapper;
+    const addColumnBtn = container.querySelector('[data-blok-database-add-column]');
+
+    if (addColumnBtn) {
+      container.insertBefore(columnEl, addColumnBtn);
+    } else {
+      container.appendChild(columnEl);
+    }
+  }
+
+  /**
+   * Removes a group (column) element from the wrapper by its data-option-id.
+   */
+  removeGroup(wrapper: HTMLElement, optionId: string): void {
     const columnEl = wrapper.querySelector(`[data-option-id="${optionId}"]`);
 
     columnEl?.remove();
@@ -215,6 +225,11 @@ export class DatabaseView {
       addCardBtn.setAttribute('data-option-id', option.id);
       addCardBtn.setAttribute('aria-label', this.i18n.t('tools.database.addCard'));
       addCardBtn.textContent = '+ ' + this.i18n.t('tools.database.newPage');
+
+      if (option.color !== undefined) {
+        addCardBtn.style.borderColor = `var(--blok-color-${option.color}-text)`;
+      }
+
       columnEl.appendChild(addCardBtn);
     }
 
@@ -232,7 +247,7 @@ export class DatabaseView {
     cardEl.setAttribute('data-row-id', row.id);
     cardEl.setAttribute('role', 'listitem');
     cardEl.style.padding = '10px 12px';
-    cardEl.style.borderRadius = '8px';
+    cardEl.style.borderRadius = '12px';
     cardEl.style.cursor = 'pointer';
     cardEl.style.position = 'relative';
 

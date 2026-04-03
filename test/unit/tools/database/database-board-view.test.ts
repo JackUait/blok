@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DatabaseView } from '../../../../src/tools/database/database-view';
+import { DatabaseBoardView } from '../../../../src/tools/database/database-board-view';
 import type { SelectOption, DatabaseRow } from '../../../../src/tools/database/types';
 import type { I18n } from '../../../../types';
 
@@ -17,7 +17,7 @@ const createMockI18n = (): I18n => ({
   getLocale: vi.fn(() => 'en'),
 });
 
-describe('DatabaseView', () => {
+describe('DatabaseBoardView', () => {
   let i18n: I18n;
 
   beforeEach(() => {
@@ -29,22 +29,22 @@ describe('DatabaseView', () => {
     vi.restoreAllMocks();
   });
 
-  describe('createBoard', () => {
+  describe('createView', () => {
     it('renders wrapper with data-blok-tool="database" attribute', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       expect(board.getAttribute('data-blok-tool')).toBe('database');
     });
 
     it('renders one [data-blok-database-column] per column', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [
         makeOption({ id: 'opt-1', position: 'a0' }),
         makeOption({ id: 'opt-2', label: 'In Progress', position: 'a1' }),
         makeOption({ id: 'opt-3', label: 'Done', position: 'a2' }),
       ];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const columnEls = board.querySelectorAll('[data-blok-database-column]');
 
@@ -52,13 +52,13 @@ describe('DatabaseView', () => {
     });
 
     it('renders [data-blok-database-card] elements inside columns', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [
         makeRow({ id: 'row-1', position: 'a0' }),
         makeRow({ id: 'row-2', position: 'a1', properties: { title: 'Write tests' } }),
       ];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const cardEls = board.querySelectorAll('[data-blok-database-card]');
 
@@ -66,12 +66,12 @@ describe('DatabaseView', () => {
     });
 
     it('renders [data-blok-database-add-card] button in each column when NOT read-only', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [
         makeOption({ id: 'opt-1', position: 'a0' }),
         makeOption({ id: 'opt-2', label: 'Done', position: 'a1' }),
       ];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addCardBtns = board.querySelectorAll('[data-blok-database-add-card]');
 
@@ -79,9 +79,9 @@ describe('DatabaseView', () => {
     });
 
     it('hides add-card button in read-only mode', () => {
-      const view = new DatabaseView({ readOnly: true, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: true, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addCardBtns = board.querySelectorAll('[data-blok-database-add-card]');
 
@@ -89,8 +89,8 @@ describe('DatabaseView', () => {
     });
 
     it('renders [data-blok-database-add-column] button when NOT read-only', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]');
 
@@ -98,8 +98,8 @@ describe('DatabaseView', () => {
     });
 
     it('hides add-column button in read-only mode', () => {
-      const view = new DatabaseView({ readOnly: true, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: true, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]');
 
@@ -107,12 +107,12 @@ describe('DatabaseView', () => {
     });
 
     it('sets data-option-id on each column element', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [
         makeOption({ id: 'opt-alpha', position: 'a0' }),
         makeOption({ id: 'opt-beta', position: 'a1' }),
       ];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const columnEls = board.querySelectorAll('[data-blok-database-column]');
 
@@ -121,13 +121,13 @@ describe('DatabaseView', () => {
     });
 
     it('sets data-row-id on each card element', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [
         makeRow({ id: 'row-x', position: 'a0' }),
         makeRow({ id: 'row-y', position: 'a1' }),
       ];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const cardEls = board.querySelectorAll('[data-blok-database-card]');
 
@@ -136,9 +136,9 @@ describe('DatabaseView', () => {
     });
 
     it('applies column color as background on the column element when color is defined', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', color: 'green' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
@@ -146,9 +146,9 @@ describe('DatabaseView', () => {
     });
 
     it('does not apply column color when color is undefined', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
@@ -156,10 +156,10 @@ describe('DatabaseView', () => {
     });
 
     it('renders delete-card button on each card when NOT read-only', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
 
@@ -169,10 +169,10 @@ describe('DatabaseView', () => {
     });
 
     it('does not render delete-card button in read-only mode', () => {
-      const view = new DatabaseView({ readOnly: true, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: true, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const deleteBtns = board.querySelectorAll('[data-blok-database-delete-card]');
 
@@ -180,13 +180,13 @@ describe('DatabaseView', () => {
     });
 
     it('renders card count badge in each column header', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [
         makeRow({ id: 'row-1', position: 'a0' }),
         makeRow({ id: 'row-2', position: 'a1', properties: { title: 'Write tests' } }),
       ];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const countEl = board.querySelector('[data-blok-database-column-count]');
 
@@ -195,9 +195,9 @@ describe('DatabaseView', () => {
     });
 
     it('renders card count badge as 0 for empty columns', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const countEl = board.querySelector('[data-blok-database-column-count]');
 
@@ -206,9 +206,9 @@ describe('DatabaseView', () => {
     });
 
     it('prefixes add-card button text with +', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addCardBtn = board.querySelector('[data-blok-database-add-card]');
 
@@ -216,8 +216,8 @@ describe('DatabaseView', () => {
     });
 
     it('prefixes add-column button text with +', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]');
 
@@ -225,9 +225,9 @@ describe('DatabaseView', () => {
     });
 
     it('renders colored dot in column header when color is defined', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', color: 'blue' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const dot = board.querySelector('[data-blok-database-column-dot]') as HTMLElement;
 
@@ -236,9 +236,9 @@ describe('DatabaseView', () => {
     });
 
     it('does not render dot when color is undefined', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const dot = board.querySelector('[data-blok-database-column-dot]');
 
@@ -246,9 +246,9 @@ describe('DatabaseView', () => {
     });
 
     it('renders column header pill element', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const pill = board.querySelector('[data-blok-database-column-pill]');
 
@@ -256,9 +256,9 @@ describe('DatabaseView', () => {
     });
 
     it('does not render empty placeholder', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const placeholder = board.querySelector('[data-blok-database-empty-placeholder]');
 
@@ -266,9 +266,9 @@ describe('DatabaseView', () => {
     });
 
     it('wraps columns inside a board area element ([data-blok-database-board])', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const boardArea = board.querySelector('[data-blok-database-board]');
 
@@ -282,20 +282,20 @@ describe('DatabaseView', () => {
 
   describe('accessibility', () => {
     it('board element has role="region" and aria-label="Kanban board"', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       expect(board.getAttribute('role')).toBe('region');
       expect(board.getAttribute('aria-label')).toBe('Kanban board');
     });
 
     it('each column element has role="group"', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [
         makeOption({ id: 'opt-1', position: 'a0' }),
         makeOption({ id: 'opt-2', label: 'In Progress', position: 'a1' }),
       ];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const columnEls = board.querySelectorAll('[data-blok-database-column]');
 
@@ -304,12 +304,12 @@ describe('DatabaseView', () => {
     });
 
     it('each column has aria-label set to the option label', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [
         makeOption({ id: 'opt-1', label: 'To Do', position: 'a0' }),
         makeOption({ id: 'opt-2', label: 'In Progress', position: 'a1' }),
       ];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const columnEls = board.querySelectorAll('[data-blok-database-column]');
 
@@ -318,9 +318,9 @@ describe('DatabaseView', () => {
     });
 
     it('cards container has role="list"', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const cardsContainer = board.querySelector('[data-blok-database-cards]');
 
@@ -328,13 +328,13 @@ describe('DatabaseView', () => {
     });
 
     it('each card element has role="listitem"', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [
         makeRow({ id: 'row-1', position: 'a0' }),
         makeRow({ id: 'row-2', position: 'a1', properties: { title: 'Write tests' } }),
       ];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const cardEls = board.querySelectorAll('[data-blok-database-card]');
 
@@ -343,10 +343,10 @@ describe('DatabaseView', () => {
     });
 
     it('delete card button has a descriptive aria-label', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const deleteBtn = board.querySelector('[data-blok-database-delete-card]');
 
@@ -354,9 +354,9 @@ describe('DatabaseView', () => {
     });
 
     it('add-card button has an aria-label', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addCardBtn = board.querySelector('[data-blok-database-add-card]');
 
@@ -364,8 +364,8 @@ describe('DatabaseView', () => {
     });
 
     it('add-column button has an aria-label', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]');
 
@@ -375,9 +375,9 @@ describe('DatabaseView', () => {
 
   describe('styling', () => {
     it('board area has flex-start alignment and gap between columns', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
@@ -386,8 +386,8 @@ describe('DatabaseView', () => {
     });
 
     it('board area has padding', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
@@ -395,17 +395,17 @@ describe('DatabaseView', () => {
     });
 
     it('board area has data-blok-database-board attribute for CSS alignment', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
       const boardArea = board.querySelector('[data-blok-database-board]');
 
       expect(boardArea).not.toBeNull();
     });
 
     it('column element has flex column layout with minimum width', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
@@ -416,9 +416,9 @@ describe('DatabaseView', () => {
     });
 
     it('column header has flex layout with padding and border-radius', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
 
@@ -429,9 +429,9 @@ describe('DatabaseView', () => {
     });
 
     it('cards container has flex column layout with gap', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
 
@@ -441,10 +441,10 @@ describe('DatabaseView', () => {
     });
 
     it('card element has padding, border-radius, and pointer cursor', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
@@ -454,10 +454,10 @@ describe('DatabaseView', () => {
     });
 
     it('card element has position relative for delete button positioning', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
@@ -465,10 +465,10 @@ describe('DatabaseView', () => {
     });
 
     it('delete card button is positioned absolutely in top-right corner', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const deleteBtn = board.querySelector('[data-blok-database-delete-card]') as HTMLElement;
 
@@ -478,9 +478,9 @@ describe('DatabaseView', () => {
     });
 
     it('column title has font-weight semibold', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const title = board.querySelector('[data-blok-database-column-title]') as HTMLElement;
 
@@ -488,9 +488,9 @@ describe('DatabaseView', () => {
     });
 
     it('column header has gap between title and delete button', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const header = board.querySelector('[data-blok-database-column-header]') as HTMLElement;
 
@@ -498,8 +498,8 @@ describe('DatabaseView', () => {
     });
 
     it('board area has vertical padding set inline', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
@@ -508,8 +508,8 @@ describe('DatabaseView', () => {
     });
 
     it('board area has updated gap of 12px', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const boardArea = board.querySelector('[data-blok-database-board]') as HTMLElement;
 
@@ -517,9 +517,9 @@ describe('DatabaseView', () => {
     });
 
     it('cards container has updated gap of 8px', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
 
@@ -527,9 +527,9 @@ describe('DatabaseView', () => {
     });
 
     it('cards container has padding-top of 6px', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const container = board.querySelector('[data-blok-database-cards]') as HTMLElement;
 
@@ -537,9 +537,9 @@ describe('DatabaseView', () => {
     });
 
     it('column element has min-width of 260px', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const column = board.querySelector('[data-blok-database-column]') as HTMLElement;
 
@@ -547,30 +547,50 @@ describe('DatabaseView', () => {
     });
 
     it('card element has updated padding of 10px 12px', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
       expect(card.style.padding).toBe('10px 12px');
     });
 
-    it('card element has border-radius of 8px', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('card element has border-radius of 12px', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const card = board.querySelector('[data-blok-database-card]') as HTMLElement;
 
-      expect(card.style.borderRadius).toBe('8px');
+      expect(card.style.borderRadius).toBe('12px');
+    });
+
+    it('add-card button border color matches column color when color is defined', () => {
+      const options = [makeOption({ id: 'opt-1', color: 'blue' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const addCardBtn = board.querySelector('[data-blok-database-add-card]') as HTMLElement;
+
+      expect(addCardBtn.style.borderColor).toBe('var(--blok-color-blue-text)');
+    });
+
+    it('add-card button has no inline border color when column has no color', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const addCardBtn = board.querySelector('[data-blok-database-add-card]') as HTMLElement;
+
+      expect(addCardBtn.style.borderColor).toBe('');
     });
 
     it('add-column button matches column width (260px) via flex', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       const addColBtn = board.querySelector('[data-blok-database-add-column]') as HTMLElement;
 
@@ -580,12 +600,12 @@ describe('DatabaseView', () => {
   });
 
   describe('DOM update helpers', () => {
-    it('appendCard adds a card element to a cards container', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('appendRow adds a card element to a cards container', () => {
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
       const container = document.createElement('div');
       const row = makeRow({ id: 'row-new', properties: { title: 'New card' } });
 
-      view.appendCard(container, row, 'title');
+      view.appendRow(container, row);
 
       const cardEl = container.querySelector('[data-blok-database-card]');
 
@@ -593,25 +613,25 @@ describe('DatabaseView', () => {
       expect(cardEl?.getAttribute('data-row-id')).toBe('row-new');
     });
 
-    it('removeCard removes a card element by data-row-id', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('removeRow removes a card element by data-row-id', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-rm' })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       expect(board.querySelector('[data-row-id="row-rm"]')).not.toBeNull();
 
-      view.removeCard(board, 'row-rm');
+      view.removeRow(board, 'row-rm');
 
       expect(board.querySelector('[data-row-id="row-rm"]')).toBeNull();
     });
 
-    it('appendColumn inserts a column before the add-column button', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const board = view.createBoard([], () => [], 'title');
+    it('appendGroup inserts a column before the add-column button', () => {
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options: [], getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
       const newOption = makeOption({ id: 'opt-new', label: 'New Column' });
 
-      view.appendColumn(board, newOption);
+      view.appendGroup(board, newOption);
 
       const columnEls = board.querySelectorAll('[data-blok-database-column]');
 
@@ -625,112 +645,112 @@ describe('DatabaseView', () => {
       expect(columnEls[0].compareDocumentPosition(addColBtn!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
-    it('updateCardTitle updates the title text of a card by data-row-id', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('updateRowTitle updates the title text of a card by data-row-id', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: 'Original' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
-      view.updateCardTitle(board, 'row-1', 'Updated title');
+      view.updateRowTitle(board, 'row-1', 'Updated title');
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
       expect(titleEl?.textContent).toBe('Updated title');
     });
 
-    it('updateCardTitle falls back to cardTitlePlaceholder i18n key when title is empty', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('updateRowTitle falls back to cardTitlePlaceholder i18n key when title is empty', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: 'Has title' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
-      view.updateCardTitle(board, 'row-1', '');
-
-      const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
-
-      expect(titleEl?.textContent).toBe('tools.database.cardTitlePlaceholder');
-    });
-
-    it('createBoard renders card with empty title using cardTitlePlaceholder i18n key', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
-      const options = [makeOption({ id: 'opt-1' })];
-      const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      view.updateRowTitle(board, 'row-1', '');
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
       expect(titleEl?.textContent).toBe('tools.database.cardTitlePlaceholder');
     });
 
-    it('createBoard sets data-placeholder on card title when title is empty', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('createView renders card with empty title using cardTitlePlaceholder i18n key', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
+
+      const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
+
+      expect(titleEl?.textContent).toBe('tools.database.cardTitlePlaceholder');
+    });
+
+    it('createView sets data-placeholder on card title when title is empty', () => {
+      const options = [makeOption({ id: 'opt-1' })];
+      const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
       expect(titleEl?.hasAttribute('data-placeholder')).toBe(true);
     });
 
-    it('createBoard does not set data-placeholder when card has a title', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('createView does not set data-placeholder when card has a title', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: 'My Card' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
       expect(titleEl?.hasAttribute('data-placeholder')).toBe(false);
     });
 
-    it('updateCardTitle adds data-placeholder when title is cleared', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('updateRowTitle adds data-placeholder when title is cleared', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: 'Has title' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
-      view.updateCardTitle(board, 'row-1', '');
+      view.updateRowTitle(board, 'row-1', '');
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
       expect(titleEl?.hasAttribute('data-placeholder')).toBe(true);
     });
 
-    it('updateCardTitle removes data-placeholder when title is set', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('updateRowTitle removes data-placeholder when title is set', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: '' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
-      view.updateCardTitle(board, 'row-1', 'Now titled');
+      view.updateRowTitle(board, 'row-1', 'Now titled');
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
       expect(titleEl?.hasAttribute('data-placeholder')).toBe(false);
     });
 
-    it('updateCardTitle does nothing when card id is not found', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('updateRowTitle does nothing when card id is not found', () => {
       const options = [makeOption({ id: 'opt-1' })];
       const rows = [makeRow({ id: 'row-1', properties: { title: 'Original' } })];
-      const board = view.createBoard(options, () => rows, 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => rows, titlePropertyId: 'title' });
+      const board = view.createView();
 
-      view.updateCardTitle(board, 'nonexistent', 'New');
+      view.updateRowTitle(board, 'nonexistent', 'New');
 
       const titleEl = board.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
 
       expect(titleEl?.textContent).toBe('Original');
     });
 
-    it('removeColumn removes a column element by data-option-id', () => {
-      const view = new DatabaseView({ readOnly: false, i18n });
+    it('removeGroup removes a column element by data-option-id', () => {
       const options = [makeOption({ id: 'opt-del', position: 'a0' })];
-      const board = view.createBoard(options, () => [], 'title');
+      const view = new DatabaseBoardView({ readOnly: false, i18n, options, getRows: () => [], titlePropertyId: 'title' });
+      const board = view.createView();
 
       expect(board.querySelector('[data-option-id="opt-del"]')).not.toBeNull();
 
-      view.removeColumn(board, 'opt-del');
+      view.removeGroup(board, 'opt-del');
 
       expect(board.querySelector('[data-option-id="opt-del"]')).toBeNull();
     });

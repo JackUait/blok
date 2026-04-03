@@ -1,7 +1,8 @@
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig } from '../../../types';
 import type { DatabaseData, DatabaseConfig, DatabaseRow, ViewType, SelectOption } from './types';
 import { DatabaseModel } from './database-model';
-import { DatabaseView } from './database-view';
+import { DatabaseBoardView } from './database-board-view';
+import type { DatabaseViewRenderer } from './database-view-renderer';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
 import type { CardDragResult } from './database-card-drag';
@@ -28,7 +29,7 @@ export class DatabaseTool implements BlockTool {
 
   private activeViewId: string;
   private model: DatabaseModel;
-  private view!: DatabaseView;
+  private view!: DatabaseViewRenderer;
   private sync!: DatabaseBackendSync;
 
   private element: HTMLDivElement | null = null;
@@ -97,11 +98,11 @@ export class DatabaseTool implements BlockTool {
     this.boardContainer = boardContainer;
     wrapper.appendChild(boardContainer);
 
-    const boardEl = this.renderActiveBoard();
+    const boardEl = this.renderActiveView();
     boardContainer.appendChild(boardEl);
 
     if (!this.readOnly) {
-      this.attachBoardListeners(boardEl);
+      this.attachViewListeners(boardEl);
       this.initSubsystems(boardEl);
     }
 
@@ -153,7 +154,6 @@ export class DatabaseTool implements BlockTool {
     }
 
     this.activeViewId = viewId;
-    this.view = new DatabaseView({ readOnly: this.readOnly, i18n: this.api.i18n });
     this.sync = new DatabaseBackendSync(
       this.config.adapter,
       (error) => {
@@ -186,11 +186,11 @@ export class DatabaseTool implements BlockTool {
     this.activateView(viewId);
 
     this.boardContainer.innerHTML = '';
-    const newBoardWrapper = this.renderActiveBoard();
+    const newBoardWrapper = this.renderActiveView();
     this.boardContainer.appendChild(newBoardWrapper);
 
     if (!this.readOnly) {
-      this.attachBoardListeners(newBoardWrapper);
+      this.attachViewListeners(newBoardWrapper);
       this.initSubsystems(newBoardWrapper);
     }
 
@@ -296,19 +296,24 @@ export class DatabaseTool implements BlockTool {
   // Board rendering helpers
   // ---------------------------------------------------------------------------
 
-  private renderActiveBoard(): HTMLDivElement {
+  private renderActiveView(): HTMLDivElement {
     const viewConfig = this.model.getView(this.activeViewId);
-    const groupByPropId = viewConfig?.groupBy;
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
+    const groupByPropId = viewConfig?.groupBy;
 
-    if (groupByPropId === undefined) {
-      return this.view.createBoard([], () => [], titlePropId);
-    }
+    const options = groupByPropId !== undefined ? this.model.getSelectOptions(groupByPropId) : [];
+    const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
 
-    const options = this.model.getSelectOptions(groupByPropId);
-    const groups = this.model.getRowsGroupedBy(groupByPropId);
-    return this.view.createBoard(options, (optionId) => groups.get(optionId) ?? [], titlePropId);
+    this.view = new DatabaseBoardView({
+      readOnly: this.readOnly,
+      i18n: this.api.i18n,
+      options,
+      getRows: (optionId) => groups.get(optionId) ?? [],
+      titlePropertyId: titlePropId,
+    });
+
+    return this.view.createView();
   }
 
   // ---------------------------------------------------------------------------
@@ -318,7 +323,7 @@ export class DatabaseTool implements BlockTool {
   /**
    * Attaches a single click listener on the board element for event delegation.
    */
-  private attachBoardListeners(boardEl: HTMLDivElement): void {
+  private attachViewListeners(boardEl: HTMLDivElement): void {
     boardEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
 
@@ -350,7 +355,7 @@ export class DatabaseTool implements BlockTool {
         if (rowId !== null) {
           event.stopPropagation();
           this.model.deleteRow(rowId);
-          this.view.removeCard(boardEl, rowId);
+          this.view.removeRow(boardEl, rowId);
           void this.sync.syncDeleteRow({ rowId });
         }
 
@@ -396,7 +401,7 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    this.view.appendCard(cardsContainer as HTMLElement, row, titlePropId);
+    this.view.appendRow(cardsContainer as HTMLElement, row);
 
     void this.sync.syncCreateRow({
       id: row.id,
@@ -431,7 +436,7 @@ export class DatabaseTool implements BlockTool {
       config: { options: [...existingOptions, newOption] },
     });
 
-    this.view.appendColumn(boardEl, newOption);
+    this.view.appendGroup?.(boardEl, newOption);
     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: [...existingOptions, newOption] } } });
   }
 
@@ -496,7 +501,7 @@ export class DatabaseTool implements BlockTool {
           const currentBoard = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]');
 
           if (currentBoard !== null && currentBoard !== undefined) {
-            this.view.updateCardTitle(currentBoard, rowId, title);
+            this.view.updateRowTitle(currentBoard, rowId, title);
           }
 
           this.sync.syncUpdateRow({ rowId, properties: { [titlePropId]: title } });
@@ -576,7 +581,7 @@ export class DatabaseTool implements BlockTool {
 
     this.model.updateRow(rowId, { [groupByPropId]: toOptionId });
     this.model.moveRow(rowId, position);
-    this.rerenderBoard();
+    this.rerenderView();
 
     this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
     void this.sync.syncMoveRow({ rowId, position });
@@ -697,7 +702,7 @@ export class DatabaseTool implements BlockTool {
     // Remove the option
     const filteredOptions = prop.config.options.filter((o) => o.id !== optionId);
     this.model.updateProperty(groupByPropId, { config: { options: filteredOptions } });
-    this.view.removeColumn(boardEl, optionId);
+    this.view.removeGroup?.(boardEl, optionId);
     void this.sync.syncUpdateProperty({ propertyId: groupByPropId, changes: { config: { options: filteredOptions } } });
   }
 
@@ -737,7 +742,7 @@ export class DatabaseTool implements BlockTool {
    *     boardWrapper  (div returned by createBoard / renderActiveBoard)
    *           boardArea  ([data-blok-database-board] — scrollable area with columns)
    */
-  private rerenderBoard(): void {
+  private rerenderView(): void {
     if (this.boardContainer === null) {
       return;
     }
@@ -756,7 +761,7 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawer = null;
     this.keyboard?.destroy();
 
-    const newBoardWrapper = this.renderActiveBoard();
+    const newBoardWrapper = this.renderActiveView();
 
     if (oldBoardWrapper !== null && oldBoardWrapper !== undefined) {
       oldBoardWrapper.replaceWith(newBoardWrapper);
@@ -771,7 +776,7 @@ export class DatabaseTool implements BlockTool {
       newBoardArea.scrollLeft = savedScrollLeft;
     }
 
-    this.attachBoardListeners(newBoardWrapper);
+    this.attachViewListeners(newBoardWrapper);
     this.initSubsystems(newBoardWrapper);
   }
 }

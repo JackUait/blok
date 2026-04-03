@@ -188,7 +188,7 @@ describe('DatabaseListView', () => {
       expect(rowEl?.getAttribute('role')).toBe('listitem');
     });
 
-    it('row element has flexbox display', () => {
+    it('row element has data-blok-database-list-row attribute for CSS flex layout', () => {
       const rows = [makeRow({ id: 'row-1' })];
       const view = new DatabaseListView({
         readOnly: false, i18n, rows, titlePropertyId: 'title', schema: makeSchema(), visiblePropertyIds: [],
@@ -197,7 +197,7 @@ describe('DatabaseListView', () => {
 
       const rowEl = list.querySelector('[data-blok-database-list-row]') as HTMLElement;
 
-      expect(rowEl.style.display).toBe('flex');
+      expect(rowEl).not.toBeNull();
     });
 
     it('renders open button inside properties area', () => {

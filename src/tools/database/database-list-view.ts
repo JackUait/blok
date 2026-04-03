@@ -47,8 +47,6 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-database-list', '');
-    wrapper.style.display = 'flex';
-    wrapper.style.flexDirection = 'column';
 
     if (this.groupOptions !== undefined && this.groupOptions.length > 0 && this.getGroupRows !== undefined) {
       for (const option of this.groupOptions) {
@@ -90,10 +88,6 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const header = document.createElement('div');
 
     header.setAttribute('data-blok-database-list-group-header', '');
-    header.style.display = 'flex';
-    header.style.alignItems = 'center';
-    header.style.gap = '6px';
-    header.style.cursor = 'pointer';
 
     const toggle = document.createElement('span');
 
@@ -103,9 +97,6 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const dot = document.createElement('span');
 
     dot.setAttribute('data-blok-database-list-group-dot', '');
-    dot.style.width = '8px';
-    dot.style.height = '8px';
-    dot.style.borderRadius = '50%';
 
     if (option.color !== undefined) {
       dot.style.backgroundColor = `var(--blok-color-${option.color}-text)`;
@@ -114,7 +105,6 @@ export class DatabaseListView implements DatabaseViewRenderer {
     const title = document.createElement('span');
 
     title.setAttribute('data-blok-database-list-group-title', '');
-    title.style.fontWeight = '600';
     title.textContent = option.label;
 
     const count = document.createElement('span');
@@ -217,21 +207,10 @@ export class DatabaseListView implements DatabaseViewRenderer {
     rowEl.setAttribute('data-blok-database-list-row', '');
     rowEl.setAttribute('data-row-id', row.id);
     rowEl.setAttribute('role', 'listitem');
-    rowEl.style.display = 'flex';
-    rowEl.style.alignItems = 'center';
-    rowEl.style.cursor = 'pointer';
-    rowEl.style.position = 'relative';
-    rowEl.style.padding = '6px 8px';
-    rowEl.style.borderRadius = '4px';
-    rowEl.style.gap = '8px';
 
     const titleEl = document.createElement('div');
 
     titleEl.setAttribute('data-blok-database-list-row-title', '');
-    titleEl.style.flex = '1';
-    titleEl.style.overflow = 'hidden';
-    titleEl.style.textOverflow = 'ellipsis';
-    titleEl.style.whiteSpace = 'nowrap';
 
     if (title) {
       titleEl.textContent = title;
@@ -246,33 +225,16 @@ export class DatabaseListView implements DatabaseViewRenderer {
 
     rowEl.appendChild(propertiesEl);
 
-    if (!this.readOnly) {
-      const deleteBtn = document.createElement('button');
-
-      deleteBtn.setAttribute('data-blok-database-delete-row', '');
-      deleteBtn.setAttribute('data-row-id', row.id);
-      deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteRow'));
-      deleteBtn.style.position = 'absolute';
-      deleteBtn.style.top = '4px';
-      deleteBtn.style.right = '4px';
-      deleteBtn.textContent = '\u00d7';
-      rowEl.appendChild(deleteBtn);
-    }
-
     return rowEl;
   }
 
   /**
-   * Creates the properties container with badges and open button.
+   * Creates the properties container with badges, open button, and delete button.
    */
   private createPropertiesElement(row: DatabaseRow): HTMLDivElement {
     const propertiesEl = document.createElement('div');
 
     propertiesEl.setAttribute('data-blok-database-list-row-properties', '');
-    propertiesEl.style.display = 'flex';
-    propertiesEl.style.alignItems = 'center';
-    propertiesEl.style.gap = '6px';
-    propertiesEl.style.flexShrink = '0';
 
     for (const propId of this.visiblePropertyIds) {
       const propDef = this.schema.find(p => p.id === propId);
@@ -294,6 +256,16 @@ export class DatabaseListView implements DatabaseViewRenderer {
     openBtn.setAttribute('data-blok-database-list-row-open', '');
     openBtn.setAttribute('aria-label', this.i18n.t('tools.database.openRow'));
     propertiesEl.appendChild(openBtn);
+
+    if (!this.readOnly) {
+      const deleteBtn = document.createElement('button');
+
+      deleteBtn.setAttribute('data-blok-database-delete-row', '');
+      deleteBtn.setAttribute('data-row-id', row.id);
+      deleteBtn.setAttribute('aria-label', this.i18n.t('tools.database.deleteRow'));
+      deleteBtn.textContent = '\u00d7';
+      propertiesEl.appendChild(deleteBtn);
+    }
 
     return propertiesEl;
   }

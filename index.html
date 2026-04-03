@@ -841,50 +841,90 @@
       {
         type: "header",
         id: "database-section-header",
-        data: {
-          text: "Database (Kanban Board)",
-          level: 2
-        }
-      },
-      {
-        type: "paragraph",
-        id: "database-section-intro",
-        data: {
-          text: "Kanban boards let you organize work into columns. Drag cards between columns, click a card to open its detail panel, and drag column headers to reorder them."
-        }
-      },
-      {
-        id: "database-board",
-        type: "database",
-        data: {
-          schema: [
-            { id: "prop-title", name: "Title", type: "title", position: "a0" },
-            { id: "prop-status", name: "Status", type: "select", position: "a1", config: {
-              options: [
-                { id: "opt-backlog", label: "Backlog", color: "gray", position: "a0" },
-                { id: "opt-progress", label: "In progress", color: "blue", position: "a1" },
-                { id: "opt-review", label: "In review", color: "purple", position: "a2" },
-                { id: "opt-done", label: "Done", color: "green", position: "a3" }
-              ]
-            }}
-          ],
-          rows: {
-            "row-1": { id: "row-1", position: "a0", properties: { "prop-title": "Write documentation", "prop-status": "opt-backlog" } },
-            "row-2": { id: "row-2", position: "a1", properties: { "prop-title": "Add dark mode support", "prop-status": "opt-backlog" } },
-            "row-3": { id: "row-3", position: "a2", properties: { "prop-title": "Implement drag and drop", "prop-status": "opt-progress" } },
-            "row-4": { id: "row-4", position: "a3", properties: { "prop-title": "Design card detail panel", "prop-status": "opt-progress" } },
-            "row-5": { id: "row-5", position: "a4", properties: { "prop-title": "Set up CI pipeline", "prop-status": "opt-progress" } },
-            "row-6": { id: "row-6", position: "a5", properties: { "prop-title": "Code review: auth module", "prop-status": "opt-review" } },
-            "row-7": { id: "row-7", position: "a6", properties: { "prop-title": "Project scaffolding", "prop-status": "opt-done" } },
-            "row-8": { id: "row-8", position: "a7", properties: { "prop-title": "Database schema design", "prop-status": "opt-done" } },
-            "row-9": { id: "row-9", position: "a8", properties: { "prop-title": "User authentication", "prop-status": "opt-done" } }
-          },
-          views: [
-            { id: "view-1", name: "Board", type: "board", position: "a0", groupBy: "prop-status", sorts: [], filters: [], visibleProperties: ["prop-title", "prop-status"] }
-          ],
-          activeViewId: "view-1"
-        }
-      },
+         data: {
+           text: "Database (Kanban Board & List)",
+           level: 2
+         }
+       },
+       {
+         type: "paragraph",
+         id: "database-section-intro",
+         data: {
+           text: "Kanban boards let you organize work into columns. Drag cards between columns, click a card to open its detail panel, and drag column headers to reorder them."
+         }
+       },
+       {
+         id: "database-board",
+         type: "database",
+         data: {
+           schema: [
+             { id: "prop-title", name: "Title", type: "title", position: "a0" },
+             { id: "prop-status", name: "Status", type: "select", position: "a1", config: {
+               options: [
+                 { id: "opt-backlog", label: "Backlog", color: "gray", position: "a0" },
+                 { id: "opt-progress", label: "In progress", color: "blue", position: "a1" },
+                 { id: "opt-review", label: "In review", color: "purple", position: "a2" },
+                 { id: "opt-done", label: "Done", color: "green", position: "a3" }
+               ]
+             }}
+           ],
+           rows: {
+             "row-1": { id: "row-1", position: "a0", properties: { "prop-title": "Write documentation", "prop-status": "opt-backlog" } },
+             "row-2": { id: "row-2", position: "a1", properties: { "prop-title": "Add dark mode support", "prop-status": "opt-backlog" } },
+             "row-3": { id: "row-3", position: "a2", properties: { "prop-title": "Implement drag and drop", "prop-status": "opt-progress" } },
+             "row-4": { id: "row-4", position: "a3", properties: { "prop-title": "Design card detail panel", "prop-status": "opt-progress" } },
+             "row-5": { id: "row-5", position: "a4", properties: { "prop-title": "Set up CI pipeline", "prop-status": "opt-progress" } },
+             "row-6": { id: "row-6", position: "a5", properties: { "prop-title": "Code review: auth module", "prop-status": "opt-review" } },
+             "row-7": { id: "row-7", position: "a6", properties: { "prop-title": "Project scaffolding", "prop-status": "opt-done" } },
+             "row-8": { id: "row-8", position: "a7", properties: { "prop-title": "Database schema design", "prop-status": "opt-done" } },
+             "row-9": { id: "row-9", position: "a8", properties: { "prop-title": "User authentication", "prop-status": "opt-done" } }
+           },
+           views: [
+             { id: "view-1", name: "Board", type: "board", position: "a0", groupBy: "prop-status", sorts: [], filters: [], visibleProperties: ["prop-title", "prop-status"] }
+           ],
+           activeViewId: "view-1"
+         }
+       },
+       {
+         type: "paragraph",
+         id: "database-list-intro",
+         data: {
+           text: "The list view shows the same data as a flat, scannable list. Switch between views using the tabs above the database."
+         }
+       },
+       {
+         id: "database-list",
+         type: "database",
+         data: {
+           schema: [
+             { id: "prop-title", name: "Title", type: "title", position: "a0" },
+             { id: "prop-status", name: "Status", type: "select", position: "a1", config: {
+               options: [
+                 { id: "opt-backlog", label: "Backlog", color: "gray", position: "a0" },
+                 { id: "opt-progress", label: "In progress", color: "blue", position: "a1" },
+                 { id: "opt-review", label: "In review", color: "purple", position: "a2" },
+                 { id: "opt-done", label: "Done", color: "green", position: "a3" }
+               ]
+             }}
+           ],
+           rows: {
+             "row-1": { id: "row-1", position: "a0", properties: { "prop-title": "Write documentation", "prop-status": "opt-backlog" } },
+             "row-2": { id: "row-2", position: "a1", properties: { "prop-title": "Add dark mode support", "prop-status": "opt-backlog" } },
+             "row-3": { id: "row-3", position: "a2", properties: { "prop-title": "Implement drag and drop", "prop-status": "opt-progress" } },
+             "row-4": { id: "row-4", position: "a3", properties: { "prop-title": "Design card detail panel", "prop-status": "opt-progress" } },
+             "row-5": { id: "row-5", position: "a4", properties: { "prop-title": "Set up CI pipeline", "prop-status": "opt-progress" } },
+             "row-6": { id: "row-6", position: "a5", properties: { "prop-title": "Code review: auth module", "prop-status": "opt-review" } },
+             "row-7": { id: "row-7", position: "a6", properties: { "prop-title": "Project scaffolding", "prop-status": "opt-done" } },
+             "row-8": { id: "row-8", position: "a7", properties: { "prop-title": "Database schema design", "prop-status": "opt-done" } },
+             "row-9": { id: "row-9", position: "a8", properties: { "prop-title": "User authentication", "prop-status": "opt-done" } }
+           },
+           views: [
+             { id: "view-1", name: "Board", type: "board", position: "a0", groupBy: "prop-status", sorts: [], filters: [], visibleProperties: ["prop-title", "prop-status"] },
+             { id: "view-2", name: "List", type: "list", position: "a1", sorts: [], filters: [], visibleProperties: ["prop-title", "prop-status"] }
+           ],
+           activeViewId: "view-2"
+         }
+       },
     ];
 
     /**

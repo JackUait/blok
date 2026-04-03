@@ -2168,3 +2168,266 @@
   position: relative;
   overflow: hidden;
 }
+
+/* ─── List View ──────────────────────────────────────── */
+
+/**
+ * List wrapper — constrained to content width, centered like the editor body.
+ * Uses the same padding trick as the tab bar and board view.
+ */
+[data-blok-database-list] {
+  display: flex;
+  flex-direction: column;
+  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+}
+
+/**
+ * List row — horizontal flex item. Hover reveals the delete button and
+ * highlights the row with a subtle background fill, matching Notion style.
+ */
+[data-blok-database-list-row] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  font-size: 14px;
+  transition: background-color 80ms ease;
+  /* Thin rule between rows */
+  border-bottom: 1px solid transparent;
+}
+
+[data-blok-database-list-row]:not(:last-child) {
+  border-bottom-color: color-mix(in srgb, currentColor 5%, transparent);
+}
+
+[data-blok-database-list-row]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+}
+
+/**
+ * Row title — fills available space, truncates overflow.
+ */
+[data-blok-database-list-row-title] {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+[data-blok-database-list-row-title][data-placeholder] {
+  color: var(--blok-database-add-text);
+  font-style: italic;
+}
+
+/**
+ * Properties area — flex row of badges + open button, right-aligned.
+ */
+[data-blok-database-list-row-properties] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/**
+ * Property badge — compact colored pill.
+ */
+[data-blok-database-list-row-property] {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  background: var(--blok-database-add-hover-bg);
+  color: var(--blok-database-tab-text-active);
+}
+
+/**
+ * Open-row button — muted arrow, visible on hover.
+ */
+[data-blok-database-list-row-open] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--blok-database-add-text);
+  flex-shrink: 0;
+  transition: opacity 80ms ease, background-color 80ms ease, color 80ms ease;
+}
+
+[data-blok-database-list-row-open]::after {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-top: 2px solid currentColor;
+  transform: rotate(45deg);
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+[data-blok-database-list-row]:hover [data-blok-database-list-row-open] {
+  opacity: 1;
+}
+
+[data-blok-database-list-row-open]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  color: var(--blok-database-tab-text-active);
+}
+
+/**
+ * Delete row button — hidden until hover, inline after the open button.
+ */
+[data-blok-database-list-row-properties] [data-blok-database-delete-row] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px;
+  color: var(--blok-database-delete-text);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: opacity 80ms ease, color 80ms ease, background-color 80ms ease;
+}
+
+[data-blok-database-list-row]:hover [data-blok-database-delete-row] {
+  opacity: 1;
+}
+
+[data-blok-database-list-row-properties] [data-blok-database-delete-row]:hover {
+  color: var(--blok-database-delete-hover-text);
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+/**
+ * Add-row button — muted "+ New row" at bottom of list.
+ */
+[data-blok-database-list] > [data-blok-database-add-row],
+[data-blok-database-list-rows] ~ [data-blok-database-add-row] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--blok-database-add-text);
+  text-align: left;
+  transition: background-color 80ms ease, color 80ms ease;
+  margin-top: 2px;
+}
+
+[data-blok-database-list] > [data-blok-database-add-row]:hover,
+[data-blok-database-list-rows] ~ [data-blok-database-add-row]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+  color: var(--blok-text-primary, inherit);
+}
+
+/**
+ * Group container — stacked sections when grouped by a select property.
+ */
+[data-blok-database-list-group] {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 4px;
+}
+
+/**
+ * Group header — clickable row containing toggle chevron, dot, title, count.
+ */
+[data-blok-database-list-group-header] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+  transition: background-color 80ms ease;
+}
+
+[data-blok-database-list-group-header]:hover {
+  background-color: var(--blok-database-add-hover-bg);
+}
+
+/**
+ * Collapse toggle — small chevron, rotates when expanded/collapsed.
+ */
+[data-blok-database-list-group-toggle] {
+  font-size: 10px;
+  color: var(--blok-database-add-text);
+  line-height: 1;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+  transition: color 80ms ease;
+}
+
+[data-blok-database-list-group-header]:hover [data-blok-database-list-group-toggle] {
+  color: var(--blok-database-tab-text-active);
+}
+
+/**
+ * Status dot — small colored circle before the group title.
+ */
+[data-blok-database-list-group-dot] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/**
+ * Group title text.
+ */
+[data-blok-database-list-group-title] {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blok-database-tab-text-active);
+  letter-spacing: 0.01em;
+}
+
+/**
+ * Row count badge — muted number after the group title.
+ */
+[data-blok-database-list-group-count] {
+  font-size: 12px;
+  color: var(--blok-database-add-text);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+/**
+ * Rows container within a group — indented slightly, role=list.
+ */
+[data-blok-database-list-rows] {
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px;
+}

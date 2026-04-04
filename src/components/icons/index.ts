@@ -458,6 +458,28 @@ export const IconDivider = `
 </svg>
 `;
 
+// Code inline icon (angle brackets: </>)
+export const IconCode = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="m7 6-4 4 4 4m6-8 4 4-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Code block icon (brackets with slash)
+export const IconCodeBlock = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="m6 7-3 3 3 3m8-6 3 3-3 3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m12 5-4 10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Line wrap icon
+export const IconWrap = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 6h12M4 10h8a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2H9m0 0 2-2m-2 2 2 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Emoji Picker Category Icons
 
 // Star icon (Callout category)

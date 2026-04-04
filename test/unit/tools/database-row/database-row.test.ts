@@ -49,8 +49,8 @@ describe('DatabaseRowTool', () => {
   });
 
   describe('static getters', () => {
-    it('toolbox is undefined (not user-insertable)', () => {
-      expect(DatabaseRowTool.toolbox).toBeUndefined();
+    it('does not define a toolbox getter (not user-insertable)', () => {
+      expect(Object.getOwnPropertyDescriptor(DatabaseRowTool, 'toolbox')).toBeUndefined();
     });
 
     it('isReadOnlySupported is true', () => {

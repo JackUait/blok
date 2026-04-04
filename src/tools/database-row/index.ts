@@ -7,6 +7,10 @@ import type { DatabaseRowData, PropertyValue } from '../database/types';
  * Not user-insertable (no toolbox entry). The parent DatabaseTool creates
  * and manages row blocks; this tool's job is to hold properties and position
  * as block data so rows participate in the block tree.
+ *
+ * Custom methods (updateProperties, updatePosition, getProperties, getPosition)
+ * are accessed by the parent DatabaseTool via block.call('methodName', params),
+ * which invokes tool instance methods by name through the Block adapter.
  */
 export class DatabaseRowTool implements BlockTool {
   private _data: DatabaseRowData;
@@ -26,7 +30,7 @@ export class DatabaseRowTool implements BlockTool {
     return el;
   }
 
-  public save(): DatabaseRowData {
+  public save(_block: HTMLElement): DatabaseRowData {
     return {
       properties: this._data.properties,
       position: this._data.position,
@@ -51,10 +55,6 @@ export class DatabaseRowTool implements BlockTool {
 
   public getPosition(): string {
     return this._data.position;
-  }
-
-  public static get toolbox(): undefined {
-    return undefined;
   }
 
   public static get isReadOnlySupported(): boolean {

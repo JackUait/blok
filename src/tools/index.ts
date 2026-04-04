@@ -61,5 +61,5 @@ export const defaultInlineTools = {
   marker: {},
   underline: {},
   strikethrough: {},
-  code: {},
+  inlineCode: {},
 } as const;

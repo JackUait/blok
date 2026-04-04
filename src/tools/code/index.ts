@@ -158,7 +158,7 @@ export class CodeTool implements BlockTool {
       setTimeout(() => {
         btn.innerHTML = originalHTML;
       }, COPIED_FEEDBACK_DURATION);
-    });
+    }).catch(() => { /* clipboard unavailable */ });
   }
 
   private toggleWrap(): void {

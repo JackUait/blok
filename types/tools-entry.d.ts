@@ -11,8 +11,9 @@ import { ToggleConstructable, ToggleData, ToggleConfig } from './tools/toggle';
 import { DividerConstructable, DividerData } from './tools/divider';
 import { CalloutConstructable, CalloutData, CalloutConfig } from './tools/callout';
 import { QuoteConstructable, QuoteData } from './tools/quote';
+import { BlockToolConstructable } from './tools/block-tool';
+import { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
 import { InlineToolConstructable } from './tools/inline-tool';
-import { BlockTuneConstructable } from './block-tunes';
 import { ToolSettings } from './tools';
 
 // Block tools
@@ -24,6 +25,8 @@ export const Toggle: ToggleConstructable;
 export const Divider: DividerConstructable;
 export const Callout: CalloutConstructable;
 export const Quote: QuoteConstructable;
+export const Database: BlockToolConstructable;
+export const DatabaseRow: BlockToolConstructable;  // DatabaseRowTool (block tool), distinct from DatabaseRow interface in types/tools/database.d.ts
 
 // Re-export data and config types for convenience
 export { HeaderData, HeaderConfig } from './tools/header';
@@ -34,6 +37,7 @@ export { ToggleData, ToggleConfig } from './tools/toggle';
 export { DividerData } from './tools/divider';
 export { CalloutData, CalloutConfig } from './tools/callout';
 export { QuoteData } from './tools/quote';
+export { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
 
 // Inline tools
 export const Bold: InlineToolConstructable;
@@ -43,9 +47,6 @@ export const Convert: InlineToolConstructable;
 export const Marker: InlineToolConstructable;
 export const Strikethrough: InlineToolConstructable;
 export const Underline: InlineToolConstructable;
-
-// Block tunes
-export const Delete: BlockTuneConstructable;
 
 /**
  * Default block tools configuration
@@ -57,6 +58,8 @@ export const defaultBlockTools: {
   readonly table: {};
   readonly toggle: {};
   readonly callout: {};
+  readonly database: {};
+  readonly 'database-row': {};
   readonly divider: {};
   readonly quote: {};
 };

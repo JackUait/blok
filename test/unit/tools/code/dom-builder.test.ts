@@ -6,7 +6,7 @@ describe('buildCodeDOM', () => {
   beforeEach(() => { vi.clearAllMocks(); });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('returns wrapper, languageButton, copyButton, wrapButton, and codeElement', async () => {
+  it('returns wrapper, languageButton, copyButton, wrapButton, preElement, and codeElement', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const result = buildCodeDOM({
       code: '',
@@ -20,12 +20,13 @@ describe('buildCodeDOM', () => {
     expect(result.languageButton).toBeInstanceOf(HTMLSpanElement);
     expect(result.copyButton).toBeInstanceOf(HTMLButtonElement);
     expect(result.wrapButton).toBeInstanceOf(HTMLButtonElement);
+    expect(result.preElement).toBeInstanceOf(HTMLPreElement);
     expect(result.codeElement).toBeInstanceOf(HTMLElement);
   });
 
-  it('wrapper contains header and codeElement as direct children', async () => {
+  it('wrapper contains header and pre as direct children', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { wrapper, codeElement } = buildCodeDOM({
+    const { wrapper, preElement, codeElement } = buildCodeDOM({
       code: '',
       languageName: 'Plain Text',
       readOnly: false,
@@ -34,8 +35,9 @@ describe('buildCodeDOM', () => {
     });
 
     expect(wrapper.children).toHaveLength(2);
-    // First child is the header, second is the code element
-    expect(wrapper.children[1]).toBe(codeElement);
+    // First child is the header, second is the <pre> wrapping the code element
+    expect(wrapper.children[1]).toBe(preElement);
+    expect(preElement.contains(codeElement)).toBe(true);
   });
 
   it('header contains languageButton, spacer, wrapButton, and copyButton', async () => {
@@ -176,6 +178,20 @@ describe('buildCodeDOM', () => {
     });
 
     expect(codeElement.tagName).toBe('CODE');
+  });
+
+  it('code element is wrapped in a <pre> tag', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { preElement, codeElement } = buildCodeDOM({
+      code: '',
+      languageName: 'JavaScript',
+      readOnly: false,
+      copyLabel: 'Copy code',
+      wrapLabel: 'Wrap lines',
+    });
+
+    expect(preElement.tagName).toBe('PRE');
+    expect(codeElement.parentElement).toBe(preElement);
   });
 
   it('actual buttons have type="button"', async () => {

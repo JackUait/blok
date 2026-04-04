@@ -12,6 +12,7 @@ export interface CodeDOMRefs {
   languageButton: HTMLSpanElement;
   copyButton: HTMLButtonElement;
   wrapButton: HTMLButtonElement;
+  preElement: HTMLPreElement;
   codeElement: HTMLElement;
 }
 
@@ -80,8 +81,14 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   header.appendChild(wrapButton);
   header.appendChild(copyButton);
 
-  wrapper.appendChild(header);
-  wrapper.appendChild(codeElement);
+  // Pre wrapper for semantic HTML
+  const preElement = document.createElement('pre');
 
-  return { wrapper, languageButton, copyButton, wrapButton, codeElement };
+  preElement.appendChild(codeElement);
+
+  // Assemble wrapper
+  wrapper.appendChild(header);
+  wrapper.appendChild(preElement);
+
+  return { wrapper, languageButton, copyButton, wrapButton, preElement, codeElement };
 }

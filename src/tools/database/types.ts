@@ -35,6 +35,11 @@ export interface DatabaseRow {
   properties: Record<string, PropertyValue>;
 }
 
+export interface DatabaseRowData extends BlockToolData {
+  properties: Record<string, PropertyValue>;
+  position: string;
+}
+
 // ─── View config ───
 
 export type ViewType = 'board' | 'table' | 'gallery' | 'list';

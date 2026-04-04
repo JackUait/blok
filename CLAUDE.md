@@ -56,6 +56,34 @@ Before declaring done: run quality gates (`yarn lint`, `yarn test`), push, clean
 
 Blok is a headless, block-based rich text editor (similar to Notion). Content is JSON blocks, not HTML.
 
+## Everything Is a Block (Architectural Law)
+
+**Every content entity in Blok MUST be a block.** This is not a guideline — it is the foundational architectural constraint. Blocks are the universal primitive.
+
+### The Rules
+
+1. **A database is a block.** It implements `BlockTool`, lives in the block tree, and stores schema + view configs in its `data`.
+2. **A database row is a block.** Each row is a `database-row` block that is a child of the database block (via `parentId`/`contentIds`). Its `data.properties` stores column values conforming to the parent database's schema.
+3. **A page is a block with children.** Any block with `contentIds` can act as a "page." Opening a database row means navigating into that block's children.
+4. **Properties are NOT blocks.** Structured column values (status, priority, dates) are metadata stored in the block's `data` field — never as separate blocks.
+5. **Page body IS blocks.** Rich content inside a row/page is stored as child blocks via `contentIds`.
+
+### When Adding New Features
+
+Before designing any new feature, ask: **"Is this a block?"** If it represents content, data, or a container — it MUST be a block. Examples:
+
+- Adding a calendar view? The calendar is a view config on a database block. Rows are still row blocks.
+- Adding comments? Each comment thread could be a block.
+- Adding a table of contents? It's a block that reads sibling blocks.
+- Adding embeds? Each embed is a block.
+
+### What This Means in Practice
+
+- **No internal data models that shadow the block tree.** If something looks like it should be a block (has an ID, stores data, can be nested), make it a block.
+- **Use `parentId`/`contentIds` for containment.** Don't reinvent hierarchy inside a tool's data blob.
+- **The Saver/Renderer pipeline handles serialization.** Don't build custom save/load for entities that should be blocks.
+- **Block operations (insert, move, delete) are the API.** Don't build parallel CRUD for non-block entities.
+
 ## Commands
 
 ```bash

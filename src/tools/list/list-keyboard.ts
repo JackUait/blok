@@ -32,7 +32,10 @@ export interface KeyboardContext {
 /**
  * Handle Enter key - split content or exit list
  */
-export const handleEnter = async (context: KeyboardContext): Promise<void> => {
+export const handleEnter = async (
+  context: KeyboardContext,
+  depthValidator?: ListDepthValidator
+): Promise<void> => {
   const { api, blockId, data, element, getContentElement } = context;
 
   const selection = window.getSelection();
@@ -45,7 +48,7 @@ export const handleEnter = async (context: KeyboardContext): Promise<void> => {
 
   // If current item is empty, handle based on depth
   if (currentContent === '' || currentContent === '<br>') {
-    await exitListOrOutdent(context);
+    await exitListOrOutdent(context, depthValidator);
     return;
   }
 
@@ -98,13 +101,16 @@ export const handleEnter = async (context: KeyboardContext): Promise<void> => {
 /**
  * Exit list or outdent when pressing Enter on empty item
  */
-const exitListOrOutdent = async (context: KeyboardContext): Promise<void> => {
+const exitListOrOutdent = async (
+  context: KeyboardContext,
+  depthValidator?: ListDepthValidator
+): Promise<void> => {
   const { api, blockId, getDepth } = context;
   const currentDepth = getDepth();
 
   // If nested, outdent instead of exiting
   if (currentDepth > 0) {
-    await handleOutdent(context);
+    await handleOutdent(context, depthValidator);
     return;
   }
 
@@ -217,9 +223,45 @@ export const handleIndent = async(
 };
 
 /**
- * Handle Shift+Tab key - outdent the list item
+ * Reduce depth by 1 for all descendant list items following the given block.
+ * Stops at non-list blocks or blocks with depth <= the parent's original depth.
  */
-export const handleOutdent = async(context: KeyboardContext): Promise<void> => {
+const cascadeDepthReduction = async (
+  api: API,
+  blockId: string | undefined,
+  parentOriginalDepth: number,
+  depthValidator: ListDepthValidator
+): Promise<void> => {
+  const startIndex = blockId
+    ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
+    : api.blocks.getCurrentBlockIndex();
+  const blocksCount = api.blocks.getBlocksCount();
+
+  const processDescendant = async (index: number): Promise<void> => {
+    if (index >= blocksCount) return;
+
+    const block = api.blocks.getBlockByIndex(index);
+
+    if (!block || block.name !== TOOL_NAME) return;
+
+    const blockDepth = depthValidator.getBlockDepth(block);
+
+    if (blockDepth <= parentOriginalDepth) return;
+
+    await api.blocks.update(block.id, { depth: blockDepth - 1 });
+    await processDescendant(index + 1);
+  };
+
+  await processDescendant(startIndex + 1);
+};
+
+/**
+ * Handle Shift+Tab key - outdent the list item and cascade to descendants
+ */
+export const handleOutdent = async(
+  context: KeyboardContext,
+  depthValidator?: ListDepthValidator
+): Promise<void> => {
   const { api, blockId, data, syncContentFromDOM, getDepth } = context;
 
   const currentDepth = getDepth();
@@ -239,6 +281,11 @@ export const handleOutdent = async(context: KeyboardContext): Promise<void> => {
     ...data,
     depth: newDepth,
   });
+
+  // Cascade depth reduction to descendant list items
+  if (depthValidator) {
+    await cascadeDepthReduction(api, blockId, currentDepth, depthValidator);
+  }
 
   // Restore focus to the updated block after DOM has been updated
   setCaretToBlockContent(api, updatedBlock);

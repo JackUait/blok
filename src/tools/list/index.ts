@@ -307,7 +307,7 @@ export class ListItem implements BlockTool {
       getDepth: this.getDepth.bind(this),
     };
 
-    await handleEnter(context);
+    await handleEnter(context, this.depthValidator);
   }
 
   private async handleBackspace(event: KeyboardEvent): Promise<void> {
@@ -349,7 +349,7 @@ export class ListItem implements BlockTool {
       getDepth: this.getDepth.bind(this),
     };
 
-    await handleOutdent(context);
+    await handleOutdent(context, this.depthValidator);
   }
 
   private syncContentFromDOM(): void {

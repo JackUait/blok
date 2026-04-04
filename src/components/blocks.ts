@@ -263,8 +263,13 @@ export class Blocks {
     if (index > 0) {
       const previousBlockIndex = Math.min(index - 1, this.length - 1);
       const previousBlock = this.blocks[previousBlockIndex];
+      const isDirectChild = previousBlock.holder.parentElement === this.workingArea;
 
-      previousBlock.holder.after(fragment);
+      if (isDirectChild) {
+        previousBlock.holder.after(fragment);
+      } else {
+        this.insertAfterNestedBlock(fragment, index);
+      }
     }
 
     if (index === 0) {
@@ -413,6 +418,26 @@ export class Blocks {
 
     target.holder.insertAdjacentElement(position, block.holder);
     block.call(BlockToolAPI.RENDERED);
+  }
+
+  /**
+   * When the previous block in the flat array is nested (e.g., a table cell
+   * paragraph), inserting after its top-level ancestor would place content
+   * mid-article. Instead, find the next top-level block at or after the
+   * insertion index and insert before it, or append to workingArea if none.
+   */
+  private insertAfterNestedBlock(fragment: DocumentFragment, index: number): void {
+    const nextTopLevel = this.blocks.slice(index).find(
+      (b) => b.holder.parentElement === this.workingArea
+    );
+
+    if (nextTopLevel !== undefined) {
+      nextTopLevel.holder.before(fragment);
+
+      return;
+    }
+
+    this.workingArea.appendChild(fragment);
   }
 
   /**

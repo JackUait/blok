@@ -969,6 +969,95 @@ describe('Blocks', () => {
       expect(blocks.blocks[1]).toBe(block2);
       expect(blocks.blocks[2]).toBe(block3);
     });
+
+    it('should insert before the next top-level block when previous block is nested mid-article', () => {
+      const blocks = createBlocks();
+
+      /**
+       * Regression: table cell paragraphs land at the end of the flat blocks
+       * array even though the table appears mid-article in the DOM.
+       *
+       * Flat array: [tableBlock(0), quoteBlock(1), emptyBlock(2), cellBlock(3)]
+       * DOM order:  [tableBlock(contains cellBlock), quoteBlock, emptyBlock]
+       *
+       * When inserting at index 3 (after cellBlock), previousBlock is
+       * cellBlock(3) which is nested inside the table. Inserting after the
+       * table's holder would place content mid-article. Instead, insertMany
+       * should place blocks at the correct DOM position — after emptyBlock
+       * (by appending to workingArea since no top-level blocks follow in
+       * the array).
+       */
+      const tableBlock = createMockBlock('table-1', 'table');
+      const quoteBlock = createMockBlock('quote-1', 'quote');
+      const emptyBlock = createMockBlock('empty-1', 'paragraph');
+      const cellBlock = createMockBlock('cell-1', 'paragraph');
+
+      blocks.push(tableBlock);
+      blocks.push(quoteBlock);
+      blocks.push(emptyBlock);
+
+      // Nest the cell block inside the table — but it's at the END of the flat array
+      const cellContainer = document.createElement('div');
+
+      cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableBlock.holder.appendChild(cellContainer);
+      cellContainer.appendChild(cellBlock.holder);
+      blocks.blocks.push(cellBlock);
+
+      // Array is now: [tableBlock(0), quoteBlock(1), emptyBlock(2), cellBlock(3)]
+      // DOM is:       [tableBlock(contains cellBlock), quoteBlock, emptyBlock]
+
+      // Insert at index 3 (shouldReplace scenario: replacing emptyBlock, which is at
+      // array index 2, but cellBlock at index 3 pushes things around)
+      // Simulating: currentBlockIndex=3, previous=blocks[2]=emptyBlock — this case works.
+      //
+      // The REAL bug: insert at index 4 (after all blocks including the trailing cellBlock)
+      const newBlock1 = createMockBlock('new-1', 'header');
+      const newBlock2 = createMockBlock('new-2', 'paragraph');
+
+      blocks.insertMany([newBlock1, newBlock2], 4);
+
+      // New blocks must be direct children of workingArea, not inside the table
+      expect(newBlock1.holder.parentElement).toBe(workingArea);
+      expect(newBlock2.holder.parentElement).toBe(workingArea);
+      expect(tableBlock.holder.contains(newBlock1.holder)).toBe(false);
+
+      // New blocks must appear AFTER emptyBlock (at the end), not after the table (mid-article)
+      const workingAreaChildren = Array.from(workingArea.children);
+      const newBlock1Pos = workingAreaChildren.indexOf(newBlock1.holder);
+      const emptyBlockPos = workingAreaChildren.indexOf(emptyBlock.holder);
+      const tableBlockPos = workingAreaChildren.indexOf(tableBlock.holder);
+
+      expect(newBlock1Pos).toBeGreaterThan(emptyBlockPos);
+      expect(newBlock1Pos).toBeGreaterThan(tableBlockPos);
+    });
+
+    it('should append to workingArea when previous block is nested and no top-level blocks follow', () => {
+      const blocks = createBlocks();
+
+      /**
+       * When all blocks after the insertion index are nested, there is
+       * no top-level block to insert before — append to workingArea.
+       */
+      const tableBlock = createMockBlock('table-1', 'table');
+      const cellBlock = createMockBlock('cell-1', 'paragraph');
+
+      blocks.push(tableBlock);
+
+      const cellContainer = document.createElement('div');
+
+      tableBlock.holder.appendChild(cellContainer);
+      cellContainer.appendChild(cellBlock.holder);
+      blocks.blocks.push(cellBlock);
+
+      const newBlock = createMockBlock('new-1', 'paragraph');
+
+      blocks.insertMany([newBlock], 2);
+
+      // Should be a direct child of workingArea, not inside the table
+      expect(newBlock.holder.parentElement).toBe(workingArea);
+      expect(tableBlock.holder.contains(newBlock.holder)).toBe(false);
+    });
   });
 
   describe('remove', () => {

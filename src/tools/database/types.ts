@@ -78,20 +78,6 @@ export interface DatabaseData extends BlockToolData {
   activeViewId: string;
 }
 
-/**
- * Legacy format with embedded rows. Used for migration detection.
- */
-export interface LegacyDatabaseData extends DatabaseData {
-  rows: Record<string, DatabaseRow>;
-}
-
-/**
- * Type guard for legacy data format.
- */
-export function isLegacyDatabaseData(data: DatabaseData): data is LegacyDatabaseData {
-  return 'rows' in data && (data as Record<string, unknown>).rows !== undefined && (data as Record<string, unknown>).rows !== null && typeof (data as Record<string, unknown>).rows === 'object';
-}
-
 // ─── Adapter ───
 
 export interface DatabaseAdapter {

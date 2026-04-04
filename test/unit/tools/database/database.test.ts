@@ -544,6 +544,27 @@ describe('DatabaseTool', () => {
       expect(options.api.blocks.getChildren).toHaveBeenCalledWith('test-block-id');
     });
 
+    it('re-renders view in rendered() when child blocks appear after render()', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
+
+      // Start with no children (simulates render() running before child blocks exist)
+      const options = createDatabaseOptions();
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      // Board should have no cards after render()
+      expect(element.querySelectorAll('[data-blok-database-card]')).toHaveLength(0);
+
+      // Now child blocks become available (simulates Renderer creating them after database block)
+      (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue(childBlocks);
+      tool.rendered();
+
+      // Board should now show the card
+      expect(element.querySelectorAll('[data-blok-database-card]')).toHaveLength(1);
+    });
+
     it('projects child block data into model rows', () => {
       const childBlocks = [
         createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),

@@ -116,7 +116,15 @@ export class DatabaseTool implements BlockTool {
 
   rendered(): void {
     this.block.stretched = true;
+
+    const hadRows = this.model.getOrderedRows().length > 0;
+
     this.syncRowsFromBlocks();
+
+    if (!hadRows && this.model.getOrderedRows().length > 0) {
+      this.rerenderView();
+    }
+
     if (this.config.adapter !== undefined) {
       void this.loadFromBackend();
     }

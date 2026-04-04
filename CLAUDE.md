@@ -142,7 +142,7 @@ Entry: `src/blok.ts` → `Core` (`src/components/core.ts`) → modules
 - **Paste**: Clipboard operations
 - **API**: Public API
 
-**Blocks** (`src/components/block/index.ts`): Fundamental unit. Wraps Tool. Has unique id, data, parentId/contentIds. Lifecycle: rendered/updated/removed/moved.
+**Blocks** (`src/components/block/index.ts`): Fundamental unit. Wraps Tool. Has unique id, data, parentId/contentIds. Lifecycle: rendered/updated/removed/moved. Database rows are `database-row` blocks (children of database blocks via parentId/contentIds).
 
 DOM: `holder` → `contentElement` → `toolRenderedElement`
 

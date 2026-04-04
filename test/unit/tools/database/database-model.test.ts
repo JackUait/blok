@@ -46,7 +46,6 @@ const makeView = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConf
 
 const makeData = (overrides: Partial<DatabaseData> = {}): DatabaseData => ({
   schema: [],
-  rows: {},
   views: [],
   activeViewId: '',
   ...overrides,
@@ -83,19 +82,21 @@ describe('DatabaseModel', () => {
       expect(views[0].groupBy).toBe(statusProp?.id);
     });
 
-    it('uses provided data when given', () => {
+    it('uses provided schema and views when given', () => {
       const prop = makeProperty({ id: 'p1', name: 'Title', type: 'title' });
-      const row = makeRow({ id: 'r1', properties: { p1: 'Hello' } });
       const view = makeView({ id: 'v1' });
       const model = new DatabaseModel(makeData({
         schema: [prop],
-        rows: { r1: row },
         views: [view],
         activeViewId: 'v1',
       }));
       expect(model.getSchema()).toHaveLength(1);
-      expect(model.getRow('r1')).toBeDefined();
       expect(model.getViews()).toHaveLength(1);
+    });
+
+    it('starts with empty rows array', () => {
+      const model = new DatabaseModel(makeData());
+      expect(model.getOrderedRows()).toHaveLength(0);
     });
   });
 
@@ -133,62 +134,69 @@ describe('DatabaseModel', () => {
       expect(model.getProperty('p1')?.config?.options).toHaveLength(1);
     });
 
-    it('deleteProperty removes from schema and strips values from all rows', () => {
+    it('deleteProperty removes from schema', () => {
       const prop = makeProperty({ id: 'p1', name: 'Notes', type: 'text' });
       const titleProp = makeProperty({ id: 'pt', name: 'Title', type: 'title', position: 'a0' });
-      const row = makeRow({ id: 'r1', properties: { pt: 'Hello', p1: 'some notes' } });
       const model = new DatabaseModel(makeData({
         schema: [titleProp, prop],
-        rows: { r1: row },
       }));
       model.deleteProperty('p1');
       expect(model.getProperty('p1')).toBeUndefined();
       expect(model.getSchema()).toHaveLength(1);
-      expect(model.getRow('r1')?.properties.p1).toBeUndefined();
-      expect(model.getRow('r1')?.properties.pt).toBe('Hello');
     });
   });
 
-  describe('row operations', () => {
-    it('getOrderedRows returns rows sorted by position', () => {
-      const r1 = makeRow({ id: 'r1', position: 'a1' });
-      const r2 = makeRow({ id: 'r2', position: 'a0' });
-      const model = new DatabaseModel(makeData({ rows: { r1, r2 } }));
+  describe('row projection', () => {
+    it('should return ordered rows from projected data', () => {
+      const model = new DatabaseModel(makeData());
+      const rows: DatabaseRow[] = [
+        makeRow({ id: 'r1', position: 'a1' }),
+        makeRow({ id: 'r0', position: 'a0' }),
+      ];
+      model.setRows(rows);
       const ordered = model.getOrderedRows();
-      expect(ordered[0].id).toBe('r2');
+      expect(ordered[0].id).toBe('r0');
       expect(ordered[1].id).toBe('r1');
     });
 
-    it('addRow creates row with auto ID and position at end', () => {
-      const model = new DatabaseModel();
-      const row = model.addRow({ 'prop-title': 'New task' });
-      expect(row.id).toBeTruthy();
-      expect(row.position).toBeTruthy();
-      expect(row.properties['prop-title']).toBe('New task');
-      expect(model.getRow(row.id)).toBeDefined();
+    it('should return row by ID from projected data', () => {
+      const model = new DatabaseModel(makeData());
+      model.setRows([makeRow({ id: 'r1', properties: { title: 'Test' } })]);
+      expect(model.getRow('r1')?.properties.title).toBe('Test');
     });
 
-    it('updateRow merges partial property changes', () => {
-      const row = makeRow({ id: 'r1', properties: { a: 'old', b: 'keep' } });
-      const model = new DatabaseModel(makeData({ rows: { r1: row } }));
-      model.updateRow('r1', { a: 'new' });
-      expect(model.getRow('r1')?.properties.a).toBe('new');
-      expect(model.getRow('r1')?.properties.b).toBe('keep');
+    it('should return undefined for unknown row ID', () => {
+      const model = new DatabaseModel(makeData());
+      model.setRows([]);
+      expect(model.getRow('nonexistent')).toBeUndefined();
     });
 
-    it('moveRow updates position', () => {
-      const row = makeRow({ id: 'r1', position: 'a0' });
-      const model = new DatabaseModel(makeData({ rows: { r1: row } }));
-      model.moveRow('r1', 'a5');
-      expect(model.getRow('r1')?.position).toBe('a5');
+    it('should group rows by property value', () => {
+      const model = new DatabaseModel(makeData());
+      model.setRows([
+        makeRow({ id: 'r1', properties: { title: 'A', status: 'opt-1' } }),
+        makeRow({ id: 'r2', properties: { title: 'B', status: 'opt-2' } }),
+        makeRow({ id: 'r3', properties: { title: 'C', status: 'opt-1' } }),
+      ]);
+      const grouped = model.getRowsGroupedBy('status');
+      expect(grouped.get('opt-1')).toHaveLength(2);
+      expect(grouped.get('opt-2')).toHaveLength(1);
     });
 
-    it('deleteRow removes the row', () => {
-      const row = makeRow({ id: 'r1' });
-      const model = new DatabaseModel(makeData({ rows: { r1: row } }));
-      model.deleteRow('r1');
-      expect(model.getRow('r1')).toBeUndefined();
-      expect(model.getOrderedRows()).toHaveLength(0);
+    it('should create new row data with auto-generated position', () => {
+      const model = new DatabaseModel(makeData());
+      model.setRows([makeRow({ position: 'a0' })]);
+      const newRow = model.createRowData();
+      expect(newRow.id).toBeDefined();
+      expect(newRow.position).toBeDefined();
+      expect(newRow.properties).toEqual({});
+    });
+
+    it('should create row data with initial properties', () => {
+      const model = new DatabaseModel(makeData());
+      model.setRows([]);
+      const newRow = model.createRowData({ title: 'New Task' });
+      expect(newRow.properties.title).toBe('New Task');
     });
   });
 
@@ -197,10 +205,12 @@ describe('DatabaseModel', () => {
       const optA = makeSelectOption({ id: 'optA', label: 'A', position: 'a0' });
       const optB = makeSelectOption({ id: 'optB', label: 'B', position: 'a1' });
       const prop = makeProperty({ id: 'status', type: 'select', config: { options: [optA, optB] } });
-      const r1 = makeRow({ id: 'r1', position: 'a0', properties: { status: 'optA' } });
-      const r2 = makeRow({ id: 'r2', position: 'a1', properties: { status: 'optB' } });
-      const r3 = makeRow({ id: 'r3', position: 'a2', properties: { status: 'optA' } });
-      const model = new DatabaseModel(makeData({ schema: [prop], rows: { r1, r2, r3 } }));
+      const model = new DatabaseModel(makeData({ schema: [prop] }));
+      model.setRows([
+        makeRow({ id: 'r1', position: 'a0', properties: { status: 'optA' } }),
+        makeRow({ id: 'r2', position: 'a1', properties: { status: 'optB' } }),
+        makeRow({ id: 'r3', position: 'a2', properties: { status: 'optA' } }),
+      ]);
       const groups = model.getRowsGroupedBy('status');
       expect(groups.get('optA')).toHaveLength(2);
       expect(groups.get('optA')![0].id).toBe('r1');
@@ -211,9 +221,11 @@ describe('DatabaseModel', () => {
     it('puts rows with no value under empty string key', () => {
       const opt = makeSelectOption({ id: 'optA', label: 'A', position: 'a0' });
       const prop = makeProperty({ id: 'status', type: 'select', config: { options: [opt] } });
-      const r1 = makeRow({ id: 'r1', position: 'a0', properties: { status: 'optA' } });
-      const r2 = makeRow({ id: 'r2', position: 'a1', properties: {} });
-      const model = new DatabaseModel(makeData({ schema: [prop], rows: { r1, r2 } }));
+      const model = new DatabaseModel(makeData({ schema: [prop] }));
+      model.setRows([
+        makeRow({ id: 'r1', position: 'a0', properties: { status: 'optA' } }),
+        makeRow({ id: 'r2', position: 'a1', properties: {} }),
+      ]);
       const groups = model.getRowsGroupedBy('status');
       expect(groups.get('optA')).toHaveLength(1);
       expect(groups.get('')).toHaveLength(1);
@@ -223,20 +235,24 @@ describe('DatabaseModel', () => {
     it('sorts rows within each group by position', () => {
       const opt = makeSelectOption({ id: 'optA', label: 'A', position: 'a0' });
       const prop = makeProperty({ id: 'status', type: 'select', config: { options: [opt] } });
-      const r1 = makeRow({ id: 'r1', position: 'a2', properties: { status: 'optA' } });
-      const r2 = makeRow({ id: 'r2', position: 'a0', properties: { status: 'optA' } });
-      const r3 = makeRow({ id: 'r3', position: 'a1', properties: { status: 'optA' } });
-      const model = new DatabaseModel(makeData({ schema: [prop], rows: { r1, r2, r3 } }));
+      const model = new DatabaseModel(makeData({ schema: [prop] }));
+      model.setRows([
+        makeRow({ id: 'r1', position: 'a2', properties: { status: 'optA' } }),
+        makeRow({ id: 'r2', position: 'a0', properties: { status: 'optA' } }),
+        makeRow({ id: 'r3', position: 'a1', properties: { status: 'optA' } }),
+      ]);
       const group = model.getRowsGroupedBy('status').get('optA')!;
       expect(group.map(r => r.id)).toEqual(['r2', 'r3', 'r1']);
     });
 
     it('groups by checkbox property using true/false keys', () => {
       const prop = makeProperty({ id: 'done', type: 'checkbox' });
-      const r1 = makeRow({ id: 'r1', position: 'a0', properties: { done: true } });
-      const r2 = makeRow({ id: 'r2', position: 'a1', properties: { done: false } });
-      const r3 = makeRow({ id: 'r3', position: 'a2', properties: {} });
-      const model = new DatabaseModel(makeData({ schema: [prop], rows: { r1, r2, r3 } }));
+      const model = new DatabaseModel(makeData({ schema: [prop] }));
+      model.setRows([
+        makeRow({ id: 'r1', position: 'a0', properties: { done: true } }),
+        makeRow({ id: 'r2', position: 'a1', properties: { done: false } }),
+        makeRow({ id: 'r3', position: 'a2', properties: {} }),
+      ]);
       const groups = model.getRowsGroupedBy('done');
       expect(groups.get('true')).toHaveLength(1);
       expect(groups.get('false')).toHaveLength(1);
@@ -317,12 +333,10 @@ describe('DatabaseModel', () => {
   });
 
   describe('snapshot', () => {
-    it('returns deep copy of schema, rows, and views', () => {
+    it('returns deep copy of schema and views', () => {
       const model = new DatabaseModel();
-      model.addRow({ title: 'Test' });
       const snap = model.snapshot();
       expect(snap.schema).toEqual(model.getSchema());
-      expect(Object.keys(snap.rows)).toHaveLength(1);
       expect(snap.views).toEqual(model.getViews());
     });
 
@@ -338,43 +352,45 @@ describe('DatabaseModel', () => {
         makeProperty({ id: 'custom-prop-1', name: 'Title', type: 'title' }),
         makeProperty({ id: 'custom-prop-2', name: 'Status', type: 'select' }),
       ];
-      const rows = {
-        'custom-row-1': makeRow({ id: 'custom-row-1', properties: { 'custom-prop-1': 'Hello' } }),
-        'custom-row-2': makeRow({ id: 'custom-row-2', properties: { 'custom-prop-1': 'World' } }),
-      };
       const views = [
         makeView({ id: 'custom-view-1', name: 'Board' }),
       ];
-      const model = new DatabaseModel(makeData({ schema, rows, views }));
+      const model = new DatabaseModel(makeData({ schema, views }));
       const snap = model.snapshot();
 
       // Property IDs preserved
       expect(snap.schema[0].id).toBe('custom-prop-1');
       expect(snap.schema[1].id).toBe('custom-prop-2');
 
-      // Row IDs preserved (as keys AND as row.id)
-      expect(snap.rows['custom-row-1']).toBeDefined();
-      expect(snap.rows['custom-row-1'].id).toBe('custom-row-1');
-      expect(snap.rows['custom-row-2']).toBeDefined();
-      expect(snap.rows['custom-row-2'].id).toBe('custom-row-2');
-
       // View IDs preserved
       expect(snap.views[0].id).toBe('custom-view-1');
+    });
+
+    it('includes activeViewId from first view', () => {
+      const v = makeView({ id: 'v1' });
+      const model = new DatabaseModel(makeData({ views: [v] }));
+      const snap = model.snapshot();
+      expect(snap.activeViewId).toBe('v1');
+    });
+
+    it('does not include rows in snapshot', () => {
+      const model = new DatabaseModel(makeData());
+      model.setRows([makeRow({ id: 'r1' })]);
+      const snap = model.snapshot();
+      expect(snap).not.toHaveProperty('rows');
     });
   });
 
   describe('hydrate', () => {
-    it('replaces schema, rows, and views with provided data', () => {
+    it('replaces schema and views with provided data', () => {
       const model = new DatabaseModel();
       const newSchema = [makeProperty({ id: 'p-new', name: 'New Prop' })];
-      const newRows = { 'r-new': makeRow({ id: 'r-new', properties: { 'p-new': 'val' } }) };
       const newViews = [makeView({ id: 'v-new', name: 'New View' })];
 
-      model.hydrate({ schema: newSchema, rows: newRows, views: newViews });
+      model.hydrate({ schema: newSchema, views: newViews });
 
       expect(model.getSchema()).toHaveLength(1);
       expect(model.getSchema()[0].id).toBe('p-new');
-      expect(model.getRow('r-new')).toBeDefined();
       expect(model.getViews()).toHaveLength(1);
       expect(model.getViews()[0].id).toBe('v-new');
     });
@@ -382,31 +398,19 @@ describe('DatabaseModel', () => {
     it('creates defensive copies so mutations to source do not affect model', () => {
       const model = new DatabaseModel();
       const schema = [makeProperty({ id: 'p1' })];
-      const rows = { r1: makeRow({ id: 'r1' }) };
       const views = [makeView({ id: 'v1' })];
 
-      model.hydrate({ schema, rows, views });
+      model.hydrate({ schema, views });
 
       schema.push(makeProperty({ id: 'injected' }));
       expect(model.getSchema()).toHaveLength(1);
-    });
-
-    it('creates defensive copies of row properties', () => {
-      const model = new DatabaseModel();
-      const row = makeRow({ id: 'r1', properties: { title: 'original' } });
-      const rows = { r1: row };
-
-      model.hydrate({ schema: [makeProperty({ id: 'p1' })], rows, views: [makeView({ id: 'v1' })] });
-
-      row.properties.title = 'mutated';
-      expect(model.getRow('r1')?.properties.title).toBe('original');
     });
 
     it('creates defensive copies of view arrays', () => {
       const model = new DatabaseModel();
       const view = makeView({ id: 'v1', sorts: [{ propertyId: 'p1', direction: 'asc' }] });
 
-      model.hydrate({ schema: [makeProperty({ id: 'p1' })], rows: {}, views: [view] });
+      model.hydrate({ schema: [makeProperty({ id: 'p1' })], views: [view] });
 
       view.sorts.push({ propertyId: 'p2', direction: 'desc' });
       expect(model.getViews()[0].sorts).toHaveLength(1);
@@ -416,13 +420,27 @@ describe('DatabaseModel', () => {
       const model = new DatabaseModel();
       model.hydrate({
         schema: [makeProperty({ id: 'backend-prop' })],
-        rows: { 'backend-row': makeRow({ id: 'backend-row' }) },
         views: [makeView({ id: 'backend-view' })],
       });
       const snap = model.snapshot();
       expect(snap.schema[0].id).toBe('backend-prop');
-      expect(snap.rows['backend-row'].id).toBe('backend-row');
       expect(snap.views[0].id).toBe('backend-view');
+    });
+
+    it('only updates schema when only schema is provided', () => {
+      const v = makeView({ id: 'v-original' });
+      const model = new DatabaseModel(makeData({ views: [v] }));
+      model.hydrate({ schema: [makeProperty({ id: 'p-new' })] });
+      expect(model.getSchema()).toHaveLength(1);
+      expect(model.getViews()[0].id).toBe('v-original');
+    });
+
+    it('only updates views when only views is provided', () => {
+      const p = makeProperty({ id: 'p-original' });
+      const model = new DatabaseModel(makeData({ schema: [p] }));
+      model.hydrate({ views: [makeView({ id: 'v-new' })] });
+      expect(model.getViews()).toHaveLength(1);
+      expect(model.getSchema()[0].id).toBe('p-original');
     });
   });
 

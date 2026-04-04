@@ -14,8 +14,9 @@ import type {
 
 export class DatabaseModel {
   private schema: PropertyDefinition[];
-  private rows: Record<string, DatabaseRow>;
+  private rows: DatabaseRow[] = [];
   private views: DatabaseViewConfig[];
+  private activeViewId: string;
 
   constructor(data?: Partial<DatabaseData>) {
     if (data?.schema !== undefined && data.schema.length > 0) {
@@ -24,19 +25,14 @@ export class DatabaseModel {
       this.schema = DatabaseModel.createDefaultSchema();
     }
 
-    this.rows = {};
-    if (data?.rows !== undefined) {
-      for (const [id, row] of Object.entries(data.rows)) {
-        this.rows[id] = { ...row, properties: { ...row.properties } };
-      }
-    }
-
     if (data?.views !== undefined && data.views.length > 0) {
       this.views = data.views.map((v) => ({ ...v, sorts: [...v.sorts], filters: [...v.filters], visibleProperties: [...v.visibleProperties] }));
     } else {
       const statusProp = this.schema.find((p) => p.type === 'select');
       this.views = [DatabaseModel.createDefaultView(statusProp?.id)];
     }
+
+    this.activeViewId = data?.activeViewId || (this.views.length > 0 ? this.views[0].id : '');
   }
 
   // ─── Schema ───
@@ -71,49 +67,30 @@ export class DatabaseModel {
 
   deleteProperty(propertyId: string): void {
     this.schema = this.schema.filter((p) => p.id !== propertyId);
-    for (const row of Object.values(this.rows)) {
-      const { [propertyId]: _, ...rest } = row.properties;
-      row.properties = rest;
-    }
   }
 
-  // ─── Rows ───
+  // ─── Row projection ───
+
+  setRows(rows: DatabaseRow[]): void {
+    this.rows = rows;
+  }
 
   getOrderedRows(): DatabaseRow[] {
-    return Object.values(this.rows).sort((a, b) => (a.position < b.position ? -1 : 1));
+    return [...this.rows].sort((a, b) => a.position.localeCompare(b.position));
   }
 
   getRow(rowId: string): DatabaseRow | undefined {
-    return this.rows[rowId];
+    return this.rows.find((r) => r.id === rowId);
   }
 
-  addRow(properties: Record<string, PropertyValue> = {}): DatabaseRow {
-    const orderedRows = this.getOrderedRows();
-    const lastPosition = orderedRows.length > 0 ? orderedRows[orderedRows.length - 1].position : null;
-    const row: DatabaseRow = {
+  createRowData(properties?: Record<string, PropertyValue>): DatabaseRow {
+    const ordered = this.getOrderedRows();
+    const lastPosition = ordered.length > 0 ? ordered[ordered.length - 1].position : null;
+    return {
       id: nanoid(),
       position: generateKeyBetween(lastPosition, null),
-      properties: { ...properties },
+      properties: properties ?? {},
     };
-    this.rows[row.id] = row;
-    return row;
-  }
-
-  updateRow(rowId: string, properties: Record<string, PropertyValue>): void {
-    const row = this.rows[rowId];
-    if (row === undefined) return;
-    Object.assign(row.properties, properties);
-  }
-
-  moveRow(rowId: string, position: string): void {
-    const row = this.rows[rowId];
-    if (row === undefined) return;
-    row.position = position;
-  }
-
-  deleteRow(rowId: string): void {
-    const { [rowId]: _, ...rest } = this.rows;
-    this.rows = rest;
   }
 
   // ─── View-oriented queries ───
@@ -180,31 +157,22 @@ export class DatabaseModel {
 
   // ─── Hydrate ───
 
-  hydrate(data: { schema: PropertyDefinition[]; rows: Record<string, DatabaseRow>; views: DatabaseViewConfig[] }): void {
-    this.schema = data.schema.map((p) => ({ ...p }));
-    this.rows = {};
-    for (const [id, row] of Object.entries(data.rows)) {
-      this.rows[id] = { ...row, properties: { ...row.properties } };
+  hydrate(data: Partial<DatabaseData>): void {
+    if (data.schema !== undefined) {
+      this.schema = structuredClone(data.schema);
     }
-    this.views = data.views.map((v) => ({ ...v, sorts: [...v.sorts], filters: [...v.filters], visibleProperties: [...v.visibleProperties] }));
+    if (data.views !== undefined) {
+      this.views = structuredClone(data.views);
+    }
   }
 
   // ─── Snapshot ───
 
   snapshot(): DatabaseData {
-    const rowsCopy: Record<string, DatabaseRow> = {};
-    for (const [id, row] of Object.entries(this.rows)) {
-      rowsCopy[id] = {
-        id: row.id,
-        position: row.position,
-        properties: JSON.parse(JSON.stringify(row.properties)) as Record<string, PropertyValue>,
-      };
-    }
     return {
-      schema: JSON.parse(JSON.stringify(this.schema)) as PropertyDefinition[],
-      rows: rowsCopy,
-      views: JSON.parse(JSON.stringify(this.views)) as DatabaseViewConfig[],
-      activeViewId: this.views.length > 0 ? this.views[0].id : '',
+      schema: structuredClone(this.schema),
+      views: structuredClone(this.views),
+      activeViewId: this.activeViewId,
     };
   }
 

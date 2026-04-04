@@ -1401,7 +1401,7 @@ describe('Paste module', () => {
       const patternHandler = handlers.find((h): h is PatternHandler => h instanceof PatternHandler);
       expect(patternHandler).toBeDefined();
 
-      // MarkdownHandler should have priority 50
+      // MarkdownHandler should have priority 30
       const markdownHandler = handlers.find((h): h is MarkdownHandler => h instanceof MarkdownHandler);
       expect(markdownHandler).toBeDefined();
 

@@ -1,10 +1,11 @@
+import type { BlockToolData } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
-import { Dom } from '../components/dom';
 import type { SanitizerConfigBuilder } from '../components/modules/paste/sanitizer-config';
 import type { ToolRegistry } from '../components/modules/paste/tool-registry';
-import type { HandlerContext, PasteData } from '../components/modules/paste/types';
+import type { HandlerContext } from '../components/modules/paste/types';
 import type { PasteHandler } from '../components/modules/paste/handlers/base';
 import { BasePasteHandler } from '../components/modules/paste/handlers/base';
+import { Block } from '../components/block';
 
 /**
  * Patterns that indicate text is likely Markdown rather than plain text.
@@ -35,6 +36,10 @@ export function hasMarkdownSignals(text: string): boolean {
  * Paste handler that detects and converts Markdown text.
  * Priority 30: between TextHandler (10) and HtmlHandler (40).
  * Lazy-loads the converter on first use.
+ *
+ * Uses BlockManager.insertMany() to insert converted blocks directly,
+ * preserving all block data (list depth, table cells, etc.) that
+ * would be lost if mapped through the DOM-based paste pipeline.
  */
 export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
   constructor(
@@ -59,32 +64,43 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     }
 
     const { markdownToBlocks } = await import('./index');
-    const blocks = markdownToBlocks(data);
+    const outputBlocks = markdownToBlocks(data);
 
-    if (!blocks.length) {
+    if (!outputBlocks.length) {
       return false;
     }
 
-    const pasteData: PasteData[] = blocks.map((block) => {
-      const content = Dom.make('div');
+    const { BlockManager, Caret } = this.Blok;
 
-      const text = block.data as { text?: string };
+    // Replace empty default block if present
+    const currentBlock = BlockManager.currentBlock;
+    const shouldReplace = context.canReplaceCurrentBlock && currentBlock !== undefined && currentBlock.isEmpty;
+    const insertIndex = shouldReplace
+      ? BlockManager.currentBlockIndex
+      : BlockManager.currentBlockIndex + 1;
 
-      content.innerHTML = typeof text.text === 'string' ? text.text : '';
+    // Compose Block instances from OutputBlockData
+    const blocksToInsert = outputBlocks.map(({ id, type, data: blockData }) =>
+      BlockManager.composeBlock({
+        id,
+        tool: type,
+        data: blockData as BlockToolData,
+      })
+    );
 
-      const event = this.composePasteEvent('tag', {
-        data: content,
-      });
+    BlockManager.insertMany(blocksToInsert, insertIndex);
 
-      return {
-        content,
-        tool: block.type,
-        isBlock: true,
-        event,
-      };
-    });
+    // Remove the replaced empty block
+    if (shouldReplace && currentBlock !== undefined) {
+      await BlockManager.removeBlock(currentBlock, false);
+    }
 
-    await this.insertPasteData(pasteData, context.canReplaceCurrentBlock);
+    // Set caret to end of last inserted block
+    const lastBlock = blocksToInsert[blocksToInsert.length - 1];
+
+    if (lastBlock instanceof Block) {
+      Caret.setToBlock(lastBlock, Caret.positions.END);
+    }
 
     return true;
   }

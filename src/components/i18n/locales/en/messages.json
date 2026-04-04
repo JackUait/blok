@@ -156,5 +156,16 @@
   "tools.quote.size": "Quote size",
   "tools.quote.placeholder": "Quote",
   "tools.quote.defaultSize": "Default",
-  "tools.quote.largeSize": "Large"
+  "tools.quote.largeSize": "Large",
+  "toolNames.code": "Code",
+  "toolNames.inlineCode": "Code",
+  "tools.code.placeholder": "Write code…",
+  "tools.code.language": "Language",
+  "tools.code.copied": "Copied!",
+  "tools.code.copyCode": "Copy code",
+  "tools.code.wrapLines": "Wrap lines",
+  "searchTerms.code": "code",
+  "searchTerms.snippet": "snippet",
+  "searchTerms.program": "program",
+  "searchTerms.pre": "pre"
 }

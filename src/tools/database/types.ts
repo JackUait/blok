@@ -68,11 +68,28 @@ export interface DatabaseViewConfig {
 
 // ─── Top-level saved data ───
 
+/**
+ * Data saved by the database block.
+ * Schema and views only — rows are child blocks (database-row type).
+ */
 export interface DatabaseData extends BlockToolData {
   schema: PropertyDefinition[];
-  rows: Record<string, DatabaseRow>;
   views: DatabaseViewConfig[];
   activeViewId: string;
+}
+
+/**
+ * Legacy format with embedded rows. Used for migration detection.
+ */
+export interface LegacyDatabaseData extends DatabaseData {
+  rows: Record<string, DatabaseRow>;
+}
+
+/**
+ * Type guard for legacy data format.
+ */
+export function isLegacyDatabaseData(data: DatabaseData): data is LegacyDatabaseData {
+  return 'rows' in data && (data as Record<string, unknown>).rows !== undefined && (data as Record<string, unknown>).rows !== null && typeof (data as Record<string, unknown>).rows === 'object';
 }
 
 // ─── Adapter ───

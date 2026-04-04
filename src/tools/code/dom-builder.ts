@@ -40,6 +40,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   languageButton.type = 'button';
   languageButton.className = LANGUAGE_BUTTON_STYLES;
   languageButton.textContent = languageName;
+  languageButton.setAttribute('aria-haspopup', 'listbox');
   languageButton.setAttribute('data-blok-testid', 'code-language-btn');
 
   // Spacer

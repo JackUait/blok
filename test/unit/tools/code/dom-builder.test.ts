@@ -221,4 +221,17 @@ describe('buildCodeDOM', () => {
     expect(languageButton.tagName).toBe('BUTTON');
     expect(languageButton.type).toBe('button');
   });
+
+  it('language button has aria-haspopup for accessibility', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { languageButton } = buildCodeDOM({
+      code: '',
+      languageName: 'JavaScript',
+      readOnly: false,
+      copyLabel: 'Copy code',
+      wrapLabel: 'Wrap lines',
+    });
+
+    expect(languageButton.getAttribute('aria-haspopup')).toBe('listbox');
+  });
 });

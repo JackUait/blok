@@ -16,6 +16,7 @@ export interface RenderContext {
   placeholder: string;
   itemColor: string | undefined;
   itemSize: string | undefined;
+  markerDepth?: number;
   setupItemPlaceholder: (element: HTMLElement) => void;
   onCheckboxChange: (checked: boolean, content: HTMLElement | null) => void;
   keydownHandler: ((event: KeyboardEvent) => void) | undefined;
@@ -25,7 +26,7 @@ export interface RenderContext {
  * Render the list item
  */
 export const renderListItem = (context: RenderContext): HTMLElement => {
-  const { data, readOnly, placeholder, itemColor, itemSize, setupItemPlaceholder, onCheckboxChange, keydownHandler } = context;
+  const { data, readOnly, placeholder, itemColor, itemSize, markerDepth, setupItemPlaceholder, onCheckboxChange, keydownHandler } = context;
 
   const result = buildListItem({
     data,
@@ -33,6 +34,7 @@ export const renderListItem = (context: RenderContext): HTMLElement => {
     placeholder,
     itemColor,
     itemSize,
+    markerDepth,
     keydownHandler,
   });
 

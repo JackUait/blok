@@ -159,10 +159,41 @@ describe('ordered-marker-manager', () => {
       const parentMarker = parent.holder.querySelector('[data-list-marker]');
       expect(parentMarker?.textContent).toBe('1.');
 
-      // Child at depth 1 should use alpha (a.)
+      // Child at depth 1 should use alpha (a.) — it has a parent at depth 0
       manager.updateMarker(child.holder, 1, 1);
       const childMarker = child.holder.querySelector('[data-list-marker]');
       expect(childMarker?.textContent).toBe('a.');
+    });
+
+    it('uses visual depth for first-in-group items (depth 1 without parent shows decimal)', () => {
+      // A first-in-group ordered item at depth 1 — no parent list item above
+      const paragraph = createMockParagraphBlock('para');
+      const item = createMockBlock('item', 'ordered', 1);
+
+      const blocks = createMockBlocksAPI([paragraph, item], { para: 0, item: 1 });
+      const manager = new OrderedMarkerManager(blocks);
+
+      // Group base depth is 1, so visual depth = 1-1 = 0 → decimal format
+      manager.updateMarker(item.holder, 1, 1);
+      const marker = item.holder.querySelector('[data-list-marker]');
+      expect(marker?.textContent).toBe('1.');
+    });
+
+    it('uses visual depth for items in a group that starts at depth > 0', () => {
+      // A list group starting at depth 1 with a child at depth 2
+      const firstItem = createMockBlock('first', 'ordered', 1);
+      const secondItem = createMockBlock('second', 'ordered', 2);
+
+      const blocks = createMockBlocksAPI([firstItem, secondItem], { first: 0, second: 1 });
+      const manager = new OrderedMarkerManager(blocks);
+
+      // firstItem: visual depth = 1-1 = 0 → decimal
+      manager.updateMarker(firstItem.holder, 0, 1);
+      expect(firstItem.holder.querySelector('[data-list-marker]')?.textContent).toBe('1.');
+
+      // secondItem: visual depth = 2-1 = 1 → alpha
+      manager.updateMarker(secondItem.holder, 1, 2);
+      expect(secondItem.holder.querySelector('[data-list-marker]')?.textContent).toBe('a.');
     });
   });
 
@@ -390,23 +421,26 @@ describe('ordered-marker-manager', () => {
       expect(marker?.textContent).toBe('1.');
     });
 
-    it('uses alpha format at depth 1', () => {
+    it('uses alpha format at depth 1 (with parent at depth 0)', () => {
+      const parent = createMockBlock('parent', 'ordered', 0);
       const block = createMockBlock('block', 'ordered', 1);
-      const blocks = createMockBlocksAPI([block], { block: 0 });
+      const blocks = createMockBlocksAPI([parent, block], { parent: 0, block: 1 });
       const manager = new OrderedMarkerManager(blocks);
 
-      manager.updateMarker(block.holder, 0, 1);
+      manager.updateMarker(block.holder, 1, 1);
 
       const marker = block.holder.querySelector('[data-list-marker]');
       expect(marker?.textContent).toBe('a.');
     });
 
-    it('uses roman format at depth 2', () => {
+    it('uses roman format at depth 2 (with ancestors at depth 0 and 1)', () => {
+      const root = createMockBlock('root', 'ordered', 0);
+      const parent = createMockBlock('parent', 'ordered', 1);
       const block = createMockBlock('block', 'ordered', 2);
-      const blocks = createMockBlocksAPI([block], { block: 0 });
+      const blocks = createMockBlocksAPI([root, parent, block], { root: 0, parent: 1, block: 2 });
       const manager = new OrderedMarkerManager(blocks);
 
-      manager.updateMarker(block.holder, 0, 2);
+      manager.updateMarker(block.holder, 2, 2);
 
       const marker = block.holder.querySelector('[data-list-marker]');
       expect(marker?.textContent).toBe('i.');

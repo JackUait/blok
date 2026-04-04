@@ -124,12 +124,19 @@ export class ListItem implements BlockTool {
   }
 
   public render(): HTMLElement {
+    const blockIndex = this.blockId
+      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
+      : this.api.blocks.getCurrentBlockIndex();
+    const depth = this._data.depth ?? 0;
+    const markerDepth = this.markerCalculator.getVisualDepth(blockIndex, depth);
+
     this._element = renderListItem({
       data: this._data,
       readOnly: this.readOnly,
       placeholder: this.placeholder,
       itemColor: this.itemColor,
       itemSize: this.itemSize,
+      markerDepth,
       setupItemPlaceholder: this.setupItemPlaceholder.bind(this),
       onCheckboxChange: (checked, content) => {
         this._data.checked = checked;
@@ -226,13 +233,18 @@ export class ListItem implements BlockTool {
       return;
     }
 
+    const blockIndex = this.blockId
+      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
+      : this.api.blocks.getCurrentBlockIndex();
+    const visualDepth = this.markerCalculator.getVisualDepth(blockIndex, newDepth);
+
     if (style === 'ordered') {
       const siblingIndex = getSiblingIndex(this.blockId, newDepth, this._data.style, this.api.blocks, this.markerCalculator);
       const markerText = getOrderedMarkerText(siblingIndex, newDepth, this._data, this.blockId, this.api.blocks, this.markerCalculator);
 
       marker.textContent = markerText;
     } else {
-      const bulletChar = getBulletCharacter(newDepth, this.markerCalculator);
+      const bulletChar = getBulletCharacter(visualDepth, this.markerCalculator);
 
       marker.textContent = bulletChar;
     }
@@ -375,12 +387,18 @@ export class ListItem implements BlockTool {
   }
 
   private rerender(): void {
+    const blockIndex = this.blockId
+      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
+      : this.api.blocks.getCurrentBlockIndex();
+    const depth = this._data.depth ?? 0;
+
     const newElement = rerenderListItem({
       data: this._data,
       readOnly: this.readOnly,
       placeholder: this.placeholder,
       itemColor: this.itemColor,
       itemSize: this.itemSize,
+      markerDepth: this.markerCalculator.getVisualDepth(blockIndex, depth),
       element: this._element,
       setupItemPlaceholder: this.setupItemPlaceholder.bind(this),
       onCheckboxChange: (checked, content) => {

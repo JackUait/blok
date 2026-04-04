@@ -298,6 +298,31 @@ describe('dom-builder', () => {
       expect(depth3).toHaveTextContent('•'); // Back to first bullet
     });
 
+    it('uses markerDepth from context for bullet when provided', () => {
+      // Simulates a first-in-group item at actual depth 1 whose visual depth is 0
+      const context = createContext({
+        data: { text: 'Test', style: 'unordered', depth: 1 },
+        markerDepth: 0,
+      });
+
+      const item = buildStandardContent(context);
+      const marker = item.querySelector('[data-list-marker]');
+
+      // Should use markerDepth (0) not data.depth (1), so bullet is '•' not '◦'
+      expect(marker).toHaveTextContent('•');
+    });
+
+    it('falls back to data.depth when markerDepth is not provided', () => {
+      const context = createContext({
+        data: { text: 'Test', style: 'unordered', depth: 1 },
+      });
+
+      const item = buildStandardContent(context);
+      const marker = item.querySelector('[data-list-marker]');
+
+      expect(marker).toHaveTextContent('◦');
+    });
+
     it('applies ordered list marker styles', () => {
       const marker = createMarker('ordered', 0);
 

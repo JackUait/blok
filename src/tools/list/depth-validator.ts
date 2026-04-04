@@ -34,24 +34,21 @@ export class ListDepthValidator {
    * Calculate the maximum allowed depth at a given block index.
    *
    * Rules:
-   * 1. First item (index 0) must be at depth 0
+   * 1. First-in-group items (index 0 or previous block is not a list) are uncapped
    * 2. For other items: maxDepth = previousListItem.depth + 1
-   * 3. If previous block is not a list item, maxDepth = 0
    *
    * @param blockIndex - The index of the block
-   * @returns The maximum allowed depth (0 or more)
+   * @returns The maximum allowed depth (0 or more, or Infinity for first-in-group)
    */
   getMaxAllowedDepth(blockIndex: number): number {
-    // First item must be at depth 0
     if (blockIndex === 0) {
-      return 0;
+      return 1;
     }
 
     const previousBlock = this.blocks.getBlockByIndex(blockIndex - 1);
 
-    // If previous block doesn't exist or isn't a list item, max depth is 0
     if (!previousBlock || previousBlock.name !== TOOL_NAME) {
-      return 0;
+      return 1;
     }
 
     // Max depth is previous item's depth + 1

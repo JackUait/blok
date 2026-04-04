@@ -19,6 +19,7 @@ export interface RerenderContext {
   placeholder: string;
   itemColor: string | undefined;
   itemSize: string | undefined;
+  markerDepth?: number;
   element: HTMLElement | null;
   setupItemPlaceholder: (element: HTMLElement) => void;
   onCheckboxChange: (checked: boolean, content: HTMLElement | null) => void;
@@ -29,7 +30,7 @@ export interface RerenderContext {
  * Rerender the list item
  */
 export const rerenderListItem = (context: RerenderContext): HTMLElement | null => {
-  const { data, readOnly, placeholder, itemColor, itemSize, element, setupItemPlaceholder, onCheckboxChange, keydownHandler } = context;
+  const { data, readOnly, placeholder, itemColor, itemSize, markerDepth, element, setupItemPlaceholder, onCheckboxChange, keydownHandler } = context;
 
   if (!element) return null;
 
@@ -42,6 +43,7 @@ export const rerenderListItem = (context: RerenderContext): HTMLElement | null =
     placeholder,
     itemColor,
     itemSize,
+    markerDepth,
     keydownHandler,
   });
 

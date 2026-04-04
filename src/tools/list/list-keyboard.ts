@@ -193,16 +193,11 @@ export const handleIndent = async(
   const { api, blockId, data, syncContentFromDOM, getDepth } = context;
 
   const currentBlockIndex = api.blocks.getCurrentBlockIndex();
-  if (currentBlockIndex === 0) return;
-
-  const previousBlock = api.blocks.getBlockByIndex(currentBlockIndex - 1);
-  if (!previousBlock || previousBlock.name !== TOOL_NAME) return;
-
   const currentDepth = getDepth();
-  const previousBlockDepth = depthValidator.getBlockDepth(previousBlock);
+  const maxAllowedDepth = depthValidator.getMaxAllowedDepth(currentBlockIndex);
 
-  // Can only indent to at most one level deeper than the previous item
-  if (currentDepth > previousBlockDepth) return;
+  // Can only indent if current depth is below the maximum
+  if (currentDepth >= maxAllowedDepth) return;
 
   // Sync current content before updating
   syncContentFromDOM();

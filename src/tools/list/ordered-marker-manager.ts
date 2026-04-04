@@ -77,7 +77,8 @@ export class OrderedMarkerManager {
       : startValue;
 
     const actualNumber = actualStartValue + siblingIndex;
-    const markerText = this.markerCalculator.formatNumber(actualNumber, blockDepth);
+    const visualDepth = this.markerCalculator.getVisualDepth(blockIndex, blockDepth);
+    const markerText = this.markerCalculator.formatNumber(actualNumber, visualDepth);
 
     marker.textContent = markerText;
   }
@@ -241,7 +242,8 @@ export class OrderedMarkerManager {
       : startValue;
 
     const actualNumber = actualStartValue + siblingIndex;
-    const markerText = this.markerCalculator.formatNumber(actualNumber, blockDepth);
+    const visualDepth = this.markerCalculator.getVisualDepth(blockIndex, blockDepth);
+    const markerText = this.markerCalculator.formatNumber(actualNumber, visualDepth);
 
     marker.textContent = markerText;
   }

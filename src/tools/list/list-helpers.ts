@@ -166,7 +166,13 @@ export const getOrderedMarkerText = (
 ): string => {
   const startValue = getListStartValue(index, depth, blockId, data, blocks, markerCalculator);
   const actualNumber = startValue + index;
-  return markerCalculator.formatNumber(actualNumber, depth);
+
+  const blockIndex = blockId
+    ? blocks.getBlockIndex(blockId) ?? blocks.getCurrentBlockIndex()
+    : blocks.getCurrentBlockIndex();
+  const visualDepth = markerCalculator.getVisualDepth(blockIndex, depth);
+
+  return markerCalculator.formatNumber(actualNumber, visualDepth);
 }
 
 /**
@@ -216,7 +222,8 @@ export const updateBlockMarker = (
 
   const startValue = markerCalculator.getGroupStartValue(blockIndex, blockDepth, siblingIndex, blockStyle);
   const actualNumber = startValue + siblingIndex;
-  const markerText = markerCalculator.formatNumber(actualNumber, blockDepth);
+  const visualDepth = markerCalculator.getVisualDepth(blockIndex, blockDepth);
+  const markerText = markerCalculator.formatNumber(actualNumber, visualDepth);
 
   marker.textContent = markerText;
 }

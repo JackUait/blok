@@ -42,28 +42,29 @@ describe('ListDepthValidator', () => {
   };
 
   describe('getMaxAllowedDepth', () => {
-    it('returns 0 for the first item (index 0)', () => {
+    it('allows one level of nesting for the first item (index 0)', () => {
       const blocksAPI = createMockBlocksAPI([]);
       const validator = new ListDepthValidator(blocksAPI);
 
-      expect(validator.getMaxAllowedDepth(0)).toBe(0);
+      // First-in-group items can nest to depth 1 (one level)
+      expect(validator.getMaxAllowedDepth(0)).toBe(1);
     });
 
-    it('returns 0 when previous block is not a list item', () => {
+    it('allows one level of nesting when previous block is not a list item', () => {
       const blocks = [createMockBlock({ name: 'paragraph' })];
       const blocksAPI = createMockBlocksAPI(blocks);
       const validator = new ListDepthValidator(blocksAPI);
 
-      expect(validator.getMaxAllowedDepth(1)).toBe(0);
+      expect(validator.getMaxAllowedDepth(1)).toBe(1);
     });
 
-    it('returns 0 when there is no previous block', () => {
+    it('allows one level of nesting when there is no previous block', () => {
       const blocks: ReturnType<typeof createMockBlock>[] = [];
       const blocksAPI = createMockBlocksAPI(blocks);
       const validator = new ListDepthValidator(blocksAPI);
 
-      // Index 1 but no blocks at all
-      expect(validator.getMaxAllowedDepth(1)).toBe(0);
+      // Index 1 but no blocks at all — still first-in-group
+      expect(validator.getMaxAllowedDepth(1)).toBe(1);
     });
 
     it('returns previous.depth + 1 when previous is a list item at depth 0', () => {
@@ -115,11 +116,12 @@ describe('ListDepthValidator', () => {
       expect(validator.isValidDepth(0, 0)).toBe(true);
     });
 
-    it('returns false for depth > 0 at index 0', () => {
+    it('allows depth 0 and 1 at index 0, rejects deeper', () => {
       const blocksAPI = createMockBlocksAPI([]);
       const validator = new ListDepthValidator(blocksAPI);
 
-      expect(validator.isValidDepth(0, 1)).toBe(false);
+      expect(validator.isValidDepth(0, 0)).toBe(true);
+      expect(validator.isValidDepth(0, 1)).toBe(true);
       expect(validator.isValidDepth(0, 2)).toBe(false);
     });
 
@@ -149,11 +151,11 @@ describe('ListDepthValidator', () => {
   });
 
   describe('getTargetDepthForMove', () => {
-    it('returns 0 for first position when current depth is deeper', () => {
+    it('caps depth to 1 for first position (first-in-group max is 1)', () => {
       const blocksAPI = createMockBlocksAPI([]);
       const validator = new ListDepthValidator(blocksAPI);
 
-      expect(validator.getTargetDepthForMove({ blockIndex: 0, currentDepth: 2 })).toBe(0);
+      expect(validator.getTargetDepthForMove({ blockIndex: 0, currentDepth: 2 })).toBe(1);
     });
 
     it('caps depth to max allowed', () => {
@@ -181,7 +183,7 @@ describe('ListDepthValidator', () => {
       expect(result).toBe(1);
     });
 
-    it('does not match next depth when it exceeds max allowed', () => {
+    it('matches next depth at index 0 since first-in-group allows depth 1', () => {
       const blocks = [
         createMockBlock({ depth: 0 }),
         createMockBlock({ depth: 1 }),
@@ -189,8 +191,8 @@ describe('ListDepthValidator', () => {
       const blocksAPI = createMockBlocksAPI(blocks);
       const validator = new ListDepthValidator(blocksAPI);
 
-      // At index 0, max allowed is 0, so even though next is depth 1, we stay at 0
-      expect(validator.getTargetDepthForMove({ blockIndex: 0, currentDepth: 0 })).toBe(0);
+      // At index 0, max is 1, next depth 1 > current 0 and within max → promote to 1
+      expect(validator.getTargetDepthForMove({ blockIndex: 0, currentDepth: 0 })).toBe(1);
     });
 
     it('matches previous depth when previous is deeper and no next list item', () => {

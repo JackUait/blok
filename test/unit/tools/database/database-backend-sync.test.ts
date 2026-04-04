@@ -3,7 +3,7 @@ import { DatabaseBackendSync } from '../../../../src/tools/database/database-bac
 import type { DatabaseAdapter } from '../../../../src/tools/database/types';
 
 const createMockAdapter = (): DatabaseAdapter => ({
-  loadDatabase: vi.fn().mockResolvedValue({ schema: [], rows: {}, views: [] }),
+  loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
   createRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
   updateRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
   moveRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
@@ -43,7 +43,7 @@ describe('DatabaseBackendSync', () => {
       const result = await sync.syncLoadDatabase();
 
       expect(adapter.loadDatabase).toHaveBeenCalled();
-      expect(result).toEqual({ schema: [], rows: {}, views: [] });
+      expect(result).toEqual({ schema: [], views: [] });
     });
 
     it('syncLoadDatabase returns undefined when no adapter', async () => {
@@ -110,6 +110,19 @@ describe('DatabaseBackendSync', () => {
       vi.advanceTimersByTime(500);
       expect(adapter.updateRow).toHaveBeenCalledTimes(1);
       expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'r1', properties: { title: 'Second' } });
+    });
+
+    it('syncUpdateRow merges properties from rapid updates to the same row', () => {
+      const adapter = createMockAdapter();
+      const sync = new DatabaseBackendSync(adapter);
+
+      sync.syncUpdateRow({ rowId: 'r1', properties: { title: 'Hello' } });
+      sync.syncUpdateRow({ rowId: 'r1', properties: { desc: 'World' } });
+
+      expect(adapter.updateRow).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(500);
+      expect(adapter.updateRow).toHaveBeenCalledTimes(1);
+      expect(adapter.updateRow).toHaveBeenCalledWith({ rowId: 'r1', properties: { title: 'Hello', desc: 'World' } });
     });
   });
 

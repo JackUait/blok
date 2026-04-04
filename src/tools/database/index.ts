@@ -155,11 +155,12 @@ export class DatabaseTool implements BlockTool {
   }
 
   validate(savedData: DatabaseData): boolean {
-    const hasTitleProp = savedData.schema?.some((p) => p.type === 'title') ?? false;
+    const titleCount = savedData.schema?.filter((p) => p.type === 'title').length ?? 0;
+    const hasExactlyOneTitle = titleCount === 1;
     const hasViews = savedData.views !== undefined && savedData.views.length > 0;
     const boardViewsValid = savedData.views?.filter((v) => v.type === 'board')
       .every((v) => v.groupBy !== undefined) ?? true;
-    return hasTitleProp && hasViews && boardViewsValid;
+    return hasExactlyOneTitle && hasViews && boardViewsValid;
   }
 
   destroy(): void {

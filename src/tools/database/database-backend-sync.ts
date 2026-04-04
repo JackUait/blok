@@ -1,4 +1,4 @@
-import type { DatabaseAdapter, PropertyDefinition, DatabaseRow, DatabaseViewConfig } from './types';
+import type { DatabaseAdapter, PropertyDefinition, DatabaseViewConfig } from './types';
 
 const UPDATE_DEBOUNCE_MS = 500;
 
@@ -21,7 +21,7 @@ export class DatabaseBackendSync {
 
   // ─── Load ───
 
-  async syncLoadDatabase(): Promise<{ schema: PropertyDefinition[]; rows: Record<string, DatabaseRow>; views: DatabaseViewConfig[] } | undefined> {
+  async syncLoadDatabase(): Promise<{ schema: PropertyDefinition[]; views: DatabaseViewConfig[] } | undefined> {
     return this.safeCall((a) => a.loadDatabase());
   }
 
@@ -36,7 +36,8 @@ export class DatabaseBackendSync {
     const { rowId } = params;
     const existing = this.pendingTimers.get(rowId);
     if (existing !== undefined) clearTimeout(existing);
-    this.pendingUpdates.set(rowId, params);
+    const pending = this.pendingUpdates.get(rowId);
+    this.pendingUpdates.set(rowId, pending === undefined ? params : { ...pending, ...params, properties: { ...pending.properties, ...params.properties } });
     this.pendingTimers.set(rowId, setTimeout(() => { this.flushRow(rowId); }, UPDATE_DEBOUNCE_MS));
   }
 

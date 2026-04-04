@@ -189,6 +189,18 @@ describe('DatabaseTool', () => {
       }))).toBe(false);
     });
 
+    it('returns false when schema has more than one title property', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+
+      expect(tool.validate(makeDefaultData({
+        schema: [
+          { id: 'p1', name: 'Title', type: 'title', position: 'a0' },
+          { id: 'p2', name: 'Another Title', type: 'title', position: 'a1' },
+          { id: 'p3', name: 'Status', type: 'select', position: 'a2' },
+        ],
+      }))).toBe(false);
+    });
+
     it('returns false when a board view has no groupBy', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const viewWithoutGroupBy: DatabaseViewConfig = {
@@ -938,9 +950,6 @@ describe('DatabaseTool', () => {
           schema: [
             { id: 'p-backend', name: 'Backend Title', type: 'title', position: 'a0' },
           ],
-          rows: {
-            'r-backend': { id: 'r-backend', position: 'a0', properties: { 'p-backend': 'From Backend' } },
-          },
           views: [{
             id: 'v-backend', name: 'Backend Board', type: 'board', position: 'a0',
             groupBy: undefined, sorts: [], filters: [], visibleProperties: [],
@@ -1142,7 +1151,7 @@ describe('DatabaseTool', () => {
   describe('ID persistence to backend', () => {
     it('passes client-generated row ID to api.blocks.insert', () => {
       const mockAdapter = {
-        loadDatabase: vi.fn().mockResolvedValue({ schema: [], rows: {}, views: [] }),
+        loadDatabase: vi.fn().mockResolvedValue({ schema: [], views: [] }),
         createRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
         updateRow: vi.fn(), moveRow: vi.fn(), deleteRow: vi.fn(),
         createProperty: vi.fn(), updateProperty: vi.fn(), deleteProperty: vi.fn(),

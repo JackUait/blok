@@ -84,7 +84,6 @@ export interface DatabaseData extends BlockToolData {
 export interface DatabaseAdapter {
   loadDatabase(): Promise<{
     schema: PropertyDefinition[];
-    rows: Record<string, DatabaseRow>;
     views: DatabaseViewConfig[];
   }>;
 

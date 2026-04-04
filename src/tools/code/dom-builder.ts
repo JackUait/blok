@@ -9,7 +9,7 @@ import { IconCopy, IconWrap } from '../../components/icons';
 
 export interface CodeDOMRefs {
   wrapper: HTMLElement;
-  languageButton: HTMLSpanElement;
+  languageButton: HTMLButtonElement;
   copyButton: HTMLButtonElement;
   wrapButton: HTMLButtonElement;
   preElement: HTMLPreElement;
@@ -35,8 +35,9 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const header = document.createElement('div');
   header.className = HEADER_STYLES;
 
-  // Language label
-  const languageButton = document.createElement('span');
+  // Language button (opens language picker)
+  const languageButton = document.createElement('button');
+  languageButton.type = 'button';
   languageButton.className = LANGUAGE_BUTTON_STYLES;
   languageButton.textContent = languageName;
   languageButton.setAttribute('data-blok-testid', 'code-language-btn');

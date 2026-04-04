@@ -164,6 +164,7 @@
   "tools.code.copied": "Copied!",
   "tools.code.copyCode": "Copy code",
   "tools.code.wrapLines": "Wrap lines",
+  "tools.code.searchLanguage": "Search language...",
   "searchTerms.code": "code",
   "searchTerms.snippet": "snippet",
   "searchTerms.program": "program",

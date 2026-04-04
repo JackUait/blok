@@ -40,6 +40,10 @@ describe('CodeTool', () => {
   });
   afterEach(() => {
     vi.restoreAllMocks();
+
+    // Clean up any language picker elements left in document.body
+    document.querySelectorAll('[data-blok-testid="code-language-picker"]').forEach((el) => el.remove());
+    document.querySelectorAll('[data-blok-language-picker-backdrop]').forEach((el) => el.remove());
   });
 
   describe('render()', () => {
@@ -89,6 +93,41 @@ describe('CodeTool', () => {
       const btn = el.querySelector('[data-blok-testid="code-language-btn"]')!;
 
       expect(btn.textContent).toBe('JavaScript');
+    });
+
+    it('language button opens language picker on click', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ language: 'javascript' }));
+      const el = tool.render();
+
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
+
+      // Picker is appended to document.body after render, but hidden
+      const pickerEl = document.body.querySelector('[data-blok-testid="code-language-picker"]') as HTMLElement;
+
+      expect(pickerEl).not.toBeNull();
+      expect(pickerEl.hidden).toBe(true);
+
+      // Click language button to open the picker
+      langBtn.click();
+
+      expect(pickerEl.hidden).toBe(false);
+
+      // Clean up
+      tool.removed();
+    });
+
+    it('removed() cleans up picker element from document.body', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+
+      tool.render();
+
+      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).not.toBeNull();
+
+      tool.removed();
+
+      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).toBeNull();
     });
   });
 

@@ -14,6 +14,7 @@ import { IconCodeBlock } from '../../components/icons';
 import { buildCodeDOM } from './dom-builder';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
+import { LanguagePicker } from './language-picker';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
@@ -33,6 +34,7 @@ export class CodeTool implements BlockTool {
   private _data: CodeData;
   private _dom: CodeDOMRefs | null = null;
   private _wrapping = true;
+  private _picker: LanguagePicker | null = null;
 
   constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
@@ -66,6 +68,21 @@ export class CodeTool implements BlockTool {
 
     dom.copyButton.addEventListener('click', () => this.copyCode());
     dom.wrapButton.addEventListener('click', () => this.toggleWrap());
+
+    if (!this.readOnly) {
+      this._picker = new LanguagePicker({
+        languages: LANGUAGES,
+        onSelect: (id: string) => this.setLanguage(id),
+        i18n: this.api.i18n,
+        activeLanguageId: this._data.language,
+      });
+
+      document.body.appendChild(this._picker.getElement());
+
+      dom.languageButton.addEventListener('click', () => {
+        this._picker?.open(dom.languageButton);
+      });
+    }
 
     return dom.wrapper;
   }
@@ -134,6 +151,8 @@ export class CodeTool implements BlockTool {
     if (this._dom) {
       this._dom.languageButton.textContent = this.getLanguageName(id);
     }
+
+    this._picker?.setActiveLanguage(id);
   }
 
   private getLanguageName(id: string): string {
@@ -179,6 +198,13 @@ export class CodeTool implements BlockTool {
     const currentIndex = this.api.blocks.getCurrentBlockIndex();
 
     this.api.blocks.insert(undefined, undefined, undefined, currentIndex + 1);
+  }
+
+  public removed(): void {
+    if (this._picker) {
+      this._picker.getElement().remove();
+      this._picker = null;
+    }
   }
 
   public static get toolbox(): ToolboxConfig {

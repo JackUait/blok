@@ -17,7 +17,7 @@ describe('buildCodeDOM', () => {
     });
 
     expect(result.wrapper).toBeInstanceOf(HTMLElement);
-    expect(result.languageButton).toBeInstanceOf(HTMLSpanElement);
+    expect(result.languageButton).toBeInstanceOf(HTMLButtonElement);
     expect(result.copyButton).toBeInstanceOf(HTMLButtonElement);
     expect(result.wrapButton).toBeInstanceOf(HTMLButtonElement);
     expect(result.preElement).toBeInstanceOf(HTMLPreElement);
@@ -208,7 +208,7 @@ describe('buildCodeDOM', () => {
     expect(wrapButton.type).toBe('button');
   });
 
-  it('language element is a span, not a button', async () => {
+  it('language element is a button', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { languageButton } = buildCodeDOM({
       code: '',
@@ -218,6 +218,7 @@ describe('buildCodeDOM', () => {
       wrapLabel: 'Wrap lines',
     });
 
-    expect(languageButton.tagName).toBe('SPAN');
+    expect(languageButton.tagName).toBe('BUTTON');
+    expect(languageButton.type).toBe('button');
   });
 });

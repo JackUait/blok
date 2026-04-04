@@ -80,11 +80,12 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
       : BlockManager.currentBlockIndex + 1;
 
     // Compose Block instances from OutputBlockData
-    const blocksToInsert = outputBlocks.map(({ id, type, data: blockData }) =>
+    const blocksToInsert = outputBlocks.map(({ id, type, data: blockData, parent }) =>
       BlockManager.composeBlock({
         id,
         tool: type,
         data: blockData as BlockToolData,
+        parentId: parent,
       })
     );
 

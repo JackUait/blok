@@ -1,5 +1,73 @@
-import { describe, it, expect } from 'vitest';
-import { hasMarkdownSignals } from '../../../src/markdown/markdown-handler';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { hasMarkdownSignals, MarkdownHandler } from '../../../src/markdown/markdown-handler';
+import type { BlokModules } from '../../../src/types-internal/blok-modules';
+import type { ToolRegistry } from '../../../src/components/modules/paste/tool-registry';
+import type { SanitizerConfigBuilder } from '../../../src/components/modules/paste/sanitizer-config';
+
+describe('MarkdownHandler', () => {
+  let handler: MarkdownHandler;
+  let mockComposeBlock: ReturnType<typeof vi.fn>;
+  let mockInsertMany: ReturnType<typeof vi.fn>;
+  let mockRemoveBlock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockComposeBlock = vi.fn().mockImplementation((options: { id: string }) => ({
+      id: options.id,
+    }));
+    mockInsertMany = vi.fn();
+    mockRemoveBlock = vi.fn().mockResolvedValue(undefined);
+
+    const mockBlok = {
+      BlockManager: {
+        composeBlock: mockComposeBlock,
+        insertMany: mockInsertMany,
+        removeBlock: mockRemoveBlock,
+        currentBlock: undefined,
+        currentBlockIndex: 0,
+      },
+      Caret: {
+        setToBlock: vi.fn(),
+        positions: { END: 'end' },
+      },
+    } as unknown as BlokModules;
+
+    handler = new MarkdownHandler(
+      mockBlok,
+      {} as ToolRegistry,
+      {} as SanitizerConfigBuilder,
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('passes parentId to composeBlock for table cell blocks', async () => {
+    const md = '| A | B |\n| --- | --- |\n| 1 | 2 |';
+
+    await handler.handle(md, { canReplaceCurrentBlock: false });
+
+    // Find the table block call
+    const tableCall = mockComposeBlock.mock.calls.find(
+      (args) => (args[0] as { tool: string }).tool === 'table'
+    );
+
+    expect(tableCall).toBeDefined();
+    const tableId = (tableCall![0] as { id: string }).id;
+
+    // Find cell paragraph calls — they should have parentId set to the table's id
+    const cellCalls = mockComposeBlock.mock.calls.filter(
+      (args) => (args[0] as { parentId?: string }).parentId !== undefined
+    );
+
+    expect(cellCalls.length).toBe(4); // 2 rows × 2 cols = 4 cell paragraphs
+    for (const args of cellCalls) {
+      expect((args[0] as { parentId: string }).parentId).toBe(tableId);
+    }
+  });
+});
 
 describe('hasMarkdownSignals', () => {
   it('detects heading syntax', () => {

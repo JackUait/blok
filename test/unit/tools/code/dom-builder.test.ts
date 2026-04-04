@@ -105,7 +105,7 @@ describe('buildCodeDOM', () => {
       wrapLabel: 'Wrap lines',
     });
 
-    expect(codeElement.contentEditable).toBe('true');
+    expect(codeElement.getAttribute('contenteditable')).toBe('true');
     expect(codeElement.getAttribute('spellcheck')).toBe('false');
   });
 
@@ -119,7 +119,7 @@ describe('buildCodeDOM', () => {
       wrapLabel: 'Wrap lines',
     });
 
-    expect(codeElement.contentEditable).not.toBe('true');
+    expect(codeElement.getAttribute('contenteditable')).toBeNull();
     expect(codeElement.getAttribute('spellcheck')).toBeNull();
   });
 

@@ -71,7 +71,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   }
 
   if (!readOnly) {
-    codeElement.contentEditable = 'true';
+    codeElement.setAttribute('contenteditable', 'true');
     codeElement.setAttribute('spellcheck', 'false');
   }
 

@@ -160,8 +160,7 @@ describe('CodeTool', () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const toolbox = CodeTool.toolbox;
 
-      expect(!Array.isArray(toolbox) && toolbox.searchTerms).toContain('code');
-      expect(!Array.isArray(toolbox) && toolbox.searchTerms).toContain('snippet');
+      expect(!Array.isArray(toolbox) && toolbox.searchTerms).toEqual(['code', 'pre', 'snippet', 'program']);
     });
   });
 
@@ -177,7 +176,7 @@ describe('CodeTool', () => {
       const config = CodeTool.pasteConfig;
 
       expect((config as { tags: string[] }).tags).toContain('PRE');
-      expect((config as { patterns: Record<string, RegExp> }).patterns.code).toBeInstanceOf(RegExp);
+      expect((config as { patterns: Record<string, RegExp> }).patterns.code).toEqual(/^```/);
     });
 
     it('sanitize config allows code tag', async () => {

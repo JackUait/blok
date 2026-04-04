@@ -186,8 +186,8 @@ export class CodeTool implements BlockTool {
       icon: IconCodeBlock,
       title: 'Code',
       titleKey: 'code',
-      searchTerms: ['code', 'snippet', 'pre', 'codeblock'],
-      searchTermKeys: ['code', 'snippet', 'pre', 'codeblock'],
+      searchTerms: ['code', 'pre', 'snippet', 'program'],
+      searchTermKeys: ['code', 'pre', 'snippet', 'program'],
     };
   }
 
@@ -212,7 +212,7 @@ export class CodeTool implements BlockTool {
     return {
       tags: ['PRE'],
       patterns: {
-        code: /^```[\s\S]+?```$/,
+        code: /^```/,
       },
     };
   }

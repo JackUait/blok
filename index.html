@@ -268,7 +268,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Divider, Quote, Bold, Italic, Link, Marker, Underline, Strikethrough } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Divider, Quote, Code, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -288,6 +288,7 @@
         callout: true,
         divider: true,
         quote: true,
+        code: true,
       },
     };
 
@@ -849,6 +850,7 @@
         marker: Marker,
         underline: Underline,
         strikethrough: Strikethrough,
+        code: InlineCode,
         link: Link,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
@@ -859,6 +861,7 @@
       if (state.tools.callout) tools.callout = { class: Callout, inlineToolbar: true };
       if (state.tools.divider) tools.divider = Divider;
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
+      if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       return {
         readOnly: state.readOnly,
         holder: 'blok',

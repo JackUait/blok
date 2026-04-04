@@ -106,7 +106,10 @@ function handleBuiltInNode(
   }
 
   if (node.type === 'code') {
-    return handleFallback(node, config, `<code>${escapeHtml(node.value)}</code>`, generateId);
+    return [makeBlock('code', {
+      code: node.value,
+      language: node.lang ?? 'plain text',
+    }, generateId)];
   }
 
   if (node.type === 'html') {

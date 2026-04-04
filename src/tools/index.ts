@@ -28,6 +28,7 @@ export { ToggleItem as Toggle } from './toggle';
 export { CalloutTool as Callout } from './callout';
 export { DividerTool as Divider } from './divider';
 export { Quote } from './quote';
+export { CodeTool as Code } from './code';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
@@ -37,6 +38,7 @@ export { ConvertInlineTool as Convert } from '../components/inline-tools/inline-
 export { MarkerInlineTool as Marker } from '../components/inline-tools/inline-tool-marker';
 export { UnderlineInlineTool as Underline } from '../components/inline-tools/inline-tool-underline';
 export { StrikethroughInlineTool as Strikethrough } from '../components/inline-tools/inline-tool-strikethrough';
+export { CodeInlineTool as InlineCode } from '../components/inline-tools/inline-tool-code';
 
 // Default tools configuration for convenience
 // Note: inlineToolbar defaults to true, so it doesn't need to be specified
@@ -49,6 +51,7 @@ export const defaultBlockTools = {
   callout: {},
   divider: {},
   quote: {},
+  code: { inlineToolbar: false },
 } as const;
 
 export const defaultInlineTools = {
@@ -58,4 +61,5 @@ export const defaultInlineTools = {
   marker: {},
   underline: {},
   strikethrough: {},
+  code: {},
 } as const;

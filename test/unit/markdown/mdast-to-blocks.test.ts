@@ -249,7 +249,7 @@ describe('mdastToBlocks', () => {
   });
 
   describe('code block', () => {
-    it('falls back to paragraph for unmapped code blocks', () => {
+    it('converts fenced code blocks to code tool blocks', () => {
       const tree: Root = {
         type: 'root',
         children: [{ type: 'code', value: 'const x = 1;', lang: 'typescript' }],
@@ -258,8 +258,21 @@ describe('mdastToBlocks', () => {
       const blocks = mdastToBlocks(tree);
 
       expect(blocks).toHaveLength(1);
-      expect(blocks[0].type).toBe('paragraph');
-      expect(blocks[0].data.text).toBe('<code>const x = 1;</code>');
+      expect(blocks[0].type).toBe('code');
+      expect(blocks[0].data).toEqual({ code: 'const x = 1;', language: 'typescript' });
+    });
+
+    it('defaults language to "plain text" when lang is null', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{ type: 'code', value: 'hello world', lang: null }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('code');
+      expect(blocks[0].data).toEqual({ code: 'hello world', language: 'plain text' });
     });
   });
 

@@ -73,9 +73,9 @@ describe('DatabaseRowTool', () => {
       const properties = { title: 'Hello', status: 'done' };
       const tool = new DatabaseRowTool(createRowOptions({ properties, position: 'b2' }));
 
-      tool.render();
+      const element = tool.render();
 
-      const saved = tool.save();
+      const saved = tool.save(element);
 
       expect(saved).toEqual({ properties: { title: 'Hello', status: 'done' }, position: 'b2' });
     });
@@ -83,9 +83,9 @@ describe('DatabaseRowTool', () => {
     it('returns empty properties when none provided', () => {
       const tool = new DatabaseRowTool(createRowOptions({ properties: {} }));
 
-      tool.render();
+      const element = tool.render();
 
-      const saved = tool.save();
+      const saved = tool.save(element);
 
       expect(saved.properties).toEqual({});
     });
@@ -125,7 +125,7 @@ describe('DatabaseRowTool', () => {
     it('updates the position', () => {
       const tool = new DatabaseRowTool(createRowOptions({ position: 'a0' }));
 
-      tool.updatePosition('c5');
+      tool.updatePosition({ position: 'c5' });
 
       expect(tool.getPosition()).toBe('c5');
     });

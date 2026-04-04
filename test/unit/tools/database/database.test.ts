@@ -1,14 +1,30 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent } from '@testing-library/dom';
-import type { API, BlockToolConstructorOptions } from '../../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseViewConfig } from '../../../../src/tools/database/types';
+import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../../types';
+import type { DatabaseData, DatabaseConfig, DatabaseRowData, DatabaseViewConfig } from '../../../../src/tools/database/types';
 import { DatabaseTool } from '../../../../src/tools/database';
 import type { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { DatabaseModel } from '../../../../src/tools/database/database-model';
 import type { CardDragResult, DatabaseCardDrag } from '../../../../src/tools/database/database-card-drag';
 import type { GroupDragResult, DatabaseColumnDrag } from '../../../../src/tools/database/database-column-drag';
 
-const createMockAPI = (): API => ({
+/**
+ * Creates a mock child block (database-row) as returned by api.blocks.getChildren.
+ */
+const createMockRowBlock = (options: {
+  id: string;
+  properties: Record<string, unknown>;
+  position: string;
+}): BlockAPI => ({
+  id: options.id,
+  name: 'database-row',
+  holder: document.createElement('div'),
+  preservedData: { properties: options.properties, position: options.position } as DatabaseRowData,
+  call: vi.fn(),
+  dispatchChange: vi.fn(),
+} as unknown as BlockAPI);
+
+const createMockAPI = (childBlocks: BlockAPI[] = []): API => ({
   styles: {
     block: 'blok-block',
     inlineToolbar: 'blok-inline-toolbar',
@@ -25,6 +41,12 @@ const createMockAPI = (): API => ({
   blocks: {
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
     getBlocksCount: vi.fn().mockReturnValue(1),
+    getChildren: vi.fn().mockReturnValue(childBlocks),
+    insert: vi.fn().mockReturnValue({ id: 'new-row-id' }),
+    delete: vi.fn(),
+    setBlockParent: vi.fn(),
+    getBlockIndex: vi.fn().mockReturnValue(0),
+    getById: vi.fn(),
   },
   notifier: { show: vi.fn() },
   tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
@@ -41,7 +63,6 @@ const makeDefaultData = (overrides: Partial<DatabaseData> = {}): DatabaseData =>
       ],
     }},
   ],
-  rows: {},
   views: [{ id: 'view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
   activeViewId: 'view-1',
   ...overrides,
@@ -50,11 +71,11 @@ const makeDefaultData = (overrides: Partial<DatabaseData> = {}): DatabaseData =>
 const createDatabaseOptions = (
   dataOverrides: Partial<DatabaseData> = {},
   config: DatabaseConfig = {},
-  overrides: { readOnly?: boolean } = {},
+  overrides: { readOnly?: boolean; childBlocks?: BlockAPI[] } = {},
 ): BlockToolConstructorOptions<DatabaseData, DatabaseConfig> => ({
   data: makeDefaultData(dataOverrides),
   config,
-  api: createMockAPI(),
+  api: createMockAPI(overrides.childBlocks ?? []),
   readOnly: overrides.readOnly ?? false,
   block: { id: 'test-block-id' } as never,
 });
@@ -129,7 +150,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('save()', () => {
-    it('returns DatabaseData with schema, rows, views, and activeViewId', () => {
+    it('returns DatabaseData with schema, views, and activeViewId but no rows', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
 
       tool.render();
@@ -137,9 +158,9 @@ describe('DatabaseTool', () => {
       const saved = tool.save(document.createElement('div'));
 
       expect(saved).toHaveProperty('schema');
-      expect(saved).toHaveProperty('rows');
       expect(saved).toHaveProperty('views');
       expect(saved).toHaveProperty('activeViewId');
+      expect(saved).not.toHaveProperty('rows');
       expect(Array.isArray(saved.schema)).toBe(true);
       expect(saved.schema.length).toBeGreaterThan(0);
       expect(Array.isArray(saved.views)).toBe(true);
@@ -180,28 +201,30 @@ describe('DatabaseTool', () => {
   });
 
   describe('render -> save roundtrip', () => {
-    it('preserves data through cycle', () => {
-      const rows = {
-        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
-      };
+    it('preserves schema and views through cycle (rows are in child blocks)', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
 
-      const tool = new DatabaseTool(createDatabaseOptions({ rows }));
+      const tool = new DatabaseTool(createDatabaseOptions({}, {}, { childBlocks }));
 
       tool.render();
+      tool.rendered();
 
       const saved = tool.save(document.createElement('div'));
 
       expect(saved.views).toHaveLength(1);
       expect(saved.schema).toHaveLength(2);
       expect(saved.schema[0].type).toBe('title');
-      expect(saved.rows['row-1']).toBeDefined();
-      expect(saved.rows['row-1'].properties['prop-title']).toBe('Task 1');
+      // Rows are NOT in saved data — they live in child blocks
+      expect(saved).not.toHaveProperty('rows');
     });
   });
 
   describe('add row via click', () => {
-    it('clicking add-card button adds row to model and DOM', () => {
-      const tool = new DatabaseTool(createDatabaseOptions());
+    it('clicking add-card button calls api.blocks.insert with database-row type', () => {
+      const options = createDatabaseOptions();
+      const tool = new DatabaseTool(options);
       const element = tool.render();
 
       const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
@@ -210,29 +233,41 @@ describe('DatabaseTool', () => {
 
       addCardBtn.click();
 
-      // Card should appear in DOM
-      const cards = element.querySelectorAll('[data-blok-database-card]');
+      expect(options.api.blocks.insert).toHaveBeenCalledTimes(1);
+      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
 
-      expect(cards).toHaveLength(1);
-
-      // Row should appear in model via save()
-      const saved = tool.save(document.createElement('div'));
-
-      expect(Object.keys(saved.rows).length).toBe(1);
+      expect(insertCall[0]).toBe('database-row');
     });
 
-    it('new row has empty title so placeholder shows', () => {
-      const tool = new DatabaseTool(createDatabaseOptions());
+    it('clicking add-card calls setBlockParent to parent row to database block', () => {
+      const options = createDatabaseOptions();
+      const tool = new DatabaseTool(options);
       const element = tool.render();
 
       const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
 
       addCardBtn.click();
 
-      const saved = tool.save(element);
-      const row = Object.values(saved.rows)[0];
+      expect(options.api.blocks.setBlockParent).toHaveBeenCalledTimes(1);
+      const parentCall = (options.api.blocks.setBlockParent as ReturnType<typeof vi.fn>).mock.calls[0];
 
-      expect(row.properties['prop-title']).toBe('');
+      // Second arg should be the database block id
+      expect(parentCall[1]).toBe('test-block-id');
+    });
+
+    it('new row data has empty title property', () => {
+      const options = createDatabaseOptions();
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      const addCardBtn = element.querySelector('[data-blok-database-add-card]') as HTMLButtonElement;
+
+      addCardBtn.click();
+
+      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+      const insertedData = insertCall[1] as DatabaseRowData;
+
+      expect(insertedData.properties['prop-title']).toBe('');
     });
   });
 
@@ -263,13 +298,18 @@ describe('DatabaseTool', () => {
   });
 
   describe('delete row via click', () => {
-    it('clicking delete-card button removes card from DOM and model', () => {
-      const rows = {
-        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
-      };
+    it('clicking delete-card button calls api.blocks.delete', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
 
-      const tool = new DatabaseTool(createDatabaseOptions({ rows }));
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+
+      (options.api.blocks.getBlockIndex as ReturnType<typeof vi.fn>).mockReturnValue(1);
+
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
 
       const deleteBtn = element.querySelector('[data-blok-database-delete-card]') as HTMLButtonElement;
 
@@ -277,18 +317,13 @@ describe('DatabaseTool', () => {
 
       deleteBtn.click();
 
-      const cards = element.querySelectorAll('[data-blok-database-card]');
-
-      expect(cards).toHaveLength(0);
-
-      const saved = tool.save(document.createElement('div'));
-
-      expect(Object.keys(saved.rows)).toHaveLength(0);
+      expect(options.api.blocks.getBlockIndex).toHaveBeenCalledWith('row-1');
+      expect(options.api.blocks.delete).toHaveBeenCalledWith(1);
     });
   });
 
-  describe('column delete cascades adapter calls for rows', () => {
-    it('calls adapter.deleteRow for each row then adapter.updateProperty when option is deleted', async () => {
+  describe('column delete cascades block deletions for rows', () => {
+    it('calls api.blocks.delete for each row then adapter.updateProperty when option is deleted', async () => {
       const deleteRowCalls: string[] = [];
       const updatePropertyCalls: Array<{ propertyId: string }> = [];
 
@@ -311,14 +346,36 @@ describe('DatabaseTool', () => {
         deleteView: vi.fn(),
       };
 
-      const rows = {
-        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
-        'row-2': { id: 'row-2', position: 'a1', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' } },
-      };
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-todo' }, position: 'a1' }),
+      ];
 
-      const options = createDatabaseOptions({ rows }, { adapter: mockAdapter });
+      const options = createDatabaseOptions({}, { adapter: mockAdapter }, { childBlocks });
+
+      // Make getBlockIndex return distinct indices for different row IDs
+      let deleteCallCount = 0;
+
+      (options.api.blocks.getBlockIndex as ReturnType<typeof vi.fn>).mockImplementation((blockId: string) => {
+        if (blockId === 'row-1') return 1;
+        if (blockId === 'row-2') return 2;
+        return 0;
+      });
+
+      // After each delete, remove the block from the children array so syncRowsFromBlocks sees the update
+      (options.api.blocks.delete as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        deleteCallCount++;
+        // After deletion, the subsequent getChildren calls should return fewer blocks
+        if (deleteCallCount >= 2) {
+          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([]);
+        } else {
+          (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([childBlocks[1]]);
+        }
+      });
+
       const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
 
       // Find the delete-column button for opt-todo (injected by DatabaseColumnControls.makeEditable)
       const deleteBtn = element.querySelector('[data-blok-database-delete-column][data-option-id="opt-todo"]') as HTMLButtonElement;
@@ -327,7 +384,10 @@ describe('DatabaseTool', () => {
 
       deleteBtn.click();
 
-      // Adapter calls are async — wait for them to flush
+      // api.blocks.delete should be called for each row in the column
+      expect(options.api.blocks.delete).toHaveBeenCalledTimes(2);
+
+      // Adapter deleteRow calls are async — wait for them to flush
       await vi.waitFor(() => {
         expect(deleteRowCalls).toHaveLength(2);
       });
@@ -366,6 +426,12 @@ describe('DatabaseTool', () => {
         blocks: {
           getCurrentBlockIndex: vi.fn().mockReturnValue(0),
           getBlocksCount: vi.fn().mockReturnValue(1),
+          getChildren: vi.fn().mockReturnValue([]),
+          insert: vi.fn(),
+          delete: vi.fn(),
+          setBlockParent: vi.fn(),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          getById: vi.fn(),
         },
         notifier: { show: vi.fn() },
         tools: { getBlockTools: vi.fn(() => []), getToolsConfig: vi.fn(() => ({ tools: undefined })) },
@@ -404,12 +470,14 @@ describe('DatabaseTool', () => {
 
   describe('rerenderBoard destroys cardDrawer subsystem', () => {
     it('destroys cardDrawer when rerender is triggered by card drop', () => {
-      const rows = {
-        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
-      };
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
 
-      const tool = new DatabaseTool(createDatabaseOptions({ rows }));
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cardDrag = (tool as any).cardDrag as DatabaseCardDrag;
@@ -428,6 +496,11 @@ describe('DatabaseTool', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cardDrawer = (tool as any).cardDrawer as DatabaseCardDrawer;
       const drawerDestroySpy = vi.spyOn(cardDrawer, 'destroy');
+
+      // After drop, update the child block so rerender picks up the new group
+      (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-doing' }, position: 'a0' }),
+      ]);
 
       // Trigger a card drop which calls handleRowDrop -> rerenderBoard
       onDrop({
@@ -460,16 +533,49 @@ describe('DatabaseTool', () => {
 
       expect(mockBlock.stretched).toBe(true);
     });
+
+    it('calls getChildren to sync rows from child blocks', () => {
+      const options = createDatabaseOptions();
+      const tool = new DatabaseTool(options);
+
+      tool.render();
+      tool.rendered();
+
+      expect(options.api.blocks.getChildren).toHaveBeenCalledWith('test-block-id');
+    });
+
+    it('projects child block data into model rows', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+        createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Task 2', 'prop-status': 'opt-doing' }, position: 'a1' }),
+      ];
+
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
+
+      tool.render();
+      tool.rendered();
+
+      // Access model to verify rows were projected
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = (tool as any).model as DatabaseModel;
+
+      expect(model.getOrderedRows()).toHaveLength(2);
+      expect(model.getRow('row-1')).toBeDefined();
+      expect(model.getRow('row-2')).toBeDefined();
+    });
   });
 
-  describe('drawer title edits update board card', () => {
-    it('editing the title in the drawer updates the card title on the board', () => {
-      const rows = {
-        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Original title', 'prop-status': 'opt-todo' } },
-      };
+  describe('drawer title edits update row block via call()', () => {
+    it('editing the title in the drawer calls block.call("updateProperties") on the row block', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Original title', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
 
-      const tool = new DatabaseTool(createDatabaseOptions({ rows }));
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
 
       // Click the card to open the drawer
       const cardEl = element.querySelector('[data-row-id="row-1"]') as HTMLElement;
@@ -485,10 +591,9 @@ describe('DatabaseTool', () => {
       drawerTitle.value = 'Updated title';
       fireEvent.input(drawerTitle);
 
-      // The card on the board should reflect the new title
-      const boardCardTitle = element.querySelector('[data-row-id="row-1"] [data-blok-database-card-title]');
-
-      expect(boardCardTitle?.textContent).toBe('Updated title');
+      // The row block's call() should have been invoked with updateProperties
+      expect(childBlocks[0].call).toHaveBeenCalledWith('updateProperties', { 'prop-title': 'Updated title' });
+      expect(childBlocks[0].dispatchChange).toHaveBeenCalled();
 
       tool.destroy();
     });
@@ -514,12 +619,14 @@ describe('DatabaseTool', () => {
     });
 
     it('preserves board horizontal scroll position after card drop', () => {
-      const rows = {
-        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
-      };
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
 
-      const tool = new DatabaseTool(createDatabaseOptions({ rows }));
+      const options = createDatabaseOptions({}, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
 
       // Mount to DOM so replaceChild works
       const container = document.createElement('div');
@@ -533,7 +640,12 @@ describe('DatabaseTool', () => {
       boardArea.scrollLeft = 200;
       expect(boardArea.scrollLeft).toBe(200);
 
-      // Trigger card drop (which calls rerenderBoard)
+      // After drop, update child block so rerender picks up the new group
+      (options.api.blocks.getChildren as ReturnType<typeof vi.fn>).mockReturnValue([
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-doing' }, position: 'a0' }),
+      ]);
+
+      // Trigger card drop (which calls handleRowDrop -> rerenderBoard)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cardDrag = (tool as any).cardDrag as DatabaseCardDrag;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -609,48 +721,69 @@ describe('DatabaseTool', () => {
           ],
         }},
       ],
-      rows: {
-        'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1' } },
-        'row-2': { id: 'row-2', position: 'a1', properties: { 'prop-title': 'Task 2' } },
-      },
       views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', sorts: [], filters: [], visibleProperties: [] }],
       activeViewId: 'view-list',
       ...overrides,
     });
 
+    const makeListChildBlocks = (): BlockAPI[] => [
+      createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1' }, position: 'a0' }),
+      createMockRowBlock({ id: 'row-2', properties: { 'prop-title': 'Task 2' }, position: 'a1' }),
+    ];
+
     it('renders a list view with [data-blok-database-list] when view type is list', () => {
-      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      const tool = new DatabaseTool(createDatabaseOptions(makeListData(), {}, { childBlocks: makeListChildBlocks() }));
       const element = tool.render();
+      tool.rendered();
       expect(element.querySelector('[data-blok-database-list]')).not.toBeNull();
       expect(element.querySelector('[data-blok-database-board]')).toBeNull();
     });
 
-    it('renders list rows for each data row', () => {
-      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
-      const element = tool.render();
-      expect(element.querySelectorAll('[data-blok-database-list-row]')).toHaveLength(2);
+    it('renders list rows for each child block after rendered()', () => {
+      const options = createDatabaseOptions(makeListData(), {}, { childBlocks: makeListChildBlocks() });
+      const tool = new DatabaseTool(options);
+
+      tool.render();
+      tool.rendered();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = (tool as any).model as DatabaseModel;
+
+      expect(model.getOrderedRows()).toHaveLength(2);
     });
 
-    it('clicking add-row button adds a row to the list', () => {
-      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+    it('clicking add-row button calls api.blocks.insert with database-row', () => {
+      const options = createDatabaseOptions(makeListData(), {}, { childBlocks: makeListChildBlocks() });
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
       const addBtn = element.querySelector('[data-blok-database-add-row]') as HTMLButtonElement;
       addBtn.click();
-      const saved = tool.save(document.createElement('div'));
-      expect(Object.keys(saved.rows)).toHaveLength(3);
+      expect(options.api.blocks.insert).toHaveBeenCalledTimes(1);
+      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+
+      expect(insertCall[0]).toBe('database-row');
     });
 
-    it('clicking delete-row button removes a row', () => {
-      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+    it('clicking delete-row button calls api.blocks.delete', () => {
+      const childBlocks = makeListChildBlocks();
+      const options = createDatabaseOptions(makeListData(), {}, { childBlocks });
+
+      (options.api.blocks.getBlockIndex as ReturnType<typeof vi.fn>).mockReturnValue(1);
+
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
       const deleteBtn = element.querySelector('[data-blok-database-delete-row]') as HTMLButtonElement;
       deleteBtn.click();
-      expect(element.querySelectorAll('[data-blok-database-list-row]')).toHaveLength(1);
+      expect(options.api.blocks.delete).toHaveBeenCalledTimes(1);
     });
 
     it('clicking a list row opens the card drawer', () => {
-      const tool = new DatabaseTool(createDatabaseOptions(makeListData()));
+      const options = createDatabaseOptions(makeListData(), {}, { childBlocks: makeListChildBlocks() });
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
       const row = element.querySelector('[data-blok-database-list-row]') as HTMLElement;
       row.click();
       expect(element.querySelector('[data-blok-database-drawer]')).not.toBeNull();
@@ -680,14 +813,16 @@ describe('DatabaseTool', () => {
     });
 
     it('renders grouped list when view has groupBy', () => {
+      const childBlocks = [
+        createMockRowBlock({ id: 'row-1', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' }, position: 'a0' }),
+      ];
       const data = makeListData({
         views: [{ id: 'view-list', name: 'List', type: 'list', position: 'a0', groupBy: 'prop-status', sorts: [], filters: [], visibleProperties: [] }],
-        rows: {
-          'row-1': { id: 'row-1', position: 'a0', properties: { 'prop-title': 'Task 1', 'prop-status': 'opt-todo' } },
-        },
       });
-      const tool = new DatabaseTool(createDatabaseOptions(data));
+      const options = createDatabaseOptions(data, {}, { childBlocks });
+      const tool = new DatabaseTool(options);
       const element = tool.render();
+      tool.rendered();
       expect(element.querySelectorAll('[data-blok-database-list-group]')).toHaveLength(2);
     });
   });
@@ -714,13 +849,13 @@ describe('DatabaseTool', () => {
       expect(element.querySelector('[data-blok-database-board]')).not.toBeNull();
     });
 
-    it('saves data in DatabaseData format with schema, rows, views', () => {
+    it('saves data in DatabaseData format with schema and views but no rows', () => {
       const tool = new DatabaseTool(createDatabaseOptions());
       const element = tool.render();
       const saved = tool.save(element);
 
       expect(saved.schema).toBeDefined();
-      expect(saved.rows).toBeDefined();
+      expect(saved).not.toHaveProperty('rows');
       expect(saved.views).toBeDefined();
       expect(Array.isArray(saved.views)).toBe(true);
       expect(saved.views.length).toBeGreaterThan(0);
@@ -813,7 +948,8 @@ describe('DatabaseTool', () => {
       const saved = tool.save(document.createElement('div'));
 
       expect(saved.schema[0].id).toBe('p-backend');
-      expect(saved.rows['r-backend']).toBeDefined();
+      // Rows are no longer in saved data — they would come from child blocks
+      expect(saved).not.toHaveProperty('rows');
 
       tool.destroy();
       document.body.removeChild(container);
@@ -983,7 +1119,7 @@ describe('DatabaseTool', () => {
   });
 
   describe('ID persistence to backend', () => {
-    it('passes client-generated row ID to adapter.createRow', () => {
+    it('passes client-generated row ID to api.blocks.insert', () => {
       const mockAdapter = {
         loadDatabase: vi.fn().mockResolvedValue({ schema: [], rows: {}, views: [] }),
         createRow: vi.fn().mockResolvedValue({ id: 'r1', position: 'a0', properties: {} }),
@@ -993,7 +1129,8 @@ describe('DatabaseTool', () => {
         updateView: vi.fn(), deleteView: vi.fn(),
       };
 
-      const tool = new DatabaseTool(createDatabaseOptions({}, { adapter: mockAdapter }));
+      const options = createDatabaseOptions({}, { adapter: mockAdapter });
+      const tool = new DatabaseTool(options);
       const element = tool.render();
 
       // Add a row
@@ -1001,9 +1138,14 @@ describe('DatabaseTool', () => {
 
       addCardBtn.click();
 
-      // Get the row ID from the saved data
-      const saved = tool.save(document.createElement('div'));
-      const rowId = Object.keys(saved.rows)[0];
+      // Verify api.blocks.insert was called with a generated ID (7th arg)
+      expect(options.api.blocks.insert).toHaveBeenCalledTimes(1);
+      const insertCall = (options.api.blocks.insert as ReturnType<typeof vi.fn>).mock.calls[0];
+      const rowId = insertCall[6] as string;
+
+      expect(rowId).toBeDefined();
+      expect(typeof rowId).toBe('string');
+      expect(rowId.length).toBeGreaterThan(0);
 
       // Verify the same ID was passed to the adapter
       expect(mockAdapter.createRow).toHaveBeenCalledTimes(1);
@@ -1024,9 +1166,6 @@ describe('DatabaseTool', () => {
             ],
           }},
         ],
-        rows: {
-          'stable-row-1': { id: 'stable-row-1', position: 'a0', properties: { 'stable-title': 'Task' } },
-        },
         views: [{ id: 'stable-view-1', name: 'Board', type: 'board', position: 'a0', groupBy: 'stable-status', sorts: [], filters: [], visibleProperties: [] }],
         activeViewId: 'stable-view-1',
       };
@@ -1036,11 +1175,12 @@ describe('DatabaseTool', () => {
       tool.render();
       const saved = tool.save(document.createElement('div'));
 
-      // All IDs must be exactly what was loaded
+      // Schema and view IDs must be exactly what was loaded
       expect(saved.schema[0].id).toBe('stable-title');
       expect(saved.schema[1].id).toBe('stable-status');
       expect(saved.schema[1].config?.options[0].id).toBe('stable-opt-1');
-      expect(saved.rows['stable-row-1'].id).toBe('stable-row-1');
+      // Rows are not in saved data — they live in child blocks
+      expect(saved).not.toHaveProperty('rows');
       expect(saved.views[0].id).toBe('stable-view-1');
       expect(saved.activeViewId).toBe('stable-view-1');
     });

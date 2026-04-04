@@ -1,5 +1,5 @@
 import type { API, BlockAPI, BlockTool, BlockToolConstructorOptions, OutputData, ToolboxConfig } from '../../../types';
-import type { DatabaseData, DatabaseConfig, DatabaseRow, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
+import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewType, SelectOption, DatabaseViewConfig, PropertyValue } from './types';
 import { DatabaseModel } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
@@ -102,6 +102,7 @@ export class DatabaseTool implements BlockTool {
     this.boardContainer = boardContainer;
     wrapper.appendChild(boardContainer);
 
+    this.syncRowsFromBlocks();
     const boardEl = this.renderActiveView();
     boardContainer.appendChild(boardEl);
 
@@ -115,6 +116,7 @@ export class DatabaseTool implements BlockTool {
 
   rendered(): void {
     this.block.stretched = true;
+    this.syncRowsFromBlocks();
     if (this.config.adapter !== undefined) {
       void this.loadFromBackend();
     }
@@ -169,6 +171,56 @@ export class DatabaseTool implements BlockTool {
   }
 
   // ---------------------------------------------------------------------------
+  // Row projection from child blocks
+  // ---------------------------------------------------------------------------
+
+  private syncRowsFromBlocks(): void {
+    const children = this.api.blocks.getChildren(this.block.id);
+    const rows: DatabaseRow[] = children
+      .filter((child) => child.name === 'database-row')
+      .map((child) => ({
+        id: child.id,
+        position: (child.preservedData as DatabaseRowData)?.position ?? '',
+        properties: (child.preservedData as DatabaseRowData)?.properties ?? {},
+      }));
+    this.model.setRows(rows);
+  }
+
+  private deleteRowBlock(rowId: string): void {
+    const blockIndex = this.api.blocks.getBlockIndex(rowId);
+
+    if (blockIndex !== undefined) {
+      void this.api.blocks.delete(blockIndex);
+    }
+
+    this.syncRowsFromBlocks();
+  }
+
+  private updateRowBlock(rowId: string, propertyChanges: Record<string, PropertyValue>): void {
+    const children = this.api.blocks.getChildren(this.block.id);
+    const rowBlock = children.find((child) => child.id === rowId);
+
+    if (rowBlock !== undefined) {
+      rowBlock.call('updateProperties', propertyChanges);
+      rowBlock.dispatchChange();
+    }
+
+    this.syncRowsFromBlocks();
+  }
+
+  private moveRowBlock(rowId: string, position: string): void {
+    const children = this.api.blocks.getChildren(this.block.id);
+    const rowBlock = children.find((child) => child.id === rowId);
+
+    if (rowBlock !== undefined) {
+      rowBlock.call('updatePosition', { position });
+      rowBlock.dispatchChange();
+    }
+
+    this.syncRowsFromBlocks();
+  }
+
+  // ---------------------------------------------------------------------------
   // View management
   // ---------------------------------------------------------------------------
 
@@ -214,6 +266,7 @@ export class DatabaseTool implements BlockTool {
     this.activateView(viewId);
 
     this.boardContainer.innerHTML = '';
+    this.syncRowsFromBlocks();
     const newBoardWrapper = this.renderActiveView();
     this.boardContainer.appendChild(newBoardWrapper);
 
@@ -423,7 +476,7 @@ export class DatabaseTool implements BlockTool {
 
         if (rowId !== null) {
           event.stopPropagation();
-          this.model.deleteRow(rowId);
+          this.deleteRowBlock(rowId);
           this.view.removeRow(boardEl, rowId);
           void this.sync.syncDeleteRow({ rowId });
         }
@@ -448,7 +501,7 @@ export class DatabaseTool implements BlockTool {
 
         if (rowId !== null) {
           event.stopPropagation();
-          this.model.deleteRow(rowId);
+          this.deleteRowBlock(rowId);
           this.view.removeRow(boardEl, rowId);
           void this.sync.syncDeleteRow({ rowId });
         }
@@ -493,13 +546,26 @@ export class DatabaseTool implements BlockTool {
       properties[groupByPropId] = optionId;
     }
 
-    const row = this.model.addRow(properties);
-    this.view.appendRow(viewEl, row);
+    const rowData = this.model.createRowData(properties);
+    const blockIndex = this.api.blocks.getBlockIndex(this.block.id) ?? 0;
+
+    this.api.blocks.insert(
+      'database-row',
+      { properties: rowData.properties, position: rowData.position },
+      {},
+      blockIndex + 1,
+      false,
+      false,
+      rowData.id,
+    );
+    this.api.blocks.setBlockParent(rowData.id, this.block.id);
+    this.syncRowsFromBlocks();
+    this.view.appendRow(viewEl, rowData);
 
     void this.sync.syncCreateRow({
-      id: row.id,
-      properties: row.properties,
-      position: row.position,
+      id: rowData.id,
+      properties: rowData.properties,
+      position: rowData.position,
     });
   }
 
@@ -513,10 +579,24 @@ export class DatabaseTool implements BlockTool {
 
     const titleProp = this.model.getSchema().find((p) => p.type === 'title');
     const titlePropId = titleProp?.id ?? '';
-    const row = this.model.addRow({
+    const rowData = this.model.createRowData({
       [titlePropId]: '',
       [groupByPropId]: optionId,
     });
+
+    const blockIndex = this.api.blocks.getBlockIndex(this.block.id) ?? 0;
+
+    this.api.blocks.insert(
+      'database-row',
+      { properties: rowData.properties, position: rowData.position },
+      {},
+      blockIndex + 1,
+      false,
+      false,
+      rowData.id,
+    );
+    this.api.blocks.setBlockParent(rowData.id, this.block.id);
+    this.syncRowsFromBlocks();
 
     const columnEl = boardEl.querySelector(`[data-option-id="${optionId}"][data-blok-database-column]`);
 
@@ -530,12 +610,12 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    this.view.appendRow(cardsContainer as HTMLElement, row);
+    this.view.appendRow(cardsContainer as HTMLElement, rowData);
 
     void this.sync.syncCreateRow({
-      id: row.id,
-      properties: row.properties,
-      position: row.position,
+      id: rowData.id,
+      properties: rowData.properties,
+      position: rowData.position,
     });
   }
 
@@ -623,7 +703,7 @@ export class DatabaseTool implements BlockTool {
         descriptionPropertyId: descriptionPropId,
         schema: this.model.getSchema(),
         onTitleChange: (rowId, title) => {
-          this.model.updateRow(rowId, { [titlePropId]: title });
+          this.updateRowBlock(rowId, { [titlePropId]: title });
           const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
             ?? this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-list]');
 
@@ -635,7 +715,7 @@ export class DatabaseTool implements BlockTool {
         },
         onDescriptionChange: (rowId, description: OutputData) => {
           if (descriptionPropId !== undefined) {
-            this.model.updateRow(rowId, { [descriptionPropId]: description });
+            this.updateRowBlock(rowId, { [descriptionPropId]: description });
             this.sync.syncUpdateRow({ rowId, properties: { [descriptionPropId]: description } });
           }
         },
@@ -740,7 +820,7 @@ export class DatabaseTool implements BlockTool {
     const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
 
-    this.model.moveRow(rowId, position);
+    this.moveRowBlock(rowId, position);
     this.rerenderView();
 
     void this.sync.syncMoveRow({ rowId, position });
@@ -759,8 +839,8 @@ export class DatabaseTool implements BlockTool {
     const afterRow = afterRowId !== null ? this.model.getRow(afterRowId) : undefined;
     const position = DatabaseModel.positionBetween(afterRow?.position ?? null, beforeRow?.position ?? null);
 
-    this.model.updateRow(rowId, { [groupByPropId]: toOptionId });
-    this.model.moveRow(rowId, position);
+    this.updateRowBlock(rowId, { [groupByPropId]: toOptionId });
+    this.moveRowBlock(rowId, position);
     this.rerenderView();
 
     this.sync.syncUpdateRow({ rowId, properties: { [groupByPropId]: toOptionId } });
@@ -875,7 +955,7 @@ export class DatabaseTool implements BlockTool {
     const rowsInGroup = groups.get(optionId) ?? [];
 
     for (const row of rowsInGroup) {
-      this.model.deleteRow(row.id);
+      this.deleteRowBlock(row.id);
       void this.sync.syncDeleteRow({ rowId: row.id });
     }
 
@@ -927,6 +1007,7 @@ export class DatabaseTool implements BlockTool {
     this.cardDrawer = null;
     this.keyboard?.destroy();
 
+    this.syncRowsFromBlocks();
     const newBoardWrapper = this.renderActiveView();
 
     if (oldBoardWrapper !== null && oldBoardWrapper !== undefined) {

@@ -45,8 +45,8 @@ export class DatabaseRowTool implements BlockTool {
     Object.assign(this._data.properties, changes);
   }
 
-  public updatePosition(position: string): void {
-    this._data.position = position;
+  public updatePosition(param: { position: string }): void {
+    this._data.position = param.position;
   }
 
   public getProperties(): Record<string, PropertyValue> {

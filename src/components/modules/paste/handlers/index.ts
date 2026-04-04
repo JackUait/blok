@@ -7,3 +7,4 @@ export { HtmlHandler } from './html-handler';
 export { PatternHandler } from './pattern-handler';
 export { TableCellsHandler } from './table-cells-handler';
 export { TextHandler } from './text-handler';
+export { MarkdownHandler } from '../../../../markdown/markdown-handler';

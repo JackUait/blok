@@ -9,6 +9,7 @@ import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
 import { HtmlHandler } from './handlers/html-handler';
+import { MarkdownHandler } from '../../../markdown/markdown-handler';
 import { PatternHandler } from './handlers/pattern-handler';
 import { TableCellsHandler } from './handlers/table-cells-handler';
 import { TextHandler } from './handlers/text-handler';
@@ -50,6 +51,7 @@ export class Paste extends Module {
       new TableCellsHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new FilesHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new PatternHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
+      new MarkdownHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new TextHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
     ];
@@ -189,6 +191,10 @@ export class Paste extends Module {
     }
 
     if (handler instanceof PatternHandler) {
+      return plainData;
+    }
+
+    if (handler instanceof MarkdownHandler) {
       return plainData;
     }
 

@@ -246,6 +246,22 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Import Markdown string as blocks.
+   * Lazy-loads the markdown converter on first call.
+   * @param md - Markdown source string
+   * @param options - Optional configuration for tool mapping and extensions
+   */
+  public async importMarkdown(md: string, options?: import('../../../markdown/types').MarkdownImportConfig): Promise<OutputData> {
+    const { markdownToBlocks } = await import('../../../markdown/index');
+    const blocks = markdownToBlocks(md, options);
+    const data: OutputData = { blocks };
+
+    await this.render(data);
+
+    return data;
+  }
+
+  /**
    * Insert new Block and returns it's API
    * @param {string} type — Tool name
    * @param {BlockToolData} data — Tool data to insert

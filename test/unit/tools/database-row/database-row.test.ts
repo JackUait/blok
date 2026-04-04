@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
+import type { DatabaseRowData as PublicDatabaseRowData } from '../../../../types';
 import type { DatabaseRowData } from '../../../../src/tools/database/types';
 import { DatabaseRowTool } from '../../../../src/tools/database-row';
 
@@ -145,6 +146,15 @@ describe('DatabaseRowTool', () => {
       const tool = new DatabaseRowTool(createRowOptions({ position: 'z9' }));
 
       expect(tool.getPosition()).toBe('z9');
+    });
+  });
+
+  describe('public type export', () => {
+    it('DatabaseRowData is importable from public types', () => {
+      const rowData: PublicDatabaseRowData = { properties: { title: 'Test' }, position: 'a0' };
+
+      expect(rowData.properties).toEqual({ title: 'Test' });
+      expect(rowData.position).toBe('a0');
     });
   });
 });

@@ -100,6 +100,7 @@ export {
   SortConfig,
   FilterConfig,
   DatabaseViewConfig,
+  DatabaseRowData,
   DatabaseData,
   DatabaseAdapter,
   DatabaseConfig,

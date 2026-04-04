@@ -68,7 +68,9 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     const pasteData: PasteData[] = blocks.map((block) => {
       const content = Dom.make('div');
 
-      content.innerHTML = typeof block.data.text === 'string' ? block.data.text : '';
+      const text = block.data as { text?: string };
+
+      content.innerHTML = typeof text.text === 'string' ? text.text : '';
 
       const event = this.composePasteEvent('tag', {
         data: content,

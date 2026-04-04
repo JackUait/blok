@@ -1,6 +1,7 @@
 import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
+import type { MarkdownImportConfig } from '../../../markdown/types';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { Module } from '../../__module';
 import { Block } from '../../block';
@@ -251,7 +252,7 @@ export class BlocksAPI extends Module {
    * @param md - Markdown source string
    * @param options - Optional configuration for tool mapping and extensions
    */
-  public async importMarkdown(md: string, options?: import('../../../markdown/types').MarkdownImportConfig): Promise<OutputData> {
+  public async importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData> {
     const { markdownToBlocks } = await import('../../../markdown/index');
     const blocks = markdownToBlocks(md, options);
     const data: OutputData = { blocks };

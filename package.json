@@ -17,6 +17,9 @@
       ],
       "react": [
         "./types/react.d.ts"
+      ],
+      "markdown": [
+        "./types/markdown.d.ts"
       ]
     }
   },
@@ -40,6 +43,10 @@
     "./react": {
       "types": "./types/react.d.ts",
       "import": "./dist/react.mjs"
+    },
+    "./markdown": {
+      "types": "./types/markdown.d.ts",
+      "import": "./dist/markdown.mjs"
     }
   },
   "bin": {
@@ -140,6 +147,7 @@
     "@tailwindcss/vite": "4.2.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
+    "@types/mdast": "^4.0.4",
     "@types/node": "25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -184,6 +192,9 @@
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
     "i18next": "25.8.18",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark-extension-gfm": "^3.0.0",
     "nanoid": "5.1.6",
     "yjs": "13.6.30"
   },

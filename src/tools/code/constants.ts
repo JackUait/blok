@@ -7,6 +7,8 @@ export const COPIED_KEY = 'tools.code.copied';
 export const COPY_CODE_KEY = 'tools.code.copyCode';
 export const WRAP_LINES_KEY = 'tools.code.wrapLines';
 export const SEARCH_LANGUAGE_KEY = 'tools.code.searchLanguage';
+export const CODE_TAB_KEY = 'tools.code.codeTab';
+export const PREVIEW_TAB_KEY = 'tools.code.previewTab';
 
 // Default values
 export const DEFAULT_LANGUAGE = 'plain text';
@@ -48,6 +50,7 @@ export const LANGUAGES: LanguageEntry[] = [
   { id: 'scala', name: 'Scala' },
   { id: 'dart', name: 'Dart' },
   { id: 'lua', name: 'Lua' },
+  { id: 'latex', name: 'LaTeX' },
 ];
 
 // CSS — Tailwind classes
@@ -57,3 +60,12 @@ export const LANGUAGE_BUTTON_STYLES = 'px-1.5 py-0.5 rounded cursor-pointer bg-t
 export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 export const CODE_AREA_STYLES = 'px-4 py-3 font-mono text-sm leading-relaxed outline-hidden whitespace-pre-wrap overflow-x-auto min-h-[1.5em]';
 export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
+
+// Preview tab styles
+export const TAB_STYLES = 'px-3 py-1 text-xs border-0 cursor-pointer rounded transition-colors';
+export const TAB_ACTIVE_STYLES = 'bg-bg-primary text-primary-text font-medium';
+export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
+export const PREVIEW_AREA_STYLES = 'px-4 py-3';
+
+// Languages that support preview rendering
+export const PREVIEWABLE_LANGUAGES = new Set(['latex']);

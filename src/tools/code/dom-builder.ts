@@ -4,6 +4,10 @@ import {
   LANGUAGE_BUTTON_STYLES,
   HEADER_BUTTON_STYLES,
   CODE_AREA_STYLES,
+  TAB_STYLES,
+  TAB_ACTIVE_STYLES,
+  TAB_INACTIVE_STYLES,
+  PREVIEW_AREA_STYLES,
 } from './constants';
 import { IconCopy, IconWrap } from '../../components/icons';
 
@@ -14,6 +18,9 @@ export interface CodeDOMRefs {
   wrapButton: HTMLButtonElement;
   preElement: HTMLPreElement;
   codeElement: HTMLElement;
+  codeTab: HTMLButtonElement | null;
+  previewTab: HTMLButtonElement | null;
+  previewElement: HTMLElement | null;
 }
 
 export interface BuildCodeDOMOptions {
@@ -22,10 +29,47 @@ export interface BuildCodeDOMOptions {
   readOnly: boolean;
   copyLabel: string;
   wrapLabel: string;
+  previewable?: boolean;
+  codeTabLabel?: string;
+  previewTabLabel?: string;
+}
+
+interface TabElements {
+  tabBar: HTMLElement;
+  codeTab: HTMLButtonElement;
+  previewTab: HTMLButtonElement;
+  previewElement: HTMLElement;
+}
+
+function buildTabElements(codeTabLabel: string | undefined, previewTabLabel: string | undefined): TabElements {
+  const tabBar = document.createElement('div');
+  tabBar.className = 'flex gap-1 px-2 pt-1.5';
+
+  const codeTab = document.createElement('button');
+  codeTab.type = 'button';
+  codeTab.textContent = codeTabLabel ?? 'Code';
+  codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
+  codeTab.setAttribute('data-blok-testid', 'code-code-tab');
+
+  const previewTab = document.createElement('button');
+  previewTab.type = 'button';
+  previewTab.textContent = previewTabLabel ?? 'Preview';
+  previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
+  previewTab.setAttribute('data-blok-testid', 'code-preview-tab');
+
+  tabBar.appendChild(codeTab);
+  tabBar.appendChild(previewTab);
+
+  const previewElement = document.createElement('div');
+  previewElement.className = PREVIEW_AREA_STYLES;
+  previewElement.setAttribute('data-blok-testid', 'code-preview');
+  previewElement.hidden = false;
+
+  return { tabBar, codeTab, previewTab, previewElement };
 }
 
 export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
-  const { code, languageName, readOnly, copyLabel, wrapLabel } = options;
+  const { code, languageName, readOnly, copyLabel, wrapLabel, previewable, codeTabLabel, previewTabLabel } = options;
 
   // Wrapper
   const wrapper = document.createElement('div');
@@ -88,9 +132,31 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
 
   preElement.appendChild(codeElement);
 
-  // Assemble wrapper
+  // Tabs and preview area (only for previewable languages in edit mode)
+  const tabs = previewable ? buildTabElements(codeTabLabel, previewTabLabel) : null;
+
+  // Assemble wrapper: header, optional tab bar, code (pre), optional preview
   wrapper.appendChild(header);
+
+  if (tabs) {
+    wrapper.appendChild(tabs.tabBar);
+  }
+
   wrapper.appendChild(preElement);
 
-  return { wrapper, languageButton, copyButton, wrapButton, preElement, codeElement };
+  if (tabs) {
+    wrapper.appendChild(tabs.previewElement);
+  }
+
+  return {
+    wrapper,
+    languageButton,
+    copyButton,
+    wrapButton,
+    preElement,
+    codeElement,
+    codeTab: tabs?.codeTab ?? null,
+    previewTab: tabs?.previewTab ?? null,
+    previewElement: tabs?.previewElement ?? null,
+  };
 }

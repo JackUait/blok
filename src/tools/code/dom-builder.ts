@@ -34,6 +34,32 @@ export interface BuildCodeDOMOptions {
   previewTabLabel?: string;
 }
 
+function buildPreviewElements(
+  codeTabLabel?: string,
+  previewTabLabel?: string,
+): { codeTab: HTMLButtonElement; previewTab: HTMLButtonElement; previewElement: HTMLDivElement } {
+  const codeTab = document.createElement('button');
+
+  codeTab.type = 'button';
+  codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
+  codeTab.textContent = codeTabLabel ?? 'Code';
+  codeTab.setAttribute('data-blok-testid', 'code-code-tab');
+
+  const previewTab = document.createElement('button');
+
+  previewTab.type = 'button';
+  previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
+  previewTab.textContent = previewTabLabel ?? 'Preview';
+  previewTab.setAttribute('data-blok-testid', 'code-preview-tab');
+
+  const previewElement = document.createElement('div');
+
+  previewElement.className = PREVIEW_AREA_STYLES;
+  previewElement.setAttribute('data-blok-testid', 'code-preview');
+
+  return { codeTab, previewTab, previewElement };
+}
+
 export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const { code, languageName, readOnly, copyLabel, wrapLabel, previewable, codeTabLabel, previewTabLabel } = options;
 
@@ -58,27 +84,9 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   spacer.className = 'flex-1';
 
   // Tab buttons (only when previewable)
-  let codeTab: HTMLButtonElement | null = null;
-  let previewTab: HTMLButtonElement | null = null;
-  let previewElement: HTMLDivElement | null = null;
-
-  if (previewable) {
-    codeTab = document.createElement('button');
-    codeTab.type = 'button';
-    codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
-    codeTab.textContent = codeTabLabel ?? 'Code';
-    codeTab.setAttribute('data-blok-testid', 'code-code-tab');
-
-    previewTab = document.createElement('button');
-    previewTab.type = 'button';
-    previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
-    previewTab.textContent = previewTabLabel ?? 'Preview';
-    previewTab.setAttribute('data-blok-testid', 'code-preview-tab');
-
-    previewElement = document.createElement('div');
-    previewElement.className = PREVIEW_AREA_STYLES;
-    previewElement.setAttribute('data-blok-testid', 'code-preview');
-  }
+  const { codeTab, previewTab, previewElement } = previewable
+    ? buildPreviewElements(codeTabLabel, previewTabLabel)
+    : { codeTab: null, previewTab: null, previewElement: null };
 
   // Wrap toggle button
   const wrapButton = document.createElement('button');

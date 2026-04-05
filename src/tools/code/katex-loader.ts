@@ -1,12 +1,16 @@
-let katexPromise: Promise<typeof import('katex')['default']> | null = null;
-let cssInjected = false;
+import type KatexType from 'katex';
+
+const state = {
+  katexPromise: null as Promise<typeof KatexType> | null,
+  cssInjected: false,
+};
 
 function injectCss(): void {
-  if (cssInjected) {
+  if (state.cssInjected) {
     return;
   }
 
-  cssInjected = true;
+  state.cssInjected = true;
 
   const link = document.createElement('link');
 
@@ -17,12 +21,12 @@ function injectCss(): void {
   document.head.appendChild(link);
 }
 
-async function loadKatex(): Promise<typeof import('katex')['default']> {
-  if (!katexPromise) {
-    katexPromise = import('katex').then((mod) => mod.default);
+async function loadKatex(): Promise<typeof KatexType> {
+  if (!state.katexPromise) {
+    state.katexPromise = import('katex').then((mod) => mod.default);
   }
 
-  return katexPromise;
+  return state.katexPromise;
 }
 
 /**

@@ -48,6 +48,7 @@ function serializeNode(node: PhrasingContent): string {
     case 'html':
       return node.value;
 
+    case 'inlineMath':
     case 'footnoteReference':
     case 'imageReference':
     case 'linkReference':

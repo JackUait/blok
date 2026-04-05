@@ -64,7 +64,7 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     }
 
     const { markdownToBlocks } = await import('./index');
-    const outputBlocks = markdownToBlocks(data);
+    const outputBlocks = await markdownToBlocks(data);
 
     if (!outputBlocks.length) {
       return false;

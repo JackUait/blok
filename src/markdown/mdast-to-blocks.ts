@@ -82,7 +82,7 @@ function handleBuiltInNode(
   generateId: () => string,
 ): OutputBlockData[] | null | undefined {
   if (node.type === 'paragraph') {
-    return [makeParagraph(phrasingToHtml(node.children), generateId)];
+    return handleParagraph(node.children as Array<{ type: string; value?: string; children?: unknown[] }>, generateId);
   }
 
   if (node.type === 'heading') {
@@ -112,11 +112,78 @@ function handleBuiltInNode(
     }, generateId)];
   }
 
+  if (node.type === 'math') {
+    return [makeBlock('code', { code: node.value, language: 'latex' }, generateId)];
+  }
+
   if (node.type === 'html') {
     return handleFallback(node, config, escapeHtml(node.value), generateId);
   }
 
   return undefined;
+}
+
+type ParagraphChild = { type: string; value?: string; children?: unknown[] };
+
+/**
+ * Convert a paragraph's phrasing children to blocks.
+ * Splits on inlineMath nodes, emitting each as a latex code block.
+ */
+function handleParagraph(children: ParagraphChild[], generateId: () => string): OutputBlockData[] {
+  const hasInlineMath = children.some(c => c.type === 'inlineMath');
+
+  if (!hasInlineMath) {
+    return [makeParagraph(phrasingToHtml(children as PhrasingContent[]), generateId)];
+  }
+
+  return splitOnInlineMath(children, generateId);
+}
+
+function splitOnInlineMath(children: ParagraphChild[], generateId: () => string): OutputBlockData[] {
+  const blocks: OutputBlockData[] = [];
+  const segments = groupByInlineMath(children);
+
+  for (const segment of segments) {
+    if (segment.type === 'math') {
+      blocks.push(makeBlock('code', { code: segment.value, language: 'latex' }, generateId));
+      continue;
+    }
+
+    const text = phrasingToHtml(segment.nodes as PhrasingContent[]).trim();
+
+    if (text) {
+      blocks.push(makeParagraph(text, generateId));
+    }
+  }
+
+  return blocks;
+}
+
+type MathSegment = { type: 'math'; value: string } | { type: 'text'; nodes: ParagraphChild[] };
+
+function groupByInlineMath(children: ParagraphChild[]): MathSegment[] {
+  const segments: MathSegment[] = [];
+  const textNodes: ParagraphChild[] = [];
+
+  for (const child of children) {
+    if (child.type !== 'inlineMath') {
+      textNodes.push(child);
+      continue;
+    }
+
+    if (textNodes.length > 0) {
+      segments.push({ type: 'text', nodes: [...textNodes] });
+      textNodes.length = 0;
+    }
+
+    segments.push({ type: 'math', value: child.value ?? '' });
+  }
+
+  if (textNodes.length > 0) {
+    segments.push({ type: 'text', nodes: textNodes });
+  }
+
+  return segments;
 }
 
 function tryOnUnknownNode(

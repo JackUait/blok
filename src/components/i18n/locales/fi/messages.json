@@ -172,5 +172,7 @@
   "tools.quote.size": "Lainauksen koko",
   "tools.quote.placeholder": "Lainaus",
   "tools.quote.defaultSize": "Oletus",
-  "tools.quote.largeSize": "Suuri"
+  "tools.quote.largeSize": "Suuri",
+  "tools.code.codeTab": "Koodi",
+  "tools.code.previewTab": "Esikatselu"
 }

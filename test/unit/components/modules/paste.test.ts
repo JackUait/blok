@@ -12,6 +12,7 @@ import { HtmlHandler } from '../../../../src/components/modules/paste/handlers/h
 import { PatternHandler } from '../../../../src/components/modules/paste/handlers/pattern-handler';
 import { TableCellsHandler } from '../../../../src/components/modules/paste/handlers/table-cells-handler';
 import { TextHandler } from '../../../../src/components/modules/paste/handlers/text-handler';
+import { MarkdownHandler } from '../../../../src/markdown/markdown-handler';
 import { ToolsCollection } from '../../../../src/components/tools/collection';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
@@ -1400,6 +1401,10 @@ describe('Paste module', () => {
       const patternHandler = handlers.find((h): h is PatternHandler => h instanceof PatternHandler);
       expect(patternHandler).toBeDefined();
 
+      // MarkdownHandler should have priority 30
+      const markdownHandler = handlers.find((h): h is MarkdownHandler => h instanceof MarkdownHandler);
+      expect(markdownHandler).toBeDefined();
+
       // HtmlHandler should have priority 40
       const htmlHandler = handlers.find((h): h is HtmlHandler => h instanceof HtmlHandler);
       expect(htmlHandler).toBeDefined();
@@ -1413,8 +1418,9 @@ describe('Paste module', () => {
       expect(handlers[1]).toBe(tableCellsHandler);
       expect(handlers[2]).toBe(filesHandler);
       expect(handlers[3]).toBe(patternHandler);
-      expect(handlers[4]).toBe(htmlHandler);
-      expect(handlers[5]).toBe(textHandler);
+      expect(handlers[4]).toBe(markdownHandler);
+      expect(handlers[5]).toBe(htmlHandler);
+      expect(handlers[6]).toBe(textHandler);
     });
 
     it('BlokDataHandler returns priority 100 for valid JSON', () => {

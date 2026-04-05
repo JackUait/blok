@@ -172,5 +172,7 @@
   "tools.quote.size": "Idézet mérete",
   "tools.quote.placeholder": "Idézet",
   "tools.quote.defaultSize": "Alapértelmezett",
-  "tools.quote.largeSize": "Nagy"
+  "tools.quote.largeSize": "Nagy",
+  "tools.code.codeTab": "Kód",
+  "tools.code.previewTab": "Előnézet"
 }

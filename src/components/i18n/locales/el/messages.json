@@ -172,5 +172,7 @@
   "tools.quote.size": "Μέγεθος παράθεσης",
   "tools.quote.placeholder": "Παράθεση",
   "tools.quote.defaultSize": "Προεπιλογή",
-  "tools.quote.largeSize": "Μεγάλο"
+  "tools.quote.largeSize": "Μεγάλο",
+  "tools.code.codeTab": "Κώδικας",
+  "tools.code.previewTab": "Προεπισκόπηση"
 }

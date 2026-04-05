@@ -172,5 +172,7 @@
   "tools.quote.size": "उद्धरण आकार",
   "tools.quote.placeholder": "उद्धरण",
   "tools.quote.defaultSize": "डिफ़ॉल्ट",
-  "tools.quote.largeSize": "बड़ा"
+  "tools.quote.largeSize": "बड़ा",
+  "tools.code.codeTab": "कोड",
+  "tools.code.previewTab": "पूर्वावलोकन"
 }

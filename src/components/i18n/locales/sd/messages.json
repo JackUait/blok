@@ -172,5 +172,7 @@
   "tools.quote.size": "اقتباس جو سائيز",
   "tools.quote.placeholder": "اقتباس",
   "tools.quote.defaultSize": "ڊفالٽ",
-  "tools.quote.largeSize": "وڏو"
+  "tools.quote.largeSize": "وڏو",
+  "tools.code.codeTab": "ڪوڊ",
+  "tools.code.previewTab": "اڳڀرائي"
 }

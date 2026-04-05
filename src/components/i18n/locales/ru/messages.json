@@ -172,5 +172,7 @@
   "tools.quote.size": "Размер цитаты",
   "tools.quote.placeholder": "Цитата",
   "tools.quote.defaultSize": "по умолчанию",
-  "tools.quote.largeSize": "Большой"
+  "tools.quote.largeSize": "Большой",
+  "tools.code.codeTab": "Код",
+  "tools.code.previewTab": "Предпросмотр"
 }

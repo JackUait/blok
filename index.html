@@ -268,7 +268,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Bold, Italic, Link, Marker, Underline, Strikethrough } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
 
     /**
@@ -289,6 +289,7 @@
         database: true,
         divider: true,
         quote: true,
+        code: true,
       },
     };
 
@@ -937,6 +938,7 @@
         marker: Marker,
         underline: Underline,
         strikethrough: Strikethrough,
+        inlineCode: InlineCode,
         link: Link,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
@@ -951,6 +953,7 @@
       }
       if (state.tools.divider) tools.divider = Divider;
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
+      if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       return {
         readOnly: state.readOnly,
         holder: 'blok',
@@ -1161,12 +1164,12 @@
      */
     const iconGroups = {
       'UI & Navigation': ['IconCross', 'IconMenu', 'IconPlus', 'IconChevronLeft', 'IconChevronRight', 'IconSearch'],
-      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconMarker', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash'],
+      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconMarker', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconDivider', 'IconQuote', 'IconCalendar'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconCalendar'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight'],
-      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller'],
+      'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconWrap', 'IconPreview'],
       'Emoji Picker': ['IconEmojiStar', 'IconEmojiSmile', 'IconEmojiSprout', 'IconEmojiUtensils', 'IconEmojiBall', 'IconEmojiGlobe', 'IconEmojiLightbulb', 'IconEmojiHash', 'IconEmojiFlag'],
     };
 

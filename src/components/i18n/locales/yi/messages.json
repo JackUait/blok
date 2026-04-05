@@ -172,5 +172,7 @@
   "tools.quote.size": "ציטאט גרייס",
   "tools.quote.placeholder": "ציטאַט",
   "tools.quote.defaultSize": "שטאַנדאַרד",
-  "tools.quote.largeSize": "גרויס"
+  "tools.quote.largeSize": "גרויס",
+  "tools.code.codeTab": "קאָד",
+  "tools.code.previewTab": "פֿאָרויסבליק"
 }

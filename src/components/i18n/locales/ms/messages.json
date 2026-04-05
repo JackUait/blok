@@ -172,5 +172,7 @@
   "tools.quote.size": "Saiz petikan",
   "tools.quote.placeholder": "Petikan",
   "tools.quote.defaultSize": "Lalai",
-  "tools.quote.largeSize": "Besar"
+  "tools.quote.largeSize": "Besar",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Pratonton"
 }

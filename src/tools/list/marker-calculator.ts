@@ -192,6 +192,43 @@ export class ListMarkerCalculator {
   }
 
   /**
+   * Get the base depth of the contiguous list run containing the block at blockIndex.
+   * Walks backward until a non-list block or the start of the editor is reached,
+   * then returns the depth of the first list item in that run.
+   *
+   * @param blockIndex - The block index to look up
+   * @returns The depth of the first list item in the run
+   */
+  getGroupBaseDepth(blockIndex: number): number {
+    const findFirstListIndex = (index: number): number => {
+      if (index <= 0) {
+        return 0;
+      }
+      const prevBlock = this.blocks.getBlockByIndex(index - 1);
+      if (!prevBlock || prevBlock.name !== TOOL_NAME) {
+        return index;
+      }
+      return findFirstListIndex(index - 1);
+    };
+
+    const firstListIndex = findFirstListIndex(blockIndex);
+    const firstBlock = this.blocks.getBlockByIndex(firstListIndex);
+    return this.getBlockDepth(firstBlock);
+  }
+
+  /**
+   * Get the visual depth for marker display.
+   * Returns the depth relative to the list group's base, clamped to >= 0.
+   *
+   * @param blockIndex - The block index
+   * @param actualDepth - The block's actual depth
+   * @returns The visual depth for marker formatting
+   */
+  getVisualDepth(blockIndex: number, actualDepth: number): number {
+    return Math.max(0, actualDepth - this.getGroupBaseDepth(blockIndex));
+  }
+
+  /**
    * Get the depth of a block by reading from its DOM.
    */
   getBlockDepth(block: ReturnType<BlocksAPI['getBlockByIndex']>): number {

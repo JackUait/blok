@@ -32,18 +32,35 @@ export class BlockSelectionKeys extends BlockEventComposer {
    */
   private canIndentSelectedListItems(): boolean {
     const { BlockSelection, BlockManager } = this.Blok;
+    const selectedSet = new Set(BlockSelection.selectedBlocks);
 
     for (const block of BlockSelection.selectedBlocks) {
       const blockIndex = BlockManager.getBlockIndex(block);
 
-      if (blockIndex === undefined || blockIndex === 0) {
+      if (blockIndex === undefined) {
         return false;
       }
 
-      const previousBlock = BlockManager.getBlockByIndex(blockIndex - 1);
+      const previousBlock = blockIndex > 0
+        ? BlockManager.getBlockByIndex(blockIndex - 1)
+        : undefined;
 
-      if (!previousBlock || previousBlock.name !== LIST_TOOL_NAME) {
+      const isFirstInGroup = !previousBlock || previousBlock.name !== LIST_TOOL_NAME;
+
+      // First-in-group items can nest one level; mid-list items can't exceed previous depth
+      if (isFirstInGroup && this.getListBlockDepth(block) >= 1) {
         return false;
+      }
+      if (isFirstInGroup) {
+        continue;
+      }
+
+      /**
+       * If the predecessor is also selected, both will be indented together,
+       * so the relative depth difference is preserved — skip the check.
+       */
+      if (selectedSet.has(previousBlock)) {
+        continue;
       }
 
       if (this.getListBlockDepth(block) > this.getListBlockDepth(previousBlock)) {

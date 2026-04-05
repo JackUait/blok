@@ -172,5 +172,7 @@
   "tools.quote.size": "Alıntı boyutu",
   "tools.quote.placeholder": "Alıntı",
   "tools.quote.defaultSize": "Varsayılan",
-  "tools.quote.largeSize": "Büyük"
+  "tools.quote.largeSize": "Büyük",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Önizleme"
 }

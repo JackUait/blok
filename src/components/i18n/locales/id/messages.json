@@ -172,5 +172,7 @@
   "tools.quote.size": "Ukuran kutipan",
   "tools.quote.placeholder": "Kutipan",
   "tools.quote.defaultSize": "Bawaan",
-  "tools.quote.largeSize": "Besar"
+  "tools.quote.largeSize": "Besar",
+  "tools.code.codeTab": "Kode",
+  "tools.code.previewTab": "Pratinjau"
 }

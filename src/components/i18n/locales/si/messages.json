@@ -172,5 +172,7 @@
   "tools.quote.size": "උපුටා දැක්වීමේ ප්‍රමාණය",
   "tools.quote.placeholder": "උපුටා දැක්වීම",
   "tools.quote.defaultSize": "පෙරනිමි",
-  "tools.quote.largeSize": "විශාල"
+  "tools.quote.largeSize": "විශාල",
+  "tools.code.codeTab": "කේතය",
+  "tools.code.previewTab": "පූර්ව දර්ශනය"
 }

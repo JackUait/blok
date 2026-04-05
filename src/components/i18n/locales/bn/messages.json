@@ -172,5 +172,7 @@
   "tools.quote.size": "উদ্ধৃতির আকার",
   "tools.quote.placeholder": "উদ্ধৃতি",
   "tools.quote.defaultSize": "ডিফল্ট",
-  "tools.quote.largeSize": "বড়"
+  "tools.quote.largeSize": "বড়",
+  "tools.code.codeTab": "কোড",
+  "tools.code.previewTab": "প্রিভিউ"
 }

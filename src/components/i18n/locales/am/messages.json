@@ -172,5 +172,7 @@
   "tools.quote.size": "የጥቅስ መጠን",
   "tools.quote.placeholder": "ጥቅስ",
   "tools.quote.defaultSize": "ነባሪ",
-  "tools.quote.largeSize": "ትልቅ"
+  "tools.quote.largeSize": "ትልቅ",
+  "tools.code.codeTab": "ኮድ",
+  "tools.code.previewTab": "ቅድመ ዕይታ"
 }

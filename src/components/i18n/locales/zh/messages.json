@@ -172,5 +172,7 @@
   "tools.quote.size": "引用大小",
   "tools.quote.placeholder": "引用",
   "tools.quote.defaultSize": "默认",
-  "tools.quote.largeSize": "大"
+  "tools.quote.largeSize": "大",
+  "tools.code.codeTab": "代码",
+  "tools.code.previewTab": "预览"
 }

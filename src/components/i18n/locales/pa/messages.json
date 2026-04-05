@@ -172,5 +172,7 @@
   "tools.quote.size": "ਹਵਾਲਾ ਆਕਾਰ",
   "tools.quote.placeholder": "ਹਵਾਲਾ",
   "tools.quote.defaultSize": "ਮੂਲ",
-  "tools.quote.largeSize": "ਵੱਡਾ"
+  "tools.quote.largeSize": "ਵੱਡਾ",
+  "tools.code.codeTab": "ਕੋਡ",
+  "tools.code.previewTab": "ਪੂਰਵ-ਦ੍ਰਿਸ਼"
 }

@@ -172,5 +172,7 @@
   "tools.quote.size": "Citatstorlek",
   "tools.quote.placeholder": "Citat",
   "tools.quote.defaultSize": "Standard",
-  "tools.quote.largeSize": "Stor"
+  "tools.quote.largeSize": "Stor",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Förhandsgranskning"
 }

@@ -69,6 +69,8 @@ export interface DOMBuilderContext {
   itemSize?: string;
   /** Optional keydown event handler */
   keydownHandler?: ((event: KeyboardEvent) => void) | null;
+  /** Visual depth for marker display (overrides data.depth for marker only) */
+  markerDepth?: number;
 }
 
 /**
@@ -149,7 +151,7 @@ export const buildWrapper = (context: DOMBuilderContext): HTMLElement => {
  * @returns The list item element containing marker and content
  */
 export const buildStandardContent = (context: DOMBuilderContext): HTMLElement => {
-  const { data, itemColor, itemSize, placeholder } = context;
+  const { data, itemColor, itemSize, placeholder, markerDepth } = context;
 
   const item = document.createElement('div');
   item.setAttribute('role', 'listitem');
@@ -170,8 +172,8 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
     item.style.marginLeft = `${depth * indent}px`;
   }
 
-  // Create marker element
-  const marker = createMarker(data.style, depth);
+  // Create marker element (use visual depth for marker display when provided)
+  const marker = createMarker(data.style, markerDepth ?? depth);
   marker.setAttribute('data-list-marker', 'true');
   marker.setAttribute('data-blok-mutation-free', 'true');
   item.appendChild(marker);

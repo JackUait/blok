@@ -172,5 +172,7 @@
   "tools.quote.size": "اقتباس کا سائز",
   "tools.quote.placeholder": "اقتباس",
   "tools.quote.defaultSize": "طے شدہ",
-  "tools.quote.largeSize": "بڑا"
+  "tools.quote.largeSize": "بڑا",
+  "tools.code.codeTab": "کوڈ",
+  "tools.code.previewTab": "پیش نظارہ"
 }

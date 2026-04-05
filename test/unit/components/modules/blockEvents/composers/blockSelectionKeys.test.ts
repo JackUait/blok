@@ -357,47 +357,150 @@ describe('BlockSelectionKeys', () => {
     });
 
     describe('indent (Tab)', () => {
-      it('returns false when first selected block has no previous block', () => {
+      it('allows indent when first selected block is at index 0 (first-in-group)', async () => {
         const mockListBlock = createBlock({ name: 'list', id: 'first-list' });
+        const depthAttr = document.createElement('span');
+        depthAttr.setAttribute('data-list-depth', '0');
+        mockListBlock.holder.appendChild(depthAttr);
+
+        const updatedBlock = createBlock({ name: 'list', id: 'first-list-updated' });
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
             selectedBlocks: [mockListBlock],
+            clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
-            getBlockByIndex: vi.fn(() => null),
+            getBlockByIndex: vi.fn(() => mockListBlock),
             getBlockIndex: vi.fn(() => 0),
+            update: vi.fn(() => Promise.resolve(updatedBlock)),
           } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-        const result = blockSelectionKeys.handleIndent(event);
+        await blockSelectionKeys.handleIndent(event);
+        await new Promise(resolve => setTimeout(resolve, 10));
 
-        expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(blok.BlockManager.update).toHaveBeenCalled();
       });
 
-      it('returns false when previous block is not a list', () => {
+      it('allows indent when previous block is not a list (first-in-group)', async () => {
         const mockListBlock = createBlock({ name: 'list', id: 'list-block' });
+        const depthAttr = document.createElement('span');
+        depthAttr.setAttribute('data-list-depth', '0');
+        mockListBlock.holder.appendChild(depthAttr);
+
         const mockPreviousBlock = createBlock({ name: 'paragraph', id: 'prev-block' });
+        const updatedBlock = createBlock({ name: 'list', id: 'list-block-updated' });
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
             selectedBlocks: [mockListBlock],
+            clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
             getBlockIndex: vi.fn(() => 1),
             getBlockByIndex: vi.fn((index: number) => index === 0 ? mockPreviousBlock : mockListBlock),
+            update: vi.fn(() => Promise.resolve(updatedBlock)),
           } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-        const result = blockSelectionKeys.handleIndent(event);
+        await blockSelectionKeys.handleIndent(event);
+        await new Promise(resolve => setTimeout(resolve, 10));
 
-        expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(blok.BlockManager.update).toHaveBeenCalled();
+      });
+
+      it('blocks indent when first-in-group item is already at depth 1', () => {
+        const mockListBlock = createBlock({ name: 'list', id: 'first-list' });
+        const depthAttr = document.createElement('span');
+        depthAttr.setAttribute('data-list-depth', '1');
+        mockListBlock.holder.appendChild(depthAttr);
+
+        const blok = createBlokModules({
+          BlockSelection: {
+            anyBlockSelected: true,
+            selectedBlocks: [mockListBlock],
+            clearCache: vi.fn(),
+          } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            getBlockByIndex: vi.fn(() => mockListBlock),
+            getBlockIndex: vi.fn(() => 0),
+            update: vi.fn(() => Promise.resolve(mockListBlock)),
+          } as unknown as BlokModules['BlockManager'],
+        });
+        const blockSelectionKeys = new BlockSelectionKeys(blok);
+        const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+        blockSelectionKeys.handleIndent(event);
+
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        // update should NOT have been called — can't indent past depth 1
+        expect(blok.BlockManager.update).not.toHaveBeenCalled();
+      });
+
+      it('allows indent when selected items at different depths have a selected predecessor', async () => {
+        const mockParentBlock = createBlock({ name: 'list', id: 'parent-block' });
+        const mockChildBlock = createBlock({ name: 'list', id: 'child-block' });
+
+        // Parent at depth 0, child at depth 1
+        const parentDepth = document.createElement('span');
+        parentDepth.setAttribute('data-list-depth', '0');
+        mockParentBlock.holder.appendChild(parentDepth);
+
+        const childDepth = document.createElement('span');
+        childDepth.setAttribute('data-list-depth', '1');
+        mockChildBlock.holder.appendChild(childDepth);
+
+        mockParentBlock.save = vi.fn(() => Promise.resolve({
+          id: 'parent-block',
+          tool: 'list',
+          data: { text: 'parent', style: 'unordered' },
+          time: 0,
+          tunes: {},
+        }));
+        mockChildBlock.save = vi.fn(() => Promise.resolve({
+          id: 'child-block',
+          tool: 'list',
+          data: { text: 'child', style: 'unordered' },
+          time: 0,
+          tunes: {},
+        }));
+
+        const updatedParent = createBlock({ name: 'list', id: 'parent-updated' });
+        const updatedChild = createBlock({ name: 'list', id: 'child-updated' });
+        let callIndex = 0;
+        const update = vi.fn(() => Promise.resolve(callIndex++ === 0 ? updatedParent : updatedChild));
+        const clearCache = vi.fn();
+
+        const blok = createBlokModules({
+          BlockSelection: {
+            anyBlockSelected: true,
+            selectedBlocks: [mockParentBlock, mockChildBlock],
+            clearCache,
+          } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            getBlockIndex: vi.fn((block: Block) => block.id === 'parent-block' ? 0 : 1),
+            getBlockByIndex: vi.fn((index: number) => index === 0 ? mockParentBlock : mockChildBlock),
+            update,
+          } as unknown as BlokModules['BlockManager'],
+        });
+
+        const blockSelectionKeys = new BlockSelectionKeys(blok);
+        const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+        await blockSelectionKeys.handleIndent(event);
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        // Both items should be indented: parent 0->1, child 1->2
+        expect(update).toHaveBeenCalledTimes(2);
+        expect(update).toHaveBeenCalledWith(mockParentBlock, expect.objectContaining({ depth: 1 }));
+        expect(update).toHaveBeenCalledWith(mockChildBlock, expect.objectContaining({ depth: 2 }));
       });
 
       it('returns false when selected block depth > previous block depth', () => {

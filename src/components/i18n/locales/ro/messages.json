@@ -172,5 +172,7 @@
   "tools.quote.size": "Dimensiune citat",
   "tools.quote.placeholder": "Citat",
   "tools.quote.defaultSize": "Implicit",
-  "tools.quote.largeSize": "Mare"
+  "tools.quote.largeSize": "Mare",
+  "tools.code.codeTab": "Cod",
+  "tools.code.previewTab": "Previzualizare"
 }

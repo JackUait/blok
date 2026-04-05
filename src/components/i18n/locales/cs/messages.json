@@ -172,5 +172,7 @@
   "tools.quote.size": "Velikost citátu",
   "tools.quote.placeholder": "Citace",
   "tools.quote.defaultSize": "Výchozí",
-  "tools.quote.largeSize": "Velký"
+  "tools.quote.largeSize": "Velký",
+  "tools.code.codeTab": "Kód",
+  "tools.code.previewTab": "Náhled"
 }

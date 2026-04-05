@@ -172,5 +172,7 @@
   "tools.quote.size": "Sitat ölçüsü",
   "tools.quote.placeholder": "Sitat",
   "tools.quote.defaultSize": "Standart",
-  "tools.quote.largeSize": "Böyük"
+  "tools.quote.largeSize": "Böyük",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Önizləmə"
 }

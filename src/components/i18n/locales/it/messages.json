@@ -172,5 +172,7 @@
   "tools.quote.size": "Dimensione citazione",
   "tools.quote.placeholder": "Citazione",
   "tools.quote.defaultSize": "Predefinito",
-  "tools.quote.largeSize": "Grande"
+  "tools.quote.largeSize": "Grande",
+  "tools.code.codeTab": "Codice",
+  "tools.code.previewTab": "Anteprima"
 }

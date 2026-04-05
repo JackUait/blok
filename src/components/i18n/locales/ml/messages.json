@@ -172,5 +172,7 @@
   "tools.quote.size": "ഉദ്ധരണി വലുപ്പം",
   "tools.quote.placeholder": "ഉദ്ധരണി",
   "tools.quote.defaultSize": "സ്ഥിരസ്ഥിതി",
-  "tools.quote.largeSize": "വലുത്"
+  "tools.quote.largeSize": "വലുത്",
+  "tools.code.codeTab": "കോഡ്",
+  "tools.code.previewTab": "പ്രിവ്യൂ"
 }

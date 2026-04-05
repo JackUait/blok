@@ -172,5 +172,7 @@
   "tools.quote.size": "Ишлэлийн хэмжээ",
   "tools.quote.placeholder": "Ишлэл",
   "tools.quote.defaultSize": "Өгөгдмөл",
-  "tools.quote.largeSize": "Том"
+  "tools.quote.largeSize": "Том",
+  "tools.code.codeTab": "Код",
+  "tools.code.previewTab": "Урьдчилан харах"
 }

@@ -376,6 +376,115 @@ describe('ListMarkerCalculator', () => {
     });
   });
 
+  describe('getGroupBaseDepth', () => {
+    it('returns own depth when block is at index 0', () => {
+      const blocks = [createMockBlock({ depth: 2 })];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getGroupBaseDepth(0)).toBe(2);
+    });
+
+    it('returns own depth when preceded by a non-list block', () => {
+      const blocks = [
+        createMockBlock({ name: 'paragraph' }),
+        createMockBlock({ depth: 1 }),
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getGroupBaseDepth(1)).toBe(1);
+    });
+
+    it('returns first list item depth in a contiguous run', () => {
+      const blocks = [
+        createMockBlock({ depth: 1 }),
+        createMockBlock({ depth: 1 }),
+        createMockBlock({ depth: 2 }),
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      // All three are in a contiguous list run starting at depth 1
+      expect(calc.getGroupBaseDepth(0)).toBe(1);
+      expect(calc.getGroupBaseDepth(1)).toBe(1);
+      expect(calc.getGroupBaseDepth(2)).toBe(1);
+    });
+
+    it('returns 0 for a normal list starting at depth 0', () => {
+      const blocks = [
+        createMockBlock({ depth: 0 }),
+        createMockBlock({ depth: 1 }),
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getGroupBaseDepth(0)).toBe(0);
+      expect(calc.getGroupBaseDepth(1)).toBe(0);
+    });
+
+    it('resets at non-list boundaries', () => {
+      const blocks = [
+        createMockBlock({ depth: 0 }),
+        createMockBlock({ name: 'paragraph' }),
+        createMockBlock({ depth: 2 }),
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getGroupBaseDepth(0)).toBe(0);
+      expect(calc.getGroupBaseDepth(2)).toBe(2);
+    });
+  });
+
+  describe('getVisualDepth', () => {
+    it('returns 0 for first-in-group at any depth', () => {
+      const blocks = [createMockBlock({ depth: 3 })];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getVisualDepth(0, 3)).toBe(0);
+    });
+
+    it('returns relative depth for items in a group with base > 0', () => {
+      const blocks = [
+        createMockBlock({ depth: 1 }),
+        createMockBlock({ depth: 2 }),
+        createMockBlock({ depth: 3 }),
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getVisualDepth(0, 1)).toBe(0);
+      expect(calc.getVisualDepth(1, 2)).toBe(1);
+      expect(calc.getVisualDepth(2, 3)).toBe(2);
+    });
+
+    it('returns actual depth when group base is 0 (no change)', () => {
+      const blocks = [
+        createMockBlock({ depth: 0 }),
+        createMockBlock({ depth: 1 }),
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      expect(calc.getVisualDepth(0, 0)).toBe(0);
+      expect(calc.getVisualDepth(1, 1)).toBe(1);
+    });
+
+    it('clamps to 0 when actual depth < base depth', () => {
+      const blocks = [
+        createMockBlock({ depth: 2 }),
+        createMockBlock({ depth: 1 }),
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const calc = new ListMarkerCalculator(blocksAPI);
+
+      // Base is 2 (first item), item at depth 1 → visual = max(0, 1-2) = 0
+      expect(calc.getVisualDepth(1, 1)).toBe(0);
+    });
+  });
+
   describe('findFirstItemIndex', () => {
     it('returns index + 1 when count is 0', () => {
       const blocks = [createMockBlock()];

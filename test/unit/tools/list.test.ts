@@ -28,6 +28,9 @@ const createMockAPI = (dictionary: Record<string, string> = defaultDictionary as
     },
     blocks: {
       getCurrentBlockIndex: () => 0,
+      getBlockByIndex: () => undefined,
+      getBlockIndex: () => 0,
+      getBlocksCount: () => 1,
       delete: () => {},
       insert: () => {},
     },

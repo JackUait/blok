@@ -172,5 +172,7 @@
   "tools.quote.size": "ကိုးကားချက်အရွယ်အစား",
   "tools.quote.placeholder": "ကိုးကားချက်",
   "tools.quote.defaultSize": "မူလ",
-  "tools.quote.largeSize": "အကြီး"
+  "tools.quote.largeSize": "အကြီး",
+  "tools.code.codeTab": "ကုဒ်",
+  "tools.code.previewTab": "ကြိုတင်ကြည့်ရှုမှု"
 }

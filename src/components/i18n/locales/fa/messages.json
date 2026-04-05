@@ -172,5 +172,7 @@
   "tools.quote.size": "اندازه نقل‌قول",
   "tools.quote.placeholder": "نقل‌قول",
   "tools.quote.defaultSize": "پیش‌فرض",
-  "tools.quote.largeSize": "بزرگ"
+  "tools.quote.largeSize": "بزرگ",
+  "tools.code.codeTab": "کد",
+  "tools.code.previewTab": "پیش‌نمایش"
 }

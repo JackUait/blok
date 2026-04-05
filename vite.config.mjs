@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
           tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
           full: path.resolve(__dirname, 'src', 'full.ts'),
           react: path.resolve(__dirname, 'src', 'react', 'index.ts'),
+          markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
         },
         formats: ['es'],
       },

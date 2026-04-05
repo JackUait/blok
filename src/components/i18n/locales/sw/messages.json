@@ -172,5 +172,7 @@
   "tools.quote.size": "Ukubwa wa nukuu",
   "tools.quote.placeholder": "Nukuu",
   "tools.quote.defaultSize": "Chaguo-msingi",
-  "tools.quote.largeSize": "Kubwa"
+  "tools.quote.largeSize": "Kubwa",
+  "tools.code.codeTab": "Msimbo",
+  "tools.code.previewTab": "Hakiki"
 }

@@ -172,5 +172,7 @@
   "tools.quote.size": "Velikost citata",
   "tools.quote.placeholder": "Citat",
   "tools.quote.defaultSize": "Privzeto",
-  "tools.quote.largeSize": "Veliko"
+  "tools.quote.largeSize": "Veliko",
+  "tools.code.codeTab": "Koda",
+  "tools.code.previewTab": "Predogled"
 }

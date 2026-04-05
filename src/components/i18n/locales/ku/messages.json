@@ -172,5 +172,7 @@
   "tools.quote.size": "Mezinahiya gotinê",
   "tools.quote.placeholder": "ووتە",
   "tools.quote.defaultSize": "بنەڕەت",
-  "tools.quote.largeSize": "گەورە"
+  "tools.quote.largeSize": "گەورە",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Pêşdîtin"
 }

@@ -172,5 +172,7 @@
   "tools.quote.size": "Tsitaadi suurus",
   "tools.quote.placeholder": "Tsitaat",
   "tools.quote.defaultSize": "vaikimisi",
-  "tools.quote.largeSize": "Suur"
+  "tools.quote.largeSize": "Suur",
+  "tools.code.codeTab": "Kood",
+  "tools.code.previewTab": "Eelvaade"
 }

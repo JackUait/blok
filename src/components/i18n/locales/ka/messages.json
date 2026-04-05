@@ -172,5 +172,7 @@
   "tools.quote.size": "ციტატის ზომა",
   "tools.quote.placeholder": "ციტატა",
   "tools.quote.defaultSize": "ნაგულისხმევი",
-  "tools.quote.largeSize": "დიდი"
+  "tools.quote.largeSize": "დიდი",
+  "tools.code.codeTab": "კოდი",
+  "tools.code.previewTab": "გადახედვა"
 }

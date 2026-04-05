@@ -662,10 +662,12 @@ const CLASS_NAME_TRANSFORMS = [
 const CSS_CLASS_TRANSFORMS = [
   // Editor wrapper classes (codex-editor)
   { pattern: /\.codex-editor__redactor(?![\w-])/g, replacement: '[data-blok-redactor]' },
+  { pattern: /\.codex-editor--narrow(?![\w-])/g, replacement: '[data-blok-narrow="true"]' },
   { pattern: /\.codex-editor--rtl(?![\w-])/g, replacement: '[data-blok-rtl="true"]' },
   { pattern: /\.codex-editor(?![\w-])/g, replacement: '[data-blok-editor]' },
   // Without dot prefix (for string literals, classList operations)
   { pattern: /(['"`])codex-editor__redactor(['"`])/g, replacement: '$1data-blok-redactor$2' },
+  { pattern: /(['"`])codex-editor--narrow(['"`])/g, replacement: '$1data-blok-narrow$2' },
   { pattern: /(['"`])codex-editor--rtl(['"`])/g, replacement: '$1data-blok-rtl$2' },
   { pattern: /(['"`])codex-editor(['"`])/g, replacement: '$1data-blok-editor$2' },
 

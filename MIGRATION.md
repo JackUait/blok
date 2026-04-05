@@ -77,6 +77,7 @@ Blok uses `data-blok-*` attributes instead of EditorJS's mixed naming convention
 | — | `data-blok-tool` (tool name on rendered element) |
 | — | `data-blok-dragging` (block being dragged) |
 | — | `data-blok-hidden` (hidden state) |
+| — | `data-blok-narrow` (narrow mode) |
 | — | `data-blok-rtl` (RTL mode) |
 | — | `data-blok-drag-handle` (drag handle element) |
 | — | `data-blok-overlay` (selection overlay) |
@@ -104,6 +105,7 @@ Blok replaces BEM class names with data attributes for selection.
 |----------|------|
 | `.codex-editor` | `[data-blok-editor]` |
 | `.codex-editor__redactor` | `[data-blok-redactor]` |
+| `.codex-editor--narrow` | `[data-blok-narrow="true"]` |
 | `.codex-editor--rtl` | `[data-blok-rtl="true"]` |
 
 ### Block Elements
@@ -413,6 +415,7 @@ Update your test selectors to use Blok's `data-blok-testid` attributes:
 | Toolbox opened | `[data-blok-toolbox-opened="true"]` |
 | Block dragging | `[data-blok-dragging="true"]` |
 | Element hidden | `[data-blok-hidden="true"]` |
+| Narrow mode | `[data-blok-narrow="true"]` |
 | RTL mode | `[data-blok-rtl="true"]` |
 
 ---

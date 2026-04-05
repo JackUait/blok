@@ -192,9 +192,12 @@
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
     "i18next": "25.8.18",
+    "katex": "^0.16.44",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
+    "mdast-util-math": "^3.0.0",
     "micromark-extension-gfm": "^3.0.0",
+    "micromark-extension-math": "^3.1.0",
     "nanoid": "5.1.6",
     "yjs": "13.6.30"
   },

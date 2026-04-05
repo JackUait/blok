@@ -7,6 +7,8 @@ import type {
   ToolboxConfig,
   ConversionConfig,
   ToolSanitizerConfig,
+  PasteConfig,
+  HTMLPasteEvent,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { PopoverItemType } from '../../components/utils/popover';
@@ -175,6 +177,22 @@ export class CalloutTool implements BlockTool {
 
   public validate(_data: CalloutData): boolean {
     return true;
+  }
+
+  public onPaste(event: HTMLPasteEvent): void {
+    const content = event.detail.data;
+    const style = content.getAttribute('style') ?? '';
+    const bgMatch = /background(?:-color)?\s*:\s*([^;]+)/i.exec(style);
+
+    if (bgMatch?.[1]) {
+      const presetName = mapToNearestPresetName(bgMatch[1].trim(), 'bg');
+
+      if (presetName) {
+        this._data.backgroundColor = presetName;
+      }
+    }
+
+    this.applyColors();
   }
 
   public renderSettings(): MenuConfig {
@@ -371,6 +389,12 @@ export class CalloutTool implements BlockTool {
         textColor: null,
         backgroundColor: null,
       }),
+    };
+  }
+
+  public static get pasteConfig(): PasteConfig {
+    return {
+      tags: [{ ASIDE: { style: true } }],
     };
   }
 

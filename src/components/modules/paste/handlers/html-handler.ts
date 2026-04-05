@@ -77,24 +77,28 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
       const isDetailsElement =
         node.nodeType === Node.ELEMENT_NODE &&
         (node as HTMLElement).tagName === 'DETAILS';
+      const isAsideElement =
+        node.nodeType === Node.ELEMENT_NODE &&
+        (node as HTMLElement).tagName === 'ASIDE';
 
-      if (!isDetailsElement) {
+      if (!isDetailsElement && !isAsideElement) {
         expandedNodes.push({ node });
         continue;
       }
 
-      const toggleExpandedIndex = expandedNodes.length;
+      const parentExpandedIndex = expandedNodes.length;
 
       expandedNodes.push({ node });
 
       // Only direct children are extracted (not deeply nested structures), which
       // is correct for Google Docs DETAILS format where children are flat siblings.
+      // For ASIDE, ALL children become child blocks (no SUMMARY to skip).
       const childElements = Array.from((node as HTMLElement).children).filter(
-        (child) => child.tagName !== 'SUMMARY'
+        (child) => isAsideElement || child.tagName !== 'SUMMARY'
       );
 
       for (const child of childElements) {
-        expandedNodes.push({ node: child, parentExpandedIndex: toggleExpandedIndex });
+        expandedNodes.push({ node: child, parentExpandedIndex });
       }
     }
 
@@ -247,12 +251,11 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
     const isSubstitutable = tags.includes(element.tagName);
 
-    // DETAILS is a container-type substitutable element. Always return it as an
-    // atomic block so the toggle tool's onPaste receives the full <details>
-    // element (including <summary> and children), rather than having them split
-    // into flat blocks when the paragraph tool's <p> registration triggers
-    // containsAnotherToolTags = true.
-    if (isSubstitutable && element.tagName === 'DETAILS') {
+    // DETAILS and ASIDE are container-type substitutable elements. Always return
+    // them as atomic blocks so the tool's onPaste receives the full element
+    // (including children), rather than having them split into flat blocks when
+    // the paragraph tool's <p> registration triggers containsAnotherToolTags = true.
+    if (isSubstitutable && (element.tagName === 'DETAILS' || element.tagName === 'ASIDE')) {
       return [...nodes, destNode, element];
     }
 

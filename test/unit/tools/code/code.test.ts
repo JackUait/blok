@@ -6,6 +6,10 @@ vi.mock('../../../../src/tools/code/katex-loader', () => ({
   renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
 }));
 
+vi.mock('../../../../src/tools/code/mermaid-loader', () => ({
+  renderMermaid: vi.fn().mockResolvedValue('<svg>mermaid diagram</svg>'),
+}));
+
 const createMockAPI = (): API =>
   ({
     styles: {
@@ -392,6 +396,61 @@ describe('CodeTool', () => {
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
       expect(el.querySelector('pre')!.hidden).toBe(true);
       // No tabs in read-only
+      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+    });
+
+    it('shows tab buttons for mermaid language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeTruthy();
+    });
+
+    it('shows preview container for mermaid language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
+    });
+
+    it('calls renderMermaid (not renderLatex) for mermaid language', async () => {
+      const { renderMermaid } = await import('../../../../src/tools/code/mermaid-loader');
+      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
+      tool.render();
+
+      // Wait for async renderPreview to complete
+      await vi.waitFor(() => {
+        expect(renderMermaid).toHaveBeenCalledWith('graph TD; A-->B;');
+      });
+      expect(renderLatex).not.toHaveBeenCalled();
+    });
+
+    it('calls renderLatex (not renderMermaid) for latex language', async () => {
+      const { renderMermaid } = await import('../../../../src/tools/code/mermaid-loader');
+      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      tool.render();
+
+      await vi.waitFor(() => {
+        expect(renderLatex).toHaveBeenCalledWith('E = mc^2');
+      });
+      expect(renderMermaid).not.toHaveBeenCalled();
+    });
+
+    it('read-only mode with mermaid shows preview only (no tabs)', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }, { readOnly: true }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
+      expect(el.querySelector('pre')!.hidden).toBe(true);
       expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
       expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
     });

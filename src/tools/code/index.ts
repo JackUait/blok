@@ -33,6 +33,7 @@ import {
   PREVIEW_AREA_STYLES,
 } from './constants';
 import { renderLatex } from './katex-loader';
+import { renderMermaid } from './mermaid-loader';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -159,7 +160,9 @@ export class CodeTool implements BlockTool {
     }
 
     const code = this._dom?.codeElement.textContent ?? this._data.code;
-    const rendered = await renderLatex(code);
+    const rendered = this._data.language === 'mermaid'
+      ? await renderMermaid(code)
+      : await renderLatex(code);
 
     this._previewContainer.innerHTML = rendered;
   }

@@ -34,6 +34,7 @@ export const LANGUAGES: LanguageEntry[] = [
   { id: 'swift', name: 'Swift' },
   { id: 'kotlin', name: 'Kotlin' },
   { id: 'latex', name: 'LaTeX' },
+  { id: 'mermaid', name: 'Mermaid' },
   { id: 'sql', name: 'SQL' },
   { id: 'html', name: 'HTML' },
   { id: 'css', name: 'CSS' },
@@ -60,7 +61,7 @@ export const CODE_AREA_STYLES = 'px-4 py-3 font-mono text-sm leading-relaxed out
 export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
 
 // Languages that support preview rendering
-export const PREVIEWABLE_LANGUAGES = new Set(['latex']);
+export const PREVIEWABLE_LANGUAGES = new Set(['latex', 'mermaid']);
 
 // i18n keys — preview tabs
 export const CODE_TAB_KEY = 'tools.code.codeTab';
@@ -70,4 +71,4 @@ export const PREVIEW_TAB_KEY = 'tools.code.previewTab';
 export const TAB_STYLES = 'px-2 py-0.5 rounded text-xs font-medium cursor-pointer border-0 transition-colors select-none';
 export const TAB_ACTIVE_STYLES = 'bg-blue-500 text-white';
 export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
-export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em]';
+export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em] flex justify-center';

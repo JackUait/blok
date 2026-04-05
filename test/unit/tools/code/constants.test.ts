@@ -75,11 +75,22 @@ describe('Code Block Constants', () => {
       expect(latex).toBeDefined();
       expect(latex!.name).toBe('LaTeX');
     });
+
+    it('includes mermaid in the language list', () => {
+      const mermaid = LANGUAGES.find(l => l.id === 'mermaid');
+
+      expect(mermaid).toBeDefined();
+      expect(mermaid!.name).toBe('Mermaid');
+    });
   });
 
   describe('PREVIEWABLE_LANGUAGES', () => {
     it('PREVIEWABLE_LANGUAGES contains latex', () => {
       expect(PREVIEWABLE_LANGUAGES.has('latex')).toBe(true);
+    });
+
+    it('PREVIEWABLE_LANGUAGES contains mermaid', () => {
+      expect(PREVIEWABLE_LANGUAGES.has('mermaid')).toBe(true);
     });
 
     it('PREVIEWABLE_LANGUAGES does not contain non-previewable languages', () => {

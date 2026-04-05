@@ -1,5 +1,10 @@
 import type { BlockToolData } from '../../../types';
 
+export type CellPlacement =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left' | 'middle-center' | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
 /**
  * Cell content always contains block IDs.
  * Every cell in the table is represented as an array of block references.
@@ -8,6 +13,8 @@ export type CellContent = {
   blocks: string[];
   color?: string;
   textColor?: string;
+  /** Content placement within the cell. Omit for default top-left. */
+  placement?: CellPlacement;
   text?: string;
   /** Number of columns this cell spans (default 1 when omitted). Only set on origin cells. */
   colspan?: number;

@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 
+vi.mock('../../../../src/tools/code/katex-loader', () => ({
+  renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
+}));
+
 const createMockAPI = (): API =>
   ({
     styles: {
@@ -300,6 +304,96 @@ describe('CodeTool', () => {
       const { CodeTool } = await import('../../../../src/tools/code');
 
       expect(typeof CodeTool.prototype.onPaste).toBe('function');
+    });
+  });
+
+  describe('preview tab', () => {
+    it('shows tab buttons for latex language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeTruthy();
+    });
+
+    it('does not show tab buttons for non-previewable language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'javascript' }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+    });
+
+    it('shows preview container for latex language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
+    });
+
+    it('defaults to preview tab active for latex', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      const preElement = el.querySelector('pre')!;
+      const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
+
+      // Preview is visible, code is hidden
+      expect(preElement.hidden).toBe(true);
+      expect((previewEl as HTMLElement).hidden).toBe(false);
+    });
+
+    it('clicking code tab shows code and hides preview', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+
+      codeTab.click();
+
+      const preElement = el.querySelector('pre')!;
+      const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
+
+      expect(preElement.hidden).toBe(false);
+      expect((previewEl as HTMLElement).hidden).toBe(true);
+    });
+
+    it('clicking preview tab shows preview and hides code', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+
+      // Switch to code first
+      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+      codeTab.click();
+
+      // Switch back to preview
+      const previewTab = el.querySelector('[data-blok-testid="code-preview-tab"]') as HTMLButtonElement;
+      previewTab.click();
+
+      const preElement = el.querySelector('pre')!;
+      const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
+
+      expect(preElement.hidden).toBe(true);
+      expect((previewEl as HTMLElement).hidden).toBe(false);
+    });
+
+    it('read-only mode with latex shows preview only (no tabs)', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }, { readOnly: true }));
+      const el = tool.render();
+
+      // Preview shown, code hidden
+      expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
+      expect(el.querySelector('pre')!.hidden).toBe(true);
+      // No tabs in read-only
+      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
     });
   });
 });

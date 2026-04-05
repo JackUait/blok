@@ -24,7 +24,15 @@ import {
   COPIED_KEY,
   LANGUAGE_KEY,
   COPIED_FEEDBACK_STYLES,
+  PREVIEWABLE_LANGUAGES,
+  CODE_TAB_KEY,
+  PREVIEW_TAB_KEY,
+  TAB_STYLES,
+  TAB_ACTIVE_STYLES,
+  TAB_INACTIVE_STYLES,
+  PREVIEW_AREA_STYLES,
 } from './constants';
+import { renderLatex } from './katex-loader';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -35,6 +43,8 @@ export class CodeTool implements BlockTool {
   private _dom: CodeDOMRefs | null = null;
   private _wrapping = true;
   private _picker: LanguagePicker | null = null;
+  private _previewActive = false;
+  private _previewContainer: HTMLElement | null = null;
 
   constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
@@ -46,15 +56,44 @@ export class CodeTool implements BlockTool {
   }
 
   public render(): HTMLElement {
+    const isPreviewable = PREVIEWABLE_LANGUAGES.has(this._data.language);
+
     const dom = buildCodeDOM({
       code: this._data.code,
       languageName: this.getLanguageName(this._data.language),
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
       wrapLabel: this.api.i18n.t(WRAP_LINES_KEY),
+      previewable: this.readOnly ? false : isPreviewable,
+      codeTabLabel: this.api.i18n.t(CODE_TAB_KEY),
+      previewTabLabel: this.api.i18n.t(PREVIEW_TAB_KEY),
     });
 
     this._dom = dom;
+
+    // Read-only + previewable: show preview only, hide code, no tabs
+    if (this.readOnly && isPreviewable) {
+      const previewEl = document.createElement('div');
+
+      previewEl.className = PREVIEW_AREA_STYLES;
+      previewEl.setAttribute('data-blok-testid', 'code-preview');
+      dom.wrapper.appendChild(previewEl);
+      dom.preElement.hidden = true;
+      this._previewContainer = previewEl;
+      void this.renderPreview();
+    }
+
+    // Edit mode + previewable: show tabs, default to preview
+    if (!this.readOnly && isPreviewable && dom.codeTab && dom.previewTab && dom.previewElement) {
+      this._previewActive = true;
+      dom.preElement.hidden = true;
+      dom.previewElement.hidden = false;
+      this._previewContainer = dom.previewElement;
+      void this.renderPreview();
+
+      dom.codeTab.addEventListener('click', () => this.showCode());
+      dom.previewTab.addEventListener('click', () => this.showPreview());
+    }
 
     if (!this.readOnly) {
       dom.codeElement.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -85,6 +124,44 @@ export class CodeTool implements BlockTool {
     }
 
     return dom.wrapper;
+  }
+
+  private showCode(): void {
+    if (!this._dom?.previewElement || !this._dom.codeTab || !this._dom.previewTab) {
+      return;
+    }
+
+    this._previewActive = false;
+    this._dom.preElement.hidden = false;
+    this._dom.previewElement.hidden = true;
+    this._dom.codeTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
+    this._dom.previewTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
+  }
+
+  private showPreview(): void {
+    if (!this._dom?.previewElement || !this._dom.codeTab || !this._dom.previewTab) {
+      return;
+    }
+
+    this._previewActive = true;
+    this._dom.preElement.hidden = true;
+    this._dom.previewElement.hidden = false;
+    this._dom.codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
+    this._dom.previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
+
+    // Re-render preview with current code content
+    void this.renderPreview();
+  }
+
+  private async renderPreview(): Promise<void> {
+    if (!this._previewContainer) {
+      return;
+    }
+
+    const code = this._dom?.codeElement.textContent ?? this._data.code;
+    const rendered = await renderLatex(code);
+
+    this._previewContainer.innerHTML = rendered;
   }
 
   public save(_blockContent: HTMLElement): CodeData {

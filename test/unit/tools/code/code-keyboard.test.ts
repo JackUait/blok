@@ -135,4 +135,41 @@ describe('handleCodeKeydown', () => {
 
     expect(codeElement.textContent).toBe('a\nb');
   });
+
+  it('Enter at end of line places caret on the new line', async () => {
+    const { handleCodeKeydown } = await import('../../../../src/tools/code/code-keyboard');
+    const codeElement = setupCodeElement('hello', 5);
+    const onExit = vi.fn();
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+
+    handleCodeKeydown(event, codeElement, onExit);
+
+    expect(codeElement.textContent).toBe('hello\n');
+
+    // Caret should be at offset 6 (after the newline)
+    const selection = window.getSelection()!;
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(codeElement);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    const caretOffset = preCaretRange.toString().length;
+
+    expect(caretOffset).toBe(6);
+  });
+
+  it('Enter at end places caret in a usable text node, not after a trailing newline node', async () => {
+    const { handleCodeKeydown } = await import('../../../../src/tools/code/code-keyboard');
+    const codeElement = setupCodeElement('hello', 5);
+    const onExit = vi.fn();
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+
+    handleCodeKeydown(event, codeElement, onExit);
+
+    // The caret's container should be a text node (not the element itself)
+    // so the browser can render the cursor on the new visual line
+    const selection = window.getSelection()!;
+    const range = selection.getRangeAt(0);
+
+    expect(range.startContainer.nodeType).toBe(Node.TEXT_NODE);
+  });
 });

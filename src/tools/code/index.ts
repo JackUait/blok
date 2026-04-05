@@ -118,6 +118,8 @@ export class CodeTool implements BlockTool {
 
         if (handled) {
           event.preventDefault();
+          this.updateGutter();
+          this.scheduleHighlight();
         }
       });
 

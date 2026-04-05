@@ -609,6 +609,41 @@ describe('CodeTool', () => {
       expect(gutter.children).toHaveLength(3);
     });
 
+    it('updates gutter immediately when Enter creates a new line', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      const el = tool.render();
+
+      // Element must be in the DOM for window.getSelection() to work
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      expect(gutter.children).toHaveLength(1);
+
+      // Place caret at end of the code element
+      const range = document.createRange();
+      const textNode = codeEl.firstChild!;
+      range.setStart(textNode, textNode.textContent!.length);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Dispatch keydown Enter — handled by handleCodeKeydown which inserts
+      // '\n' via Range API; preventDefault suppresses the native input event
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+      codeEl.dispatchEvent(enterEvent);
+
+      // Gutter must update immediately — not wait for the next input event
+      expect(gutter.children).toHaveLength(2);
+      expect(gutter.children[0].textContent).toBe('1');
+      expect(gutter.children[1].textContent).toBe('2');
+
+      el.remove();
+    });
+
     it('line numbers toggle button exists in header', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());

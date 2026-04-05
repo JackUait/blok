@@ -57,7 +57,7 @@ export const WRAPPER_STYLES = 'flex flex-col rounded-lg bg-bg-secondary overflow
 export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 border-b border-border-primary text-xs text-gray-text';
 export const LANGUAGE_BUTTON_STYLES = 'px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
-export const CODE_AREA_STYLES = 'px-4 py-3 font-mono text-sm leading-relaxed outline-hidden whitespace-pre-wrap overflow-x-auto min-h-[1.5em]';
+export const CODE_AREA_STYLES = 'block px-4 py-3 font-mono text-sm leading-relaxed outline-hidden whitespace-pre-wrap overflow-x-auto min-h-[1.5em]';
 export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
 
 // Languages that support preview rendering

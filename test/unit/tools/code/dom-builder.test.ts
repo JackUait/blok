@@ -448,6 +448,33 @@ describe('buildCodeDOM', () => {
       expect(gutterElement.children[0].textContent).toBe('1');
     });
 
+    it('gutter renders 7 lines for the Maxwell equations LaTeX demo', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+
+      // The LaTeX demo in index.html must have 7 logical lines so that
+      // each visual row gets its own line number (no confusing wrapping).
+      const latexCode = [
+        '\\begin{aligned}',
+        '  e^{i\\pi} + 1 &= 0 \\\\',
+        '  x &= \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} \\\\',
+        '  \\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\',
+        '  \\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0',
+        '    \\frac{\\partial \\mathbf{E}}{\\partial t}',
+        '\\end{aligned}',
+      ].join('\n');
+
+      const { gutterElement } = buildCodeDOM({
+        code: latexCode,
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      expect(gutterElement.children).toHaveLength(7);
+      expect(gutterElement.children[6].textContent).toBe('7');
+    });
+
     it('wrapper has header and code body as direct children (no longer header + pre)', async () => {
       const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
       const { wrapper, gutterElement } = buildCodeDOM({

@@ -10,6 +10,26 @@ vi.mock('../../../../src/tools/code/mermaid-loader', () => ({
   renderMermaid: vi.fn().mockResolvedValue('<svg>mermaid diagram</svg>'),
 }));
 
+const mockTokenizeCode = vi.fn().mockResolvedValue(null);
+const mockIsHighlightable = vi.fn().mockReturnValue(false);
+const mockDisposeHighlighter = vi.fn();
+
+vi.mock('../../../../src/tools/code/shiki-loader', () => ({
+  tokenizeCode: (...args: unknown[]) => mockTokenizeCode(...args),
+  isHighlightable: (...args: unknown[]) => mockIsHighlightable(...args),
+  disposeHighlighter: mockDisposeHighlighter,
+}));
+
+const mockApplyHighlights = vi.fn().mockReturnValue(() => {});
+const mockIsHighlightingSupported = vi.fn().mockReturnValue(false);
+const mockDisposeAllHighlights = vi.fn();
+
+vi.mock('../../../../src/tools/code/highlight-applier', () => ({
+  applyHighlights: (...args: unknown[]) => mockApplyHighlights(...args),
+  isHighlightingSupported: () => mockIsHighlightingSupported(),
+  disposeAllHighlights: mockDisposeAllHighlights,
+}));
+
 const createMockAPI = (): API =>
   ({
     styles: {
@@ -45,6 +65,10 @@ const createOptions = (
 describe('CodeTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTokenizeCode.mockResolvedValue(null);
+    mockIsHighlightable.mockReturnValue(false);
+    mockApplyHighlights.mockReturnValue(() => {});
+    mockIsHighlightingSupported.mockReturnValue(false);
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -453,6 +477,97 @@ describe('CodeTool', () => {
       expect(el.querySelector('pre')!.hidden).toBe(true);
       expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
       expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+    });
+  });
+
+  describe('syntax highlighting', () => {
+    it('highlights code after rendered() for highlightable language when supported', async () => {
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizeCode.mockResolvedValue({
+        light: { tokens: [[{ content: 'const', color: '#A626A4', offset: 0 }]], fg: '#383A42' },
+        dark: { tokens: [[{ content: 'const', color: '#4FC1FF', offset: 0 }]], fg: '#D4D4D4' },
+      });
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1', language: 'javascript' }));
+      tool.render();
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        expect(mockTokenizeCode).toHaveBeenCalledWith('const x = 1', 'javascript');
+      });
+      expect(mockApplyHighlights).toHaveBeenCalled();
+    });
+
+    it('does not highlight when CSS Highlight API is not supported', async () => {
+      mockIsHighlightingSupported.mockReturnValue(false);
+      mockIsHighlightable.mockReturnValue(true);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1', language: 'javascript' }));
+      tool.render();
+      tool.rendered();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockTokenizeCode).not.toHaveBeenCalled();
+    });
+
+    it('does not highlight unhighlightable languages', async () => {
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(false);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'plain text', language: 'plain text' }));
+      tool.render();
+      tool.rendered();
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockTokenizeCode).not.toHaveBeenCalled();
+    });
+
+    it('re-highlights when language changes', async () => {
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizeCode.mockResolvedValue({
+        light: { tokens: [[{ content: 'x', color: '#FF0000', offset: 0 }]], fg: '#000' },
+        dark: { tokens: [[{ content: 'x', color: '#00FF00', offset: 0 }]], fg: '#FFF' },
+      });
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'x = 1', language: 'javascript' }));
+      tool.render();
+
+      const settings = tool.renderSettings() as Array<{ children: { items: Array<{ onActivate: () => void; title: string }> } }>;
+      const pythonItem = settings[0].children.items.find((i) => i.title === 'Python');
+      pythonItem?.onActivate();
+
+      await vi.waitFor(() => {
+        expect(mockTokenizeCode).toHaveBeenCalledWith(expect.any(String), 'python');
+      });
+    });
+
+    it('disposes highlights in removed()', async () => {
+      const mockCleanup = vi.fn();
+      mockIsHighlightingSupported.mockReturnValue(true);
+      mockIsHighlightable.mockReturnValue(true);
+      mockTokenizeCode.mockResolvedValue({
+        light: { tokens: [[{ content: 'x', color: '#FF0000', offset: 0 }]], fg: '#000' },
+        dark: { tokens: [[{ content: 'x', color: '#00FF00', offset: 0 }]], fg: '#FFF' },
+      });
+      mockApplyHighlights.mockReturnValue(mockCleanup);
+
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'test', language: 'javascript' }));
+      tool.render();
+      tool.rendered();
+
+      await vi.waitFor(() => {
+        expect(mockApplyHighlights).toHaveBeenCalled();
+      });
+
+      tool.removed();
+      expect(mockCleanup).toHaveBeenCalled();
     });
   });
 });

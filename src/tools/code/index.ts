@@ -34,6 +34,8 @@ import {
 } from './constants';
 import { renderLatex } from './katex-loader';
 import { renderMermaid } from './mermaid-loader';
+import { tokenizeCode, isHighlightable } from './shiki-loader';
+import { applyHighlights, isHighlightingSupported } from './highlight-applier';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -46,6 +48,8 @@ export class CodeTool implements BlockTool {
   private _picker: LanguagePicker | null = null;
   private _previewActive = false;
   private _previewContainer: HTMLElement | null = null;
+  private _disposeHighlights: (() => void) | null = null;
+  private _highlightRafId: number | null = null;
 
   constructor({ data, api, readOnly }: BlockToolConstructorOptions<CodeData>) {
     this.api = api;
@@ -104,6 +108,8 @@ export class CodeTool implements BlockTool {
           event.preventDefault();
         }
       });
+
+      dom.codeElement.addEventListener('input', () => this.scheduleHighlight());
     }
 
     dom.copyButton.addEventListener('click', () => this.copyCode());
@@ -125,6 +131,10 @@ export class CodeTool implements BlockTool {
     }
 
     return dom.wrapper;
+  }
+
+  public rendered(): void {
+    void this.highlightCode();
   }
 
   private showCode(): void {
@@ -184,6 +194,8 @@ export class CodeTool implements BlockTool {
     if (this._dom) {
       this._dom.codeElement.textContent = this._data.code;
     }
+
+    void this.highlightCode();
   }
 
   public renderSettings(): MenuConfig {
@@ -223,6 +235,8 @@ export class CodeTool implements BlockTool {
     if (this._dom) {
       this._dom.codeElement.textContent = this._data.code;
     }
+
+    void this.highlightCode();
   }
 
   private setLanguage(id: string): void {
@@ -233,6 +247,7 @@ export class CodeTool implements BlockTool {
     }
 
     this._picker?.setActiveLanguage(id);
+    void this.highlightCode();
   }
 
   private getLanguageName(id: string): string {
@@ -274,6 +289,43 @@ export class CodeTool implements BlockTool {
     }
   }
 
+  private scheduleHighlight(): void {
+    if (this._highlightRafId !== null) {
+      return;
+    }
+
+    this._highlightRafId = requestAnimationFrame(() => {
+      this._highlightRafId = null;
+      void this.highlightCode();
+    });
+  }
+
+  private async highlightCode(): Promise<void> {
+    if (!isHighlightingSupported() || !isHighlightable(this._data.language)) {
+      this._disposeHighlights?.();
+      this._disposeHighlights = null;
+      return;
+    }
+
+    const code = this._dom?.codeElement.textContent ?? '';
+
+    if (!code.trim()) {
+      this._disposeHighlights?.();
+      this._disposeHighlights = null;
+      return;
+    }
+
+    const tokens = await tokenizeCode(code, this._data.language);
+
+    if (!tokens || !this._dom) {
+      return;
+    }
+
+    // Clean up previous highlights before applying new ones
+    this._disposeHighlights?.();
+    this._disposeHighlights = applyHighlights(this._dom.codeElement, tokens);
+  }
+
   private exitBlock(): void {
     const currentIndex = this.api.blocks.getCurrentBlockIndex();
 
@@ -281,6 +333,14 @@ export class CodeTool implements BlockTool {
   }
 
   public removed(): void {
+    this._disposeHighlights?.();
+    this._disposeHighlights = null;
+
+    if (this._highlightRafId !== null) {
+      cancelAnimationFrame(this._highlightRafId);
+      this._highlightRafId = null;
+    }
+
     if (this._picker) {
       this._picker.getElement().remove();
       this._picker = null;

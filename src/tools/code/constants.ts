@@ -57,3 +57,7 @@ export const LANGUAGE_BUTTON_STYLES = 'px-1.5 py-0.5 rounded cursor-pointer bg-t
 export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 export const CODE_AREA_STYLES = 'px-4 py-3 font-mono text-sm leading-relaxed outline-hidden whitespace-pre-wrap overflow-x-auto min-h-[1.5em]';
 export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
+export const TAB_STYLES = 'px-2 py-0.5 rounded text-xs font-medium cursor-pointer bg-transparent border-0 transition-colors';
+export const TAB_ACTIVE_STYLES = 'text-text-primary bg-item-hover-bg';
+export const TAB_INACTIVE_STYLES = 'text-gray-text can-hover:hover:bg-item-hover-bg';
+export const PREVIEW_AREA_STYLES = 'px-4 py-3';

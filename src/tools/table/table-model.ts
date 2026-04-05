@@ -1,4 +1,4 @@
-import type { CellContent, LegacyCellContent, TableData } from './types';
+import type { CellContent, CellPlacement, LegacyCellContent, TableData } from './types';
 import { isCellWithBlocks } from './types';
 
 export interface SelectionRect {
@@ -130,6 +130,10 @@ export class TableModel {
 
           if (c.textColor !== undefined) {
             cell.textColor = c.textColor;
+          }
+
+          if (c.placement !== undefined) {
+            cell.placement = c.placement;
           }
 
           if (c.colspan !== undefined && c.colspan > 1) {
@@ -291,6 +295,25 @@ export class TableModel {
     }
 
     return this.contentGrid[row][col].textColor;
+  }
+
+  setCellPlacement(row: number, col: number, placement: CellPlacement | undefined): void {
+    if (!this.isInBounds(row, col)) {
+      return;
+    }
+    if (placement === undefined) {
+      delete this.contentGrid[row][col].placement;
+    } else {
+      this.contentGrid[row][col].placement = placement;
+    }
+  }
+
+  getCellPlacement(row: number, col: number): CellPlacement | undefined {
+    if (!this.isInBounds(row, col)) {
+      return undefined;
+    }
+
+    return this.contentGrid[row][col].placement;
   }
 
   // ─── Row operations ─────────────────────────────────────────────
@@ -1409,6 +1432,10 @@ export class TableModel {
 
       if (cell.textColor !== undefined && isValidCssColor(cell.textColor)) {
         normalized.textColor = cell.textColor;
+      }
+
+      if (cell.placement !== undefined) {
+        normalized.placement = cell.placement;
       }
 
       if (cell.colspan !== undefined && cell.colspan > 1) {

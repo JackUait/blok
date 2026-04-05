@@ -1,5 +1,9 @@
 import type { BlockToolData } from '../../../types';
 
+/**
+ * Content placement within a cell.
+ * Describes vertical (top/middle/bottom) and horizontal (left/center/right) alignment.
+ */
 export type CellPlacement =
   | 'top-left' | 'top-center' | 'top-right'
   | 'middle-left' | 'middle-center' | 'middle-right'
@@ -13,9 +17,9 @@ export type CellContent = {
   blocks: string[];
   color?: string;
   textColor?: string;
-  /** Content placement within the cell. Omit for default top-left. */
-  placement?: CellPlacement;
   text?: string;
+  /** Content placement within the cell (vertical + horizontal alignment). */
+  placement?: CellPlacement;
   /** Number of columns this cell spans (default 1 when omitted). Only set on origin cells. */
   colspan?: number;
   /** Number of rows this cell spans (default 1 when omitted). Only set on origin cells. */
@@ -91,5 +95,5 @@ export interface ClipboardBlockData {
 export interface TableCellsClipboard {
   rows: number;
   cols: number;
-  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string }>>;
+  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string; placement?: CellPlacement }>>;
 }

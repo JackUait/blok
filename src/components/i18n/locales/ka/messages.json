@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "გასუფთავება",
   "tools.table.copySelection": "კოპირება",
   "tools.table.cellColor": "ფერი",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "სათაურის სვეტი",
   "tools.table.insertColumnLeft": "სვეტის დამატება მარცხნივ",
   "tools.table.insertColumnRight": "სვეტის დამატება მარჯვნივ",

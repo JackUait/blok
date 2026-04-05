@@ -1,10 +1,10 @@
 import type { I18n } from '../../../types/api';
-import { IconCopy, IconCross, IconMarker } from '../../components/icons';
+import { IconCopy, IconCross, IconMarker, IconMergeCells, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
-import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
 import { createCellColorPicker } from './table-cell-color-picker';
 import type { CellColorMode } from './table-cell-color-picker';
 import { createGripDotsSvg } from './table-grip-visuals';
@@ -74,6 +74,14 @@ interface CellSelectionOptions {
   onColorChange?: (cells: HTMLElement[], color: string | null, mode: CellColorMode) => void;
   onPointerDragActiveChange?: (active: boolean) => void;
   isPopoverOpen?: () => boolean;
+  /** Called to check if the current selection range can be merged. */
+  canMergeCells?: (range: SelectionRange) => boolean;
+  /** Called when user requests to merge the selected cells. */
+  onMergeCells?: (range: SelectionRange) => void;
+  /** Called to check if the cell at (row, col) is a merge origin that can be split. */
+  isMergedCell?: (row: number, col: number) => boolean;
+  /** Called when user requests to split a merged cell. */
+  onSplitCell?: (row: number, col: number) => void;
   i18n: I18n;
 }
 
@@ -100,6 +108,10 @@ export class TableCellSelection {
   private onSelectionRangeChange: ((range: SelectionRange) => void) | undefined;
   private onPointerDragActiveChange: ((active: boolean) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
+  private canMergeCells: ((range: SelectionRange) => boolean) | undefined;
+  private onMergeCells: ((range: SelectionRange) => void) | undefined;
+  private isMergedCell: ((row: number, col: number) => boolean) | undefined;
+  private onSplitCell: ((row: number, col: number) => void) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
@@ -124,6 +136,10 @@ export class TableCellSelection {
     this.onSelectionRangeChange = options.onSelectionRangeChange;
     this.onPointerDragActiveChange = options.onPointerDragActiveChange;
     this.isPopoverOpen = options.isPopoverOpen;
+    this.canMergeCells = options.canMergeCells;
+    this.onMergeCells = options.onMergeCells;
+    this.isMergedCell = options.isMergedCell;
+    this.onSplitCell = options.onSplitCell;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
@@ -169,8 +185,7 @@ export class TableCellSelection {
    * Programmatically select an entire row.
    */
   public selectRow(rowIndex: number): void {
-    const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
-    const colCount = rows[0]?.querySelectorAll(`[${CELL_ATTR}]`).length ?? 0;
+    const colCount = this.getLogicalColumnCount();
 
     if (colCount === 0) {
       return;
@@ -544,9 +559,11 @@ export class TableCellSelection {
       cell.setAttribute(SELECTED_ATTR, '');
     });
 
-    // Calculate overlay position from bounding rects of corner cells
-    const firstCell = rows[minRow]?.querySelectorAll(`[${CELL_ATTR}]`)[minCol] as HTMLElement | undefined;
-    const lastCell = rows[maxRow]?.querySelectorAll(`[${CELL_ATTR}]`)[maxCol] as HTMLElement | undefined;
+    // Calculate overlay position from bounding rects of corner cells.
+    // Try coordinate-based lookup first (works with merged cells),
+    // then fall back to index-based lookup for backwards compatibility.
+    const firstCell = this.findCellByCoordOrIndex(rows, minRow, minCol);
+    const lastCell = this.findCellByCoordOrIndex(rows, maxRow, maxCol);
 
     if (!firstCell || !lastCell) {
       return;
@@ -614,8 +631,8 @@ export class TableCellSelection {
     }
 
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
-    const firstCell = rows[range.minRow]?.querySelectorAll(`[${CELL_ATTR}]`)[range.minCol] as HTMLElement | undefined;
-    const lastCell = rows[range.maxRow]?.querySelectorAll(`[${CELL_ATTR}]`)[range.maxCol] as HTMLElement | undefined;
+    const firstCell = this.findCellByCoordOrIndex(rows, range.minRow, range.minCol);
+    const lastCell = this.findCellByCoordOrIndex(rows, range.maxRow, range.maxCol);
 
     if (!firstCell || !lastCell) {
       return;
@@ -744,8 +761,46 @@ export class TableCellSelection {
       });
     }
 
+    const mergeItems: PopoverItemParams[] = [];
+
+    if (this.lastPaintedRange && this.onMergeCells) {
+      const range = this.lastPaintedRange;
+      const isMultiCell = range.minRow !== range.maxRow || range.minCol !== range.maxCol;
+      const canMerge = isMultiCell && this.canMergeCells?.(range);
+
+      if (canMerge) {
+        mergeItems.push({
+          icon: IconMergeCells,
+          title: this.i18n.t('tools.table.mergeCells'),
+          closeOnActivate: true,
+          onActivate: (): void => {
+            this.onMergeCells?.(range);
+            this.clearSelection();
+          },
+        });
+      }
+    }
+
+    if (this.lastPaintedRange && this.onSplitCell) {
+      const range = this.lastPaintedRange;
+      const isSingleCell = range.minRow === range.maxRow && range.minCol === range.maxCol;
+
+      if (isSingleCell && this.isMergedCell?.(range.minRow, range.minCol)) {
+        mergeItems.push({
+          icon: IconSplitCell,
+          title: this.i18n.t('tools.table.splitCell'),
+          closeOnActivate: true,
+          onActivate: (): void => {
+            this.onSplitCell?.(range.minRow, range.minCol);
+            this.clearSelection();
+          },
+        });
+      }
+    }
+
     const items: PopoverItemParams[] = [
       ...colorPickerItems,
+      ...mergeItems,
       {
         icon: IconCopy,
         title: this.i18n.t('tools.table.copySelection'),
@@ -868,7 +923,7 @@ export class TableCellSelection {
     const gridRect = this.grid.getBoundingClientRect();
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
     const rowCount = rows.length;
-    const colCount = rows[0]?.querySelectorAll(`[${CELL_ATTR}]`).length ?? 0;
+    const colCount = this.getLogicalColumnCount();
 
     if (rowCount === 0 || colCount === 0) {
       return;
@@ -892,15 +947,77 @@ export class TableCellSelection {
     minCol: number,
     maxCol: number,
   ): HTMLElement[] {
-    return Array.from(rows)
-      .slice(minRow, maxRow + 1)
-      .flatMap(row => {
-        const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+    const hasCoordAttrs = this.grid.querySelector(`[${CELL_ROW_ATTR}]`) !== null;
 
-        return Array.from(cells)
-          .slice(minCol, maxCol + 1)
-          .filter((cell): cell is HTMLElement => cell instanceof HTMLElement);
-      });
+    if (!hasCoordAttrs) {
+      // Fallback: index-based lookup for grids without coordinate attributes
+      return Array.from(rows)
+        .slice(minRow, maxRow + 1)
+        .flatMap(row => {
+          const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+
+          return Array.from(cells)
+            .slice(minCol, maxCol + 1)
+            .filter((cell): cell is HTMLElement => cell instanceof HTMLElement);
+        });
+    }
+
+    const allCells = this.grid.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`);
+
+    return Array.from(allCells).filter(cell => {
+      const rowAttr = cell.getAttribute(CELL_ROW_ATTR);
+      const colAttr = cell.getAttribute(CELL_COL_ATTR);
+
+      if (rowAttr === null || colAttr === null) {
+        return false;
+      }
+
+      const cellRow = Number(rowAttr);
+      const cellCol = Number(colAttr);
+      const td = cell as HTMLTableCellElement;
+      const cellMaxRow = cellRow + (td.rowSpan || 1) - 1;
+      const cellMaxCol = cellCol + (td.colSpan || 1) - 1;
+
+      // Include if the cell's area overlaps the selection range
+      return cellRow <= maxRow && cellMaxRow >= minRow
+        && cellCol <= maxCol && cellMaxCol >= minCol;
+    });
+  }
+
+  /**
+   * Find a cell by coordinate attributes first, falling back to index-based
+   * lookup when coordinate attributes are not present.
+   */
+  private findCellByCoordOrIndex(
+    rows: NodeListOf<Element>,
+    row: number,
+    col: number,
+  ): HTMLElement | undefined {
+    const coordCell = this.grid.querySelector<HTMLElement>(
+      `[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`
+    );
+
+    if (coordCell) {
+      return coordCell;
+    }
+
+    return rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
+  }
+
+  /**
+   * Get the logical column count from the colgroup, falling back to the
+   * physical cell count in the first row when no colgroup exists.
+   */
+  private getLogicalColumnCount(): number {
+    const colgroupCount = this.grid.querySelector('colgroup')?.querySelectorAll('col').length;
+
+    if (colgroupCount !== undefined && colgroupCount > 0) {
+      return colgroupCount;
+    }
+
+    const firstRow = this.grid.querySelector(`[${ROW_ATTR}]`);
+
+    return firstRow?.querySelectorAll(`[${CELL_ATTR}]`).length ?? 0;
   }
 
   /**

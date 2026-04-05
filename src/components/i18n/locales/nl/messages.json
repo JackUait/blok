@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Wissen",
   "tools.table.copySelection": "Kopiëren",
   "tools.table.cellColor": "Kleur",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Kolomkop",
   "tools.table.insertColumnLeft": "Kolom links invoegen",
   "tools.table.insertColumnRight": "Kolom rechts invoegen",

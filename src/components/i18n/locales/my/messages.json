@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "ရှင်းလင်းရန်",
   "tools.table.copySelection": "ကူးယူပါ",
   "tools.table.cellColor": "အရောင်",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ခေါင်းစဉ်ကော်လံ",
   "tools.table.insertColumnLeft": "ဘယ်ဘက်တွင် ကော်လံထည့်ရန်",
   "tools.table.insertColumnRight": "ညာဘက်တွင် ကော်လံထည့်ရန်",

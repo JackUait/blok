@@ -83,6 +83,12 @@ export class TableController {
       case 'set-col-widths':
         return this.handleSetColWidths(command.widths ? [...command.widths] : undefined);
 
+      case 'merge-cells':
+        return this.handleMergeCells(command.minRow, command.maxRow, command.minCol, command.maxCol);
+
+      case 'split-cell':
+        return this.handleSplitCell(command.row, command.col);
+
       case 'replace-all':
         return this.handleReplaceAll(command.data);
     }
@@ -220,6 +226,29 @@ export class TableController {
     return {
       type: 'col-widths-changed',
       widths,
+    };
+  }
+
+  private handleMergeCells(minRow: number, maxRow: number, minCol: number, maxCol: number): TableDomainEvent {
+    const result = this.model.mergeCells({ minRow, maxRow, minCol, maxCol });
+
+    return {
+      type: 'cells-merged',
+      minRow,
+      maxRow,
+      minCol,
+      maxCol,
+      blocksToRelocate: result.blocksToRelocate,
+    };
+  }
+
+  private handleSplitCell(row: number, col: number): TableDomainEvent {
+    this.model.splitCell(row, col);
+
+    return {
+      type: 'cell-split',
+      row,
+      col,
     };
   }
 

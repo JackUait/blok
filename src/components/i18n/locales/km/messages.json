@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "លុបចោល",
   "tools.table.copySelection": "ចម្លង",
   "tools.table.cellColor": "ពណ៌",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ជួរឈរចំណងជើង",
   "tools.table.insertColumnLeft": "បញ្ចូលជួរឈរខាងឆ្វេង",
   "tools.table.insertColumnRight": "បញ្ចូលជួរឈរខាងស្តាំ",

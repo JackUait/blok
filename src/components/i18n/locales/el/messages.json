@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Καθαρισμός",
   "tools.table.copySelection": "Αντιγραφή",
   "tools.table.cellColor": "Χρώμα",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Στήλη επικεφαλίδας",
   "tools.table.insertColumnLeft": "Εισαγωγή στήλης αριστερά",
   "tools.table.insertColumnRight": "Εισαγωγή στήλης δεξιά",

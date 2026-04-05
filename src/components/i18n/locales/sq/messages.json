@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Pastro",
   "tools.table.copySelection": "Kopjo",
   "tools.table.cellColor": "Ngjyra",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Kolonë titull",
   "tools.table.insertColumnLeft": "Shto kolonë majtas",
   "tools.table.insertColumnRight": "Shto kolonë djathtas",

@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "پاک کردن",
   "tools.table.copySelection": "کپی",
   "tools.table.cellColor": "رنگ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ستون سرآیند",
   "tools.table.insertColumnLeft": "درج ستون چپ",
   "tools.table.insertColumnRight": "درج ستون راست",

@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Očisti",
   "tools.table.copySelection": "Kopiraj",
   "tools.table.cellColor": "Boja",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Stupac zaglavlja",
   "tools.table.insertColumnLeft": "Umetni stupac lijevo",
   "tools.table.insertColumnRight": "Umetni stupac desno",

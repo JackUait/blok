@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "تازىلاش",
   "tools.table.copySelection": "كۆچۈر",
   "tools.table.cellColor": "رەڭ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ماۋزۇ ئىستونى",
   "tools.table.insertColumnLeft": "سولغا ئىستون قىستۇرۇش",
   "tools.table.insertColumnRight": "ئوڭغا ئىستون قىستۇرۇش",

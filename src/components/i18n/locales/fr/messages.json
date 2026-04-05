@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Effacer",
   "tools.table.copySelection": "Copier",
   "tools.table.cellColor": "Couleur",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Colonne d'en-tête",
   "tools.table.insertColumnLeft": "Insérer colonne à gauche",
   "tools.table.insertColumnRight": "Insérer colonne à droite",

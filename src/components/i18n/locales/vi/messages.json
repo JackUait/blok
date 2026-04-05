@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Xóa",
   "tools.table.copySelection": "Sao chép",
   "tools.table.cellColor": "Màu",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Cột tiêu đề",
   "tools.table.insertColumnLeft": "Chèn cột bên trái",
   "tools.table.insertColumnRight": "Chèn cột bên phải",

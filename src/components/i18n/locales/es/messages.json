@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Borrar",
   "tools.table.copySelection": "Copiar",
   "tools.table.cellColor": "Color",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Columna de encabezado",
   "tools.table.insertColumnLeft": "Insertar columna a la izquierda",
   "tools.table.insertColumnRight": "Insertar columna a la derecha",

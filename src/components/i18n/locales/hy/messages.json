@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Մաքրել",
   "tools.table.copySelection": "Պատճենել",
   "tools.table.cellColor": "Գույն",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Վերնագրի սյունակ",
   "tools.table.insertColumnLeft": "Ավելացնել սյունակ ձախից",
   "tools.table.insertColumnRight": "Ավելացնել սյունակ աջից",

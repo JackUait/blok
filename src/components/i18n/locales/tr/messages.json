@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Temizle",
   "tools.table.copySelection": "Kopyala",
   "tools.table.cellColor": "Renk",
+  "tools.table.mergeCells": "Hücreleri birleştir",
+  "tools.table.splitCell": "Hücreyi böl",
   "tools.table.headerColumn": "Başlık sütunu",
   "tools.table.insertColumnLeft": "Sola sütun ekle",
   "tools.table.insertColumnRight": "Sağa sütun ekle",

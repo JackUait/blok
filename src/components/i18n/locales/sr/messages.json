@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Очисти",
   "tools.table.copySelection": "Копирај",
   "tools.table.cellColor": "Боја",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Колона заглавља",
   "tools.table.insertColumnLeft": "Уметни колону лево",
   "tools.table.insertColumnRight": "Уметни колону десно",

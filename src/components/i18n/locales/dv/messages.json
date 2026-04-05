@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "ސާފުކުރޭ",
   "tools.table.copySelection": "ކޮޕީކުރޭ",
   "tools.table.cellColor": "ކުލަ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ހެޑަރ ކޮލަމް",
   "tools.table.insertColumnLeft": "ކަނާތުން ކޮލަމް އިތުރުކުރޭ",
   "tools.table.insertColumnRight": "ވާތުން ކޮލަމް އިތުރުކުރޭ",

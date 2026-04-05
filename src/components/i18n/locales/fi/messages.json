@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Tyhjennä",
   "tools.table.copySelection": "Kopioi",
   "tools.table.cellColor": "Väri",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Otsikkosarake",
   "tools.table.insertColumnLeft": "Lisää sarake vasemmalle",
   "tools.table.insertColumnRight": "Lisää sarake oikealle",

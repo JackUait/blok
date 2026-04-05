@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Очистити",
   "tools.table.copySelection": "Копіювати",
   "tools.table.cellColor": "Колір",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Колонка-заголовок",
   "tools.table.insertColumnLeft": "Вставити колонку зліва",
   "tools.table.insertColumnRight": "Вставити колонку справа",

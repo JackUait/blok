@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "クリア",
   "tools.table.copySelection": "コピー",
   "tools.table.cellColor": "カラー",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "見出し列",
   "tools.table.insertColumnLeft": "左に列を挿入",
   "tools.table.insertColumnRight": "右に列を挿入",

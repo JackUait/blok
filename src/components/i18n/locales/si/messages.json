@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "හිස් කරන්න",
   "tools.table.copySelection": "පිටපත් කරන්න",
   "tools.table.cellColor": "වර්ණය",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ශීර්ෂ තීරුව",
   "tools.table.insertColumnLeft": "වමට තීරුව එක් කරන්න",
   "tools.table.insertColumnRight": "දකුණට තීරුව එක් කරන්න",

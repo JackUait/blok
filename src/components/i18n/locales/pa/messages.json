@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "ਸਾਫ਼ ਕਰੋ",
   "tools.table.copySelection": "ਕਾਪੀ",
   "tools.table.cellColor": "ਰੰਗ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ਹੈਡਰ ਕਾਲਮ",
   "tools.table.insertColumnLeft": "ਖੱਬੇ ਕਾਲਮ ਜੋੜੋ",
   "tools.table.insertColumnRight": "ਸੱਜੇ ਕਾਲਮ ਜੋੜੋ",

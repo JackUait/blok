@@ -2,7 +2,7 @@ import type { API } from '../../../types';
 
 import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR } from './table-core';
+import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableGrid } from './table-core';
 import type { LegacyCellContent, TableData } from './types';
 import { isCellWithBlocks } from './types';
@@ -10,37 +10,37 @@ import { isCellWithBlocks } from './types';
 // ─── Pure DOM helpers ───────────────────────────────────────────────
 
 export const readPixelWidths = (gridEl: HTMLElement): number[] => {
-  const firstRow = gridEl.querySelector(`[${ROW_ATTR}]`);
+  const colgroup = gridEl.querySelector('colgroup');
 
-  if (!firstRow) {
+  if (!colgroup) {
     return [];
   }
 
-  const cells = firstRow.querySelectorAll(`[${CELL_ATTR}]`);
+  const cols = colgroup.querySelectorAll('col');
 
-  return Array.from(cells).map(cell =>
-    (cell as HTMLElement).getBoundingClientRect().width
+  return Array.from(cols).map(col =>
+    parseFloat((col as HTMLElement).style.width) || 0
   );
 };
 
 export const applyPixelWidths = (gridEl: HTMLElement, widths: number[]): void => {
   const totalWidth = widths.reduce((sum, w) => sum + w, 0);
-  const gridStyle: HTMLElement = gridEl;
+  const grid: HTMLElement = gridEl;
 
-  gridStyle.style.width = `${totalWidth + BORDER_WIDTH}px`;
+  grid.style.width = `${totalWidth + BORDER_WIDTH}px`;
 
-  const rowEls = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+  const colgroup = gridEl.querySelector('colgroup');
 
-  rowEls.forEach(row => {
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+  if (!colgroup) {
+    return;
+  }
 
-    cells.forEach((node, i) => {
-      if (i < widths.length) {
-        const cellEl = node as HTMLElement;
+  const cols = Array.from(colgroup.querySelectorAll('col')) as HTMLElement[];
 
-        cellEl.style.width = `${widths[i]}px`;
-      }
-    });
+  widths.forEach((w, i) => {
+    if (i < cols.length) {
+      cols[i].style.width = `${w}px`;
+    }
   });
 };
 
@@ -92,8 +92,7 @@ export const isColumnEmpty = (gridEl: HTMLElement, colIndex: number): boolean =>
   const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
 
   return Array.from(rows).every(row => {
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-    const cell = cells[colIndex] as HTMLElement | undefined;
+    const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
 
     return !cell || isCellEmpty(cell);
   });
@@ -102,16 +101,15 @@ export const isColumnEmpty = (gridEl: HTMLElement, colIndex: number): boolean =>
 // ─── Percent-mode width redistribution ──────────────────────────────
 
 export const redistributePercentWidths = (gridEl: HTMLElement): void => {
-  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
-  const firstRow = rows[0];
+  const colgroup = gridEl.querySelector('colgroup');
 
-  if (!firstRow) {
+  if (!colgroup) {
     return;
   }
 
-  const firstRowCells = firstRow.querySelectorAll(`[${CELL_ATTR}]`);
-  const currentTotal = Array.from(firstRowCells).reduce(
-    (sum, cell) => sum + (parseFloat((cell as HTMLElement).style.width) || 0),
+  const cols = colgroup.querySelectorAll('col');
+  const currentTotal = Array.from(cols).reduce(
+    (sum, col) => sum + (parseFloat((col as HTMLElement).style.width) || 0),
     0,
   );
 
@@ -121,15 +119,11 @@ export const redistributePercentWidths = (gridEl: HTMLElement): void => {
 
   const scale = 100 / currentTotal;
 
-  rows.forEach(row => {
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+  cols.forEach(col => {
+    const el = col as HTMLElement;
+    const oldWidth = parseFloat(el.style.width) || 0;
 
-    cells.forEach(cell => {
-      const el = cell as HTMLElement;
-      const oldWidth = parseFloat(el.style.width) || 0;
-
-      el.style.width = `${Math.round(oldWidth * scale * 100) / 100}%`;
-    });
+    el.style.width = `${Math.round(oldWidth * scale * 100) / 100}%`;
   });
 };
 
@@ -221,10 +215,10 @@ export const getBlockIdsInColumn = (element: HTMLElement | null, cellBlocks: Tab
   const cellsInColumn: Element[] = [];
 
   rows.forEach(row => {
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
+    const cell = row.querySelector(`[${CELL_COL_ATTR}="${colIndex}"]`);
 
-    if (colIndex < cells.length) {
-      cellsInColumn.push(cells[colIndex]);
+    if (cell) {
+      cellsInColumn.push(cell);
     }
   });
 
@@ -258,10 +252,8 @@ export const mountCellBlocksReadOnly = (
       return;
     }
 
-    const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
-
     rowData.forEach((cellContent, colIndex) => {
-      const cell = cells[colIndex] as HTMLElement | undefined;
+      const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
 
       if (!cell) {
         return;
@@ -408,14 +400,12 @@ export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[
       return;
     }
 
-    const cells = rows[r].querySelectorAll(`[${CELL_ATTR}]`);
-
     rowContent.forEach((cellContent, c) => {
-      if (c >= cells.length) {
+      const el = rows[r].querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${c}"]`);
+
+      if (!el) {
         return;
       }
-
-      const el = cells[c] as HTMLElement;
 
       if (isCellWithBlocks(cellContent) && cellContent.color) {
         el.style.backgroundColor = cellContent.color;

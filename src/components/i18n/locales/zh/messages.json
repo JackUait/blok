@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "清除",
   "tools.table.copySelection": "复制",
   "tools.table.cellColor": "颜色",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "标题列",
   "tools.table.insertColumnLeft": "在左侧插入列",
   "tools.table.insertColumnRight": "在右侧插入列",

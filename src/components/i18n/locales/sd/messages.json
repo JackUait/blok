@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "صاف ڪريو",
   "tools.table.copySelection": "ڪاپي",
   "tools.table.cellColor": "رنگ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "هيڊر ڪالم",
   "tools.table.insertColumnLeft": "کاٻي ڪالم شامل ڪريو",
   "tools.table.insertColumnRight": "ساڄي ڪالم شامل ڪريو",

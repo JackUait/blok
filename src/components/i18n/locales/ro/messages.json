@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Șterge",
   "tools.table.copySelection": "Copiază",
   "tools.table.cellColor": "Culoare",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Coloană antet",
   "tools.table.insertColumnLeft": "Inserează coloană la stânga",
   "tools.table.insertColumnRight": "Inserează coloană la dreapta",

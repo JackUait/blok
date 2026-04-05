@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Futa",
   "tools.table.copySelection": "Nakili",
   "tools.table.cellColor": "Rangi",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Safu wima ya kichwa",
   "tools.table.insertColumnLeft": "Ingiza safu wima kushoto",
   "tools.table.insertColumnRight": "Ingiza safu wima kulia",

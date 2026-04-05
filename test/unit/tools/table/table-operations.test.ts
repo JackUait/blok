@@ -9,7 +9,7 @@ describe('table-operations', () => {
   describe('mountCellBlocksReadOnly', () => {
     it('should render legacy string content as plain text without creating blocks', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Create DOM structure: grid > row > cell > container
@@ -19,6 +19,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -51,7 +52,7 @@ describe('table-operations', () => {
 
     it('should handle empty legacy string content', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -60,6 +61,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -90,7 +92,7 @@ describe('table-operations', () => {
 
     it('should handle mixed legacy strings and block-based cells', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -100,6 +102,7 @@ describe('table-operations', () => {
       // Cell 0: legacy string
       const cell0 = document.createElement('div');
       cell0.setAttribute(CELL_ATTR, '');
+      cell0.setAttribute(CELL_COL_ATTR, '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       cell0.appendChild(container0);
@@ -107,6 +110,7 @@ describe('table-operations', () => {
       // Cell 1: block-based
       const cell1 = document.createElement('div');
       cell1.setAttribute(CELL_ATTR, '');
+      cell1.setAttribute(CELL_COL_ATTR, '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       cell1.appendChild(container1);
@@ -168,7 +172,7 @@ describe('table-operations', () => {
 
     it('should handle block-based cells without modification', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -177,6 +181,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -218,7 +223,7 @@ describe('table-operations', () => {
 
     it('should strip placeholder attributes from mounted blocks', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -227,6 +232,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -269,7 +275,7 @@ describe('table-operations', () => {
 
     it('should be idempotent when called multiple times with legacy string content', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Create DOM structure: grid > row > cell > container
@@ -279,6 +285,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -312,7 +319,7 @@ describe('table-operations', () => {
 
     it('should render legacy string HTML markup as real HTML, not as literal text', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -321,6 +328,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -354,7 +362,7 @@ describe('table-operations', () => {
 
     it('should not call setBlockParent or insert for legacy string cells in read-only mode', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
-      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       const gridElement = document.createElement('div');
@@ -363,6 +371,7 @@ describe('table-operations', () => {
 
       const cell = document.createElement('div');
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
 
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');

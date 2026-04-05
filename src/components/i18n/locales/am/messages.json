@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "አጽዳ",
   "tools.table.copySelection": "ቅዳ",
   "tools.table.cellColor": "ቀለም",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "የራስጌ አምድ",
   "tools.table.insertColumnLeft": "ከግራ አምድ አስገባ",
   "tools.table.insertColumnRight": "ከቀኝ አምድ አስገባ",

@@ -11,6 +11,18 @@ const makeData = (overrides: Partial<TableData> = {}): TableData => ({
   ...overrides,
 });
 
+// ─── Merge helpers ──────────────────────────────────────────────────
+const originCell = (blocks: string[], colspan: number, rowspan: number): CellContent => ({
+  blocks,
+  ...(colspan > 1 ? { colspan } : {}),
+  ...(rowspan > 1 ? { rowspan } : {}),
+});
+
+const coveredCell = (originRow: number, originCol: number): CellContent => ({
+  blocks: [],
+  mergedInto: [originRow, originCol],
+});
+
 describe('TableModel invariants', () => {
   describe('validateInvariants()', () => {
     it('passes for a valid empty model', () => {
@@ -64,6 +76,84 @@ describe('TableModel invariants', () => {
       model.setColWidths([100, 200, 300, 400]);
 
       expect(() => model.validateInvariants()).toThrow(/colWidths has 4 entries but grid has 2 columns/);
+    });
+  });
+
+  describe('merge invariants', () => {
+    it('passes for a valid 2x2 merge', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [originCell(['a', 'b', 'c', 'd'], 2, 2), coveredCell(0, 0), cell('e')],
+          [coveredCell(0, 0), coveredCell(0, 0), cell('f')],
+          [cell('g'), cell('h'), cell('i')],
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('passes for a valid horizontal merge', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [originCell(['a', 'b', 'c'], 3, 1), coveredCell(0, 0), coveredCell(0, 0)],
+          [cell('d'), cell('e'), cell('f')],
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('detects mergedInto pointing to cell without matching span', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [cell('a'), cell('b')],
+          [coveredCell(0, 0), cell('d')],
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).toThrow(/mergedInto.*\[1,0\].*\[0,0\].*not a merge origin/);
+    });
+
+    it('detects mergedInto pointing out of bounds', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [cell('a'), { blocks: [], mergedInto: [5, 5] as [number, number] }],
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).toThrow(/mergedInto.*out.of.bounds/i);
+    });
+
+    it('detects mergedInto outside the span of its claimed origin', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [originCell(['a', 'b'], 2, 1), coveredCell(0, 0)],
+          [coveredCell(0, 0), cell('d')],
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).toThrow(/mergedInto.*\[1,0\].*outside the span/);
+    });
+
+    it('detects missing mergedInto on cell within an origin span', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [originCell(['a'], 2, 2), coveredCell(0, 0)],
+          [coveredCell(0, 0), cell('d')], // [1,1] should have mergedInto but doesn't
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).toThrow(/\[1,1\].*within span.*\[0,0\].*no mergedInto/);
+    });
+
+    it('detects origin cell whose span extends beyond grid bounds', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [originCell(['a'], 3, 1), coveredCell(0, 0)], // colspan=3 but only 2 cols
+        ],
+      }));
+
+      expect(() => model.validateInvariants()).toThrow(/span.*extends beyond grid bounds/);
     });
   });
 

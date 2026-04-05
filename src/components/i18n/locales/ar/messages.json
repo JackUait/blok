@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "مسح",
   "tools.table.copySelection": "نسخ",
   "tools.table.cellColor": "لون",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "عمود رأس",
   "tools.table.insertColumnLeft": "إدراج عمود يساراً",
   "tools.table.insertColumnRight": "إدراج عمود يميناً",

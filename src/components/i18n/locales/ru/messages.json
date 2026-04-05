@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Очистить",
   "tools.table.copySelection": "Копировать",
   "tools.table.cellColor": "Цвет",
+  "tools.table.mergeCells": "Объединить ячейки",
+  "tools.table.splitCell": "Разделить ячейку",
   "tools.table.headerColumn": "Колонка-заголовок",
   "tools.table.insertColumnLeft": "Вставить столбец слева",
   "tools.table.insertColumnRight": "Вставить столбец справа",

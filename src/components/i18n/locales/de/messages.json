@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Löschen",
   "tools.table.copySelection": "Kopieren",
   "tools.table.cellColor": "Farbe",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Kopfspalte",
   "tools.table.insertColumnLeft": "Spalte links einfügen",
   "tools.table.insertColumnRight": "Spalte rechts einfügen",

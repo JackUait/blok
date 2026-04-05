@@ -1,6 +1,6 @@
 import type { API } from '../../../types';
 
-import { CELL_ATTR, ROW_ATTR } from './table-core';
+import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableModel } from './table-model';
 import type { LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
@@ -330,6 +330,12 @@ export class TableCellBlocks {
    * Get the number of columns in the table (based on first row)
    */
   private getColumnCount(): number {
+    const colgroup = this.gridElement.querySelector('colgroup');
+
+    if (colgroup) {
+      return colgroup.querySelectorAll('col').length;
+    }
+
     const firstRow = this.gridElement.querySelector('[data-blok-table-row]');
 
     return firstRow?.querySelectorAll('[data-blok-table-cell]').length ?? 0;
@@ -346,9 +352,7 @@ export class TableCellBlocks {
       return null;
     }
 
-    const cells = rowEl.querySelectorAll('[data-blok-table-cell]');
-
-    return (cells[col] as HTMLElement | undefined) ?? null;
+    return rowEl.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${col}"]`) ?? null;
   }
 
   /**
@@ -368,11 +372,10 @@ export class TableCellBlocks {
         return;
       }
 
-      const cells = row.querySelectorAll(`[${CELL_ATTR}]`);
       const normalizedRow: CellContent[] = [];
 
       rowData.forEach((cellContent, colIndex) => {
-        const cell = cells[colIndex] as HTMLElement | undefined;
+        const cell = row.querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${colIndex}"]`);
 
         if (!cell) {
           return;

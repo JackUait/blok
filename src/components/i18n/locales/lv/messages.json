@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Notīrīt",
   "tools.table.copySelection": "Kopēt",
   "tools.table.cellColor": "Krāsa",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Virsraksta kolonna",
   "tools.table.insertColumnLeft": "Ievietot kolonnu kreisajā pusē",
   "tools.table.insertColumnRight": "Ievietot kolonnu labajā pusē",

@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Tühista",
   "tools.table.copySelection": "Kopeeri",
   "tools.table.cellColor": "Värv",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Päiseveerg",
   "tools.table.insertColumnLeft": "Lisa veerg vasakule",
   "tools.table.insertColumnRight": "Lisa veerg paremale",

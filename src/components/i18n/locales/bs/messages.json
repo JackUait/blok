@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Očisti",
   "tools.table.copySelection": "Kopiraj",
   "tools.table.cellColor": "Boja",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Kolona zaglavlja",
   "tools.table.insertColumnLeft": "Umetni kolonu lijevo",
   "tools.table.insertColumnRight": "Umetni kolonu desno",

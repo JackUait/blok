@@ -4,6 +4,8 @@ import { applyCellColors } from '../../../../src/tools/table/table-operations';
 const ROW_ATTR = 'data-blok-table-row';
 const CELL_ATTR = 'data-blok-table-cell';
 
+const CELL_COL_ATTR = 'data-blok-table-cell-col';
+
 const createTestGrid = (rows: number, cols: number): HTMLElement => {
   const grid = document.createElement('div');
 
@@ -16,6 +18,7 @@ const createTestGrid = (rows: number, cols: number): HTMLElement => {
       const cell = document.createElement('div');
 
       cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, String(c));
       row.appendChild(cell);
     }
 

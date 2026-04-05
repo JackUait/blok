@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Rensa",
   "tools.table.copySelection": "Kopiera",
   "tools.table.cellColor": "Färg",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Rubrikkolumn",
   "tools.table.insertColumnLeft": "Infoga kolumn till vänster",
   "tools.table.insertColumnRight": "Infoga kolumn till höger",

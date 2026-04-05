@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "Ryd",
   "tools.table.copySelection": "Kopiér",
   "tools.table.cellColor": "Farve",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Overskriftskolonne",
   "tools.table.insertColumnLeft": "Indsæt kolonne til venstre",
   "tools.table.insertColumnRight": "Indsæt kolonne til højre",

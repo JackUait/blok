@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Išvalyti",
   "tools.table.copySelection": "Kopijuoti",
   "tools.table.cellColor": "Spalva",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Antraštės stulpelis",
   "tools.table.insertColumnLeft": "Įterpti stulpelį kairėje",
   "tools.table.insertColumnRight": "Įterpti stulpelį dešinėje",

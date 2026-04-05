@@ -508,9 +508,9 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const firstCol = element.querySelector('col') as HTMLElement;
 
-      expect(firstCell.style.width).toBe('33.33%');
+      expect(firstCol.style.width).toBe('33.33%');
     });
 
     it('applies custom colWidths from data as pixel values', () => {
@@ -521,10 +521,10 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const cells = element.querySelectorAll('[data-blok-table-cell]');
+      const cols = element.querySelectorAll('colgroup col');
 
-      expect((cells[0] as HTMLElement).style.width).toBe('400px');
-      expect((cells[1] as HTMLElement).style.width).toBe('200px');
+      expect((cols[0] as HTMLElement).style.width).toBe('400px');
+      expect((cols[1] as HTMLElement).style.width).toBe('200px');
     });
 
     it('falls back to equal widths when colWidths length mismatches columns', () => {
@@ -535,9 +535,9 @@ describe('Table Tool', () => {
       const table = new Table(options);
       const element = table.render();
 
-      const firstCell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const firstCol = element.querySelector('col') as HTMLElement;
 
-      expect(firstCell.style.width).toBe('33.33%');
+      expect(firstCol.style.width).toBe('33.33%');
     });
   });
 
@@ -841,26 +841,24 @@ describe('Table Tool', () => {
 
       const scrollContainer = element.firstElementChild as HTMLElement;
       const gridBefore = scrollContainer.firstElementChild as HTMLElement;
-      const cellsBefore = gridBefore.querySelectorAll('[data-blok-table-row]')[0]
-        .querySelectorAll('[data-blok-table-cell]');
-      const widthsBefore = Array.from(cellsBefore).map(c => (c as HTMLElement).style.width);
+      const colsBefore = gridBefore.querySelectorAll('colgroup col');
+      const widthsBefore = Array.from(colsBefore).map(c => (c as HTMLElement).style.width);
 
       const addColBtn = element.querySelector('[data-blok-table-add-col]') as HTMLElement;
 
       pointerClick(addColBtn);
 
       const gridAfter = scrollContainer.firstElementChild as HTMLElement;
-      const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
-        .querySelectorAll('[data-blok-table-cell]');
+      const colsAfter = gridAfter.querySelectorAll('colgroup col');
 
       // Existing columns keep their widths
-      expect((cellsAfter[0] as HTMLElement).style.width).toBe(widthsBefore[0]);
-      expect((cellsAfter[1] as HTMLElement).style.width).toBe(widthsBefore[1]);
-      expect((cellsAfter[2] as HTMLElement).style.width).toBe(widthsBefore[2]);
+      expect((colsAfter[0] as HTMLElement).style.width).toBe(widthsBefore[0]);
+      expect((colsAfter[1] as HTMLElement).style.width).toBe(widthsBefore[1]);
+      expect((colsAfter[2] as HTMLElement).style.width).toBe(widthsBefore[2]);
 
       // New column added
-      expect(cellsAfter).toHaveLength(4);
-      expect((cellsAfter[3] as HTMLElement).style.width).toMatch(/px$/);
+      expect(colsAfter).toHaveLength(4);
+      expect((colsAfter[3] as HTMLElement).style.width).toMatch(/px$/);
 
       // Grid width grew (not same as before)
       const totalAfter = parseFloat(gridAfter.style.width);
@@ -887,11 +885,10 @@ describe('Table Tool', () => {
 
       const scrollContainer = element.firstElementChild as HTMLElement;
       const gridAfter = scrollContainer.firstElementChild as HTMLElement;
-      const cellsAfter = gridAfter.querySelectorAll('[data-blok-table-row]')[0]
-        .querySelectorAll('[data-blok-table-cell]');
+      const colsAfter = gridAfter.querySelectorAll('colgroup col');
 
       // Average of [200, 200, 200] = 200, half = 100
-      expect((cellsAfter[3] as HTMLElement).style.width).toBe('100px');
+      expect((colsAfter[3] as HTMLElement).style.width).toBe('100px');
 
       document.body.removeChild(element);
     });
@@ -2989,13 +2986,13 @@ describe('Table Tool', () => {
 
       await vi.advanceTimersByTimeAsync(16);
 
-      // After deletion, the 2 remaining cells should have widths summing to 100%
-      const cellsAfter = firstRow?.querySelectorAll<HTMLElement>('[data-blok-table-cell]');
+      // After deletion, the 2 remaining columns should have widths summing to ~100%
+      const colsAfter = gridEl.querySelectorAll<HTMLElement>('col');
 
-      expect(cellsAfter).toHaveLength(2);
+      expect(colsAfter).toHaveLength(2);
 
-      const totalWidth = Array.from(cellsAfter ?? []).reduce(
-        (sum, cell) => sum + parseFloat(cell.style.width),
+      const totalWidth = Array.from(colsAfter).reduce(
+        (sum, col) => sum + parseFloat(col.style.width),
         0,
       );
 

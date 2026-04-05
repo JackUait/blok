@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "지우기",
   "tools.table.copySelection": "복사",
   "tools.table.cellColor": "색상",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "머리글 열",
   "tools.table.insertColumnLeft": "왼쪽에 열 삽입",
   "tools.table.insertColumnRight": "오른쪽에 열 삽입",

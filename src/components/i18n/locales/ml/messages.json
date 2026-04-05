@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "മായ്ക്കുക",
   "tools.table.copySelection": "പകർത്തുക",
   "tools.table.cellColor": "നിറം",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ഹെഡർ കോളം",
   "tools.table.insertColumnLeft": "ഇടതുവശത്ത് കോളം ചേർക്കുക",
   "tools.table.insertColumnRight": "വലതുവശത്ത് കോളം ചേർക്കുക",

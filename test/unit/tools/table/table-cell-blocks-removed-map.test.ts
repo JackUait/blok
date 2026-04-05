@@ -429,6 +429,7 @@ describe('removedBlockCells index-based key bugs', () => {
       // Cell (0,0) with single block being replaced
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       const paraHolder = document.createElement('div');
@@ -439,6 +440,7 @@ describe('removedBlockCells index-based key bugs', () => {
       // Cell (0,1) with another block
       const cell2 = document.createElement('div');
       cell2.setAttribute('data-blok-table-cell', '');
+      cell2.setAttribute('data-blok-table-cell-col', '1');
       const container2 = document.createElement('div');
       container2.setAttribute(CELL_BLOCKS_ATTR, '');
       const otherHolder = document.createElement('div');

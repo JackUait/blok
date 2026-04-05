@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "ล้าง",
   "tools.table.copySelection": "คัดลอก",
   "tools.table.cellColor": "สี",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "คอลัมน์หัวข้อ",
   "tools.table.insertColumnLeft": "แทรกคอลัมน์ทางซ้าย",
   "tools.table.insertColumnRight": "แทรกคอลัมน์ทางขวา",

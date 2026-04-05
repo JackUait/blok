@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "खाली गर्नुहोस्",
   "tools.table.copySelection": "प्रतिलिपि",
   "tools.table.cellColor": "रङ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "शीर्ष स्तम्भ",
   "tools.table.insertColumnLeft": "बायाँ स्तम्भ थप्नुहोस्",
   "tools.table.insertColumnRight": "दायाँ स्तम्भ थप्नुहोस्",

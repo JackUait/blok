@@ -25,7 +25,7 @@ import {
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
-import { TableGrid, ROW_ATTR, CELL_ATTR } from './table-core';
+import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
   applyCellColors,
   applyPixelWidths,
@@ -201,6 +201,120 @@ export class Table implements BlockTool {
   }
 
   /**
+   * Rebuild the <tbody> from the current model state.
+   * Generates a new table via createGridFromModel (with correct colspan/rowspan),
+   * transplants existing block holders into the new cells, and swaps the tbody.
+   */
+  private rebuildTableBody(): void {
+    const gridEl = this.gridElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    const oldTbody = gridEl.querySelector('tbody');
+
+    if (!oldTbody) {
+      return;
+    }
+
+    // Collect all existing block holders by ID before replacing tbody
+    const blockHolders = new Map<string, HTMLElement>();
+
+    oldTbody.querySelectorAll('[data-blok-id]').forEach(el => {
+      const id = el.getAttribute('data-blok-id');
+
+      if (id) {
+        blockHolders.set(id, el as HTMLElement);
+      }
+    });
+
+    // Build new table from model (has correct colspan/rowspan structure)
+    const newTable = this.grid.createGridFromModel(this.model);
+    const newTbody = newTable.querySelector('tbody');
+
+    if (!newTbody) {
+      return;
+    }
+
+    // Move block holders from old cells to new cells
+    const content = this.model.snapshot().content;
+
+    this.mountBlockHoldersInNewTbody(content, newTbody, blockHolders);
+
+    // Replace old tbody with new
+    oldTbody.replaceWith(newTbody);
+  }
+
+  /**
+   * Mount block holders into the new tbody cells based on model content.
+   * Extracted to keep rebuildTableBody under nesting depth limit.
+   */
+  private mountBlockHoldersInNewTbody(
+    content: TableData['content'],
+    newTbody: Element,
+    blockHolders: Map<string, HTMLElement>
+  ): void {
+    content.forEach((rowData, r) => {
+      rowData.forEach((cellContent, c) => {
+        if (typeof cellContent === 'string') {
+          return;
+        }
+
+        if (cellContent.mergedInto) {
+          return;
+        }
+
+        const newCell = newTbody.querySelector(
+          `[${CELL_ROW_ATTR}="${r}"][${CELL_COL_ATTR}="${c}"]`
+        );
+
+        if (!newCell) {
+          return;
+        }
+
+        const container = newCell.querySelector(`[${CELL_BLOCKS_ATTR}]`);
+
+        if (!container) {
+          return;
+        }
+
+        cellContent.blocks.forEach(blockId => {
+          const holder = blockHolders.get(blockId);
+
+          if (holder) {
+            container.appendChild(holder);
+          }
+        });
+      });
+    });
+  }
+
+  /**
+   * Check if the model's content contains any merged cells.
+   */
+  private modelHasMerges(): boolean {
+    const snapshot = this.model.snapshot();
+
+    return snapshot.content.some(row =>
+      row.some(cell =>
+        typeof cell !== 'string' && ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1)
+      )
+    );
+  }
+
+  /**
+   * Create a flat grid (no merge handling) using createGrid.
+   * Extracted from render() to keep it readable.
+   */
+  private createFlatGrid(): HTMLTableElement {
+    const rows = this.initialContent?.length || this.config.rows || DEFAULT_ROWS;
+    const cols = this.initialContent?.reduce((max, row) => Math.max(max, row?.length ?? 0), 0) || this.config.cols || DEFAULT_COLS;
+
+    return this.grid.createGrid(rows, cols, this.model.colWidths);
+  }
+
+  /**
    * Initialize all visual subsystems on a grid element.
    * Shared by rendered(), setData(), and onPaste() to ensure consistent
    * subsystem initialization order.
@@ -309,12 +423,14 @@ export class Table implements BlockTool {
 
     this.isNewTable = (this.initialContent?.length ?? 0) === 0;
 
-    const rows = this.initialContent?.length || this.config.rows || DEFAULT_ROWS;
-    const cols = this.initialContent?.reduce((max, row) => Math.max(max, row?.length ?? 0), 0) || this.config.cols || DEFAULT_COLS;
+    const hasContent = (this.initialContent?.length ?? 0) > 0;
+    const hasMerges = hasContent && this.modelHasMerges();
 
-    const gridEl = this.grid.createGrid(rows, cols, this.model.colWidths);
+    const gridEl = hasMerges
+      ? this.grid.createGridFromModel(this.model)
+      : this.createFlatGrid();
 
-    if ((this.initialContent?.length ?? 0) > 0) {
+    if (hasContent && !hasMerges) {
       this.grid.fillGrid(gridEl, this.initialContent ?? []);
     }
 
@@ -1332,6 +1448,24 @@ export class Table implements BlockTool {
       },
       onColorChange: (cells, color, mode) => {
         this.handleCellColorChange(cells, color, mode);
+      },
+      canMergeCells: (range) => {
+        return this.model.canMergeCells(range);
+      },
+      onMergeCells: (range) => {
+        this.runTransactedStructuralOp(() => {
+          this.model.mergeCells(range);
+          this.rebuildTableBody();
+        });
+      },
+      isMergedCell: (row, col) => {
+        return this.model.isMergedCell(row, col);
+      },
+      onSplitCell: (row, col) => {
+        this.runTransactedStructuralOp(() => {
+          this.model.splitCell(row, col);
+          this.rebuildTableBody();
+        });
       },
     });
   }

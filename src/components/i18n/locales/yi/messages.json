@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "אויסמעקן",
   "tools.table.copySelection": "קאָפּירן",
   "tools.table.cellColor": "קאָליר",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "קעפּל שפּאַלט",
   "tools.table.insertColumnLeft": "אַרײַנשטעלן שפּאַלט לינקס",
   "tools.table.insertColumnRight": "אַרײַנשטעלן שפּאַלט רעכטס",

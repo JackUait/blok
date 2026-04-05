@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "پاککردنەوە",
   "tools.table.copySelection": "کۆپی بکە",
   "tools.table.cellColor": "ڕەنگ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ستوونی سەرپەڕە",
   "tools.table.insertColumnLeft": "زیادکردنی ستوون لە چەپ",
   "tools.table.insertColumnRight": "زیادکردنی ستوون لە ڕاست",

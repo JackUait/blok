@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "I-clear",
   "tools.table.copySelection": "Kopyahin",
   "tools.table.cellColor": "Kulay",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Header na kolum",
   "tools.table.insertColumnLeft": "Magsingit ng kolum sa kaliwa",
   "tools.table.insertColumnRight": "Magsingit ng kolum sa kanan",

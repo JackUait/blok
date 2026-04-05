@@ -71,6 +71,8 @@
   "tools.table.clearSelection": "Vymazať",
   "tools.table.copySelection": "Kopírovať",
   "tools.table.cellColor": "Farba",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "Stĺpec hlavičky",
   "tools.table.insertColumnLeft": "Vložiť stĺpec vľavo",
   "tools.table.insertColumnRight": "Vložiť stĺpec vpravo",

@@ -45,6 +45,7 @@ describe('TableCellBlocks', () => {
       // Create DOM structure: cell > container > block > content
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
 
       const container = document.createElement('div');
       container.setAttribute('data-blok-table-cell-blocks', '');
@@ -67,6 +68,7 @@ describe('TableCellBlocks', () => {
     it('should return false when element is in plain text cell', async () => {
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       cell.setAttribute('contenteditable', 'true');
 
       const { isInCellBlock } = await import('../../../../src/tools/table/table-cell-blocks');
@@ -79,6 +81,7 @@ describe('TableCellBlocks', () => {
     it('should return the cell element containing the given element', async () => {
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
 
       const nested = document.createElement('span');
       cell.appendChild(nested);
@@ -189,6 +192,7 @@ describe('TableCellBlocks', () => {
 
         const cell = document.createElement('div');
         cell.setAttribute('data-blok-table-cell', '');
+        cell.setAttribute('data-blok-table-cell-col', '0');
         row.appendChild(cell);
 
         const container = document.createElement('div');
@@ -283,6 +287,7 @@ describe('TableCellBlocks', () => {
 
         const cell = document.createElement('div');
         cell.setAttribute('data-blok-table-cell', '');
+        cell.setAttribute('data-blok-table-cell-col', '0');
         row.appendChild(cell);
 
         const container = document.createElement('div');
@@ -335,6 +340,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
 
       const container = document.createElement('div');
 
@@ -377,6 +383,8 @@ describe('TableCellBlocks', () => {
       const { cell: c1 } = buildCellWithEditable(cellBlocksAttr);
       const { cell: c2 } = buildCellWithEditable(cellBlocksAttr);
 
+      c1.setAttribute('data-blok-table-cell-col', '0');
+      c2.setAttribute('data-blok-table-cell-col', '1');
       row1.appendChild(c1);
       row1.appendChild(c2);
       gridEl.appendChild(row1);
@@ -387,6 +395,7 @@ describe('TableCellBlocks', () => {
 
       const { cell: c3 } = buildCellWithEditable(cellBlocksAttr);
 
+      c3.setAttribute('data-blok-table-cell-col', '0');
       row2.appendChild(c3);
       gridEl.appendChild(row2);
 
@@ -499,6 +508,7 @@ describe('TableCellBlocks', () => {
       // Cell 0
       const cell0 = document.createElement('div');
       cell0.setAttribute('data-blok-table-cell', '');
+      cell0.setAttribute('data-blok-table-cell-col', '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0 = document.createElement('div');
@@ -512,6 +522,7 @@ describe('TableCellBlocks', () => {
       // Cell 1
       const cell1 = document.createElement('div');
       cell1.setAttribute('data-blok-table-cell', '');
+      cell1.setAttribute('data-blok-table-cell-col', '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
@@ -551,6 +562,7 @@ describe('TableCellBlocks', () => {
       // Cell 0 with two blocks
       const cell0 = document.createElement('div');
       cell0.setAttribute('data-blok-table-cell', '');
+      cell0.setAttribute('data-blok-table-cell-col', '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0a = document.createElement('div');
@@ -570,6 +582,7 @@ describe('TableCellBlocks', () => {
       // Cell 1
       const cell1 = document.createElement('div');
       cell1.setAttribute('data-blok-table-cell', '');
+      cell1.setAttribute('data-blok-table-cell-col', '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
@@ -609,6 +622,7 @@ describe('TableCellBlocks', () => {
       row0.setAttribute('data-blok-table-row', '');
       const cell00 = document.createElement('div');
       cell00.setAttribute('data-blok-table-cell', '');
+      cell00.setAttribute('data-blok-table-cell-col', '0');
       const cont00 = document.createElement('div');
       cont00.setAttribute(CELL_BLOCKS_ATTR, '');
       const blk00 = document.createElement('div');
@@ -625,6 +639,7 @@ describe('TableCellBlocks', () => {
       row1.setAttribute('data-blok-table-row', '');
       const cell10 = document.createElement('div');
       cell10.setAttribute('data-blok-table-cell', '');
+      cell10.setAttribute('data-blok-table-cell-col', '0');
       const cont10 = document.createElement('div');
       cont10.setAttribute(CELL_BLOCKS_ATTR, '');
       const blk10 = document.createElement('div');
@@ -664,6 +679,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -723,6 +739,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -817,6 +834,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -895,6 +913,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -977,6 +996,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1063,6 +1083,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1139,6 +1160,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1229,6 +1251,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1310,6 +1333,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       // Container is empty — no block holders
@@ -1346,6 +1370,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       const existingBlock = document.createElement('div');
@@ -1397,6 +1422,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
 
@@ -1462,6 +1488,7 @@ describe('TableCellBlocks', () => {
       // Cell with two blocks: the first will be replaced, the second provides adjacency
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
 
@@ -1573,6 +1600,7 @@ describe('TableCellBlocks', () => {
       // Cell (0,0) with a single block — the one being replaced
       const cell00 = document.createElement('div');
       cell00.setAttribute('data-blok-table-cell', '');
+      cell00.setAttribute('data-blok-table-cell-col', '0');
       const container00 = document.createElement('div');
       container00.setAttribute(CELL_BLOCKS_ATTR, '');
       const paraBlock = document.createElement('div');
@@ -1583,6 +1611,7 @@ describe('TableCellBlocks', () => {
       // Cell (0,1) with a single block — NOT the target cell
       const cell01 = document.createElement('div');
       cell01.setAttribute('data-blok-table-cell', '');
+      cell01.setAttribute('data-blok-table-cell-col', '1');
       const container01 = document.createElement('div');
       container01.setAttribute(CELL_BLOCKS_ATTR, '');
       const otherBlock = document.createElement('div');
@@ -1710,6 +1739,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1760,6 +1790,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1811,6 +1842,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1855,6 +1887,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1903,6 +1936,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -1960,6 +1994,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -2007,6 +2042,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');
@@ -2042,6 +2078,7 @@ describe('TableCellBlocks', () => {
       pastedRow.setAttribute('data-blok-table-row', '');
       const pastedCell = document.createElement('div');
       pastedCell.setAttribute('data-blok-table-cell', '');
+      pastedCell.setAttribute('data-blok-table-cell-col', '0');
       const pastedCellContainer = document.createElement('div');
       pastedCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
       pastedCell.appendChild(pastedCellContainer);
@@ -2097,6 +2134,7 @@ describe('TableCellBlocks', () => {
       pastedRow.setAttribute('data-blok-table-row', '');
       const pastedCell = document.createElement('div');
       pastedCell.setAttribute('data-blok-table-cell', '');
+      pastedCell.setAttribute('data-blok-table-cell-col', '0');
       const pastedCellContainer = document.createElement('div');
       pastedCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
       pastedCell.appendChild(pastedCellContainer);
@@ -2176,6 +2214,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2246,6 +2285,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2296,6 +2336,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       // Container is empty — ensureCellHasBlock will insert and call stripPlaceholders
@@ -2325,6 +2366,7 @@ describe('TableCellBlocks', () => {
       // Cell with two blocks
       const cell0 = document.createElement('div');
       cell0.setAttribute('data-blok-table-cell', '');
+      cell0.setAttribute('data-blok-table-cell-col', '0');
       const container0 = document.createElement('div');
       container0.setAttribute(CELL_BLOCKS_ATTR, '');
       const block0a = document.createElement('div');
@@ -2338,6 +2380,7 @@ describe('TableCellBlocks', () => {
       // Cell with one block
       const cell1 = document.createElement('div');
       cell1.setAttribute('data-blok-table-cell', '');
+      cell1.setAttribute('data-blok-table-cell-col', '1');
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
       const block1 = document.createElement('div');
@@ -2365,6 +2408,7 @@ describe('TableCellBlocks', () => {
       // Cell without a blocks container
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
 
       const api = { blocks: {}, events: { on: vi.fn(), off: vi.fn() } } as unknown as API;
       const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
@@ -2380,6 +2424,7 @@ describe('TableCellBlocks', () => {
       const gridElement = document.createElement('div');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2477,6 +2522,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2532,6 +2578,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2600,6 +2647,7 @@ describe('TableCellBlocks', () => {
         for (let c = 0; c < 3; c++) {
           const cell = document.createElement('div');
           cell.setAttribute('data-blok-table-cell', '');
+          cell.setAttribute('data-blok-table-cell-col', String(c));
           const container = document.createElement('div');
           container.setAttribute(CELL_BLOCKS_ATTR, '');
           cell.appendChild(container);
@@ -2678,6 +2726,7 @@ describe('TableCellBlocks', () => {
       row.setAttribute('data-blok-table-row', '');
       const cell = document.createElement('div');
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
       container.setAttribute(CELL_BLOCKS_ATTR, '');
       cell.appendChild(container);
@@ -2708,6 +2757,7 @@ describe('TableCellBlocks', () => {
       const cell = document.createElement('div');
 
       cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
       const container = document.createElement('div');
 
       container.setAttribute(CELL_BLOCKS_ATTR, '');

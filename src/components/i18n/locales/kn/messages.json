@@ -56,6 +56,8 @@
   "tools.table.clearSelection": "ತೆರವುಗೊಳಿಸಿ",
   "tools.table.copySelection": "ನಕಲು",
   "tools.table.cellColor": "ಬಣ್ಣ",
+  "tools.table.mergeCells": "Merge cells",
+  "tools.table.splitCell": "Split cell",
   "tools.table.headerColumn": "ಹೆಡರ್ ಕಾಲಂ",
   "tools.table.insertColumnLeft": "ಎಡಕ್ಕೆ ಕಾಲಂ ಸೇರಿಸಿ",
   "tools.table.insertColumnRight": "ಬಲಕ್ಕೆ ಕಾಲಂ ಸೇರಿಸಿ",

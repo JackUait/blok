@@ -625,6 +625,8 @@ export class TableModel {
     origin.colspan = maxCol - minCol + 1;
     origin.rowspan = maxRow - minRow + 1;
     delete origin.mergedInto;
+    // Reset placement to default (top-left) on merge
+    delete origin.placement;
 
     // Normalize: remove colspan/rowspan if 1
     if (origin.colspan === 1) {
@@ -723,12 +725,14 @@ export class TableModel {
 
         delete spanned.mergedInto;
         spanned.blocks = [];
+        delete spanned.placement;
       }
     }
 
     // Reset origin
     delete cell.colspan;
     delete cell.rowspan;
+    delete cell.placement;
   }
 
   // ─── Metadata setters ──────────────────────────────────────────

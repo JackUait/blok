@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TableModel } from '../../../../src/tools/table/table-model';
-import type { CellContent, TableData } from '../../../../src/tools/table/types';
+import type { CellContent, CellPlacement, TableData } from '../../../../src/tools/table/types';
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
 const cell = (...blocks: string[]): CellContent => ({ blocks });
 
 const colorCell = (color: string, ...blocks: string[]): CellContent => ({ blocks, color });
+
+const placedCell = (placement: CellPlacement, ...blocks: string[]): CellContent => ({ blocks, placement });
 
 const makeData = (overrides: Partial<TableData> = {}): TableData => ({
   withHeadings: false,
@@ -218,6 +220,21 @@ describe('TableModel merge/split', () => {
       // Origin block was not relocated
       expect(result.blocksToRelocate).not.toContain('r0c0');
     });
+
+    it('resets placement to top-left on the merged origin cell', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [placedCell('bottom-right', 'a'), cell('b')],
+          [cell('c'), placedCell('middle-center', 'd')],
+        ],
+      }));
+
+      model.mergeCells({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).placement).toBeUndefined();
+    });
   });
 
   // ─── splitCell ──────────────────────────────────────────────────
@@ -284,6 +301,25 @@ describe('TableModel merge/split', () => {
       model.splitCell(0, 0);
 
       expect(() => model.validateInvariants()).not.toThrow();
+    });
+
+    it('resets placement to top-left on all cells after split', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [placedCell('bottom-right', 'a'), cell('b')],
+          [cell('c'), cell('d')],
+        ],
+      }));
+
+      model.mergeCells({ minRow: 0, maxRow: 1, minCol: 0, maxCol: 1 });
+      model.splitCell(0, 0);
+
+      const snap = model.snapshot();
+
+      expect((snap.content[0][0] as CellContent).placement).toBeUndefined();
+      expect((snap.content[0][1] as CellContent).placement).toBeUndefined();
+      expect((snap.content[1][0] as CellContent).placement).toBeUndefined();
+      expect((snap.content[1][1] as CellContent).placement).toBeUndefined();
     });
   });
 

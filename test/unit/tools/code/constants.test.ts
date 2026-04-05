@@ -2,16 +2,9 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  TOOL_NAME,
-  PLACEHOLDER_KEY,
-  LANGUAGE_KEY,
-  COPIED_KEY,
-  COPY_CODE_KEY,
-  WRAP_LINES_KEY,
-  DEFAULT_LANGUAGE,
-  TAB_STRING,
-  LANGUAGES,
-  PREVIEWABLE_LANGUAGES,
+  TOOL_NAME, PLACEHOLDER_KEY, LANGUAGE_KEY, COPIED_KEY, COPY_CODE_KEY,
+  WRAP_LINES_KEY, DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
+  HIGHLIGHTABLE_LANGUAGES, SHIKI_LIGHT_THEME, SHIKI_DARK_THEME, DARK_MODE_SELECTOR,
 } from '../../../../src/tools/code/constants';
 
 describe('Code Block Constants', () => {
@@ -96,6 +89,39 @@ describe('Code Block Constants', () => {
     it('PREVIEWABLE_LANGUAGES does not contain non-previewable languages', () => {
       expect(PREVIEWABLE_LANGUAGES.has('javascript')).toBe(false);
       expect(PREVIEWABLE_LANGUAGES.has('plain text')).toBe(false);
+    });
+  });
+
+  describe('HIGHLIGHTABLE_LANGUAGES', () => {
+    it('contains common programming languages', () => {
+      expect(HIGHLIGHTABLE_LANGUAGES.has('javascript')).toBe(true);
+      expect(HIGHLIGHTABLE_LANGUAGES.has('typescript')).toBe(true);
+      expect(HIGHLIGHTABLE_LANGUAGES.has('python')).toBe(true);
+      expect(HIGHLIGHTABLE_LANGUAGES.has('html')).toBe(true);
+      expect(HIGHLIGHTABLE_LANGUAGES.has('css')).toBe(true);
+    });
+
+    it('does not contain plain text', () => {
+      expect(HIGHLIGHTABLE_LANGUAGES.has('plain text')).toBe(false);
+    });
+
+    it('does not contain previewable languages', () => {
+      expect(HIGHLIGHTABLE_LANGUAGES.has('latex')).toBe(false);
+      expect(HIGHLIGHTABLE_LANGUAGES.has('mermaid')).toBe(false);
+    });
+  });
+
+  describe('Shiki theme constants', () => {
+    it('SHIKI_LIGHT_THEME is defined', () => {
+      expect(SHIKI_LIGHT_THEME).toBe('one-light');
+    });
+
+    it('SHIKI_DARK_THEME is defined', () => {
+      expect(SHIKI_DARK_THEME).toBe('vitesse-dark');
+    });
+
+    it('DARK_MODE_SELECTOR targets .dark class', () => {
+      expect(DARK_MODE_SELECTOR).toBe('.dark');
     });
   });
 });

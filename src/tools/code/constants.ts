@@ -72,3 +72,17 @@ export const TAB_STYLES = 'px-2 py-0.5 rounded text-xs font-medium cursor-pointe
 export const TAB_ACTIVE_STYLES = 'bg-blue-500 text-white';
 export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
 export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em] flex justify-center';
+
+// Shiki theme names for syntax highlighting
+export const SHIKI_LIGHT_THEME = 'one-light';
+export const SHIKI_DARK_THEME = 'vitesse-dark';
+
+// CSS selector for dark mode (Tailwind convention)
+export const DARK_MODE_SELECTOR = '.dark';
+
+// Languages that support syntax highlighting (all except plain text and previewable)
+export const HIGHLIGHTABLE_LANGUAGES = new Set(
+  LANGUAGES
+    .map((lang) => lang.id)
+    .filter((id) => id !== DEFAULT_LANGUAGE && !PREVIEWABLE_LANGUAGES.has(id))
+);

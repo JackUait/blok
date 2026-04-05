@@ -55,7 +55,7 @@ import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableScrollHaze } from './table-scroll-haze';
-import type { ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
+import type { CellPlacement, ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -1310,6 +1310,36 @@ export class Table implements BlockTool {
     });
   }
 
+  private handleCellPlacementChange(cells: HTMLElement[], placement: CellPlacement): void {
+    const gridEl = this.gridElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    this.runTransactedStructuralOp(() => {
+      for (const cell of cells) {
+        const coord = getCellPosition(gridEl, cell);
+
+        if (!coord) {
+          continue;
+        }
+
+        this.model.setCellPlacement(coord.row, coord.col, placement === 'top-left' ? undefined : placement);
+
+        const blocksContainer = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+        if (blocksContainer) {
+          if (placement === 'top-left') {
+            blocksContainer.removeAttribute('data-blok-cell-placement');
+          } else {
+            blocksContainer.setAttribute('data-blok-cell-placement', placement);
+          }
+        }
+      }
+    });
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
   ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string }> {
@@ -1459,6 +1489,12 @@ export class Table implements BlockTool {
       },
       onColorChange: (cells, color, mode) => {
         this.handleCellColorChange(cells, color, mode);
+      },
+      onPlacementChange: (cells, placement) => {
+        this.handleCellPlacementChange(cells, placement);
+      },
+      getCellPlacement: (row, col) => {
+        return this.model.getCellPlacement(row, col);
       },
       canMergeCells: (range) => {
         return this.model.canMergeCells(range);

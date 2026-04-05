@@ -254,7 +254,7 @@ export class BlocksAPI extends Module {
    */
   public async importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData> {
     const { markdownToBlocks } = await import('../../../markdown/index');
-    const blocks = markdownToBlocks(md, options);
+    const blocks = await markdownToBlocks(md, options);
     const data: OutputData = { blocks };
 
     await this.render(data);

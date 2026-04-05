@@ -1,5 +1,5 @@
 import type { I18n } from '../../../types/api';
-import { IconCopy, IconCross, IconMarker, IconMergeCells, IconSplitCell } from '../../components/icons';
+import { IconCopy, IconCross, IconMarker, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
@@ -7,6 +7,8 @@ import { twMerge } from '../../components/utils/tw';
 import { CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
 import { createCellColorPicker } from './table-cell-color-picker';
 import type { CellColorMode } from './table-cell-color-picker';
+import { createCellPlacementPicker } from './table-cell-placement-picker';
+import type { CellPlacement } from './types';
 import { createGripDotsSvg } from './table-grip-visuals';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -72,6 +74,8 @@ interface CellSelectionOptions {
   onCut?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
   onCopyViaButton?: (cells: HTMLElement[]) => void;
   onColorChange?: (cells: HTMLElement[], color: string | null, mode: CellColorMode) => void;
+  onPlacementChange?: (cells: HTMLElement[], placement: CellPlacement) => void;
+  getCellPlacement?: (row: number, col: number) => CellPlacement | undefined;
   onPointerDragActiveChange?: (active: boolean) => void;
   isPopoverOpen?: () => boolean;
   /** Called to check if the current selection range can be merged. */
@@ -105,6 +109,8 @@ export class TableCellSelection {
   private onCut: ((cells: HTMLElement[], clipboardData: DataTransfer) => void) | undefined;
   private onCopyViaButton: ((cells: HTMLElement[]) => void) | undefined;
   private onColorChange: ((cells: HTMLElement[], color: string | null, mode: CellColorMode) => void) | undefined;
+  private onPlacementChange: ((cells: HTMLElement[], placement: CellPlacement) => void) | undefined;
+  private getCellPlacement: ((row: number, col: number) => CellPlacement | undefined) | undefined;
   private onSelectionRangeChange: ((range: SelectionRange) => void) | undefined;
   private onPointerDragActiveChange: ((active: boolean) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
@@ -133,6 +139,8 @@ export class TableCellSelection {
     this.onCut = options.onCut;
     this.onCopyViaButton = options.onCopyViaButton;
     this.onColorChange = options.onColorChange;
+    this.onPlacementChange = options.onPlacementChange;
+    this.getCellPlacement = options.getCellPlacement;
     this.onSelectionRangeChange = options.onSelectionRangeChange;
     this.onPointerDragActiveChange = options.onPointerDragActiveChange;
     this.isPopoverOpen = options.isPopoverOpen;
@@ -761,6 +769,37 @@ export class TableCellSelection {
       });
     }
 
+    const placementItems: PopoverItemParams[] = [];
+
+    if (this.onPlacementChange !== undefined) {
+      let currentPlacement: CellPlacement | undefined;
+
+      if (this.lastPaintedRange && this.getCellPlacement) {
+        currentPlacement = this.getCellPlacement(this.lastPaintedRange.minRow, this.lastPaintedRange.minCol);
+      }
+
+      const { element: pickerElement } = createCellPlacementPicker({
+        i18n: this.i18n,
+        currentPlacement,
+        onPlacementSelect: (placement: CellPlacement): void => {
+          this.onPlacementChange?.([...this.selectedCells], placement);
+        },
+      });
+
+      placementItems.push({
+        icon: IconPlacement,
+        title: this.i18n.t('tools.table.placement'),
+        name: 'cellPlacement',
+        children: {
+          items: [{
+            type: PopoverItemType.Html,
+            element: pickerElement,
+          }],
+          isFlippable: false,
+        },
+      });
+    }
+
     const mergeItems: PopoverItemParams[] = [];
 
     if (this.lastPaintedRange && this.onMergeCells) {
@@ -800,6 +839,7 @@ export class TableCellSelection {
 
     const items: PopoverItemParams[] = [
       ...colorPickerItems,
+      ...placementItems,
       ...mergeItems,
       {
         icon: IconCopy,

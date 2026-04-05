@@ -4,6 +4,10 @@ import {
   LANGUAGE_BUTTON_STYLES,
   HEADER_BUTTON_STYLES,
   CODE_AREA_STYLES,
+  TAB_STYLES,
+  TAB_ACTIVE_STYLES,
+  TAB_INACTIVE_STYLES,
+  PREVIEW_AREA_STYLES,
 } from './constants';
 import { IconCopy, IconWrap } from '../../components/icons';
 
@@ -14,6 +18,9 @@ export interface CodeDOMRefs {
   wrapButton: HTMLButtonElement;
   preElement: HTMLPreElement;
   codeElement: HTMLElement;
+  codeTab: HTMLButtonElement | null;
+  previewTab: HTMLButtonElement | null;
+  previewElement: HTMLDivElement | null;
 }
 
 export interface BuildCodeDOMOptions {
@@ -22,10 +29,13 @@ export interface BuildCodeDOMOptions {
   readOnly: boolean;
   copyLabel: string;
   wrapLabel: string;
+  previewable?: boolean;
+  codeTabLabel?: string;
+  previewTabLabel?: string;
 }
 
 export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
-  const { code, languageName, readOnly, copyLabel, wrapLabel } = options;
+  const { code, languageName, readOnly, copyLabel, wrapLabel, previewable, codeTabLabel, previewTabLabel } = options;
 
   // Wrapper
   const wrapper = document.createElement('div');
@@ -46,6 +56,29 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   // Spacer
   const spacer = document.createElement('div');
   spacer.className = 'flex-1';
+
+  // Tab buttons (only when previewable)
+  let codeTab: HTMLButtonElement | null = null;
+  let previewTab: HTMLButtonElement | null = null;
+  let previewElement: HTMLDivElement | null = null;
+
+  if (previewable) {
+    codeTab = document.createElement('button');
+    codeTab.type = 'button';
+    codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
+    codeTab.textContent = codeTabLabel ?? 'Code';
+    codeTab.setAttribute('data-blok-testid', 'code-code-tab');
+
+    previewTab = document.createElement('button');
+    previewTab.type = 'button';
+    previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
+    previewTab.textContent = previewTabLabel ?? 'Preview';
+    previewTab.setAttribute('data-blok-testid', 'code-preview-tab');
+
+    previewElement = document.createElement('div');
+    previewElement.className = PREVIEW_AREA_STYLES;
+    previewElement.setAttribute('data-blok-testid', 'code-preview');
+  }
 
   // Wrap toggle button
   const wrapButton = document.createElement('button');
@@ -77,20 +110,29 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     codeElement.setAttribute('spellcheck', 'false');
   }
 
-  // Assemble
+  // Assemble header
   header.appendChild(languageButton);
   header.appendChild(spacer);
+
+  if (codeTab && previewTab) {
+    header.appendChild(codeTab);
+    header.appendChild(previewTab);
+  }
+
   header.appendChild(wrapButton);
   header.appendChild(copyButton);
 
   // Pre wrapper for semantic HTML
   const preElement = document.createElement('pre');
-
   preElement.appendChild(codeElement);
 
   // Assemble wrapper
   wrapper.appendChild(header);
   wrapper.appendChild(preElement);
 
-  return { wrapper, languageButton, copyButton, wrapButton, preElement, codeElement };
+  if (previewElement) {
+    wrapper.appendChild(previewElement);
+  }
+
+  return { wrapper, languageButton, copyButton, wrapButton, preElement, codeElement, codeTab, previewTab, previewElement };
 }

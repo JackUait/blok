@@ -82,7 +82,7 @@ describe('CodeTool', () => {
       const el = tool.render();
       const codeEl = el.querySelector('[data-blok-testid="code-content"]')!;
 
-      expect(codeEl.getAttribute('contenteditable')).toBe('true');
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
     });
 
     it('does not set contentEditable in read-only mode', async () => {

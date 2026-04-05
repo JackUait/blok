@@ -114,7 +114,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   }
 
   if (!readOnly) {
-    codeElement.setAttribute('contenteditable', 'true');
+    codeElement.setAttribute('contenteditable', 'plaintext-only');
     codeElement.setAttribute('spellcheck', 'false');
   }
 

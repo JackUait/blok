@@ -107,7 +107,7 @@ describe('buildCodeDOM', () => {
       wrapLabel: 'Wrap lines',
     });
 
-    expect(codeElement.getAttribute('contenteditable')).toBe('true');
+    expect(codeElement.getAttribute('contenteditable')).toBe('plaintext-only');
     expect(codeElement.getAttribute('spellcheck')).toBe('false');
   });
 

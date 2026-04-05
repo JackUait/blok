@@ -35,7 +35,11 @@ export default defineConfig(({ mode }) => {
         formats: ['es'],
       },
       rollupOptions: {
-        external: ['react', 'react-dom', 'react/jsx-runtime'],
+        external: [
+          'react', 'react-dom', 'react/jsx-runtime',
+          'shiki/core', 'shiki/engine/javascript',
+          /^@shikijs\//,
+        ],
         output: {
           entryFileNames: '[name].mjs',
           chunkFileNames: 'chunks/[name]-[hash].mjs',

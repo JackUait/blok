@@ -156,5 +156,7 @@
   "tools.quote.size": "حجم الاقتباس",
   "tools.quote.placeholder": "اقتباس",
   "tools.quote.defaultSize": "افتراضي",
-  "tools.quote.largeSize": "كبير"
+  "tools.quote.largeSize": "كبير",
+  "tools.code.codeTab": "كود",
+  "tools.code.previewTab": "معاينة"
 }

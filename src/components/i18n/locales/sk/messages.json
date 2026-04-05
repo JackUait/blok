@@ -156,5 +156,7 @@
   "tools.quote.size": "Veľkosť citátu",
   "tools.quote.placeholder": "Citácia",
   "tools.quote.defaultSize": "Predvolené",
-  "tools.quote.largeSize": "Veľký"
+  "tools.quote.largeSize": "Veľký",
+  "tools.code.codeTab": "Kód",
+  "tools.code.previewTab": "Náhľad"
 }

@@ -156,5 +156,7 @@
   "tools.quote.size": "Rozmiar cytatu",
   "tools.quote.placeholder": "Cytat",
   "tools.quote.defaultSize": "Domyślny",
-  "tools.quote.largeSize": "Duży"
+  "tools.quote.largeSize": "Duży",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Podgląd"
 }

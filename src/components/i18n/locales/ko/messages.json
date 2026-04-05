@@ -156,5 +156,7 @@
   "tools.quote.size": "인용 크기",
   "tools.quote.placeholder": "인용",
   "tools.quote.defaultSize": "기본값",
-  "tools.quote.largeSize": "크게"
+  "tools.quote.largeSize": "크게",
+  "tools.code.codeTab": "코드",
+  "tools.code.previewTab": "미리보기"
 }

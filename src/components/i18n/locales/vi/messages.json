@@ -156,5 +156,7 @@
   "tools.quote.size": "Kích thước trích dẫn",
   "tools.quote.placeholder": "Trích dẫn",
   "tools.quote.defaultSize": "Mặc định",
-  "tools.quote.largeSize": "Lớn"
+  "tools.quote.largeSize": "Lớn",
+  "tools.code.codeTab": "Mã",
+  "tools.code.previewTab": "Xem trước"
 }

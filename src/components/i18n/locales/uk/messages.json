@@ -156,5 +156,7 @@
   "tools.quote.size": "Розмір цитати",
   "tools.quote.placeholder": "Цитата",
   "tools.quote.defaultSize": "за замовчуванням",
-  "tools.quote.largeSize": "Великий"
+  "tools.quote.largeSize": "Великий",
+  "tools.code.codeTab": "Код",
+  "tools.code.previewTab": "Попередній перегляд"
 }

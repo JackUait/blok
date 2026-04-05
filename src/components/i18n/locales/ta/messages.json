@@ -156,5 +156,7 @@
   "tools.quote.size": "மேற்கோள் அளவு",
   "tools.quote.placeholder": "மேற்கோள்",
   "tools.quote.defaultSize": "இயல்பு",
-  "tools.quote.largeSize": "பெரிய"
+  "tools.quote.largeSize": "பெரிய",
+  "tools.code.codeTab": "குறியீடு",
+  "tools.code.previewTab": "முன்னோட்டம்"
 }

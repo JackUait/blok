@@ -156,5 +156,7 @@
   "tools.quote.size": "Մեջբերման չափը",
   "tools.quote.placeholder": "Մեջբերում",
   "tools.quote.defaultSize": "Կանխադրված",
-  "tools.quote.largeSize": "Մեծ"
+  "tools.quote.largeSize": "Մեծ",
+  "tools.code.codeTab": "Կոդ",
+  "tools.code.previewTab": "Նախադիտում"
 }

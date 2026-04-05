@@ -156,5 +156,7 @@
   "tools.quote.size": "Величина цитата",
   "tools.quote.placeholder": "Цитат",
   "tools.quote.defaultSize": "Подразумевано",
-  "tools.quote.largeSize": "Велики"
+  "tools.quote.largeSize": "Велики",
+  "tools.code.codeTab": "Код",
+  "tools.code.previewTab": "Преглед"
 }

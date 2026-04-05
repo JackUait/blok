@@ -156,5 +156,7 @@
   "tools.quote.size": "Citāta izmērs",
   "tools.quote.placeholder": "Citāts",
   "tools.quote.defaultSize": "Noklusējuma",
-  "tools.quote.largeSize": "Liels"
+  "tools.quote.largeSize": "Liels",
+  "tools.code.codeTab": "Kods",
+  "tools.code.previewTab": "Priekšskatījums"
 }

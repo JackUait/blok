@@ -156,5 +156,7 @@
   "tools.quote.size": "Veličina citata",
   "tools.quote.placeholder": "Citat",
   "tools.quote.defaultSize": "Podrazumijevano",
-  "tools.quote.largeSize": "Veliko"
+  "tools.quote.largeSize": "Veliko",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Pregled"
 }

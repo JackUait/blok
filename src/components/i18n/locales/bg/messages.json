@@ -156,5 +156,7 @@
   "tools.quote.size": "Размер на цитата",
   "tools.quote.placeholder": "Цитат",
   "tools.quote.defaultSize": "по подразбиране",
-  "tools.quote.largeSize": "Голям"
+  "tools.quote.largeSize": "Голям",
+  "tools.code.codeTab": "Код",
+  "tools.code.previewTab": "Преглед"
 }

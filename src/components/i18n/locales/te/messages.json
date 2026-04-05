@@ -156,5 +156,7 @@
   "tools.quote.size": "కోట్ పరిమాణం",
   "tools.quote.placeholder": "ఉల్లేఖనం",
   "tools.quote.defaultSize": "అప్రమేయం",
-  "tools.quote.largeSize": "పెద్ద"
+  "tools.quote.largeSize": "పెద్ద",
+  "tools.code.codeTab": "కోడ్",
+  "tools.code.previewTab": "ముందుచూపు"
 }

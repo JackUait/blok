@@ -105,9 +105,9 @@ describe('Code Block Constants', () => {
       expect(HIGHLIGHTABLE_LANGUAGES.has('plain text')).toBe(false);
     });
 
-    it('does not contain previewable languages', () => {
-      expect(HIGHLIGHTABLE_LANGUAGES.has('latex')).toBe(false);
-      expect(HIGHLIGHTABLE_LANGUAGES.has('mermaid')).toBe(false);
+    it('contains previewable languages', () => {
+      expect(HIGHLIGHTABLE_LANGUAGES.has('latex')).toBe(true);
+      expect(HIGHLIGHTABLE_LANGUAGES.has('mermaid')).toBe(true);
     });
   });
 

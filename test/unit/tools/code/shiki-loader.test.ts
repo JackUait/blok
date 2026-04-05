@@ -58,10 +58,10 @@ describe('shiki-loader', () => {
       expect(isHighlightable('plain text')).toBe(false);
     });
 
-    it('returns false for previewable languages', async () => {
+    it('returns true for previewable languages', async () => {
       const { isHighlightable } = await import('../../../../src/tools/code/shiki-loader');
-      expect(isHighlightable('latex')).toBe(false);
-      expect(isHighlightable('mermaid')).toBe(false);
+      expect(isHighlightable('latex')).toBe(true);
+      expect(isHighlightable('mermaid')).toBe(true);
     });
   });
 

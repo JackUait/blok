@@ -80,9 +80,9 @@ export const SHIKI_DARK_THEME = 'vitesse-dark';
 // CSS selector for dark mode (Tailwind convention)
 export const DARK_MODE_SELECTOR = '.dark';
 
-// Languages that support syntax highlighting (all except plain text and previewable)
+// Languages that support syntax highlighting (all except plain text)
 export const HIGHLIGHTABLE_LANGUAGES = new Set(
   LANGUAGES
     .map((lang) => lang.id)
-    .filter((id) => id !== DEFAULT_LANGUAGE && !PREVIEWABLE_LANGUAGES.has(id))
+    .filter((id) => id !== DEFAULT_LANGUAGE)
 );

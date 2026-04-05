@@ -30,6 +30,8 @@ const LANG_IMPORTS: Record<string, () => Promise<unknown>> = {
   scala: () => import('@shikijs/langs/scala'),
   dart: () => import('@shikijs/langs/dart'),
   lua: () => import('@shikijs/langs/lua'),
+  latex: () => import('@shikijs/langs/latex'),
+  mermaid: () => import('@shikijs/langs/mermaid'),
 };
 
 interface ShikiTokenResult {

@@ -19,6 +19,8 @@ const MARKDOWN_SIGNALS: RegExp[] = [
   /\[.+?\]\(.+?\)/,               // Markdown links: [text](url)
   /\*\*.+?\*\*/,                   // Bold: **text**
   /!\[/,                           // Image: ![
+  /\$\$[\s\S]+?\$\$/,             // Block math: $$...$$
+  /(?<!\$)\$(?!\$)(?=\S)[^$]+(?<=\S)\$(?!\$)/, // Inline math: $...$
 ];
 
 /**

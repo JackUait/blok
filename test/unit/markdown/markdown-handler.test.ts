@@ -114,4 +114,19 @@ describe('hasMarkdownSignals', () => {
   it('rejects # not followed by space', () => {
     expect(hasMarkdownSignals('#hashtag')).toBe(false);
   });
+
+  it('detects block math with double dollar signs', () => {
+    expect(hasMarkdownSignals('Before $$E = mc^2$$ after')).toBe(true);
+    expect(hasMarkdownSignals('$$\\sum_{i=1}^n i = \\frac{n(n+1)}{2}$$')).toBe(true);
+  });
+
+  it('detects inline math with single dollar signs', () => {
+    expect(hasMarkdownSignals('The equation $E = mc^2$ is famous')).toBe(true);
+    expect(hasMarkdownSignals('$x^2 + y^2 = z^2$')).toBe(true);
+  });
+
+  it('does not detect dollar amounts as math', () => {
+    expect(hasMarkdownSignals('The price is $100')).toBe(false);
+    expect(hasMarkdownSignals('I have $50 and $30')).toBe(false);
+  });
 });

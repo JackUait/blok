@@ -160,5 +160,15 @@
   "tools.quote.defaultSize": "डिफ़ॉल्ट",
   "tools.quote.largeSize": "बड़ा",
   "tools.code.codeTab": "कोड",
-  "tools.code.previewTab": "पूर्वावलोकन"
+  "tools.code.previewTab": "पूर्वावलोकन",
+  "tools.table.placement": "Placement",
+  "tools.table.placementTopLeft": "Top Left",
+  "tools.table.placementTopCenter": "Top Center",
+  "tools.table.placementTopRight": "Top Right",
+  "tools.table.placementMiddleLeft": "Middle Left",
+  "tools.table.placementMiddleCenter": "Center",
+  "tools.table.placementMiddleRight": "Middle Right",
+  "tools.table.placementBottomLeft": "Bottom Left",
+  "tools.table.placementBottomCenter": "Bottom Center",
+  "tools.table.placementBottomRight": "Bottom Right"
 }

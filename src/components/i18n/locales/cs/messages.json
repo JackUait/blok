@@ -160,5 +160,15 @@
   "tools.quote.defaultSize": "Výchozí",
   "tools.quote.largeSize": "Velký",
   "tools.code.codeTab": "Kód",
-  "tools.code.previewTab": "Náhled"
+  "tools.code.previewTab": "Náhled",
+  "tools.table.placement": "Placement",
+  "tools.table.placementTopLeft": "Top Left",
+  "tools.table.placementTopCenter": "Top Center",
+  "tools.table.placementTopRight": "Top Right",
+  "tools.table.placementMiddleLeft": "Middle Left",
+  "tools.table.placementMiddleCenter": "Center",
+  "tools.table.placementMiddleRight": "Middle Right",
+  "tools.table.placementBottomLeft": "Bottom Left",
+  "tools.table.placementBottomCenter": "Bottom Center",
+  "tools.table.placementBottomRight": "Bottom Right"
 }

@@ -160,5 +160,15 @@
   "tools.quote.defaultSize": "అప్రమేయం",
   "tools.quote.largeSize": "పెద్ద",
   "tools.code.codeTab": "కోడ్",
-  "tools.code.previewTab": "ముందుచూపు"
+  "tools.code.previewTab": "ముందుచూపు",
+  "tools.table.placement": "Placement",
+  "tools.table.placementTopLeft": "Top Left",
+  "tools.table.placementTopCenter": "Top Center",
+  "tools.table.placementTopRight": "Top Right",
+  "tools.table.placementMiddleLeft": "Middle Left",
+  "tools.table.placementMiddleCenter": "Center",
+  "tools.table.placementMiddleRight": "Middle Right",
+  "tools.table.placementBottomLeft": "Bottom Left",
+  "tools.table.placementBottomCenter": "Bottom Center",
+  "tools.table.placementBottomRight": "Bottom Right"
 }

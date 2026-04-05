@@ -594,3 +594,6 @@ export const IconMergeCells = `<svg xmlns="http://www.w3.org/2000/svg" width="18
 
 // Split cell icon (one cell splitting into two)
 export const IconSplitCell = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M8 8l4 4-4 4"/><path d="M16 8l-4 4 4 4"/></svg>`;
+
+// Placement icon (3x3 grid of cells)
+export const IconPlacement = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="5" y="5" width="4" height="4" rx="0.5"/><rect x="10" y="5" width="4" height="4" rx="0.5"/><rect x="15" y="5" width="4" height="4" rx="0.5"/><rect x="5" y="10" width="4" height="4" rx="0.5"/><rect x="10" y="10" width="4" height="4" rx="0.5"/><rect x="15" y="10" width="4" height="4" rx="0.5"/><rect x="5" y="15" width="4" height="4" rx="0.5"/><rect x="10" y="15" width="4" height="4" rx="0.5"/><rect x="15" y="15" width="4" height="4" rx="0.5"/></svg>';

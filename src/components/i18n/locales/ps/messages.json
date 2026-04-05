@@ -160,5 +160,15 @@
   "tools.quote.defaultSize": "اصلي",
   "tools.quote.largeSize": "لوی",
   "tools.code.codeTab": "کوډ",
-  "tools.code.previewTab": "مخکتنه"
+  "tools.code.previewTab": "مخکتنه",
+  "tools.table.placement": "Placement",
+  "tools.table.placementTopLeft": "Top Left",
+  "tools.table.placementTopCenter": "Top Center",
+  "tools.table.placementTopRight": "Top Right",
+  "tools.table.placementMiddleLeft": "Middle Left",
+  "tools.table.placementMiddleCenter": "Center",
+  "tools.table.placementMiddleRight": "Middle Right",
+  "tools.table.placementBottomLeft": "Bottom Left",
+  "tools.table.placementBottomCenter": "Bottom Center",
+  "tools.table.placementBottomRight": "Bottom Right"
 }

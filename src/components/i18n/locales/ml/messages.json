@@ -160,5 +160,15 @@
   "tools.quote.defaultSize": "സ്ഥിരസ്ഥിതി",
   "tools.quote.largeSize": "വലുത്",
   "tools.code.codeTab": "കോഡ്",
-  "tools.code.previewTab": "പ്രിവ്യൂ"
+  "tools.code.previewTab": "പ്രിവ്യൂ",
+  "tools.table.placement": "Placement",
+  "tools.table.placementTopLeft": "Top Left",
+  "tools.table.placementTopCenter": "Top Center",
+  "tools.table.placementTopRight": "Top Right",
+  "tools.table.placementMiddleLeft": "Middle Left",
+  "tools.table.placementMiddleCenter": "Center",
+  "tools.table.placementMiddleRight": "Middle Right",
+  "tools.table.placementBottomLeft": "Bottom Left",
+  "tools.table.placementBottomCenter": "Bottom Center",
+  "tools.table.placementBottomRight": "Bottom Right"
 }

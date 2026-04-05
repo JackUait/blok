@@ -160,5 +160,15 @@
   "tools.quote.defaultSize": "Varsayılan",
   "tools.quote.largeSize": "Büyük",
   "tools.code.codeTab": "Kod",
-  "tools.code.previewTab": "Önizleme"
+  "tools.code.previewTab": "Önizleme",
+  "tools.table.placement": "Placement",
+  "tools.table.placementTopLeft": "Top Left",
+  "tools.table.placementTopCenter": "Top Center",
+  "tools.table.placementTopRight": "Top Right",
+  "tools.table.placementMiddleLeft": "Middle Left",
+  "tools.table.placementMiddleCenter": "Center",
+  "tools.table.placementMiddleRight": "Middle Right",
+  "tools.table.placementBottomLeft": "Bottom Left",
+  "tools.table.placementBottomCenter": "Bottom Center",
+  "tools.table.placementBottomRight": "Bottom Right"
 }

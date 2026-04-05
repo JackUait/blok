@@ -160,5 +160,15 @@
   "tools.quote.defaultSize": "இயல்பு",
   "tools.quote.largeSize": "பெரிய",
   "tools.code.codeTab": "குறியீடு",
-  "tools.code.previewTab": "முன்னோட்டம்"
+  "tools.code.previewTab": "முன்னோட்டம்",
+  "tools.table.placement": "Placement",
+  "tools.table.placementTopLeft": "Top Left",
+  "tools.table.placementTopCenter": "Top Center",
+  "tools.table.placementTopRight": "Top Right",
+  "tools.table.placementMiddleLeft": "Middle Left",
+  "tools.table.placementMiddleCenter": "Center",
+  "tools.table.placementMiddleRight": "Middle Right",
+  "tools.table.placementBottomLeft": "Bottom Left",
+  "tools.table.placementBottomCenter": "Bottom Center",
+  "tools.table.placementBottomRight": "Bottom Right"
 }

@@ -1204,6 +1204,44 @@
   @apply p-0 m-0 min-h-[1.6em];
 }
 
+/* ─── Cell content placement ──────────────────────────────────── */
+
+[data-blok-cell-placement="top-center"] {
+  align-items: center;
+}
+
+[data-blok-cell-placement="top-right"] {
+  align-items: flex-end;
+}
+
+[data-blok-cell-placement="middle-left"] {
+  justify-content: center;
+}
+
+[data-blok-cell-placement="middle-center"] {
+  align-items: center;
+  justify-content: center;
+}
+
+[data-blok-cell-placement="middle-right"] {
+  align-items: flex-end;
+  justify-content: center;
+}
+
+[data-blok-cell-placement="bottom-left"] {
+  justify-content: flex-end;
+}
+
+[data-blok-cell-placement="bottom-center"] {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+[data-blok-cell-placement="bottom-right"] {
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
 /**
  * Exclude bare 'color' from transition-property inside table cells.
  * StyleManager applies transition-colors (which includes 'color') for smooth

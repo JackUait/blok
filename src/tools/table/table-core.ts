@@ -617,6 +617,7 @@ export class TableGrid {
     cell.style.borderBottom = BORDER_STYLE;
     cell.style.overflow = 'hidden';
     cell.style.overflowWrap = 'break-word';
+    cell.style.height = '0';
 
     cell.setAttribute(CELL_ATTR, '');
 
@@ -628,6 +629,9 @@ export class TableGrid {
     const blocksContainer = document.createElement('div');
 
     blocksContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+    blocksContainer.style.display = 'flex';
+    blocksContainer.style.flexDirection = 'column';
+    blocksContainer.style.minHeight = '100%';
     cell.appendChild(blocksContainer);
 
     return cell;

@@ -422,6 +422,36 @@ export const applyCellColors = (gridEl: HTMLElement, content: LegacyCellContent[
   });
 };
 
+export const applyCellPlacements = (gridEl: HTMLElement, content: LegacyCellContent[][]): void => {
+  const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
+
+  content.forEach((rowContent, r) => {
+    if (r >= rows.length) {
+      return;
+    }
+
+    rowContent.forEach((cellContent, c) => {
+      const el = rows[r].querySelector<HTMLElement>(`[${CELL_COL_ATTR}="${c}"]`);
+
+      if (!el) {
+        return;
+      }
+
+      const blocksContainer = el.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+      if (!blocksContainer) {
+        return;
+      }
+
+      if (isCellWithBlocks(cellContent) && cellContent.placement && cellContent.placement !== 'top-left') {
+        blocksContainer.setAttribute('data-blok-cell-placement', cellContent.placement);
+      } else {
+        blocksContainer.removeAttribute('data-blok-cell-placement');
+      }
+    });
+  });
+};
+
 export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadingColumn: boolean): void => {
   if (!gridEl) {
     return;

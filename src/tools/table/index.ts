@@ -28,6 +28,7 @@ import { TableCellSelection } from './table-cell-selection';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
   applyCellColors,
+  applyCellPlacements,
   applyPixelWidths,
   computeHalfAvgWidth,
   computeInitialColWidth,
@@ -504,7 +505,9 @@ export class Table implements BlockTool {
 
     if (this.readOnly) {
       mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
-      applyCellColors(gridEl, this.model.snapshot().content);
+      const snap = this.model.snapshot();
+      applyCellColors(gridEl, snap.content);
+      applyCellPlacements(gridEl, snap.content);
       this.initScrollHaze();
 
       return;
@@ -546,7 +549,9 @@ export class Table implements BlockTool {
     }
 
     this.initSubsystems(gridEl);
-    applyCellColors(gridEl, this.model.snapshot().content);
+    const snapInit = this.model.snapshot();
+    applyCellColors(gridEl, snapInit.content);
+    applyCellPlacements(gridEl, snapInit.content);
 
     if (this.isNewTable) {
       this.cellSelection?.selectRange({ minRow: 0, maxRow: 0, minCol: 0, maxCol: 0 });
@@ -657,7 +662,9 @@ export class Table implements BlockTool {
     }
 
     if (this.readOnly) {
-      applyCellColors(gridEl, this.model.snapshot().content);
+      const snapRO = this.model.snapshot();
+      applyCellColors(gridEl, snapRO.content);
+      applyCellPlacements(gridEl, snapRO.content);
 
       return;
     }
@@ -718,7 +725,9 @@ export class Table implements BlockTool {
       this.rowColControls.restoreVisibleGrips(savedGripIndices.col, savedGripIndices.row);
     }
 
-    applyCellColors(gridEl, this.model.snapshot().content);
+    const snapSet = this.model.snapshot();
+    applyCellColors(gridEl, snapSet.content);
+    applyCellPlacements(gridEl, snapSet.content);
   }
 
   public onPaste(event: HTMLPasteEvent): void {
@@ -811,7 +820,9 @@ export class Table implements BlockTool {
       }, true);
 
       this.initSubsystems(gridEl);
-      applyCellColors(gridEl, this.model.snapshot().content);
+      const snapPaste = this.model.snapshot();
+      applyCellColors(gridEl, snapPaste.content);
+      applyCellPlacements(gridEl, snapPaste.content);
     }
   }
 

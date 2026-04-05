@@ -156,5 +156,7 @@
   "tools.quote.size": "ຂະໜາດຄຳອ້າງອີງ",
   "tools.quote.placeholder": "ອ້າງອິງ",
   "tools.quote.defaultSize": "ຄ່າເລີ່ມຕົ້ນ",
-  "tools.quote.largeSize": "ໃຫຍ່"
+  "tools.quote.largeSize": "ໃຫຍ່",
+  "tools.code.codeTab": "ໂຄດ",
+  "tools.code.previewTab": "ເບິ່ງກ່ອນ"
 }

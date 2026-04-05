@@ -156,5 +156,7 @@
   "tools.quote.size": "Tamaño de cita",
   "tools.quote.placeholder": "Cita",
   "tools.quote.defaultSize": "Predeterminado",
-  "tools.quote.largeSize": "Grande"
+  "tools.quote.largeSize": "Grande",
+  "tools.code.codeTab": "Código",
+  "tools.code.previewTab": "Vista previa"
 }

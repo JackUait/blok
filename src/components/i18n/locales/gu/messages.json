@@ -156,5 +156,7 @@
   "tools.quote.size": "અવતરણ કદ",
   "tools.quote.placeholder": "અવતરણ",
   "tools.quote.defaultSize": "ડિફૉલ્ટ",
-  "tools.quote.largeSize": "મોટું"
+  "tools.quote.largeSize": "મોટું",
+  "tools.code.codeTab": "કોડ",
+  "tools.code.previewTab": "પ્રીવ્યૂ"
 }

@@ -156,5 +156,7 @@
   "tools.quote.size": "ទំហំសម្រង់",
   "tools.quote.placeholder": "សម្រង់",
   "tools.quote.defaultSize": "លំនាំដើម",
-  "tools.quote.largeSize": "ធំ"
+  "tools.quote.largeSize": "ធំ",
+  "tools.code.codeTab": "កូដ",
+  "tools.code.previewTab": "មើលជាមុន"
 }

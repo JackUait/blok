@@ -156,5 +156,7 @@
   "tools.quote.size": "उद्धरण आकार",
   "tools.quote.placeholder": "उद्धरण",
   "tools.quote.defaultSize": "पूर्वनिर्धारित",
-  "tools.quote.largeSize": "ठूलो"
+  "tools.quote.largeSize": "ठूलो",
+  "tools.code.codeTab": "कोड",
+  "tools.code.previewTab": "पूर्वावलोकन"
 }

@@ -156,5 +156,7 @@
   "tools.quote.size": "نەقىل چوڭلۇقى",
   "tools.quote.placeholder": "نەقىل",
   "tools.quote.defaultSize": "سۈكۈتتىكى",
-  "tools.quote.largeSize": "چوڭ"
+  "tools.quote.largeSize": "چوڭ",
+  "tools.code.codeTab": "كود",
+  "tools.code.previewTab": "ئالدىن كۆرۈش"
 }

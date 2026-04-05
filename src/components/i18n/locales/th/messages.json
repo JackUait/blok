@@ -156,5 +156,7 @@
   "tools.quote.size": "ขนาดคำพูด",
   "tools.quote.placeholder": "อ้างอิง",
   "tools.quote.defaultSize": "ค่าเริ่มต้น",
-  "tools.quote.largeSize": "ใหญ่"
+  "tools.quote.largeSize": "ใหญ่",
+  "tools.code.codeTab": "โค้ด",
+  "tools.code.previewTab": "ตัวอย่าง"
 }

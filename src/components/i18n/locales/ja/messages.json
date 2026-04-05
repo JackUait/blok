@@ -156,5 +156,7 @@
   "tools.quote.size": "引用サイズ",
   "tools.quote.placeholder": "引用",
   "tools.quote.defaultSize": "デフォルト",
-  "tools.quote.largeSize": "大"
+  "tools.quote.largeSize": "大",
+  "tools.code.codeTab": "コード",
+  "tools.code.previewTab": "プレビュー"
 }

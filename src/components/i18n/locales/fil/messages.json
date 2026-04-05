@@ -156,5 +156,7 @@
   "tools.quote.size": "Laki ng quote",
   "tools.quote.placeholder": "Panipi",
   "tools.quote.defaultSize": "Default",
-  "tools.quote.largeSize": "Malaki"
+  "tools.quote.largeSize": "Malaki",
+  "tools.code.codeTab": "Code",
+  "tools.code.previewTab": "Preview"
 }

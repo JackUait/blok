@@ -156,5 +156,7 @@
   "tools.quote.size": "Citaatgrootte",
   "tools.quote.placeholder": "Citaat",
   "tools.quote.defaultSize": "Standaard",
-  "tools.quote.largeSize": "Groot"
+  "tools.quote.largeSize": "Groot",
+  "tools.code.codeTab": "Code",
+  "tools.code.previewTab": "Voorbeeld"
 }

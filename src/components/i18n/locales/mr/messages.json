@@ -156,5 +156,7 @@
   "tools.quote.size": "अवतरण आकार",
   "tools.quote.placeholder": "अवतरण",
   "tools.quote.defaultSize": "डीफॉल्ट",
-  "tools.quote.largeSize": "मोठा"
+  "tools.quote.largeSize": "मोठा",
+  "tools.code.codeTab": "कोड",
+  "tools.code.previewTab": "पूर्वावलोकन"
 }

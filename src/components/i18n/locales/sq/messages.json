@@ -156,5 +156,7 @@
   "tools.quote.size": "Madhësia e citimit",
   "tools.quote.placeholder": "Citim",
   "tools.quote.defaultSize": "Parazgjedhur",
-  "tools.quote.largeSize": "I madh"
+  "tools.quote.largeSize": "I madh",
+  "tools.code.codeTab": "Kod",
+  "tools.code.previewTab": "Shikimi paraprak"
 }

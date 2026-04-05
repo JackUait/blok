@@ -156,5 +156,7 @@
   "tools.quote.size": "ಉಲ್ಲೇಖ ಗಾತ್ರ",
   "tools.quote.placeholder": "ಉಲ್ಲೇಖ",
   "tools.quote.defaultSize": "ಡೀಫಾಲ್ಟ್",
-  "tools.quote.largeSize": "ದೊಡ್ಡ"
+  "tools.quote.largeSize": "ದೊಡ್ಡ",
+  "tools.code.codeTab": "ಕೋಡ್",
+  "tools.code.previewTab": "ಮುನ್ನೋಟ"
 }

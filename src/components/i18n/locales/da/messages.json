@@ -156,5 +156,7 @@
   "tools.quote.size": "Citatstørrelse",
   "tools.quote.placeholder": "Citat",
   "tools.quote.defaultSize": "Standard",
-  "tools.quote.largeSize": "Stor"
+  "tools.quote.largeSize": "Stor",
+  "tools.code.codeTab": "Kode",
+  "tools.code.previewTab": "Forhåndsvisning"
 }

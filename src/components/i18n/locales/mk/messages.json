@@ -156,5 +156,7 @@
   "tools.quote.size": "Големина на цитат",
   "tools.quote.placeholder": "Цитат",
   "tools.quote.defaultSize": "Стандардно",
-  "tools.quote.largeSize": "Голем"
+  "tools.quote.largeSize": "Голем",
+  "tools.code.codeTab": "Код",
+  "tools.code.previewTab": "Преглед"
 }

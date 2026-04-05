@@ -156,5 +156,7 @@
   "tools.quote.size": "גודל ציטוט",
   "tools.quote.placeholder": "ציטוט",
   "tools.quote.defaultSize": "ברירת מחדל",
-  "tools.quote.largeSize": "גדול"
+  "tools.quote.largeSize": "גדול",
+  "tools.code.codeTab": "קוד",
+  "tools.code.previewTab": "תצוגה מקדימה"
 }

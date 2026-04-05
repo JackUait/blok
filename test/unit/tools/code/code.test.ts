@@ -15,8 +15,8 @@ const mockIsHighlightable = vi.fn().mockReturnValue(false);
 const mockDisposeHighlighter = vi.fn();
 
 vi.mock('../../../../src/tools/code/shiki-loader', () => ({
-  tokenizeCode: (...args: unknown[]) => mockTokenizeCode(...args),
-  isHighlightable: (...args: unknown[]) => mockIsHighlightable(...args),
+  tokenizeCode: (...args: unknown[]): unknown => mockTokenizeCode(...args),
+  isHighlightable: (...args: unknown[]): unknown => mockIsHighlightable(...args),
   disposeHighlighter: mockDisposeHighlighter,
 }));
 
@@ -25,8 +25,8 @@ const mockIsHighlightingSupported = vi.fn().mockReturnValue(false);
 const mockDisposeAllHighlights = vi.fn();
 
 vi.mock('../../../../src/tools/code/highlight-applier', () => ({
-  applyHighlights: (...args: unknown[]) => mockApplyHighlights(...args),
-  isHighlightingSupported: () => mockIsHighlightingSupported(),
+  applyHighlights: (...args: unknown[]): unknown => mockApplyHighlights(...args),
+  isHighlightingSupported: (): unknown => mockIsHighlightingSupported(),
   disposeAllHighlights: mockDisposeAllHighlights,
 }));
 

@@ -55,18 +55,18 @@ export function isHighlightable(lang: string): boolean {
 
 async function ensureHighlighter(): Promise<ShikiHighlighter> {
   if (!state.highlighterPromise) {
-    state.highlighterPromise = (async () => {
+    state.highlighterPromise = (async (): Promise<ShikiHighlighter> => {
       const { createHighlighterCore } = await import('shiki/core');
       const { createJavaScriptRegexEngine } = await import('shiki/engine/javascript');
 
-      const hl = await createHighlighterCore({
+      const hl: ShikiHighlighter = await createHighlighterCore({
         themes: [
           import('@shikijs/themes/one-light'),
           import('@shikijs/themes/vitesse-dark'),
         ],
         langs: [],
         engine: createJavaScriptRegexEngine(),
-      });
+      }) as ShikiHighlighter;
       state.highlighter = hl;
       return hl;
     })();

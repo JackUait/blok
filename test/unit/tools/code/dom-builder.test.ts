@@ -234,4 +234,114 @@ describe('buildCodeDOM', () => {
 
     expect(languageButton.getAttribute('aria-haspopup')).toBe('listbox');
   });
+
+  describe('preview support', () => {
+    it('includes tab buttons when previewable is true', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+        previewable: true,
+        codeTabLabel: 'Code',
+        previewTabLabel: 'Preview',
+      });
+
+      expect(result.codeTab).toBeInstanceOf(HTMLButtonElement);
+      expect(result.previewTab).toBeInstanceOf(HTMLButtonElement);
+      expect(result.codeTab!.textContent).toBe('Code');
+      expect(result.previewTab!.textContent).toBe('Preview');
+    });
+
+    it('includes preview container when previewable is true', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'E = mc^2',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+        previewable: true,
+        codeTabLabel: 'Code',
+        previewTabLabel: 'Preview',
+      });
+
+      expect(result.previewElement).toBeInstanceOf(HTMLDivElement);
+      expect(result.previewElement!.getAttribute('data-blok-testid')).toBe('code-preview');
+    });
+
+    it('does not include tab buttons when previewable is false', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'const x = 1;',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+        previewable: false,
+        codeTabLabel: 'Code',
+        previewTabLabel: 'Preview',
+      });
+
+      expect(result.codeTab).toBeNull();
+      expect(result.previewTab).toBeNull();
+      expect(result.previewElement).toBeNull();
+    });
+
+    it('does not include tab buttons when previewable is omitted', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'const x = 1;',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      expect(result.codeTab).toBeNull();
+      expect(result.previewTab).toBeNull();
+      expect(result.previewElement).toBeNull();
+    });
+
+    it('tab buttons have data-blok-testid attributes', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: '',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+        previewable: true,
+        codeTabLabel: 'Code',
+        previewTabLabel: 'Preview',
+      });
+
+      expect(result.codeTab!.getAttribute('data-blok-testid')).toBe('code-code-tab');
+      expect(result.previewTab!.getAttribute('data-blok-testid')).toBe('code-preview-tab');
+    });
+
+    it('tab buttons are in the header between spacer and wrap button', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { wrapper, codeTab, wrapButton } = buildCodeDOM({
+        code: '',
+        languageName: 'LaTeX',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+        previewable: true,
+        codeTabLabel: 'Code',
+        previewTabLabel: 'Preview',
+      });
+
+      const header = wrapper.children[0];
+      const children = Array.from(header.children);
+      const codeTabIndex = children.indexOf(codeTab!);
+      const wrapIndex = children.indexOf(wrapButton);
+
+      expect(codeTabIndex).toBeGreaterThan(1); // after language + spacer
+      expect(codeTabIndex).toBeLessThan(wrapIndex);
+    });
+  });
 });

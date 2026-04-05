@@ -1240,6 +1240,7 @@ __metadata:
     i18next: "npm:25.8.18"
     jscpd: "npm:4.0.8"
     jsdom: "npm:28.1.0"
+    katex: "npm:^0.16.44"
     mdast-util-from-markdown: "npm:^2.0.3"
     mdast-util-gfm: "npm:^3.1.0"
     mdast-util-math: "npm:^3.0.0"
@@ -7160,7 +7161,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"katex@npm:^0.16.0":
+"katex@npm:^0.16.0, katex@npm:^0.16.44":
   version: 0.16.44
   resolution: "katex@npm:0.16.44"
   dependencies:

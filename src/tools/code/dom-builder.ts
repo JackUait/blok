@@ -20,7 +20,7 @@ export interface CodeDOMRefs {
   codeElement: HTMLElement;
   codeTab: HTMLButtonElement | null;
   previewTab: HTMLButtonElement | null;
-  previewElement: HTMLElement | null;
+  previewElement: HTMLDivElement | null;
 }
 
 export interface BuildCodeDOMOptions {
@@ -34,38 +34,30 @@ export interface BuildCodeDOMOptions {
   previewTabLabel?: string;
 }
 
-interface TabElements {
-  tabBar: HTMLElement;
-  codeTab: HTMLButtonElement;
-  previewTab: HTMLButtonElement;
-  previewElement: HTMLElement;
-}
-
-function buildTabElements(codeTabLabel: string | undefined, previewTabLabel: string | undefined): TabElements {
-  const tabBar = document.createElement('div');
-  tabBar.className = 'flex gap-1 px-2 pt-1.5';
-
+function buildPreviewElements(
+  codeTabLabel?: string,
+  previewTabLabel?: string,
+): { codeTab: HTMLButtonElement; previewTab: HTMLButtonElement; previewElement: HTMLDivElement } {
   const codeTab = document.createElement('button');
+
   codeTab.type = 'button';
-  codeTab.textContent = codeTabLabel ?? 'Code';
   codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
+  codeTab.textContent = codeTabLabel ?? 'Code';
   codeTab.setAttribute('data-blok-testid', 'code-code-tab');
 
   const previewTab = document.createElement('button');
+
   previewTab.type = 'button';
-  previewTab.textContent = previewTabLabel ?? 'Preview';
   previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
+  previewTab.textContent = previewTabLabel ?? 'Preview';
   previewTab.setAttribute('data-blok-testid', 'code-preview-tab');
 
-  tabBar.appendChild(codeTab);
-  tabBar.appendChild(previewTab);
-
   const previewElement = document.createElement('div');
+
   previewElement.className = PREVIEW_AREA_STYLES;
   previewElement.setAttribute('data-blok-testid', 'code-preview');
-  previewElement.hidden = false;
 
-  return { tabBar, codeTab, previewTab, previewElement };
+  return { codeTab, previewTab, previewElement };
 }
 
 export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
@@ -90,6 +82,11 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   // Spacer
   const spacer = document.createElement('div');
   spacer.className = 'flex-1';
+
+  // Tab buttons (only when previewable)
+  const { codeTab, previewTab, previewElement } = previewable
+    ? buildPreviewElements(codeTabLabel, previewTabLabel)
+    : { codeTab: null, previewTab: null, previewElement: null };
 
   // Wrap toggle button
   const wrapButton = document.createElement('button');
@@ -121,42 +118,29 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     codeElement.setAttribute('spellcheck', 'false');
   }
 
-  // Assemble
+  // Assemble header
   header.appendChild(languageButton);
   header.appendChild(spacer);
+
+  if (codeTab && previewTab) {
+    header.appendChild(codeTab);
+    header.appendChild(previewTab);
+  }
+
   header.appendChild(wrapButton);
   header.appendChild(copyButton);
 
   // Pre wrapper for semantic HTML
   const preElement = document.createElement('pre');
-
   preElement.appendChild(codeElement);
 
-  // Tabs and preview area (only for previewable languages in edit mode)
-  const tabs = previewable ? buildTabElements(codeTabLabel, previewTabLabel) : null;
-
-  // Assemble wrapper: header, optional tab bar, code (pre), optional preview
+  // Assemble wrapper
   wrapper.appendChild(header);
-
-  if (tabs) {
-    wrapper.appendChild(tabs.tabBar);
-  }
-
   wrapper.appendChild(preElement);
 
-  if (tabs) {
-    wrapper.appendChild(tabs.previewElement);
+  if (previewElement) {
+    wrapper.appendChild(previewElement);
   }
 
-  return {
-    wrapper,
-    languageButton,
-    copyButton,
-    wrapButton,
-    preElement,
-    codeElement,
-    codeTab: tabs?.codeTab ?? null,
-    previewTab: tabs?.previewTab ?? null,
-    previewElement: tabs?.previewElement ?? null,
-  };
+  return { wrapper, languageButton, copyButton, wrapButton, preElement, codeElement, codeTab, previewTab, previewElement };
 }

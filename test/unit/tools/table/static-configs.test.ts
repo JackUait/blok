@@ -94,7 +94,31 @@ describe('Table static configs', () => {
     expect(config).not.toBe(false);
 
     if (config !== false) {
-      expect(config.tags).toEqual(expect.arrayContaining(['TABLE', 'TR', 'TH', 'TD']));
+      const tagNames = config.tags!.map(tag =>
+        typeof tag === 'string' ? tag : Object.keys(tag)[0]
+      );
+
+      expect(tagNames).toEqual(expect.arrayContaining(['TABLE', 'TR', 'TH', 'TD']));
+    }
+  });
+
+  it('paste config preserves style attribute on TD and TH elements', () => {
+    const config = Table.pasteConfig;
+
+    expect(config).not.toBe(false);
+
+    if (config !== false) {
+      const tdConfig = config.tags!.find(
+        tag => typeof tag === 'object' && 'TD' in tag
+      );
+      const thConfig = config.tags!.find(
+        tag => typeof tag === 'object' && 'TH' in tag
+      );
+
+      expect(tdConfig).toBeDefined();
+      expect(thConfig).toBeDefined();
+      expect((tdConfig as Record<string, unknown>).TD).toEqual({ style: true });
+      expect((thConfig as Record<string, unknown>).TH).toEqual({ style: true });
     }
   });
 });

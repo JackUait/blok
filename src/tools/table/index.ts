@@ -234,7 +234,7 @@ export class Table implements BlockTool {
 
   public static get pasteConfig(): PasteConfig {
     return {
-      tags: ['TABLE', 'TR', 'TH', 'TD'],
+      tags: ['TABLE', 'TR', { TH: { style: true } }, { TD: { style: true } }],
     };
   }
 

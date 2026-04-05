@@ -7,8 +7,6 @@ export const COPIED_KEY = 'tools.code.copied';
 export const COPY_CODE_KEY = 'tools.code.copyCode';
 export const WRAP_LINES_KEY = 'tools.code.wrapLines';
 export const SEARCH_LANGUAGE_KEY = 'tools.code.searchLanguage';
-export const CODE_TAB_KEY = 'tools.code.codeTab';
-export const PREVIEW_TAB_KEY = 'tools.code.previewTab';
 
 // Default values
 export const DEFAULT_LANGUAGE = 'plain text';
@@ -35,6 +33,7 @@ export const LANGUAGES: LanguageEntry[] = [
   { id: 'php', name: 'PHP' },
   { id: 'swift', name: 'Swift' },
   { id: 'kotlin', name: 'Kotlin' },
+  { id: 'latex', name: 'LaTeX' },
   { id: 'sql', name: 'SQL' },
   { id: 'html', name: 'HTML' },
   { id: 'css', name: 'CSS' },
@@ -50,7 +49,6 @@ export const LANGUAGES: LanguageEntry[] = [
   { id: 'scala', name: 'Scala' },
   { id: 'dart', name: 'Dart' },
   { id: 'lua', name: 'Lua' },
-  { id: 'latex', name: 'LaTeX' },
 ];
 
 // CSS — Tailwind classes
@@ -61,11 +59,15 @@ export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent b
 export const CODE_AREA_STYLES = 'px-4 py-3 font-mono text-sm leading-relaxed outline-hidden whitespace-pre-wrap overflow-x-auto min-h-[1.5em]';
 export const COPIED_FEEDBACK_STYLES = 'text-xs text-gray-text font-medium select-none';
 
-// Preview tab styles
-export const TAB_STYLES = 'px-3 py-1 text-xs border-0 cursor-pointer rounded transition-colors';
-export const TAB_ACTIVE_STYLES = 'bg-bg-primary text-primary-text font-medium';
-export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
-export const PREVIEW_AREA_STYLES = 'px-4 py-3';
-
 // Languages that support preview rendering
 export const PREVIEWABLE_LANGUAGES = new Set(['latex']);
+
+// i18n keys — preview tabs
+export const CODE_TAB_KEY = 'tools.code.codeTab';
+export const PREVIEW_TAB_KEY = 'tools.code.previewTab';
+
+// CSS — preview tab styles
+export const TAB_STYLES = 'px-2 py-0.5 rounded text-xs font-medium cursor-pointer border-0 transition-colors select-none';
+export const TAB_ACTIVE_STYLES = 'bg-blue-500 text-white';
+export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
+export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em]';

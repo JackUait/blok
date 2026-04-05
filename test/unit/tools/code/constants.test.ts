@@ -11,6 +11,7 @@ import {
   DEFAULT_LANGUAGE,
   TAB_STRING,
   LANGUAGES,
+  PREVIEWABLE_LANGUAGES,
 } from '../../../../src/tools/code/constants';
 
 describe('Code Block Constants', () => {
@@ -66,6 +67,24 @@ describe('Code Block Constants', () => {
       expect(ids).toContain('html');
       expect(ids).toContain('css');
       expect(ids).toContain('json');
+    });
+
+    it('includes latex in the language list', () => {
+      const latex = LANGUAGES.find(l => l.id === 'latex');
+
+      expect(latex).toBeDefined();
+      expect(latex!.name).toBe('LaTeX');
+    });
+  });
+
+  describe('PREVIEWABLE_LANGUAGES', () => {
+    it('PREVIEWABLE_LANGUAGES contains latex', () => {
+      expect(PREVIEWABLE_LANGUAGES.has('latex')).toBe(true);
+    });
+
+    it('PREVIEWABLE_LANGUAGES does not contain non-previewable languages', () => {
+      expect(PREVIEWABLE_LANGUAGES.has('javascript')).toBe(false);
+      expect(PREVIEWABLE_LANGUAGES.has('plain text')).toBe(false);
     });
   });
 });

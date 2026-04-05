@@ -81,6 +81,13 @@ describe('Table static configs', () => {
     });
   });
 
+  it('sanitize allows a tag with href, target _blank, and rel nofollow in content', () => {
+    const config = Table.sanitize;
+    const aRule = (config.content as Record<string, unknown>)['a'];
+
+    expect(aRule).toEqual({ href: true, target: '_blank', rel: 'nofollow' });
+  });
+
   it('paste config handles TABLE, TR, TH, TD tags', () => {
     const config = Table.pasteConfig;
 

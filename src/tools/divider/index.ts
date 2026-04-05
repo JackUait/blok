@@ -2,6 +2,7 @@ import type {
   BlockTool,
   BlockToolConstructorOptions,
   PasteConfig,
+  PasteEvent,
   SanitizerConfig,
   ToolboxConfig,
 } from '../../../types';
@@ -78,15 +79,22 @@ export class DividerTool implements BlockTool {
   }
 
   /**
-   * Paste three-or-more hyphens to create a divider
+   * Paste three-or-more hyphens or an <hr> element to create a divider
    */
   public static get pasteConfig(): PasteConfig {
     return {
+      tags: ['HR'],
       patterns: {
         divider: /^-{3,}$/,
       },
     };
   }
+
+  /**
+   * Handle paste events — divider is contentless so no data extraction needed.
+   * Must exist for the tool registry to process pasteConfig (hasOnPasteHandler check).
+   */
+  public onPaste(_event: PasteEvent): void {}
 
   /**
    * Nothing to sanitize — no HTML content

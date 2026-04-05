@@ -152,6 +152,30 @@ describe('DividerTool', () => {
       expect((config as { patterns: Record<string, RegExp> }).patterns.divider.test('--')).toBe(false);
       expect((config as { patterns: Record<string, RegExp> }).patterns.divider.test('--- text')).toBe(false);
     });
+
+    it('has tags property containing HR for tag-based paste', async () => {
+      const { DividerTool } = await import('../../../../src/tools/divider');
+      const config = DividerTool.pasteConfig;
+
+      expect(config).toBeDefined();
+      expect((config as { tags: string[] }).tags).toContain('HR');
+    });
+
+    it('has both tags and patterns properties', async () => {
+      const { DividerTool } = await import('../../../../src/tools/divider');
+      const config = DividerTool.pasteConfig;
+
+      expect(config).toHaveProperty('tags');
+      expect(config).toHaveProperty('patterns');
+    });
+  });
+
+  describe('onPaste()', () => {
+    it('has an onPaste method on the prototype for tool registry detection', async () => {
+      const { DividerTool } = await import('../../../../src/tools/divider');
+
+      expect(typeof DividerTool.prototype.onPaste).toBe('function');
+    });
   });
 
   describe('static sanitize', () => {

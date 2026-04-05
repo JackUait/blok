@@ -260,7 +260,7 @@ export class Table implements BlockTool {
 
           return style.length > 0 ? { style: true } : {};
         },
-        a: { href: true },
+        a: { href: true, target: '_blank', rel: 'nofollow' },
         input: { type: true, checked: true },
       },
     };

@@ -185,7 +185,7 @@ const CELL_SANITIZE_CONFIG: SanitizerConfig = {
   i: true,
   em: true,
   br: true,
-  a: { href: true },
+  a: { href: true, target: '_blank', rel: 'nofollow' },
   mark: (node: Element): { [attr: string]: boolean | string } => {
     const el = node as HTMLElement;
     const style = el.style;

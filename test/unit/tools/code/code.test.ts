@@ -644,6 +644,113 @@ describe('CodeTool', () => {
       el.remove();
     });
 
+    it('appends trailing BR when Enter creates a trailing newline', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Place caret at end
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Press Enter at end of text
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      // A <br> sentinel should be appended so the browser renders the empty line
+      expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
+      // textContent must NOT include the BR (it's invisible to content)
+      expect(codeEl.textContent).toBe('hello\n');
+
+      el.remove();
+    });
+
+    it('does not append BR when Enter is pressed in the middle of text', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'helloworld' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Place caret in the middle (after "hello")
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      // No BR needed — newline is followed by "world"
+      expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
+      expect(codeEl.textContent).toBe('hello\nworld');
+
+      el.remove();
+    });
+
+    it('removes trailing BR when input makes content no longer end with newline', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Place caret at end and press Enter to create trailing newline + BR
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(codeEl.lastChild).toBeInstanceOf(HTMLBRElement);
+
+      // Simulate user typing on the new line (browser modifies text node)
+      const textNode = codeEl.firstChild!;
+      (textNode as Text).data = 'hello\nx';
+      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // BR should be removed — content no longer ends with \n
+      expect(codeEl.lastChild).not.toBeInstanceOf(HTMLBRElement);
+
+      el.remove();
+    });
+
+    it('save() excludes the trailing BR from saved data', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      document.body.appendChild(el);
+
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      // Press Enter at end to create trailing newline + BR
+      const range = document.createRange();
+      range.setStart(codeEl.firstChild!, 5);
+      range.collapse(true);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      // save() should return the text content without the BR
+      const data = tool.save(el);
+      expect(data.code).toBe('hello\n');
+
+      el.remove();
+    });
+
     it('line numbers toggle button exists in header', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());

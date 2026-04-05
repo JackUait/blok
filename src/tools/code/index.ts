@@ -118,12 +118,14 @@ export class CodeTool implements BlockTool {
 
         if (handled) {
           event.preventDefault();
+          this.syncTrailingBr();
           this.updateGutter();
           this.scheduleHighlight();
         }
       });
 
       dom.codeElement.addEventListener('input', () => {
+        this.syncTrailingBr();
         this.updateGutter();
         this.scheduleHighlight();
       });
@@ -339,6 +341,29 @@ export class CodeTool implements BlockTool {
       lineEl.textContent = String(idx + 1);
       gutter.appendChild(lineEl);
     });
+  }
+
+  /**
+   * Ensure a trailing <br> exists when the text content ends with '\n'.
+   * Browsers collapse a trailing newline in contenteditable — no visible
+   * empty line is rendered, so the caret has nowhere to go.  A sentinel
+   * <br> forces the browser to create the line box.  It is invisible to
+   * textContent, so save() and updateGutter() need no changes.
+   */
+  private syncTrailingBr(): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const code = this._dom.codeElement;
+    const text = code.textContent ?? '';
+    const hasBr = code.lastChild instanceof HTMLBRElement;
+
+    if (text.endsWith('\n') && !hasBr) {
+      code.appendChild(document.createElement('br'));
+    } else if (!text.endsWith('\n') && hasBr) {
+      code.lastChild!.remove();
+    }
   }
 
   private scheduleHighlight(): void {

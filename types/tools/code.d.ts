@@ -8,4 +8,6 @@ export interface CodeData extends BlockToolData {
   code: string;
   /** Language identifier, e.g. "javascript", "plain text" */
   language: string;
+  /** Whether to show line numbers in the gutter */
+  lineNumbers?: boolean;
 }

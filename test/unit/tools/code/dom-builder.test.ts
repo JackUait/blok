@@ -24,9 +24,9 @@ describe('buildCodeDOM', () => {
     expect(result.codeElement).toBeInstanceOf(HTMLElement);
   });
 
-  it('wrapper contains header and pre as direct children', async () => {
+  it('wrapper contains header and code body as direct children', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { wrapper, preElement, codeElement } = buildCodeDOM({
+    const { wrapper, preElement, codeElement, gutterElement } = buildCodeDOM({
       code: '',
       languageName: 'Plain Text',
       readOnly: false,
@@ -35,14 +35,16 @@ describe('buildCodeDOM', () => {
     });
 
     expect(wrapper.children).toHaveLength(2);
-    // First child is the header, second is the <pre> wrapping the code element
-    expect(wrapper.children[1]).toBe(preElement);
+    // First child is the header, second is the code body (gutter + pre)
+    const codeBody = wrapper.children[1];
+    expect(codeBody.contains(gutterElement)).toBe(true);
+    expect(codeBody.contains(preElement)).toBe(true);
     expect(preElement.contains(codeElement)).toBe(true);
   });
 
-  it('header contains languageButton, spacer, wrapButton, and copyButton', async () => {
+  it('header contains languageButton, spacer, lineNumbersButton, wrapButton, and copyButton', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
-    const { wrapper, languageButton, wrapButton, copyButton } = buildCodeDOM({
+    const { wrapper, languageButton, lineNumbersButton, wrapButton, copyButton } = buildCodeDOM({
       code: '',
       languageName: 'Python',
       readOnly: false,
@@ -51,11 +53,12 @@ describe('buildCodeDOM', () => {
     });
 
     const header = wrapper.children[0];
-    expect(header.children).toHaveLength(4);
+    expect(header.children).toHaveLength(5);
     expect(header.children[0]).toBe(languageButton);
     // children[1] is the spacer
-    expect(header.children[2]).toBe(wrapButton);
-    expect(header.children[3]).toBe(copyButton);
+    expect(header.children[2]).toBe(lineNumbersButton);
+    expect(header.children[3]).toBe(wrapButton);
+    expect(header.children[4]).toBe(copyButton);
   });
 
   it('language button displays the language name', async () => {
@@ -342,6 +345,123 @@ describe('buildCodeDOM', () => {
 
       expect(codeTabIndex).toBeGreaterThan(1); // after language + spacer
       expect(codeTabIndex).toBeLessThan(wrapIndex);
+    });
+  });
+
+  describe('line numbers gutter', () => {
+    it('returns gutterElement in CodeDOMRefs', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const result = buildCodeDOM({
+        code: 'line 1\nline 2\nline 3',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      expect(result.gutterElement).toBeInstanceOf(HTMLElement);
+    });
+
+    it('gutter element has aria-hidden for accessibility', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { gutterElement } = buildCodeDOM({
+        code: 'line 1',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      expect(gutterElement.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('gutter element has data-blok-testid', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { gutterElement } = buildCodeDOM({
+        code: '',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      expect(gutterElement.getAttribute('data-blok-testid')).toBe('code-gutter');
+    });
+
+    it('gutter and pre are wrapped in a flex container', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { gutterElement, preElement } = buildCodeDOM({
+        code: 'hello',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      // Both share the same parent (the code body flex container)
+      expect(gutterElement.parentElement).toBe(preElement.parentElement);
+      expect(gutterElement.parentElement).not.toBeNull();
+    });
+
+    it('gutter is the first child and pre is the second child of code body', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { gutterElement, preElement } = buildCodeDOM({
+        code: 'hello',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      const codeBody = gutterElement.parentElement!;
+      expect(codeBody.children[0]).toBe(gutterElement);
+      expect(codeBody.children[1]).toBe(preElement);
+    });
+
+    it('gutter renders one child div per line of code', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { gutterElement } = buildCodeDOM({
+        code: 'a\nb\nc',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      expect(gutterElement.children).toHaveLength(3);
+      expect(gutterElement.children[0].textContent).toBe('1');
+      expect(gutterElement.children[1].textContent).toBe('2');
+      expect(gutterElement.children[2].textContent).toBe('3');
+    });
+
+    it('gutter renders one line for empty code', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { gutterElement } = buildCodeDOM({
+        code: '',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      expect(gutterElement.children).toHaveLength(1);
+      expect(gutterElement.children[0].textContent).toBe('1');
+    });
+
+    it('wrapper has header and code body as direct children (no longer header + pre)', async () => {
+      const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+      const { wrapper, gutterElement } = buildCodeDOM({
+        code: 'hello',
+        languageName: 'JavaScript',
+        readOnly: false,
+        copyLabel: 'Copy code',
+        wrapLabel: 'Wrap lines',
+      });
+
+      // wrapper has: header, codeBody (which contains gutter + pre)
+      expect(wrapper.children).toHaveLength(2);
+      // Second child should be the code body container, not directly the pre
+      expect(wrapper.children[1]).toBe(gutterElement.parentElement);
     });
   });
 });

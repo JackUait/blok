@@ -86,3 +86,11 @@ export const HIGHLIGHTABLE_LANGUAGES = new Set(
     .map((lang) => lang.id)
     .filter((id) => id !== DEFAULT_LANGUAGE)
 );
+
+// i18n key — line numbers toggle
+export const LINE_NUMBERS_KEY = 'tools.code.lineNumbers';
+
+// CSS — line number gutter
+export const CODE_BODY_STYLES = 'flex overflow-hidden';
+export const GUTTER_STYLES = 'select-none text-right pr-3 py-3 font-mono text-sm leading-relaxed text-gray-text/40 border-r border-border-primary shrink-0';
+export const GUTTER_LINE_STYLES = 'leading-relaxed';

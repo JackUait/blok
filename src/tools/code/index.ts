@@ -21,6 +21,7 @@ import {
   CODE_AREA_STYLES,
   COPY_CODE_KEY,
   WRAP_LINES_KEY,
+  LINE_NUMBERS_KEY,
   COPIED_KEY,
   LANGUAGE_KEY,
   COPIED_FEEDBACK_STYLES,
@@ -31,6 +32,7 @@ import {
   TAB_ACTIVE_STYLES,
   TAB_INACTIVE_STYLES,
   PREVIEW_AREA_STYLES,
+  GUTTER_LINE_STYLES,
 } from './constants';
 import { renderLatex } from './katex-loader';
 import { renderMermaid } from './mermaid-loader';
@@ -45,6 +47,7 @@ export class CodeTool implements BlockTool {
   private _data: CodeData;
   private _dom: CodeDOMRefs | null = null;
   private _wrapping = true;
+  private _lineNumbers = true;
   private _picker: LanguagePicker | null = null;
   private _previewActive = false;
   private _previewContainer: HTMLElement | null = null;
@@ -57,7 +60,9 @@ export class CodeTool implements BlockTool {
     this._data = {
       code: data?.code ?? '',
       language: data?.language ?? DEFAULT_LANGUAGE,
+      lineNumbers: data?.lineNumbers,
     };
+    this._lineNumbers = data?.lineNumbers ?? true;
   }
 
   public render(): HTMLElement {
@@ -69,12 +74,17 @@ export class CodeTool implements BlockTool {
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
       wrapLabel: this.api.i18n.t(WRAP_LINES_KEY),
+      lineNumbersLabel: this.api.i18n.t(LINE_NUMBERS_KEY),
       previewable: this.readOnly ? false : isPreviewable,
       codeTabLabel: this.api.i18n.t(CODE_TAB_KEY),
       previewTabLabel: this.api.i18n.t(PREVIEW_TAB_KEY),
     });
 
     this._dom = dom;
+
+    // Line numbers gutter visibility
+    dom.gutterElement.hidden = !this._lineNumbers;
+    dom.lineNumbersButton.addEventListener('click', () => this.toggleLineNumbers());
 
     // Read-only + previewable: show preview only, hide code, no tabs
     if (this.readOnly && isPreviewable) {
@@ -84,6 +94,7 @@ export class CodeTool implements BlockTool {
       previewEl.setAttribute('data-blok-testid', 'code-preview');
       dom.wrapper.appendChild(previewEl);
       dom.preElement.hidden = true;
+      dom.gutterElement.hidden = true;
       this._previewContainer = previewEl;
       void this.renderPreview();
     }
@@ -92,6 +103,7 @@ export class CodeTool implements BlockTool {
     if (!this.readOnly && isPreviewable && dom.codeTab && dom.previewTab && dom.previewElement) {
       this._previewActive = true;
       dom.preElement.hidden = true;
+      dom.gutterElement.hidden = true;
       dom.previewElement.hidden = false;
       this._previewContainer = dom.previewElement;
       void this.renderPreview();
@@ -109,7 +121,10 @@ export class CodeTool implements BlockTool {
         }
       });
 
-      dom.codeElement.addEventListener('input', () => this.scheduleHighlight());
+      dom.codeElement.addEventListener('input', () => {
+        this.updateGutter();
+        this.scheduleHighlight();
+      });
     }
 
     dom.copyButton.addEventListener('click', () => this.copyCode());
@@ -144,6 +159,7 @@ export class CodeTool implements BlockTool {
 
     this._previewActive = false;
     this._dom.preElement.hidden = false;
+    this._dom.gutterElement.hidden = !this._lineNumbers;
     this._dom.previewElement.hidden = true;
     this._dom.codeTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
     this._dom.previewTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
@@ -156,6 +172,7 @@ export class CodeTool implements BlockTool {
 
     this._previewActive = true;
     this._dom.preElement.hidden = true;
+    this._dom.gutterElement.hidden = true;
     this._dom.previewElement.hidden = false;
     this._dom.codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
     this._dom.previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
@@ -181,6 +198,7 @@ export class CodeTool implements BlockTool {
     return {
       code: this._dom?.codeElement.textContent ?? '',
       language: this._data.language,
+      lineNumbers: this._lineNumbers,
     };
   }
 
@@ -287,6 +305,38 @@ export class CodeTool implements BlockTool {
     } else {
       this._dom.codeElement.className = CODE_AREA_STYLES.replace('whitespace-pre-wrap', 'whitespace-pre');
     }
+  }
+
+  private toggleLineNumbers(): void {
+    this._lineNumbers = !this._lineNumbers;
+
+    if (this._dom) {
+      this._dom.gutterElement.hidden = !this._lineNumbers;
+    }
+  }
+
+  private updateGutter(): void {
+    if (!this._dom) {
+      return;
+    }
+
+    const code = this._dom.codeElement.textContent ?? '';
+    const lineCount = code ? code.split('\n').length : 1;
+    const gutter = this._dom.gutterElement;
+    const currentCount = gutter.children.length;
+
+    if (currentCount === lineCount) {
+      return;
+    }
+
+    // Rebuild gutter lines
+    gutter.innerHTML = '';
+    Array.from({ length: lineCount }, (_, idx) => {
+      const lineEl = document.createElement('div');
+      lineEl.className = GUTTER_LINE_STYLES;
+      lineEl.textContent = String(idx + 1);
+      gutter.appendChild(lineEl);
+    });
   }
 
   private scheduleHighlight(): void {

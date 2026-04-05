@@ -488,6 +488,17 @@ export const IconWrap = `
 </svg>
 `;
 
+// Line numbers icon (gutter marks + code lines)
+export const IconLineNumbers = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M7 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" opacity="0.35"/>
+  <circle cx="4.5" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="4.5" cy="10" r="0.75" fill="currentColor"/>
+  <circle cx="4.5" cy="13" r="0.75" fill="currentColor"/>
+  <path d="M10 7h6M10 10h6M10 13h4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Emoji Picker Category Icons
 
 // Star icon (Callout category)
@@ -577,3 +588,9 @@ export const IconEmojiFlag = `
   <path d="M5 3c2 0 3 1.5 5 1.5S14 3 16 3v8c-2 0-3 1.5-5 1.5S7 11 5 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
+
+// Merge cells icon (two cells merging into one)
+export const IconMergeCells = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M3 12h18"/><path d="M12 8l-3 4 3 4"/></svg>`;
+
+// Split cell icon (one cell splitting into two)
+export const IconSplitCell = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M8 8l4 4-4 4"/><path d="M16 8l-4 4 4 4"/></svg>`;

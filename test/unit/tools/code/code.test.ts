@@ -55,6 +55,7 @@ const createOptions = (
   data: {
     code: data.code ?? '',
     language: data.language ?? 'plain text',
+    ...(data.lineNumbers !== undefined ? { lineNumbers: data.lineNumbers } : {}),
   } as CodeData,
   config: {},
   api: createMockAPI(),
@@ -568,6 +569,169 @@ describe('CodeTool', () => {
 
       tool.removed();
       expect(mockCleanup).toHaveBeenCalled();
+    });
+  });
+
+  describe('line numbers', () => {
+    it('renders a gutter element with line numbers', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1\nline 2\nline 3' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]');
+
+      expect(gutter).not.toBeNull();
+      expect(gutter!.children).toHaveLength(3);
+    });
+
+    it('gutter shows correct line numbers', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'a\nb\nc\nd\ne' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      expect(gutter.children[0].textContent).toBe('1');
+      expect(gutter.children[4].textContent).toBe('5');
+    });
+
+    it('updates gutter on input', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      expect(gutter.children).toHaveLength(1);
+
+      // Simulate typing a new line
+      codeEl.textContent = 'line 1\nline 2\nline 3';
+      codeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(gutter.children).toHaveLength(3);
+    });
+
+    it('line numbers toggle button exists in header', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]');
+
+      expect(btn).not.toBeNull();
+      expect(btn).toBeInstanceOf(HTMLButtonElement);
+    });
+
+    it('clicking line numbers button hides the gutter', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1\nline 2' }));
+      const el = tool.render();
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(false);
+
+      btn.click();
+
+      expect(gutter.hidden).toBe(true);
+    });
+
+    it('clicking line numbers button twice restores the gutter', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'a\nb' }));
+      const el = tool.render();
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      btn.click();
+      expect(gutter.hidden).toBe(true);
+
+      btn.click();
+      expect(gutter.hidden).toBe(false);
+    });
+
+    it('save() includes lineNumbers field', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'test' }));
+      const el = tool.render();
+      const data = tool.save(el);
+
+      expect(data).toHaveProperty('lineNumbers');
+      expect(data.lineNumbers).toBe(true);
+    });
+
+    it('save() returns lineNumbers false after toggling off', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'test' }));
+      const el = tool.render();
+
+      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
+      btn.click();
+
+      const data = tool.save(el);
+      expect(data.lineNumbers).toBe(false);
+    });
+
+    it('restores lineNumbers false from saved data', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello', lineNumbers: false } as Partial<CodeData>));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(true);
+    });
+
+    it('defaults lineNumbers to true when not provided', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(false);
+    });
+
+    it('gutter updates after merge()', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'line 1' }));
+      tool.render();
+
+      tool.merge({ code: 'line 2\nline 3', language: 'plain text' } as CodeData);
+
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
+
+      // 'line 1\nline 2\nline 3' = 3 lines
+      expect(gutter.children).toHaveLength(3);
+    });
+
+    it('gutter is hidden when preview is active for previewable language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      // Preview defaults to active for previewable languages
+      expect(gutter.hidden).toBe(true);
+    });
+
+    it('gutter is restored when switching from preview to code tab', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+
+      expect(gutter.hidden).toBe(true);
+
+      codeTab.click();
+
+      expect(gutter.hidden).toBe(false);
+    });
+
+    it('gutter is hidden in read-only mode with previewable language', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }, { readOnly: true }));
+      const el = tool.render();
+      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
+
+      expect(gutter.hidden).toBe(true);
     });
   });
 });

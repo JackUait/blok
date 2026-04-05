@@ -3,8 +3,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   TOOL_NAME, PLACEHOLDER_KEY, LANGUAGE_KEY, COPIED_KEY, COPY_CODE_KEY,
-  WRAP_LINES_KEY, DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
+  WRAP_LINES_KEY, LINE_NUMBERS_KEY, DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
   HIGHLIGHTABLE_LANGUAGES, SHIKI_LIGHT_THEME, SHIKI_DARK_THEME, DARK_MODE_SELECTOR,
+  CODE_AREA_STYLES, GUTTER_STYLES, GUTTER_LINE_STYLES, CODE_BODY_STYLES,
 } from '../../../../src/tools/code/constants';
 
 describe('Code Block Constants', () => {
@@ -18,6 +19,7 @@ describe('Code Block Constants', () => {
     expect(COPIED_KEY).toBe('tools.code.copied');
     expect(COPY_CODE_KEY).toBe('tools.code.copyCode');
     expect(WRAP_LINES_KEY).toBe('tools.code.wrapLines');
+    expect(LINE_NUMBERS_KEY).toBe('tools.code.lineNumbers');
   });
 
   it('DEFAULT_LANGUAGE is "plain text"', () => {
@@ -122,6 +124,33 @@ describe('Code Block Constants', () => {
 
     it('DARK_MODE_SELECTOR targets .dark class', () => {
       expect(DARK_MODE_SELECTOR).toBe('.dark');
+    });
+  });
+
+  describe('Line number styles', () => {
+    it('GUTTER_STYLES is a non-empty string', () => {
+      expect(typeof GUTTER_STYLES).toBe('string');
+      expect(GUTTER_STYLES.length).toBeGreaterThan(0);
+    });
+
+    it('GUTTER_STYLES includes user-select-none to prevent selection', () => {
+      expect(GUTTER_STYLES).toContain('select-none');
+    });
+
+    it('GUTTER_LINE_STYLES is a non-empty string', () => {
+      expect(typeof GUTTER_LINE_STYLES).toBe('string');
+      expect(GUTTER_LINE_STYLES.length).toBeGreaterThan(0);
+    });
+
+    it('CODE_BODY_STYLES includes flex for side-by-side layout', () => {
+      expect(CODE_BODY_STYLES).toContain('flex');
+    });
+
+    it('GUTTER_STYLES uses same text size and line height as CODE_AREA_STYLES', () => {
+      expect(GUTTER_STYLES).toContain('text-sm');
+      expect(GUTTER_STYLES).toContain('leading-relaxed');
+      expect(CODE_AREA_STYLES).toContain('text-sm');
+      expect(CODE_AREA_STYLES).toContain('leading-relaxed');
     });
   });
 });

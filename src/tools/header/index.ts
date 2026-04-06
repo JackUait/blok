@@ -112,6 +112,12 @@ export class Header implements BlockTool {
   private readOnly: boolean;
 
   /**
+   * Cleanup function for the placeholder, returned by setupPlaceholder().
+   * Stored so we can tear down the placeholder when entering read-only mode.
+   */
+  private placeholderCleanup: (() => void) | null = null;
+
+  /**
    * Tool's settings passed from Editor
    */
   private _settings: HeaderConfig;
@@ -300,6 +306,45 @@ export class Header implements BlockTool {
   public removed(): void {
     this.api.events.off('block changed', this.handleBlockChanged);
     this._element.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  /**
+   * Toggle read-only mode in-place without re-rendering the DOM element.
+   * Manages contentEditable, keydown listener (for toggle headings),
+   * placeholder setup/teardown, and body placeholder click handler.
+   *
+   * @param state - true to enter read-only mode, false to exit
+   */
+  public setReadOnly(state: boolean): void {
+    if (!this._element) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    if (state) {
+      this._element.contentEditable = 'false';
+
+      if (this._data.isToggleable) {
+        this._element.removeEventListener('keydown', this.handleKeyDown);
+      }
+
+      if (this.placeholderCleanup) {
+        this.placeholderCleanup();
+        this.placeholderCleanup = null;
+      }
+    } else {
+      this._element.contentEditable = 'true';
+
+      if (this._data.isToggleable) {
+        this._element.addEventListener('keydown', this.handleKeyDown);
+      }
+
+      const translatedName = this.api.i18n.t(this.currentLevel.nameKey);
+      const placeholderText = this.resolvePlaceholderText(translatedName);
+
+      this.placeholderCleanup = setupPlaceholder(this._element, placeholderText);
+    }
   }
 
   /**
@@ -679,7 +724,7 @@ export class Header implements BlockTool {
     const placeholderText = this.resolvePlaceholderText(translatedName);
 
     if (!this.readOnly) {
-      setupPlaceholder(tag, placeholderText);
+      this.placeholderCleanup = setupPlaceholder(tag, placeholderText);
     } else {
       tag.setAttribute('data-placeholder', placeholderText);
     }

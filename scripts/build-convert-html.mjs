@@ -20,6 +20,9 @@ async function buildConvertHtml() {
       },
       rollupOptions: {
         external: ['node:fs', 'node:path', 'node:process', 'jsdom'],
+        output: {
+          inlineDynamicImports: true,
+        },
       },
     },
   });

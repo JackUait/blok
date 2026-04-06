@@ -16,7 +16,7 @@ import type { CalloutData, CalloutConfig } from './types';
 import { buildCalloutDOM, type CalloutDOMRefs } from './dom-builder';
 import { saveCallout } from './block-operations';
 import { handleCalloutFirstChildBackspace } from './callout-keyboard';
-import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { mountChildBlocks } from '../nested-blocks';
 import { createColorPicker, type ColorPickerHandle } from '../../components/shared/color-picker';
 import { colorVarName } from '../../components/shared/color-presets';
 import { mapToNearestPresetName } from '../../components/utils/color-mapping';
@@ -61,7 +61,7 @@ const VARIANT_TO_BG_PRESET: Record<string, string | null> = {
 
 export class CalloutTool implements BlockTool {
   private readonly api: API;
-  private readonly readOnly: boolean;
+  private readOnly: boolean;
   private _data: CalloutData;
   private _dom: CalloutDOMRefs | null = null;
   private _emojiPicker: EmojiPicker | null = null;
@@ -109,6 +109,10 @@ export class CalloutTool implements BlockTool {
   }
 
   public render(): HTMLElement {
+    if (this._dom) {
+      return this._dom.wrapper;
+    }
+
     const dom = buildCalloutDOM({
       emoji: this._data.emoji,
       readOnly: this.readOnly,
@@ -145,14 +149,7 @@ export class CalloutTool implements BlockTool {
 
     const children = this.api.blocks.getChildren(this.blockId);
 
-    // Append existing children to the container
-    for (const child of children) {
-      const needsMount = child.holder.parentElement !== this._dom.childContainer;
-
-      if (needsMount && !child.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
-        this._dom.childContainer.appendChild(child.holder);
-      }
-    }
+    mountChildBlocks(this._dom.childContainer, children);
 
     // Auto-create initial paragraph child when callout has no children
     if (children.length === 0) {
@@ -253,6 +250,14 @@ export class CalloutTool implements BlockTool {
 
   public removed(): void {
     // No-op — no subscriptions to clean up
+  }
+
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+
+    if (this._dom) {
+      this._dom.emojiButton.disabled = state;
+    }
   }
 
   private syncPickerActiveColors(): void {

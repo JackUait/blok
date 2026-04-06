@@ -132,11 +132,18 @@ export const setupPlaceholder = (
   element: HTMLElement,
   placeholder?: string,
   attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder'
-): void => {
+): (() => void) => {
   // Always set the attribute, even if empty (for consistency and testing)
   element.setAttribute(attributeName, placeholder ?? '');
 
-  element.addEventListener('focus', () => handleEmptyElement(element));
+  const handler = (): void => handleEmptyElement(element);
+
+  element.addEventListener('focus', handler);
+
+  return () => {
+    element.removeEventListener('focus', handler);
+    element.removeAttribute(attributeName);
+  };
 };
 
 /**

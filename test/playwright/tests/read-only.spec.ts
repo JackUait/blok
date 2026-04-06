@@ -453,6 +453,73 @@ test.describe('read-only mode', () => {
     await expect(paragraph).toContainText('Original content + pasted text');
   });
 
+  test('in-place toggle preserves content without re-render', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: 'Preserved content',
+            },
+          },
+        ],
+      },
+    });
+
+    const paragraphWrapper = page.locator(PARAGRAPH_SELECTOR);
+    const paragraph = paragraphWrapper.locator('[contenteditable]');
+
+    await expect(paragraphWrapper).toHaveCount(1);
+    await paragraph.click();
+    await placeCursorAtEnd(paragraph);
+    await page.keyboard.type(' with edits');
+    await expect(paragraph).toContainText('Preserved content with edits');
+
+    /**
+     * Stamp the block wrapper element with a unique attribute so we can verify
+     * it is the exact same node after toggling — not a destroyed/recreated one.
+     * We stamp the wrapper (not the inner contenteditable) because the wrapper
+     * is managed by Block, not by the Tool.
+     */
+    await paragraphWrapper.evaluate((element: HTMLElement) => {
+      element.setAttribute('data-identity-stamp', 'original');
+    });
+
+    await toggleReadOnly(page, true);
+    await waitForReadOnlyState(page, true);
+
+    /**
+     * Content must be identical after toggling to read-only
+     */
+    await expect(paragraph).toContainText('Preserved content with edits');
+    await expect(paragraph).toHaveAttribute('contenteditable', 'false');
+
+    /**
+     * The identity stamp proves the block wrapper was NOT destroyed and recreated.
+     * If the fallback (save → clear → render) path ran, the stamp would be gone.
+     */
+    await expect(paragraphWrapper).toHaveAttribute('data-identity-stamp', 'original');
+
+    /**
+     * Toggle back to editable
+     */
+    await toggleReadOnly(page, false);
+    await waitForReadOnlyState(page, false);
+
+    await expect(paragraph).toContainText('Preserved content with edits');
+    await expect(paragraph).toHaveAttribute('contenteditable', 'true');
+    await expect(paragraphWrapper).toHaveAttribute('data-identity-stamp', 'original');
+
+    /**
+     * Verify editor is functional again — user can type
+     */
+    await paragraph.click();
+    await placeCursorAtEnd(paragraph);
+    await page.keyboard.type(' and more');
+    await expect(paragraph).toContainText('Preserved content with edits and more');
+  });
+
   test('throws descriptive error when enabling read-only with unsupported tools', async ({ page }) => {
     await createBlok(page, {
       data: {

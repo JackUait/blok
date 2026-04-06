@@ -2842,7 +2842,7 @@ describe('Table Tool', () => {
               holders[id].textContent = `Content of ${id}`;
             }
 
-            return { id, holder: holders[id] };
+            return { id, holder: holders[id], parentId: 'table-readonly-mount' };
           }),
           getBlocksCount: vi.fn().mockReturnValue(2),
         },
@@ -4428,6 +4428,178 @@ describe('Table Tool', () => {
       // Must preserve the <b> tag — not strip it to plain "bold word"
       expect(blockText).toContain('<b>bold</b>');
       expect(blockText).not.toBe('bold word');
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+  });
+
+  describe('setReadOnly', () => {
+    it('sets data-blok-table-readonly attribute when entering readonly', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Before: no readonly attribute in edit mode
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(false);
+
+      table.setReadOnly(true);
+
+      // After: readonly attribute should be present
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(true);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('removes data-blok-table-readonly attribute when exiting readonly', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        config: {},
+        api: createMockAPI(),
+        readOnly: true,
+        block: {} as never,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // Before: readonly attribute is present
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(true);
+
+      table.setReadOnly(false);
+
+      // After: readonly attribute should be removed
+      expect(element.hasAttribute('data-blok-table-readonly')).toBe(false);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('preserves DOM element reference across toggle', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      const originalElement = element;
+
+      // Toggle to readonly and back
+      table.setReadOnly(true);
+      table.setReadOnly(false);
+
+      // The wrapper element should still be the same DOM node (in-place mutation)
+      expect(document.body.contains(originalElement)).toBe(true);
+      expect(originalElement.getAttribute('data-blok-tool')).toBe('table');
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('adds WRAPPER_EDIT_CLASSES when exiting readonly', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        config: {},
+        api: createMockAPI(),
+        readOnly: true,
+        block: {} as never,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In readonly mode, edit classes should not be present
+      expect(element.classList.contains('relative')).toBe(false);
+
+      table.setReadOnly(false);
+
+      // After exiting readonly, edit classes should be added
+      expect(element.classList.contains('relative')).toBe(true);
+      expect(element.classList.contains('mb-7')).toBe(true);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('removes WRAPPER_EDIT_CLASSES when entering readonly', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In edit mode, edit classes should be present
+      expect(element.classList.contains('relative')).toBe(true);
+
+      table.setReadOnly(true);
+
+      // After entering readonly, edit classes should be removed
+      expect(element.classList.contains('relative')).toBe(false);
+      expect(element.classList.contains('mb-7')).toBe(false);
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('creates grip overlay when exiting readonly', () => {
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        config: {},
+        api: createMockAPI(),
+        readOnly: true,
+        block: {} as never,
+      };
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In readonly mode, no grip overlay
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).toBeNull();
+
+      table.setReadOnly(false);
+
+      // After exiting readonly, grip overlay should exist
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).not.toBeNull();
+
+      table.destroy();
+      document.body.removeChild(element);
+    });
+
+    it('removes grip overlay when entering readonly', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+      });
+      const table = new Table(options);
+      const element = table.render();
+
+      document.body.appendChild(element);
+      table.rendered();
+
+      // In edit mode, grip overlay exists
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).not.toBeNull();
+
+      table.setReadOnly(true);
+
+      // After entering readonly, grip overlay should be removed
+      expect(element.querySelector('[data-blok-table-grip-overlay]')).toBeNull();
 
       table.destroy();
       document.body.removeChild(element);

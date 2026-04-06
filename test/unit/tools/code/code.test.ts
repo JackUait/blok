@@ -876,4 +876,84 @@ describe('CodeTool', () => {
       expect(gutter.hidden).toBe(true);
     });
   });
+
+  describe('setReadOnly', () => {
+    it('sets contentEditable to false when entering readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
+
+      tool.setReadOnly(true);
+
+      expect(codeEl.getAttribute('contenteditable')).toBe('false');
+    });
+
+    it('sets contentEditable to plaintext-only when exiting readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }, { readOnly: true }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.getAttribute('contenteditable')).toBeNull();
+
+      tool.setReadOnly(false);
+
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
+    });
+
+    it('removes spellcheck when entering readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.getAttribute('spellcheck')).toBe('false');
+
+      tool.setReadOnly(true);
+
+      expect(codeEl.hasAttribute('spellcheck')).toBe(false);
+    });
+
+    it('restores spellcheck when exiting readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }, { readOnly: true }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      expect(codeEl.hasAttribute('spellcheck')).toBe(false);
+
+      tool.setReadOnly(false);
+
+      expect(codeEl.getAttribute('spellcheck')).toBe('false');
+    });
+
+    it('mutates code element in-place across toggle', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+      const el = tool.render();
+      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
+
+      tool.setReadOnly(true);
+
+      // Same code element reference should be in the DOM
+      expect(el.querySelector('[data-blok-testid="code-content"]')).toBe(codeEl);
+      expect(codeEl.getAttribute('contenteditable')).toBe('false');
+
+      tool.setReadOnly(false);
+
+      expect(el.querySelector('[data-blok-testid="code-content"]')).toBe(codeEl);
+      expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
+    });
+
+    it('is a no-op when called before render', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'hello' }));
+
+      // Should not throw
+      expect(() => tool.setReadOnly(true)).not.toThrow();
+    });
+  });
 });

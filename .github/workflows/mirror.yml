@@ -2,9 +2,8 @@ name: Push to mirror
 
 on:
   push:
-    branches: ['**']
-    tags: ['**']
-  delete:
+    branches: [master]
+    tags: ['v*']
 
 jobs:
   mirror:

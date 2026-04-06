@@ -198,6 +198,22 @@ export class CodeTool implements BlockTool {
     this._previewContainer.innerHTML = rendered;
   }
 
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+
+    if (!this._dom) {
+      return;
+    }
+
+    if (state) {
+      this._dom.codeElement.setAttribute('contenteditable', 'false');
+      this._dom.codeElement.removeAttribute('spellcheck');
+    } else {
+      this._dom.codeElement.setAttribute('contenteditable', 'plaintext-only');
+      this._dom.codeElement.setAttribute('spellcheck', 'false');
+    }
+  }
+
   public save(_blockContent: HTMLElement): CodeData {
     return {
       code: this._dom?.codeElement.textContent ?? '',

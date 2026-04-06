@@ -77,6 +77,39 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish to GitHub Packages as @dodopizza/blok
+        continue-on-error: true
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+
+          # Patch package name for @dodopizza scope
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+            pkg.name = '@dodopizza/blok';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          # Configure GitHub Packages auth
+          echo "@dodopizza:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc
+
+          if [[ "$TAG_NAME" == *"-beta"* ]]; then
+            npm publish --tag beta || true
+          else
+            npm publish || true
+          fi
+
+          # Restore package name
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+            pkg.name = '@jackuait/blok';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.MIRROR_PAT }}
+
       - name: Create GitHub Release
         run: |
           TAG_NAME="${GITHUB_REF#refs/tags/}"

@@ -885,4 +885,149 @@ describe('ToggleItem', () => {
       expect(saved.text).toBe('Plain toggle content');
     });
   });
+
+  describe('setReadOnly()', () => {
+    it('sets contentEditable to false when entering readonly', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions({ text: 'Hello' }));
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
+
+      // Starts editable
+      expect(contentEl.contentEditable).toBe('true');
+
+      toggle.setReadOnly(true);
+
+      expect(contentEl.contentEditable).toBe('false');
+    });
+
+    it('sets contentEditable to true when exiting readonly', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions({ text: 'Hello' }, {}, { readOnly: true }));
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
+
+      // Starts non-editable
+      expect(contentEl.contentEditable).toBe('false');
+
+      toggle.setReadOnly(false);
+
+      expect(contentEl.contentEditable).toBe('true');
+    });
+
+    it('preserves DOM content element reference across toggle', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions({ text: 'Hello' }));
+      const element = toggle.render();
+      const contentBefore = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
+
+      toggle.setReadOnly(true);
+      toggle.setReadOnly(false);
+
+      // Content element is the same DOM node — setReadOnly mutates in place
+      const contentAfter = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
+
+      expect(contentAfter).toBe(contentBefore);
+    });
+
+    it('unsubscribes from block changed event when entering readonly', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      toggle.render();
+
+      // Constructor subscribes to 'block changed'
+      expect(mockAPI.events.on).toHaveBeenCalledWith('block changed', expect.any(Function));
+
+      const onCallCount = (mockAPI.events.off as ReturnType<typeof vi.fn>).mock.calls.length;
+
+      toggle.setReadOnly(true);
+
+      // Should have called events.off with 'block changed'
+      expect(mockAPI.events.off).toHaveBeenCalledWith('block changed', expect.any(Function));
+      expect((mockAPI.events.off as ReturnType<typeof vi.fn>).mock.calls.length).toBe(onCallCount + 1);
+    });
+
+    it('resubscribes to block changed event when exiting readonly', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions({}, {}, { readOnly: true });
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      toggle.render();
+
+      // Constructor in readOnly mode does NOT subscribe
+      expect(mockAPI.events.on).not.toHaveBeenCalled();
+
+      toggle.setReadOnly(false);
+
+      // Should now subscribe to 'block changed'
+      expect(mockAPI.events.on).toHaveBeenCalledWith('block changed', expect.any(Function));
+    });
+
+    it('does not double-subscribe when called with same state', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions();
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      toggle.render();
+
+      // Constructor already subscribed once
+      const initialOnCount = (mockAPI.events.on as ReturnType<typeof vi.fn>).mock.calls.length;
+
+      // Call setReadOnly(false) when already NOT readonly — should not re-subscribe
+      toggle.setReadOnly(false);
+
+      expect((mockAPI.events.on as ReturnType<typeof vi.fn>).mock.calls.length).toBe(initialOnCount);
+      expect(mockAPI.events.off).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op if element has not been rendered yet', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+
+      // Should not throw when called before render()
+      expect(() => toggle.setReadOnly(true)).not.toThrow();
+    });
+
+    it('updates body placeholder visibility based on new readOnly state', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const mockAPI = createMockAPI();
+      (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([]);
+
+      const options = createToggleOptions({ text: 'toggle', isOpen: true });
+      options.api = mockAPI;
+
+      const toggle = new ToggleItem(options);
+      const element = toggle.render();
+      toggle.rendered();
+
+      const bodyPlaceholder = element.querySelector(`[${TOGGLE_ATTR.toggleBodyPlaceholder}]`) as HTMLElement;
+
+      // Body placeholder is visible when open, no children, and not readonly
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(false);
+
+      // Enter readonly — body placeholder should be hidden
+      toggle.setReadOnly(true);
+
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(true);
+
+      // Exit readonly — body placeholder should reappear
+      toggle.setReadOnly(false);
+
+      expect(bodyPlaceholder.classList.contains('hidden')).toBe(false);
+    });
+  });
 });

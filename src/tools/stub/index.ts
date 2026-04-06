@@ -74,6 +74,16 @@ export class Stub implements BlockTool {
   }
 
   /**
+   * Toggle read-only mode in-place.
+   * Stub has no interactive elements, so this is intentionally a no-op.
+   *
+   * @param _state - read-only state (unused)
+   */
+  public setReadOnly(_state: boolean): void {
+    // no-op: stub blocks have no editable content
+  }
+
+  /**
    * Create Tool html markup
    * @returns {HTMLElement}
    */

@@ -19,7 +19,7 @@ import type {
 import { DATA_ATTR } from '../../components/constants';
 import { IconText } from '../../components/icons';
 import { stripFakeBackgroundElements } from '../../components/utils';
-import { PLACEHOLDER_EMPTY_EDITOR_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { isContentEmpty, PLACEHOLDER_EMPTY_EDITOR_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 /**
@@ -118,6 +118,11 @@ export class Paragraph implements BlockTool {
   private readOnly: boolean;
 
   /**
+   * Cleanup function for placeholder behavior, returned by setupPlaceholder
+   */
+  private placeholderCleanup: (() => void) | null = null;
+
+  /**
    * Placeholder for Paragraph Tool
    */
   private _placeholder: string;
@@ -157,9 +162,7 @@ export class Paragraph implements BlockTool {
     this.api = api;
     this.readOnly = readOnly;
 
-    if (!this.readOnly) {
-      this.onKeyUp = this.onKeyUp.bind(this);
-    }
+    this.onKeyUp = this.onKeyUp.bind(this);
 
     this._placeholder = config?.placeholder ?? Paragraph.DEFAULT_PLACEHOLDER;
     this._data = data ?? { text: '' };
@@ -263,7 +266,7 @@ export class Paragraph implements BlockTool {
     if (!this.readOnly) {
       div.contentEditable = 'true';
       div.addEventListener('keyup', this.onKeyUp);
-      setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
     }
 
     return div;
@@ -275,9 +278,47 @@ export class Paragraph implements BlockTool {
    * @returns HTMLDivElement
    */
   public render(): HTMLDivElement {
-    this._element = this.drawView();
+    if (!this._element) {
+      this._element = this.drawView();
+    }
 
     return this._element;
+  }
+
+  /**
+   * Toggle read-only mode in-place without re-rendering the DOM element.
+   * Manages contentEditable, keyup listener, placeholder, and empty-content <br>.
+   *
+   * @param state - true to enter read-only mode, false to exit
+   */
+  public setReadOnly(state: boolean): void {
+    if (!this._element) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    if (state) {
+      this._element.contentEditable = 'false';
+      this._element.removeEventListener('keyup', this.onKeyUp);
+
+      if (this.placeholderCleanup) {
+        this.placeholderCleanup();
+        this.placeholderCleanup = null;
+      }
+
+      if (isContentEmpty(this._element)) {
+        this._element.innerHTML = '<br>';
+      }
+    } else {
+      this._element.contentEditable = 'true';
+      this._element.addEventListener('keyup', this.onKeyUp);
+      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
+
+      if (this._element.innerHTML === '<br>') {
+        this._element.innerHTML = '';
+      }
+    }
   }
 
   /**

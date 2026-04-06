@@ -229,6 +229,31 @@ export class ToggleItem implements BlockTool {
     this.setOpenState(false);
   }
 
+  public setReadOnly(state: boolean): void {
+    if (!this._element) {
+      return;
+    }
+
+    const wasReadOnly = this.readOnly;
+
+    this.readOnly = state;
+
+    // Toggle contentEditable on the content element
+    if (this._contentElement) {
+      this._contentElement.contentEditable = state ? 'false' : 'true';
+    }
+
+    // Manage block changed event subscription
+    if (state && !wasReadOnly) {
+      this.api.events.off('block changed', this.handleBlockChanged);
+    } else if (!state && wasReadOnly) {
+      this.api.events.on('block changed', this.handleBlockChanged);
+    }
+
+    // Update body placeholder visibility (hidden in read-only mode)
+    this.updateBodyPlaceholderVisibility();
+  }
+
   public removed(): void {
     this.api.events.off('block changed', this.handleBlockChanged);
   }

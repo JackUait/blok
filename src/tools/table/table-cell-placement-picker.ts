@@ -58,7 +58,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
   label.style.textAlign = 'center';
   label.style.fontSize = '11px';
   label.style.marginTop = '6px';
-  label.style.opacity = '0.6';
+  label.style.color = 'var(--blok-text-secondary, #707684)';
   label.textContent = options.i18n.t(I18N_KEYS[current]);
 
   for (const placement of PLACEMENTS) {
@@ -81,9 +81,9 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
       cell.setAttribute('data-active', 'true');
       cell.style.outline = '2px solid var(--blok-color-primary, #388AE5)';
       cell.style.outlineOffset = '-2px';
-      cell.style.backgroundColor = 'var(--blok-bg-secondary, rgba(56, 138, 229, 0.1))';
+      cell.style.backgroundColor = 'var(--blok-item-focus-bg, rgba(35, 131, 226, 0.14))';
     } else {
-      cell.style.backgroundColor = 'var(--blok-bg-tertiary, #f0f0f0)';
+      cell.style.backgroundColor = 'var(--blok-bg-light, #eff2f5)';
     }
 
     const line1 = document.createElement('div');
@@ -117,7 +117,7 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
       cell.setAttribute('data-active', 'true');
       cell.style.outline = '2px solid var(--blok-color-primary, #388AE5)';
       cell.style.outlineOffset = '-2px';
-      cell.style.backgroundColor = 'var(--blok-bg-secondary, rgba(56, 138, 229, 0.1))';
+      cell.style.backgroundColor = 'var(--blok-item-focus-bg, rgba(35, 131, 226, 0.14))';
       label.textContent = options.i18n.t(I18N_KEYS[placement]);
 
       options.onPlacementSelect(placement);

@@ -6,7 +6,7 @@
 
 import type { API } from '../../../types';
 
-import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { mountChildBlocks } from '../nested-blocks';
 import { setupPlaceholder } from '../../components/utils/placeholder';
 
 import { TOGGLE_ATTR } from './constants';
@@ -95,13 +95,11 @@ export const updateChildrenVisibility = (
     arrowElement.focus();
   }
 
+  if (childContainer) {
+    mountChildBlocks(childContainer, children);
+  }
+
   for (const child of children) {
-    const needsMount = childContainer && child.holder.parentElement !== childContainer;
-
-    if (needsMount && !child.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
-      childContainer.appendChild(child.holder);
-    }
-
     if (isOpen) {
       child.holder.classList.remove('hidden');
     } else {

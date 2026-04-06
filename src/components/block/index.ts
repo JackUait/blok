@@ -203,6 +203,11 @@ export class Block extends EventsDispatcher<BlockEvents> {
   private readonly blockAPI: BlockAPIInterface;
 
   /**
+   * Current read-only state of the block
+   */
+  private readOnly: boolean;
+
+  /**
    * Cleanup function for draggable behavior
    */
   private draggableCleanup: (() => void) | null = null;
@@ -261,6 +266,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.blokEventBus = eventBus || null;
     this.blockAPI = new BlockAPI(this);
 
+    this.readOnly = readOnly;
     this.tool = tool;
     this.toolInstance = tool.create(data, this.blockAPI, readOnly);
     this.tunes = tool.tunes;
@@ -324,18 +330,21 @@ export class Block extends EventsDispatcher<BlockEvents> {
     );
 
     // Bind block mutation watchers and input events
+    // - Skip entirely when block is in read-only mode (no mutations to track, no input events)
     // - Immediately if bindMutationWatchersImmediately is true (for user-created blocks)
     // - Deferred via requestIdleCallback otherwise (for initial load optimization)
-    const bindEvents = (): void => {
-      this.mutationHandler.watch();
-      this.inputManager.addInputEvents();
-      this.toggleInputsEmptyMark();
-    };
+    if (!readOnly) {
+      const bindEvents = (): void => {
+        this.mutationHandler.watch();
+        this.inputManager.addInputEvents();
+        this.toggleInputsEmptyMark();
+      };
 
-    if (bindMutationWatchersImmediately) {
-      bindEvents();
-    } else {
-      window.requestIdleCallback(bindEvents);
+      if (bindMutationWatchersImmediately) {
+        bindEvents();
+      } else {
+        window.requestIdleCallback(bindEvents);
+      }
     }
   }
 
@@ -504,6 +513,31 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     if (isFunction(this.toolInstance.destroy)) {
       this.toolInstance.destroy();
+    }
+  }
+
+  /**
+   * Toggle read-only mode in place without destroying the block.
+   * Updates internal managers and notifies the tool if it supports in-place toggle.
+   * @param state - new read-only state
+   */
+  public setReadOnly(state: boolean): void {
+    if (this.readOnly === state) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    if (state) {
+      this.inputManager.removeInputEvents();
+      this.mutationHandler.unwatch();
+    } else {
+      this.inputManager.addInputEvents();
+      this.mutationHandler.watch();
+    }
+
+    if (typeof (this.toolInstance as unknown as { setReadOnly?: unknown }).setReadOnly === 'function') {
+      (this.toolInstance as unknown as { setReadOnly: (s: boolean) => void }).setReadOnly(state);
     }
   }
 

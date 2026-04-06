@@ -1205,6 +1205,56 @@ describe('Header Tool - setData() for undo/redo', () => {
   });
 });
 
+describe('Header Tool - setReadOnly', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('setReadOnly', () => {
+    it('sets contentEditable to false when entering readonly', () => {
+      const options = createHeaderOptions({ text: 'Hello', level: 2 });
+      const header = new Header(options);
+      const element = header.render();
+
+      header.setReadOnly(true);
+
+      const heading = element.querySelector('h2') ?? element;
+
+      expect(heading.contentEditable).toBe('false');
+    });
+
+    it('sets contentEditable to true when exiting readonly', () => {
+      const options = createHeaderOptions({ text: 'Hello', level: 2 });
+
+      (options as { readOnly: boolean }).readOnly = true;
+
+      const header = new Header(options);
+      const element = header.render();
+
+      header.setReadOnly(false);
+
+      const heading = element.querySelector('h2') ?? element;
+
+      expect(heading.contentEditable).toBe('true');
+    });
+
+    it('preserves DOM element reference across toggle', () => {
+      const options = createHeaderOptions({ text: 'Hello', level: 2 });
+      const header = new Header(options);
+      const element = header.render();
+
+      header.setReadOnly(true);
+      header.setReadOnly(false);
+
+      expect(header.render()).toBe(element);
+    });
+  });
+});
+
 describe('Header Tool - Notion-matching typography', () => {
   it('H1 uses text-3xl font size (30px) matching Notion heading 1', () => {
     const options = createHeaderOptions({ text: 'Test', level: 1 });

@@ -313,7 +313,7 @@ describe('table-operations with merged cells', () => {
         blocks: {
           insert: vi.fn(),
           getBlockIndex: vi.fn().mockReturnValue(0),
-          getBlockByIndex: vi.fn().mockReturnValue({ holder: mockHolder }),
+          getBlockByIndex: vi.fn().mockReturnValue({ holder: mockHolder, parentId: 'table-1' }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
         },

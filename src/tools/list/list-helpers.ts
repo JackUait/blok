@@ -19,8 +19,8 @@ export const getContentElement = (
   if (!element) return null;
 
   if (style === 'checklist') {
-    const contentEditable = element.querySelector('[contenteditable]');
-    return contentEditable instanceof HTMLElement ? contentEditable : null;
+    const checklistContent = element.querySelector('[data-blok-testid="list-checklist-content"]');
+    return checklistContent instanceof HTMLElement ? checklistContent : null;
   }
 
   const contentContainer = element.querySelector('[data-blok-testid="list-content-container"]');

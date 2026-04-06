@@ -302,9 +302,15 @@ export const mountCellBlocksReadOnly = (
         return;
       }
 
-      // If this container previously rendered legacy text, clear it before mounting holders.
-      if (!hasExistingBlocks && (container.textContent ?? '').length > 0) {
-        container.textContent = '';
+      // Clear the container before (re-)mounting block holders.
+      // This covers two cases:
+      //   1. Legacy text was previously rendered and needs to be replaced with blocks.
+      //   2. Block holders are already mounted (e.g. from edit mode before a
+      //      setReadOnly toggle) — without clearing, the clone-guard below would
+      //      duplicate every holder because it detects them inside a
+      //      [data-blok-nested-blocks] container and appends a cloneNode(true).
+      if (hasExistingBlocks || (container.textContent ?? '').length > 0) {
+        container.replaceChildren();
       }
 
       for (const blockId of cellContent.blocks) {
@@ -317,6 +323,13 @@ export const mountCellBlocksReadOnly = (
         const block = api.blocks.getBlockByIndex(index);
 
         if (!block) {
+          continue;
+        }
+
+        // Skip blocks that don't belong to this table.
+        // Corrupted data may contain cross-table references; mounting them
+        // would steal (or clone) DOM nodes from the other table.
+        if (block.parentId !== _tableBlockId) {
           continue;
         }
 
@@ -382,8 +395,8 @@ export const normalizeTableData = (
 export const setupKeyboardNavigation = (
   gridEl: HTMLElement,
   cellBlocks: TableCellBlocks | null,
-): void => {
-  gridEl.addEventListener('keydown', (event: KeyboardEvent) => {
+): (() => void) => {
+  const handler = (event: KeyboardEvent): void => {
     const target = event.target as HTMLElement;
     const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
@@ -396,7 +409,13 @@ export const setupKeyboardNavigation = (
     if (position) {
       cellBlocks?.handleKeyDown(event, position);
     }
-  });
+  };
+
+  gridEl.addEventListener('keydown', handler);
+
+  return () => {
+    gridEl.removeEventListener('keydown', handler);
+  };
 };
 
 export const SCROLL_OVERFLOW_CLASSES = ['overflow-x-auto', 'overflow-y-hidden'];

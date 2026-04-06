@@ -13,7 +13,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconQuote } from '../../components/icons';
 import { stripFakeBackgroundElements } from '../../components/utils';
-import { PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { isContentEmpty, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 export interface QuoteData extends BlockToolData {
@@ -40,6 +40,7 @@ const LARGE_CLASS = 'text-[1.2em]';
 export class Quote implements BlockTool {
   private api: API;
   private readOnly: boolean;
+  private placeholderCleanup: (() => void) | null = null;
   private _data: QuoteData;
   private _element: HTMLQuoteElement | null = null;
 
@@ -51,9 +52,7 @@ export class Quote implements BlockTool {
       size: data?.size ?? 'default',
     };
 
-    if (!this.readOnly) {
-      this.onKeyUp = this.onKeyUp.bind(this);
-    }
+    this.onKeyUp = this.onKeyUp.bind(this);
   }
 
   public onKeyUp(e: KeyboardEvent): void {
@@ -70,7 +69,7 @@ export class Quote implements BlockTool {
     }
   }
 
-  public render(): HTMLQuoteElement {
+  private drawView(): HTMLQuoteElement {
     const el = document.createElement('blockquote');
 
     el.className = twMerge(
@@ -91,12 +90,48 @@ export class Quote implements BlockTool {
     if (!this.readOnly) {
       el.contentEditable = 'true';
       el.addEventListener('keyup', this.onKeyUp);
-      setupPlaceholder(el, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(el, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active');
     }
 
-    this._element = el;
-
     return el;
+  }
+
+  public render(): HTMLQuoteElement {
+    if (!this._element) {
+      this._element = this.drawView();
+    }
+
+    return this._element;
+  }
+
+  public setReadOnly(state: boolean): void {
+    if (!this._element) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    if (state) {
+      this._element.contentEditable = 'false';
+      this._element.removeEventListener('keyup', this.onKeyUp);
+
+      if (this.placeholderCleanup) {
+        this.placeholderCleanup();
+        this.placeholderCleanup = null;
+      }
+
+      if (isContentEmpty(this._element)) {
+        this._element.innerHTML = '<br>';
+      }
+    } else {
+      this._element.contentEditable = 'true';
+      this._element.addEventListener('keyup', this.onKeyUp);
+      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active');
+
+      if (this._element.innerHTML === '<br>') {
+        this._element.innerHTML = '';
+      }
+    }
   }
 
   public save(blockContent: HTMLQuoteElement): QuoteData {

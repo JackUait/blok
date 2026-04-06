@@ -7,7 +7,7 @@ import type { BlokConfig } from '../../../../types';
 
 interface CreateReadOnlyOptions {
   config?: BlokConfig;
-  blockTools?: Array<[string, { isReadOnlySupported?: boolean }]>;
+  blockTools?: Array<[string, { isReadOnlySupported?: boolean; supportsInPlaceReadOnly?: boolean }]>;
   saverBlocks?: unknown[];
 }
 
@@ -20,6 +20,7 @@ type ReadOnlyMocks = {
     save: MockInstance<() => Promise<{ blocks: unknown[] }>>;
   };
   blockManager: {
+    blocks: Array<{ setReadOnly: MockInstance<(state: boolean) => void> }>;
     clear: MockInstance<() => Promise<void>>;
     toggleReadOnly: MockInstance<(state: boolean) => void>;
   };
@@ -43,7 +44,7 @@ type CreateReadOnlyResult = {
 
 const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult => {
   const blockToolsEntries = options?.blockTools ?? [];
-  const blockTools = new Map<string, { isReadOnlySupported?: boolean }>(blockToolsEntries);
+  const blockTools = new Map<string, { isReadOnlySupported?: boolean; supportsInPlaceReadOnly?: boolean }>(blockToolsEntries);
 
   const readOnly = new ReadOnly({
     config: options?.config ?? {},
@@ -65,6 +66,7 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
   };
 
   const blockManager: ReadOnlyMocks['blockManager'] = {
+    blocks: [],
     clear: vi.fn<() => Promise<void>>(async () => undefined),
     toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
   };
@@ -251,6 +253,104 @@ describe('ReadOnly module', () => {
     await readOnly.toggle(true);
 
     expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+
+  describe('in-place toggle', () => {
+    it('uses in-place path when all tools support setReadOnly', async () => {
+      const mockBlock = {
+        setReadOnly: vi.fn(),
+      };
+
+      const { readOnly, mocks } = createReadOnly({
+        config: { readOnly: false },
+        blockTools: [
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+        ],
+      });
+
+      mocks.blockManager.blocks = [mockBlock];
+
+      await readOnly.prepare();
+      await readOnly.toggle(true);
+
+      // In-place path: setReadOnly called on each block
+      expect(mockBlock.setReadOnly).toHaveBeenCalledWith(true);
+
+      // Full re-render path NOT taken
+      expect(mocks.saver.save).not.toHaveBeenCalled();
+      expect(mocks.blockManager.clear).not.toHaveBeenCalled();
+      expect(mocks.renderer.render).not.toHaveBeenCalled();
+      expect(mocks.modificationsObserver.disable).not.toHaveBeenCalled();
+    });
+
+    it('falls back to full re-render when a tool lacks setReadOnly', async () => {
+      const { readOnly, mocks } = createReadOnly({
+        config: { readOnly: false },
+        blockTools: [
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+          ['custom', { isReadOnlySupported: true, supportsInPlaceReadOnly: false }],
+        ],
+      });
+
+      await readOnly.prepare();
+      const result = await readOnly.toggle(true);
+
+      expect(result).toBe(true);
+
+      // Full re-render path taken
+      expect(mocks.saver.save).toHaveBeenCalled();
+      expect(mocks.blockManager.clear).toHaveBeenCalled();
+      expect(mocks.renderer.render).toHaveBeenCalled();
+    });
+
+    it('supportsInPlaceToggle returns true when all tool classes have setReadOnly', async () => {
+      const { readOnly } = createReadOnly({
+        config: { readOnly: false },
+        blockTools: [
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+        ],
+      });
+
+      await readOnly.prepare();
+
+      expect((readOnly as unknown as { supportsInPlaceToggle: boolean }).supportsInPlaceToggle).toBe(true);
+    });
+
+    it('supportsInPlaceToggle returns false when any tool class lacks setReadOnly', async () => {
+      const { readOnly } = createReadOnly({
+        config: { readOnly: false },
+        blockTools: [
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+          ['custom', { isReadOnlySupported: true, supportsInPlaceReadOnly: false }],
+        ],
+      });
+
+      await readOnly.prepare();
+
+      expect((readOnly as unknown as { supportsInPlaceToggle: boolean }).supportsInPlaceToggle).toBe(false);
+    });
+
+    it('module toggleReadOnly cascade still runs in in-place path', async () => {
+      const mockBlock = {
+        setReadOnly: vi.fn(),
+      };
+
+      const { readOnly, mocks } = createReadOnly({
+        config: { readOnly: false },
+        blockTools: [
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+        ],
+      });
+
+      mocks.blockManager.blocks = [mockBlock];
+
+      await readOnly.prepare();
+      await readOnly.toggle(true);
+
+      expect(mocks.blockManager.toggleReadOnly).toHaveBeenCalledWith(true);
+      expect(mocks.toolbar.toggleReadOnly).toHaveBeenCalledWith(true);
+      expect(mocks.inlineToolbar.toggleReadOnly).toHaveBeenCalledWith(true);
+    });
   });
 
   describe('set method', () => {

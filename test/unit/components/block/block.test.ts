@@ -40,6 +40,8 @@ interface CreateBlockOptions {
   tunes?: TuneFactoryResult[];
   tunesData?: Record<string, BlockTuneData>;
   eventBus?: EventsDispatcher<BlokEventMap>;
+  readOnly?: boolean;
+  toolSetReadOnly?: (state: boolean) => void;
 }
 
 interface CreateBlockResult {
@@ -143,11 +145,15 @@ const createBlock = (options: CreateBlockOptions = {}): CreateBlockResult => {
     conversionConfig: undefined,
   } as unknown as BlockToolAdapter;
 
+  if (options.toolSetReadOnly !== undefined) {
+    (toolInstance as unknown as Record<string, unknown>).setReadOnly = options.toolSetReadOnly;
+  }
+
   const block = new Block({
     id: 'test-block',
     data: options.data ?? {},
     tool: toolAdapter,
-    readOnly: false,
+    readOnly: options.readOnly ?? false,
     tunesData: options.tunesData ?? {},
     api: {} as ApiModules,
   }, options.eventBus);
@@ -1147,6 +1153,126 @@ describe('Block', () => {
       expect(() => {
         block.cleanupDraggable();
       }).not.toThrow();
+    });
+  });
+
+  describe('setReadOnly', () => {
+    it('stops propagating mutations when entering readonly', () => {
+      const eventBus = new EventsDispatcher<BlokEventMap>();
+      const { block } = createBlock({ readOnly: false, eventBus });
+
+      const mutationHandler = vi.fn();
+
+      block.on('didMutated', mutationHandler);
+
+      // Verify mutations propagate before readonly
+      const mockMutation = {
+        type: 'childList' as MutationRecordType,
+        target: block.pluginsContent,
+        addedNodes: [] as unknown as NodeList,
+        removedNodes: [] as unknown as NodeList,
+        previousSibling: null,
+        nextSibling: null,
+        attributeName: null,
+        attributeNamespace: null,
+        oldValue: null,
+      } as MutationRecord;
+
+      eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
+      expect(mutationHandler).toHaveBeenCalledTimes(1);
+
+      // Enter readonly
+      block.setReadOnly(true);
+      mutationHandler.mockClear();
+
+      // Mutations should no longer propagate
+      eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
+      expect(mutationHandler).not.toHaveBeenCalled();
+    });
+
+    it('resumes propagating mutations when exiting readonly', () => {
+      const eventBus = new EventsDispatcher<BlokEventMap>();
+      const { block } = createBlock({ readOnly: true, eventBus });
+
+      const mutationHandler = vi.fn();
+
+      block.on('didMutated', mutationHandler);
+
+      const mockMutation = {
+        type: 'childList' as MutationRecordType,
+        target: block.pluginsContent,
+        addedNodes: [] as unknown as NodeList,
+        removedNodes: [] as unknown as NodeList,
+        previousSibling: null,
+        nextSibling: null,
+        attributeName: null,
+        attributeNamespace: null,
+        oldValue: null,
+      } as MutationRecord;
+
+      // In readonly, mutations should not propagate
+      eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
+      expect(mutationHandler).not.toHaveBeenCalled();
+
+      // Exit readonly
+      block.setReadOnly(false);
+
+      // Mutations should now propagate
+      eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
+      expect(mutationHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls tool.setReadOnly when tool implements it', () => {
+      const setReadOnlySpy = vi.fn();
+      const { block } = createBlock({
+        readOnly: false,
+        toolSetReadOnly: setReadOnlySpy,
+      });
+
+      block.setReadOnly(true);
+
+      expect(setReadOnlySpy).toHaveBeenCalledWith(true);
+    });
+
+    it('does not throw when tool does not implement setReadOnly', () => {
+      const { block } = createBlock({ readOnly: false });
+
+      expect(() => block.setReadOnly(true)).not.toThrow();
+    });
+
+    it('is a no-op when state matches current state', () => {
+      const eventBus = new EventsDispatcher<BlokEventMap>();
+      const setReadOnlySpy = vi.fn();
+      const { block } = createBlock({
+        readOnly: true,
+        eventBus,
+        toolSetReadOnly: setReadOnlySpy,
+      });
+
+      const mutationHandler = vi.fn();
+
+      block.on('didMutated', mutationHandler);
+
+      // Calling setReadOnly with the same state should be a no-op
+      block.setReadOnly(true);
+
+      expect(setReadOnlySpy).not.toHaveBeenCalled();
+
+      // Verify the block's mutation state hasn't changed (still not watching)
+      const mockMutation = {
+        type: 'childList' as MutationRecordType,
+        target: block.pluginsContent,
+        addedNodes: [] as unknown as NodeList,
+        removedNodes: [] as unknown as NodeList,
+        previousSibling: null,
+        nextSibling: null,
+        attributeName: null,
+        attributeNamespace: null,
+        oldValue: null,
+      } as MutationRecord;
+
+      eventBus.emit(RedactorDomChanged, { mutations: [mockMutation] });
+      expect(mutationHandler).not.toHaveBeenCalled();
     });
   });
 });

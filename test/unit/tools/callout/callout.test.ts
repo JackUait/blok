@@ -572,4 +572,45 @@ describe('CalloutTool', () => {
       expect(imported).toEqual({ emoji: '💡', textColor: null, backgroundColor: null });
     });
   });
+
+  describe('setReadOnly()', () => {
+    it('disables emoji button when entering readonly', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+      const btn = el.querySelector<HTMLButtonElement>('[data-blok-testid="callout-emoji-btn"]');
+
+      expect(btn).not.toBeNull();
+      expect(btn!.disabled).toBe(false);
+
+      tool.setReadOnly(true);
+
+      expect(btn!.disabled).toBe(true);
+    });
+
+    it('enables emoji button when exiting readonly', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions({}, { readOnly: true }));
+      const el = tool.render();
+      const btn = el.querySelector<HTMLButtonElement>('[data-blok-testid="callout-emoji-btn"]');
+
+      expect(btn).not.toBeNull();
+      expect(btn!.disabled).toBe(true);
+
+      tool.setReadOnly(false);
+
+      expect(btn!.disabled).toBe(false);
+    });
+
+    it('preserves DOM element reference across toggle', async () => {
+      const { CalloutTool } = await import('../../../../src/tools/callout');
+      const tool = new CalloutTool(createOptions());
+      const el = tool.render();
+
+      tool.setReadOnly(true);
+      tool.setReadOnly(false);
+
+      expect(tool.render()).toBe(el);
+    });
+  });
 });

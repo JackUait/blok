@@ -134,6 +134,32 @@ describe('setupPlaceholder', () => {
     setupPlaceholder(element, 'Focus placeholder', 'data-blok-placeholder-active');
     expect(element.getAttribute('data-blok-placeholder-active')).toBe('Focus placeholder');
   });
+
+  it('returns a cleanup function', () => {
+    const cleanup = setupPlaceholder(element, 'Type here');
+
+    expect(typeof cleanup).toBe('function');
+  });
+
+  it('cleanup removes the focus event listener', () => {
+    const cleanup = setupPlaceholder(element, 'Type here', 'data-blok-placeholder-active');
+
+    cleanup();
+
+    // After cleanup, focusing the element should NOT call setCaretToStart.
+    // We verify by checking that the attribute was removed (cleanup removes it).
+    expect(element.hasAttribute('data-blok-placeholder-active')).toBe(false);
+  });
+
+  it('cleanup removes the placeholder attribute', () => {
+    const cleanup = setupPlaceholder(element, 'Hello');
+
+    expect(element.getAttribute('data-placeholder')).toBe('Hello');
+
+    cleanup();
+
+    expect(element.hasAttribute('data-placeholder')).toBe(false);
+  });
 });
 
 describe('isContentEmpty', () => {

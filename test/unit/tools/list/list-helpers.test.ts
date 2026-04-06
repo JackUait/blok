@@ -15,11 +15,10 @@ describe("list-helpers", () => {
       expect(result).toBeNull();
     });
 
-    it("returns contenteditable element for checklist style", () => {
+    it("returns checklist content element for checklist style", () => {
       const element = document.createElement("div");
       const contentEl = document.createElement("div");
-      // Need to set the attribute since querySelector looks for attributes
-      contentEl.setAttribute("contenteditable", "true");
+      contentEl.setAttribute("data-blok-testid", "list-checklist-content");
       element.appendChild(contentEl);
 
       const result = getContentElement(element, "checklist");
@@ -41,7 +40,7 @@ describe("list-helpers", () => {
       expect(result).toBe(contentContainer);
     });
 
-    it("returns null when contenteditable not found for checklist", () => {
+    it("returns null when checklist content element not found for checklist", () => {
       const element = document.createElement("div");
       const regularDiv = document.createElement("div");
       element.appendChild(regularDiv);

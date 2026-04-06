@@ -142,6 +142,9 @@ export class TableCornerDrag {
       didDrag: false,
     };
 
+    this.updateTooltip();
+    this.tooltip.style.opacity = '1';
+
     this.hitZone.setPointerCapture(e.pointerId);
     this.hitZone.addEventListener('pointermove', this.boundPointerMove);
     this.hitZone.addEventListener('pointerup', this.boundPointerUp);
@@ -170,18 +173,30 @@ export class TableCornerDrag {
 
     const { unitHeight, unitWidth } = this.dragState;
 
-    const targetRows = Math.floor(dy / unitHeight);
-    const targetCols = Math.floor(dx / unitWidth);
+    const targetRows = Math.trunc(dy / unitHeight);
+    const targetCols = Math.trunc(dx / unitWidth);
 
     while (this.dragState.addedRows < targetRows) {
       this.onAddRow();
       this.dragState.addedRows++;
     }
 
+    while (this.dragState.addedRows > targetRows && this.canRemoveLastRow()) {
+      this.onRemoveLastRow();
+      this.dragState.addedRows--;
+    }
+
     while (this.dragState.addedCols < targetCols) {
       this.onAddColumn();
       this.dragState.addedCols++;
     }
+
+    while (this.dragState.addedCols > targetCols && this.canRemoveLastColumn()) {
+      this.onRemoveLastColumn();
+      this.dragState.addedCols--;
+    }
+
+    this.updateTooltip();
   }
 
   private handlePointerUp(_e: PointerEvent): void {

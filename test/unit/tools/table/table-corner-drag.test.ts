@@ -298,4 +298,103 @@ describe('TableCornerDrag', () => {
       expect(options.onDragStart).not.toHaveBeenCalled();
     });
   });
+
+  describe('drag to remove', () => {
+    it('calls onRemoveLastRow when dragging upward', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 64, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 64, pointerId: 1 }));
+
+      expect(options.onRemoveLastRow).toHaveBeenCalledOnce();
+    });
+
+    it('calls onRemoveLastColumn when dragging leftward', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const firstRow = grid.querySelector('[data-blok-table-row]')!;
+      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
+
+      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: -6, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: -6, clientY: 100, pointerId: 1 }));
+
+      expect(options.onRemoveLastColumn).toHaveBeenCalledOnce();
+    });
+
+    it('does not call onRemoveLastRow when canRemoveLastRow returns false', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      options.canRemoveLastRow.mockReturnValue(false);
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 64, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 64, pointerId: 1 }));
+
+      expect(options.onRemoveLastRow).not.toHaveBeenCalled();
+    });
+
+    it('does not call onRemoveLastColumn when canRemoveLastColumn returns false', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      options.canRemoveLastColumn.mockReturnValue(false);
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const firstRow = grid.querySelector('[data-blok-table-row]')!;
+      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
+
+      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: -6, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: -6, clientY: 100, pointerId: 1 }));
+
+      expect(options.onRemoveLastColumn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('tooltip updates during drag', () => {
+    it('updates tooltip text during drag', () => {
+      let currentSize = { rows: 2, cols: 3 };
+      const options = createDefaultOptions(wrapper, grid);
+
+      options.getTableSize.mockImplementation(() => currentSize);
+      options.onAddRow.mockImplementation(() => { currentSize = { rows: currentSize.rows + 1, cols: currentSize.cols }; });
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 136, pointerId: 1 }));
+
+      expect(tooltip.textContent).toBe('3×3');
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 136, pointerId: 1 }));
+    });
+  });
 });

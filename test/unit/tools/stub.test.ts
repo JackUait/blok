@@ -112,4 +112,11 @@ describe('Stub tool', () => {
 
     expect(secondRender).toBe(firstRender);
   });
+
+  it('has setReadOnly method that does not throw', () => {
+    const { stub } = createStub();
+
+    expect(() => stub.setReadOnly(true)).not.toThrow();
+    expect(() => stub.setReadOnly(false)).not.toThrow();
+  });
 });

@@ -61,7 +61,7 @@ export class ReadOnly extends Module {
         if (!tool.isReadOnlySupported) {
           toolsDontSupportReadOnly.push(name);
         }
-        if (typeof (tool as { class?: { prototype?: Record<string, unknown> } }).class?.prototype?.setReadOnly !== 'function') {
+        if (!tool.supportsInPlaceReadOnly) {
           this.toolsDontSupportInPlaceToggle.push(name);
         }
       });

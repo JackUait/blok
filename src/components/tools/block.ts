@@ -70,6 +70,16 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * Returns true if the Tool's prototype has a setReadOnly method,
+   * enabling the in-place read-only toggle path (no save/clear/render cycle).
+   */
+  public get supportsInPlaceReadOnly(): boolean {
+    const prototype = (this.constructable as unknown as { prototype?: { setReadOnly?: unknown } })?.prototype;
+
+    return typeof prototype?.setReadOnly === 'function';
+  }
+
+  /**
    * Returns true if Tool supports linebreaks
    */
   public get isLineBreaksEnabled(): boolean {

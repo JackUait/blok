@@ -7,7 +7,7 @@ import type { BlokConfig } from '../../../../types';
 
 interface CreateReadOnlyOptions {
   config?: BlokConfig;
-  blockTools?: Array<[string, { isReadOnlySupported?: boolean; class?: { prototype: Record<string, unknown> } }]>;
+  blockTools?: Array<[string, { isReadOnlySupported?: boolean; supportsInPlaceReadOnly?: boolean }]>;
   saverBlocks?: unknown[];
 }
 
@@ -44,7 +44,7 @@ type CreateReadOnlyResult = {
 
 const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult => {
   const blockToolsEntries = options?.blockTools ?? [];
-  const blockTools = new Map<string, { isReadOnlySupported?: boolean; class?: { prototype: Record<string, unknown> } }>(blockToolsEntries);
+  const blockTools = new Map<string, { isReadOnlySupported?: boolean; supportsInPlaceReadOnly?: boolean }>(blockToolsEntries);
 
   const readOnly = new ReadOnly({
     config: options?.config ?? {},
@@ -264,7 +264,7 @@ describe('ReadOnly module', () => {
       const { readOnly, mocks } = createReadOnly({
         config: { readOnly: false },
         blockTools: [
-          ['paragraph', { isReadOnlySupported: true, class: { prototype: { setReadOnly() {} } } }],
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
         ],
       });
 
@@ -287,8 +287,8 @@ describe('ReadOnly module', () => {
       const { readOnly, mocks } = createReadOnly({
         config: { readOnly: false },
         blockTools: [
-          ['paragraph', { isReadOnlySupported: true, class: { prototype: { setReadOnly() {} } } }],
-          ['custom', { isReadOnlySupported: true, class: { prototype: {} } }],
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+          ['custom', { isReadOnlySupported: true, supportsInPlaceReadOnly: false }],
         ],
       });
 
@@ -307,7 +307,7 @@ describe('ReadOnly module', () => {
       const { readOnly } = createReadOnly({
         config: { readOnly: false },
         blockTools: [
-          ['paragraph', { isReadOnlySupported: true, class: { prototype: { setReadOnly() {} } } }],
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
         ],
       });
 
@@ -320,8 +320,8 @@ describe('ReadOnly module', () => {
       const { readOnly } = createReadOnly({
         config: { readOnly: false },
         blockTools: [
-          ['paragraph', { isReadOnlySupported: true, class: { prototype: { setReadOnly() {} } } }],
-          ['custom', { isReadOnlySupported: true, class: { prototype: {} } }],
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+          ['custom', { isReadOnlySupported: true, supportsInPlaceReadOnly: false }],
         ],
       });
 
@@ -338,7 +338,7 @@ describe('ReadOnly module', () => {
       const { readOnly, mocks } = createReadOnly({
         config: { readOnly: false },
         blockTools: [
-          ['paragraph', { isReadOnlySupported: true, class: { prototype: { setReadOnly() {} } } }],
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
         ],
       });
 

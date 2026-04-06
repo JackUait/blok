@@ -36,6 +36,12 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
   isReadOnlySupported: boolean;
 
   /**
+   * Returns true if the Tool's prototype has a setReadOnly method,
+   * enabling the in-place read-only toggle path (no save/clear/render cycle).
+   */
+  supportsInPlaceReadOnly: boolean;
+
+  /**
    * Returns true if Tool supports linebreaks
    */
   isLineBreaksEnabled: boolean;

@@ -61,7 +61,7 @@ const VARIANT_TO_BG_PRESET: Record<string, string | null> = {
 
 export class CalloutTool implements BlockTool {
   private readonly api: API;
-  private readonly readOnly: boolean;
+  private readOnly: boolean;
   private _data: CalloutData;
   private _dom: CalloutDOMRefs | null = null;
   private _emojiPicker: EmojiPicker | null = null;
@@ -109,6 +109,10 @@ export class CalloutTool implements BlockTool {
   }
 
   public render(): HTMLElement {
+    if (this._dom) {
+      return this._dom.wrapper;
+    }
+
     const dom = buildCalloutDOM({
       emoji: this._data.emoji,
       readOnly: this.readOnly,
@@ -253,6 +257,14 @@ export class CalloutTool implements BlockTool {
 
   public removed(): void {
     // No-op — no subscriptions to clean up
+  }
+
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+
+    if (this._dom) {
+      this._dom.emojiButton.disabled = state;
+    }
   }
 
   private syncPickerActiveColors(): void {

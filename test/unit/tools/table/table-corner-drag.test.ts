@@ -125,4 +125,37 @@ describe('TableCornerDrag', () => {
       expect(tooltip.style.opacity).toBe('0');
     });
   });
+
+  describe('hover tooltip', () => {
+    it('shows tooltip with table size on mouseenter', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      options.getTableSize.mockReturnValue({ rows: 2, cols: 3 });
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new MouseEvent('mouseenter'));
+
+      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
+
+      expect(tooltip.style.opacity).toBe('1');
+      expect(tooltip.textContent).toBe('2×3');
+    });
+
+    it('hides tooltip on mouseleave', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new MouseEvent('mouseenter'));
+      hitZone.dispatchEvent(new MouseEvent('mouseleave'));
+
+      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
+
+      expect(tooltip.style.opacity).toBe('0');
+    });
+  });
 });

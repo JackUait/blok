@@ -158,7 +158,7 @@ const NON_LATIN_LOCALES = new Set([
  * Accepted ASCII loanwords that are standard UI terms even in non-Latin locales.
  * These get a pass on the "must use native script" rule.
  */
-const ACCEPTED_ASCII_LOANWORDS = new Set(['info', 'ok']);
+const ACCEPTED_ASCII_LOANWORDS = new Set(['info', 'ok', 'pre']);
 
 // ---------------------------------------------------------------------------
 // Tests

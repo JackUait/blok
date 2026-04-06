@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TableCornerDrag } from '../../../../src/tools/table/table-corner-drag';
 
+const mockShowTooltip = vi.fn();
+const mockHideTooltip = vi.fn();
+
+vi.mock('../../../../src/components/utils/tooltip', () => ({
+  show: (...args: unknown[]): void => { mockShowTooltip(...args); },
+  hide: (): void => { mockHideTooltip(); },
+}));
+
 const CORNER_DRAG_ATTR = 'data-blok-table-corner-drag';
-const CORNER_TOOLTIP_ATTR = 'data-blok-table-corner-tooltip';
 
 const createWrapper = (): HTMLDivElement => {
   const wrapper = document.createElement('div');
@@ -109,29 +116,27 @@ describe('TableCornerDrag', () => {
       expect(hitZone.getAttribute('contenteditable')).toBe('false');
     });
 
-    it('creates a tooltip element', () => {
+    it('does not create an inline tooltip element', () => {
       const options = createDefaultOptions(wrapper, grid);
 
       cornerDrag = new TableCornerDrag(options);
 
-      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`);
+      const tooltip = wrapper.querySelector('[data-blok-table-corner-tooltip]');
 
-      expect(tooltip).not.toBeNull();
+      expect(tooltip).toBeNull();
     });
 
-    it('tooltip is hidden by default', () => {
+    it('does not show tooltip on construction', () => {
       const options = createDefaultOptions(wrapper, grid);
 
       cornerDrag = new TableCornerDrag(options);
 
-      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
-
-      expect(tooltip.style.opacity).toBe('0');
+      expect(mockShowTooltip).not.toHaveBeenCalled();
     });
   });
 
   describe('hover tooltip', () => {
-    it('shows tooltip with table size on mouseenter', () => {
+    it('shows singleton tooltip with table size on mouseenter', () => {
       const options = createDefaultOptions(wrapper, grid);
 
       options.getTableSize.mockReturnValue({ rows: 2, cols: 3 });
@@ -141,15 +146,14 @@ describe('TableCornerDrag', () => {
 
       hitZone.dispatchEvent(new MouseEvent('mouseenter'));
 
-      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
-
-      expect(tooltip.style.opacity).toBe('1');
-      expect(tooltip.textContent).toBe('2×3');
+      expect(mockShowTooltip).toHaveBeenCalledWith(
+        hitZone,
+        '3\u00D72',
+        expect.objectContaining({ placement: 'bottom' }),
+      );
     });
 
-    it('hides tooltip after 150ms delay on mouseleave', () => {
-      vi.useFakeTimers();
-
+    it('hides singleton tooltip on mouseleave', () => {
       const options = createDefaultOptions(wrapper, grid);
 
       cornerDrag = new TableCornerDrag(options);
@@ -159,15 +163,7 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new MouseEvent('mouseenter'));
       hitZone.dispatchEvent(new MouseEvent('mouseleave'));
 
-      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
-
-      expect(tooltip.style.opacity).toBe('1');
-
-      vi.advanceTimersByTime(150);
-
-      expect(tooltip.style.opacity).toBe('0');
-
-      vi.useRealTimers();
+      expect(mockHideTooltip).toHaveBeenCalled();
     });
   });
 
@@ -404,7 +400,7 @@ describe('TableCornerDrag', () => {
   });
 
   describe('tooltip updates during drag', () => {
-    it('updates tooltip text during drag', () => {
+    it('updates singleton tooltip during drag', () => {
       let currentSize = { rows: 2, cols: 3 };
       const options = createDefaultOptions(wrapper, grid);
 
@@ -414,7 +410,6 @@ describe('TableCornerDrag', () => {
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
-      const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
       const rows = grid.querySelectorAll('[data-blok-table-row]');
 
       Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
@@ -422,7 +417,11 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
       hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 136, pointerId: 1 }));
 
-      expect(tooltip.textContent).toBe('3×3');
+      expect(mockShowTooltip).toHaveBeenCalledWith(
+        hitZone,
+        '3\u00D73',
+        expect.objectContaining({ placement: 'bottom' }),
+      );
 
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 136, pointerId: 1 }));
     });
@@ -499,14 +498,13 @@ describe('TableCornerDrag', () => {
   });
 
   describe('destroy', () => {
-    it('removes hit zone and tooltip from DOM', () => {
+    it('removes hit zone from DOM', () => {
       const options = createDefaultOptions(wrapper, grid);
 
       cornerDrag = new TableCornerDrag(options);
       cornerDrag.destroy();
 
       expect(wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`)).toBeNull();
-      expect(wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`)).toBeNull();
     });
 
     it('does not call handlers after destroy', () => {

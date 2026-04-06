@@ -1,5 +1,6 @@
+import { show as showTooltip, hide as hideTooltip } from '../../components/utils/tooltip';
+
 const CORNER_DRAG_ATTR = 'data-blok-table-corner-drag';
-const CORNER_TOOLTIP_ATTR = 'data-blok-table-corner-tooltip';
 
 export interface TableCornerDragOptions {
   wrapper: HTMLElement;
@@ -33,7 +34,6 @@ export class TableCornerDrag {
   private wrapper: HTMLElement;
   private gridEl: HTMLElement;
   private hitZone: HTMLElement;
-  private tooltip: HTMLElement;
   private getTableSize: () => { rows: number; cols: number };
   private onAddRow: () => void;
   private onAddColumn: () => void;
@@ -45,7 +45,6 @@ export class TableCornerDrag {
   private canRemoveLastColumn: () => boolean;
   private onClickAdd: (() => void) | null;
   private dragState: DragState | null = null;
-  private hideTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly boundMouseEnter: () => void;
   private readonly boundMouseLeave: () => void;
   private readonly boundPointerDown: (e: PointerEvent) => void;
@@ -78,17 +77,6 @@ export class TableCornerDrag {
     this.hitZone.style.bottom = '-36px';
     this.hitZone.style.right = '-16px';
 
-    this.tooltip = document.createElement('div');
-    this.tooltip.setAttribute(CORNER_TOOLTIP_ATTR, '');
-    this.tooltip.style.position = 'absolute';
-    this.tooltip.style.bottom = '-56px';
-    this.tooltip.style.right = '-16px';
-    this.tooltip.style.opacity = '0';
-    this.tooltip.style.pointerEvents = 'none';
-    this.tooltip.style.fontSize = '11px';
-    this.tooltip.style.color = '#6b7280';
-    this.tooltip.style.whiteSpace = 'nowrap';
-
     this.boundMouseEnter = this.handleMouseEnter.bind(this);
     this.boundMouseLeave = this.handleMouseLeave.bind(this);
     this.boundPointerDown = this.handlePointerDown.bind(this);
@@ -100,32 +88,23 @@ export class TableCornerDrag {
     this.hitZone.addEventListener('pointerdown', this.boundPointerDown);
 
     this.wrapper.appendChild(this.hitZone);
-    this.wrapper.appendChild(this.tooltip);
   }
 
   private updateTooltip(): void {
     const size = this.getTableSize();
 
-    this.tooltip.textContent = `${size.rows}\u00D7${size.cols}`;
+    showTooltip(this.hitZone, `${size.cols}\u00D7${size.rows}`, { placement: 'bottom' });
   }
 
   private handleMouseEnter(): void {
-    if (this.hideTimeout !== null) {
-      clearTimeout(this.hideTimeout);
-      this.hideTimeout = null;
-    }
     this.updateTooltip();
-    this.tooltip.style.opacity = '1';
   }
 
   private handleMouseLeave(): void {
     if (this.dragState !== null) {
       return;
     }
-    this.hideTimeout = setTimeout(() => {
-      this.tooltip.style.opacity = '0';
-      this.hideTimeout = null;
-    }, 150);
+    hideTooltip();
   }
 
   private measureUnitHeight(): number {
@@ -161,7 +140,6 @@ export class TableCornerDrag {
     };
 
     this.updateTooltip();
-    this.tooltip.style.opacity = '1';
 
     this.hitZone.setPointerCapture(e.pointerId);
     this.hitZone.addEventListener('pointermove', this.boundPointerMove);
@@ -225,6 +203,7 @@ export class TableCornerDrag {
     const { didDrag, pointerId } = this.dragState;
 
     this.dragState = null;
+    hideTooltip();
     this.hitZone.releasePointerCapture(pointerId);
     this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
     this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
@@ -245,7 +224,6 @@ export class TableCornerDrag {
 
   public setDisplay(visible: boolean): void {
     this.hitZone.style.display = visible ? '' : 'none';
-    this.tooltip.style.display = visible ? '' : 'none';
   }
 
   public setInteractive(interactive: boolean): void {
@@ -258,16 +236,12 @@ export class TableCornerDrag {
     this.hitZone.removeEventListener('pointerdown', this.boundPointerDown);
     this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
     this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
-    if (this.hideTimeout !== null) {
-      clearTimeout(this.hideTimeout);
-      this.hideTimeout = null;
-    }
     if (this.dragState?.didDrag) {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
     this.dragState = null;
+    hideTooltip();
     this.hitZone.remove();
-    this.tooltip.remove();
   }
 }

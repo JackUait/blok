@@ -1,4 +1,5 @@
 import { twMerge } from '../../components/utils/tw';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import type { TableModel } from './table-model';
@@ -631,6 +632,7 @@ export class TableGrid {
     const blocksContainer = document.createElement('div');
 
     blocksContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+    blocksContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
     blocksContainer.style.display = 'flex';
     blocksContainer.style.flexDirection = 'column';
     blocksContainer.style.minHeight = '100%';

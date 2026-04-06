@@ -342,6 +342,52 @@ describe('Table Tool', () => {
       expect(saved.content[0][0]).toEqual({ blocks: ['list-1', 'list-2', 'list-3'] });
     });
 
+    it('should produce empty blocks array when all block IDs in a cell are foreign', () => {
+      const TABLE_ID = 'table-owner';
+      const foreignBlock1 = 'block-from-other-table-1';
+      const foreignBlock2 = 'block-from-other-table-2';
+
+      const mockApi = createMockAPI({
+        blocks: {
+          getById: (id: string) => {
+            if (id === foreignBlock1 || id === foreignBlock2) {
+              return { id, parentId: 'other-table-id' } as never;
+            }
+
+            return null;
+          },
+        } as never,
+      });
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [
+            [{ blocks: [foreignBlock1, foreignBlock2] }],
+          ],
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: TABLE_ID } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      // When ALL blocks belong to another table, the cell should have an
+      // empty blocks array — not crash or produce invalid output.
+      const cell = saved.content[0][0];
+
+      expect(isCellWithBlocks(cell)).toBe(true);
+      if (isCellWithBlocks(cell)) {
+        expect(cell.blocks).toEqual([]);
+      }
+    });
+
     it('should filter out block IDs whose parent does not match this table', () => {
       const TABLE_ID = 'table-owner';
       const ownedBlock = 'block-owned-1';

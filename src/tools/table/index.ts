@@ -257,6 +257,8 @@ export class Table implements BlockTool {
     newTbody: Element,
     blockHolders: Map<string, HTMLElement>
   ): void {
+    const mounted = new Set<string>();
+
     content.forEach((rowData, r) => {
       rowData.forEach((cellContent, c) => {
         if (typeof cellContent === 'string') {
@@ -284,8 +286,9 @@ export class Table implements BlockTool {
         cellContent.blocks.forEach(blockId => {
           const holder = blockHolders.get(blockId);
 
-          if (holder) {
+          if (holder && !mounted.has(blockId)) {
             container.appendChild(holder);
+            mounted.add(blockId);
           }
         });
       });

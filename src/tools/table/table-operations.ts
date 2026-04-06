@@ -1,4 +1,5 @@
 import type { API } from '../../../types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
@@ -324,7 +325,7 @@ export const mountCellBlocksReadOnly = (
         // the DOM node. This can happen when corrupted data references the same
         // block in multiple tables. In read-only mode a deep clone is safe
         // because the content is non-interactive.
-        if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+        if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
           container.appendChild(block.holder.cloneNode(true));
           continue;
         }

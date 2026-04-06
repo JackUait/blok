@@ -168,6 +168,43 @@ describe('Toggle Lifecycle', () => {
 
       document.body.removeChild(otherEl);
     });
+
+    it('should not steal a child holder that is already inside another toggle children container', () => {
+      const child = createMockChild();
+      const api = createMockApi([child]);
+
+      const containerA = document.createElement('div');
+      containerA.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+      containerA.setAttribute('data-blok-nested-blocks', '');
+
+      const containerB = document.createElement('div');
+      containerB.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+
+      containerA.appendChild(child.holder);
+
+      updateChildrenVisibility(api, 'block-1', true, containerB);
+
+      expect(containerA.contains(child.holder)).toBe(true);
+      expect(containerB.contains(child.holder)).toBe(false);
+    });
+
+    it('should not steal a child holder that is inside a table cell container', () => {
+      const child = createMockChild();
+      const api = createMockApi([child]);
+
+      const tableCellContainer = document.createElement('div');
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableCellContainer.setAttribute('data-blok-nested-blocks', '');
+      tableCellContainer.appendChild(child.holder);
+
+      const toggleContainer = document.createElement('div');
+      toggleContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+
+      updateChildrenVisibility(api, 'block-1', true, toggleContainer);
+
+      expect(tableCellContainer.contains(child.holder)).toBe(true);
+      expect(toggleContainer.contains(child.holder)).toBe(false);
+    });
   });
 
   describe('updateArrowState', () => {

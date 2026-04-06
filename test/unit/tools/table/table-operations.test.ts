@@ -419,6 +419,7 @@ describe('table-operations', () => {
 
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
+      container1.setAttribute('data-blok-nested-blocks', '');
 
       cell1.appendChild(container1);
       row1.appendChild(cell1);
@@ -435,6 +436,7 @@ describe('table-operations', () => {
 
       const container2 = document.createElement('div');
       container2.setAttribute(CELL_BLOCKS_ATTR, '');
+      container2.setAttribute('data-blok-nested-blocks', '');
 
       cell2.appendChild(container2);
       row2.appendChild(cell2);
@@ -534,6 +536,7 @@ describe('table-operations', () => {
 
       const container1 = document.createElement('div');
       container1.setAttribute(CELL_BLOCKS_ATTR, '');
+      container1.setAttribute('data-blok-nested-blocks', '');
 
       cell1.appendChild(container1);
       row1.appendChild(cell1);
@@ -550,6 +553,7 @@ describe('table-operations', () => {
 
       const container2 = document.createElement('div');
       container2.setAttribute(CELL_BLOCKS_ATTR, '');
+      container2.setAttribute('data-blok-nested-blocks', '');
 
       cell2.appendChild(container2);
       row2.appendChild(cell2);

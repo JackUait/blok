@@ -1,4 +1,5 @@
 import type { API } from '../../../types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 import { CELL_ATTR, ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableModel } from './table-model';
@@ -6,15 +7,6 @@ import type { LegacyCellContent, CellContent } from './types';
 import { isCellWithBlocks } from './types';
 
 export const CELL_BLOCKS_ATTR = 'data-blok-table-cell-blocks';
-
-/**
- * Check if an element is inside a block-based table cell
- */
-export const isInCellBlock = (element: HTMLElement): boolean => {
-  const cellBlocksContainer = element.closest(`[${CELL_BLOCKS_ATTR}]`);
-
-  return cellBlocksContainer !== null;
-};
 
 /**
  * Get the cell element that contains the given element
@@ -483,11 +475,10 @@ export class TableCellBlocks {
         continue;
       }
 
-      // Guard: if the block is already mounted in another table cell, create a
-      // duplicate with the same tool name and data rather than stealing the DOM
-      // node or leaving this cell empty. This heals corrupted data where the
-      // same block ID is referenced by multiple tables.
-      if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+      // Guard: if the block is already mounted in another nested container
+      // (table cell, toggle, callout, header), create a duplicate with the
+      // same tool name and data rather than stealing the DOM node.
+      if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
         const duplicate = this.api.blocks.insert(
           block.name,
           block.preservedData,
@@ -538,9 +529,9 @@ export class TableCellBlocks {
       return;
     }
 
-    // Guard: skip blocks already mounted in another table cell's container.
-    // Without this, insertBefore would steal the DOM node from the other table.
-    if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+    // Guard: skip blocks already mounted in another nested container.
+    // Without this, insertBefore would steal the DOM node from the other container.
+    if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
       return;
     }
 

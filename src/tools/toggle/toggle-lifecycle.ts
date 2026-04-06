@@ -6,6 +6,7 @@
 
 import type { API } from '../../../types';
 
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { setupPlaceholder } from '../../components/utils/placeholder';
 
 import { TOGGLE_ATTR } from './constants';
@@ -95,7 +96,9 @@ export const updateChildrenVisibility = (
   }
 
   for (const child of children) {
-    if (childContainer && child.holder.parentElement !== childContainer) {
+    const needsMount = childContainer && child.holder.parentElement !== childContainer;
+
+    if (needsMount && !child.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
       childContainer.appendChild(child.holder);
     }
 

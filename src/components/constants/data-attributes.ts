@@ -221,6 +221,16 @@ export const DATA_ATTR = {
   placeholderActive: 'data-blok-placeholder-active',
 
   // ============================================
+  // Nested Blocks
+  // ============================================
+
+  /** Container that hosts nested block holders (table cells, toggle/callout/header children).
+   *  Used as a universal guard: before moving a block holder via appendChild,
+   *  check `holder.closest([nestedBlocks])` — if truthy, the holder is already
+   *  claimed by another container and must not be stolen. */
+  nestedBlocks: 'data-blok-nested-blocks',
+
+  // ============================================
   // Mutation Tracking
   // ============================================
 

@@ -750,6 +750,7 @@ export class Header implements BlockTool {
     // pl-8 (32px) matches the heading's left padding so children align with the title text start.
     childContainer.className = 'pl-8';
     childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+    childContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
     // Block DOM mutations inside the children container from triggering the header tool's
     // didMutated → syncBlockDataToYjs path (same rationale as the toggle list tool).
     childContainer.setAttribute('data-blok-mutation-free', 'true');

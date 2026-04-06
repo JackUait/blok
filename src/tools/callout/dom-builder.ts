@@ -1,5 +1,6 @@
 // src/tools/callout/dom-builder.ts
 
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { TOGGLE_ATTR } from '../toggle/constants';
 import {
   WRAPPER_STYLES,
@@ -43,6 +44,7 @@ export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs
   const childContainer = document.createElement('div');
   childContainer.className = CHILDREN_STYLES;
   childContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+  childContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
   childContainer.setAttribute('data-blok-child-toolbar', '');
   childContainer.setAttribute('data-blok-mutation-free', 'true');
 

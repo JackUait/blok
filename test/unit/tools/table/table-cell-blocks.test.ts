@@ -40,43 +40,6 @@ describe('TableCellBlocks', () => {
     });
   });
 
-  describe('isInCellBlock', () => {
-    it('should return true when element is inside a cell block container', async () => {
-      // Create DOM structure: cell > container > block > content
-      const cell = document.createElement('div');
-      cell.setAttribute('data-blok-table-cell', '');
-      cell.setAttribute('data-blok-table-cell-col', '0');
-
-      const container = document.createElement('div');
-      container.setAttribute('data-blok-table-cell-blocks', '');
-      cell.appendChild(container);
-
-      const block = document.createElement('div');
-      block.setAttribute('data-blok-id', 'block-1');
-      container.appendChild(block);
-
-      const content = document.createElement('div');
-      content.setAttribute('contenteditable', 'true');
-      block.appendChild(content);
-
-      // Import after setting up DOM
-      const { isInCellBlock } = await import('../../../../src/tools/table/table-cell-blocks');
-
-      expect(isInCellBlock(content)).toBe(true);
-    });
-
-    it('should return false when element is in plain text cell', async () => {
-      const cell = document.createElement('div');
-      cell.setAttribute('data-blok-table-cell', '');
-      cell.setAttribute('data-blok-table-cell-col', '0');
-      cell.setAttribute('contenteditable', 'true');
-
-      const { isInCellBlock } = await import('../../../../src/tools/table/table-cell-blocks');
-
-      expect(isInCellBlock(cell)).toBe(false);
-    });
-  });
-
   describe('getCellFromElement', () => {
     it('should return the cell element containing the given element', async () => {
       const cell = document.createElement('div');
@@ -2133,6 +2096,7 @@ describe('TableCellBlocks', () => {
       const existingBlockHolder = document.createElement('div');
       const originalCellContainer = document.createElement('div');
       originalCellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalCellContainer.setAttribute('data-blok-nested-blocks', '');
       originalCellContainer.appendChild(existingBlockHolder);
 
       // Pasted table grid: a 1x1 table (row > cell > container)
@@ -2861,6 +2825,7 @@ describe('TableCellBlocks', () => {
       // Original table's cell container — the block already lives here
       const originalContainer = document.createElement('div');
       originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalContainer.setAttribute('data-blok-nested-blocks', '');
 
       const blockHolder = document.createElement('div');
       blockHolder.setAttribute('data-blok-id', 'stolen-block');
@@ -2923,6 +2888,7 @@ describe('TableCellBlocks', () => {
       // Original table's cell container — the block already lives here
       const originalContainer = document.createElement('div');
       originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalContainer.setAttribute('data-blok-nested-blocks', '');
 
       const blockHolder = document.createElement('div');
       blockHolder.setAttribute('data-blok-id', 'stolen-block');
@@ -3001,12 +2967,83 @@ describe('TableCellBlocks', () => {
       expect(result[0][0].blocks).not.toContain('stolen-block');
     });
 
+    it('mountBlocksInCell should not steal a block from a toggle child container', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+      const { TOGGLE_ATTR } = await import('../../../../src/tools/toggle/constants');
+
+      // Toggle's child container — the block already lives here
+      const toggleChildrenContainer = document.createElement('div');
+      toggleChildrenContainer.setAttribute(TOGGLE_ATTR.toggleChildren, '');
+      toggleChildrenContainer.setAttribute('data-blok-nested-blocks', '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'toggle-child-block');
+      blockHolder.innerHTML = '<div>Child paragraph</div>';
+      toggleChildrenContainer.appendChild(blockHolder);
+
+      // Table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const cellContainer = document.createElement('div');
+      cellContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(cellContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const duplicateHolder = document.createElement('div');
+      duplicateHolder.setAttribute('data-blok-id', 'duplicate-block');
+
+      const api = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'duplicate-block', holder: duplicateHolder }),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'toggle-child-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) {
+              return {
+                id: 'toggle-child-block',
+                holder: blockHolder,
+                name: 'paragraph',
+                preservedData: { text: 'Child paragraph' },
+              };
+            }
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'table-1',
+        model: createMockModel(),
+      });
+
+      cellBlocks.initializeCells([[{ blocks: ['toggle-child-block'] }]]);
+
+      // The block must NOT have been stolen from the toggle container
+      expect(toggleChildrenContainer.contains(blockHolder)).toBe(true);
+      expect(cellContainer.contains(blockHolder)).toBe(false);
+    });
+
     it('claimBlockForCell should not steal a block already mounted in another cell container', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Original table's cell container — the block already lives here
       const originalContainer = document.createElement('div');
       originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      originalContainer.setAttribute('data-blok-nested-blocks', '');
 
       const blockHolder = document.createElement('div');
       blockHolder.setAttribute('data-blok-id', 'stolen-block');

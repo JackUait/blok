@@ -78,6 +78,7 @@ interface TableInternals {
     mergeCells: (r: { minRow: number; maxRow: number; minCol: number; maxCol: number }) => void;
     splitCell: (r: number, c: number) => void;
     snapshot: () => { content: CellContent[][] };
+    contentGrid: CellContent[][];
   };
   rebuildTableBody: () => void;
 }
@@ -216,6 +217,49 @@ describe('Table merge/split DOM rendering', () => {
       const holdersInOrigin = blocksContainer?.querySelectorAll('[data-blok-id]');
 
       expect(holdersInOrigin).toHaveLength(holderIdsBefore.length);
+    });
+  });
+
+  describe('duplicate block IDs during tbody rebuild', () => {
+    it('should not steal a block holder when the same block ID appears in two cells', () => {
+      // Create a 1x2 table — each cell gets one auto-created paragraph block
+      const content: CellContent[][] = [
+        [{ blocks: [] }, { blocks: [] }],
+      ];
+      const options = createTableOptions({ content });
+      const table = new Table(options);
+      const element = renderTable(table);
+
+      const internals = getInternals(table);
+
+      // After render, each cell should have exactly one block holder
+      const cellContainers = element.querySelectorAll('[data-blok-table-cell-blocks]');
+
+      expect(cellContainers).toHaveLength(2);
+
+      const cell0Holders = cellContainers[0].querySelectorAll('[data-blok-id]');
+      const cell1Holders = cellContainers[1].querySelectorAll('[data-blok-id]');
+
+      expect(cell0Holders).toHaveLength(1);
+      expect(cell1Holders).toHaveLength(1);
+
+      // Get the block ID from cell [0,0]
+      const stolenBlockId = cell0Holders[0].getAttribute('data-blok-id')!;
+
+      // Corrupt the model: add the same block ID to cell [0,1]
+      // This simulates the cross-table data corruption scenario
+      internals.model.contentGrid[0][1].blocks.push(stolenBlockId);
+
+      // Trigger a tbody rebuild (same path as merge/split)
+      internals.rebuildTableBody.call(table);
+
+      // After rebuild, cell [0,0] must still have its block holder —
+      // it must NOT be stolen to cell [0,1] by appendChild
+      const rebuiltContainers = element.querySelectorAll('[data-blok-table-cell-blocks]');
+      const rebuiltCell0 = rebuiltContainers[0].querySelectorAll('[data-blok-id]');
+
+      expect(rebuiltCell0).toHaveLength(1);
+      expect(rebuiltCell0[0].getAttribute('data-blok-id')).toBe(stolenBlockId);
     });
   });
 });

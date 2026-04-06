@@ -574,6 +574,88 @@ describe('TableAddControls', () => {
       expect(addColBtn.style.opacity).toBe('0');
     });
 
+    it('buttons hide when document mousemove moves far from grid after being shown via document handler', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      vi.useFakeTimers();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const gridRect = new DOMRect(0, 0, 200, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+
+      // Step 1: show buttons via document mousemove near grid (outside wrapper)
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true }));
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Step 2: move cursor far from grid via document mousemove
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 300, bubbles: true }));
+
+      vi.advanceTimersByTime(200);
+
+      expect(addRowBtn.style.opacity).toBe('0');
+
+      vi.useRealTimers();
+    });
+
+    it('buttons hide after document mousemove near grid cancels mouseleave hide and cursor moves far away', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      vi.useFakeTimers();
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: mockI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        ...defaultDragCallbacks(),
+      });
+
+      const gridRect = new DOMRect(0, 0, 200, 100);
+
+      vi.spyOn(grid, 'getBoundingClientRect').mockReturnValue(gridRect);
+      vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(gridRect);
+
+      // Step 1: show add-row button via wrapper mousemove near bottom
+      wrapper.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 90, bubbles: true }));
+
+      const addRowBtn = wrapper.querySelector(`[${ADD_ROW_ATTR}]`) as HTMLElement;
+
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Step 2: wrapper mouseleave schedules hide
+      wrapper.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+      // Step 3: document mousemove near grid (within proximity) — cancels the pending hide via showRow()
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 120, bubbles: true }));
+
+      // Button should still be visible (hide was canceled, re-shown by proximity)
+      vi.advanceTimersByTime(200);
+      expect(addRowBtn.style.opacity).toBe('1');
+
+      // Step 4: cursor moves far from grid via document mousemove
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 300, bubbles: true }));
+
+      vi.advanceTimersByTime(200);
+
+      // Button must hide — this is the bug: without the fix, it stays at opacity '1'
+      expect(addRowBtn.style.opacity).toBe('0');
+
+      vi.useRealTimers();
+    });
+
     it('document mousemove listener is removed after destroy', () => {
       ({ wrapper, grid } = createGridAndWrapper(2, 2));
 

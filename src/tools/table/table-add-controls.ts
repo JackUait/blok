@@ -495,8 +495,8 @@ export class TableAddControls {
    * Document-level mousemove handler.
    * Catches mouse movements outside the wrapper (e.g. in the ::after
    * pseudo-element zone below the grid, which has pointer-events-none).
-   * Only delegates to handleMouseMove when the cursor is within the
-   * proximity zone around the grid to avoid unnecessary work.
+   * Delegates to handleMouseMove when the cursor is within the proximity
+   * zone around the grid; schedules hiding when the cursor is far away.
    */
   private handleDocumentMouseMove(e: MouseEvent): void {
     if (this.wrapper.contains(e.target as Node)) {
@@ -513,6 +513,9 @@ export class TableAddControls {
 
     if (nearGrid) {
       this.handleMouseMove(e);
+    } else {
+      this.scheduleHideRow();
+      this.scheduleHideCol();
     }
   }
 

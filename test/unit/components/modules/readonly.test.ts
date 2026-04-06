@@ -280,7 +280,10 @@ describe('ReadOnly module', () => {
       expect(mocks.saver.save).not.toHaveBeenCalled();
       expect(mocks.blockManager.clear).not.toHaveBeenCalled();
       expect(mocks.renderer.render).not.toHaveBeenCalled();
-      expect(mocks.modificationsObserver.disable).not.toHaveBeenCalled();
+
+      // ModificationsObserver paused during in-place toggle to avoid recording as edits
+      expect(mocks.modificationsObserver.disable).toHaveBeenCalled();
+      expect(mocks.modificationsObserver.enable).toHaveBeenCalled();
     });
 
     it('falls back to full re-render when a tool lacks setReadOnly', async () => {

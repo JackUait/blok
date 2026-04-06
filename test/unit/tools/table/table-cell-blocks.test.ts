@@ -2917,6 +2917,90 @@ describe('TableCellBlocks', () => {
       expect(newContainer.contains(blockHolder)).toBe(false);
     });
 
+    it('should duplicate a stolen block with the same tool name and data instead of creating an empty paragraph', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original table's cell container — the block already lives here
+      const originalContainer = document.createElement('div');
+      originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'stolen-block');
+      blockHolder.innerHTML = '<div>Original paragraph</div>';
+      originalContainer.appendChild(blockHolder);
+
+      // New table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const duplicateHolder = document.createElement('div');
+
+      duplicateHolder.setAttribute('data-blok-id', 'duplicate-block');
+
+      const api = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'duplicate-block', holder: duplicateHolder }),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'stolen-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) {
+              return {
+                id: 'stolen-block',
+                holder: blockHolder,
+                name: 'paragraph',
+                preservedData: { text: 'Original paragraph' },
+              };
+            }
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'new-table',
+        model: createMockModel(),
+      });
+
+      const result = cellBlocks.initializeCells([[{ blocks: ['stolen-block'] }]]);
+
+      // The original block must stay in its original container
+      expect(originalContainer.contains(blockHolder)).toBe(true);
+
+      // A duplicate block must be created with the stolen block's tool name and data
+      expect(api.blocks.insert).toHaveBeenCalledWith(
+        'paragraph',
+        { text: 'Original paragraph' },
+        {},
+        expect.any(Number),
+        false
+      );
+
+      // The duplicate's holder must be mounted in the new container
+      expect(newContainer.contains(duplicateHolder)).toBe(true);
+
+      // The normalized content must reference the duplicate's ID, not the stolen block's
+      expect(result[0][0].blocks).toContain('duplicate-block');
+      expect(result[0][0].blocks).not.toContain('stolen-block');
+    });
+
     it('claimBlockForCell should not steal a block already mounted in another cell container', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 

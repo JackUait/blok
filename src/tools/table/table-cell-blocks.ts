@@ -390,9 +390,9 @@ export class TableCellBlocks {
         const referencedBlockIds = isCellWithBlocks(cellContent) && cellContent.blocks.length > 0
           ? [...cellContent.blocks]
           : null;
-        const mountedIds = referencedBlockIds
+        const { mountedIds, replacements } = referencedBlockIds
           ? this.mountBlocksInCell(container, referencedBlockIds)
-          : [];
+          : { mountedIds: [] as string[], replacements: new Map<string, string>() };
 
         const cellColorProps: Pick<CellContent, 'color' | 'textColor'> = {};
 
@@ -406,7 +406,12 @@ export class TableCellBlocks {
         }
 
         if (mountedIds.length > 0) {
-          normalizedRow.push({ blocks: referencedBlockIds ?? mountedIds, ...cellColorProps });
+          const baseIds = referencedBlockIds ?? mountedIds;
+          const blockIds = replacements.size > 0
+            ? baseIds.map(id => replacements.get(id) ?? id)
+            : baseIds;
+
+          normalizedRow.push({ blocks: blockIds, ...cellColorProps });
         } else {
           const text = typeof cellContent === 'string'
             ? cellContent
@@ -455,10 +460,15 @@ export class TableCellBlocks {
 
   /**
    * Mount existing blocks into a cell container by their IDs.
-   * Returns the IDs of blocks that were successfully mounted.
+   * Returns the IDs of blocks that were successfully mounted and a map of
+   * original→duplicate IDs for blocks that were already in another cell.
    */
-  private mountBlocksInCell(container: HTMLElement, blockIds: string[]): string[] {
+  private mountBlocksInCell(
+    container: HTMLElement,
+    blockIds: string[]
+  ): { mountedIds: string[]; replacements: Map<string, string> } {
     const mountedIds: string[] = [];
+    const replacements = new Map<string, string>();
 
     for (const blockId of blockIds) {
       const index = this.api.blocks.getBlockIndex(blockId);
@@ -473,9 +483,23 @@ export class TableCellBlocks {
         continue;
       }
 
-      // Guard: skip blocks already mounted in another table cell's container.
-      // Without this, appendChild would steal the DOM node from the other table.
+      // Guard: if the block is already mounted in another table cell, create a
+      // duplicate with the same tool name and data rather than stealing the DOM
+      // node or leaving this cell empty. This heals corrupted data where the
+      // same block ID is referenced by multiple tables.
       if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+        const duplicate = this.api.blocks.insert(
+          block.name,
+          block.preservedData,
+          {},
+          this.api.blocks.getBlocksCount(),
+          false
+        );
+
+        container.appendChild(duplicate.holder);
+        this.api.blocks.setBlockParent(duplicate.id, this.tableBlockId);
+        mountedIds.push(duplicate.id);
+        replacements.set(blockId, duplicate.id);
         continue;
       }
 
@@ -483,7 +507,7 @@ export class TableCellBlocks {
       this.api.blocks.setBlockParent(blockId, this.tableBlockId);
       mountedIds.push(blockId);
     }
-    return mountedIds;
+    return { mountedIds, replacements };
   }
 
   /**

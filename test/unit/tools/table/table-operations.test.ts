@@ -474,6 +474,123 @@ describe('table-operations', () => {
       // Grid2's cell must NOT have stolen the block holder
       expect(container2.contains(sharedBlockHolder)).toBe(false);
     });
+
+    it('should wrap legacy string content in a div with leading-[1.5] to match paragraph line-height', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn(),
+          getBlockByIndex: vi.fn(),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      const legacyContent = [['Hello world']];
+
+      mountCellBlocksReadOnly(gridElement, legacyContent, api, 'table-id');
+
+      // Legacy text must be wrapped in a div with leading-[1.5] so its
+      // line-height matches paragraph blocks used in edit mode.
+      const wrapper = container.querySelector('div');
+
+      expect(wrapper).not.toBeNull();
+      expect(wrapper!.classList.contains('leading-[1.5]')).toBe(true);
+      expect(wrapper!.textContent).toBe('Hello world');
+    });
+
+    it('should clone block content into second table when same block is referenced by two tables', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // --- Grid 1 ---
+      const grid1 = document.createElement('div');
+      const row1 = document.createElement('div');
+      row1.setAttribute(ROW_ATTR, '');
+
+      const cell1 = document.createElement('div');
+      cell1.setAttribute(CELL_ATTR, '');
+      cell1.setAttribute(CELL_COL_ATTR, '0');
+
+      const container1 = document.createElement('div');
+      container1.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell1.appendChild(container1);
+      row1.appendChild(cell1);
+      grid1.appendChild(row1);
+
+      // --- Grid 2 ---
+      const grid2 = document.createElement('div');
+      const row2 = document.createElement('div');
+      row2.setAttribute(ROW_ATTR, '');
+
+      const cell2 = document.createElement('div');
+      cell2.setAttribute(CELL_ATTR, '');
+      cell2.setAttribute(CELL_COL_ATTR, '0');
+
+      const container2 = document.createElement('div');
+      container2.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      cell2.appendChild(container2);
+      row2.appendChild(cell2);
+      grid2.appendChild(row2);
+
+      // Shared block with visible content
+      const sharedBlockHolder = document.createElement('div');
+      sharedBlockHolder.setAttribute('data-blok-id', 'shared-block');
+      sharedBlockHolder.innerHTML = '<div class="blok-block">Paragraph text</div>';
+
+      const mockGetBlockIndex = vi.fn().mockReturnValue(0);
+      const mockGetBlockByIndex = vi.fn().mockReturnValue({
+        id: 'shared-block',
+        holder: sharedBlockHolder,
+      });
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      const content = [[{ blocks: ['shared-block'] }]];
+
+      mountCellBlocksReadOnly(grid1, content, api, 'table-1');
+      mountCellBlocksReadOnly(grid2, content, api, 'table-2');
+
+      // Grid1 has the original holder
+      expect(container1.contains(sharedBlockHolder)).toBe(true);
+
+      // Grid2 must NOT be empty — it should have a cloned copy of the content
+      expect(container2.children.length).toBeGreaterThan(0);
+      expect(container2.textContent).toBe('Paragraph text');
+
+      // The clone must NOT be the same DOM node
+      expect(container2.contains(sharedBlockHolder)).toBe(false);
+    });
   });
 
   describe('normalizeTableData', () => {

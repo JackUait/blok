@@ -288,9 +288,15 @@ export const mountCellBlocksReadOnly = (
 
       if (!isCellWithBlocks(cellContent)) {
         // Read-only render path must not mutate block state.
-        // Use innerHTML so that legacy HTML markup (e.g. <b>bold</b>) is
-        // interpreted by the browser rather than shown as literal text.
-        container.innerHTML = cellContent;
+        // Wrap in a div with leading-[1.5] so the line-height matches paragraph
+        // blocks used in edit mode (where legacy strings are converted to real
+        // paragraph blocks with that line-height). Without this wrapper, the
+        // text inherits the cell's leading-none, producing shorter cells.
+        const wrapper = document.createElement('div');
+
+        wrapper.className = 'leading-[1.5]';
+        wrapper.innerHTML = cellContent;
+        container.replaceChildren(wrapper);
 
         return;
       }
@@ -314,11 +320,12 @@ export const mountCellBlocksReadOnly = (
         }
 
         // Guard: if the block holder is already inside another table cell's
-        // blocks container, skip it. Without this check, appendChild would
-        // move (steal) the DOM node from the first table, leaving its cell
-        // empty. This can happen when corrupted data references the same
-        // block in multiple tables.
+        // blocks container, clone its visual content instead of moving (stealing)
+        // the DOM node. This can happen when corrupted data references the same
+        // block in multiple tables. In read-only mode a deep clone is safe
+        // because the content is non-interactive.
         if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+          container.appendChild(block.holder.cloneNode(true));
           continue;
         }
 

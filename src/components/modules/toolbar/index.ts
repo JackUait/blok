@@ -478,15 +478,6 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (blockContentElement) {
       this.toolboxInstance.updateLeftAlignElement(blockContentElement);
-
-      /**
-       * Sync toolbar content wrapper's margin with the block content element
-       * so toolbar buttons align with the block content edge, even when
-       * consumer CSS overrides the block content's margin.
-       */
-      if (this.nodes.content) {
-        this.nodes.content.style.marginLeft = getComputedStyle(blockContentElement).marginLeft;
-      }
     }
 
     /**
@@ -507,6 +498,22 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     this.open();
+
+    /**
+     * Sync toolbar content wrapper's margin with the block content element
+     * so toolbar buttons align with the block content edge, even when
+     * consumer CSS overrides the block content's margin.
+     *
+     * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
+     * Clamp to the actions element width so toolbar buttons (plus, settings)
+     * never overflow off-screen to the left when content is flush-left.
+     */
+    if (blockContentElement && this.nodes.content) {
+      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+    }
   }
 
   /**
@@ -607,18 +614,10 @@ export class Toolbar extends Module<ToolbarNodes> {
       targetBlock.setupDraggable(settingsToggler, this.Blok.DragManager);
     }
 
-    /**
-     * Sync toolbar content wrapper's margin with the block content element
-     * so toolbar buttons align with the block content edge.
-     */
     const blockContentElement = targetBlockHolder.querySelector<HTMLElement>(`[${DATA_ATTR.elementContent}]`);
 
     if (blockContentElement) {
       this.toolboxInstance.updateLeftAlignElement(blockContentElement);
-
-      if (this.nodes.content) {
-        this.nodes.content.style.marginLeft = getComputedStyle(blockContentElement).marginLeft;
-      }
     }
 
     /**
@@ -632,6 +631,18 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.blockTunesToggler.show();
 
     this.open();
+
+    /**
+     * Sync toolbar content wrapper's margin with the block content element.
+     * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
+     * Clamp to the actions width so buttons never overflow off-screen to the left.
+     */
+    if (blockContentElement && this.nodes.content) {
+      const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
+
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+    }
   }
 
   /**

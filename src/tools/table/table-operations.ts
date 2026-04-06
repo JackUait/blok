@@ -302,9 +302,15 @@ export const mountCellBlocksReadOnly = (
         return;
       }
 
-      // If this container previously rendered legacy text, clear it before mounting holders.
-      if (!hasExistingBlocks && (container.textContent ?? '').length > 0) {
-        container.textContent = '';
+      // Clear the container before (re-)mounting block holders.
+      // This covers two cases:
+      //   1. Legacy text was previously rendered and needs to be replaced with blocks.
+      //   2. Block holders are already mounted (e.g. from edit mode before a
+      //      setReadOnly toggle) — without clearing, the clone-guard below would
+      //      duplicate every holder because it detects them inside a
+      //      [data-blok-nested-blocks] container and appends a cloneNode(true).
+      if (hasExistingBlocks || (container.textContent ?? '').length > 0) {
+        container.replaceChildren();
       }
 
       for (const blockId of cellContent.blocks) {

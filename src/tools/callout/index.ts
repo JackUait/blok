@@ -16,7 +16,7 @@ import type { CalloutData, CalloutConfig } from './types';
 import { buildCalloutDOM, type CalloutDOMRefs } from './dom-builder';
 import { saveCallout } from './block-operations';
 import { handleCalloutFirstChildBackspace } from './callout-keyboard';
-import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { mountChildBlocks } from '../nested-blocks';
 import { createColorPicker, type ColorPickerHandle } from '../../components/shared/color-picker';
 import { colorVarName } from '../../components/shared/color-presets';
 import { mapToNearestPresetName } from '../../components/utils/color-mapping';
@@ -149,14 +149,7 @@ export class CalloutTool implements BlockTool {
 
     const children = this.api.blocks.getChildren(this.blockId);
 
-    // Append existing children to the container
-    for (const child of children) {
-      const needsMount = child.holder.parentElement !== this._dom.childContainer;
-
-      if (needsMount && !child.holder.closest(`[${DATA_ATTR.nestedBlocks}]`)) {
-        this._dom.childContainer.appendChild(child.holder);
-      }
-    }
+    mountChildBlocks(this._dom.childContainer, children);
 
     // Auto-create initial paragraph child when callout has no children
     if (children.length === 0) {

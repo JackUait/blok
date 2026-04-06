@@ -520,6 +520,59 @@ describe('table-operations', () => {
       expect(wrapper!.textContent).toBe('Hello world');
     });
 
+    it('should not duplicate block holders when called on a container that already has them mounted', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Create DOM structure: grid > row > cell > container (with nested-blocks attr)
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      container.setAttribute('data-blok-nested-blocks', '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // Simulate edit mode: block holder is ALREADY mounted inside the container
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'block-1');
+      blockHolder.textContent = 'Cell content';
+      container.appendChild(blockHolder);
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          getBlockByIndex: vi.fn().mockReturnValue({
+            id: 'block-1',
+            holder: blockHolder,
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      const content = [[{ blocks: ['block-1'] }]];
+
+      // This simulates setReadOnly(true) calling mountCellBlocksReadOnly
+      // while block holders are still in the container from edit mode.
+      mountCellBlocksReadOnly(gridElement, content, api, 'table-id');
+
+      // Must have exactly ONE block holder, not a duplicate
+      const holders = container.querySelectorAll('[data-blok-id]');
+      expect(holders).toHaveLength(1);
+      expect(container.textContent).toBe('Cell content');
+    });
+
     it('should clone block content into second table when same block is referenced by two tables', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
       const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');

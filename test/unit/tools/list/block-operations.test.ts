@@ -136,11 +136,11 @@ describe('block-operations', () => {
       rerenderListItem(context as RerenderContext);
 
       expect(context.setupItemPlaceholder).toHaveBeenCalled();
-      // The content element is passed - check it has the data-blok-testid
+      // The content element itself is passed — it should be the content container
       const calls = context.setupItemPlaceholder.mock.calls;
       expect(calls.length).toBeGreaterThan(0);
       const calledWithElement = calls[0][0] as HTMLElement;
-      expect(calledWithElement.querySelector('[data-blok-testid="list-content-container"]')).not.toBeNull();
+      expect(calledWithElement.getAttribute('data-blok-testid')).toBe('list-content-container');
     });
 
     it('attaches checkbox change handler for checklist items', () => {

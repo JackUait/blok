@@ -111,7 +111,9 @@ export const buildListItem = (context: DOMBuilderContext): BuildResult => {
   // Extract element references for the result
   const markerElement = itemContent.querySelector<HTMLElement>('[data-list-marker]');
   const checkboxElement = itemContent.querySelector<HTMLInputElement>('input[type="checkbox"]');
-  const contentElement = itemContent.querySelector<HTMLElement>('[contenteditable]');
+  const contentElement = data.style === 'checklist'
+    ? itemContent.querySelector<HTMLElement>(`[data-blok-testid="${LIST_TEST_IDS.checklistContent}"]`)
+    : itemContent.querySelector<HTMLElement>(`[data-blok-testid="${LIST_TEST_IDS.contentContainer}"]`);
 
   return {
     wrapper,

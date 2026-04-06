@@ -236,6 +236,7 @@ export class TableCornerDrag {
 
   public setDisplay(visible: boolean): void {
     this.hitZone.style.display = visible ? '' : 'none';
+    this.tooltip.style.display = visible ? '' : 'none';
   }
 
   public setInteractive(interactive: boolean): void {
@@ -251,6 +252,10 @@ export class TableCornerDrag {
     if (this.hideTimeout !== null) {
       clearTimeout(this.hideTimeout);
       this.hideTimeout = null;
+    }
+    if (this.dragState?.didDrag) {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     }
     this.dragState = null;
     this.hitZone.remove();

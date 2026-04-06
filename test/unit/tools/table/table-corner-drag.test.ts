@@ -76,9 +76,7 @@ describe('TableCornerDrag', () => {
     wrapper.appendChild(grid);
 
     /* Stub pointer capture APIs not available in jsdom */
-    // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
     HTMLElement.prototype.setPointerCapture = vi.fn();
-    // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
     HTMLElement.prototype.releasePointerCapture = vi.fn();
   });
 

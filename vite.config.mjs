@@ -55,13 +55,23 @@ export default defineConfig(({ mode }) => {
                     return true;
                   }
 
+                  // Manually allow khroma (MIT, see node_modules/khroma/license)
+                  // because package.json is missing the "license" field
+                  if (dependency.name === 'khroma') {
+                    return true;
+                  }
+
                   // Return false for unlicensed dependencies.
                   if (!dependency.license) {
                     return false;
                   }
 
-                  // Allow MIT, Apache-2.0, and ISC licenses.
-                  return ['MIT', 'Apache-2.0', 'ISC'].includes(dependency.license);
+                  // Allow permissive open-source licenses.
+                  // Handle SPDX OR expressions like "(MPL-2.0 OR Apache-2.0)".
+                  const allowed = ['MIT', 'Apache-2.0', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', '0BSD'];
+                  const parts = dependency.license.replace(/[()]/g, '').split(/\s+OR\s+/);
+
+                  return parts.some((l) => allowed.includes(l));
                 },
                 failOnUnlicensed: true,
                 failOnViolation: true,

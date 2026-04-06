@@ -1,4 +1,4 @@
-name: Mirror to dodopizza/blok
+name: Push to mirror
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   mirror:
+    if: github.repository != 'dodopizza/blok'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

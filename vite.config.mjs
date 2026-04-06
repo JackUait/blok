@@ -37,8 +37,6 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         external: [
           'react', 'react-dom', 'react/jsx-runtime',
-          'shiki/core', 'shiki/engine/javascript',
-          /^@shikijs\//,
         ],
         output: {
           entryFileNames: '[name].mjs',

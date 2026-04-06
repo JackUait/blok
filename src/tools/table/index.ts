@@ -569,6 +569,64 @@ export class Table implements BlockTool {
   }
 
   /**
+   * Toggle read-only mode in place without re-rendering.
+   * Entering readonly tears down all interactive subsystems and cell blocks;
+   * exiting readonly recreates them.
+   */
+  public setReadOnly(state: boolean): void {
+    const wrapper = this.element;
+    const gridEl = this.gridElement;
+
+    if (!wrapper || !gridEl) {
+      return;
+    }
+
+    this.readOnly = state;
+
+    if (state) {
+      // Entering readonly: tear down interactive subsystems
+      this.teardownSubsystems();
+      this.cellBlocks?.destroy();
+      this.cellBlocks = null;
+
+      // Remove grip overlay
+      if (this.gripOverlay) {
+        this.gripOverlay.remove();
+        this.gripOverlay = null;
+      }
+
+      // Update wrapper classes and attributes
+      WRAPPER_EDIT_CLASSES.forEach(cls => wrapper.classList.remove(cls));
+      wrapper.setAttribute('data-blok-table-readonly', '');
+
+      // Mount cell content as non-interactive
+      const snap = this.model.snapshot();
+
+      mountCellBlocksReadOnly(gridEl, snap.content, this.api, this.blockId ?? '');
+    } else {
+      // Exiting readonly: restore interactive subsystems
+      wrapper.removeAttribute('data-blok-table-readonly');
+      WRAPPER_EDIT_CLASSES.forEach(cls => wrapper.classList.add(cls));
+
+      // Create grip overlay
+      const overlay = document.createElement('div');
+
+      overlay.setAttribute('data-blok-table-grip-overlay', '');
+      overlay.style.position = 'absolute';
+      overlay.style.inset = '0';
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '3';
+      wrapper.appendChild(overlay);
+      this.gripOverlay = overlay;
+
+      // Initialize cell blocks and subsystems
+      this.initCellBlocks(gridEl);
+      this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
+      this.initSubsystems(gridEl);
+    }
+  }
+
+  /**
    * Remove blocks that claim this table as parent but are not referenced in any cell.
    *
    * These "ghost children" can appear when stale data is saved — e.g. a paste or split

@@ -17,6 +17,20 @@ export const readPixelWidths = (gridEl: HTMLElement): number[] => {
   }
 
   const cols = colgroup.querySelectorAll('col');
+  const firstCol = cols[0] as HTMLElement | undefined;
+
+  // When columns use percentage widths, parseFloat would return the percentage
+  // number (e.g. 50 from "50%") which is not a pixel value. In that case,
+  // read actual rendered widths from the first row's cells.
+  if (firstCol && firstCol.style.width.endsWith('%')) {
+    const firstRow = gridEl.querySelector(`[${ROW_ATTR}]`);
+
+    if (firstRow) {
+      return Array.from(firstRow.querySelectorAll(`[${CELL_ATTR}]`)).map(
+        cell => Math.round(cell.getBoundingClientRect().width)
+      );
+    }
+  }
 
   return Array.from(cols).map(col =>
     parseFloat((col as HTMLElement).style.width) || 0

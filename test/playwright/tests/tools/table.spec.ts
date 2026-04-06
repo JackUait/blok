@@ -553,13 +553,13 @@ test.describe('table tool', () => {
         },
       });
 
-      const firstCellWidth = await page.evaluate(() => {
-        const cell = document.querySelector('[data-blok-table-cell]') as HTMLElement;
+      const firstColWidth = await page.evaluate(() => {
+        const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-        return cell?.style.width;
+        return (cols[0] as HTMLElement)?.style.width;
       });
 
-      expect(firstCellWidth).toBe('400px');
+      expect(firstColWidth).toBe('400px');
 
       const savedData = await page.evaluate(async () => {
         return window.blokInstance?.save();

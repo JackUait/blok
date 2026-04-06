@@ -293,23 +293,23 @@ test.describe('Table Rendering and Initial State', () => {
     // 2. Wait for the editor to be ready
     await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
 
-    // Verify: The first column renders at 400px wide
-    const firstCellWidth = await page.evaluate(() => {
-      const cell = document.querySelector('[data-blok-table-cell]') as HTMLElement;
+    // Verify: The first column renders at 400px wide (width is on <col> elements)
+    const firstColWidth = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return cell?.style.width;
+      return (cols[0] as HTMLElement)?.style.width;
     });
 
-    expect(firstCellWidth).toBe('400px');
+    expect(firstColWidth).toBe('400px');
 
     // Verify: The second column renders at 200px wide
-    const secondCellWidth = await page.evaluate(() => {
-      const cells = document.querySelectorAll('[data-blok-table-cell]');
+    const secondColWidth = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return (cells[1] as HTMLElement)?.style.width;
+      return (cols[1] as HTMLElement)?.style.width;
     });
 
-    expect(secondCellWidth).toBe('200px');
+    expect(secondColWidth).toBe('200px');
   });
 
   test('Table has no critical or serious axe-core accessibility violations in edit mode', async ({ page }) => {

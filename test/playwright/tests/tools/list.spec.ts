@@ -351,7 +351,7 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
-    test('tab does not indent first item', async ({ page }) => {
+    test('tab indents first item to depth 1', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -365,17 +365,16 @@ test.describe('list tool (ListItem)', () => {
 
       await firstItem.click();
 
-      // Press Tab - should not indent
+      // Press Tab - first-in-group items can nest one level
       await page.keyboard.press('Tab');
 
-      // Save and verify depth is still 0
-
+      // Save and verify depth is now 1
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
-      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[0].data.depth).toBe(1);
     });
 
     test('shift+tab decreases depth', async ({ page }) => {
@@ -1573,7 +1572,7 @@ test.describe('list tool (ListItem)', () => {
   });
 
   test.describe('drag and drop depth validation', () => {
-    test('nested item moved to first position becomes depth 0', async ({ page }) => {
+    test('nested item moved to first position keeps depth 1', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -1590,17 +1589,16 @@ test.describe('list tool (ListItem)', () => {
       // Wait for DOM update after move
       await expect(page.getByText('Nested item')).toBeVisible();
 
-      // Verify depth is adjusted to 0
-
+      // First-in-group items are allowed up to depth 1, so depth stays at 1
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
-      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[0].data.depth).toBe(1);
     });
 
-    test('deeply nested item moved to first position becomes depth 0', async ({ page }) => {
+    test('deeply nested item moved to first position becomes depth 1', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -1622,9 +1620,9 @@ test.describe('list tool (ListItem)', () => {
         return await window.blokInstance?.save();
       });
 
-      // First item should be depth 0
+      // First-in-group items are capped at depth 1
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
-      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[0].data.depth).toBe(1);
     });
 
     test('item depth is capped to previousItem.depth + 1 after move', async ({ page }) => {
@@ -1735,14 +1733,13 @@ test.describe('list tool (ListItem)', () => {
       expect(result).not.toHaveProperty('error');
       expect(result.isStillSelected).toBe(true);
 
-      // Verify depth was also adjusted correctly
-
+      // Verify depth was also adjusted correctly (capped at 1 for first-in-group)
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
-      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[0].data.depth).toBe(1);
     });
   });
 
@@ -1850,7 +1847,7 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
     });
 
-    test('tab does nothing when any selected item cannot be indented', async ({ page }) => {
+    test('tab indents all selected items when first-in-group can still nest', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -1860,22 +1857,21 @@ test.describe('list tool (ListItem)', () => {
         ]),
       });
 
-      // Select first and second items (first cannot be indented - no previous list item)
+      // Select first and second items (first-in-group items can nest one level)
       await selectBlocksRange(page, 0, 1);
 
-      // Press Tab - should do nothing because first item can't indent
+      // Press Tab - first-in-group items at depth 0 can indent to depth 1
       await page.keyboard.press('Tab');
 
-      // Verify neither item was indented
-
+      // Verify both items were indented to depth 1
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
-      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[0].data.depth).toBe(1);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
-      expect(savedData?.blocks[1].data.depth ?? 0).toBe(0);
+      expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
     test('shift+tab does nothing when any selected item is at depth 0', async ({ page }) => {

@@ -58,6 +58,7 @@ export class TableGrid {
     const table = document.createElement('table');
 
     table.style.tableLayout = 'fixed';
+    table.style.width = '100%';
     table.style.borderCollapse = 'separate';
     table.style.borderSpacing = '0px';
     table.style.borderTop = BORDER_STYLE;
@@ -101,6 +102,7 @@ export class TableGrid {
     const table = document.createElement('table');
 
     table.style.tableLayout = 'fixed';
+    table.style.width = '100%';
     table.style.borderCollapse = 'separate';
     table.style.borderSpacing = '0px';
     table.style.borderTop = BORDER_STYLE;

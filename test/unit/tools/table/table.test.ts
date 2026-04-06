@@ -664,11 +664,11 @@ describe('Table Tool', () => {
 
       table.rendered();
 
-      // Grid has no style.width (percent mode) → percent branch of syncRowButtonWidth
+      // Grid has 100% width (percent mode) → percent branch of syncRowButtonWidth
       const scrollContainer = element.firstElementChild as HTMLElement;
       const grid = scrollContainer.firstElementChild as HTMLElement;
 
-      expect(grid.style.width).toBe('');
+      expect(grid.style.width).toBe('100%');
 
       // The add-row button should be at left: 0px (no padding offset needed)
       const addRowBtn = element.querySelector('[data-blok-table-add-row]') as HTMLElement;
@@ -692,7 +692,7 @@ describe('Table Tool', () => {
       const scrollContainer = element.querySelector('[data-blok-table-scroll]') as HTMLElement;
       const grid = scrollContainer.firstElementChild as HTMLElement;
 
-      expect(grid.style.width).toBe('');
+      expect(grid.style.width).toBe('100%');
 
       const handle = element.querySelector('[data-blok-table-resize]') as HTMLElement;
 

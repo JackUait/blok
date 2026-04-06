@@ -224,22 +224,22 @@ test.describe('Data Save and Load', () => {
       await blok.isReady;
     }, savedData);
 
-    // 3. Verify first column is still 400px and second column is 200px
-    const firstCellWidth = await page.evaluate(() => {
-      const cell = document.querySelector('[data-blok-table-cell]') as HTMLElement;
+    // 3. Verify first column is still 400px and second column is 200px (widths on <col> elements)
+    const firstColWidth = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return cell?.style.width;
+      return (cols[0] as HTMLElement)?.style.width;
     });
 
-    expect(firstCellWidth).toBe('400px');
+    expect(firstColWidth).toBe('400px');
 
-    const secondCellWidth = await page.evaluate(() => {
-      const cells = document.querySelectorAll('[data-blok-table-cell]');
+    const secondColWidth = await page.evaluate(() => {
+      const cols = document.querySelectorAll('[data-blok-tool="table"] colgroup col');
 
-      return (cells[1] as HTMLElement)?.style.width;
+      return (cols[1] as HTMLElement)?.style.width;
     });
 
-    expect(secondCellWidth).toBe('200px');
+    expect(secondColWidth).toBe('200px');
   });
 
   test('Legacy string content is migrated to block format on load', async ({ page }) => {

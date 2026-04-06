@@ -511,14 +511,11 @@ export class Toolbar extends Module<ToolbarNodes> {
      * consumer CSS overrides the block content's margin.
      *
      * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
-     * Clamp to the actions element width so toolbar buttons (plus, settings)
-     * never overflow off-screen to the left when content is flush-left.
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
-      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
     }
   }
 
@@ -641,13 +638,11 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Sync toolbar content wrapper's margin with the block content element.
      * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
-     * Clamp to the actions width so buttons never overflow off-screen to the left.
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
-      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
     }
   }
 

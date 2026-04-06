@@ -217,6 +217,42 @@ describe('ReadOnly module', () => {
     expect(mocks.inlineToolbar.toggleReadOnly).toHaveBeenCalledWith(true);
   });
 
+  it('restores scroll position after re-render to prevent content jumping', async () => {
+    const savedBlocks = [{ id: 'block-1' }];
+    const { readOnly, mocks } = createReadOnly({
+      saverBlocks: savedBlocks,
+    });
+
+    // Simulate user scrolled to 500px
+    const scrollYSpy = vi.spyOn(window, 'scrollY', 'get').mockReturnValue(500);
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+
+    // Simulate the re-render causing a scroll jump (e.g., container collapse)
+    mocks.renderer.render.mockImplementation(async () => {
+      // After re-render, browser may have shifted scroll
+      scrollYSpy.mockReturnValue(0);
+    });
+
+    await readOnly.toggle(true);
+
+    expect(scrollToSpy).toHaveBeenCalledWith(0, 500);
+  });
+
+  it('does not call scrollTo when scroll position is unchanged after re-render', async () => {
+    const savedBlocks = [{ id: 'block-1' }];
+    const { readOnly } = createReadOnly({
+      saverBlocks: savedBlocks,
+    });
+
+    // Scroll stays at same position
+    vi.spyOn(window, 'scrollY', 'get').mockReturnValue(200);
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+
+    await readOnly.toggle(true);
+
+    expect(scrollToSpy).not.toHaveBeenCalled();
+  });
+
   describe('set method', () => {
     it('sets read-only mode to true', async () => {
       const { readOnly, mocks } = createReadOnly();

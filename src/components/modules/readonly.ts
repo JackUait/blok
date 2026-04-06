@@ -117,6 +117,8 @@ export class ReadOnly extends Module {
       return this.readOnlyEnabled;
     }
 
+    const savedScrollY = window.scrollY;
+
     this.Blok.Renderer.markRenderStart();
 
     try {
@@ -124,6 +126,10 @@ export class ReadOnly extends Module {
       await this.Blok.Renderer.render(savedBlocks.blocks);
     } finally {
       this.Blok.Renderer.markRenderEnd();
+    }
+
+    if (window.scrollY !== savedScrollY) {
+      window.scrollTo(0, savedScrollY);
     }
 
     this.Blok.ModificationsObserver.enable();

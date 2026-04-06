@@ -462,6 +462,44 @@ const editor = new Blok({
 });`,
   },
 
+  {
+    id: 'code',
+    exportName: 'Code',
+    type: 'block',
+    badge: 'Block Tool',
+    title: 'Code',
+    description:
+      'A syntax-highlighted code block with a language picker, line numbers, line wrapping toggle, and copy-to-clipboard button. Supports 30+ languages via Shiki. LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block.',
+    importExample: `import { Code } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface CodeData {
+  code: string;          // Raw code text (not HTML)
+  language: string;      // Language identifier, e.g. "javascript", "plain text"
+  lineNumbers?: boolean; // Whether to show line numbers in the gutter
+}`,
+    saveDataExample: `{
+  "id": "cod001",
+  "type": "code",
+  "data": {
+    "code": "const greeting = 'hello';\\nconsole.log(greeting);",
+    "language": "javascript",
+    "lineNumbers": true
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Code } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    code: {
+      class: Code,
+      inlineToolbar: false,
+    },
+  },
+});`,
+  },
+
   // ── Inline Tools ──────────────────────────────────────────────────────────
   {
     id: 'bold',
@@ -626,6 +664,32 @@ const editor = new Blok({
   holder: 'editor',
   tools: {
     strikethrough: Strikethrough,
+  },
+});`,
+  },
+  {
+    id: 'inlineCode',
+    exportName: 'InlineCode',
+    type: 'inline',
+    badge: 'Inline Tool',
+    title: 'Inline Code',
+    description:
+      'Wraps selected text in `<code>`. Activated with Cmd/Ctrl+E or by clicking the code button in the inline toolbar. Useful for marking up variable names, function calls, and short code snippets within text.',
+    importExample: `import { InlineCode } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `// Stored as HTML inside the block's text field.
+// "Call <code>getData()</code> to fetch results"`,
+    saveDataExample: `{
+  "type": "paragraph",
+  "data": { "text": "Call <code>getData()</code> to fetch results" }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { InlineCode } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    inlineCode: InlineCode,
   },
 });`,
   },

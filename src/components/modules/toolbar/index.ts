@@ -289,11 +289,17 @@ export class Toolbar extends Module<ToolbarNodes> {
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.nodes.actions?.classList.remove(this.CSS.actionsOpened);
         this.nodes.actions?.removeAttribute('data-blok-opened');
+        if (this.nodes.actions) {
+          this.nodes.actions.style.pointerEvents = 'none';
+        }
       },
       show: (): void => {
         // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.nodes.actions?.classList.add(this.CSS.actionsOpened);
         this.nodes.actions?.setAttribute('data-blok-opened', 'true');
+        if (this.nodes.actions) {
+          this.nodes.actions.style.pointerEvents = 'auto';
+        }
       },
     };
   }
@@ -925,6 +931,13 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
       this.CSS.actions,
     ]);
+
+    /**
+     * Start with pointer-events disabled so invisible (opacity-0) actions
+     * don't intercept clicks on elements underneath (e.g. toggle arrows).
+     * blockActions.show()/hide() toggles this inline style.
+     */
+    actions.style.pointerEvents = 'none';
 
     this.nodes.content = content;
 

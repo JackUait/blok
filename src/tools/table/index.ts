@@ -1727,7 +1727,9 @@ export class Table implements BlockTool {
 
     const range = selection.getRangeAt(0);
 
-    range.deleteContents();
+    if (!range.collapsed) {
+      range.deleteContents();
+    }
 
     const fragment = document.createDocumentFragment();
     const wrapper = document.createElement('div');

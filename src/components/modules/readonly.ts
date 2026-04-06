@@ -128,11 +128,15 @@ export class ReadOnly extends Module {
      * instead of the full save/clear/render cycle
      */
     if (this.supportsInPlaceToggle) {
+      this.Blok.ModificationsObserver.disable();
+
       const blocks = (this.Blok.BlockManager as { blocks?: Array<{ setReadOnly: (s: boolean) => void }> }).blocks ?? [];
 
       for (const block of blocks) {
         block.setReadOnly(state);
       }
+
+      this.Blok.ModificationsObserver.enable();
 
       return this.readOnlyEnabled;
     }

@@ -19,8 +19,6 @@ export const getToolbarStyles = (): { [name: string]: string } => {
     actions: twJoin(
       'absolute flex opacity-0 pr-[5px]',
       'right-full',
-      // Re-enable pointer events for interactive elements
-      'pointer-events-auto',
       // Mobile styles
       'mobile:right-auto',
       // RTL styles

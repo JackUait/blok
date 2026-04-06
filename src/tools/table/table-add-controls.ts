@@ -29,7 +29,7 @@ const VISUAL_CLASSES = [
   'justify-center',
   'border',
   'border-gray-300',
-  'rounded-full',
+  'rounded-sm',
   'group-hover/add:bg-gray-50',
 ];
 

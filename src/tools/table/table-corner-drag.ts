@@ -70,17 +70,19 @@ export class TableCornerDrag {
     this.hitZone.setAttribute(CORNER_DRAG_ATTR, '');
     this.hitZone.setAttribute('contenteditable', 'false');
     this.hitZone.style.position = 'absolute';
-    this.hitZone.style.width = '20px';
-    this.hitZone.style.height = '20px';
+    this.hitZone.style.width = '36px';
+    this.hitZone.style.height = '36px';
     this.hitZone.style.cursor = 'nwse-resize';
     this.hitZone.style.zIndex = '2';
     this.hitZone.style.pointerEvents = 'auto';
     this.hitZone.style.bottom = '-36px';
-    this.hitZone.style.right = '-36px';
+    this.hitZone.style.right = '-16px';
 
     this.tooltip = document.createElement('div');
     this.tooltip.setAttribute(CORNER_TOOLTIP_ATTR, '');
     this.tooltip.style.position = 'absolute';
+    this.tooltip.style.bottom = '-56px';
+    this.tooltip.style.right = '-16px';
     this.tooltip.style.opacity = '0';
     this.tooltip.style.pointerEvents = 'none';
     this.tooltip.style.fontSize = '11px';

@@ -15,17 +15,52 @@ export interface TableCornerDragOptions {
   canRemoveLastColumn: () => boolean;
 }
 
+const DRAG_THRESHOLD = 5;
+
+interface DragState {
+  startX: number;
+  startY: number;
+  unitWidth: number;
+  unitHeight: number;
+  addedRows: number;
+  addedCols: number;
+  pointerId: number;
+  didDrag: boolean;
+}
+
 export class TableCornerDrag {
   private wrapper: HTMLElement;
+  private gridEl: HTMLElement;
   private hitZone: HTMLElement;
   private tooltip: HTMLElement;
   private getTableSize: () => { rows: number; cols: number };
+  private onAddRow: () => void;
+  private onAddColumn: () => void;
+  private onRemoveLastRow: () => void;
+  private onRemoveLastColumn: () => void;
+  private onDragStart: () => void;
+  private onDragEnd: () => void;
+  private canRemoveLastRow: () => boolean;
+  private canRemoveLastColumn: () => boolean;
+  private dragState: DragState | null = null;
   private readonly boundMouseEnter: () => void;
   private readonly boundMouseLeave: () => void;
+  private readonly boundPointerDown: (e: PointerEvent) => void;
+  private readonly boundPointerMove: (e: PointerEvent) => void;
+  private readonly boundPointerUp: (e: PointerEvent) => void;
 
   constructor(options: TableCornerDragOptions) {
     this.wrapper = options.wrapper;
+    this.gridEl = options.gridEl;
     this.getTableSize = options.getTableSize;
+    this.onAddRow = options.onAddRow;
+    this.onAddColumn = options.onAddColumn;
+    this.onRemoveLastRow = options.onRemoveLastRow;
+    this.onRemoveLastColumn = options.onRemoveLastColumn;
+    this.onDragStart = options.onDragStart;
+    this.onDragEnd = options.onDragEnd;
+    this.canRemoveLastRow = options.canRemoveLastRow;
+    this.canRemoveLastColumn = options.canRemoveLastColumn;
 
     this.hitZone = document.createElement('div');
     this.hitZone.setAttribute(CORNER_DRAG_ATTR, '');
@@ -48,9 +83,13 @@ export class TableCornerDrag {
 
     this.boundMouseEnter = this.handleMouseEnter.bind(this);
     this.boundMouseLeave = this.handleMouseLeave.bind(this);
+    this.boundPointerDown = this.handlePointerDown.bind(this);
+    this.boundPointerMove = this.handlePointerMove.bind(this);
+    this.boundPointerUp = this.handlePointerUp.bind(this);
 
     this.hitZone.addEventListener('mouseenter', this.boundMouseEnter);
     this.hitZone.addEventListener('mouseleave', this.boundMouseLeave);
+    this.hitZone.addEventListener('pointerdown', this.boundPointerDown);
 
     this.wrapper.appendChild(this.hitZone);
     this.wrapper.appendChild(this.tooltip);
@@ -71,9 +110,74 @@ export class TableCornerDrag {
     this.tooltip.style.opacity = '0';
   }
 
+  private measureUnitHeight(): number {
+    const rows = this.gridEl.querySelectorAll('[data-blok-table-row]');
+    const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
+
+    return lastRow?.offsetHeight || 30;
+  }
+
+  private measureUnitWidth(): number {
+    const firstRow = this.gridEl.querySelector('[data-blok-table-row]');
+
+    if (!firstRow) {
+      return 100;
+    }
+
+    const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
+    const lastCell = cells[cells.length - 1] as HTMLElement | undefined;
+
+    return lastCell?.offsetWidth || 100;
+  }
+
+  private handlePointerDown(e: PointerEvent): void {
+    this.dragState = {
+      startX: e.clientX,
+      startY: e.clientY,
+      unitWidth: this.measureUnitWidth(),
+      unitHeight: this.measureUnitHeight(),
+      addedRows: 0,
+      addedCols: 0,
+      pointerId: e.pointerId,
+      didDrag: false,
+    };
+
+    this.hitZone.setPointerCapture(e.pointerId);
+    this.hitZone.addEventListener('pointermove', this.boundPointerMove);
+    this.hitZone.addEventListener('pointerup', this.boundPointerUp);
+  }
+
+  private handlePointerMove(_e: PointerEvent): void {
+    // Will be filled in Task 4
+  }
+
+  private handlePointerUp(e: PointerEvent): void {
+    if (this.dragState === null) {
+      return;
+    }
+
+    const { didDrag, pointerId } = this.dragState;
+
+    this.dragState = null;
+    this.hitZone.releasePointerCapture(pointerId);
+    this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
+    this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
+
+    if (!didDrag) {
+      this.onAddRow();
+      this.onAddColumn();
+    } else {
+      this.onDragEnd();
+    }
+  }
+
   public destroy(): void {
     this.hitZone.removeEventListener('mouseenter', this.boundMouseEnter);
     this.hitZone.removeEventListener('mouseleave', this.boundMouseLeave);
+    this.hitZone.removeEventListener('pointerdown', this.boundPointerDown);
+    this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
+    this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
+    this.dragState = null;
     this.hitZone.remove();
     this.tooltip.remove();
   }

@@ -74,6 +74,12 @@ describe('TableCornerDrag', () => {
     wrapper = createWrapper();
     grid = createGrid(2, 3);
     wrapper.appendChild(grid);
+
+    /* Stub pointer capture APIs not available in jsdom */
+    // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+    HTMLElement.prototype.setPointerCapture = vi.fn();
+    // eslint-disable-next-line no-param-reassign -- mocking jsdom-unsupported pointer capture APIs
+    HTMLElement.prototype.releasePointerCapture = vi.fn();
   });
 
   afterEach(() => {
@@ -156,6 +162,36 @@ describe('TableCornerDrag', () => {
       const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
 
       expect(tooltip.style.opacity).toBe('0');
+    });
+  });
+
+  describe('click (no drag)', () => {
+    it('calls onAddRow and onAddColumn once each on click', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 100, pointerId: 1 }));
+
+      expect(options.onAddRow).toHaveBeenCalledOnce();
+      expect(options.onAddColumn).toHaveBeenCalledOnce();
+    });
+
+    it('does not call onDragStart or onDragEnd on click', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 100, pointerId: 1 }));
+
+      expect(options.onDragStart).not.toHaveBeenCalled();
+      expect(options.onDragEnd).not.toHaveBeenCalled();
     });
   });
 });

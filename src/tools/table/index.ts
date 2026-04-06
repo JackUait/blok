@@ -54,6 +54,7 @@ import type { PendingHighlight } from './table-row-col-action-handler';
 import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
+import { TableCornerDrag } from './table-corner-drag';
 import { TableScrollHaze } from './table-scroll-haze';
 import type { CellPlacement, ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
 import { isCellWithBlocks } from './types';
@@ -94,6 +95,7 @@ export class Table implements BlockTool {
   private rowColControls: TableRowColControls | null = null;
   private cellBlocks: TableCellBlocks | null = null;
   private cellSelection: TableCellSelection | null = null;
+  private cornerDrag: TableCornerDrag | null = null;
   private scrollHaze: TableScrollHaze | null = null;
   private element: HTMLDivElement | null = null;
   private gridElement: HTMLElement | null = null;
@@ -194,6 +196,8 @@ export class Table implements BlockTool {
     this.resize = null;
     this.addControls?.destroy();
     this.addControls = null;
+    this.cornerDrag?.destroy();
+    this.cornerDrag = null;
     this.rowColControls?.destroy();
     this.rowColControls = null;
     this.cellSelection?.destroy();
@@ -327,6 +331,7 @@ export class Table implements BlockTool {
   private initSubsystems(gridEl: HTMLElement): void {
     this.initResize(gridEl);
     this.initAddControls(gridEl);
+    this.initCornerDrag(gridEl);
     this.initRowColControls(gridEl);
     this.initCellSelection(gridEl);
     this.initGridPasteListener(gridEl);
@@ -1065,6 +1070,130 @@ export class Table implements BlockTool {
     }
   }
 
+  private initCornerDrag(gridEl: HTMLElement): void {
+    this.cornerDrag?.destroy();
+
+    if (!this.element) {
+      return;
+    }
+
+    this.cornerDrag = new TableCornerDrag({
+      wrapper: this.element,
+      gridEl,
+      onAddRow: () => {
+        this.runStructuralOp(() => {
+          this.grid.addRow(gridEl);
+          this.model.addRow();
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingStyles(this.gridElement, this.model.withHeadings);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+        });
+      },
+      onAddColumn: () => {
+        this.runStructuralOp(() => {
+          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
+          const halfWidth = this.model.initialColWidth !== undefined
+            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
+            : computeHalfAvgWidth(colWidths);
+          const newWidths = [...colWidths, halfWidth];
+
+          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          this.model.addColumn(undefined, halfWidth);
+          this.model.setColWidths(newWidths);
+          applyPixelWidths(gridEl, newWidths);
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+        });
+      },
+      onRemoveLastRow: () => {
+        this.runStructuralOp(() => {
+          const rowCount = this.grid.getRowCount(gridEl);
+
+          if (rowCount <= 1) {
+            return;
+          }
+
+          const { blocksToDelete } = this.model.deleteRow(rowCount - 1);
+
+          this.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.grid.deleteRow(gridEl, rowCount - 1);
+        });
+      },
+      onRemoveLastColumn: () => {
+        this.runStructuralOp(() => {
+          const colCount = this.grid.getColumnCount(gridEl);
+
+          if (colCount <= 1) {
+            return;
+          }
+
+          const { blocksToDelete } = this.model.deleteColumn(colCount - 1);
+
+          this.cellBlocks?.deleteBlocks(blocksToDelete);
+          this.grid.deleteColumn(gridEl, colCount - 1);
+
+          const updatedWidths = this.model.colWidths;
+
+          if (updatedWidths) {
+            applyPixelWidths(gridEl, updatedWidths);
+          }
+        });
+      },
+      onDragStart: () => {
+        if (this.resize) {
+          this.resize.enabled = false;
+        }
+        this.rowColControls?.hideAllGrips();
+        this.rowColControls?.setGripsDisplay(false);
+        this.addControls?.setDisplay(false);
+      },
+      onDragEnd: () => {
+        this.initResize(gridEl);
+        this.rowColControls?.refresh();
+        this.addControls?.setDisplay(true);
+        this.addControls?.syncRowButtonWidth();
+      },
+      getTableSize: () => {
+        return { rows: this.model.rows, cols: this.model.cols };
+      },
+      canRemoveLastRow: () => {
+        return this.model.rows > 1 && isRowEmpty(gridEl, this.model.rows - 1);
+      },
+      canRemoveLastColumn: () => {
+        return this.model.cols > 1 && isColumnEmpty(gridEl, this.model.cols - 1);
+      },
+      onClickAdd: () => {
+        this.runTransactedStructuralOp(() => {
+          // Add row
+          this.grid.addRow(gridEl);
+          this.model.addRow();
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingStyles(this.gridElement, this.model.withHeadings);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+
+          // Add column
+          const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);
+          const halfWidth = this.model.initialColWidth !== undefined
+            ? Math.round((this.model.initialColWidth / 2) * 100) / 100
+            : computeHalfAvgWidth(colWidths);
+          const newWidths = [...colWidths, halfWidth];
+
+          this.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
+          this.model.addColumn(undefined, halfWidth);
+          this.model.setColWidths(newWidths);
+          applyPixelWidths(gridEl, newWidths);
+          populateNewCells(gridEl, this.cellBlocks);
+          updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
+
+          // Refresh subsystems
+          this.initResize(gridEl);
+          this.rowColControls?.refresh();
+          this.addControls?.syncRowButtonWidth();
+        });
+      },
+    });
+  }
+
   private initRowColControls(gridEl: HTMLElement): void {
     this.rowColControls?.destroy();
 
@@ -1088,6 +1217,7 @@ export class Table implements BlockTool {
         }
 
         this.addControls?.setDisplay(!isDragging);
+        this.cornerDrag?.setDisplay(!isDragging);
 
         if (isDragging) {
           this.api.toolbar.close({ setExplicitlyClosed: false });
@@ -1467,6 +1597,7 @@ export class Table implements BlockTool {
         }
 
         this.addControls?.setInteractive(!hasSelection);
+        this.cornerDrag?.setInteractive(!hasSelection);
         this.rowColControls?.setGripsDisplay(!hasSelection);
       },
       onSelectionRangeChange: () => {

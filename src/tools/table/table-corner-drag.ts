@@ -13,6 +13,7 @@ export interface TableCornerDragOptions {
   getTableSize: () => { rows: number; cols: number };
   canRemoveLastRow: () => boolean;
   canRemoveLastColumn: () => boolean;
+  onClickAdd?: () => void;
 }
 
 const DRAG_THRESHOLD = 5;
@@ -42,6 +43,7 @@ export class TableCornerDrag {
   private onDragEnd: () => void;
   private canRemoveLastRow: () => boolean;
   private canRemoveLastColumn: () => boolean;
+  private onClickAdd: (() => void) | null;
   private dragState: DragState | null = null;
   private hideTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly boundMouseEnter: () => void;
@@ -62,6 +64,7 @@ export class TableCornerDrag {
     this.onDragEnd = options.onDragEnd;
     this.canRemoveLastRow = options.canRemoveLastRow;
     this.canRemoveLastColumn = options.canRemoveLastColumn;
+    this.onClickAdd = options.onClickAdd ?? null;
 
     this.hitZone = document.createElement('div');
     this.hitZone.setAttribute(CORNER_DRAG_ATTR, '');
@@ -225,8 +228,12 @@ export class TableCornerDrag {
     this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
 
     if (!didDrag) {
-      this.onAddRow();
-      this.onAddColumn();
+      if (this.onClickAdd) {
+        this.onClickAdd();
+      } else {
+        this.onAddRow();
+        this.onAddColumn();
+      }
     } else {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';

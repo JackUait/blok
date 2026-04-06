@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { createCellPlacementPicker } from '../../../../src/tools/table/table-cell-placement-picker';
 import type { CellPlacement } from '../../../../src/tools/table/types';
 
@@ -21,7 +21,7 @@ const mockI18n = {
 } as Parameters<typeof createCellPlacementPicker>[0]['i18n'];
 
 describe('createCellPlacementPicker', () => {
-  let onPlacementSelect: ReturnType<typeof vi.fn>;
+  let onPlacementSelect: Mock<(placement: CellPlacement) => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();

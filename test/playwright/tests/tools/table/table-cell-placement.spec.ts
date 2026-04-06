@@ -244,7 +244,7 @@ test.describe('Cell Placement', () => {
 
     // Verify the data-blok-cell-placement attribute is set on the cell's blocks container
     const placementAttr = await getCell(page, 0, 0).evaluate((cell) => {
-      const blocksContainer = cell.querySelector('[data-blok-table-cell-blocks]') as HTMLElement | null;
+      const blocksContainer = cell.querySelector('[data-blok-table-cell-blocks]');
 
       return blocksContainer?.getAttribute('data-blok-cell-placement') ?? null;
     });

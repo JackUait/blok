@@ -362,7 +362,7 @@ export class CodeTool implements BlockTool {
     if (text.endsWith('\n') && !hasBr) {
       code.appendChild(document.createElement('br'));
     } else if (!text.endsWith('\n') && hasBr) {
-      code.lastChild!.remove();
+      code.lastChild.remove();
     }
   }
 

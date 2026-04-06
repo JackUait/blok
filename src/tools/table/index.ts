@@ -1329,12 +1329,14 @@ export class Table implements BlockTool {
 
         const blocksContainer = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
 
-        if (blocksContainer) {
-          if (placement === 'top-left') {
-            blocksContainer.removeAttribute('data-blok-cell-placement');
-          } else {
-            blocksContainer.setAttribute('data-blok-cell-placement', placement);
-          }
+        if (!blocksContainer) {
+          continue;
+        }
+
+        if (placement === 'top-left') {
+          blocksContainer.removeAttribute('data-blok-cell-placement');
+        } else {
+          blocksContainer.setAttribute('data-blok-cell-placement', placement);
         }
       }
     });

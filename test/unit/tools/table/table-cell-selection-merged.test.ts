@@ -189,6 +189,9 @@ const mockMergedBoundingRects = (grid: HTMLTableElement): void => {
 
 const mockI18n = {
   t: (key: string): string => key,
+  has: (_key: string): boolean => false,
+  getEnglishTranslation: (key: string): string => key,
+  getLocale: (): string => 'en',
 };
 
 describe('TableCellSelection — merged cells', () => {

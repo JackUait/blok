@@ -772,11 +772,9 @@ export class TableCellSelection {
     const placementItems: PopoverItemParams[] = [];
 
     if (this.onPlacementChange !== undefined) {
-      let currentPlacement: CellPlacement | undefined;
-
-      if (this.lastPaintedRange && this.getCellPlacement) {
-        currentPlacement = this.getCellPlacement(this.lastPaintedRange.minRow, this.lastPaintedRange.minCol);
-      }
+      const currentPlacement: CellPlacement | undefined = this.lastPaintedRange && this.getCellPlacement
+        ? this.getCellPlacement(this.lastPaintedRange.minRow, this.lastPaintedRange.minCol)
+        : undefined;
 
       const { element: pickerElement } = createCellPlacementPicker({
         i18n: this.i18n,

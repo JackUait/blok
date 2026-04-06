@@ -528,9 +528,11 @@ export class TableModel {
 
     // Check that no merged cell partially overlaps the selection boundary.
     // A merged cell is allowed if it's fully inside the selection.
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        const cell = this.contentGrid[r][c];
+    return this.contentGrid.slice(minRow, maxRow + 1).every((row, ri) => {
+      const r = minRow + ri;
+
+      return row.slice(minCol, maxCol + 1).every((cell, ci) => {
+        const c = minCol + ci;
 
         // Check origin cells whose span extends beyond the selection
         const colspan = cell.colspan ?? 1;
@@ -550,10 +552,10 @@ export class TableModel {
             return false;
           }
         }
-      }
-    }
 
-    return true;
+        return true;
+      });
+    });
   }
 
   /**
@@ -576,19 +578,21 @@ export class TableModel {
 
     // First, if any cell in the selection is itself an origin of a merge,
     // split it so we work with flat cells
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        if (r === minRow && c === minCol) {
-          continue;
-        }
+    this.contentGrid.slice(minRow, maxRow + 1).forEach((row, ri) => {
+      const r = minRow + ri;
 
-        const cell = this.contentGrid[r][c];
+      row.slice(minCol, maxCol + 1).forEach((cell, ci) => {
+        const c = minCol + ci;
+
+        if (r === minRow && c === minCol) {
+          return;
+        }
 
         if ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1) {
           this.splitCellInternal(r, c);
         }
-      }
-    }
+      });
+    });
 
     // Also split the origin if it was previously merged
     if ((origin.colspan ?? 1) > 1 || (origin.rowspan ?? 1) > 1) {
@@ -598,11 +602,14 @@ export class TableModel {
     // Collect blocks from all cells in row-major order and move to origin
     const collectedBlocks: string[] = [];
 
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        const cell = this.contentGrid[r][c];
+    this.contentGrid.slice(minRow, maxRow + 1).forEach((_row, ri) => {
+      const r = minRow + ri;
 
-        for (const blockId of cell.blocks) {
+      this.contentGrid[r].slice(minCol, maxCol + 1).forEach((_cell, ci) => {
+        const c = minCol + ci;
+        const gridCell = this.contentGrid[r][c];
+
+        for (const blockId of gridCell.blocks) {
           collectedBlocks.push(blockId);
 
           if (r !== minRow || c !== minCol) {
@@ -612,13 +619,13 @@ export class TableModel {
 
         // Clear non-origin cells
         if (r !== minRow || c !== minCol) {
-          cell.blocks = [];
-          cell.mergedInto = [minRow, minCol];
-          delete cell.colspan;
-          delete cell.rowspan;
+          gridCell.blocks = [];
+          gridCell.mergedInto = [minRow, minCol];
+          delete gridCell.colspan;
+          delete gridCell.rowspan;
         }
-      }
-    }
+      });
+    });
 
     // Set origin cell
     origin.blocks = collectedBlocks;
@@ -715,10 +722,14 @@ export class TableModel {
     const rowspan = cell.rowspan ?? 1;
 
     // Clear spanned cells
-    for (let r = row; r < row + rowspan && r < this.rows; r++) {
-      for (let c = col; c < col + colspan && c < this.cols; c++) {
+    this.contentGrid.slice(row, Math.min(row + rowspan, this.rows)).forEach((_gridRow, ri) => {
+      const r = row + ri;
+
+      this.contentGrid[r].slice(col, Math.min(col + colspan, this.cols)).forEach((_spanned, ci) => {
+        const c = col + ci;
+
         if (r === row && c === col) {
-          continue;
+          return;
         }
 
         const spanned = this.contentGrid[r][c];
@@ -726,8 +737,8 @@ export class TableModel {
         delete spanned.mergedInto;
         spanned.blocks = [];
         delete spanned.placement;
-      }
-    }
+      });
+    });
 
     // Reset origin
     delete cell.colspan;
@@ -887,21 +898,23 @@ export class TableModel {
           return;
         }
 
-        for (let dr = r; dr < r + rowspan; dr++) {
-          for (let dc = c; dc < c + colspan; dc++) {
-            if (dr === r && dc === c) {
-              continue;
-            }
+        this.contentGrid.slice(r, r + rowspan).forEach((spanRow, dri) => {
+          const dr = r + dri;
 
-            const spanned = this.contentGrid[dr]?.[dc];
+          spanRow.slice(c, c + colspan).forEach((spanned, dci) => {
+            const dc = c + dci;
+
+            if (dr === r && dc === c) {
+              return;
+            }
 
             if (!spanned?.mergedInto) {
               throw new Error(
                 `Invariant violation: cell [${dr},${dc}] is within span of origin [${r},${c}] but has no mergedInto`
               );
             }
-          }
-        }
+          });
+        });
       });
     });
 
@@ -920,13 +933,15 @@ export class TableModel {
    * Called after inserting (delta=1) or deleting (delta=-1) a row.
    */
   private shiftMergedIntoRows(startRow: number, delta: number): void {
-    for (const row of this.contentGrid) {
-      for (const cell of row) {
-        if (cell.mergedInto !== undefined && cell.mergedInto[0] >= startRow) {
-          cell.mergedInto = [cell.mergedInto[0] + delta, cell.mergedInto[1]];
+    this.contentGrid.forEach((_row, r) => {
+      this.contentGrid[r].forEach((_cell, c) => {
+        const gridCell = this.contentGrid[r][c];
+
+        if (gridCell.mergedInto !== undefined && gridCell.mergedInto[0] >= startRow) {
+          gridCell.mergedInto = [gridCell.mergedInto[0] + delta, gridCell.mergedInto[1]];
         }
-      }
-    }
+      });
+    });
   }
 
   /**
@@ -934,13 +949,15 @@ export class TableModel {
    * Called after inserting (delta=1) or deleting (delta=-1) a column.
    */
   private shiftMergedIntoCols(startCol: number, delta: number): void {
-    for (const row of this.contentGrid) {
-      for (const cell of row) {
-        if (cell.mergedInto !== undefined && cell.mergedInto[1] >= startCol) {
-          cell.mergedInto = [cell.mergedInto[0], cell.mergedInto[1] + delta];
+    this.contentGrid.forEach((_row, r) => {
+      this.contentGrid[r].forEach((_cell, c) => {
+        const gridCell = this.contentGrid[r][c];
+
+        if (gridCell.mergedInto !== undefined && gridCell.mergedInto[1] >= startCol) {
+          gridCell.mergedInto = [gridCell.mergedInto[0], gridCell.mergedInto[1] + delta];
         }
-      }
-    }
+      });
+    });
   }
 
   /**
@@ -948,51 +965,41 @@ export class TableModel {
    * crosses the insertion point, increment their rowspan, and mark new cells as covered.
    */
   private expandSpansForInsertedRow(insertedRow: number): void {
-    for (let r = 0; r < this.contentGrid.length; r++) {
-      for (let c = 0; c < this.contentGrid[r].length; c++) {
-        const cell = this.contentGrid[r][c];
-        const rowspan = cell.rowspan ?? 1;
-        const colspan = cell.colspan ?? 1;
+    this.contentGrid.forEach((_row, r) => {
+      this.contentGrid[r].forEach((_cell, c) => {
+        const gridCell = this.contentGrid[r][c];
+        const rowspan = gridCell.rowspan ?? 1;
+        const colspan = gridCell.colspan ?? 1;
 
         if (rowspan <= 1 && colspan <= 1) {
-          continue;
+          return;
         }
 
-        // Origin must be above the inserted row and its span must cross it.
-        // The origin is at row r (which is the post-insert index).
-        // If r < insertedRow and the origin was originally at r (not shifted),
-        // its span originally ended at r + rowspan - 1 (in post-insert coords, the
-        // original spanned rows below insertedRow were shifted down by 1).
-        // The insertion point is crossed when the original span end >= insertedRow,
-        // i.e., the origin is strictly above the insertion and its span extends into or past it.
-        // After insert: origin at r, cells it used to cover are at r..r+rowspan-1 but
-        // with a gap at insertedRow. We need to check: r < insertedRow and
-        // the span (which has already been shifted) reaches past insertedRow.
-        // Since mergedInto coords were already shifted, the covered cells below
-        // insertedRow now point correctly, but the new row at insertedRow is uncovered.
-        // Condition: origin at r < insertedRow and r + rowspan > insertedRow
-        // (rowspan is still the old value, but rows below were shifted, so
-        // the old span of rowspan rows now has a gap at insertedRow).
-        if (r < insertedRow && r + rowspan > insertedRow) {
-          // Increment rowspan to absorb the new row
-          cell.rowspan = rowspan + 1;
-
-          // Mark the new row's cells within the colspan as covered
-          for (let dc = c; dc < c + colspan; dc++) {
-            if (dc < this.contentGrid[insertedRow].length) {
-              const newCell = this.contentGrid[insertedRow][dc];
-
-              if (dc === c && r === insertedRow) {
-                // This would be the origin itself — skip (shouldn't happen since r < insertedRow)
-                continue;
-              }
-              newCell.mergedInto = [r, c];
-              newCell.blocks = [];
-            }
-          }
+        if (r >= insertedRow || r + rowspan <= insertedRow) {
+          return;
         }
+
+        // Increment rowspan to absorb the new row
+        gridCell.rowspan = rowspan + 1;
+
+        // Mark the new row's cells within the colspan as covered
+        this.markInsertedRowCells(insertedRow, r, c, colspan);
+      });
+    });
+  }
+
+  private markInsertedRowCells(insertedRow: number, originRow: number, originCol: number, colspan: number): void {
+    this.contentGrid[insertedRow].slice(originCol, originCol + colspan).forEach((_newCell, ci) => {
+      const dc = originCol + ci;
+
+      if (dc === originCol && originRow === insertedRow) {
+        return;
       }
-    }
+      const gridCell = this.contentGrid[insertedRow][dc];
+
+      gridCell.mergedInto = [originRow, originCol];
+      gridCell.blocks = [];
+    });
   }
 
   /**
@@ -1000,33 +1007,40 @@ export class TableModel {
    * crosses the insertion point, increment their colspan, and mark new cells as covered.
    */
   private expandSpansForInsertedCol(insertedCol: number): void {
-    for (let r = 0; r < this.contentGrid.length; r++) {
-      for (let c = 0; c < this.contentGrid[r].length; c++) {
-        const cell = this.contentGrid[r][c];
-        const rowspan = cell.rowspan ?? 1;
-        const colspan = cell.colspan ?? 1;
+    this.contentGrid.forEach((_row, r) => {
+      this.contentGrid[r].forEach((_cell, c) => {
+        const gridCell = this.contentGrid[r][c];
+        const rowspan = gridCell.rowspan ?? 1;
+        const colspan = gridCell.colspan ?? 1;
 
         if (rowspan <= 1 && colspan <= 1) {
-          continue;
+          return;
         }
 
-        if (c < insertedCol && c + colspan > insertedCol) {
-          cell.colspan = colspan + 1;
-
-          for (let dr = r; dr < r + rowspan; dr++) {
-            if (dr < this.contentGrid.length) {
-              const newCell = this.contentGrid[dr][insertedCol];
-
-              if (dr === r && insertedCol === c) {
-                continue;
-              }
-              newCell.mergedInto = [r, c];
-              newCell.blocks = [];
-            }
-          }
+        if (c >= insertedCol || c + colspan <= insertedCol) {
+          return;
         }
+
+        gridCell.colspan = colspan + 1;
+
+        // Mark the new column's cells within the rowspan as covered
+        this.markInsertedColCells(insertedCol, r, c, rowspan);
+      });
+    });
+  }
+
+  private markInsertedColCells(insertedCol: number, originRow: number, originCol: number, rowspan: number): void {
+    this.contentGrid.slice(originRow, originRow + rowspan).forEach((_gridRow, ri) => {
+      const dr = originRow + ri;
+
+      if (dr === originRow && insertedCol === originCol) {
+        return;
       }
-    }
+      const gridCell = this.contentGrid[dr][insertedCol];
+
+      gridCell.mergedInto = [originRow, originCol];
+      gridCell.blocks = [];
+    });
   }
 
   /**
@@ -1037,122 +1051,156 @@ export class TableModel {
   private contractSpansForDeletedRow(rowIndex: number): void {
     const row = this.contentGrid[rowIndex];
 
-    for (let c = 0; c < row.length; c++) {
-      const cell = row[c];
+    row.forEach((_cell, c) => {
+      const gridCell = this.contentGrid[rowIndex][c];
 
-      if ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1) {
-        // This cell is a merge origin
-        const rowspan = cell.rowspan ?? 1;
-        const colspan = cell.colspan ?? 1;
+      if ((gridCell.colspan ?? 1) > 1 || (gridCell.rowspan ?? 1) > 1) {
+        this.handleOriginInDeletedRow(rowIndex, c);
+      } else if (gridCell.mergedInto !== undefined) {
+        this.handleCoveredInDeletedRow(rowIndex, c);
+      }
+    });
+  }
 
-        if (rowspan > 1) {
-          const newRowspan = rowspan - 1;
-          const nextRow = rowIndex + 1;
+  private handleOriginInDeletedRow(rowIndex: number, c: number): void {
+    const cell = this.contentGrid[rowIndex][c];
+    const rowspan = cell.rowspan ?? 1;
+    const colspan = cell.colspan ?? 1;
 
-          if (nextRow < this.contentGrid.length) {
-            const newOrigin = this.contentGrid[nextRow][c];
+    if (rowspan <= 1) {
+      return;
+    }
 
-            // Transfer blocks and merge metadata to the new origin
-            newOrigin.blocks = [...cell.blocks];
-            cell.blocks = [];
+    const newRowspan = rowspan - 1;
+    const nextRow = rowIndex + 1;
 
-            if (newRowspan === 1 && colspan === 1) {
-              // Dissolve the merge entirely
-              delete newOrigin.mergedInto;
-              delete newOrigin.colspan;
-              delete newOrigin.rowspan;
+    if (nextRow < this.contentGrid.length) {
+      this.transferOriginToNextRow(rowIndex, c, nextRow, rowspan, colspan, newRowspan);
+    }
 
-              // Clear mergedInto from all cells that pointed to this origin
-              for (let dr = nextRow; dr < rowIndex + rowspan; dr++) {
-                for (let dc = c; dc < c + colspan; dc++) {
-                  if (dr === nextRow && dc === c) {
-                    continue;
-                  }
-                  const spanned = this.contentGrid[dr]?.[dc];
+    delete cell.colspan;
+    delete cell.rowspan;
+  }
 
-                  if (spanned?.mergedInto?.[0] === rowIndex && spanned?.mergedInto?.[1] === c) {
-                    delete spanned.mergedInto;
-                  }
-                }
-              }
-            } else {
-              // Set new origin's merge metadata
-              delete newOrigin.mergedInto;
-              if (newRowspan > 1) {
-                newOrigin.rowspan = newRowspan;
-              } else {
-                delete newOrigin.rowspan;
-              }
-              if (colspan > 1) {
-                newOrigin.colspan = colspan;
-              } else {
-                delete newOrigin.colspan;
-              }
+  private transferOriginToNextRow(
+    rowIndex: number, c: number, nextRow: number,
+    rowspan: number, colspan: number, newRowspan: number
+  ): void {
+    const cell = this.contentGrid[rowIndex][c];
+    const newOrigin = this.contentGrid[nextRow][c];
 
-              // Update mergedInto references to point to new origin
-              for (let dr = nextRow; dr < rowIndex + rowspan; dr++) {
-                for (let dc = c; dc < c + colspan; dc++) {
-                  if (dr === nextRow && dc === c) {
-                    continue;
-                  }
-                  const spanned = this.contentGrid[dr]?.[dc];
+    newOrigin.blocks = [...cell.blocks];
+    cell.blocks = [];
 
-                  if (spanned?.mergedInto?.[0] === rowIndex && spanned?.mergedInto?.[1] === c) {
-                    spanned.mergedInto = [nextRow, c];
-                  }
-                }
-              }
-            }
-          }
+    delete newOrigin.mergedInto;
 
-          // Clear the old origin's merge metadata
-          delete cell.colspan;
-          delete cell.rowspan;
-        }
-      } else if (cell.mergedInto !== undefined) {
-        // This cell is covered by a merge from a different row
-        const [originRow, originCol] = cell.mergedInto;
+    if (newRowspan === 1 && colspan === 1) {
+      delete newOrigin.colspan;
+      delete newOrigin.rowspan;
+      this.clearMergedIntoRefs(nextRow, rowIndex + rowspan, c, c + colspan, rowIndex, c, nextRow, c, undefined);
 
-        if (originRow !== rowIndex) {
-          const origin = this.contentGrid[originRow]?.[originCol];
+      return;
+    }
 
-          if (origin) {
-            const oRowspan = origin.rowspan ?? 1;
-            const oColspan = origin.colspan ?? 1;
-            const newRowspan = oRowspan - 1;
+    if (newRowspan > 1) {
+      newOrigin.rowspan = newRowspan;
+    } else {
+      delete newOrigin.rowspan;
+    }
+    if (colspan > 1) {
+      newOrigin.colspan = colspan;
+    } else {
+      delete newOrigin.colspan;
+    }
+    this.clearMergedIntoRefs(nextRow, rowIndex + rowspan, c, c + colspan, rowIndex, c, nextRow, c, [nextRow, c]);
+  }
 
-            if (newRowspan === 1 && oColspan === 1) {
-              // Dissolve the merge
-              delete origin.colspan;
-              delete origin.rowspan;
+  private handleCoveredInDeletedRow(rowIndex: number, c: number): void {
+    const cell = this.contentGrid[rowIndex][c];
+    const [originRow, originCol] = cell.mergedInto as [number, number];
 
-              // Clear mergedInto from all remaining cells in the span
-              for (let dr = originRow; dr < originRow + oRowspan; dr++) {
-                for (let dc = originCol; dc < originCol + oColspan; dc++) {
-                  if (dr === originRow && dc === originCol) {
-                    continue;
-                  }
-                  if (dr === rowIndex) {
-                    continue; // This row is being deleted
-                  }
-                  const spanned = this.contentGrid[dr]?.[dc];
+    if (originRow === rowIndex) {
+      return;
+    }
 
-                  if (spanned?.mergedInto) {
-                    delete spanned.mergedInto;
-                  }
-                }
-              }
-            } else {
-              if (newRowspan > 1) {
-                origin.rowspan = newRowspan;
-              } else {
-                delete origin.rowspan;
-              }
-            }
-          }
-        }
+    const origin = this.contentGrid[originRow]?.[originCol];
+
+    if (!origin) {
+      return;
+    }
+
+    const oRowspan = origin.rowspan ?? 1;
+    const oColspan = origin.colspan ?? 1;
+    const newRowspan = oRowspan - 1;
+
+    if (newRowspan === 1 && oColspan === 1) {
+      delete origin.colspan;
+      delete origin.rowspan;
+
+      this.clearMergedIntoRefsForDissolve(originRow, originRow + oRowspan, originCol, originCol + oColspan, originRow, originCol, rowIndex);
+    } else {
+      if (newRowspan > 1) {
+        origin.rowspan = newRowspan;
+      } else {
+        delete origin.rowspan;
       }
     }
+  }
+
+  private clearMergedIntoRefs(
+    startRow: number, endRow: number, startCol: number, endCol: number,
+    oldOriginRow: number, oldOriginCol: number,
+    skipRow: number, skipCol: number,
+    newRef: [number, number] | undefined
+  ): void {
+    this.contentGrid.slice(startRow, endRow).forEach((_gridRow, ri) => {
+      const dr = startRow + ri;
+
+      this.contentGrid[dr].slice(startCol, endCol).forEach((_spanned, ci) => {
+        const dc = startCol + ci;
+
+        if (dr === skipRow && dc === skipCol) {
+          return;
+        }
+
+        const spanned = this.contentGrid[dr]?.[dc];
+
+        if (spanned?.mergedInto?.[0] === oldOriginRow && spanned?.mergedInto?.[1] === oldOriginCol) {
+          if (newRef === undefined) {
+            delete spanned.mergedInto;
+          } else {
+            spanned.mergedInto = newRef;
+          }
+        }
+      });
+    });
+  }
+
+  private clearMergedIntoRefsForDissolve(
+    startRow: number, endRow: number, startCol: number, endCol: number,
+    skipOriginRow: number, skipOriginCol: number, deletedRow: number
+  ): void {
+    this.contentGrid.slice(startRow, endRow).forEach((_gridRow, ri) => {
+      const dr = startRow + ri;
+
+      if (dr === deletedRow) {
+        return;
+      }
+
+      this.contentGrid[dr].slice(startCol, endCol).forEach((_spanned, ci) => {
+        const dc = startCol + ci;
+
+        if (dr === skipOriginRow && dc === skipOriginCol) {
+          return;
+        }
+
+        const spanned = this.contentGrid[dr]?.[dc];
+
+        if (spanned?.mergedInto) {
+          delete spanned.mergedInto;
+        }
+      });
+    });
   }
 
   /**
@@ -1160,117 +1208,126 @@ export class TableModel {
    * Symmetric to contractSpansForDeletedRow.
    */
   private contractSpansForDeletedCol(colIndex: number): void {
-    for (let r = 0; r < this.contentGrid.length; r++) {
-      const cell = this.contentGrid[r][colIndex];
+    this.contentGrid.forEach((_row, r) => {
+      const gridCell = this.contentGrid[r][colIndex];
 
-      if ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1) {
-        // This cell is a merge origin
-        const rowspan = cell.rowspan ?? 1;
-        const colspan = cell.colspan ?? 1;
+      if ((gridCell.colspan ?? 1) > 1 || (gridCell.rowspan ?? 1) > 1) {
+        this.handleOriginInDeletedCol(colIndex, r);
+      } else if (gridCell.mergedInto !== undefined) {
+        this.handleCoveredInDeletedCol(colIndex, r);
+      }
+    });
+  }
 
-        if (colspan > 1) {
-          const newColspan = colspan - 1;
-          const nextCol = colIndex + 1;
+  private handleOriginInDeletedCol(colIndex: number, r: number): void {
+    const cell = this.contentGrid[r][colIndex];
+    const rowspan = cell.rowspan ?? 1;
+    const colspan = cell.colspan ?? 1;
 
-          if (nextCol < this.contentGrid[r].length) {
-            const newOrigin = this.contentGrid[r][nextCol];
+    if (colspan <= 1) {
+      return;
+    }
 
-            // Transfer blocks to the new origin
-            newOrigin.blocks = [...cell.blocks];
-            cell.blocks = [];
+    const newColspan = colspan - 1;
+    const nextCol = colIndex + 1;
 
-            if (newColspan === 1 && rowspan === 1) {
-              // Dissolve the merge entirely
-              delete newOrigin.mergedInto;
-              delete newOrigin.colspan;
-              delete newOrigin.rowspan;
+    if (nextCol < (this.contentGrid[r]?.length ?? 0)) {
+      this.transferOriginToNextCol(colIndex, r, nextCol, rowspan, colspan, newColspan);
+    }
 
-              for (let dr = r; dr < r + rowspan; dr++) {
-                for (let dc = nextCol; dc < colIndex + colspan; dc++) {
-                  if (dr === r && dc === nextCol) {
-                    continue;
-                  }
-                  const spanned = this.contentGrid[dr]?.[dc];
+    delete cell.colspan;
+    delete cell.rowspan;
+  }
 
-                  if (spanned?.mergedInto?.[0] === r && spanned?.mergedInto?.[1] === colIndex) {
-                    delete spanned.mergedInto;
-                  }
-                }
-              }
-            } else {
-              delete newOrigin.mergedInto;
-              if (newColspan > 1) {
-                newOrigin.colspan = newColspan;
-              } else {
-                delete newOrigin.colspan;
-              }
-              if (rowspan > 1) {
-                newOrigin.rowspan = rowspan;
-              } else {
-                delete newOrigin.rowspan;
-              }
+  private transferOriginToNextCol(
+    colIndex: number, r: number, nextCol: number,
+    rowspan: number, colspan: number, newColspan: number
+  ): void {
+    const cell = this.contentGrid[r][colIndex];
+    const newOrigin = this.contentGrid[r][nextCol];
 
-              // Update mergedInto references
-              for (let dr = r; dr < r + rowspan; dr++) {
-                for (let dc = nextCol; dc < colIndex + colspan; dc++) {
-                  if (dr === r && dc === nextCol) {
-                    continue;
-                  }
-                  const spanned = this.contentGrid[dr]?.[dc];
+    newOrigin.blocks = [...cell.blocks];
+    cell.blocks = [];
+    delete newOrigin.mergedInto;
 
-                  if (spanned?.mergedInto?.[0] === r && spanned?.mergedInto?.[1] === colIndex) {
-                    spanned.mergedInto = [r, nextCol];
-                  }
-                }
-              }
-            }
-          }
+    if (newColspan === 1 && rowspan === 1) {
+      delete newOrigin.colspan;
+      delete newOrigin.rowspan;
+      this.clearMergedIntoRefs(r, r + rowspan, nextCol, colIndex + colspan, r, colIndex, r, nextCol, undefined);
 
-          // Clear old origin's merge metadata
-          delete cell.colspan;
-          delete cell.rowspan;
-        }
-      } else if (cell.mergedInto !== undefined) {
-        const [originRow, originCol] = cell.mergedInto;
+      return;
+    }
 
-        if (originCol !== colIndex) {
-          const origin = this.contentGrid[originRow]?.[originCol];
+    if (newColspan > 1) {
+      newOrigin.colspan = newColspan;
+    } else {
+      delete newOrigin.colspan;
+    }
+    if (rowspan > 1) {
+      newOrigin.rowspan = rowspan;
+    } else {
+      delete newOrigin.rowspan;
+    }
+    this.clearMergedIntoRefs(r, r + rowspan, nextCol, colIndex + colspan, r, colIndex, r, nextCol, [r, nextCol]);
+  }
 
-          if (origin) {
-            const oColspan = origin.colspan ?? 1;
-            const oRowspan = origin.rowspan ?? 1;
-            const newColspan = oColspan - 1;
+  private handleCoveredInDeletedCol(colIndex: number, r: number): void {
+    const cell = this.contentGrid[r][colIndex];
+    const [originRow, originCol] = cell.mergedInto as [number, number];
 
-            if (newColspan === 1 && oRowspan === 1) {
-              delete origin.colspan;
-              delete origin.rowspan;
+    if (originCol === colIndex) {
+      return;
+    }
 
-              for (let dr = originRow; dr < originRow + oRowspan; dr++) {
-                for (let dc = originCol; dc < originCol + oColspan; dc++) {
-                  if (dr === originRow && dc === originCol) {
-                    continue;
-                  }
-                  if (dc === colIndex) {
-                    continue;
-                  }
-                  const spanned = this.contentGrid[dr]?.[dc];
+    const origin = this.contentGrid[originRow]?.[originCol];
 
-                  if (spanned?.mergedInto) {
-                    delete spanned.mergedInto;
-                  }
-                }
-              }
-            } else {
-              if (newColspan > 1) {
-                origin.colspan = newColspan;
-              } else {
-                delete origin.colspan;
-              }
-            }
-          }
-        }
+    if (!origin) {
+      return;
+    }
+
+    const oColspan = origin.colspan ?? 1;
+    const oRowspan = origin.rowspan ?? 1;
+    const newColspan = oColspan - 1;
+
+    if (newColspan === 1 && oRowspan === 1) {
+      delete origin.colspan;
+      delete origin.rowspan;
+
+      this.clearMergedIntoRefsForDissolveCol(originRow, originRow + oRowspan, originCol, originCol + oColspan, originRow, originCol, colIndex);
+    } else {
+      if (newColspan > 1) {
+        origin.colspan = newColspan;
+      } else {
+        delete origin.colspan;
       }
     }
+  }
+
+  private clearMergedIntoRefsForDissolveCol(
+    startRow: number, endRow: number, startCol: number, endCol: number,
+    skipOriginRow: number, skipOriginCol: number, deletedCol: number
+  ): void {
+    this.contentGrid.slice(startRow, endRow).forEach((_gridRow, ri) => {
+      const dr = startRow + ri;
+
+      this.contentGrid[dr].slice(startCol, endCol).forEach((_spanned, ci) => {
+        const dc = startCol + ci;
+
+        if (dr === skipOriginRow && dc === skipOriginCol) {
+          return;
+        }
+
+        if (dc === deletedCol) {
+          return;
+        }
+
+        const spanned = this.contentGrid[dr]?.[dc];
+
+        if (spanned?.mergedInto) {
+          delete spanned.mergedInto;
+        }
+      });
+    });
   }
 
   /**
@@ -1279,29 +1336,23 @@ export class TableModel {
   private isRowInvolvedInMerge(rowIndex: number): boolean {
     const row = this.contentGrid[rowIndex];
 
-    for (let c = 0; c < row.length; c++) {
-      const cell = row[c];
-
+    return row.some(cell => {
       // Origin with rowspan > 1 means it extends to other rows
       if ((cell.rowspan ?? 1) > 1) {
         return true;
       }
 
       // Covered by a merge from a different row
-      if (cell.mergedInto !== undefined && cell.mergedInto[0] !== rowIndex) {
-        return true;
-      }
-    }
-
-    return false;
+      return cell.mergedInto !== undefined && cell.mergedInto[0] !== rowIndex;
+    });
   }
 
   /**
    * Check if any cell in a column is involved in a merge that extends beyond the column.
    */
   private isColInvolvedInMerge(colIndex: number): boolean {
-    for (let r = 0; r < this.contentGrid.length; r++) {
-      const cell = this.contentGrid[r][colIndex];
+    return this.contentGrid.some(row => {
+      const cell = row[colIndex];
 
       // Origin with colspan > 1 means it extends to other columns
       if ((cell.colspan ?? 1) > 1) {
@@ -1309,12 +1360,8 @@ export class TableModel {
       }
 
       // Covered by a merge from a different column
-      if (cell.mergedInto !== undefined && cell.mergedInto[1] !== colIndex) {
-        return true;
-      }
-    }
-
-    return false;
+      return cell.mergedInto !== undefined && cell.mergedInto[1] !== colIndex;
+    });
   }
 
   /**
@@ -1322,51 +1369,20 @@ export class TableModel {
    * by computing the index remapping.
    */
   private rebuildMergedIntoRowCoordinates(from: number, to: number): void {
-    // Build the mapping: for each old row index, what is its new index?
     const rowCount = this.contentGrid.length;
-    const mapping = new Array<number>(rowCount);
+    const mapping = this.buildMoveMapping(rowCount, from, to);
 
-    // After splice(from, 1) then splice(to, 0, moved):
-    // The row that was at `from` is now at `to`.
-    // Other rows shift to fill the gap and accommodate the insertion.
-    for (let oldIdx = 0; oldIdx < rowCount; oldIdx++) {
-      let newIdx = oldIdx;
+    this.contentGrid.forEach((_row, r) => {
+      this.contentGrid[r].forEach((_cell, c) => {
+        const gridCell = this.contentGrid[r][c];
 
-      // First: remove from `from` — rows above `from` stay, rows below shift up
-      if (oldIdx === from) {
-        newIdx = to;
-        mapping[oldIdx] = newIdx;
-        continue;
-      }
+        if (gridCell.mergedInto !== undefined) {
+          const oldOriginRow = gridCell.mergedInto[0];
 
-      if (oldIdx > from) {
-        newIdx = oldIdx - 1;
-      }
-
-      // Then: insert at `to` — rows at/below `to` shift down
-      if (newIdx >= to) {
-        newIdx = newIdx + 1;
-      }
-
-      mapping[oldIdx] = newIdx;
-    }
-
-    // Now remap mergedInto coordinates using the inverse mapping.
-    // We need: for each current row position, what was the old row index?
-    // Then use the mapping to figure out the new origin position.
-    // But actually, since the splice already happened, the grid is in its final position.
-    // We need to map old mergedInto values through the mapping.
-    // The cells are already in their new positions, but their mergedInto values
-    // still reference old row indices. We need to update them.
-    for (const row of this.contentGrid) {
-      for (const cell of row) {
-        if (cell.mergedInto !== undefined) {
-          const oldOriginRow = cell.mergedInto[0];
-
-          cell.mergedInto = [mapping[oldOriginRow], cell.mergedInto[1]];
+          gridCell.mergedInto = [mapping[oldOriginRow], gridCell.mergedInto[1]];
         }
-      }
-    }
+      });
+    });
   }
 
   /**
@@ -1375,37 +1391,31 @@ export class TableModel {
    */
   private rebuildMergedIntoColCoordinates(from: number, to: number): void {
     const colCount = this.cols;
-    const mapping = new Array<number>(colCount);
+    const mapping = this.buildMoveMapping(colCount, from, to);
 
-    for (let oldIdx = 0; oldIdx < colCount; oldIdx++) {
-      let newIdx = oldIdx;
+    this.contentGrid.forEach((_row, r) => {
+      this.contentGrid[r].forEach((_cell, c) => {
+        const gridCell = this.contentGrid[r][c];
 
-      if (oldIdx === from) {
-        newIdx = to;
-        mapping[oldIdx] = newIdx;
-        continue;
-      }
+        if (gridCell.mergedInto !== undefined) {
+          const oldOriginCol = gridCell.mergedInto[1];
 
-      if (oldIdx > from) {
-        newIdx = oldIdx - 1;
-      }
-
-      if (newIdx >= to) {
-        newIdx = newIdx + 1;
-      }
-
-      mapping[oldIdx] = newIdx;
-    }
-
-    for (const row of this.contentGrid) {
-      for (const cell of row) {
-        if (cell.mergedInto !== undefined) {
-          const oldOriginCol = cell.mergedInto[1];
-
-          cell.mergedInto = [cell.mergedInto[0], mapping[oldOriginCol]];
+          gridCell.mergedInto = [gridCell.mergedInto[0], mapping[oldOriginCol]];
         }
+      });
+    });
+  }
+
+  private buildMoveMapping(count: number, from: number, to: number): number[] {
+    return Array.from({ length: count }, (_, oldIdx) => {
+      if (oldIdx === from) {
+        return to;
       }
-    }
+
+      const afterRemove = oldIdx > from ? oldIdx - 1 : oldIdx;
+
+      return afterRemove >= to ? afterRemove + 1 : afterRemove;
+    });
   }
 
   // ─── Private helpers ────────────────────────────────────────────

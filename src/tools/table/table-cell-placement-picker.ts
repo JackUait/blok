@@ -107,10 +107,11 @@ export const createCellPlacementPicker = (options: PlacementPickerOptions): Plac
 
     cell.addEventListener('click', () => {
       grid.querySelectorAll('[data-placement]').forEach(el => {
-        (el as HTMLElement).removeAttribute('data-active');
-        (el as HTMLElement).style.outline = '';
-        (el as HTMLElement).style.outlineOffset = '';
-        (el as HTMLElement).style.backgroundColor = 'var(--blok-bg-tertiary, #f0f0f0)';
+        const element = el as HTMLElement;
+        element.removeAttribute('data-active');
+        element.style.outline = '';
+        element.style.outlineOffset = '';
+        element.style.backgroundColor = 'var(--blok-bg-tertiary, #f0f0f0)';
       });
 
       cell.setAttribute('data-active', 'true');

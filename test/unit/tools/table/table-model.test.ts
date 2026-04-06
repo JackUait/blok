@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TableModel } from '../../../../src/tools/table/table-model';
-import type { CellContent, CellPlacement, TableData } from '../../../../src/tools/table/types';
+import type { CellContent, TableData } from '../../../../src/tools/table/types';
 
 // ─── Helpers ───────────────────────────────────────────────────────
 

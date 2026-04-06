@@ -399,6 +399,12 @@ export class TableAddControls {
       document.body.style.cursor = axis === 'row' ? 'row-resize' : 'col-resize';
       this.showDimensionTooltip();
       this.onDragStart();
+
+      return;
+    }
+
+    if (this.dragState.didDrag) {
+      this.showDimensionTooltip();
     }
 
     if (this.dragState.didDrag) {

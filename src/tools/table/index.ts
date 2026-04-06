@@ -995,8 +995,8 @@ export class Table implements BlockTool {
       grid: gridEl,
       i18n: this.api.i18n,
       getTableSize: () => ({
-        rows: this.grid.getRowCount(gridEl),
-        cols: this.grid.getColumnCount(gridEl),
+        rows: this.model.rows,
+        cols: this.model.cols,
       }),
       getNewColumnWidth: () => {
         const colWidths = this.model.colWidths ?? readPixelWidths(gridEl);

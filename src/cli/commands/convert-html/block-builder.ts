@@ -85,8 +85,25 @@ function convertNode(
 
   if (tag === 'IMG') {
     const src = el.getAttribute('src') ?? '';
+    const widthStyle = parseCssProperty(el, 'width');
+    let width: number | null = null;
 
-    blocks.push({ id: nextId('image'), type: 'image', data: { url: src } });
+    if (widthStyle) {
+      const parsed = parseInt(widthStyle, 10);
+
+      if (!isNaN(parsed)) {
+        width = parsed;
+      }
+    }
+
+    blocks.push({
+      id: nextId('image'),
+      type: 'image',
+      data: { url: src },
+      stretched: null,
+      key: null,
+      width,
+    });
 
     return;
   }
@@ -157,13 +174,21 @@ function flattenList(
 
     const text = clone.innerHTML.trim();
 
+    // Use aria-level if present (1-based → 0-based), otherwise use nesting depth
+    const ariaLevel = (child as HTMLElement).getAttribute('aria-level');
+    let itemDepth = depth;
+
+    if (ariaLevel) {
+      itemDepth = Math.max(0, parseInt(ariaLevel, 10) - 1);
+    }
+
     blocks.push({
       id: nextId('list'),
       type: 'list',
       data: {
         text,
         style,
-        depth: depth === 0 ? null : depth,
+        depth: itemDepth === 0 ? null : itemDepth,
         checked: null,
         start: isFirstItem && startValue !== null ? startValue : null,
       },
@@ -350,7 +375,7 @@ function parseCssProperty(el: HTMLElement, property: string): string | null {
     return null;
   }
 
-  const regex = new RegExp(`${property}\\s*:\\s*([^;]+)`);
+  const regex = new RegExp(`(?<![\\-a-z])${property}\\s*:\\s*([^;]+)`);
   const match = regex.exec(style);
 
   return match ? match[1].trim() : null;

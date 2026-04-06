@@ -85,6 +85,26 @@ describe('buildBlocks', () => {
       expect(blocks[0].type).toBe('image');
       expect(blocks[0].data).toEqual({ url: 'https://example.com/photo.jpg' });
     });
+
+    it('includes stretched, key, and width fields', () => {
+      const blocks = run('<img src="https://example.com/photo.jpg">');
+      expect(blocks[0]).toMatchObject({
+        type: 'image',
+        data: { url: 'https://example.com/photo.jpg' },
+        stretched: null,
+        key: null,
+        width: null,
+      });
+    });
+
+    it('extracts width from style attribute', () => {
+      const blocks = run('<img src="https://example.com/photo.jpg" style="width: 50%">');
+      expect(blocks[0]).toMatchObject({
+        type: 'image',
+        data: { url: 'https://example.com/photo.jpg' },
+        width: 50,
+      });
+    });
   });
 
   describe('toggle', () => {
@@ -138,6 +158,12 @@ describe('buildBlocks', () => {
       const blocks = run('<ul><li><b>bold</b> item</li></ul>');
       expect(blocks[0].data.text).toBe('<b>bold</b> item');
     });
+
+    it('uses aria-level for list item depth', () => {
+      const blocks = run('<ul><li aria-level="1">top</li><li aria-level="3">deep</li></ul>');
+      expect(blocks[0].data.depth).toBeNull(); // aria-level 1 → depth 0 → null
+      expect(blocks[1].data.depth).toBe(2);    // aria-level 3 → depth 2
+    });
   });
 
   // --- Table blocks ---
@@ -171,6 +197,18 @@ describe('buildBlocks', () => {
       const tableBlock = blocks.find((b) => b.type === 'table')!;
       const row = (tableBlock.data.content as Record<string, unknown>[][])[0];
       expect((row[0].blocks as string[]).length).toBe(0);
+    });
+
+    it('extracts color correctly when background-color also exists', () => {
+      const blocks = run(
+        '<table><tr><td style="background-color: rgb(251, 236, 221); color: rgb(0, 0, 0);">text</td></tr></table>'
+      );
+      const tableBlock = blocks.find((b) => b.type === 'table')!;
+      const row = (tableBlock.data.content as Record<string, unknown>[][])[0];
+      // color should be mapped from rgb(0,0,0) (black), not from background-color
+      expect(row[0].color).toBe('orange');
+      // textColor should come from the explicit color property
+      expect(row[0].textColor).not.toBe('orange');
     });
   });
 

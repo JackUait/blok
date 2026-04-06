@@ -4,6 +4,9 @@ export interface OutputBlockData {
   data: Record<string, unknown>;
   parent?: string;
   content?: string[];
+  stretched?: number | null;
+  key?: string | null;
+  width?: number | null;
 }
 
 export interface OutputData {

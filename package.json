@@ -51,7 +51,8 @@
   },
   "bin": {
     "blok": "./bin/blok.mjs",
-    "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js"
+    "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js",
+    "blok-convert-html": "./bin/convert-html.mjs"
   },
   "files": [
     "dist",
@@ -83,7 +84,7 @@
   "scripts": {
     "serve": "vite --no-open",
     "serve:docs": "cd docs && vite --port 8080",
-    "build": "vite build --mode production && node scripts/build-locales.mjs && node scripts/build-cli.mjs",
+    "build": "vite build --mode production && node scripts/build-locales.mjs && node scripts/build-cli.mjs && node scripts/build-convert-html.mjs",
     "build:cli": "node scripts/build-cli.mjs",
     "build:test": "vite build --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",

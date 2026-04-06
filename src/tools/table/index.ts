@@ -1101,6 +1101,7 @@ export class Table implements BlockTool {
           this.model.addColumn(undefined, halfWidth);
           this.model.setColWidths(newWidths);
           applyPixelWidths(gridEl, newWidths);
+          enableScrollOverflow(this.ensureScrollContainer());
           populateNewCells(gridEl, this.cellBlocks);
           updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
         });

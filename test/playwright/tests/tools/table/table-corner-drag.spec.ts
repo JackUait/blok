@@ -266,6 +266,63 @@ test.describe('Table Corner Drag Handle', () => {
     await expect(firstRowCells).toHaveCount(3);
   });
 
+  test('Scroll container has overflow classes during corner drag column addition', async ({ page }) => {
+    // Regression: corner drag's onAddColumn did not enable scroll overflow,
+    // causing the grid to overflow unclipped and the hit zone to appear
+    // in the middle of the table instead of at the visible corner.
+
+    // 1. Create a 2x2 table (starts in percent mode, no colWidths)
+    await createTable(page, [['A', 'B'], ['C', 'D']]);
+
+    // 2. Verify scroll container starts without overflow classes (percent mode)
+    const scrollContainerBefore = await page.evaluate(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement;
+
+      return {
+        hasOverflowX: sc?.classList.contains('overflow-x-auto'),
+        hasOverflowY: sc?.classList.contains('overflow-y-hidden'),
+      };
+    });
+
+    expect(scrollContainerBefore.hasOverflowX).toBe(false);
+    expect(scrollContainerBefore.hasOverflowY).toBe(false);
+
+    // 3. Start a corner drag and add columns
+    const cornerHandle = page.locator(CORNER_DRAG_SELECTOR);
+    const cornerBox = assertBoundingBox(await cornerHandle.boundingBox(), 'Corner handle');
+
+    const unitWidth = await page.evaluate(() => {
+      const firstRow = document.querySelector('[data-blok-table-row]');
+      const cells = firstRow?.querySelectorAll('[data-blok-table-cell]') ?? [];
+
+      return (cells[cells.length - 1] as HTMLElement)?.offsetWidth || 100;
+    });
+
+    const startX = cornerBox.x + cornerBox.width / 2;
+    const startY = cornerBox.y + cornerBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+
+    // Drag right enough to add 2 columns
+    await page.mouse.move(startX + unitWidth * 2 + 10, startY, { steps: 10 });
+
+    // 4. Check scroll container MID-DRAG — it must have overflow classes now
+    const scrollContainerDuring = await page.evaluate(() => {
+      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement;
+
+      return {
+        hasOverflowX: sc?.classList.contains('overflow-x-auto'),
+        hasOverflowY: sc?.classList.contains('overflow-y-hidden'),
+      };
+    });
+
+    expect(scrollContainerDuring.hasOverflowX).toBe(true);
+    expect(scrollContainerDuring.hasOverflowY).toBe(true);
+
+    await page.mouse.up();
+  });
+
   test('Undo reverses corner click additions', async ({ page }) => {
     // 1. Create a 2x2 table
     await createTable(page, [['A', 'B'], ['C', 'D']]);

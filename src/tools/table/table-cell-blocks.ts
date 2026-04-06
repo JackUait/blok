@@ -473,6 +473,12 @@ export class TableCellBlocks {
         continue;
       }
 
+      // Guard: skip blocks already mounted in another table cell's container.
+      // Without this, appendChild would steal the DOM node from the other table.
+      if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+        continue;
+      }
+
       container.appendChild(block.holder);
       this.api.blocks.setBlockParent(blockId, this.tableBlockId);
       mountedIds.push(blockId);
@@ -505,6 +511,12 @@ export class TableCellBlocks {
     // Guard against circular DOM: never append the table block's own holder
     // into one of its descendant cell containers.
     if (block.holder.contains(container)) {
+      return;
+    }
+
+    // Guard: skip blocks already mounted in another table cell's container.
+    // Without this, insertBefore would steal the DOM node from the other table.
+    if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
       return;
     }
 

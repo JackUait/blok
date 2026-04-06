@@ -341,6 +341,65 @@ describe('Table Tool', () => {
 
       expect(saved.content[0][0]).toEqual({ blocks: ['list-1', 'list-2', 'list-3'] });
     });
+
+    it('should filter out block IDs whose parent does not match this table', () => {
+      const TABLE_ID = 'table-owner';
+      const ownedBlock = 'block-owned-1';
+      const foreignBlock = 'block-foreign-from-other-table';
+      const ownedBlock2 = 'block-owned-2';
+
+      const mockApi = createMockAPI({
+        blocks: {
+          getById: (id: string) => {
+            if (id === ownedBlock || id === ownedBlock2) {
+              return { id, parentId: TABLE_ID } as never;
+            }
+            if (id === foreignBlock) {
+              return { id, parentId: 'other-table-id' } as never;
+            }
+
+            return null;
+          },
+        } as never,
+      });
+
+      const options: BlockToolConstructorOptions<TableData, TableConfig> = {
+        data: {
+          withHeadings: false,
+          withHeadingColumn: false,
+          content: [
+            [{ blocks: [ownedBlock, foreignBlock] }, { blocks: [ownedBlock2] }],
+          ],
+        } as TableData,
+        config: {},
+        api: mockApi,
+        readOnly: false,
+        block: { id: TABLE_ID } as never,
+      };
+
+      const table = new Table(options);
+      const element = table.render();
+
+      const saved = table.save(element);
+
+      // The foreign block should be filtered out — only owned blocks remain
+      const firstCell = saved.content[0][0];
+
+      expect(isCellWithBlocks(firstCell)).toBe(true);
+      if (isCellWithBlocks(firstCell)) {
+        expect(firstCell.blocks).toContain(ownedBlock);
+        expect(firstCell.blocks).not.toContain(foreignBlock);
+        expect(firstCell.blocks).toHaveLength(1);
+      }
+
+      // The second cell should be unaffected (all blocks owned)
+      const secondCell = saved.content[0][1];
+
+      expect(isCellWithBlocks(secondCell)).toBe(true);
+      if (isCellWithBlocks(secondCell)) {
+        expect(secondCell.blocks).toEqual([ownedBlock2]);
+      }
+    });
   });
 
   describe('heading row', () => {

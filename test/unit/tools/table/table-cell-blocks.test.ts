@@ -2126,7 +2126,7 @@ describe('TableCellBlocks', () => {
       expect(setBlockParentMock).toHaveBeenCalledWith('new-para-1', 'table-1');
     });
 
-    it('steals block from original table when called with existing block ID (documents the root cause)', async () => {
+    it('does not steal block from original table when called with existing block ID', async () => {
       const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
 
       // Original cell DOM: a container that already holds an existing block holder
@@ -2148,9 +2148,13 @@ describe('TableCellBlocks', () => {
       pastedRow.appendChild(pastedCell);
       pastedGridElement.appendChild(pastedRow);
 
+      const fallbackHolder = document.createElement('div');
+
+      fallbackHolder.setAttribute('data-blok-id', 'fallback-para');
+
       const api = {
         blocks: {
-          insert: vi.fn(),
+          insert: vi.fn().mockReturnValue({ id: 'fallback-para', holder: fallbackHolder }),
           getBlockIndex: vi.fn((id: string) => {
             if (id === 'original-para-id') return 0;
 
@@ -2161,6 +2165,7 @@ describe('TableCellBlocks', () => {
 
             return undefined;
           }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
         },
         events: { on: vi.fn(), off: vi.fn() },
@@ -2176,10 +2181,10 @@ describe('TableCellBlocks', () => {
       // Call with the OLD ID — the one that already belongs to the original table
       cellBlocks.initializeCells([[{ blocks: ['original-para-id'] }]]);
 
-      // The block was stolen: no longer in the original container
-      expect(originalCellContainer.contains(existingBlockHolder)).toBe(false);
-      // And now lives in the pasted table's cell container
-      expect(pastedCellContainer.contains(existingBlockHolder)).toBe(true);
+      // The block should NOT be stolen — it must stay in the original container
+      expect(originalCellContainer.contains(existingBlockHolder)).toBe(true);
+      // The pasted table should NOT contain the original block
+      expect(pastedCellContainer.contains(existingBlockHolder)).toBe(false);
     });
 
     it('does not disturb original table blocks when called with new remapped IDs (fix verification)', async () => {
@@ -2846,6 +2851,126 @@ describe('TableCellBlocks', () => {
 
       // Enter should NOT be prevented — let the editor handle it
       expect(preventSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cross-table block stealing prevention', () => {
+    it('mountBlocksInCell should not steal a block already mounted in another cell container', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original table's cell container — the block already lives here
+      const originalContainer = document.createElement('div');
+      originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'stolen-block');
+      originalContainer.appendChild(blockHolder);
+
+      // New (pasted) table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const fallbackHolder = document.createElement('div');
+
+      fallbackHolder.setAttribute('data-blok-id', 'fallback-paragraph');
+
+      const api = {
+        blocks: {
+          insert: vi.fn().mockReturnValue({ id: 'fallback-paragraph', holder: fallbackHolder }),
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'stolen-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'stolen-block', holder: blockHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'pasted-table',
+        model: createMockModel(),
+      });
+
+      // initializeCells calls mountBlocksInCell internally
+      cellBlocks.initializeCells([[{ blocks: ['stolen-block'] }]]);
+
+      // The block should NOT have been moved — it must stay in the original container
+      expect(originalContainer.contains(blockHolder)).toBe(true);
+      expect(newContainer.contains(blockHolder)).toBe(false);
+    });
+
+    it('claimBlockForCell should not steal a block already mounted in another cell container', async () => {
+      const { TableCellBlocks, CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      // Original table's cell container — the block already lives here
+      const originalContainer = document.createElement('div');
+      originalContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+
+      const blockHolder = document.createElement('div');
+      blockHolder.setAttribute('data-blok-id', 'stolen-block');
+      originalContainer.appendChild(blockHolder);
+
+      // New table grid: 1x1 with its own cell container
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-table-row', '');
+      const cell = document.createElement('div');
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.setAttribute('data-blok-table-cell-col', '0');
+      const newContainer = document.createElement('div');
+      newContainer.setAttribute(CELL_BLOCKS_ATTR, '');
+      cell.appendChild(newContainer);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'stolen-block') return 0;
+
+            return undefined;
+          }),
+          getBlockByIndex: vi.fn((index: number) => {
+            if (index === 0) return { id: 'stolen-block', holder: blockHolder };
+
+            return undefined;
+          }),
+          getBlocksCount: vi.fn().mockReturnValue(1),
+          setBlockParent: vi.fn(),
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const cellBlocks = new TableCellBlocks({
+        api,
+        gridElement,
+        tableBlockId: 'new-table',
+        model: createMockModel(),
+      });
+
+      cellBlocks.claimBlockForCell(cell, 'stolen-block');
+
+      // The block should NOT have been moved — it must stay in the original container
+      expect(originalContainer.contains(blockHolder)).toBe(true);
+      expect(newContainer.contains(blockHolder)).toBe(false);
     });
   });
 });

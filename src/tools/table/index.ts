@@ -56,6 +56,7 @@ import type { RowColAction } from './table-row-col-controls';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableScrollHaze } from './table-scroll-haze';
 import type { CellPlacement, ClipboardBlockData, LegacyCellContent, TableCellsClipboard, TableData, TableConfig } from './types';
+import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
 const DEFAULT_COLS = 3;
@@ -595,7 +596,28 @@ export class Table implements BlockTool {
   }
 
   public save(_blockContent: HTMLElement): TableData {
-    return this.model.snapshot();
+    const data = this.model.snapshot();
+
+    // Filter out block IDs that don't belong to this table.
+    // Corrupted data may contain cross-table references; persisting them
+    // causes DOM node stealing and data loss on subsequent renders.
+    data.content = data.content.map(row =>
+      row.map(cell => {
+        if (!isCellWithBlocks(cell)) {
+          return cell;
+        }
+
+        const filtered = cell.blocks.filter(blockId => {
+          const block = this.api.blocks.getById?.(blockId);
+
+          return !block || block.parentId === this.blockId;
+        });
+
+        return { ...cell, blocks: filtered };
+      })
+    );
+
+    return data;
   }
 
   public validate(savedData: TableData): boolean {

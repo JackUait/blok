@@ -130,6 +130,7 @@ const LOGIC_TESTS = [
   '**/ui/toolbox-no-truncation.spec.ts',
   '**/ui/table-toolbar-visibility.spec.ts',
   '**/ui/css-layer-conflict.spec.ts',
+  '**/ui/content-align.spec.ts',
 
   // Seed/utility tests
   '**/seed.spec.ts',

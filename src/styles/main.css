@@ -1128,8 +1128,12 @@
 /**
  * Content alignment
  * Applies horizontal alignment to block content based on the editor's contentAlign setting.
- * Left alignment is the default (no margin needed).
+ * Left alignment overrides the mx-auto Tailwind class on [data-blok-element-content].
  */
+[data-blok-content-align="left"] [data-blok-element-content] {
+  margin-left: 0;
+}
+
 [data-blok-content-align="center"] [data-blok-element-content] {
   margin-left: auto;
   margin-right: auto;

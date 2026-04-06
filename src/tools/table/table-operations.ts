@@ -326,6 +326,13 @@ export const mountCellBlocksReadOnly = (
           continue;
         }
 
+        // Skip blocks that don't belong to this table.
+        // Corrupted data may contain cross-table references; mounting them
+        // would steal (or clone) DOM nodes from the other table.
+        if (block.parentId !== _tableBlockId) {
+          continue;
+        }
+
         // Guard: if the block holder is already inside another table cell's
         // blocks container, clone its visual content instead of moving (stealing)
         // the DOM node. This can happen when corrupted data references the same

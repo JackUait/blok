@@ -140,8 +140,8 @@ describe('table-operations', () => {
       });
 
       const mockGetBlockByIndex = vi.fn((index: number) => {
-        if (index === 0) return { id: 'existing-block', holder: existingBlockHolder };
-        if (index === 1) return { id: 'legacy-block', holder: legacyBlockHolder };
+        if (index === 0) return { id: 'existing-block', holder: existingBlockHolder, parentId: 'table-id' };
+        if (index === 1) return { id: 'legacy-block', holder: legacyBlockHolder, parentId: 'table-id' };
         return undefined;
       });
 
@@ -198,6 +198,7 @@ describe('table-operations', () => {
       const mockGetBlockByIndex = vi.fn().mockReturnValue({
         id: 'block-1',
         holder: existingBlockHolder,
+        parentId: 'table-id',
       });
 
       const api = {
@@ -257,6 +258,7 @@ describe('table-operations', () => {
           getBlockByIndex: vi.fn().mockReturnValue({
             id: 'block-1',
             holder: blockHolder,
+            parentId: 'table-id',
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
@@ -450,6 +452,7 @@ describe('table-operations', () => {
       const mockGetBlockByIndex = vi.fn().mockReturnValue({
         id: 'shared-block',
         holder: sharedBlockHolder,
+        parentId: 'table-1',
       });
 
       const api = {
@@ -462,19 +465,20 @@ describe('table-operations', () => {
         },
       } as unknown as API;
 
-      // Both tables reference the same block ID
+      // Both tables reference the same block ID (corrupted data)
       const content = [[{ blocks: ['shared-block'] }]];
 
-      // Mount grid1 first — block holder should land in container1
+      // Mount grid1 first — block belongs to table-1 so it should land in container1
       mountCellBlocksReadOnly(grid1, content, api, 'table-1');
 
-      // Mount grid2 second — should NOT steal the holder from container1
+      // Mount grid2 second — block belongs to table-1, not table-2, so it must be skipped
       mountCellBlocksReadOnly(grid2, content, api, 'table-2');
 
       // Grid1's cell must still contain the block holder
       expect(container1.contains(sharedBlockHolder)).toBe(true);
-      // Grid2's cell must NOT have stolen the block holder
+      // Grid2's cell must NOT have the block (parent mismatch → skipped)
       expect(container2.contains(sharedBlockHolder)).toBe(false);
+      expect(container2.children).toHaveLength(0);
     });
 
     it('should wrap legacy string content in a div with leading-[1.5] to match paragraph line-height', async () => {
@@ -555,6 +559,7 @@ describe('table-operations', () => {
           getBlockByIndex: vi.fn().mockReturnValue({
             id: 'block-1',
             holder: blockHolder,
+            parentId: 'table-id',
           }),
           getBlocksCount: vi.fn().mockReturnValue(1),
           setBlockParent: vi.fn(),
@@ -573,7 +578,71 @@ describe('table-operations', () => {
       expect(container.textContent).toBe('Cell content');
     });
 
-    it('should clone block content into second table when same block is referenced by two tables', async () => {
+    it('should skip blocks whose parent does not match the table block ID', async () => {
+      const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
+      const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const gridElement = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      cell.setAttribute(CELL_COL_ATTR, '0');
+
+      const container = document.createElement('div');
+      container.setAttribute(CELL_BLOCKS_ATTR, '');
+      container.setAttribute('data-blok-nested-blocks', '');
+
+      cell.appendChild(container);
+      row.appendChild(cell);
+      gridElement.appendChild(row);
+
+      // Block that belongs to THIS table
+      const ownBlockHolder = document.createElement('div');
+      ownBlockHolder.setAttribute('data-blok-id', 'own-block');
+      ownBlockHolder.textContent = 'Own content';
+
+      // Block that belongs to ANOTHER table (cross-table reference)
+      const foreignBlockHolder = document.createElement('div');
+      foreignBlockHolder.setAttribute('data-blok-id', 'foreign-block');
+      foreignBlockHolder.textContent = 'Foreign content';
+
+      const mockGetBlockIndex = vi.fn((id: string) => {
+        if (id === 'own-block') return 0;
+        if (id === 'foreign-block') return 1;
+        return undefined;
+      });
+
+      const mockGetBlockByIndex = vi.fn((index: number) => {
+        if (index === 0) return { id: 'own-block', holder: ownBlockHolder, parentId: 'table-1' };
+        if (index === 1) return { id: 'foreign-block', holder: foreignBlockHolder, parentId: 'table-2' };
+        return undefined;
+      });
+
+      const api = {
+        blocks: {
+          insert: vi.fn(),
+          getBlockIndex: mockGetBlockIndex,
+          getBlockByIndex: mockGetBlockByIndex,
+          getBlocksCount: vi.fn().mockReturnValue(2),
+          setBlockParent: vi.fn(),
+        },
+      } as unknown as API;
+
+      // Corrupted content: cell references both own block and foreign block
+      const content = [[{ blocks: ['own-block', 'foreign-block'] }]];
+
+      mountCellBlocksReadOnly(gridElement, content, api, 'table-1');
+
+      // Only the own block should be mounted; foreign block must be skipped
+      const holders = container.querySelectorAll('[data-blok-id]');
+      expect(holders).toHaveLength(1);
+      expect(container.textContent).toBe('Own content');
+    });
+
+    it('should skip cross-table blocks instead of cloning them', async () => {
       const { mountCellBlocksReadOnly } = await import('../../../../src/tools/table/table-operations');
       const { ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } = await import('../../../../src/tools/table/table-core');
       const { CELL_BLOCKS_ATTR } = await import('../../../../src/tools/table/table-cell-blocks');
@@ -612,7 +681,7 @@ describe('table-operations', () => {
       row2.appendChild(cell2);
       grid2.appendChild(row2);
 
-      // Shared block with visible content
+      // Block owned by table-1
       const sharedBlockHolder = document.createElement('div');
       sharedBlockHolder.setAttribute('data-blok-id', 'shared-block');
       sharedBlockHolder.innerHTML = '<div class="blok-block">Paragraph text</div>';
@@ -621,6 +690,7 @@ describe('table-operations', () => {
       const mockGetBlockByIndex = vi.fn().mockReturnValue({
         id: 'shared-block',
         holder: sharedBlockHolder,
+        parentId: 'table-1',
       });
 
       const api = {
@@ -633,20 +703,17 @@ describe('table-operations', () => {
         },
       } as unknown as API;
 
+      // Both tables reference the same block (corrupted data)
       const content = [[{ blocks: ['shared-block'] }]];
 
       mountCellBlocksReadOnly(grid1, content, api, 'table-1');
       mountCellBlocksReadOnly(grid2, content, api, 'table-2');
 
-      // Grid1 has the original holder
+      // Grid1 has the original holder (block belongs to table-1)
       expect(container1.contains(sharedBlockHolder)).toBe(true);
 
-      // Grid2 must NOT be empty — it should have a cloned copy of the content
-      expect(container2.children.length).toBeGreaterThan(0);
-      expect(container2.textContent).toBe('Paragraph text');
-
-      // The clone must NOT be the same DOM node
-      expect(container2.contains(sharedBlockHolder)).toBe(false);
+      // Grid2 must be empty — block belongs to table-1, not table-2
+      expect(container2.children).toHaveLength(0);
     });
   });
 

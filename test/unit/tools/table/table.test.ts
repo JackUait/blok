@@ -2842,7 +2842,7 @@ describe('Table Tool', () => {
               holders[id].textContent = `Content of ${id}`;
             }
 
-            return { id, holder: holders[id] };
+            return { id, holder: holders[id], parentId: 'table-readonly-mount' };
           }),
           getBlocksCount: vi.fn().mockReturnValue(2),
         },

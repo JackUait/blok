@@ -82,6 +82,37 @@ if (cleanupNpmrc) {
   unlinkSync('.npmrc');
 }
 
+// --- Publish to GitHub Packages as @dodopizza/blok ---
+
+const pkgJson = JSON.parse(readFileSync('package.json', 'utf-8'));
+
+try {
+  pkgJson.name = '@dodopizza/blok';
+  writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
+
+  const gprToken = process.env.BLOK_GITHUB_TOKEN;
+
+  if (gprToken) {
+    writeFileSync('.npmrc', [
+      '@dodopizza:registry=https://npm.pkg.github.com',
+      `//npm.pkg.github.com/:_authToken=${gprToken}`,
+      '',
+    ].join('\n'));
+  }
+
+  run(`npm publish --tag ${tag}`);
+  console.log('\nPublished @dodopizza/blok to GitHub Packages');
+} catch {
+  console.error('\nFailed to publish @dodopizza/blok to GitHub Packages (continuing)');
+} finally {
+  pkgJson.name = '@jackuait/blok';
+  writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
+
+  if (existsSync('.npmrc')) {
+    unlinkSync('.npmrc');
+  }
+}
+
 // --- Git: commit, tag, push ---
 
 run('git add package.json');

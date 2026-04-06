@@ -43,6 +43,7 @@ export class TableCornerDrag {
   private canRemoveLastRow: () => boolean;
   private canRemoveLastColumn: () => boolean;
   private dragState: DragState | null = null;
+  private hideTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly boundMouseEnter: () => void;
   private readonly boundMouseLeave: () => void;
   private readonly boundPointerDown: (e: PointerEvent) => void;
@@ -71,6 +72,8 @@ export class TableCornerDrag {
     this.hitZone.style.cursor = 'nwse-resize';
     this.hitZone.style.zIndex = '2';
     this.hitZone.style.pointerEvents = 'auto';
+    this.hitZone.style.bottom = '-36px';
+    this.hitZone.style.right = '-36px';
 
     this.tooltip = document.createElement('div');
     this.tooltip.setAttribute(CORNER_TOOLTIP_ATTR, '');
@@ -102,12 +105,22 @@ export class TableCornerDrag {
   }
 
   private handleMouseEnter(): void {
+    if (this.hideTimeout !== null) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+    }
     this.updateTooltip();
     this.tooltip.style.opacity = '1';
   }
 
   private handleMouseLeave(): void {
-    this.tooltip.style.opacity = '0';
+    if (this.dragState !== null) {
+      return;
+    }
+    this.hideTimeout = setTimeout(() => {
+      this.tooltip.style.opacity = '0';
+      this.hideTimeout = null;
+    }, 150);
   }
 
   private measureUnitHeight(): number {
@@ -235,6 +248,10 @@ export class TableCornerDrag {
     this.hitZone.removeEventListener('pointerdown', this.boundPointerDown);
     this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
     this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
+    if (this.hideTimeout !== null) {
+      clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+    }
     this.dragState = null;
     this.hitZone.remove();
     this.tooltip.remove();

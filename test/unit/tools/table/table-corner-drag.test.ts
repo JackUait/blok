@@ -149,7 +149,9 @@ describe('TableCornerDrag', () => {
       expect(tooltip.textContent).toBe('2×3');
     });
 
-    it('hides tooltip on mouseleave', () => {
+    it('hides tooltip after 150ms delay on mouseleave', () => {
+      vi.useFakeTimers();
+
       const options = createDefaultOptions(wrapper, grid);
 
       cornerDrag = new TableCornerDrag(options);
@@ -161,7 +163,13 @@ describe('TableCornerDrag', () => {
 
       const tooltip = wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`) as HTMLElement;
 
+      expect(tooltip.style.opacity).toBe('1');
+
+      vi.advanceTimersByTime(150);
+
       expect(tooltip.style.opacity).toBe('0');
+
+      vi.useRealTimers();
     });
   });
 
@@ -371,6 +379,30 @@ describe('TableCornerDrag', () => {
 
       expect(options.onRemoveLastColumn).not.toHaveBeenCalled();
     });
+
+    it('does not remove below 1×1 minimum size', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      let removeCount = 0;
+
+      options.canRemoveLastRow.mockImplementation(() => {
+        // Allow first removal, block second (simulating 1-row minimum)
+        removeCount++;
+        return removeCount <= 1;
+      });
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      // Try to remove 3 rows (but canRemoveLastRow only allows 1)
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 4, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 4, pointerId: 1 }));
+
+      expect(options.onRemoveLastRow).toHaveBeenCalledOnce();
+    });
   });
 
   describe('tooltip updates during drag', () => {
@@ -445,6 +477,26 @@ describe('TableCornerDrag', () => {
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
       expect(hitZone.style.pointerEvents).toBe('auto');
+    });
+  });
+
+  describe('pointer capture', () => {
+    it('captures pointer on pointerdown and releases on pointerup', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const setCapture = vi.spyOn(hitZone, 'setPointerCapture');
+      const releaseCapture = vi.spyOn(hitZone, 'releasePointerCapture');
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 42 }));
+
+      expect(setCapture).toHaveBeenCalledWith(42);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 100, pointerId: 42 }));
+
+      expect(releaseCapture).toHaveBeenCalledWith(42);
     });
   });
 

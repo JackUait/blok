@@ -284,6 +284,26 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 106, clientY: 100, pointerId: 1 }));
     });
 
+    it('hides tooltip on pointerup after drag', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 136, pointerId: 1 }));
+
+      mockHideTooltip.mockClear();
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 136, pointerId: 1 }));
+
+      expect(mockHideTooltip).toHaveBeenCalled();
+    });
+
     it('does not trigger drag mode when movement is under threshold', () => {
       const options = createDefaultOptions(wrapper, grid);
 
@@ -519,6 +539,21 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
 
       expect(options.onAddRow).not.toHaveBeenCalled();
+    });
+
+    it('hides tooltip on destroy', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new MouseEvent('mouseenter'));
+      mockHideTooltip.mockClear();
+
+      cornerDrag.destroy();
+
+      expect(mockHideTooltip).toHaveBeenCalled();
     });
   });
 });

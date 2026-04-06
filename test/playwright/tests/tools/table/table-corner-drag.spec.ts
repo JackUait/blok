@@ -11,7 +11,7 @@ const HOLDER_ID = 'blok';
 const CELL_SELECTOR = '[data-blok-table-cell]';
 const ROW_SELECTOR = '[data-blok-table-row]';
 const CORNER_DRAG_SELECTOR = '[data-blok-table-corner-drag]';
-const CORNER_TOOLTIP_SELECTOR = '[data-blok-table-corner-tooltip]';
+const SINGLETON_TOOLTIP_SELECTOR = '[data-blok-interface="tooltip"]';
 
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 
@@ -216,11 +216,11 @@ test.describe('Table Corner Drag Handle', () => {
     // 2. Hover over the corner drag handle (uses mouse API to bypass overlay interception)
     await hoverCornerHandle(page);
 
-    // 3. Verify the tooltip is visible and shows "2×3"
-    const tooltip = page.locator(CORNER_TOOLTIP_SELECTOR);
+    // 3. Verify the singleton tooltip is visible and shows "3×2" (cols×rows)
+    const tooltip = page.locator(SINGLETON_TOOLTIP_SELECTOR);
 
-    await expect(tooltip).toHaveCSS('opacity', '1');
-    await expect(tooltip).toHaveText('2\u00D73');
+    await expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
+    await expect(tooltip).toHaveText('3\u00D72');
   });
 
   test('Corner drag adds rows and columns', async ({ page }) => {

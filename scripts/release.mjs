@@ -94,9 +94,14 @@ if (isDirectRun) {
 
   run(`npm version ${version} --no-git-tag-version`);
 
-  // --- Publish to npm (triggers prepublishOnly → yarn build) ---
+  // --- Build once, pack twice (npm + GPR), publish both as tarballs ---
 
-  run(`npm publish --tag ${tag}`);
+  run('yarn build');
+
+  // Pack @jackuait/blok tarball for npm
+  const npmPackJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
+
+  run(gprPublishCommand({ packJson: npmPackJson, packDir: '/tmp', tag }));
 
   // --- Cleanup temporary .npmrc ---
 
@@ -109,13 +114,12 @@ if (isDirectRun) {
   const pkgJson = JSON.parse(readFileSync('package.json', 'utf-8'));
 
   try {
-    // Rewrite name first so the tarball contains @dodopizza/blok
+    // Rewrite name so the tarball contains @dodopizza/blok
     pkgJson.name = '@dodopizza/blok';
     writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
 
-    // Pack a tarball from the already-built output. Using --ignore-scripts
-    // avoids any lifecycle hooks that might fail under the rewritten name.
-    const packJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
+    // Pack a second tarball under the @dodopizza name
+    const gprPackJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
 
     const gprToken = process.env.BLOK_GITHUB_TOKEN;
 
@@ -127,8 +131,7 @@ if (isDirectRun) {
       ].join('\n'));
     }
 
-    // Publish the tarball — bypasses prepublishOnly entirely
-    run(gprPublishCommand({ packJson, packDir: '/tmp', tag }));
+    run(gprPublishCommand({ packJson: gprPackJson, packDir: '/tmp', tag }));
     console.log('\nPublished @dodopizza/blok to GitHub Packages');
   } catch {
     console.error('\nFailed to publish @dodopizza/blok to GitHub Packages (continuing)');

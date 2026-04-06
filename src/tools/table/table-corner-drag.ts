@@ -147,11 +147,44 @@ export class TableCornerDrag {
     this.hitZone.addEventListener('pointerup', this.boundPointerUp);
   }
 
-  private handlePointerMove(_e: PointerEvent): void {
-    // Will be filled in Task 4
+  private handlePointerMove(e: PointerEvent): void {
+    if (this.dragState === null) {
+      return;
+    }
+
+    const dx = e.clientX - this.dragState.startX;
+    const dy = e.clientY - this.dragState.startY;
+
+    if (!this.dragState.didDrag) {
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < DRAG_THRESHOLD) {
+        return;
+      }
+
+      this.dragState.didDrag = true;
+      document.body.style.cursor = 'nwse-resize';
+      document.body.style.userSelect = 'none';
+      this.onDragStart();
+    }
+
+    const { unitHeight, unitWidth } = this.dragState;
+
+    const targetRows = Math.floor(dy / unitHeight);
+    const targetCols = Math.floor(dx / unitWidth);
+
+    while (this.dragState.addedRows < targetRows) {
+      this.onAddRow();
+      this.dragState.addedRows++;
+    }
+
+    while (this.dragState.addedCols < targetCols) {
+      this.onAddColumn();
+      this.dragState.addedCols++;
+    }
   }
 
-  private handlePointerUp(e: PointerEvent): void {
+  private handlePointerUp(_e: PointerEvent): void {
     if (this.dragState === null) {
       return;
     }
@@ -167,6 +200,8 @@ export class TableCornerDrag {
       this.onAddRow();
       this.onAddColumn();
     } else {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
       this.onDragEnd();
     }
   }

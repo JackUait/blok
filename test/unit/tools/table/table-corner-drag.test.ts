@@ -194,4 +194,108 @@ describe('TableCornerDrag', () => {
       expect(options.onDragEnd).not.toHaveBeenCalled();
     });
   });
+
+  describe('drag to add', () => {
+    it('calls onAddRow when dragging downward by one unit height', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 136, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 130, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 130, pointerId: 1 }));
+
+      expect(options.onAddRow).toHaveBeenCalledOnce();
+      expect(options.onAddColumn).not.toHaveBeenCalled();
+      expect(options.onDragEnd).toHaveBeenCalledOnce();
+    });
+
+    it('calls onAddColumn when dragging rightward by one unit width', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      const firstRow = grid.querySelector('[data-blok-table-row]')!;
+      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
+
+      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 206, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 100, pointerId: 1 }));
+
+      expect(options.onAddColumn).toHaveBeenCalledOnce();
+      expect(options.onAddRow).not.toHaveBeenCalled();
+      expect(options.onDragEnd).toHaveBeenCalledOnce();
+    });
+
+    it('adds both rows and columns on diagonal drag', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      const rows = grid.querySelectorAll('[data-blok-table-row]');
+
+      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+
+      const firstRow = grid.querySelector('[data-blok-table-row]')!;
+      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
+
+      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 306, clientY: 166, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 160, pointerId: 1 }));
+
+      expect(options.onAddRow).toHaveBeenCalledTimes(2);
+      expect(options.onAddColumn).toHaveBeenCalledTimes(2);
+    });
+
+    it('fires onDragStart after exceeding threshold', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 103, clientY: 100, pointerId: 1 }));
+
+      expect(options.onDragStart).not.toHaveBeenCalled();
+
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 106, clientY: 100, pointerId: 1 }));
+
+      expect(options.onDragStart).toHaveBeenCalledOnce();
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 106, clientY: 100, pointerId: 1 }));
+    });
+
+    it('does not trigger drag mode when movement is under threshold', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 103, clientY: 102, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 103, clientY: 102, pointerId: 1 }));
+
+      expect(options.onAddRow).toHaveBeenCalledOnce();
+      expect(options.onAddColumn).toHaveBeenCalledOnce();
+      expect(options.onDragStart).not.toHaveBeenCalled();
+    });
+  });
 });

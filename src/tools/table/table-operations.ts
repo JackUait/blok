@@ -382,8 +382,8 @@ export const normalizeTableData = (
 export const setupKeyboardNavigation = (
   gridEl: HTMLElement,
   cellBlocks: TableCellBlocks | null,
-): void => {
-  gridEl.addEventListener('keydown', (event: KeyboardEvent) => {
+): (() => void) => {
+  const handler = (event: KeyboardEvent): void => {
     const target = event.target as HTMLElement;
     const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
@@ -396,7 +396,13 @@ export const setupKeyboardNavigation = (
     if (position) {
       cellBlocks?.handleKeyDown(event, position);
     }
-  });
+  };
+
+  gridEl.addEventListener('keydown', handler);
+
+  return () => {
+    gridEl.removeEventListener('keydown', handler);
+  };
 };
 
 export const SCROLL_OVERFLOW_CLASSES = ['overflow-x-auto', 'overflow-y-hidden'];

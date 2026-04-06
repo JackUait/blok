@@ -103,6 +103,8 @@ export class Table implements BlockTool {
   private pendingHighlight: PendingHighlight | null = null;
   private isNewTable = false;
   private unregisterRestrictedTools: (() => void) | null = null;
+  private gridPasteCleanup: (() => void) | null = null;
+  private keyboardNavCleanup: (() => void) | null = null;
 
   /**
    * Generation counter for setData calls.
@@ -200,6 +202,10 @@ export class Table implements BlockTool {
     this.cellSelection = null;
     this.scrollHaze?.destroy();
     this.scrollHaze = null;
+    this.gridPasteCleanup?.();
+    this.gridPasteCleanup = null;
+    this.keyboardNavCleanup?.();
+    this.keyboardNavCleanup = null;
   }
 
   /**
@@ -486,7 +492,7 @@ export class Table implements BlockTool {
 
     if (!this.readOnly) {
       this.initCellBlocks(gridEl);
-      setupKeyboardNavigation(gridEl, this.cellBlocks);
+      this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
     }
 
     return wrapper;
@@ -1556,9 +1562,14 @@ export class Table implements BlockTool {
   }
 
   private initGridPasteListener(gridEl: HTMLElement): void {
-    gridEl.addEventListener('paste', (e: ClipboardEvent) => {
+    const handler = (e: ClipboardEvent): void => {
       this.handleGridPaste(e, gridEl);
-    });
+    };
+
+    gridEl.addEventListener('paste', handler);
+    this.gridPasteCleanup = () => {
+      gridEl.removeEventListener('paste', handler);
+    };
   }
 
   private handleGridPaste(e: ClipboardEvent, gridEl: HTMLElement): void {

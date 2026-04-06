@@ -705,6 +705,43 @@ describe('table-operations', () => {
     });
   });
 
+  describe('setupKeyboardNavigation', () => {
+    it('should return a cleanup function that removes the keydown listener', async () => {
+      const { setupKeyboardNavigation } = await import('../../../../src/tools/table/table-operations');
+      const { ROW_ATTR, CELL_ATTR } = await import('../../../../src/tools/table/table-core');
+
+      const gridEl = document.createElement('div');
+      const row = document.createElement('div');
+      row.setAttribute(ROW_ATTR, '');
+      const cell = document.createElement('div');
+      cell.setAttribute(CELL_ATTR, '');
+      row.appendChild(cell);
+      gridEl.appendChild(row);
+
+      const handleKeyDown = vi.fn();
+      const cellBlocks = { handleKeyDown } as unknown as Parameters<typeof setupKeyboardNavigation>[1];
+
+      const cleanup = setupKeyboardNavigation(gridEl, cellBlocks);
+
+      expect(typeof cleanup).toBe('function');
+
+      // Dispatch a keydown event — handler should fire
+      const event = new KeyboardEvent('keydown', { bubbles: true });
+      cell.dispatchEvent(event);
+
+      expect(handleKeyDown).toHaveBeenCalledTimes(1);
+
+      // Call cleanup — handler should be removed
+      cleanup();
+      handleKeyDown.mockClear();
+
+      const event2 = new KeyboardEvent('keydown', { bubbles: true });
+      cell.dispatchEvent(event2);
+
+      expect(handleKeyDown).not.toHaveBeenCalled();
+    });
+  });
+
   describe('SCROLL_OVERFLOW_CLASSES', () => {
     it('should include overflow-y-hidden to prevent implicit vertical scrollbar from overflow-x-auto', async () => {
       const { SCROLL_OVERFLOW_CLASSES } = await import('../../../../src/tools/table/table-operations');

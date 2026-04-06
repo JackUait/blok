@@ -61,8 +61,6 @@ export const DATA_ATTR = {
 
   /** Content alignment mode (left, center, right) */
   contentAlign: 'data-blok-content-align',
-  /** Narrow mode state */
-  narrow: 'data-blok-narrow',
   /** Right-to-left mode */
   rtl: 'data-blok-rtl',
 

@@ -229,12 +229,6 @@ test('transforms .codex-editor class', () => {
   assertEqual(result, `[data-blok-editor] { color: red; }`);
 });
 
-test('transforms .codex-editor--narrow modifier', () => {
-  const input = `.codex-editor--narrow { width: 100%; }`;
-  const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);
-  assertEqual(result, `[data-blok-narrow="true"] { width: 100%; }`);
-});
-
 test('transforms .codex-editor__redactor class', () => {
   const input = `.codex-editor__redactor { padding: 20px; }`;
   const { result } = applyTransforms(input, CSS_CLASS_TRANSFORMS);

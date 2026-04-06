@@ -397,4 +397,80 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 136, pointerId: 1 }));
     });
   });
+
+  describe('setDisplay', () => {
+    it('hides the hit zone when visible is false', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.setDisplay(false);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      expect(hitZone.style.display).toBe('none');
+    });
+
+    it('shows the hit zone when visible is true', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.setDisplay(false);
+      cornerDrag.setDisplay(true);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      expect(hitZone.style.display).toBe('');
+    });
+  });
+
+  describe('setInteractive', () => {
+    it('disables pointer events when interactive is false', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.setInteractive(false);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      expect(hitZone.style.pointerEvents).toBe('none');
+    });
+
+    it('restores pointer events when interactive is true', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.setInteractive(false);
+      cornerDrag.setInteractive(true);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      expect(hitZone.style.pointerEvents).toBe('auto');
+    });
+  });
+
+  describe('destroy', () => {
+    it('removes hit zone and tooltip from DOM', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.destroy();
+
+      expect(wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`)).toBeNull();
+      expect(wrapper.querySelector(`[${CORNER_TOOLTIP_ATTR}]`)).toBeNull();
+    });
+
+    it('does not call handlers after destroy', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      cornerDrag.destroy();
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
+
+      expect(options.onAddRow).not.toHaveBeenCalled();
+    });
+  });
 });

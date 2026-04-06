@@ -221,6 +221,14 @@ export class TableCornerDrag {
     }
   }
 
+  public setDisplay(visible: boolean): void {
+    this.hitZone.style.display = visible ? '' : 'none';
+  }
+
+  public setInteractive(interactive: boolean): void {
+    this.hitZone.style.pointerEvents = interactive ? 'auto' : 'none';
+  }
+
   public destroy(): void {
     this.hitZone.removeEventListener('mouseenter', this.boundMouseEnter);
     this.hitZone.removeEventListener('mouseleave', this.boundMouseLeave);

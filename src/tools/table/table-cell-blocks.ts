@@ -618,6 +618,12 @@ export class TableCellBlocks {
       return;
     }
 
+    if (type === 'block-moved') {
+      this.handleBlockMoved(detail);
+
+      return;
+    }
+
     if (type !== 'block-added') {
       return;
     }
@@ -754,6 +760,30 @@ export class TableCellBlocks {
     }
 
     this.schedulePendingCellCheck();
+  }
+
+  /**
+   * Handle a block-moved event: if the block left this table (its holder is
+   * no longer inside our grid), remove the stale reference from the model.
+   *
+   * Without this, cross-table moves leave ghost entries in the source table's
+   * model, causing the same block ID to appear in two tables' saved data.
+   */
+  private handleBlockMoved(detail: { target: { id: string; holder: HTMLElement } }): void {
+    const blockId = detail.target.id;
+    const cellPos = this.model.findCellForBlock(blockId);
+
+    if (!cellPos) {
+      return;
+    }
+
+    // If the holder is still inside our grid, the block was moved within
+    // this table — nothing to clean up.
+    if (this.gridElement.contains(detail.target.holder)) {
+      return;
+    }
+
+    this.model.removeBlockFromCell(cellPos.row, cellPos.col, blockId);
   }
 
   /**

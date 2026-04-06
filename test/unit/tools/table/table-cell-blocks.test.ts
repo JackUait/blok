@@ -330,6 +330,69 @@ describe('TableCellBlocks', () => {
         expect(mockApi.caret.setToBlock).not.toHaveBeenCalled();
       });
     });
+
+    describe('block-moved handling', () => {
+      it('should remove block from model when block-moved event fires and block left this table', async () => {
+        const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+        const model = createMockModel();
+
+        // The model still tracks the moved block at cell (0, 0)
+        (model.findCellForBlock as ReturnType<typeof vi.fn>).mockImplementation((id: string) => {
+          if (id === 'moved-block') return { row: 0, col: 0 };
+
+          return null;
+        });
+
+        // Capture the handler registered via api.events.on('block changed', handler)
+        let blockChangedHandler: ((data: unknown) => void) | undefined;
+
+        const api = {
+          blocks: {},
+          events: {
+            on: vi.fn((eventName: string, cb: (data: unknown) => void) => {
+              if (eventName === 'block changed') {
+                blockChangedHandler = cb;
+              }
+            }),
+            off: vi.fn(),
+          },
+        } as unknown as API;
+
+        new TableCellBlocks({
+          api: api as never,
+          gridElement: gridEl,
+          tableBlockId: 'table-1',
+          model,
+        });
+
+        expect(blockChangedHandler).toBeDefined();
+
+        // Create a holder that is NOT inside this table's grid (simulating the
+        // block was moved out of the table to somewhere else in the editor)
+        const movedBlockHolder = document.createElement('div');
+
+        movedBlockHolder.setAttribute('data-blok-id', 'moved-block');
+        document.body.appendChild(movedBlockHolder);
+
+        // Fire the block-moved event
+        blockChangedHandler!({
+          event: {
+            type: 'block-moved',
+            detail: {
+              target: { id: 'moved-block', holder: movedBlockHolder },
+              fromIndex: 1,
+              toIndex: 5,
+            },
+          },
+        });
+
+        // The source table should remove the stale block reference from its model
+        expect(model.removeBlockFromCell).toHaveBeenCalledWith(0, 0, 'moved-block');
+
+        movedBlockHolder.remove();
+      });
+    });
   });
 
   describe('handleKeyDown in cell blocks', () => {

@@ -313,6 +313,15 @@ export const mountCellBlocksReadOnly = (
           continue;
         }
 
+        // Guard: if the block holder is already inside another table cell's
+        // blocks container, skip it. Without this check, appendChild would
+        // move (steal) the DOM node from the first table, leaving its cell
+        // empty. This can happen when corrupted data references the same
+        // block in multiple tables.
+        if (block.holder.closest(`[${CELL_BLOCKS_ATTR}]`)) {
+          continue;
+        }
+
         container.appendChild(block.holder);
       }
 

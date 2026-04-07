@@ -506,19 +506,6 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.open();
 
     /**
-     * When the toolbar is at a table block, the actions (plus button, settings
-     * toggler) overlap the table grid's first column because tables use
-     * full-width content with no left margin. Disable pointer-events on the
-     * actions container so cell selection and editing clicks pass through to
-     * the table cells underneath.
-     *
-     * Must run after open() which sets pointer-events: auto on actions.
-     */
-    if (targetBlock.name === 'table' && this.nodes.actions) {
-      this.nodes.actions.style.pointerEvents = 'none';
-    }
-
-    /**
      * Sync toolbar content wrapper's margin with the block content element
      * so toolbar buttons align with the block content edge, even when
      * consumer CSS overrides the block content's margin.

@@ -26,7 +26,6 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
   toolbar: Toolbar;
   plusButton: HTMLButtonElement;
   settingsToggler: HTMLButtonElement;
-  actions: HTMLDivElement;
   wrapper: HTMLDivElement;
 } {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
@@ -34,15 +33,10 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
 
   // Build toolbar DOM nodes
   const wrapper = document.createElement('div');
-  const actions = document.createElement('div');
   const plusButton = document.createElement('button');
   const settingsToggler = document.createElement('button');
 
-  actions.appendChild(plusButton);
-  actions.appendChild(settingsToggler);
-  wrapper.appendChild(actions);
-
-  toolbar.nodes = { wrapper, content: document.createElement('div'), actions, plusButton, settingsToggler } as unknown as typeof toolbar.nodes;
+  toolbar.nodes = { wrapper, plusButton, settingsToggler } as unknown as typeof toolbar.nodes;
 
   // Stub private helpers
   const priv = toolbar as unknown as Record<string, unknown>;
@@ -80,7 +74,7 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
 
   toolbar.state = { ...defaultBlok, ...blokOverrides } as BlokModules;
 
-  return { toolbar, plusButton, settingsToggler, actions, wrapper };
+  return { toolbar, plusButton, settingsToggler, wrapper };
 }
 
 // ─── tests ──────────────────────────────────────────────────────────────────
@@ -242,80 +236,5 @@ describe('Toolbar — table block plus button visibility', () => {
     expect(plusButton.style.display).toBe('');
 
     document.body.removeChild(tableHolder);
-  });
-
-  it('disables pointer-events on actions for table blocks so clicks pass through to cells', () => {
-    /**
-     * Scenario: The toolbar opens at a table block. The actions container
-     * (plus button + settings toggler) overlaps the table grid's first column
-     * because tables use full-width content with no left margin.
-     *
-     * Pointer-events must be disabled on the actions container so that mouse
-     * clicks pass through to the table cells underneath, allowing cell
-     * selection and editing.
-     */
-    const { toolbar, actions } = createToolbar();
-
-    const tableHolder = document.createElement('div');
-    const cellContainer = document.createElement('div');
-
-    cellContainer.setAttribute('data-blok-table-cell-blocks', '');
-    const cellTarget = document.createElement('div');
-
-    cellContainer.appendChild(cellTarget);
-    tableHolder.appendChild(cellContainer);
-    tableHolder.appendChild(toolbar.nodes.wrapper as HTMLElement);
-    document.body.appendChild(tableHolder);
-
-    const tableBlock = {
-      id: 'table-1',
-      name: 'table',
-      holder: tableHolder,
-      isEmpty: false,
-      cleanupDraggable: vi.fn(),
-      setupDraggable: vi.fn(),
-      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
-    } as unknown as Block;
-
-    // No cell focused — just hovering over the table
-    (document.activeElement as HTMLElement | null)?.blur?.();
-
-    toolbar.moveAndOpen(tableBlock, cellTarget);
-
-    // Actions must have pointer-events disabled so clicks pass through
-    expect(actions.style.pointerEvents).toBe('none');
-
-    document.body.removeChild(tableHolder);
-  });
-
-  it('does not disable pointer-events on actions for non-table blocks', () => {
-    /**
-     * Scenario: The toolbar opens at a regular block (e.g. paragraph).
-     * The actions container should remain interactive so the user can click
-     * the plus button and settings toggler.
-     */
-    const { toolbar, actions } = createToolbar();
-
-    const paragraphHolder = document.createElement('div');
-
-    paragraphHolder.appendChild(toolbar.nodes.wrapper as HTMLElement);
-    document.body.appendChild(paragraphHolder);
-
-    const paragraphBlock = {
-      id: 'para-1',
-      name: 'paragraph',
-      holder: paragraphHolder,
-      isEmpty: false,
-      cleanupDraggable: vi.fn(),
-      setupDraggable: vi.fn(),
-      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
-    } as unknown as Block;
-
-    toolbar.moveAndOpen(paragraphBlock, paragraphHolder);
-
-    // Actions should NOT have pointer-events disabled for regular blocks
-    expect(actions.style.pointerEvents).not.toBe('none');
-
-    document.body.removeChild(paragraphHolder);
   });
 });

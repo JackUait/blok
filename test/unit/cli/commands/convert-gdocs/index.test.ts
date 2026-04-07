@@ -156,8 +156,8 @@ describe('convertGdocs', () => {
 
   it('all blocks have unique IDs', () => {
     const html = gdocs('<p><span>a</span></p><p><span>b</span></p><h1><span>c</span></h1>');
-    const result = JSON.parse(convertGdocs(html));
-    const ids: string[] = result.blocks.map((b: { id: string }) => b.id);
+    const result = JSON.parse(convertGdocs(html)) as { blocks: Array<{ id: string }> };
+    const ids = result.blocks.map((b) => b.id);
 
     expect(new Set(ids).size).toBe(ids.length);
   });

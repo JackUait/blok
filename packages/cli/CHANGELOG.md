@@ -2,6 +2,14 @@
 
 All notable changes to `@jackuait/blok-cli` are documented here.
 
+## [0.10.0](https://github.com/JackUait/blok/compare/v0.5.0...v0.10.0) (2026-04-08)
+
+### Features
+
+- **html-to-json** — Initial release of `@jackuait/blok-cli` with `blok-cli convert` command for converting HTML to Blok JSON format
+- **convert-gdocs** — New `blok-cli convert --convert-gdocs` command for converting Google Docs HTML to Blok JSON
+- **dual-registry publishing** — Package published to both npm (`@jackuait/blok-cli`) and GitHub Packages (`@dodopizza/blok-cli`)
+
 ## [0.10.0-beta.17](https://github.com/JackUait/blok/compare/v0.10.0-beta.16...v0.10.0-beta.17) (2026-04-07)
 
 _No CLI-specific changes in this release._

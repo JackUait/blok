@@ -1053,7 +1053,11 @@ export class TableCellBlocks {
   }
 
   /**
-   * Delete blocks by their IDs (in reverse index order to avoid shifting issues)
+   * Delete blocks by their IDs (in reverse index order to avoid shifting issues).
+   * Preserves scroll position because api.blocks.delete() is async — its internal
+   * `await` defers Caret.setToBlock() to microtasks that run AFTER this method returns,
+   * causing unwanted page jumps via element.focus() and window.scrollBy().
+   * We use Promise.all().then() to schedule the scroll restore after all those microtasks.
    */
   public deleteBlocks(blockIds: string[]): void {
     const blockIndices = blockIds
@@ -1061,8 +1065,14 @@ export class TableCellBlocks {
       .filter((index): index is number => index !== undefined)
       .sort((a, b) => b - a);
 
-    blockIndices.forEach(index => {
-      void this.api.blocks.delete(index);
+    const savedScrollY = window.scrollY;
+
+    const deletePromises = blockIndices.map(index => this.api.blocks.delete(index));
+
+    void Promise.all(deletePromises).then(() => {
+      if (window.scrollY !== savedScrollY) {
+        window.scrollTo(0, savedScrollY);
+      }
     });
   }
 

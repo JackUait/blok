@@ -2525,6 +2525,99 @@ describe('TableCellBlocks', () => {
       expect(mockDelete).toHaveBeenCalledTimes(1);
       expect(mockDelete).toHaveBeenCalledWith(0);
     });
+
+    it('should preserve scroll position when deleting blocks causes a scroll jump', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      let currentScrollY = 500;
+      const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+
+      Object.defineProperty(window, 'scrollY', {
+        get: () => currentScrollY,
+        configurable: true,
+      });
+
+      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}) as typeof window.scrollTo);
+
+      /**
+       * Mock delete as async (matching the real api.blocks.delete signature).
+       * The scroll jump from Caret.setToBlock() happens after the await inside
+       * delete(), so we simulate it in the resolved promise.
+       */
+      const mockDelete = vi.fn(async () => {
+        currentScrollY = 0;
+      });
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'b1') return 0;
+            if (id === 'b2') return 1;
+
+            return undefined;
+          }),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.deleteBlocks(['b1', 'b2']);
+
+      // Flush the Promise.all().then() microtask chain
+      await new Promise(resolve => { setTimeout(resolve, 0); });
+
+      expect(scrollToSpy).toHaveBeenCalledWith(0, 500);
+
+      scrollToSpy.mockRestore();
+      if (originalDescriptor) {
+        Object.defineProperty(window, 'scrollY', originalDescriptor);
+      }
+    });
+
+    it('should not call scrollTo when scroll position is unchanged after deletion', async () => {
+      const { TableCellBlocks } = await import('../../../../src/tools/table/table-cell-blocks');
+
+      const originalDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+
+      Object.defineProperty(window, 'scrollY', {
+        get: () => 300,
+        configurable: true,
+      });
+
+      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}) as typeof window.scrollTo);
+
+      const mockDelete = vi.fn(async () => {});
+
+      const api = {
+        blocks: {
+          getBlockIndex: vi.fn((id: string) => {
+            if (id === 'b1') return 0;
+
+            return undefined;
+          }),
+          delete: mockDelete,
+        },
+        events: { on: vi.fn(), off: vi.fn() },
+      } as unknown as API;
+
+      const gridElement = document.createElement('div');
+      const cellBlocks = new TableCellBlocks({ api, gridElement, tableBlockId: 't1', model: createMockModel() });
+
+      cellBlocks.deleteBlocks(['b1']);
+
+      // Flush the Promise.all().then() microtask chain
+      await new Promise(resolve => { setTimeout(resolve, 0); });
+
+      expect(scrollToSpy).not.toHaveBeenCalled();
+
+      scrollToSpy.mockRestore();
+      if (originalDescriptor) {
+        Object.defineProperty(window, 'scrollY', originalDescriptor);
+      }
+    });
   });
 
   describe('initializeCells recovery for missing blocks', () => {

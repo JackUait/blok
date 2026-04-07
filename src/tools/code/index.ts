@@ -14,7 +14,8 @@ import { IconCodeBlock } from '../../components/icons';
 import { buildCodeDOM } from './dom-builder';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
-import { LanguagePicker } from './language-picker';
+import { PopoverDesktop } from '../../components/utils/popover';
+import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
@@ -24,6 +25,7 @@ import {
   LINE_NUMBERS_KEY,
   COPIED_KEY,
   LANGUAGE_KEY,
+  SEARCH_LANGUAGE_KEY,
   COPIED_FEEDBACK_STYLES,
   PREVIEWABLE_LANGUAGES,
   PREVIEW_TOGGLE_KEY,
@@ -44,7 +46,7 @@ export class CodeTool implements BlockTool {
   private _dom: CodeDOMRefs | null = null;
   private _wrapping = true;
   private _lineNumbers = true;
-  private _picker: LanguagePicker | null = null;
+  private _picker: PopoverDesktop | null = null;
   private _previewActive = false;
   private _previewContainer: HTMLElement | null = null;
   private _disposeHighlights: (() => void) | null = null;
@@ -132,17 +134,28 @@ export class CodeTool implements BlockTool {
     dom.wrapButton.addEventListener('click', () => this.toggleWrap());
 
     if (!this.readOnly) {
-      this._picker = new LanguagePicker({
-        languages: LANGUAGES,
-        onSelect: (id: string) => this.setLanguage(id),
-        i18n: this.api.i18n,
-        activeLanguageId: this._data.language,
+      const languageItems: PopoverItemParams[] = LANGUAGES.map((lang) => ({
+        title: lang.name,
+        name: lang.id,
+        toggle: 'language',
+        isActive: (): boolean => this._data.language === lang.id,
+        closeOnActivate: true,
+        onActivate: (): void => this.setLanguage(lang.id),
+      }));
+
+      this._picker = new PopoverDesktop({
+        items: languageItems,
+        trigger: dom.languageButton,
+        leftAlignElement: dom.wrapper,
+        searchable: true,
+        width: '200px',
+        messages: {
+          search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
+        },
       });
 
-      document.body.appendChild(this._picker.getElement());
-
       dom.languageButton.addEventListener('click', () => {
-        this._picker?.open(dom.languageButton);
+        this._picker?.show();
       });
     }
 
@@ -298,7 +311,6 @@ export class CodeTool implements BlockTool {
       }
     }
 
-    this._picker?.setActiveLanguage(id);
     void this.highlightCode();
   }
 
@@ -449,7 +461,7 @@ export class CodeTool implements BlockTool {
     }
 
     if (this._picker) {
-      this._picker.getElement().remove();
+      this._picker.destroy();
       this._picker = null;
     }
   }

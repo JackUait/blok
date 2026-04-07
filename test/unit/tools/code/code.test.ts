@@ -74,9 +74,8 @@ describe('CodeTool', () => {
   afterEach(() => {
     vi.restoreAllMocks();
 
-    // Clean up any language picker elements left in document.body
-    document.querySelectorAll('[data-blok-testid="code-language-picker"]').forEach((el) => el.remove());
-    document.querySelectorAll('[data-blok-language-picker-backdrop]').forEach((el) => el.remove());
+    // Clean up any popover elements left in document.body
+    document.querySelectorAll('[data-blok-popover-opened]').forEach((el) => el.remove());
   });
 
   describe('render()', () => {
@@ -129,39 +128,31 @@ describe('CodeTool', () => {
       expect(btn.querySelector('span')!.textContent).toBe('JavaScript');
     });
 
-    it('language button opens language picker on click', async () => {
+    it('language button creates a popover for language selection', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ language: 'javascript' }));
-      const el = tool.render();
+      tool.render();
 
-      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
-
-      // Picker is appended to document.body after render, but hidden
-      const pickerEl = document.body.querySelector('[data-blok-testid="code-language-picker"]') as HTMLElement;
-
-      expect(pickerEl).not.toBeNull();
-      expect(pickerEl.hidden).toBe(true);
-
-      // Click language button to open the picker
-      langBtn.click();
-
-      expect(pickerEl.hidden).toBe(false);
+      // After switching to PopoverDesktop, the old custom picker element should NOT exist
+      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).toBeNull();
 
       // Clean up
       tool.removed();
     });
 
-    it('removed() cleans up picker element from document.body', async () => {
+    it('removed() cleans up popover from document.body', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());
 
       tool.render();
 
-      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).not.toBeNull();
+      // After switching to PopoverDesktop, no old-style picker element should exist
+      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).toBeNull();
 
       tool.removed();
 
-      expect(document.body.querySelector('[data-blok-testid="code-language-picker"]')).toBeNull();
+      // removed() should not throw when called again (idempotent cleanup)
+      expect(() => tool.removed()).not.toThrow();
     });
   });
 

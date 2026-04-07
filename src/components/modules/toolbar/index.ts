@@ -427,8 +427,11 @@ export class Toolbar extends Module<ToolbarNodes> {
      */
     const focusIsInsideCell = this.isFocusInsideTableCell();
     const isCalloutFirstChild = this.isFirstChildOfCallout(targetBlock);
+    const isCalloutBlock = targetBlock.name === 'callout';
 
-    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
+    // Hide plus button for callout blocks and their first children to avoid
+    // overlap with the callout emoji icon in the left padding area.
+    plusButton.style.display = (isCalloutFirstChild || isCalloutBlock) ? 'none' : '';
 
     if (settingsToggler) {
       settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
@@ -519,14 +522,7 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (hasLeftEdgeInteraction && this.nodes.actions) {
       this.nodes.actions.style.pointerEvents = 'none';
-
-      /**
-       * Re-enable pointer-events on the settings toggler so it can still
-       * receive mousedown events for drag-and-drop.
-       */
-      if (this.nodes.settingsToggler) {
-        this.nodes.settingsToggler.style.pointerEvents = 'auto';
-      }
+      this.restoreSettingsTogglerForLeftEdgeBlock(targetBlock);
     }
 
     /**
@@ -536,7 +532,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      *
      * Uses Math.max to guarantee the actions container (positioned via right:100%)
      * never extends beyond the left edge of the viewport, which would make the
-     * drag handle unreachable by pointer events.
+      * drag handle unreachable by pointer events.
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
@@ -862,11 +858,45 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     const focusIsInsideCell = this.isFocusInsideTableCell();
     const isCalloutFirstChild = this.hoveredBlock !== null && this.isFirstChildOfCallout(this.hoveredBlock);
+    const isCalloutBlock = this.hoveredBlock?.name === 'callout';
 
-    plusButton.style.display = isCalloutFirstChild ? 'none' : '';
+    plusButton.style.display = (isCalloutFirstChild || isCalloutBlock) ? 'none' : '';
 
     if (settingsToggler) {
       settingsToggler.style.display = (focusIsInsideCell || isCalloutFirstChild) ? 'none' : '';
+    }
+  }
+
+  /**
+   * Re-enables pointer-events on the settings toggler (and callout drag zone) after
+   * the actions container has been set to pointer-events: none for left-edge blocks.
+   *
+   * For callout blocks: also wires the dedicated drag zone as the drag handle and
+   * re-enables the settings toggler so the settings menu remains accessible.
+   * The emoji button (at x=32px) no longer overlaps the actions zone (x=[0,29px])
+   * because the callout uses pl-8 (32px) left padding.
+   *
+   * For all other left-edge blocks (toggle, header with arrow): simply re-enables the
+   * settings toggler so it continues to function as the drag handle.
+   */
+  private restoreSettingsTogglerForLeftEdgeBlock(targetBlock: Block): void {
+    if (targetBlock.name === 'callout') {
+      if (this.nodes.settingsToggler) {
+        this.nodes.settingsToggler.style.pointerEvents = 'auto';
+      }
+
+      const calloutDragZone = targetBlock.holder.querySelector<HTMLElement>('[data-callout-drag-zone]');
+
+      if (calloutDragZone) {
+        calloutDragZone.style.pointerEvents = 'auto';
+        targetBlock.setupDraggable(calloutDragZone, this.Blok.DragManager);
+      }
+
+      return;
+    }
+
+    if (this.nodes.settingsToggler) {
+      this.nodes.settingsToggler.style.pointerEvents = 'auto';
     }
   }
 

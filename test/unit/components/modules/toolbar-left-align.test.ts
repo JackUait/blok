@@ -192,7 +192,7 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     document.body.removeChild(blockHolder);
   });
 
-  it('does not clamp toolbar marginLeft to actionsWidth when block content is left-aligned', () => {
+  it('clamps toolbar marginLeft to actionsWidth when block content is left-aligned (keeps buttons reachable)', () => {
     const blockHolder = document.createElement('div');
     const blockContent = document.createElement('div');
 
@@ -236,9 +236,10 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     // Act
     toolbar.moveAndOpen(block);
 
-    // Assert: toolbar content marginLeft matches the block content (0px),
-    // NOT clamped to actions width (51px) which would cause buttons to overlap content
-    expect(content.style.marginLeft).toBe('0px');
+    // Assert: toolbar content marginLeft is clamped to actionsWidth (51px) so that
+    // the actions container (positioned via right:100%) never extends beyond the left
+    // viewport edge, keeping plus button and drag handle reachable by pointer events.
+    expect(content.style.marginLeft).toBe('51px');
 
     document.body.removeChild(blockHolder);
   });
@@ -350,7 +351,7 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     document.body.removeChild(blockHolder);
   });
 
-  it('does not clamp toolbar marginLeft to actionsWidth on moveAndOpenForMultipleBlocks', () => {
+  it('clamps toolbar marginLeft to actionsWidth on moveAndOpenForMultipleBlocks (keeps buttons reachable)', () => {
     const blockHolder = document.createElement('div');
     const blockContent = document.createElement('div');
 
@@ -406,8 +407,9 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     // Act
     toolbar.moveAndOpenForMultipleBlocks(block);
 
-    // Assert: marginLeft matches block content (0px), not clamped to actionsWidth (51px)
-    expect(content.style.marginLeft).toBe('0px');
+    // Assert: marginLeft is clamped to actionsWidth (51px) so that the actions container
+    // (positioned via right:100%) never extends beyond the left viewport edge.
+    expect(content.style.marginLeft).toBe('51px');
 
     document.body.removeChild(blockHolder);
   });

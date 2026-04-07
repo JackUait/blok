@@ -190,12 +190,10 @@ const selectCells = async (
   const startBox = assertBoundingBox(await startCell.boundingBox(), `cell [${startRow},${startCol}]`);
   const endBox = assertBoundingBox(await endCell.boundingBox(), `cell [${endRow},${endCol}]`);
 
-  // For single column selections, use the left edge of the cell to avoid overflow.
-  // For regular selections, use center.
-  const isSingleColumn = startCol === endCol;
-  const startX = isSingleColumn ? startBox.x + 5 : startBox.x + startBox.width / 2;
+  // Always use cell center coordinates for both start and end
+  const startX = startBox.x + startBox.width / 2;
   const startY = startBox.y + startBox.height / 2;
-  const endX = isSingleColumn ? endBox.x + 5 : endBox.x + endBox.width / 2;
+  const endX = endBox.x + endBox.width / 2;
   const endY = endBox.y + endBox.height / 2;
 
   await page.mouse.move(startX, startY);

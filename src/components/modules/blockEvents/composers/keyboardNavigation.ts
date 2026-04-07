@@ -345,6 +345,15 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
+     * Don't merge across table cell boundaries.
+     * When the caret is at the start of the first input in a table cell, Backspace should be a no-op
+     * rather than merging the previous cell's last block into the current cell.
+     */
+    if (this.isCurrentBlockInsideTableCell) {
+      return;
+    }
+
+    /**
      * Backspace at the start of the first Block should do nothing
      */
     if (previousBlock === null) {
@@ -444,6 +453,15 @@ export class KeyboardNavigation extends BlockEventComposer {
      * When the next block is in a different parent context, treat it as if there's no next block.
      */
     if (nextBlock.parentId !== currentBlock.parentId) {
+      return;
+    }
+
+    /**
+     * Don't merge across table cell boundaries.
+     * When the caret is at the end of the last input in a table cell, Delete should be a no-op
+     * rather than merging the next cell's first block into the current cell.
+     */
+    if (this.isCurrentBlockInsideTableCell) {
       return;
     }
 

@@ -11,7 +11,7 @@ describe('cli integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('--migration outputs complete document to stdout', () => {
+  it('--migration outputs complete document to stdout', async () => {
     const chunks: string[] = [];
 
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
@@ -20,7 +20,7 @@ describe('cli integration', () => {
       return true;
     });
 
-    run(['--migration'], '0.6.0-beta.5');
+    await run(['--migration'], '0.6.0-beta.5');
 
     const output = chunks.join('');
 
@@ -30,7 +30,7 @@ describe('cli integration', () => {
     expect(output).toContain('This guide covers the breaking changes');
   });
 
-  it('--help lists all available commands', () => {
+  it('--help lists all available commands', async () => {
     const chunks: string[] = [];
 
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
@@ -39,10 +39,11 @@ describe('cli integration', () => {
       return true;
     });
 
-    run(['--help'], '0.6.0-beta.5');
+    await run(['--help'], '0.6.0-beta.5');
 
     const output = chunks.join('');
 
+    expect(output).toContain('blok-cli');
     expect(output).toContain('--migration');
     expect(output).toContain('--output');
     expect(output).toContain('--help');

@@ -1,7 +1,7 @@
 import { getMigrationDoc } from './commands/migration';
 import { writeOutput } from './utils/output';
 
-const HELP_TEXT = `Usage: blok [options]
+const HELP_TEXT = `Usage: blok-cli [options]
 
 Options:
   --convert-html       Convert legacy HTML from stdin to Blok JSON (stdout)
@@ -10,11 +10,11 @@ Options:
   --help               Show this help message
 
 Examples:
-  npx @jackuait/blok --convert-html < article.html
-  npx @jackuait/blok --convert-html < article.html --output article.json
-  npx @jackuait/blok --migration
-  npx @jackuait/blok --migration | pbcopy
-  npx @jackuait/blok --migration --output migration-guide.md
+  npx @jackuait/blok-cli --convert-html < article.html
+  npx @jackuait/blok-cli --convert-html < article.html --output article.json
+  npx @jackuait/blok-cli --migration
+  npx @jackuait/blok-cli --migration | pbcopy
+  npx @jackuait/blok-cli --migration --output migration-guide.md
 `;
 
 const parseArgs = (argv: string[]): { command: string | null; output?: string } => {
@@ -39,14 +39,21 @@ const parseArgs = (argv: string[]): { command: string | null; output?: string } 
   return { command: null };
 };
 
-export const run = (argv: string[], version: string): void => {
+export const run = async (argv: string[], version: string): Promise<void> => {
   const { command, output } = parseArgs(argv);
 
   switch (command) {
     case 'convert-html': {
-      const { convertHtml } = require('./commands/convert-html/index');
-      const html = require('node:fs').readFileSync('/dev/stdin', 'utf-8') as string;
-      const json = convertHtml(html) as string;
+      const jsdom = await import('jsdom') as { JSDOM: new (html: string) => { window: typeof globalThis } };
+      const dom = new jsdom.JSDOM('');
+
+      globalThis.DOMParser = dom.window.DOMParser;
+      globalThis.Node = dom.window.Node;
+
+      const { convertHtml } = await import('./commands/convert-html/index');
+      const fs = await import('node:fs');
+      const html = fs.readFileSync('/dev/stdin', 'utf-8');
+      const json = convertHtml(html);
 
       writeOutput(json, output);
       break;

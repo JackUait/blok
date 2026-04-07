@@ -56,8 +56,8 @@ if (isDirectRun) {
     return execSync(cmd, { stdio: 'inherit', ...opts });
   }
 
-  function runCapture(cmd) {
-    return execSync(cmd, { encoding: 'utf-8' }).trim();
+  function runCapture(cmd, opts = {}) {
+    return execSync(cmd, { encoding: 'utf-8', ...opts }).trim();
   }
 
   // --- Validate ---
@@ -146,9 +146,76 @@ if (isDirectRun) {
     }
   }
 
+  // --- Publish @jackuait/blok-cli ---
+
+  const cliDir = join(fileURLToPath(new URL('.', import.meta.url)), '../packages/cli');
+  const cliPkgPath = join(cliDir, 'package.json');
+  const cliPkgJson = JSON.parse(readFileSync(cliPkgPath, 'utf-8'));
+
+  try {
+    // Sync version from main package
+    cliPkgJson.version = version;
+    writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
+
+    // Build CLI
+    run('node scripts/build-cli.mjs');
+
+    // Write npm .npmrc
+    if (npmToken) {
+      writeFileSync('.npmrc', `//registry.npmjs.org/:_authToken=${npmToken}\n`);
+    }
+
+    // Pack and publish to npm as @jackuait/blok-cli
+    const cliNpmPackJson = runCapture(
+      'npm pack --ignore-scripts --pack-destination /tmp --json',
+      { cwd: cliDir }
+    );
+
+    run(gprPublishCommand({ packJson: cliNpmPackJson, packDir: '/tmp', tag }));
+    console.log('\nPublished @jackuait/blok-cli to npm');
+
+    // Cleanup npm .npmrc
+    if (existsSync('.npmrc')) {
+      unlinkSync('.npmrc');
+    }
+
+    // Publish to GitHub Packages as @dodopizza/blok-cli
+    cliPkgJson.name = '@dodopizza/blok-cli';
+    writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
+
+    const gprToken = process.env.BLOK_GITHUB_TOKEN;
+
+    if (gprToken) {
+      writeFileSync('.npmrc', [
+        '@dodopizza:registry=https://npm.pkg.github.com',
+        `//npm.pkg.github.com/:_authToken=${gprToken}`,
+        '',
+      ].join('\n'));
+    }
+
+    const cliGprPackJson = runCapture(
+      'npm pack --ignore-scripts --pack-destination /tmp --json',
+      { cwd: cliDir }
+    );
+
+    run(gprPublishCommand({ packJson: cliGprPackJson, packDir: '/tmp', tag }));
+    console.log('\nPublished @dodopizza/blok-cli to GitHub Packages');
+  } catch (err) {
+    console.error('\nFailed to publish blok-cli:');
+    console.error(err.message || err);
+    process.exitCode = 1;
+  } finally {
+    cliPkgJson.name = '@jackuait/blok-cli';
+    writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
+
+    if (existsSync('.npmrc')) {
+      unlinkSync('.npmrc');
+    }
+  }
+
   // --- Git: commit, tag, push ---
 
-  run('git add package.json');
+  run('git add package.json packages/cli/package.json');
   run(`git commit -m "chore(release): ${version}"`);
   run(`git tag ${gitTag}`);
   run('git push');

@@ -1,6 +1,6 @@
 {
   "name": "@jackuait/blok-cli",
-  "version": "0.10.0-beta.17",
+  "version": "0.10.0-beta.19",
   "description": "CLI tools for Blok — convert HTML to Blok JSON, generate migration guides",
   "bin": {
     "blok-cli": "bin/blok-cli.mjs"

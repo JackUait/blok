@@ -19,13 +19,14 @@ async function buildCli() {
       copyPublicDir: false,
       target: 'node18',
       emptyOutDir: false,
+      outDir: path.resolve(__dirname, '../packages/cli/dist'),
       lib: {
         entry: path.resolve(__dirname, '../src/cli/index.ts'),
         formats: ['es'],
         fileName: () => 'cli.mjs',
       },
       rollupOptions: {
-        external: ['node:fs', 'node:path'],
+        external: ['node:fs', 'node:path', 'node:process', 'jsdom'],
       },
     },
     define: {

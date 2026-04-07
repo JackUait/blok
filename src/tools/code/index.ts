@@ -19,10 +19,7 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
-  CODE_AREA_STYLES,
   COPY_CODE_KEY,
-  WRAP_LINES_KEY,
-  LINE_NUMBERS_KEY,
   COPIED_KEY,
   LANGUAGE_KEY,
   SEARCH_LANGUAGE_KEY,
@@ -44,7 +41,6 @@ export class CodeTool implements BlockTool {
   private readOnly: boolean;
   private _data: CodeData;
   private _dom: CodeDOMRefs | null = null;
-  private _wrapping = true;
   private _lineNumbers = true;
   private _picker: PopoverDesktop | null = null;
   private _previewActive = false;
@@ -71,8 +67,6 @@ export class CodeTool implements BlockTool {
       languageName: this.getLanguageName(this._data.language),
       readOnly: this.readOnly,
       copyLabel: this.api.i18n.t(COPY_CODE_KEY),
-      wrapLabel: this.api.i18n.t(WRAP_LINES_KEY),
-      lineNumbersLabel: this.api.i18n.t(LINE_NUMBERS_KEY),
       previewable: this.readOnly ? false : isPreviewable,
       previewToggleLabel: this.api.i18n.t(PREVIEW_TOGGLE_KEY),
     });
@@ -81,10 +75,6 @@ export class CodeTool implements BlockTool {
 
     // Line numbers gutter visibility
     dom.gutterElement.hidden = !this._lineNumbers;
-    dom.lineNumbersButton.addEventListener('click', () => this.toggleLineNumbers());
-
-    // More menu toggle
-    dom.moreButton.addEventListener('click', () => this.toggleMoreMenu());
 
     // Read-only + previewable: show preview only, hide code, no toggle
     if (this.readOnly && isPreviewable) {
@@ -131,7 +121,6 @@ export class CodeTool implements BlockTool {
     }
 
     dom.copyButton.addEventListener('click', () => this.copyCode());
-    dom.wrapButton.addEventListener('click', () => this.toggleWrap());
 
     if (!this.readOnly) {
       const languageItems: PopoverItemParams[] = LANGUAGES.map((lang) => ({
@@ -197,14 +186,6 @@ export class CodeTool implements BlockTool {
 
     // Re-render preview with current code content
     void this.renderPreview();
-  }
-
-  private toggleMoreMenu(): void {
-    if (!this._dom) {
-      return;
-    }
-
-    this._dom.moreMenu.hidden = !this._dom.moreMenu.hidden;
   }
 
   private async renderPreview(): Promise<void> {
@@ -337,28 +318,6 @@ export class CodeTool implements BlockTool {
         btn.innerHTML = originalHTML;
       }, COPIED_FEEDBACK_DURATION);
     }).catch(() => { /* clipboard unavailable */ });
-  }
-
-  private toggleWrap(): void {
-    this._wrapping = !this._wrapping;
-
-    if (!this._dom) {
-      return;
-    }
-
-    if (this._wrapping) {
-      this._dom.codeElement.className = CODE_AREA_STYLES;
-    } else {
-      this._dom.codeElement.className = CODE_AREA_STYLES.replace('whitespace-pre-wrap', 'whitespace-pre');
-    }
-  }
-
-  private toggleLineNumbers(): void {
-    this._lineNumbers = !this._lineNumbers;
-
-    if (this._dom) {
-      this._dom.gutterElement.hidden = !this._lineNumbers;
-    }
   }
 
   private updateGutter(): void {

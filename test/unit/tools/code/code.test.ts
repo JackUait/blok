@@ -88,7 +88,6 @@ describe('CodeTool', () => {
       expect(el.querySelector('[data-blok-testid="code-content"]')).toBeTruthy();
       expect(el.querySelector('[data-blok-testid="code-language-btn"]')).toBeTruthy();
       expect(el.querySelector('[data-blok-testid="code-copy-btn"]')).toBeTruthy();
-      expect(el.querySelector('[data-blok-testid="code-wrap-btn"]')).toBeTruthy();
     });
 
     it('renders existing code content', async () => {
@@ -273,25 +272,6 @@ describe('CodeTool', () => {
       copyBtn.click();
 
       expect(writeText).toHaveBeenCalledWith('copied text');
-    });
-  });
-
-  describe('wrap toggle', () => {
-    it('toggles whitespace style on code element', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
-      const wrapBtn = el.querySelector('[data-blok-testid="code-wrap-btn"]') as HTMLButtonElement;
-
-      expect(codeEl.className).toContain('whitespace-pre-wrap');
-
-      wrapBtn.click();
-      expect(codeEl.className).toContain('whitespace-pre');
-      expect(codeEl.className).not.toContain('whitespace-pre-wrap');
-
-      wrapBtn.click();
-      expect(codeEl.className).toContain('whitespace-pre-wrap');
     });
   });
 
@@ -737,44 +717,6 @@ describe('CodeTool', () => {
       el.remove();
     });
 
-    it('line numbers toggle button exists in header', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]');
-
-      expect(btn).not.toBeNull();
-      expect(btn).toBeInstanceOf(HTMLButtonElement);
-    });
-
-    it('clicking line numbers button hides the gutter', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'line 1\nline 2' }));
-      const el = tool.render();
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
-      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
-
-      expect(gutter.hidden).toBe(false);
-
-      btn.click();
-
-      expect(gutter.hidden).toBe(true);
-    });
-
-    it('clicking line numbers button twice restores the gutter', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'a\nb' }));
-      const el = tool.render();
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
-      const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
-
-      btn.click();
-      expect(gutter.hidden).toBe(true);
-
-      btn.click();
-      expect(gutter.hidden).toBe(false);
-    });
-
     it('save() includes lineNumbers field', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'test' }));
@@ -783,18 +725,6 @@ describe('CodeTool', () => {
 
       expect(data).toHaveProperty('lineNumbers');
       expect(data.lineNumbers).toBe(true);
-    });
-
-    it('save() returns lineNumbers false after toggling off', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'test' }));
-      const el = tool.render();
-
-      const btn = el.querySelector('[data-blok-testid="code-line-numbers-btn"]') as HTMLButtonElement;
-      btn.click();
-
-      const data = tool.save(el);
-      expect(data.lineNumbers).toBe(false);
     });
 
     it('restores lineNumbers false from saved data', async () => {
@@ -953,91 +883,6 @@ describe('CodeTool', () => {
       // Button should contain both text and an SVG chevron
       expect(langBtn.querySelector('svg')).toBeTruthy();
       expect(langBtn.textContent).toContain('JavaScript');
-    });
-  });
-
-  describe('more menu', () => {
-    it('renders a more button in the header', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const moreBtn = el.querySelector('[data-blok-testid="code-more-btn"]');
-
-      expect(moreBtn).not.toBeNull();
-      expect(moreBtn).toBeInstanceOf(HTMLButtonElement);
-    });
-
-    it('more menu is hidden by default', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
-
-      expect(menu).not.toBeNull();
-      expect(menu.hidden).toBe(true);
-    });
-
-    it('clicking more button shows the menu', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const moreBtn = el.querySelector('[data-blok-testid="code-more-btn"]') as HTMLButtonElement;
-      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
-
-      moreBtn.click();
-
-      expect(menu.hidden).toBe(false);
-    });
-
-    it('clicking more button again hides the menu', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const moreBtn = el.querySelector('[data-blok-testid="code-more-btn"]') as HTMLButtonElement;
-      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
-
-      moreBtn.click();
-      expect(menu.hidden).toBe(false);
-
-      moreBtn.click();
-      expect(menu.hidden).toBe(true);
-    });
-
-    it('more menu contains line numbers toggle', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
-      const lineNumBtn = menu.querySelector('[data-blok-testid="code-line-numbers-btn"]');
-
-      expect(lineNumBtn).not.toBeNull();
-    });
-
-    it('more menu contains wrap toggle', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
-      const wrapBtn = menu.querySelector('[data-blok-testid="code-wrap-btn"]');
-
-      expect(wrapBtn).not.toBeNull();
-    });
-
-    it('wrap and line numbers buttons are NOT direct children of header', async () => {
-      const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions());
-      const el = tool.render();
-
-      // The header is the first child with border-b
-      const header = el.children[0] as HTMLElement;
-
-      // Wrap and line numbers should NOT be direct header children
-      const headerDirectBtns = Array.from(header.children).filter(
-        (child) => child.getAttribute('data-blok-testid') === 'code-wrap-btn'
-          || child.getAttribute('data-blok-testid') === 'code-line-numbers-btn'
-      );
-
-      expect(headerDirectBtns).toHaveLength(0);
     });
   });
 });

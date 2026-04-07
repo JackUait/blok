@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TOOL_NAME, PLACEHOLDER_KEY, LANGUAGE_KEY, COPIED_KEY, COPY_CODE_KEY,
-  WRAP_LINES_KEY, LINE_NUMBERS_KEY, DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
+  DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
   HIGHLIGHTABLE_LANGUAGES, SHIKI_LIGHT_THEME, SHIKI_DARK_THEME, DARK_MODE_SELECTOR,
   CODE_AREA_STYLES, GUTTER_STYLES, GUTTER_LINE_STYLES, CODE_BODY_STYLES,
 } from '../../../../src/tools/code/constants';
@@ -18,8 +18,6 @@ describe('Code Block Constants', () => {
     expect(LANGUAGE_KEY).toBe('tools.code.language');
     expect(COPIED_KEY).toBe('tools.code.copied');
     expect(COPY_CODE_KEY).toBe('tools.code.copyCode');
-    expect(WRAP_LINES_KEY).toBe('tools.code.wrapLines');
-    expect(LINE_NUMBERS_KEY).toBe('tools.code.lineNumbers');
   });
 
   it('DEFAULT_LANGUAGE is "plain text"', () => {

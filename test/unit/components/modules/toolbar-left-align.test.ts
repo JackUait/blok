@@ -192,6 +192,106 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     document.body.removeChild(blockHolder);
   });
 
+  it('does not clamp toolbar marginLeft to actionsWidth when block content is left-aligned', () => {
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    blockContent.style.marginLeft = '0px';
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-1',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block],
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    // Simulate actions having a real width (e.g. plus button + settings toggler)
+    const actions = toolbar.nodes.actions!;
+
+    vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
+
+    // Act
+    toolbar.moveAndOpen(block);
+
+    // Assert: toolbar content marginLeft matches the block content (0px),
+    // NOT clamped to actions width (51px) which would cause buttons to overlap content
+    expect(content.style.marginLeft).toBe('0px');
+
+    document.body.removeChild(blockHolder);
+  });
+
+  it('preserves block content marginLeft for centered content even with actions width', () => {
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    blockContent.style.marginLeft = '153px';
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-1',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block],
+      } as unknown as BlokModules['BlockManager'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    const actions = toolbar.nodes.actions!;
+
+    vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
+
+    // Act
+    toolbar.moveAndOpen(block);
+
+    // Assert: marginLeft matches block content (153px), not clamped to actionsWidth
+    expect(content.style.marginLeft).toBe('153px');
+
+    document.body.removeChild(blockHolder);
+  });
+
   it('syncs toolbar content wrapper marginLeft on moveAndOpenForMultipleBlocks', () => {
     const blockHolder = document.createElement('div');
     const blockContent = document.createElement('div');
@@ -245,6 +345,68 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     toolbar.moveAndOpenForMultipleBlocks(block);
 
     // Assert: toolbar content wrapper's marginLeft matches block content's marginLeft
+    expect(content.style.marginLeft).toBe('0px');
+
+    document.body.removeChild(blockHolder);
+  });
+
+  it('does not clamp toolbar marginLeft to actionsWidth on moveAndOpenForMultipleBlocks', () => {
+    const blockHolder = document.createElement('div');
+    const blockContent = document.createElement('div');
+
+    blockContent.setAttribute(DATA_ATTR.elementContent, '');
+    blockContent.style.marginLeft = '0px';
+    blockHolder.appendChild(blockContent);
+    document.body.appendChild(blockHolder);
+
+    const block = {
+      id: 'block-1',
+      name: 'paragraph',
+      holder: blockHolder,
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const block2 = {
+      id: 'block-2',
+      name: 'paragraph',
+      holder: document.createElement('div'),
+      isEmpty: false,
+      setupDraggable: vi.fn(),
+      cleanupDraggable: vi.fn(),
+      getTunes: vi.fn().mockReturnValue({ toolTunes: [], commonTunes: [] }),
+    } as unknown as Block;
+
+    const { toolbar, content } = createToolbar({
+      BlockManager: {
+        currentBlock: block,
+        currentBlockIndex: 0,
+        blocks: [block, block2],
+      } as unknown as BlokModules['BlockManager'],
+      BlockSelection: {
+        selectedBlocks: [block, block2],
+      } as unknown as BlokModules['BlockSelection'],
+    });
+
+    const priv = toolbar as unknown as Record<string, unknown>;
+
+    priv.toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+      open: vi.fn(),
+      updateLeftAlignElement: vi.fn(),
+    };
+
+    const actions = toolbar.nodes.actions!;
+
+    vi.spyOn(actions, 'offsetWidth', 'get').mockReturnValue(51);
+
+    // Act
+    toolbar.moveAndOpenForMultipleBlocks(block);
+
+    // Assert: marginLeft matches block content (0px), not clamped to actionsWidth (51px)
     expect(content.style.marginLeft).toBe('0px');
 
     document.body.removeChild(blockHolder);

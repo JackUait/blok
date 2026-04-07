@@ -526,13 +526,14 @@ export class Toolbar extends Module<ToolbarNodes> {
      * so toolbar buttons align with the block content edge, even when
      * consumer CSS overrides the block content's margin.
      *
-     * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
+     * Uses the block's actual marginLeft directly — when content is left-aligned
+     * (marginLeft: 0), toolbar actions will extend into the editor's left gutter
+     * via negative positioning (right: 100%), which is the expected behavior.
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
-      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
     }
   }
 
@@ -654,13 +655,11 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Sync toolbar content wrapper's margin with the block content element.
-     * Runs after open() so the toolbar is visible and actions have correct offsetWidth.
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
-      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
+      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
     }
   }
 

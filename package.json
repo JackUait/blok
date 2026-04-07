@@ -51,8 +51,8 @@
   },
   "bin": {
     "blok": "./bin/blok.mjs",
-    "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js",
-    "blok-convert-html": "./bin/convert-html.mjs"
+    "blok-convert-html": "./bin/convert-html.mjs",
+    "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js"
   },
   "files": [
     "dist",

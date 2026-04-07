@@ -644,6 +644,10 @@
   --color-swatch-ring-hover: var(--blok-swatch-ring-hover);
   --color-swatch-ring-active: var(--blok-swatch-ring-active);
 
+  /* Surface tokens (code blocks, secondary containers) */
+  --color-bg-secondary: var(--blok-bg-secondary);
+  --color-border-secondary: var(--blok-border-secondary);
+
 }
 
 @layer utilities {
@@ -724,6 +728,10 @@
   --blok-swatch-neutral-bg: #f7f7f5;
   --blok-swatch-ring-hover: rgba(0, 0, 0, 0.10);
   --blok-swatch-ring-active: rgba(0, 0, 0, 0.30);
+
+  /* Surface tokens (code blocks, secondary containers) */
+  --blok-bg-secondary: #f7f8fa;
+  --blok-border-secondary: rgba(55, 53, 47, 0.09);
 
   /* Marker colors — light theme */
   --blok-color-gray-text: #787774;
@@ -818,6 +826,10 @@
     --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
     --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
 
+    /* Surface tokens (code blocks, secondary containers) */
+    --blok-bg-secondary: rgba(255, 255, 255, 0.04);
+    --blok-border-secondary: rgba(255, 255, 255, 0.08);
+
     /* Marker colors — dark theme */
     --blok-color-gray-text: #9b9b9b;
     --blok-color-gray-bg: #2f2f2f;
@@ -909,6 +921,10 @@
   --blok-swatch-neutral-bg: #3a3a38;
   --blok-swatch-ring-hover: rgba(255, 255, 255, 0.15);
   --blok-swatch-ring-active: rgba(255, 255, 255, 0.35);
+
+  /* Surface tokens (code blocks, secondary containers) */
+  --blok-bg-secondary: rgba(255, 255, 255, 0.04);
+  --blok-border-secondary: rgba(255, 255, 255, 0.08);
 
   /* Marker colors — dark theme */
   --blok-color-gray-text: #9b9b9b;

@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+const css = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
+
 describe('Preflight CSS', () => {
-  const css = readFileSync(resolve(__dirname, '../../../src/styles/main.css'), 'utf-8');
 
   it('should not reset border-radius on form elements', () => {
     /**
@@ -20,5 +21,23 @@ describe('Preflight CSS', () => {
     const ruleBody = formResetMatch?.[1] ?? '';
 
     expect(ruleBody).not.toContain('border-radius');
+  });
+});
+
+describe('Theme tokens', () => {
+  it('defines --blok-bg-secondary in the light theme', () => {
+    expect(css).toContain('--blok-bg-secondary');
+  });
+
+  it('defines --blok-border-secondary in the light theme', () => {
+    expect(css).toContain('--blok-border-secondary');
+  });
+
+  it('maps bg-secondary to the Tailwind @theme inline block', () => {
+    expect(css).toContain('--color-bg-secondary');
+  });
+
+  it('maps border-secondary to the Tailwind @theme inline block', () => {
+    expect(css).toContain('--color-border-secondary');
   });
 });

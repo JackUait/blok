@@ -53,7 +53,7 @@ export const LANGUAGES: LanguageEntry[] = [
 ];
 
 // CSS — Tailwind classes
-export const WRAPPER_STYLES = 'flex flex-col rounded-lg bg-bg-secondary overflow-hidden my-1';
+export const WRAPPER_STYLES = 'flex flex-col rounded-lg border border-border-secondary bg-bg-secondary overflow-hidden my-1';
 export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 border-b border-border-primary text-xs text-gray-text';
 export const LANGUAGE_BUTTON_STYLES = 'px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
@@ -72,6 +72,14 @@ export const TAB_STYLES = 'px-2 py-0.5 rounded text-xs font-medium cursor-pointe
 export const TAB_ACTIVE_STYLES = 'bg-blue-500 text-white';
 export const TAB_INACTIVE_STYLES = 'bg-transparent text-gray-text can-hover:hover:bg-item-hover-bg';
 export const PREVIEW_AREA_STYLES = 'px-4 py-3 overflow-x-auto min-h-[1.5em] flex justify-center';
+
+// i18n key — preview toggle
+export const PREVIEW_TOGGLE_KEY = 'tools.code.previewToggle';
+
+// CSS — more menu dropdown
+export const MORE_MENU_STYLES = 'absolute right-0 top-full mt-1 min-w-[10rem] rounded-lg bg-bg-secondary border border-border-secondary shadow-lg p-1 z-10';
+export const MORE_MENU_ITEM_STYLES = 'flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-xs text-gray-text cursor-pointer bg-transparent border-0 transition-colors can-hover:hover:bg-item-hover-bg select-none';
+export const MORE_MENU_ITEM_ACTIVE_STYLES = 'text-blue-500';
 
 // Shiki theme names for syntax highlighting
 export const SHIKI_LIGHT_THEME = 'one-light';

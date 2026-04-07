@@ -26,11 +26,7 @@ import {
   LANGUAGE_KEY,
   COPIED_FEEDBACK_STYLES,
   PREVIEWABLE_LANGUAGES,
-  CODE_TAB_KEY,
-  PREVIEW_TAB_KEY,
-  TAB_STYLES,
-  TAB_ACTIVE_STYLES,
-  TAB_INACTIVE_STYLES,
+  PREVIEW_TOGGLE_KEY,
   PREVIEW_AREA_STYLES,
   GUTTER_LINE_STYLES,
 } from './constants';
@@ -76,8 +72,7 @@ export class CodeTool implements BlockTool {
       wrapLabel: this.api.i18n.t(WRAP_LINES_KEY),
       lineNumbersLabel: this.api.i18n.t(LINE_NUMBERS_KEY),
       previewable: this.readOnly ? false : isPreviewable,
-      codeTabLabel: this.api.i18n.t(CODE_TAB_KEY),
-      previewTabLabel: this.api.i18n.t(PREVIEW_TAB_KEY),
+      previewToggleLabel: this.api.i18n.t(PREVIEW_TOGGLE_KEY),
     });
 
     this._dom = dom;
@@ -86,7 +81,10 @@ export class CodeTool implements BlockTool {
     dom.gutterElement.hidden = !this._lineNumbers;
     dom.lineNumbersButton.addEventListener('click', () => this.toggleLineNumbers());
 
-    // Read-only + previewable: show preview only, hide code, no tabs
+    // More menu toggle
+    dom.moreButton.addEventListener('click', () => this.toggleMoreMenu());
+
+    // Read-only + previewable: show preview only, hide code, no toggle
     if (this.readOnly && isPreviewable) {
       const previewEl = document.createElement('div');
 
@@ -99,8 +97,8 @@ export class CodeTool implements BlockTool {
       void this.renderPreview();
     }
 
-    // Edit mode + previewable: show tabs, default to preview
-    if (!this.readOnly && isPreviewable && dom.codeTab && dom.previewTab && dom.previewElement) {
+    // Edit mode + previewable: show preview toggle, default to preview
+    if (!this.readOnly && isPreviewable && dom.previewToggleButton && dom.previewElement) {
       this._previewActive = true;
       dom.preElement.hidden = true;
       dom.gutterElement.hidden = true;
@@ -108,8 +106,7 @@ export class CodeTool implements BlockTool {
       this._previewContainer = dom.previewElement;
       void this.renderPreview();
 
-      dom.codeTab.addEventListener('click', () => this.showCode());
-      dom.previewTab.addEventListener('click', () => this.showPreview());
+      dom.previewToggleButton.addEventListener('click', () => this.togglePreview());
     }
 
     if (!this.readOnly) {
@@ -156,8 +153,16 @@ export class CodeTool implements BlockTool {
     void this.highlightCode();
   }
 
+  private togglePreview(): void {
+    if (this._previewActive) {
+      this.showCode();
+    } else {
+      this.showPreview();
+    }
+  }
+
   private showCode(): void {
-    if (!this._dom?.previewElement || !this._dom.codeTab || !this._dom.previewTab) {
+    if (!this._dom?.previewElement || !this._dom.previewToggleButton) {
       return;
     }
 
@@ -165,12 +170,10 @@ export class CodeTool implements BlockTool {
     this._dom.preElement.hidden = false;
     this._dom.gutterElement.hidden = !this._lineNumbers;
     this._dom.previewElement.hidden = true;
-    this._dom.codeTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
-    this._dom.previewTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
   }
 
   private showPreview(): void {
-    if (!this._dom?.previewElement || !this._dom.codeTab || !this._dom.previewTab) {
+    if (!this._dom?.previewElement || !this._dom.previewToggleButton) {
       return;
     }
 
@@ -178,11 +181,17 @@ export class CodeTool implements BlockTool {
     this._dom.preElement.hidden = true;
     this._dom.gutterElement.hidden = true;
     this._dom.previewElement.hidden = false;
-    this._dom.codeTab.className = `${TAB_STYLES} ${TAB_INACTIVE_STYLES}`;
-    this._dom.previewTab.className = `${TAB_STYLES} ${TAB_ACTIVE_STYLES}`;
 
     // Re-render preview with current code content
     void this.renderPreview();
+  }
+
+  private toggleMoreMenu(): void {
+    if (!this._dom) {
+      return;
+    }
+
+    this._dom.moreMenu.hidden = !this._dom.moreMenu.hidden;
   }
 
   private async renderPreview(): Promise<void> {
@@ -281,7 +290,12 @@ export class CodeTool implements BlockTool {
     this._data.language = id;
 
     if (this._dom) {
-      this._dom.languageButton.textContent = this.getLanguageName(id);
+      // Update the text span inside the language button (first child)
+      const textSpan = this._dom.languageButton.querySelector('span');
+
+      if (textSpan) {
+        textSpan.textContent = this.getLanguageName(id);
+      }
     }
 
     this._picker?.setActiveLanguage(id);

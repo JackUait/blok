@@ -95,6 +95,22 @@ export const IconPlus = `
 </svg>
 `;
 
+// Chevron Down icon
+export const IconChevronDown = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="m6 8 4 4 4-4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Ellipsis (horizontal three dots) icon
+export const IconEllipsis = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="5" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="10" cy="10" r="1.25" fill="currentColor"/>
+  <circle cx="15" cy="10" r="1.25" fill="currentColor"/>
+</svg>
+`;
+
 // Chevron Left icon
 export const IconChevronLeft = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

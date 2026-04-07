@@ -125,7 +125,8 @@ describe('CodeTool', () => {
       const el = tool.render();
       const btn = el.querySelector('[data-blok-testid="code-language-btn"]')!;
 
-      expect(btn.textContent).toBe('JavaScript');
+      // Language button now contains a text span + chevron SVG
+      expect(btn.querySelector('span')!.textContent).toBe('JavaScript');
     });
 
     it('language button opens language picker on click', async () => {
@@ -337,22 +338,20 @@ describe('CodeTool', () => {
   });
 
   describe('preview tab', () => {
-    it('shows tab buttons for latex language', async () => {
+    it('shows preview toggle button for latex language', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
 
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeTruthy();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-preview-toggle-btn"]')).toBeTruthy();
     });
 
-    it('does not show tab buttons for non-previewable language', async () => {
+    it('does not show preview toggle for non-previewable language', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'const x = 1;', language: 'javascript' }));
       const el = tool.render();
 
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-preview-toggle-btn"]')).toBeNull();
     });
 
     it('shows preview container for latex language', async () => {
@@ -363,7 +362,7 @@ describe('CodeTool', () => {
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
     });
 
-    it('defaults to preview tab active for latex', async () => {
+    it('defaults to preview active for latex', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
@@ -376,14 +375,14 @@ describe('CodeTool', () => {
       expect((previewEl as HTMLElement).hidden).toBe(false);
     });
 
-    it('clicking code tab shows code and hides preview', async () => {
+    it('clicking preview toggle shows code and hides preview', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
 
-      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+      const toggleBtn = el.querySelector('[data-blok-testid="code-preview-toggle-btn"]') as HTMLButtonElement;
 
-      codeTab.click();
+      toggleBtn.click();
 
       const preElement = el.querySelector('pre')!;
       const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
@@ -392,18 +391,17 @@ describe('CodeTool', () => {
       expect((previewEl as HTMLElement).hidden).toBe(true);
     });
 
-    it('clicking preview tab shows preview and hides code', async () => {
+    it('clicking preview toggle twice returns to preview', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
 
-      // Switch to code first
-      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
-      codeTab.click();
+      const toggleBtn = el.querySelector('[data-blok-testid="code-preview-toggle-btn"]') as HTMLButtonElement;
 
+      // Switch to code
+      toggleBtn.click();
       // Switch back to preview
-      const previewTab = el.querySelector('[data-blok-testid="code-preview-tab"]') as HTMLButtonElement;
-      previewTab.click();
+      toggleBtn.click();
 
       const preElement = el.querySelector('pre')!;
       const previewEl = el.querySelector('[data-blok-testid="code-preview"]')!;
@@ -412,7 +410,7 @@ describe('CodeTool', () => {
       expect((previewEl as HTMLElement).hidden).toBe(false);
     });
 
-    it('read-only mode with latex shows preview only (no tabs)', async () => {
+    it('read-only mode with latex shows preview only (no toggle)', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }, { readOnly: true }));
       const el = tool.render();
@@ -420,18 +418,16 @@ describe('CodeTool', () => {
       // Preview shown, code hidden
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
       expect(el.querySelector('pre')!.hidden).toBe(true);
-      // No tabs in read-only
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+      // No toggle in read-only
+      expect(el.querySelector('[data-blok-testid="code-preview-toggle-btn"]')).toBeNull();
     });
 
-    it('shows tab buttons for mermaid language', async () => {
+    it('shows preview toggle for mermaid language', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
       const el = tool.render();
 
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeTruthy();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeTruthy();
+      expect(el.querySelector('[data-blok-testid="code-preview-toggle-btn"]')).toBeTruthy();
     });
 
     it('shows preview container for mermaid language', async () => {
@@ -469,15 +465,14 @@ describe('CodeTool', () => {
       expect(renderMermaid).not.toHaveBeenCalled();
     });
 
-    it('read-only mode with mermaid shows preview only (no tabs)', async () => {
+    it('read-only mode with mermaid shows preview only (no toggle)', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }, { readOnly: true }));
       const el = tool.render();
 
       expect(el.querySelector('[data-blok-testid="code-preview"]')).toBeTruthy();
       expect(el.querySelector('pre')!.hidden).toBe(true);
-      expect(el.querySelector('[data-blok-testid="code-code-tab"]')).toBeNull();
-      expect(el.querySelector('[data-blok-testid="code-preview-tab"]')).toBeNull();
+      expect(el.querySelector('[data-blok-testid="code-preview-toggle-btn"]')).toBeNull();
     });
   });
 
@@ -853,16 +848,16 @@ describe('CodeTool', () => {
       expect(gutter.hidden).toBe(true);
     });
 
-    it('gutter is restored when switching from preview to code tab', async () => {
+    it('gutter is restored when switching from preview to code via toggle', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       const el = tool.render();
       const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
-      const codeTab = el.querySelector('[data-blok-testid="code-code-tab"]') as HTMLButtonElement;
+      const toggleBtn = el.querySelector('[data-blok-testid="code-preview-toggle-btn"]') as HTMLButtonElement;
 
       expect(gutter.hidden).toBe(true);
 
-      codeTab.click();
+      toggleBtn.click();
 
       expect(gutter.hidden).toBe(false);
     });
@@ -954,6 +949,104 @@ describe('CodeTool', () => {
 
       // Should not throw
       expect(() => tool.setReadOnly(true)).not.toThrow();
+    });
+  });
+
+  describe('language button chevron', () => {
+    it('language button contains a chevron-down icon', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ language: 'javascript' }));
+      const el = tool.render();
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
+
+      // Button should contain both text and an SVG chevron
+      expect(langBtn.querySelector('svg')).toBeTruthy();
+      expect(langBtn.textContent).toContain('JavaScript');
+    });
+  });
+
+  describe('more menu', () => {
+    it('renders a more button in the header', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const moreBtn = el.querySelector('[data-blok-testid="code-more-btn"]');
+
+      expect(moreBtn).not.toBeNull();
+      expect(moreBtn).toBeInstanceOf(HTMLButtonElement);
+    });
+
+    it('more menu is hidden by default', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
+
+      expect(menu).not.toBeNull();
+      expect(menu.hidden).toBe(true);
+    });
+
+    it('clicking more button shows the menu', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const moreBtn = el.querySelector('[data-blok-testid="code-more-btn"]') as HTMLButtonElement;
+      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
+
+      moreBtn.click();
+
+      expect(menu.hidden).toBe(false);
+    });
+
+    it('clicking more button again hides the menu', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const moreBtn = el.querySelector('[data-blok-testid="code-more-btn"]') as HTMLButtonElement;
+      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
+
+      moreBtn.click();
+      expect(menu.hidden).toBe(false);
+
+      moreBtn.click();
+      expect(menu.hidden).toBe(true);
+    });
+
+    it('more menu contains line numbers toggle', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
+      const lineNumBtn = menu.querySelector('[data-blok-testid="code-line-numbers-btn"]');
+
+      expect(lineNumBtn).not.toBeNull();
+    });
+
+    it('more menu contains wrap toggle', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+      const menu = el.querySelector('[data-blok-testid="code-more-menu"]') as HTMLElement;
+      const wrapBtn = menu.querySelector('[data-blok-testid="code-wrap-btn"]');
+
+      expect(wrapBtn).not.toBeNull();
+    });
+
+    it('wrap and line numbers buttons are NOT direct children of header', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+      const el = tool.render();
+
+      // The header is the first child with border-b
+      const header = el.children[0] as HTMLElement;
+
+      // Wrap and line numbers should NOT be direct header children
+      const headerDirectBtns = Array.from(header.children).filter(
+        (child) => child.getAttribute('data-blok-testid') === 'code-wrap-btn'
+          || child.getAttribute('data-blok-testid') === 'code-line-numbers-btn'
+      );
+
+      expect(headerDirectBtns).toHaveLength(0);
     });
   });
 });

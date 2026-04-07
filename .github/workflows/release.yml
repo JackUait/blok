@@ -43,7 +43,7 @@ jobs:
       artifact-name: dist
 
   publish:
-    name: Publish
+    name: Publish to npm
     runs-on: ubuntu-latest
     needs: [ci, e2e]
     timeout-minutes: 10
@@ -77,8 +77,46 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish to GitHub Packages as @dodopizza/blok
-        continue-on-error: true
+      - name: Create GitHub Release
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG_NAME" == *"-beta"* ]]; then
+            gh release create "$TAG_NAME" --generate-notes --prerelease
+          else
+            gh release create "$TAG_NAME" --generate-notes
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-gpr:
+    name: Publish to GitHub Packages
+    runs-on: ubuntu-latest
+    needs: [ci]
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@dodopizza'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish @dodopizza/blok to GitHub Packages
         run: |
           TAG_NAME="${GITHUB_REF#refs/tags/}"
 
@@ -90,33 +128,10 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
-          # Configure GitHub Packages auth
-          echo "@dodopizza:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc
-
           if [[ "$TAG_NAME" == *"-beta"* ]]; then
-            npm publish --tag beta || true
+            npm publish --tag beta
           else
-            npm publish || true
+            npm publish
           fi
-
-          # Restore package name
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
-            pkg.name = '@jackuait/blok';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
         env:
           NODE_AUTH_TOKEN: ${{ secrets.MIRROR_PAT }}
-
-      - name: Create GitHub Release
-        run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          if [[ "$TAG_NAME" == *"-beta"* ]]; then
-            gh release create "$TAG_NAME" --generate-notes --prerelease
-          else
-            gh release create "$TAG_NAME" --generate-notes
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

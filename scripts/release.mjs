@@ -133,8 +133,10 @@ if (isDirectRun) {
 
     run(gprPublishCommand({ packJson: gprPackJson, packDir: '/tmp', tag }));
     console.log('\nPublished @dodopizza/blok to GitHub Packages');
-  } catch {
-    console.error('\nFailed to publish @dodopizza/blok to GitHub Packages (continuing)');
+  } catch (err) {
+    console.error('\nFailed to publish @dodopizza/blok to GitHub Packages:');
+    console.error(err.message || err);
+    process.exitCode = 1;
   } finally {
     pkgJson.name = '@jackuait/blok';
     writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');

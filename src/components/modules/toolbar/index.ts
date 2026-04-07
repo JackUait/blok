@@ -519,6 +519,14 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     if (hasLeftEdgeInteraction && this.nodes.actions) {
       this.nodes.actions.style.pointerEvents = 'none';
+
+      /**
+       * Re-enable pointer-events on the settings toggler so it can still
+       * receive mousedown events for drag-and-drop.
+       */
+      if (this.nodes.settingsToggler) {
+        this.nodes.settingsToggler.style.pointerEvents = 'auto';
+      }
     }
 
     /**
@@ -526,14 +534,15 @@ export class Toolbar extends Module<ToolbarNodes> {
      * so toolbar buttons align with the block content edge, even when
      * consumer CSS overrides the block content's margin.
      *
-     * Uses the block's actual marginLeft directly — when content is left-aligned
-     * (marginLeft: 0), toolbar actions will extend into the editor's left gutter
-     * via negative positioning (right: 100%), which is the expected behavior.
+     * Uses Math.max to guarantee the actions container (positioned via right:100%)
+     * never extends beyond the left edge of the viewport, which would make the
+     * drag handle unreachable by pointer events.
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
     }
   }
 
@@ -655,11 +664,13 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     /**
      * Sync toolbar content wrapper's margin with the block content element.
+     * Clamp to actionsWidth so actions never extend beyond the left viewport edge.
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
     }
   }
 

@@ -44,7 +44,7 @@ export const run = async (argv: string[], version: string): Promise<void> => {
 
   switch (command) {
     case 'convert-html': {
-      const jsdom = await import('jsdom') as { JSDOM: new (html: string) => { window: typeof globalThis } };
+      const jsdom = await import('jsdom');
       const dom = new jsdom.JSDOM('');
 
       globalThis.DOMParser = dom.window.DOMParser;

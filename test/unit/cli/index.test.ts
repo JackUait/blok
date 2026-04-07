@@ -25,8 +25,8 @@ vi.mock('../../../src/cli/commands/convert-html/index', () => ({
   convertHtml: vi.fn(() => '{"version":"2.31.0","blocks":[]}'),
 }));
 
-vi.mock(import('node:fs'), async (importOriginal) => {
-  const actual = await importOriginal();
+vi.mock('node:fs', async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
 
   return {
     ...actual,

@@ -73,7 +73,7 @@ describe('convertHtml', () => {
   it('all blocks have unique IDs', () => {
     const html = '<p>a</p><p>b</p><h1>c</h1><ul><li>d</li></ul>';
     const result = JSON.parse(convertHtml(html));
-    const ids = result.blocks.map((b: { id: string }) => b.id);
+    const ids: string[] = result.blocks.map((b: { id: string }) => b.id);
 
     expect(new Set(ids).size).toBe(ids.length);
   });

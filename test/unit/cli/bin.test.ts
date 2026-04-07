@@ -44,6 +44,27 @@ describe('blok-cli binary', () => {
     expect(result.blocks[0].data.text).toBe('Hello <b>world</b>');
   });
 
+  it('--convert-gdocs converts piped Google Docs HTML to JSON', () => {
+    const gdocsHtml = '<b id="docs-internal-guid-test"><p><span style="font-weight:700">Hello</span></p></b>';
+    const output = execSync(
+      `echo '${gdocsHtml}' | node ${BIN_PATH} --convert-gdocs`,
+      { encoding: 'utf-8' }
+    );
+    const result = JSON.parse(output);
+
+    expect(result.version).toBe('2.31.0');
+    expect(result.blocks).toHaveLength(1);
+    expect(result.blocks[0].type).toBe('paragraph');
+    expect(result.blocks[0].data.text).toContain('<b>');
+    expect(result.blocks[0].data.text).toContain('Hello');
+  });
+
+  it('--help lists --convert-gdocs option', () => {
+    const output = execSync(`node ${BIN_PATH} --help`, { encoding: 'utf-8' });
+
+    expect(output).toContain('--convert-gdocs');
+  });
+
   it('no args outputs help text', () => {
     const output = execSync(`node ${BIN_PATH}`, { encoding: 'utf-8' });
 

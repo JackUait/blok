@@ -40,6 +40,33 @@ export function sanitize(wrapper: HTMLElement): void {
   sanitizeNode(wrapper);
 }
 
+/**
+ * Unwrap a disallowed element: move its children before it, remove it,
+ * and return any element children so they can be re-queued for processing.
+ */
+function unwrapElement(el: HTMLElement): ChildNode[] {
+  const grandchildren = Array.from(el.childNodes);
+
+  for (const gc of grandchildren) {
+    el.before(gc);
+  }
+  el.remove();
+
+  return grandchildren.filter((gc) => gc.nodeType === gc.ELEMENT_NODE);
+}
+
+/**
+ * Strip attributes from an element that are not in the allowed set.
+ * When `allowedAttrs` is `true`, all attributes are removed.
+ */
+function stripAttributes(el: HTMLElement, allowedAttrs: Set<string> | true): void {
+  for (const attr of Array.from(el.attributes)) {
+    if (allowedAttrs === true || !allowedAttrs.has(attr.name)) {
+      el.removeAttribute(attr.name);
+    }
+  }
+}
+
 function sanitizeNode(node: Node): void {
   // Use a live-like approach: collect children, then process each.
   // When a child is unwrapped its grandchildren are inserted in place and
@@ -52,43 +79,15 @@ function sanitizeNode(node: Node): void {
     }
 
     const el = child as HTMLElement;
-    const tag = el.tagName;
-    const allowedAttrs = ALLOWED[tag];
+    const allowedAttrs = ALLOWED[el.tagName];
 
     if (allowedAttrs === undefined) {
-      // Unwrap: move children to the parent, then remove this element.
-      const grandchildren = Array.from(el.childNodes);
-
-      for (const gc of grandchildren) {
-        el.before(gc);
-      }
-
-      el.remove();
-
-      // Push the moved grandchildren onto the queue so they are evaluated
-      // for unwrapping / attribute-stripping in the same parent context.
-      for (const gc of grandchildren) {
-        if (gc.nodeType === gc.ELEMENT_NODE) {
-          queue.push(gc);
-        }
-      }
-    } else {
-      // Strip disallowed attributes.
-      if (allowedAttrs !== true) {
-        for (const attr of Array.from(el.attributes)) {
-          if (!allowedAttrs.has(attr.name)) {
-            el.removeAttribute(attr.name);
-          }
-        }
-      } else {
-        // true means no attributes allowed — strip all.
-        for (const attr of Array.from(el.attributes)) {
-          el.removeAttribute(attr.name);
-        }
-      }
-
-      // Recurse into children.
-      sanitizeNode(el);
+      // Unwrap disallowed tag and re-queue its element children.
+      queue.push(...unwrapElement(el));
+      continue;
     }
+
+    stripAttributes(el, allowedAttrs);
+    sanitizeNode(el);
   }
 }

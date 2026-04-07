@@ -5,6 +5,7 @@ const HELP_TEXT = `Usage: blok-cli [options]
 
 Options:
   --convert-html       Convert legacy HTML from stdin to Blok JSON (stdout)
+  --convert-gdocs      Convert Google Docs HTML from stdin to Blok JSON (stdout)
   --migration          Output the EditorJS to Blok migration guide (LLM-friendly)
   --output <file>      Write output to a file instead of stdout
   --help               Show this help message
@@ -12,6 +13,8 @@ Options:
 Examples:
   npx @jackuait/blok-cli --convert-html < article.html
   npx @jackuait/blok-cli --convert-html < article.html --output article.json
+  npx @jackuait/blok-cli --convert-gdocs < gdocs-export.html
+  npx @jackuait/blok-cli --convert-gdocs < gdocs-export.html --output doc.json
   npx @jackuait/blok-cli --migration
   npx @jackuait/blok-cli --migration | pbcopy
   npx @jackuait/blok-cli --migration --output migration-guide.md
@@ -27,6 +30,13 @@ const parseArgs = (argv: string[]): { command: string | null; output?: string } 
     const output = outputIndex !== -1 ? argv[outputIndex + 1] : undefined;
 
     return { command: 'convert-html', output };
+  }
+
+  if (argv.includes('--convert-gdocs')) {
+    const outputIndex = argv.indexOf('--output');
+    const output = outputIndex !== -1 ? argv[outputIndex + 1] : undefined;
+
+    return { command: 'convert-gdocs', output };
   }
 
   if (argv.includes('--migration')) {
@@ -54,6 +64,22 @@ export const run = async (argv: string[], version: string): Promise<void> => {
       const fs = await import('node:fs');
       const html = fs.readFileSync('/dev/stdin', 'utf-8');
       const json = convertHtml(html);
+
+      writeOutput(json, output);
+      break;
+    }
+    case 'convert-gdocs': {
+      const jsdom = await import('jsdom');
+      const dom = new jsdom.JSDOM('');
+
+      globalThis.DOMParser = dom.window.DOMParser;
+      globalThis.Node = dom.window.Node;
+      (globalThis as Record<string, unknown>).document = dom.window.document;
+
+      const { convertGdocs } = await import('./commands/convert-gdocs/index');
+      const fs = await import('node:fs');
+      const html = fs.readFileSync('/dev/stdin', 'utf-8');
+      const json = convertGdocs(html);
 
       writeOutput(json, output);
       break;

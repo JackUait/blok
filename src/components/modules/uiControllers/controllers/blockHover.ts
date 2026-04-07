@@ -34,6 +34,13 @@ export class BlockHoverController extends Controller {
    */
   private static readonly HOVER_COOLDOWN_MS = 50;
 
+  /**
+   * Maximum horizontal distance from content edges for extended hover zone.
+   * When cursor is within this distance of the content area, nearest-block
+   * detection activates. Beyond this distance, no hover event is emitted.
+   */
+  private static readonly HOVER_ZONE_SIZE = 100;
+
   constructor(options: {
     config: Controller['config'];
     eventsDispatcher: Controller['eventsDispatcher'];
@@ -104,9 +111,10 @@ export class BlockHoverController extends Controller {
 
       /**
        * If no block element found directly, find the nearest block by Y distance
+       * but only if the cursor is within the extended hover zone (100px from content edges).
        */
       if (!hoveredBlockElement) {
-        this.emitNearestBlockHovered(event.clientY);
+        this.emitNearestBlockHoveredInZone(event.clientX, event.clientY);
 
         return;
       }
@@ -167,6 +175,41 @@ export class BlockHoverController extends Controller {
       block: nearestBlock,
       target: nearestBlock.holder,
     });
+  }
+
+  /**
+   * Emits a BlockHovered event for the nearest block, but only if the cursor
+   * is within the extended hover zone (HOVER_ZONE_SIZE px from content edges).
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   */
+  private emitNearestBlockHoveredInZone(clientX: number, clientY: number): void {
+    const blocks = this.Blok.BlockManager.blocks;
+    const topLevelBlocks = blocks.filter(block =>
+      block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
+    );
+
+    if (topLevelBlocks.length === 0) {
+      return;
+    }
+
+    const contentEl = topLevelBlocks[0].holder.querySelector<HTMLElement>('[data-blok-element-content]');
+
+    if (!contentEl) {
+      this.emitNearestBlockHovered(clientY);
+
+      return;
+    }
+
+    const contentRect = contentEl.getBoundingClientRect();
+    const distLeft = Math.abs(clientX - contentRect.left);
+    const distRight = Math.abs(clientX - contentRect.right);
+    const withinZone = distLeft <= BlockHoverController.HOVER_ZONE_SIZE
+      || distRight <= BlockHoverController.HOVER_ZONE_SIZE;
+
+    if (withinZone) {
+      this.emitNearestBlockHovered(clientY);
+    }
   }
 
   /**

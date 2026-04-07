@@ -506,6 +506,22 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.open();
 
     /**
+     * For blocks with interactive elements at the left edge (toggle arrows,
+     * callout emoji buttons), disable pointer-events on the actions
+     * container so clicks pass through to the block content.
+     * Must run after open() which sets pointer-events: auto on actions.
+     */
+    const isToggleHeader = targetBlock.name === 'header'
+      && targetBlock.holder.querySelector('[data-blok-toggle-arrow]') !== null;
+    const hasLeftEdgeInteraction = targetBlock.name === 'callout'
+      || targetBlock.name === 'toggle'
+      || isToggleHeader;
+
+    if (hasLeftEdgeInteraction && this.nodes.actions) {
+      this.nodes.actions.style.pointerEvents = 'none';
+    }
+
+    /**
      * Sync toolbar content wrapper's margin with the block content element
      * so toolbar buttons align with the block content edge, even when
      * consumer CSS overrides the block content's margin.
@@ -514,8 +530,9 @@ export class Toolbar extends Module<ToolbarNodes> {
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
     }
   }
 
@@ -641,8 +658,9 @@ export class Toolbar extends Module<ToolbarNodes> {
      */
     if (blockContentElement && this.nodes.content) {
       const blockMarginLeft = parseFloat(getComputedStyle(blockContentElement).marginLeft) || 0;
+      const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
 
-      this.nodes.content.style.marginLeft = `${blockMarginLeft}px`;
+      this.nodes.content.style.marginLeft = `${Math.max(blockMarginLeft, actionsWidth)}px`;
     }
   }
 

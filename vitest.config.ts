@@ -1,12 +1,17 @@
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+const rootPkg = JSON.parse(readFileSync(path.resolve(dirname, 'package.json'), 'utf-8'));
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
+  define: {
+    __CLI_VERSION__: JSON.stringify(rootPkg.version),
+  },
   test: {
     coverage: {
       provider: 'v8',
@@ -23,7 +28,7 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['test/unit/**/*.test.ts', 'test/unit/**/*.test.tsx'],
           setupFiles: ['test/unit/vitest.setup.ts']
-        }
+        },
       },
       {
         extends: true,

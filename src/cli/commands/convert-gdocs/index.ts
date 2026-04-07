@@ -4,6 +4,8 @@ import { sanitize } from '../convert-html/sanitizer';
 import { buildBlocks } from '../convert-html/block-builder';
 import type { OutputData } from '../convert-html/types';
 
+declare const __CLI_VERSION__: string;
+
 /**
  * Convert Google Docs HTML to Blok JSON.
  * Runs: Google Docs preprocess -> general preprocess -> sanitize -> build blocks -> serialize.
@@ -18,7 +20,7 @@ export function convertGdocs(html: string): string {
   sanitize(wrapper);
 
   const blocks = buildBlocks(wrapper);
-  const output: OutputData = { version: '2.31.0', blocks };
+  const output: OutputData = { version: typeof __CLI_VERSION__ !== 'undefined' ? __CLI_VERSION__ : 'dev', blocks };
 
   return JSON.stringify(output);
 }

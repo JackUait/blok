@@ -1351,8 +1351,6 @@ __metadata:
     react-dom:
       optional: true
   bin:
-    blok: ./bin/blok.mjs
-    blok-convert-html: ./bin/convert-html.mjs
     migrate-from-editorjs: ./codemod/migrate-editorjs-to-blok.js
   languageName: unknown
   linkType: soft
